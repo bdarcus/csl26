@@ -1,0 +1,8 @@
+target/
+**/*.rs.bk
+*.swp
+.DS_Store
+csl.json
+csln.json
+flattened_*.json
+tests/*.csl

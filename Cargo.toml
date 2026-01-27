@@ -1,0 +1,7 @@
+[workspace]
+members = [
+    "crates/csl_legacy",
+    "crates/csln_core",
+    "crates/csln_migrate"
+]
+resolver = "2"

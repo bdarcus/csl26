@@ -1,0 +1,12 @@
+{
+  "phase": "2_architecture",
+  "status": "paused",
+  "completed_milestones": [
+    "csl_legacy_strict_parser",
+    "macro_inliner_recursion",
+    "variable_label_collapsing",
+    "date_block_upsampling"
+  ],
+  "current_task": "implement_names_upsampling",
+  "last_updated": "2026-01-27"
+}
