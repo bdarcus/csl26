@@ -214,10 +214,11 @@ fn format_names(
     // Format each name
     // Use explicit name_order if provided, otherwise use global display_as_sort
     let display_as_sort = config.and_then(|c| c.display_as_sort.clone());
+    let initialize_with = config.and_then(|c| c.initialize_with.as_ref());
     let formatted: Vec<String> = display_names
         .iter()
         .enumerate()
-        .map(|(i, name)| format_single_name(name, form, i, &display_as_sort, name_order))
+        .map(|(i, name)| format_single_name(name, form, i, &display_as_sort, name_order, initialize_with))
         .collect();
 
     // Join with appropriate delimiter and "and" from locale
@@ -246,12 +247,16 @@ fn format_names(
 /// The `name_order` override takes precedence over `display_as_sort`.
 /// This allows specific template components (like editors) to use
 /// different name formatting than the global setting.
+///
+/// If `initialize_with` is Some (e.g., ". "), given names are abbreviated to initials.
+/// If None, full given names are used.
 fn format_single_name(
     name: &Name,
     form: &ContributorForm,
     index: usize,
     display_as_sort: &Option<DisplayAsSort>,
     name_order: Option<&csln_core::template::NameOrder>,
+    initialize_with: Option<&String>,
 ) -> String {
     use csln_core::template::NameOrder;
     
@@ -281,32 +286,40 @@ fn format_single_name(
     match form {
         ContributorForm::Short => family.to_string(),
         ContributorForm::Long | ContributorForm::Verb | ContributorForm::VerbShort => {
-            // Convert given name(s) to initials (e.g., "Karl Anders" → "K. A.")
-            // Handles both full names and pre-initialized input like "K. A."
-            let initials: String = given
-                .split_whitespace()
-                .map(|w| {
-                    w.chars()
-                        .next()
-                        .map(|c| format!("{}.", c))
-                        .unwrap_or_default()
-                })
-                .collect::<Vec<_>>()
-                .join(" ");
+            // Format given name based on initialize_with:
+            // - If Some (e.g., ". "), use initials: "Thomas S." → "T. S."
+            // - If None, use full given names: "Thomas S." → "Thomas S."
+            let formatted_given = if let Some(_init) = initialize_with {
+                // Convert given name(s) to initials (e.g., "Karl Anders" → "K. A.")
+                // Handles both full names and pre-initialized input like "K. A."
+                given
+                    .split_whitespace()
+                    .map(|w| {
+                        w.chars()
+                            .next()
+                            .map(|c| format!("{}.", c))
+                            .unwrap_or_default()
+                    })
+                    .collect::<Vec<_>>()
+                    .join(" ")
+            } else {
+                // Use full given names
+                given.to_string()
+            };
             
             if inverted {
-                // "Family, G. A." format
-                if initials.is_empty() {
+                // "Family, Given" format (e.g., "Kuhn, Thomas S." or "Kuhn, T. S.")
+                if formatted_given.is_empty() {
                     family.to_string()
                 } else {
-                    format!("{}, {}", family, initials)
+                    format!("{}, {}", family, formatted_given)
                 }
             } else {
-                // "G. A. Family" format (e.g., for editors in "In ... (Eds.)" context)
-                if initials.is_empty() {
+                // "Given Family" format (e.g., "Thomas S. Kuhn" or "T. S. Kuhn")
+                if formatted_given.is_empty() {
                     family.to_string()
                 } else {
-                    format!("{} {}", initials, family)
+                    format!("{} {}", formatted_given, family)
                 }
             }
         }

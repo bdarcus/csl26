@@ -5,6 +5,13 @@ pub struct Style {
     pub version: String,
     pub xmlns: String,
     pub class: String,
+    /// Style-level name formatting options (inherited by all names unless overridden)
+    pub initialize_with: Option<String>,
+    pub names_delimiter: Option<String>,
+    pub name_as_sort_order: Option<String>,
+    pub sort_separator: Option<String>,
+    pub delimiter_precedes_last: Option<String>,
+    pub and: Option<String>,
     pub info: Info,
     pub locale: Vec<Locale>,
     pub macros: Vec<Macro>,

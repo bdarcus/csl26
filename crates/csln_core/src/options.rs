@@ -161,6 +161,10 @@ pub struct ContributorConfig {
     /// When to display a contributor's name in sort order.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub display_as_sort: Option<DisplayAsSort>,
+    /// String to append after initialized given names (e.g., ". " for "J. Smith").
+    /// If None, full given names are used (e.g., "John Smith").
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub initialize_with: Option<String>,
     /// Shorten the list of contributors (et al. handling).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub shorten: Option<ShortenListOptions>,
@@ -170,6 +174,9 @@ pub struct ContributorConfig {
     /// Conjunction between last two contributors.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub and: Option<AndOptions>,
+    /// When to include delimiter before the last contributor.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub delimiter_precedes_last: Option<DelimiterPrecedesLast>,
     /// When and how to display contributor roles.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub role: Option<RoleOptions>,

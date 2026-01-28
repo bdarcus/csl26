@@ -12,8 +12,8 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 use csl_legacy::model::{CslNode, Style, Names, Substitute};
 use csln_core::options::{
     AndOptions, Config, ContributorConfig, DateConfig,
-    DisplayAsSort, Processing, ShortenListOptions, Substitute as CslnSubstitute,
-    SubstituteKey, TitlesConfig,
+    DelimiterPrecedesLast, DisplayAsSort, Processing, ShortenListOptions, 
+    Substitute as CslnSubstitute, SubstituteKey, TitlesConfig,
 };
 
 /// Extracts global configuration options from a CSL 1.0 style.
@@ -27,7 +27,7 @@ impl OptionsExtractor {
         // 1. Detect processing mode from citation attributes
         config.processing = Self::detect_processing_mode(style);
 
-        // 2. Extract contributor options from citation/bibliography attributes
+        // 2. Extract contributor options from style-level attributes and citation/bibliography
         config.contributors = Self::extract_contributor_config(style);
 
         // 3. Extract substitute patterns from the first <names> block with <substitute>
@@ -55,10 +55,43 @@ impl OptionsExtractor {
         None
     }
 
-    /// Extract contributor formatting options from citation/bibliography.
+    /// Extract contributor formatting options from style-level attributes and citation/bibliography.
     fn extract_contributor_config(style: &Style) -> Option<ContributorConfig> {
         let mut config = ContributorConfig::default();
         let mut has_config = false;
+
+        // Style-level options (on <style> element)
+        // These are inherited by all names unless overridden
+        if let Some(init_with) = &style.initialize_with {
+            config.initialize_with = Some(init_with.clone());
+            has_config = true;
+        }
+        if let Some(and) = &style.and {
+            config.and = match and.as_str() {
+                "text" => Some(AndOptions::Text),
+                "symbol" => Some(AndOptions::Symbol),
+                _ => None,
+            };
+            if config.and.is_some() { has_config = true; }
+        }
+        if let Some(sort_order) = &style.name_as_sort_order {
+            config.display_as_sort = match sort_order.as_str() {
+                "first" => Some(DisplayAsSort::First),
+                "all" => Some(DisplayAsSort::All),
+                _ => None,
+            };
+            if config.display_as_sort.is_some() { has_config = true; }
+        }
+        if let Some(dpl) = &style.delimiter_precedes_last {
+            config.delimiter_precedes_last = match dpl.as_str() {
+                "contextual" => Some(DelimiterPrecedesLast::Contextual),
+                "after-inverted-name" => Some(DelimiterPrecedesLast::AfterInvertedName),
+                "always" => Some(DelimiterPrecedesLast::Always),
+                "never" => Some(DelimiterPrecedesLast::Never),
+                _ => None,
+            };
+            if config.delimiter_precedes_last.is_some() { has_config = true; }
+        }
 
         // Check citation-level et-al settings
         let citation = &style.citation;

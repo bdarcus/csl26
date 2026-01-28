@@ -5,6 +5,14 @@ pub fn parse_style(node: Node) -> Result<Style, String> {
     let version = node.attribute("version").unwrap_or_default().to_string();
     let xmlns = node.attribute("xmlns").unwrap_or_default().to_string();
     let class = node.attribute("class").unwrap_or_default().to_string();
+    
+    // Style-level name options (inherited by all names)
+    let initialize_with = node.attribute("initialize-with").map(|s| s.to_string());
+    let names_delimiter = node.attribute("names-delimiter").map(|s| s.to_string());
+    let name_as_sort_order = node.attribute("name-as-sort-order").map(|s| s.to_string());
+    let sort_separator = node.attribute("sort-separator").map(|s| s.to_string());
+    let delimiter_precedes_last = node.attribute("delimiter-precedes-last").map(|s| s.to_string());
+    let and = node.attribute("and").map(|s| s.to_string());
 
     let mut info = Info::default();
     let mut locale = Vec::new();
@@ -31,6 +39,12 @@ pub fn parse_style(node: Node) -> Result<Style, String> {
         version,
         xmlns,
         class,
+        initialize_with,
+        names_delimiter,
+        name_as_sort_order,
+        sort_separator,
+        delimiter_precedes_last,
+        and,
         info,
         locale,
         macros,
