@@ -4,6 +4,21 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 */
 
 //! The CSLN processor for rendering citations and bibliographies.
+//!
+//! ## Architecture
+//!
+//! The processor is intentionally "dumb" - it applies the style as written
+//! without implicit logic. Style-specific behavior (e.g., suppress publisher
+//! for journals) should be expressed in the style YAML via `overrides`, not
+//! hardcoded here.
+//!
+//! ## CSL 1.0 Compatibility
+//!
+//! The processor implements the CSL 1.0 "variable-once" rule:
+//! > "Substituted variables are suppressed in the rest of the output to 
+//! > prevent duplication."
+//!
+//! This is tracked via `rendered_vars` in `process_template()`.
 
 use crate::error::ProcessorError;
 use crate::reference::{Bibliography, Citation, Reference};
@@ -129,6 +144,19 @@ impl Processor {
     }
 
     /// Process a template for a reference.
+    ///
+    /// Iterates through template components, extracting values from the reference.
+    /// Empty values are skipped. Implements the CSL 1.0 "variable-once" rule:
+    /// each variable can only be rendered once per reference to prevent duplication.
+    ///
+    /// ## Variable Deduplication
+    /// 
+    /// Per CSL 1.0 spec: "Substituted variables are suppressed in the rest of the
+    /// output to prevent duplication." We implement this by tracking rendered
+    /// variables in a HashSet and skipping any that have already been rendered.
+    ///
+    /// This prevents issues like author appearing twice if used as substitute
+    /// for editor.
     fn process_template(
         &self,
         reference: &Reference,
@@ -140,28 +168,30 @@ impl Processor {
         let default_hint = ProcHints::default();
         let hint = self.hints.get(&reference.id).unwrap_or(&default_hint);
 
-        // Track rendered variables to prevent duplicates (CSL 1.0 spec)
+        // Track rendered variables to prevent duplicates (CSL 1.0 spec:
+        // "Substituted variables are suppressed in the rest of the output")
         let mut rendered_vars: std::collections::HashSet<String> = std::collections::HashSet::new();
 
         let components: Vec<ProcTemplateComponent> = template
             .iter()
             .filter_map(|component| {
-                // Get variable key for deduplication
+                // Get unique key for this variable (e.g., "contributor:Author")
                 let var_key = get_variable_key(component);
                 
-                // Skip if this variable was already rendered (CSL 1.0 spec)
+                // Skip if this variable was already rendered
                 if let Some(ref key) = var_key {
                     if rendered_vars.contains(key) {
                         return None;
                     }
                 }
                 
+                // Extract value from reference
                 let values = component.values(reference, hint, &options)?;
                 if values.value.is_empty() {
                     return None;
                 }
                 
-                // Mark variable as rendered
+                // Mark variable as rendered for deduplication
                 if let Some(key) = var_key {
                     rendered_vars.insert(key);
                 }
@@ -290,7 +320,18 @@ impl Processor {
 }
 
 /// Get a unique key for a template component's variable.
-/// Used to prevent duplicate variable rendering (CSL 1.0 spec).
+///
+/// Used to implement the CSL 1.0 "variable-once" rule. Each component type
+/// generates a key based on its specific variable (e.g., "contributor:Author",
+/// "date:Issued", "title:Primary").
+///
+/// List components return None because they can contain multiple variables
+/// and should not be deduplicated as a whole.
+///
+/// ## Examples
+/// - `Contributor(Author)` → `"contributor:Author"`
+/// - `Date(Issued)` → `"date:Issued"`
+/// - `Title(ParentSerial)` → `"title:ParentSerial"`
 fn get_variable_key(component: &TemplateComponent) -> Option<String> {
     use csln_core::template::*;
     
@@ -300,7 +341,7 @@ fn get_variable_key(component: &TemplateComponent) -> Option<String> {
         TemplateComponent::Title(t) => Some(format!("title:{:?}", t.title)),
         TemplateComponent::Number(n) => Some(format!("number:{:?}", n.number)),
         TemplateComponent::Variable(v) => Some(format!("variable:{:?}", v.variable)),
-        TemplateComponent::List(_) => None, // Lists can contain multiple variables
+        TemplateComponent::List(_) => None, // Lists contain multiple variables, not deduplicated
         _ => None, // Future component types
     }
 }

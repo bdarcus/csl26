@@ -4,6 +4,18 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 */
 
 //! Rendering utilities for CSLN templates.
+//!
+//! This module converts processed template components into final output strings.
+//! 
+//! ## Design Notes
+//! 
+//! The separator logic here is currently somewhat implicit (checking punctuation
+//! characters). Ideally, separators should be explicitly declared in the style.
+//! 
+//! TODO: Consider adding explicit `separator` field to template components,
+//! allowing styles to declare `separator: ". "` or `separator: ", "` directly.
+//! This would move the logic from processor to style, making behavior more
+//! predictable and testable.
 
 use csln_core::template::{TemplateComponent, WrapPunctuation, Rendering};
 use std::fmt::Write;
@@ -27,6 +39,17 @@ pub struct ProcTemplateComponent {
 pub type ProcTemplate = Vec<ProcTemplateComponent>;
 
 /// Render processed templates into a final bibliography string.
+///
+/// ## Separator Logic
+/// 
+/// The default separator between components is `. ` (period-space).
+/// This is modified based on:
+/// - Component's rendered prefix (comma/semicolon skip separator)
+/// - Component type (dates always get period separator)
+/// - Parenthetical content (gets space only, not period)
+/// 
+/// Components can override this via their `prefix` rendering field.
+/// For example, `prefix: ", "` will suppress the default `. ` separator.
 pub fn refs_to_string(proc_templates: Vec<ProcTemplate>) -> String {
     let mut output = String::new();
     for (i, proc_template) in proc_templates.iter().enumerate() {
@@ -35,29 +58,35 @@ pub fn refs_to_string(proc_templates: Vec<ProcTemplate>) -> String {
         }
         for (j, component) in proc_template.iter().enumerate() {
             let rendered = render_component(component);
-            // Skip empty components
+            // Skip empty components (e.g., suppressed by type override)
             if rendered.is_empty() {
                 continue;
             }
-            // Add separator if needed
+            
+            // Add separator between components
+            // NOTE: This logic is implicit based on punctuation. A future improvement
+            // would be to add explicit `separator` field to template components.
             if j > 0 && !output.is_empty() {
                 let last_char = output.chars().last().unwrap_or(' ');
                 let first_char = rendered.chars().next().unwrap_or(' ');
                 
-                // Check if this is a date component (always needs period separator)
+                // Date components always need period separator (author-date style)
                 let is_date = matches!(&component.template_component, TemplateComponent::Date(_));
                 
-                // If next component starts with comma/semicolon/colon, no space needed
                 if matches!(first_char, ',' | ';' | ':') {
-                    // No separator - component provides its own punctuation
+                    // Component provides its own punctuation via prefix (e.g., ", 436–444")
+                    // No separator needed
                 } else if first_char == '(' && !is_date {
-                    // Non-date parentheses need just a space (e.g., chapter pages)
+                    // Parenthetical content (e.g., chapter pages "(pp. 1-10)") 
+                    // gets space only, not period
                     if !last_char.is_whitespace() {
                         output.push(' ');
                     }
                 } else if !matches!(last_char, '.' | ',' | ':' | ';' | ' ') {
+                    // Default: add period-space separator
                     output.push_str(". ");
                 } else if last_char == '.' {
+                    // Already have period, just add space
                     output.push(' ');
                 } else if !last_char.is_whitespace() {
                     // After comma/colon/semicolon, just add space
@@ -66,7 +95,9 @@ pub fn refs_to_string(proc_templates: Vec<ProcTemplate>) -> String {
             }
             let _ = write!(&mut output, "{}", rendered);
         }
-        // Don't add period if last *rendered* component is DOI/URL
+        
+        // Add trailing period unless entry ends with DOI/URL
+        // (links are self-terminating and shouldn't have period after)
         let last_is_link = proc_template.iter().rev()
             .find(|c| !render_component(c).is_empty())
             .map_or(false, |c| {

@@ -8,6 +8,30 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 //! This module defines the declarative template language for CSLN.
 //! Unlike CSL 1.0's procedural rendering elements, these components
 //! are simple, typed instructions that the processor interprets.
+//!
+//! ## Design Philosophy
+//!
+//! **Explicit over magic**: All rendering behavior should be expressible in the
+//! style YAML. The processor should not have hidden conditional logic based on
+//! reference types. Instead, use `overrides` to declare type-specific behavior.
+//!
+//! ## Type-Specific Overrides
+//!
+//! Components support `overrides` to customize rendering per reference type:
+//!
+//! ```yaml
+//! - variable: publisher
+//!   overrides:
+//!     article-journal:
+//!       suppress: true  # Don't show publisher for journals
+//! - number: pages
+//!   overrides:
+//!     chapter:
+//!       wrap: parentheses
+//!       prefix: "pp. "  # Show as "(pp. 1-10)" for chapters
+//! ```
+//!
+//! This keeps all conditional logic in the style, making it testable and portable.
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -24,19 +48,26 @@ use std::collections::HashMap;
 #[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq)]
 #[serde(rename_all = "kebab-case", default)]
 pub struct Rendering {
+    /// Render in italics/emphasis.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub emph: Option<bool>,
+    /// Render in quotes.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub quote: Option<bool>,
+    /// Render in bold/strong.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub strong: Option<bool>,
+    /// Text to prepend to the rendered value.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub prefix: Option<String>,
+    /// Text to append to the rendered value.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub suffix: Option<String>,
+    /// Punctuation to wrap the value in (e.g., parentheses).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub wrap: Option<WrapPunctuation>,
-    /// If true, suppress this component entirely.
+    /// If true, suppress this component entirely (render as empty string).
+    /// Useful for type-specific overrides like suppressing publisher for journals.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub suppress: Option<bool>,
 }
