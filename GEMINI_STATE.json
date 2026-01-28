@@ -14,19 +14,25 @@
     "refactor_plan_created",
     "baseline_migration_analysis_complete",
     "phase_2a_schema_alignment_complete",
-    "phase_2b_options_extractor_created"
+    "phase_2b_options_extractor_created",
+    "phase_2b_apa_tested_and_integrated"
   ],
-  "current_task": "phase_2b_complete_extraction",
+  "current_task": "phase_2c_compressor_enhancement",
   "last_updated": "2026-01-28",
   "next_steps": [
-    "test OptionsExtractor on real APA.csl",
-    "integrate OptionsExtractor into migration pipeline",
-    "refactor compressor to emit TemplateComponent"
+    "refactor compressor to emit TemplateComponent instead of CslnNode",
+    "create new Style output combining options + templates",
+    "set up citeproc-js oracle verification"
   ],
   "files_created": [
     "crates/csln_core/src/options.rs",
     "crates/csln_core/src/template.rs",
     "crates/csln_migrate/src/options_extractor.rs"
   ],
-  "tests_passing": 15
+  "tests_passing": 16,
+  "commits_today": [
+    "0501dc0 - feat: add CSLN schema and OptionsExtractor",
+    "b767d88 - fix: improve substitute extraction for real styles", 
+    "d5816e8 - feat: integrate OptionsExtractor into migration CLI"
+  ]
 }

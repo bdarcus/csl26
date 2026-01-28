@@ -3,20 +3,20 @@ info:
   id: http://www.zotero.org/styles/apa
 locale:
   terms:
-    ad: ' C.E.'
-    guest: "\n        "
-    performer:verb: recorded by
     post: online post
+    bc: ' B.C.E.'
+    supplement:short: "\n        "
+    illustrator:short: illus.
+    legislation:short: Pub. L.
+    circa:short: ca.
+    manuscript: unpublished manuscript
+    performer:verb: recorded by
+    ad: ' C.E.'
     review-of: review of the
     interviewer:short: "\n        "
-    circa:short: ca.
-    software: computer software
-    bc: ' B.C.E.'
-    manuscript: unpublished manuscript
-    legislation:short: Pub. L.
-    supplement:short: "\n        "
     review-of:short: review of
-    illustrator:short: illus.
+    software: computer software
+    guest: "\n        "
 citation:
 - type: group
   children:
