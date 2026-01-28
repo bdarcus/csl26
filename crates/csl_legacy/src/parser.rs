@@ -73,7 +73,7 @@ fn parse_locale(node: Node) -> Result<Locale, String> {
 fn parse_term(node: Node) -> Result<Term, String> {
     let name = node.attribute("name").unwrap_or_default().to_string();
     let form = node.attribute("form").map(|s| s.to_string());
-    let mut value = node.text().unwrap_or_default().to_string();
+    let value = node.text().unwrap_or_default().to_string();
     let mut single = None;
     let mut multiple = None;
 

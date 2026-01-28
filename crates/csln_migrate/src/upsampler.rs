@@ -76,7 +76,7 @@ impl Upsampler {
         // Extract et-al defaults from Names node
         let mut et_al_min = n.et_al_min;
         let mut et_al_use_first = n.et_al_use_first;
-        let mut et_al_subsequent = if n.et_al_subsequent_min.is_some() || n.et_al_subsequent_use_first.is_some() {
+        let et_al_subsequent = if n.et_al_subsequent_min.is_some() || n.et_al_subsequent_use_first.is_some() {
             Some(Box::new(csln::EtAlSubsequent {
                 min: n.et_al_subsequent_min.unwrap_or(0) as u8,
                 use_first: n.et_al_subsequent_use_first.unwrap_or(0) as u8,
@@ -86,7 +86,7 @@ impl Upsampler {
         };
 
         let mut et_al_term = "et al.".to_string();
-        let mut et_al_formatting = FormattingOptions::default();
+        let et_al_formatting = FormattingOptions::default();
 
         for child in &n.children {
             match child {

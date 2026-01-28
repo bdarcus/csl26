@@ -2,7 +2,6 @@ use std::fs;
 use roxmltree::Document;
 use csl_legacy::parser::parse_style;
 use csln_migrate::{MacroInliner, Upsampler};
-use csln_core::{CslnStyle, CslnInfo};
 
 use csl_legacy::model::CslNode as LNode;
 use csln_core::CslnNode as CNode;

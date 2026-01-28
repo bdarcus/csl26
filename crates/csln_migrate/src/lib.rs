@@ -1,4 +1,4 @@
-use csl_legacy::model::{Style, CslNode, Macro};
+use csl_legacy::model::{Style, CslNode};
 use std::collections::HashMap;
 
 pub mod upsampler;

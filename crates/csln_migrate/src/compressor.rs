@@ -1,5 +1,4 @@
-use csln_core::{CslnNode, VariableBlock, ItemType, FormattingOptions};
-use std::collections::HashMap;
+use csln_core::{CslnNode, ItemType};
 
 pub struct Compressor;
 

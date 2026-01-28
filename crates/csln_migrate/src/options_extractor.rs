@@ -11,9 +11,9 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 
 use csl_legacy::model::{CslNode, Style, Names, Substitute};
 use csln_core::options::{
-    AndOptions, Config, ContributorConfig, DateConfig, DelimiterPrecedesLast,
-    DisplayAsSort, MonthFormat, Processing, ShortenListOptions, Substitute as CslnSubstitute,
-    SubstituteKey, TitleRendering, TitlesConfig,
+    AndOptions, Config, ContributorConfig, DateConfig,
+    DisplayAsSort, Processing, ShortenListOptions, Substitute as CslnSubstitute,
+    SubstituteKey, TitlesConfig,
 };
 
 /// Extracts global configuration options from a CSL 1.0 style.

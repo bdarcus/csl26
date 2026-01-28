@@ -1,5 +1,4 @@
 use std::fs;
-use std::path::Path;
 use roxmltree::Document;
 use csl_legacy::parser::parse_style;
 

@@ -11,7 +11,7 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 use csln_core::{
     CslnNode, Variable, FormattingOptions,
     template::{
-        TemplateComponent, Rendering, WrapPunctuation,
+        TemplateComponent, Rendering,
         TemplateContributor, ContributorRole, ContributorForm,
         TemplateDate, DateVariable, DateForm,
         TemplateTitle, TitleType,

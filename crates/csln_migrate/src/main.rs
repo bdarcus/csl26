@@ -2,7 +2,7 @@ use std::fs;
 use roxmltree::Document;
 use csl_legacy::parser::parse_style;
 use csln_migrate::{MacroInliner, Upsampler, Compressor, OptionsExtractor, TemplateCompiler};
-use csln_core::{Style, StyleInfo, CitationSpec, BibliographySpec, options::Config, template::TemplateComponent};
+use csln_core::{Style, StyleInfo, CitationSpec, BibliographySpec, template::TemplateComponent};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = std::env::args().collect();
