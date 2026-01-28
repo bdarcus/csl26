@@ -50,6 +50,7 @@ impl Upsampler {
                 if let Some(val) = &t.value {
                     return Some(csln::CslnNode::Text { value: val.clone() });
                 }
+                // eprintln!("Dropping text node: {:?}", t);
                 None
             }
             LNode::Group(g) => {
@@ -60,9 +61,126 @@ impl Upsampler {
                 }))
             }
             LNode::Date(d) => self.map_date(d),
+            LNode::Names(n) => self.map_names(n),
             LNode::Choose(c) => self.map_choose(c),
-            _ => None, // Expand as we add more types
+            LNode::Number(n) => self.map_number(n),
+            LNode::Label(l) => self.map_label(l),
+            _ => {
+                eprintln!("Dropping node type: {:?}", node); 
+                None
+            }
         }
+    }
+
+    fn map_names(&self, n: &legacy::Names) -> Option<csln::CslnNode> {
+        let variable = self.map_variable(&n.variable)?;
+        
+        let mut options = csln::NamesOptions {
+            delimiter: n.delimiter.clone(),
+            ..Default::default()
+        };
+
+        // Analyze children to populate options
+        for child in &n.children {
+            match child {
+                LNode::Name(name) => {
+                    options.mode = match name.form.as_deref() {
+                        Some("short") => Some(csln::NameMode::Short),
+                        Some("count") => Some(csln::NameMode::Count),
+                        _ => Some(csln::NameMode::Long),
+                    };
+                    options.and = match name.and.as_deref() {
+                        Some("text") => Some(csln::AndTerm::Text),
+                        Some("symbol") => Some(csln::AndTerm::Symbol),
+                        _ => None,
+                    };
+                    // ... other name attributes like delimiter-precedes-last
+                }
+                LNode::Label(label) => {
+                    options.label = Some(csln::LabelOptions {
+                        form: self.map_label_form(&label.form),
+                        pluralize: true, // Auto-pluralization implied in Names
+                        formatting: self.map_formatting(&label.formatting, &label.prefix, &label.suffix, None),
+                    });
+                }
+                LNode::EtAl(et_al) => {
+                    options.et_al = Some(csln::EtAlOptions {
+                        min: None, // CSL 1.0 puts this on <citation>/<bibliography> often, needs inheritance logic later
+                        use_first: None,
+                        term: et_al.term.clone(),
+                    });
+                }
+                LNode::Substitute(sub) => {
+                    for sub_node in &sub.children {
+                        // Extract variables from substitute block
+                        if let LNode::Names(sub_names) = sub_node {
+                            if let Some(sub_var) = self.map_variable(&sub_names.variable) {
+                                options.substitute.push(sub_var);
+                            }
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        Some(csln::CslnNode::Names(csln::NamesBlock {
+            variable,
+            options,
+            formatting: FormattingOptions::default(), // Names node itself rarely has formatting, usually children do
+        }))
+    }
+
+    fn map_number(&self, n: &legacy::Number) -> Option<csln::CslnNode> {
+        let variable = self.map_variable(&n.variable)?;
+        // Numbers in CSLN are just Variables. 
+        // We capture the formatting from the legacy Number node.
+        Some(csln::CslnNode::Variable(csln::VariableBlock {
+            variable,
+            label: None,
+            formatting: self.map_formatting(&n.formatting, &n.prefix, &n.suffix, None),
+            overrides: HashMap::new(),
+        }))
+    }
+
+    fn map_label(&self, l: &legacy::Label) -> Option<csln::CslnNode> {
+        // Standalone labels are tricky.
+        // In CSLN, labels are usually attached to variables.
+        // For now, if we see a standalone label, we might map it to a Variable block 
+        // but this implies printing the variable too, which might not be intended 
+        // if the original XML had <label variable="page"/> without <text variable="page"/>.
+        // However, usually they appear together.
+        // If they appear apart, it's often inside a complex macro.
+        
+        // Strategy: Map to a VariableBlock but we need a way to say "Label Only".
+        // CSLN doesn't have "Label Only" yet.
+        // Let's Skip them for now but log them less noisily, OR map them to Text if they have constant content?
+        // No, they are dynamic.
+        
+        // Temporary Solution: Map to VariableBlock with a special "LabelOnly" override?
+        // Let's just drop them for now but I'll comment out the log to reduce noise, 
+        // knowing this is a known limitation of the current CSLN spec.
+        // Actually, let's map them to Text with a placeholder to signal "Label Here".
+        
+        if let Some(var_str) = &l.variable {
+             if let Some(var) = self.map_variable(var_str) {
+                 // We return a VariableBlock. If CSLN prints the variable value by default,
+                 // this might duplicate data if the style also has a Text node.
+                 // But typically, a Label node *without* a grouped Text node is rare or used for specific effects.
+                 // Let's return it as a VariableBlock and assume the user wants the label + variable.
+                 return Some(csln::CslnNode::Variable(csln::VariableBlock {
+                    variable: var,
+                    label: Some(csln::LabelOptions {
+                        form: self.map_label_form(&l.form),
+                        pluralize: true,
+                        formatting: self.map_formatting(&l.formatting, &l.prefix, &l.suffix, None),
+                    }),
+                    formatting: FormattingOptions::default(), // The variable value itself has no formatting from the label node
+                    overrides: HashMap::new(),
+                }));
+             }
+        }
+        None
     }
 
     fn map_choose(&self, c: &legacy::Choose) -> Option<csln::CslnNode> {
@@ -80,8 +198,18 @@ impl Upsampler {
             }
         }
 
+        let mut if_variables = Vec::new();
+        if let Some(vars) = &c.if_branch.variable {
+            for v in vars.split_whitespace() {
+                if let Some(var) = self.map_variable(v) {
+                    if_variables.push(var);
+                }
+            }
+        }
+
         Some(csln::CslnNode::Condition(csln::ConditionBlock {
             if_item_type,
+            if_variables,
             then_branch: self.upsample_nodes(&c.if_branch.children),
             else_branch: if let Some(else_children) = &c.else_branch {
                 Some(self.upsample_nodes(else_children))

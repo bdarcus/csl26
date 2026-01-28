@@ -1,6 +1,9 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+pub mod renderer; // Expose the renderer
+pub use renderer::{Renderer, CitationItem};
+
 // Re-exporting the previous enums (ItemType, Variable, etc. are already there)
 // I'll include them in the full file write for completeness and to ensure it compiles.
 
@@ -54,6 +57,8 @@ pub enum CslnNode {
     Variable(VariableBlock),
     /// A date variable with specialized formatting options.
     Date(DateBlock),
+    /// A name variable with substitution and et-al logic.
+    Names(NamesBlock),
     /// A group of nodes with shared formatting and delimiter.
     Group(GroupBlock),
     /// A conditional block (fallback for logic that can't be upsampled).
@@ -82,7 +87,10 @@ pub struct GroupBlock {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConditionBlock {
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub if_item_type: Vec<ItemType>,
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    pub if_variables: Vec<Variable>,
     pub then_branch: Vec<CslnNode>,
     pub else_branch: Option<Vec<CslnNode>>,
 }
@@ -112,6 +120,68 @@ pub struct DateBlock {
     pub options: DateOptions,
     #[serde(flatten)]
     pub formatting: FormattingOptions,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NamesBlock {
+    pub variable: Variable,
+    #[serde(flatten)]
+    pub options: NamesOptions,
+    #[serde(flatten)]
+    pub formatting: FormattingOptions,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "kebab-case")]
+pub struct NamesOptions {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub delimiter: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub mode: Option<NameMode>, // short, long, count
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub and: Option<AndTerm>, // text, symbol
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub delimiter_precedes_last: Option<DelimiterPrecedes>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub et_al: Option<EtAlOptions>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub label: Option<LabelOptions>,
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    pub substitute: Vec<Variable>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum NameMode {
+    Long,
+    Short,
+    Count,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum AndTerm {
+    Text,
+    Symbol,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum DelimiterPrecedes {
+    Contextual,
+    AfterInvertedName,
+    Always,
+    Never,
+}
+
+// Reusing EtAlOptions from previous definition in GEMINI.md, ensuring it's in the code
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct EtAlOptions {
+    pub min: Option<usize>,
+    pub use_first: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub term: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
