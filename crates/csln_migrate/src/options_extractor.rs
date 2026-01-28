@@ -223,30 +223,76 @@ impl OptionsExtractor {
         let mut template = Vec::new();
 
         for child in &sub.children {
-            match child {
-                CslNode::Names(names) => {
-                    // Map the variable to a SubstituteKey
-                    match names.variable.as_str() {
-                        "editor" => template.push(SubstituteKey::Editor),
-                        "translator" => template.push(SubstituteKey::Translator),
-                        _ => {} // Other name variables not yet supported
-                    }
-                }
-                CslNode::Text(t) => {
-                    // Check if it's a title variable
-                    if let Some(var) = &t.variable {
-                        if var == "title" || var == "container-title" {
-                            template.push(SubstituteKey::Title);
-                        }
-                    }
-                }
-                _ => {}
-            }
+            Self::extract_substitute_keys(child, &mut template);
         }
 
         CslnSubstitute {
             contributor_role_form: None, // Could be inferred from label forms
             template,
+        }
+    }
+
+    /// Recursively extract substitute keys from a node.
+    fn extract_substitute_keys(node: &CslNode, template: &mut Vec<SubstituteKey>) {
+        match node {
+            CslNode::Names(names) => {
+                // Map the variable to a SubstituteKey
+                for var in names.variable.split_whitespace() {
+                    match var {
+                        "editor" | "editorial-director" => {
+                            if !template.contains(&SubstituteKey::Editor) {
+                                template.push(SubstituteKey::Editor);
+                            }
+                        }
+                        "translator" => {
+                            if !template.contains(&SubstituteKey::Translator) {
+                                template.push(SubstituteKey::Translator);
+                            }
+                        }
+                        _ => {} // Other name variables not yet supported
+                    }
+                }
+            }
+            CslNode::Text(t) => {
+                // Check if it's a title variable or a macro (likely containing title)
+                if let Some(var) = &t.variable {
+                    if var == "title" || var == "container-title" {
+                        if !template.contains(&SubstituteKey::Title) {
+                            template.push(SubstituteKey::Title);
+                        }
+                    }
+                }
+                // Macro calls that likely contain title
+                if let Some(macro_name) = &t.macro_name {
+                    if macro_name.contains("title") {
+                        if !template.contains(&SubstituteKey::Title) {
+                            template.push(SubstituteKey::Title);
+                        }
+                    }
+                }
+            }
+            CslNode::Choose(c) => {
+                // Recurse into choose branches
+                for child in &c.if_branch.children {
+                    Self::extract_substitute_keys(child, template);
+                }
+                for branch in &c.else_if_branches {
+                    for child in &branch.children {
+                        Self::extract_substitute_keys(child, template);
+                    }
+                }
+                if let Some(else_children) = &c.else_branch {
+                    for child in else_children {
+                        Self::extract_substitute_keys(child, template);
+                    }
+                }
+            }
+            CslNode::Group(g) => {
+                for child in &g.children {
+                    Self::extract_substitute_keys(child, template);
+                }
+            }
+            _ => {}
         }
     }
 
@@ -339,5 +385,38 @@ mod tests {
         assert_eq!(sub.template.len(), 2);
         assert_eq!(sub.template[0], SubstituteKey::Editor);
         assert_eq!(sub.template[1], SubstituteKey::Title);
+    }
+
+    #[test]
+    fn test_extract_from_real_apa() {
+        let apa_path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent().unwrap()
+            .parent().unwrap()
+            .join("styles/apa.csl");
+        
+        let xml = std::fs::read_to_string(&apa_path)
+            .expect("Failed to read apa.csl");
+        let style = parse_csl(&xml).expect("Failed to parse apa.csl");
+        let config = OptionsExtractor::extract(&style);
+
+        // APA should have author-date processing (has disambiguate-add-year-suffix)
+        assert_eq!(config.processing, Some(Processing::AuthorDate), 
+            "APA should be detected as author-date style");
+
+        // APA has et-al settings
+        assert!(config.contributors.is_some(), "APA should have contributor config");
+        
+        // APA has substitute pattern (editor, then title)
+        assert!(config.substitute.is_some(), "APA should have substitute config");
+
+        // Print for debugging
+        println!("APA Config extracted:");
+        println!("  Processing: {:?}", config.processing);
+        if let Some(ref contrib) = config.contributors {
+            println!("  Contributors: {:?}", contrib);
+        }
+        if let Some(ref sub) = config.substitute {
+            println!("  Substitute: {:?}", sub);
+        }
     }
 }
