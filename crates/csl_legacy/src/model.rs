@@ -23,7 +23,16 @@ pub struct Info {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Locale {
     pub lang: Option<String>,
-    // Simplification for now
+    pub terms: Vec<Term>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct Term {
+    pub name: String,
+    pub form: Option<String>,
+    pub value: String,
+    pub single: Option<String>,
+    pub multiple: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

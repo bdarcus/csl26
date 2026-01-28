@@ -55,7 +55,43 @@ fn parse_info(node: Node) -> Result<Info, String> {
 
 fn parse_locale(node: Node) -> Result<Locale, String> {
     let lang = node.attribute("lang").map(|s| s.to_string());
-    Ok(Locale { lang })
+    let mut terms = Vec::new();
+    
+    for child in node.children() {
+        if child.is_element() && child.tag_name().name() == "terms" {
+            for term_node in child.children() {
+                if term_node.is_element() && term_node.tag_name().name() == "term" {
+                    terms.push(parse_term(term_node)?);
+                }
+            }
+        }
+    }
+    
+    Ok(Locale { lang, terms })
+}
+
+fn parse_term(node: Node) -> Result<Term, String> {
+    let name = node.attribute("name").unwrap_or_default().to_string();
+    let form = node.attribute("form").map(|s| s.to_string());
+    let mut value = node.text().unwrap_or_default().to_string();
+    let mut single = None;
+    let mut multiple = None;
+
+    // Check for single/multiple children
+    for child in node.children() {
+        if child.is_element() {
+            match child.tag_name().name() {
+                "single" => single = Some(child.text().unwrap_or_default().to_string()),
+                "multiple" => multiple = Some(child.text().unwrap_or_default().to_string()),
+                _ => {}
+            }
+        }
+    }
+    
+    // If no single/multiple, value is the text content
+    // Actually, simple terms just have text content.
+    
+    Ok(Term { name, form, value, single, multiple })
 }
 
 fn parse_macro(node: Node) -> Result<Macro, String> {

@@ -38,8 +38,16 @@ pub enum Variable {
 #[serde(rename_all = "kebab-case")]
 pub struct CslnStyle {
     pub info: CslnInfo,
+    pub locale: CslnLocale, // Simplification: Single merged locale for now
     pub citation: Vec<CslnNode>,
     pub bibliography: Vec<CslnNode>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct CslnLocale {
+    pub terms: HashMap<String, String>, // term_name -> value (simplified)
+    // In reality, terms have forms (long/short/verb/symbol) and pluralization.
+    // We should probably model that key as "term:form".
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
