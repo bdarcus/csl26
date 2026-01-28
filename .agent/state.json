@@ -1,70 +1,21 @@
 {
-  "phase": "csln_processor_implementation",
-  "status": "phase_3b_bibliography_rendering",
-  "completed_milestones": [
-    "csl_legacy_strict_parser",
-    "macro_inliner_recursion",
-    "variable_label_collapsing",
-    "date_block_upsampling",
-    "names_block_upsampling",
-    "bulk_migration_proof_of_concept",
-    "deep_verification_node_types",
-    "rendering_oracle_vertical_slice",
-    "names_substitution_options_verification",
-    "refactor_plan_created",
-    "baseline_migration_analysis_complete",
-    "phase_2a_schema_alignment_complete",
-    "phase_2b_options_extractor_created",
-    "phase_2b_apa_tested_and_integrated",
-    "phase_2c_template_compiler_complete",
-    "phase_2d_oracle_setup_complete",
-    "phase_2d_apa_semantic_match",
-    "phase_3a_processor_crate_created",
-    "phase_3b_locale_support_added",
-    "phase_3b_cli_tool_created",
-    "phase_3b_editor_role_labels",
-    "phase_3b_list_component"
-  ],
-  "current_task": "refine_bibliography_formatting",
-  "last_updated": "2026-01-28T19:07:00Z",
+  "phase": "cleanup_complete",
+  "status": "ready_for_collaboration",
+  "repo": "https://github.com/bdarcus/csl26",
+  "last_updated": "2026-01-28T19:15:00Z",
   "citation_status": "5/5 exact match with citeproc-js oracle",
   "bibliography_status": "~85% match - core elements working",
+  "structure": {
+    ".agent/": "LLM agent instructions (AGENTS.md) and state (state.json)",
+    "crates/": "Rust workspace (csl_legacy, csln_core, csln_migrate, csln_processor)",
+    "examples/": "CSLN style examples (apa-style.yaml, chicago-bib.yaml)",
+    "scripts/": "Oracle verification (citeproc-js)",
+    "styles/": "2,844 CSL 1.0 styles (submodule)"
+  },
   "next_steps": [
-    "refine template ordering (editor before container)",
-    "context-aware page formatting",
-    "fix trailing punctuation",
-    "Chicago style migration"
+    "refine bibliography formatting (page ranges, punctuation)",
+    "Chicago author-date style support",
+    "bulk migration of all 2,844 styles"
   ],
-  "files_created": [
-    "crates/csln_core/src/options.rs",
-    "crates/csln_core/src/template.rs",
-    "crates/csln_core/src/locale.rs",
-    "crates/csln_migrate/src/options_extractor.rs",
-    "crates/csln_migrate/src/template_compiler.rs",
-    "scripts/oracle.js",
-    "crates/csln_processor/src/lib.rs",
-    "crates/csln_processor/src/processor.rs",
-    "crates/csln_processor/src/reference.rs",
-    "crates/csln_processor/src/render.rs",
-    "crates/csln_processor/src/values.rs",
-    "crates/csln_processor/src/main.rs"
-  ],
-  "tests_passing": 40,
-  "oracle_verified": ["apa.csl", "chicago-author-date.csl"],
-  "session_commits": [
-    "29ce248 - Add csln_processor CLI for testing",
-    "f6ebcd8 - Add shorten option for et al. truncation",
-    "626d5ac - Fix bibliography rendering issues",
-    "14a3a5f - Improve bibliography formatting",
-    "b11b6c9 - Add corporate author test case",
-    "e0256bb - Add publisher, issue, pages to template",
-    "b5774e4 - Add editor role labels (Ed.)",
-    "3bb4a4e - Implement List component for volume(issue)"
-  ],
-  "key_features": {
-    "citations": "et al. truncation, author-date format, corporate authors",
-    "bibliography": "all names shown, role labels, volume(issue), DOI prefix",
-    "locale": "en-US with terms, months, contributor roles",
-    "list_component": "groups items with delimiter, applies rendering inline"
-  }
+  "tests_passing": 40
 }
