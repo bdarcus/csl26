@@ -56,9 +56,11 @@ bibliography:
     - title: parent-serial
     - date: issued
       form: month-day
-    - number: volume
-    - number: issue
-      wrap: parentheses
+    - items:
+        - number: volume
+        - number: issue
+          wrap: parentheses
+      delimiter: none
     - number: pages
       prefix: "pp. "
     - variable: doi

@@ -13,8 +13,8 @@ use csln_core::locale::{Locale, TermForm};
 use csln_core::options::{AndOptions, Config, DisplayAsSort, ShortenListOptions, SubstituteKey};
 use csln_core::template::{
     ContributorForm, ContributorRole, DateForm, DateVariable as TemplateDateVar,
-    NumberVariable, SimpleVariable, TemplateComponent, TemplateContributor,
-    TemplateDate, TemplateNumber, TemplateTitle, TemplateVariable, TitleType,
+    DelimiterPunctuation, NumberVariable, SimpleVariable, TemplateComponent, TemplateContributor,
+    TemplateDate, TemplateList, TemplateNumber, TemplateTitle, TemplateVariable, TitleType,
 };
 
 /// Processed values ready for rendering.
@@ -79,7 +79,7 @@ impl ComponentValues for TemplateComponent {
             TemplateComponent::Title(t) => t.values(reference, hints, options),
             TemplateComponent::Number(n) => n.values(reference, hints, options),
             TemplateComponent::Variable(v) => v.values(reference, hints, options),
-            TemplateComponent::List(_) => None, // TODO: implement
+            TemplateComponent::List(l) => l.values(reference, hints, options),
             _ => None, // Handle future non-exhaustive variants
         }
     }
@@ -426,6 +426,79 @@ impl ComponentValues for TemplateVariable {
 
         value.filter(|s| !s.is_empty()).map(|value| ProcValues {
             value,
+            prefix: None,
+            suffix: None,
+        })
+    }
+}
+
+impl ComponentValues for TemplateList {
+    fn values(
+        &self,
+        reference: &Reference,
+        hints: &ProcHints,
+        options: &RenderOptions<'_>,
+    ) -> Option<ProcValues> {
+        use csln_core::template::WrapPunctuation;
+        
+        // Collect values from all items, applying their rendering
+        let values: Vec<String> = self.items
+            .iter()
+            .filter_map(|item| {
+                let v = item.values(reference, hints, options)?;
+                if v.value.is_empty() {
+                    return None;
+                }
+                
+                // Apply rendering from the item
+                let rendering = item.rendering();
+                let (wrap_open, wrap_close) = match rendering.wrap.as_ref().unwrap_or(&WrapPunctuation::None) {
+                    WrapPunctuation::Parentheses => ("(", ")"),
+                    WrapPunctuation::Brackets => ("[", "]"),
+                    WrapPunctuation::None => ("", ""),
+                };
+                
+                let prefix = rendering.prefix.as_deref().unwrap_or_default();
+                let suffix = rendering.suffix.as_deref().unwrap_or_default();
+                
+                // Build the formatted value
+                let mut s = String::new();
+                s.push_str(wrap_open);
+                s.push_str(prefix);
+                if let Some(p) = &v.prefix {
+                    s.push_str(p);
+                }
+                s.push_str(&v.value);
+                if let Some(suf) = &v.suffix {
+                    s.push_str(suf);
+                }
+                s.push_str(suffix);
+                s.push_str(wrap_close);
+                
+                Some(s)
+            })
+            .collect();
+
+        if values.is_empty() {
+            return None;
+        }
+
+        // Join with delimiter
+        let delimiter = match self.delimiter.as_ref().unwrap_or(&DelimiterPunctuation::Comma) {
+            DelimiterPunctuation::Comma => ", ",
+            DelimiterPunctuation::Semicolon => "; ",
+            DelimiterPunctuation::Period => ". ",
+            DelimiterPunctuation::Colon => ": ",
+            DelimiterPunctuation::Ampersand => " & ",
+            DelimiterPunctuation::VerticalLine => " | ",
+            DelimiterPunctuation::Slash => "/",
+            DelimiterPunctuation::Hyphen => "-",
+            DelimiterPunctuation::Space => " ",
+            DelimiterPunctuation::None => "",
+        };
+
+        Some(ProcValues {
+            value: values.join(delimiter),
             prefix: None,
             suffix: None,
         })
