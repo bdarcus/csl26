@@ -31,13 +31,23 @@ pub fn refs_to_string(proc_templates: Vec<ProcTemplate>) -> String {
         if i > 0 {
             output.push_str("\n\n");
         }
-        let num_components = proc_template.len();
         for (j, component) in proc_template.iter().enumerate() {
             let rendered = render_component(component);
-            if j > 0 && !output.ends_with(". ") && !output.ends_with('.') {
-                output.push_str(". ");
-            } else if j > 0 && output.ends_with('.') {
-                output.push(' ');
+            // Skip empty components
+            if rendered.is_empty() {
+                continue;
+            }
+            // Add separator if needed (not after punctuation)
+            if j > 0 && !output.is_empty() {
+                let last_char = output.chars().last().unwrap_or(' ');
+                if !matches!(last_char, '.' | ',' | ':' | ';' | ' ') {
+                    output.push_str(". ");
+                } else if last_char == '.' {
+                    output.push(' ');
+                } else if !last_char.is_whitespace() {
+                    // After comma/colon/semicolon, just add space
+                    output.push(' ');
+                }
             }
             let _ = write!(&mut output, "{}", rendered);
         }

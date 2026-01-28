@@ -151,6 +151,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             
             new_bib.insert(min_idx, vol_issue_list);
         }
+        
+        // NOTE: Pages formatting is type-specific:
+        // - Chapters need "(pp. pages)"
+        // - Journals just need "pages"
+        // This requires type overrides which aren't yet implemented.
     }
 
     // 5. Build Style in correct format for csln_processor

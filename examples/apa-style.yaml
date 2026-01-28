@@ -15,7 +15,7 @@ options:
     default:
       emph: true
   contributors:
-    display-as-sort: all
+    display-as-sort: all  # All names inverted in bibliography
     and: symbol
     shorten:
       min: 3
@@ -34,7 +34,9 @@ bibliography:
       form: year
       wrap: parentheses
     - title: primary
-    # For chapters: "In Editor (Ed.), Container Title (pp. pages). Publisher"
+    # For chapters: "In Editor (Eds.), Container Title (pp. pages). Publisher"
+    # NOTE: Editor names should ideally be non-inverted, but display-as-sort
+    # applies globally. This is a known limitation.
     - contributor: editor
       form: verb
       prefix: "In "
