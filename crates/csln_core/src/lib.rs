@@ -5,9 +5,11 @@ pub mod renderer; // Expose the renderer
 pub use renderer::{Renderer, CitationItem};
 
 // New CSLN schema modules
+pub mod locale;
 pub mod options;
 pub mod template;
 
+pub use locale::Locale;
 pub use options::Config;
 pub use template::TemplateComponent;
 

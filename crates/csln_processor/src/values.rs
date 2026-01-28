@@ -9,6 +9,7 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 //! based on template component specifications.
 
 use crate::reference::{DateVariable, Name, Reference};
+use csln_core::locale::Locale;
 use csln_core::options::{AndOptions, Config, DisplayAsSort, ShortenListOptions, SubstituteKey};
 use csln_core::template::{
     ContributorForm, ContributorRole, DateForm, DateVariable as TemplateDateVar,
@@ -43,6 +44,7 @@ pub struct ProcHints {
 /// Options for rendering.
 pub struct RenderOptions<'a> {
     pub config: &'a Config,
+    pub locale: &'a Locale,
 }
 
 /// Trait for extracting values from template components.
@@ -154,6 +156,7 @@ fn format_names(names: &[Name], form: &ContributorForm, options: &RenderOptions<
     }
 
     let config = options.config.contributors.as_ref();
+    let locale = options.locale;
 
     // Check for et al. truncation
     let shorten: Option<&ShortenListOptions> = config.and_then(|c| c.shorten.as_ref());
@@ -176,12 +179,9 @@ fn format_names(names: &[Name], form: &ContributorForm, options: &RenderOptions<
         .map(|(i, name)| format_single_name(name, form, i, &display_as_sort))
         .collect();
 
-    // Join with appropriate delimiter and "and"
-    let and_str = match config.and_then(|c| c.and.clone()) {
-        Some(AndOptions::Symbol) => " & ",
-        Some(AndOptions::Text) => " and ",
-        _ => " & ",
-    };
+    // Join with appropriate delimiter and "and" from locale
+    let use_symbol = matches!(config.and_then(|c| c.and.clone()), Some(AndOptions::Symbol));
+    let and_str = format!(" {} ", locale.and_term(use_symbol));
 
     let result = if formatted.len() == 1 {
         formatted[0].clone()
@@ -194,7 +194,7 @@ fn format_names(names: &[Name], form: &ContributorForm, options: &RenderOptions<
     };
 
     if use_et_al {
-        format!("{} et al.", result)
+        format!("{} {}", result, locale.et_al())
     } else {
         result
     }
@@ -268,13 +268,15 @@ impl ComponentValues for TemplateDate {
             _ => return None,
         };
 
+        let locale = options.locale;
+
         let formatted = match self.form {
             DateForm::Year => date.year_value().map(|y| y.to_string()),
             DateForm::YearMonth => {
                 let year = date.year_value()?;
                 let month = date.month_value();
                 match month {
-                    Some(m) => Some(format!("{} {}", month_name(m as u8), year)),
+                    Some(m) => Some(format!("{} {}", locale.month_name(m as u8, false), year)),
                     None => Some(year.to_string()),
                 }
             }
@@ -283,8 +285,8 @@ impl ComponentValues for TemplateDate {
                 let month = date.month_value();
                 let day = date.day_value();
                 match (month, day) {
-                    (Some(m), Some(d)) => Some(format!("{} {}, {}", month_name(m as u8), d, year)),
-                    (Some(m), None) => Some(format!("{} {}", month_name(m as u8), year)),
+                    (Some(m), Some(d)) => Some(format!("{} {}, {}", locale.month_name(m as u8, false), d, year)),
+                    (Some(m), None) => Some(format!("{} {}", locale.month_name(m as u8, false), year)),
                     _ => Some(year.to_string()),
                 }
             }
@@ -312,15 +314,6 @@ impl ComponentValues for TemplateDate {
             prefix: None,
             suffix,
         })
-    }
-}
-
-fn month_name(month: u8) -> &'static str {
-    match month {
-        1 => "January", 2 => "February", 3 => "March", 4 => "April",
-        5 => "May", 6 => "June", 7 => "July", 8 => "August",
-        9 => "September", 10 => "October", 11 => "November", 12 => "December",
-        _ => "",
     }
 }
 
@@ -404,6 +397,7 @@ impl ComponentValues for TemplateVariable {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use csln_core::locale::Locale;
 
     fn make_config() -> Config {
         Config {
@@ -422,6 +416,10 @@ mod tests {
         }
     }
 
+    fn make_locale() -> Locale {
+        Locale::en_us()
+    }
+
     fn make_reference() -> Reference {
         Reference {
             id: "kuhn1962".to_string(),
@@ -437,7 +435,8 @@ mod tests {
     #[test]
     fn test_contributor_values() {
         let config = make_config();
-        let options = RenderOptions { config: &config };
+        let locale = make_locale();
+        let options = RenderOptions { config: &config, locale: &locale };
         let reference = make_reference();
         let hints = ProcHints::default();
 
@@ -455,7 +454,8 @@ mod tests {
     #[test]
     fn test_date_values() {
         let config = make_config();
-        let options = RenderOptions { config: &config };
+        let locale = make_locale();
+        let options = RenderOptions { config: &config, locale: &locale };
         let reference = make_reference();
         let hints = ProcHints::default();
 
@@ -472,7 +472,8 @@ mod tests {
     #[test]
     fn test_et_al() {
         let config = make_config();
-        let options = RenderOptions { config: &config };
+        let locale = make_locale();
+        let options = RenderOptions { config: &config, locale: &locale };
         let hints = ProcHints::default();
 
         let reference = Reference {

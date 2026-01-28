@@ -9,6 +9,7 @@ use crate::error::ProcessorError;
 use crate::reference::{Bibliography, Citation, Reference};
 use crate::render::{citation_to_string, refs_to_string, ProcTemplate, ProcTemplateComponent};
 use crate::values::{ComponentValues, ProcHints, RenderOptions};
+use csln_core::locale::Locale;
 use csln_core::options::{Config, Processing, SortKey};
 use csln_core::template::TemplateComponent;
 use csln_core::Style;
@@ -17,16 +18,30 @@ use std::collections::HashMap;
 /// The CSLN processor.
 ///
 /// Takes a style, bibliography, and citations, and produces formatted output.
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct Processor {
     /// The style definition.
     style: Style,
     /// The bibliography (references keyed by ID).
     bibliography: Bibliography,
+    /// The locale for terms and formatting.
+    locale: Locale,
     /// Default configuration.
     default_config: Config,
     /// Pre-calculated processing hints.
     hints: HashMap<String, ProcHints>,
+}
+
+impl Default for Processor {
+    fn default() -> Self {
+        Self {
+            style: Style::default(),
+            bibliography: Bibliography::default(),
+            locale: Locale::en_us(),
+            default_config: Config::default(),
+            hints: HashMap::new(),
+        }
+    }
 }
 
 /// Processed output containing citations and bibliography.
@@ -39,11 +54,17 @@ pub struct ProcessedReferences {
 }
 
 impl Processor {
-    /// Create a new processor.
+    /// Create a new processor with default English locale.
     pub fn new(style: Style, bibliography: Bibliography) -> Self {
+        Self::with_locale(style, bibliography, Locale::en_us())
+    }
+
+    /// Create a new processor with a custom locale.
+    pub fn with_locale(style: Style, bibliography: Bibliography, locale: Locale) -> Self {
         let mut processor = Processor {
             style,
             bibliography,
+            locale,
             default_config: Config::default(),
             hints: HashMap::new(),
         };
@@ -114,7 +135,7 @@ impl Processor {
         template: &[TemplateComponent],
     ) -> Option<ProcTemplate> {
         let config = self.get_config();
-        let options = RenderOptions { config };
+        let options = RenderOptions { config, locale: &self.locale };
         let default_hint = ProcHints::default();
         let hint = self.hints.get(&reference.id).unwrap_or(&default_hint);
 
