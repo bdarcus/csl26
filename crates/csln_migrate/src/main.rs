@@ -88,6 +88,29 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
         
+        // Add editor for chapters: "In Editor (Eds.), Container"
+        let has_editor = new_bib.iter().any(|c| {
+            matches!(c, TemplateComponent::Contributor(tc) if tc.contributor == csln_core::template::ContributorRole::Editor)
+        });
+        if !has_editor {
+            // Insert editor before parent-monograph title
+            let container_pos = new_bib.iter().position(|c| {
+                matches!(c, TemplateComponent::Title(tt) if tt.title == csln_core::template::TitleType::ParentMonograph)
+            });
+            if let Some(pos) = container_pos {
+                new_bib.insert(pos, TemplateComponent::Contributor(csln_core::template::TemplateContributor {
+                    contributor: csln_core::template::ContributorRole::Editor,
+                    form: csln_core::template::ContributorForm::Verb,
+                    delimiter: None,
+                    rendering: csln_core::template::Rendering {
+                        prefix: Some("In ".to_string()),
+                        suffix: Some(", ".to_string()),
+                        ..Default::default()
+                    },
+                }));
+            }
+        }
+        
         // Combine volume and issue into a List component
         let vol_pos = new_bib.iter().position(|c| {
             matches!(c, TemplateComponent::Number(n) if n.number == csln_core::template::NumberVariable::Volume)

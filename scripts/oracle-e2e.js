@@ -74,10 +74,17 @@ const testItems = {
     "id": "ITEM-4",
     "type": "chapter",
     "title": "The Role of Deliberate Practice",
-    "author": [{ "family": "Ericsson", "given": "K. Anders" }],
-    "editor": [{ "literal": "The Editors of Cambridge" }],
+    "author": [
+      { "family": "Ericsson", "given": "K. Anders" }
+    ],
+    "editor": [
+      { "family": "Ericsson", "given": "K. Anders" },
+      { "family": "Charness", "given": "Neil" },
+      { "family": "Feltovich", "given": "Paul J." },
+      { "family": "Hoffman", "given": "Robert R." }
+    ],
     "issued": { "date-parts": [[2006]] },
-    "container-title": "The Cambridge Handbook of Expertise",
+    "container-title": "The Cambridge Handbook of Expertise and Expert Performance",
     "publisher": "Cambridge University Press",
     "page": "683-703"
   },

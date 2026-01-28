@@ -1,6 +1,7 @@
 ---
 info:
-  title: APA
+  title: APA 7th Edition
+  id: https://www.zotero.org/styles/apa
 options: 
   substitute: 
     contributor-role-form: short
@@ -19,21 +20,6 @@ options:
     shorten:
       min: 3
       use-first: 1
-templates:
-  title-apa:
-    - title: primary
-  container-title:
-    - title: parent-monograph
-      prefix: "In "
-      emph: true
-    - title: parent-serial
-  author-apa-full:
-    - contributor: author
-      form: long
-  howpublished-apa:
-    - contributor: publisher
-      form: short
-      wrap: parentheses
 citation:
   template:
     - contributor: author
@@ -48,20 +34,22 @@ bibliography:
       form: year
       wrap: parentheses
     - title: primary
+    # For chapters: "In Editor (Ed.), Container Title (pp. pages). Publisher"
     - contributor: editor
       form: verb
-    - title: parent-monograph
       prefix: "In "
+      suffix: ", "
+    - title: parent-monograph
       emph: true
+    # For journals: "Container Title, volume(issue), pages. DOI"
     - title: parent-serial
-    - date: issued
-      form: month-day
     - items:
         - number: volume
         - number: issue
           wrap: parentheses
       delimiter: none
     - number: pages
+      wrap: parentheses
       prefix: "pp. "
     - variable: doi
       prefix: "https://doi.org/"

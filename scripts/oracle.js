@@ -62,10 +62,13 @@ const testItems = {
             { "family": "Ericsson", "given": "K. Anders" }
         ],
         "editor": [
-            { "family": "Cambridge", "given": "The Editors of" }
+            { "family": "Ericsson", "given": "K. Anders" },
+            { "family": "Charness", "given": "Neil" },
+            { "family": "Feltovich", "given": "Paul J." },
+            { "family": "Hoffman", "given": "Robert R." }
         ],
         "issued": { "date-parts": [[2006]] },
-        "container-title": "The Cambridge Handbook of Expertise",
+        "container-title": "The Cambridge Handbook of Expertise and Expert Performance",
         "publisher": "Cambridge University Press",
         "page": "683-703"
     },
