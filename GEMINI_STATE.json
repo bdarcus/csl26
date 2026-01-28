@@ -1,6 +1,6 @@
 {
   "phase": "csln_model_alignment",
-  "status": "in_progress",
+  "status": "phase_2_complete",
   "completed_milestones": [
     "csl_legacy_strict_parser",
     "macro_inliner_recursion",
@@ -17,14 +17,16 @@
     "phase_2b_options_extractor_created",
     "phase_2b_apa_tested_and_integrated",
     "phase_2c_template_compiler_complete",
-    "phase_2d_oracle_setup_complete"
+    "phase_2d_oracle_setup_complete",
+    "phase_2d_apa_semantic_match"
   ],
-  "current_task": "phase_2d_output_comparison",
+  "current_task": "ready_for_phase_3",
   "last_updated": "2026-01-28",
   "next_steps": [
-    "improve TemplateCompiler ordering",
-    "add author component to citation template",
-    "compare rendered output against oracle"
+    "implement CSLN processor to render templates",
+    "run full APA test suite comparison",
+    "migrate Chicago style",
+    "bulk migrate all 2844 styles"
   ],
   "files_created": [
     "crates/csln_core/src/options.rs",
@@ -40,7 +42,11 @@
     "b767d88 - fix: improve substitute extraction for real styles",
     "db842a1 - feat: integrate OptionsExtractor into migration CLI",
     "e919140 - feat: add TemplateCompiler for clean CSLN output",
-    "741af07 - chore: update state",
-    "0459ae1 - feat: add citeproc-js oracle"
-  ]
+    "0459ae1 - feat: add citeproc-js oracle",
+    "a80aeee - feat: improve template ordering and author-date citation"
+  ],
+  "semantic_match": {
+    "apa_citation": "author:short + date:year → (Kuhn, 1962)",
+    "apa_et_al": "options.contributors.shorten → (LeCun et al., 2015)"
+  }
 }
