@@ -135,7 +135,7 @@ fn create_test_bibliography() -> Bibliography {
             id: "ITEM-4".to_string(),
             ref_type: "chapter".to_string(),
             author: Some(vec![Name::new("Ericsson", "K. Anders")]),
-            editor: Some(vec![Name::new("Cambridge", "The Editors of")]),
+            editor: Some(vec![Name::literal("The Editors of Cambridge")]),
             title: Some("The Role of Deliberate Practice".to_string()),
             collection_title: Some("The Cambridge Handbook of Expertise".to_string()),
             issued: Some(DateVariable::year(2006)),

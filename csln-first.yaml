@@ -14,7 +14,7 @@ options:
     default:
       emph: true
   contributors:
-    display-as-sort: first
+    display-as-sort: all
     and: symbol
     shorten:
       min: 3
@@ -58,6 +58,7 @@ bibliography:
       form: month-day
     - number: volume
     - variable: doi
+      prefix: "https://doi.org/"
     - contributor: publisher
       form: long
       delimiter: ":"
