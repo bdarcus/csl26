@@ -9,7 +9,7 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 //! based on template component specifications.
 
 use crate::reference::{DateVariable, Name, Reference};
-use csln_core::locale::Locale;
+use csln_core::locale::{Locale, TermForm};
 use csln_core::options::{AndOptions, Config, DisplayAsSort, ShortenListOptions, SubstituteKey};
 use csln_core::template::{
     ContributorForm, ContributorRole, DateForm, DateVariable as TemplateDateVar,
@@ -150,10 +150,26 @@ impl ComponentValues for TemplateContributor {
             return None;
         }
 
+        let formatted = format_names(names, &self.form, options);
+        
+        // Add role label suffix for verb forms (e.g., "Name (Ed.)")
+        let suffix = match (&self.form, &self.contributor) {
+            (ContributorForm::Verb | ContributorForm::VerbShort, role) => {
+                let plural = names.len() > 1;
+                let form = match self.form {
+                    ContributorForm::VerbShort => TermForm::Short,
+                    _ => TermForm::Short, // Use short for label: (Ed.) not (editor)
+                };
+                options.locale.role_term(role, plural, form)
+                    .map(|t| format!(" ({})", t))
+            }
+            _ => None,
+        };
+
         Some(ProcValues {
-            value: format_names(names, &self.form, options),
+            value: formatted,
             prefix: None,
-            suffix: None,
+            suffix,
         })
     }
 }

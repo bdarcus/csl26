@@ -35,19 +35,19 @@ impl Locale {
         let mut roles = HashMap::new();
         
         roles.insert(ContributorRole::Editor, ContributorTerm {
-            singular: SimpleTerm { long: "editor".into(), short: "ed.".into() },
-            plural: SimpleTerm { long: "editors".into(), short: "eds.".into() },
-            verb: SimpleTerm { long: "edited by".into(), short: "ed.".into() },
+            singular: SimpleTerm { long: "editor".into(), short: "Ed.".into() },
+            plural: SimpleTerm { long: "editors".into(), short: "Eds.".into() },
+            verb: SimpleTerm { long: "edited by".into(), short: "Ed.".into() },
         });
         
         roles.insert(ContributorRole::Translator, ContributorTerm {
-            singular: SimpleTerm { long: "translator".into(), short: "trans.".into() },
-            plural: SimpleTerm { long: "translators".into(), short: "trans.".into() },
-            verb: SimpleTerm { long: "translated by".into(), short: "trans.".into() },
+            singular: SimpleTerm { long: "translator".into(), short: "Trans.".into() },
+            plural: SimpleTerm { long: "translators".into(), short: "Trans.".into() },
+            verb: SimpleTerm { long: "translated by".into(), short: "Trans.".into() },
         });
 
         roles.insert(ContributorRole::Director, ContributorTerm {
-            singular: SimpleTerm { long: "director".into(), short: "dir.".into() },
+            singular: SimpleTerm { long: "director".into(), short: "Dir.".into() },
             plural: SimpleTerm { long: "directors".into(), short: "dirs.".into() },
             verb: SimpleTerm { long: "directed by".into(), short: "dir.".into() },
         });
@@ -264,11 +264,11 @@ mod tests {
         
         assert_eq!(
             locale.role_term(&ContributorRole::Editor, false, TermForm::Short),
-            Some("ed.")
+            Some("Ed.")
         );
         assert_eq!(
             locale.role_term(&ContributorRole::Editor, true, TermForm::Short),
-            Some("eds.")
+            Some("Eds.")
         );
         assert_eq!(
             locale.role_term(&ContributorRole::Translator, false, TermForm::Verb),
