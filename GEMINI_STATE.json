@@ -16,26 +16,31 @@
     "phase_2a_schema_alignment_complete",
     "phase_2b_options_extractor_created",
     "phase_2b_apa_tested_and_integrated",
-    "phase_2c_template_compiler_complete"
+    "phase_2c_template_compiler_complete",
+    "phase_2d_oracle_setup_complete"
   ],
-  "current_task": "phase_2d_oracle_verification",
+  "current_task": "phase_2d_output_comparison",
   "last_updated": "2026-01-28",
   "next_steps": [
-    "set up citeproc-js npm harness",
-    "compare rendered output for APA",
-    "refine TemplateCompiler for missing cases"
+    "improve TemplateCompiler ordering",
+    "add author component to citation template",
+    "compare rendered output against oracle"
   ],
   "files_created": [
     "crates/csln_core/src/options.rs",
     "crates/csln_core/src/template.rs",
     "crates/csln_migrate/src/options_extractor.rs",
-    "crates/csln_migrate/src/template_compiler.rs"
+    "crates/csln_migrate/src/template_compiler.rs",
+    "scripts/oracle.js"
   ],
   "tests_passing": 20,
+  "oracle_verified": ["apa.csl", "chicago-author-date.csl"],
   "commits_today": [
     "0501dc0 - feat: add CSLN schema and OptionsExtractor",
     "b767d88 - fix: improve substitute extraction for real styles",
     "db842a1 - feat: integrate OptionsExtractor into migration CLI",
-    "e919140 - feat: add TemplateCompiler for clean CSLN output"
+    "e919140 - feat: add TemplateCompiler for clean CSLN output",
+    "741af07 - chore: update state",
+    "0459ae1 - feat: add citeproc-js oracle"
   ]
 }

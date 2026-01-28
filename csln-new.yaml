@@ -17,32 +17,29 @@ options:
     delimiter: '-'
     and: symbol
 citation:
-- title: primary
-  quote: true
-- contributor: interviewer
+- contributor: author
   form: short
-- variable: genre
-- contributor: composer
-  form: short
-- date: original-published
-  form: year
 - date: issued
   form: year
 bibliography:
-- title: primary
 - contributor: author
   form: short
 - date: issued
   form: full
-- variable: genre
+- title: primary
+- title: parent-serial
+- title: parent-monograph
 - number: chapter-number
 - number: volume
-- title: parent-serial
+- number: edition
+- number: number-of-volumes
+- number: issue
+- number: pages
+- variable: genre
 - variable: doi
   prefix: https://doi.org/
-- date: accessed
-  form: full
 - variable: url
+- variable: publisher
 - contributor: composer
   form: long
 - contributor: interviewer
@@ -50,12 +47,8 @@ bibliography:
   delimiter: '; '
 - contributor: container-author
   form: long
-- number: edition
-- title: parent-monograph
-- number: number-of-volumes
-- number: issue
-- number: pages
-- variable: publisher
+- date: accessed
+  form: full
 - date: event-date
   form: full
 - date: original-published

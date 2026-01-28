@@ -63,6 +63,50 @@ impl TemplateCompiler {
         components
     }
 
+    /// Compile and sort for citation output (author first, then date).
+    pub fn compile_citation(&self, nodes: &[CslnNode]) -> Vec<TemplateComponent> {
+        let mut components = self.compile(nodes);
+        self.sort_citation_components(&mut components);
+        components
+    }
+
+    /// Compile and sort for bibliography output.
+    pub fn compile_bibliography(&self, nodes: &[CslnNode]) -> Vec<TemplateComponent> {
+        let mut components = self.compile(nodes);
+        self.sort_bibliography_components(&mut components);
+        components
+    }
+
+    /// Sort components for citation: author/date first.
+    fn sort_citation_components(&self, components: &mut Vec<TemplateComponent>) {
+        components.sort_by_key(|c| match c {
+            TemplateComponent::Contributor(c) if c.contributor == ContributorRole::Author => 0,
+            TemplateComponent::Contributor(_) => 1,
+            TemplateComponent::Date(d) if d.date == DateVariable::Issued => 2,
+            TemplateComponent::Date(_) => 3,
+            TemplateComponent::Title(_) => 4,
+            _ => 5,
+        });
+    }
+
+    /// Sort components for bibliography: author, date, title, then rest.
+    fn sort_bibliography_components(&self, components: &mut Vec<TemplateComponent>) {
+        components.sort_by_key(|c| match c {
+            TemplateComponent::Contributor(c) if c.contributor == ContributorRole::Author => 0,
+            TemplateComponent::Date(d) if d.date == DateVariable::Issued => 1,
+            TemplateComponent::Title(t) if t.title == TitleType::Primary => 2,
+            TemplateComponent::Title(t) if t.title == TitleType::ParentSerial => 3,
+            TemplateComponent::Title(t) if t.title == TitleType::ParentMonograph => 4,
+            TemplateComponent::Number(_) => 5,
+            TemplateComponent::Variable(_) => 6,
+            TemplateComponent::Contributor(_) => 7,
+            TemplateComponent::Date(_) => 8,
+            TemplateComponent::Title(_) => 9,
+            TemplateComponent::List(_) => 10,
+            _ => 99,
+        });
+    }
+
     /// Check if two components refer to the same variable.
     fn same_variable(&self, a: &TemplateComponent, b: &TemplateComponent) -> bool {
         match (a, b) {

@@ -58,8 +58,47 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 4. Template Compilation (new path) - use compressed nodes
     println!("Compiling to TemplateComponents...");
     let template_compiler = TemplateCompiler;
-    let new_bib = template_compiler.compile(&csln_bib);
-    let new_cit = template_compiler.compile(&csln_cit);
+    let new_bib = template_compiler.compile_bibliography(&csln_bib);
+    let mut new_cit = template_compiler.compile_citation(&csln_cit);
+    
+    // For author-date styles, ensure citation has author + date
+    if matches!(options.processing, Some(csln_core::options::Processing::AuthorDate)) {
+        // Check if author is missing from citation
+        let has_author = new_cit.iter().any(|c| {
+            matches!(c, TemplateComponent::Contributor(tc) if tc.contributor == csln_core::template::ContributorRole::Author)
+        });
+        if !has_author {
+            // Insert author at beginning
+            new_cit.insert(0, TemplateComponent::Contributor(csln_core::template::TemplateContributor {
+                contributor: csln_core::template::ContributorRole::Author,
+                form: csln_core::template::ContributorForm::Short,
+                delimiter: None,
+                rendering: csln_core::template::Rendering::default(),
+            }));
+        }
+        // Check if date is missing
+        let has_date = new_cit.iter().any(|c| {
+            matches!(c, TemplateComponent::Date(td) if td.date == csln_core::template::DateVariable::Issued)
+        });
+        if !has_date {
+            // Insert date after author
+            let insert_pos = new_cit.iter().position(|c| !matches!(c, TemplateComponent::Contributor(_))).unwrap_or(1);
+            new_cit.insert(insert_pos, TemplateComponent::Date(csln_core::template::TemplateDate {
+                date: csln_core::template::DateVariable::Issued,
+                form: csln_core::template::DateForm::Year,
+                rendering: csln_core::template::Rendering::default(),
+            }));
+        }
+        // Keep only essential citation components for author-date
+        new_cit.retain(|c| {
+            matches!(c, 
+                TemplateComponent::Contributor(tc) if tc.contributor == csln_core::template::ContributorRole::Author
+            ) || matches!(c, 
+                TemplateComponent::Date(td) if td.date == csln_core::template::DateVariable::Issued
+            )
+        });
+    }
+    
     println!("  Citation: {} components", new_cit.len());
     println!("  Bibliography: {} components", new_bib.len());
 
