@@ -12,12 +12,21 @@
     "rendering_oracle_vertical_slice",
     "names_substitution_options_verification",
     "refactor_plan_created",
-    "baseline_migration_analysis_complete"
+    "baseline_migration_analysis_complete",
+    "phase_2a_schema_alignment_complete",
+    "phase_2b_options_extractor_created"
   ],
-  "current_task": "awaiting_user_instructions",
+  "current_task": "phase_2b_complete_extraction",
   "last_updated": "2026-01-28",
   "next_steps": [
-    "refactor csln_core to match csln-first.yaml schema",
-    "enhance compressor.rs for group merging and substitution detection"
-  ]
+    "test OptionsExtractor on real APA.csl",
+    "integrate OptionsExtractor into migration pipeline",
+    "refactor compressor to emit TemplateComponent"
+  ],
+  "files_created": [
+    "crates/csln_core/src/options.rs",
+    "crates/csln_core/src/template.rs",
+    "crates/csln_migrate/src/options_extractor.rs"
+  ],
+  "tests_passing": 15
 }

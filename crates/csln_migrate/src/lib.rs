@@ -3,8 +3,11 @@ use std::collections::HashMap;
 
 pub mod upsampler;
 pub mod compressor;
+pub mod options_extractor;
+
 pub use upsampler::Upsampler;
 pub use compressor::Compressor;
+pub use options_extractor::OptionsExtractor;
 pub struct MacroInliner {
     macros: HashMap<String, Vec<CslNode>>,
 }

@@ -4,6 +4,74 @@ use std::collections::HashMap;
 pub mod renderer; // Expose the renderer
 pub use renderer::{Renderer, CitationItem};
 
+// New CSLN schema modules
+pub mod options;
+pub mod template;
+
+pub use options::Config;
+pub use template::TemplateComponent;
+
+/// A named template (reusable sequence of components).
+pub type Template = Vec<TemplateComponent>;
+
+/// The new CSLN Style model.
+///
+/// This is the target schema for CSLN, featuring declarative options
+/// and simple template components instead of procedural conditionals.
+#[derive(Debug, Default, Deserialize, Serialize, Clone)]
+#[serde(rename_all = "kebab-case")]
+pub struct Style {
+    /// Style metadata.
+    pub info: StyleInfo,
+    /// Named reusable templates.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub templates: Option<HashMap<String, Template>>,
+    /// Global style options.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub options: Option<Config>,
+    /// Citation specification.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub citation: Option<CitationSpec>,
+    /// Bibliography specification.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub bibliography: Option<BibliographySpec>,
+}
+
+/// Citation specification.
+#[derive(Debug, Deserialize, Serialize, Clone)]
+#[serde(rename_all = "kebab-case")]
+pub struct CitationSpec {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub options: Option<Config>,
+    pub template: Template,
+}
+
+/// Bibliography specification.
+#[derive(Debug, Deserialize, Serialize, Clone)]
+#[serde(rename_all = "kebab-case")]
+pub struct BibliographySpec {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub options: Option<Config>,
+    pub template: Template,
+}
+
+/// Style metadata.
+#[derive(Debug, Default, Deserialize, Serialize, Clone)]
+#[serde(rename_all = "kebab-case")]
+pub struct StyleInfo {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub title: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+}
+
+// ============================================================================
+// Legacy types below - kept for migration bridge from CSL 1.0
+// These will be deprecated once migration is complete
+// ============================================================================
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Hash)]
 #[serde(rename_all = "kebab-case")]
 pub enum ItemType {
@@ -258,3 +326,122 @@ pub enum TextDecoration { None, Underline }
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum VerticalAlign { Baseline, Superscript, Subscript }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_style_minimal_deserialization() {
+        let yaml = r#"
+info:
+  title: Test Style
+"#;
+        let style: Style = serde_yaml::from_str(yaml).unwrap();
+        assert_eq!(style.info.title.as_ref().unwrap(), "Test Style");
+    }
+
+    #[test]
+    fn test_style_with_citation() {
+        let yaml = r#"
+info:
+  title: Test
+citation:
+  template:
+    - contributor: author
+      form: short
+    - date: issued
+      form: year
+"#;
+        let style: Style = serde_yaml::from_str(yaml).unwrap();
+        let citation = style.citation.unwrap();
+        assert_eq!(citation.template.len(), 2);
+    }
+
+    #[test]
+    fn test_style_with_options() {
+        let yaml = r#"
+info:
+  title: APA
+options:
+  processing: author-date
+  contributors:
+    display-as-sort: first
+    and: symbol
+"#;
+        let style: Style = serde_yaml::from_str(yaml).unwrap();
+        let options = style.options.unwrap();
+        assert_eq!(options.processing, Some(options::Processing::AuthorDate));
+    }
+
+    #[test]
+    fn test_csln_first_yaml() {
+        // Test parsing the actual csln-first.yaml file structure
+        let yaml = r#"
+info:
+  title: APA
+options: 
+  substitute: 
+    contributor-role-form: short
+    template:
+      - editor
+      - title
+  processing: author-date
+  contributors:
+    display-as-sort: first
+    and: symbol
+citation:
+  template:
+    - contributor: author
+      form: short
+    - date: issued
+      form: year
+bibliography: 
+  template:
+    - contributor: author
+      form: long
+    - date: issued
+      form: year
+      wrap: parentheses
+    - title: primary
+    - title: parent-monograph
+      prefix: "In "
+      emph: true
+    - number: volume
+    - variable: doi
+"#;
+        let style: Style = serde_yaml::from_str(yaml).unwrap();
+        
+        // Verify info
+        assert_eq!(style.info.title.as_ref().unwrap(), "APA");
+        
+        // Verify options
+        let options = style.options.unwrap();
+        assert_eq!(options.processing, Some(options::Processing::AuthorDate));
+        assert!(options.substitute.is_some());
+        
+        // Verify citation
+        let citation = style.citation.unwrap();
+        assert_eq!(citation.template.len(), 2);
+        
+        // Verify bibliography  
+        let bib = style.bibliography.unwrap();
+        assert_eq!(bib.template.len(), 6);
+        
+        // Verify flattened rendering worked
+        match &bib.template[1] {
+            template::TemplateComponent::Date(d) => {
+                assert_eq!(d.rendering.wrap, Some(template::WrapPunctuation::Parentheses));
+            }
+            _ => panic!("Expected Date"),
+        }
+        
+        match &bib.template[3] {
+            template::TemplateComponent::Title(t) => {
+                assert_eq!(t.rendering.prefix, Some("In ".to_string()));
+                assert_eq!(t.rendering.emph, Some(true));
+            }
+            _ => panic!("Expected Title"),
+        }
+    }
+}
