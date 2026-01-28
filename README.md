@@ -132,28 +132,27 @@ Every CSL 1.0 style can be automatically migrated to CSLN. We verify correctness
 | CSL 1.0 Parser (`csl_legacy`) | ✅ Complete - parses all 2,844 official styles |
 | CSLN Schema (`csln_core`) | ✅ Complete - options, templates, locale, rendering |
 | Migration Tool (`csln_migrate`) | ✅ Complete - extracts options, compiles templates |
-| CSLN Processor (`csln_processor`) | 🟡 In Progress - citations match, bibliography ~85% |
-| Oracle Verification | ✅ APA citations verified against citeproc-js |
+| CSLN Processor (`csln_processor`) | ✅ APA 5/5 match - citations and bibliography verified |
+| Oracle Verification | ✅ APA verified against citeproc-js |
+| Corpus Analyzer (`csln_analyze`) | ✅ Complete - feature usage stats for 2,844 styles |
 
 ### Current Test Results
 
 ```
-40 tests passing
+18 unit tests passing
+APA 7th: 5/5 citations, 5/5 bibliography (exact match)
 
-Citations (5/5 exact match):
-✓ (Kuhn, 1962)           - single author
-✓ (Hawking, 1988)        - book
-✓ (LeCun et al., 2015)   - 3+ authors (et al.)
-✓ (Ericsson, 2006)       - chapter
-✓ (World Bank, 2023)     - corporate author
+Features implemented:
+✓ page-range-format (1,076 styles) - expanded, minimal, chicago
+✓ delimiter-precedes-et-al (786 styles) - always, never, contextual  
+✓ initialize-with (1,437 styles) - name initialization
+✓ name-as-sort-order (2,100+ styles) - family-first ordering
+✓ is-uncertain-date handling - [1962?] format
 
-Bibliography:
-✓ Author names with initials
-✓ Date in parentheses
-✓ Italic titles
-✓ Volume(issue) combined format
-✓ Editor role labels (Ed.)
-✓ DOI with prefix
+Remaining high-priority:
+○ demote-non-dropping-particle (2,570 styles)
+○ disambiguate-add-givenname (935 styles)
+○ subsequent-author-substitute (314 styles)
 ```
 
 ## Architecture

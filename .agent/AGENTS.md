@@ -116,10 +116,16 @@ Run `cargo run --bin csln_analyze -- styles/` to regenerate these statistics.
 | Feature | Usage | Notes |
 |---------|-------|-------|
 | `demote-non-dropping-particle` | 2,570 styles | "van Gogh" sorting |
-| `page-range-format` | 1,076 styles | chicago, expanded, minimal |
 | `disambiguate-add-givenname` | 935 styles | Add initials when ambiguous |
 | `subsequent-author-substitute` | 314 styles | "———" for repeated authors |
-| `delimiter-precedes-et-al` | 786 uses | Comma before "et al." |
+
+### Implemented ✅
+| Feature | Usage | Notes |
+|---------|-------|-------|
+| `page-range-format` | 1,076 styles | expanded, minimal, chicago |
+| `delimiter-precedes-et-al` | 786 uses | always, never, contextual |
+| `initialize-with` | 1,437 styles | Style-level name initialization |
+| `name-as-sort-order` | 2,100+ styles | Family-first name ordering |
 
 ### Medium Priority (Note Styles)
 | Feature | Usage | Notes |
@@ -156,6 +162,29 @@ cargo build && cargo clippy
 ## State Management
 
 Session state is stored in `.agent/state.json`. Read on start, update on completion.
+
+## Git Workflow
+
+**IMPORTANT: Do not commit directly to `main` branch.**
+
+All changes must be made on feature branches and merged via pull request:
+
+```bash
+# Create a feature branch
+git checkout -b feat/my-feature
+
+# Make changes, commit
+git add -A && git commit -m "feat: description"
+
+# Push and create PR
+git push -u origin feat/my-feature
+```
+
+Branch naming conventions:
+- `feat/` - New features
+- `fix/` - Bug fixes  
+- `refactor/` - Code refactoring
+- `docs/` - Documentation changes
 
 ## Coding Standards
 
