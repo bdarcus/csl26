@@ -57,8 +57,10 @@ bibliography:
     - date: issued
       form: month-day
     - number: volume
+    - number: issue
+      wrap: parentheses
+    - number: pages
+      prefix: "pp. "
     - variable: doi
       prefix: "https://doi.org/"
-    - contributor: publisher
-      form: long
-      delimiter: ":"
+    - variable: publisher
