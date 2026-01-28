@@ -100,6 +100,37 @@ Code should be self-documenting with clear comments explaining:
 - **Locale**: en-US with terms, months, contributor roles
 - **Key Features**: Variable-once rule, type-specific overrides, name_order control
 
+## Feature Priority (Based on Corpus Analysis)
+
+Run `cargo run --bin csln_analyze -- styles/` to regenerate these statistics.
+
+### Implemented ✅
+| Feature | Usage | Notes |
+|---------|-------|-------|
+| `initialize-with` | 8,035 uses | Controls name initials vs full names |
+| `is-uncertain-date` | 1,668 uses | Handled by preferring else branch |
+| `and` (text/symbol) | 172 styles | Conjunction between names |
+| `name-as-sort-order` | 48 styles | Family-first formatting |
+
+### High Priority (Not Yet Implemented)
+| Feature | Usage | Notes |
+|---------|-------|-------|
+| `demote-non-dropping-particle` | 2,570 styles | "van Gogh" sorting |
+| `page-range-format` | 1,076 styles | chicago, expanded, minimal |
+| `disambiguate-add-givenname` | 935 styles | Add initials when ambiguous |
+| `subsequent-author-substitute` | 314 styles | "———" for repeated authors |
+| `delimiter-precedes-et-al` | 786 uses | Comma before "et al." |
+
+### Medium Priority (Note Styles)
+| Feature | Usage | Notes |
+|---------|-------|-------|
+| `position` conditions | 2,431 uses | ibid, subsequent, first |
+| Note style class | 542 styles | 19% of corpus |
+
+### Style Classes
+- **in-text**: 2,302 styles (80.9%) - author-date
+- **note**: 542 styles (19.1%) - footnote-based
+
 ## Test Commands
 
 ```bash
@@ -114,6 +145,9 @@ cd scripts && node oracle-e2e.js ../styles/apa.csl
 
 # Run CSLN processor  
 cargo run --bin csln_processor -- examples/apa-style.yaml
+
+# Analyze all styles for feature usage
+cargo run --bin csln_analyze -- styles/
 
 # Build and check
 cargo build && cargo clippy
@@ -134,6 +168,6 @@ Session state is stored in `.agent/state.json`. Read on start, update on complet
 
 ## Priority Styles
 
-1. **APA 7th** - Complex, widely used
-2. **Chicago Author-Date** - Different patterns
+1. **APA 7th** - Complex, widely used ✅ (5/5 match)
+2. **Chicago Author-Date** - Different patterns (full names, different punctuation)
 3. **All 2,844 styles** - Bulk migration target

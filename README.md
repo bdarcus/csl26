@@ -224,6 +224,20 @@ cargo test --workspace
 cargo run --bin csln_processor -- examples/apa-style.yaml
 ```
 
+### Style Corpus Analysis
+
+The `csln_analyze` tool scans all CSL 1.0 styles to identify patterns and gaps:
+
+```bash
+# Analyze all styles in the styles/ directory
+cargo run --bin csln_analyze -- styles/
+
+# Output as JSON for scripting
+cargo run --bin csln_analyze -- styles/ --json
+```
+
+This helps prioritize which features to implement based on actual usage across 2,844 styles.
+
 ### Oracle Verification (citeproc-js)
 
 The `scripts/` directory contains tools to verify CSLN output against citeproc-js, the reference CSL 1.0 implementation.
