@@ -216,6 +216,7 @@ pub struct ChooseBranch {
     pub type_: Option<String>,
     pub variable: Option<String>,
     pub is_numeric: Option<String>,
+    pub is_uncertain_date: Option<String>,
     pub locator: Option<String>,
     pub position: Option<String>,
     pub children: Vec<CslNode>,

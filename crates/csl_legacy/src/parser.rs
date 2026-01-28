@@ -360,6 +360,7 @@ fn parse_choose_branch(node: Node) -> Result<ChooseBranch, String> {
         type_: node.attribute("type").map(|s| s.to_string()),
         variable: node.attribute("variable").map(|s| s.to_string()),
         is_numeric: node.attribute("is-numeric").map(|s| s.to_string()),
+        is_uncertain_date: node.attribute("is-uncertain-date").map(|s| s.to_string()),
         locator: node.attribute("locator").map(|s| s.to_string()),
         position: node.attribute("position").map(|s| s.to_string()),
         children: parse_children(node)?,

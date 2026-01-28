@@ -193,6 +193,20 @@ impl Upsampler {
     }
 
     fn map_choose(&self, c: &legacy::Choose) -> Option<csln::CslnNode> {
+        // Handle is-uncertain-date condition specially: prefer else branch since most dates
+        // aren't uncertain. Full EDTF support would handle this dynamically at render time.
+        if c.if_branch.is_uncertain_date.is_some() {
+            // Use else branch (non-uncertain formatting) as default
+            if let Some(else_children) = &c.else_branch {
+                let nodes = self.upsample_nodes(else_children);
+                return nodes.into_iter().next();
+            } else if !c.else_if_branches.is_empty() {
+                let nodes = self.upsample_nodes(&c.else_if_branches[0].children);
+                return nodes.into_iter().next();
+            }
+            // Fall through to if-branch if no else exists
+        }
+        
         let mut if_item_type = Vec::new();
         if let Some(types) = &c.if_branch.type_ {
             for t in types.split_whitespace() {
