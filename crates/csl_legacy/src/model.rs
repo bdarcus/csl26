@@ -12,6 +12,8 @@ pub struct Style {
     pub sort_separator: Option<String>,
     pub delimiter_precedes_last: Option<String>,
     pub and: Option<String>,
+    /// Page range formatting (expanded, minimal, chicago, chicago-16)
+    pub page_range_format: Option<String>,
     pub info: Info,
     pub locale: Vec<Locale>,
     pub macros: Vec<Macro>,

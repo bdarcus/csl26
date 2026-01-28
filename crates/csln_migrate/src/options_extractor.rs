@@ -12,8 +12,8 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 use csl_legacy::model::{CslNode, Style, Names, Substitute};
 use csln_core::options::{
     AndOptions, Config, ContributorConfig, DateConfig,
-    DelimiterPrecedesLast, DisplayAsSort, Processing, ShortenListOptions, 
-    Substitute as CslnSubstitute, SubstituteKey, TitlesConfig,
+    DelimiterPrecedesLast, DisplayAsSort, PageRangeFormat, Processing, 
+    ShortenListOptions, Substitute as CslnSubstitute, SubstituteKey, TitlesConfig,
 };
 
 /// Extracts global configuration options from a CSL 1.0 style.
@@ -39,7 +39,23 @@ impl OptionsExtractor {
         // 5. Extract title configuration from formatting patterns
         config.titles = Self::extract_title_config(style);
 
+        // 6. Extract page range format from style-level attribute
+        config.page_range_format = Self::extract_page_range_format(style);
+
         config
+    }
+
+    /// Extract page range format from style-level page-range-format attribute.
+    fn extract_page_range_format(style: &Style) -> Option<PageRangeFormat> {
+        style.page_range_format.as_ref().and_then(|f| match f.as_str() {
+            "expanded" => Some(PageRangeFormat::Expanded),
+            "minimal" => Some(PageRangeFormat::Minimal),
+            "minimal-two" => Some(PageRangeFormat::MinimalTwo),
+            "chicago" => Some(PageRangeFormat::Chicago),
+            "chicago-15" => Some(PageRangeFormat::Chicago),
+            "chicago-16" => Some(PageRangeFormat::Chicago16),
+            _ => None,
+        })
     }
 
     /// Detect the processing mode (author-date, numeric, note) from citation attributes.

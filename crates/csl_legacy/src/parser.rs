@@ -13,6 +13,7 @@ pub fn parse_style(node: Node) -> Result<Style, String> {
     let sort_separator = node.attribute("sort-separator").map(|s| s.to_string());
     let delimiter_precedes_last = node.attribute("delimiter-precedes-last").map(|s| s.to_string());
     let and = node.attribute("and").map(|s| s.to_string());
+    let page_range_format = node.attribute("page-range-format").map(|s| s.to_string());
 
     let mut info = Info::default();
     let mut locale = Vec::new();
@@ -45,6 +46,7 @@ pub fn parse_style(node: Node) -> Result<Style, String> {
         sort_separator,
         delimiter_precedes_last,
         and,
+        page_range_format,
         info,
         locale,
         macros,

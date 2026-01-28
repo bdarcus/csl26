@@ -429,14 +429,13 @@ impl ComponentValues for TemplateNumber {
         &self,
         reference: &Reference,
         _hints: &ProcHints,
-        _options: &RenderOptions<'_>,
+        options: &RenderOptions<'_>,
     ) -> Option<ProcValues> {
         let value = match self.number {
             NumberVariable::Volume => reference.volume.as_ref().map(|v| v.to_string()),
             NumberVariable::Issue => reference.issue.as_ref().map(|v| v.to_string()),
             NumberVariable::Pages => reference.page.clone().map(|p| {
-                // Convert ASCII hyphen to en-dash for page ranges
-                p.replace("-", "–")
+                format_page_range(&p, options.config.page_range_format.as_ref())
             }),
             NumberVariable::Edition => reference.edition.as_ref().map(|v| v.to_string()),
             _ => None,
@@ -448,6 +447,104 @@ impl ComponentValues for TemplateNumber {
             suffix: None,
         })
     }
+}
+
+/// Format a page range according to the specified format.
+///
+/// Formats: expanded (default), minimal, minimal-two, chicago, chicago-16
+fn format_page_range(pages: &str, format: Option<&csln_core::options::PageRangeFormat>) -> String {
+    use csln_core::options::PageRangeFormat;
+    
+    // First, replace hyphen with en-dash
+    let pages = pages.replace("-", "–");
+    
+    // If no range or no format specified, return as-is
+    let format = match format {
+        Some(f) => f,
+        None => return pages, // Default: just convert to en-dash
+    };
+    
+    // Check if this is a range (contains en-dash)
+    let parts: Vec<&str> = pages.split('–').collect();
+    if parts.len() != 2 {
+        return pages; // Not a simple range
+    }
+    
+    let start = parts[0].trim();
+    let end = parts[1].trim();
+    
+    // Parse as numbers
+    let start_num: Option<u32> = start.parse().ok();
+    let end_num: Option<u32> = end.parse().ok();
+    
+    match (start_num, end_num) {
+        (Some(s), Some(e)) if e > s => {
+            let formatted_end = match format {
+                PageRangeFormat::Expanded => end.to_string(),
+                PageRangeFormat::Minimal => format_minimal(start, end, 1),
+                PageRangeFormat::MinimalTwo => format_minimal(start, end, 2),
+                PageRangeFormat::Chicago | PageRangeFormat::Chicago16 => {
+                    format_chicago(s, e)
+                }
+                _ => end.to_string(), // Future variants: default to expanded
+            };
+            format!("{}–{}", start, formatted_end)
+        }
+        _ => pages, // Can't parse or invalid range
+    }
+}
+
+/// Minimal format: keep only differing digits, with minimum min_digits
+fn format_minimal(start: &str, end: &str, min_digits: usize) -> String {
+    let start_chars: Vec<char> = start.chars().collect();
+    let end_chars: Vec<char> = end.chars().collect();
+    
+    if start_chars.len() != end_chars.len() {
+        return end.to_string();
+    }
+    
+    // Find first differing position
+    let mut first_diff = 0;
+    for (i, (s, e)) in start_chars.iter().zip(end_chars.iter()).enumerate() {
+        if s != e {
+            first_diff = i;
+            break;
+        }
+    }
+    
+    // Keep at least min_digits from the end
+    let keep_from = first_diff.min(end_chars.len().saturating_sub(min_digits));
+    end_chars[keep_from..].iter().collect()
+}
+
+/// Chicago Manual of Style page range format
+fn format_chicago(start: u32, end: u32) -> String {
+    // Chicago rules (simplified from CMOS 17th):
+    // - Under 100: use all digits (3–10, 71–72, 96–117)
+    // - 100+, same hundreds: use changed part only for 2+ digits (107–8, 321–28, 1536–38)
+    // - Different hundreds: use all digits (107–108, 321–328 if change of hundreds)
+    
+    if start < 100 || end < 100 {
+        return end.to_string();
+    }
+    
+    let start_str = start.to_string();
+    let end_str = end.to_string();
+    
+    if start_str.len() != end_str.len() {
+        return end_str;
+    }
+    
+    // Check if same hundreds
+    let start_prefix = start / 100;
+    let end_prefix = end / 100;
+    
+    if start_prefix != end_prefix {
+        return end_str; // Different hundreds, use full number
+    }
+    
+    // Same hundreds: use minimal-two style
+    format_minimal(&start_str, &end_str, 2)
 }
 
 impl ComponentValues for TemplateVariable {
@@ -654,5 +751,44 @@ mod tests {
 
         let values = component.values(&reference, &hints, &options).unwrap();
         assert_eq!(values.value, "LeCun et al.");
+    }
+
+    #[test]
+    fn test_format_page_range_expanded() {
+        use csln_core::options::PageRangeFormat;
+        assert_eq!(format_page_range("321-328", Some(&PageRangeFormat::Expanded)), "321–328");
+        assert_eq!(format_page_range("42-45", Some(&PageRangeFormat::Expanded)), "42–45");
+    }
+
+    #[test]
+    fn test_format_page_range_minimal() {
+        use csln_core::options::PageRangeFormat;
+        // minimal: keep only differing digits
+        assert_eq!(format_page_range("321-328", Some(&PageRangeFormat::Minimal)), "321–8");
+        assert_eq!(format_page_range("42-45", Some(&PageRangeFormat::Minimal)), "42–5");
+        assert_eq!(format_page_range("12-17", Some(&PageRangeFormat::Minimal)), "12–7");
+    }
+
+    #[test]
+    fn test_format_page_range_minimal_two() {
+        use csln_core::options::PageRangeFormat;
+        // minimal-two: at least 2 digits
+        assert_eq!(format_page_range("321-328", Some(&PageRangeFormat::MinimalTwo)), "321–28");
+        assert_eq!(format_page_range("42-45", Some(&PageRangeFormat::MinimalTwo)), "42–45");
+    }
+
+    #[test]
+    fn test_format_page_range_chicago() {
+        use csln_core::options::PageRangeFormat;
+        // Chicago: special rules for under 100 and same hundreds
+        assert_eq!(format_page_range("71-72", Some(&PageRangeFormat::Chicago)), "71–72");
+        assert_eq!(format_page_range("321-328", Some(&PageRangeFormat::Chicago)), "321–28");
+        assert_eq!(format_page_range("1536-1538", Some(&PageRangeFormat::Chicago)), "1536–38");
+    }
+
+    #[test]
+    fn test_format_page_range_no_format() {
+        // No format specified: just convert hyphen to en-dash
+        assert_eq!(format_page_range("321-328", None), "321–328");
     }
 }

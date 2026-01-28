@@ -33,6 +33,27 @@ pub struct Config {
     /// Title formatting defaults.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub titles: Option<TitlesConfig>,
+    /// Page range formatting (expanded, minimal, chicago).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub page_range_format: Option<PageRangeFormat>,
+}
+
+/// Page range formatting options.
+#[derive(Debug, Default, PartialEq, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+#[non_exhaustive]
+pub enum PageRangeFormat {
+    /// Full expansion: 321-328 → 321–328
+    #[default]
+    Expanded,
+    /// Minimal digits: 321-328 → 321–8
+    Minimal,
+    /// Minimal two digits: 321-328 → 321–28
+    MinimalTwo,
+    /// Chicago Manual of Style 15th ed rules
+    Chicago,
+    /// Chicago Manual of Style 16th/17th ed rules
+    Chicago16,
 }
 
 /// Title formatting configuration by title type.

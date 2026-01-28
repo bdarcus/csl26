@@ -31,9 +31,11 @@ name = "csln_analyze"
 version = "0.1.0"
 dependencies = [
  "csl_legacy",
+ "csln_core",
  "roxmltree",
  "serde",
  "serde_json",
+ "serde_yaml",
  "walkdir",
 ]
 
