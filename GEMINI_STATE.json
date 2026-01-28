@@ -15,24 +15,27 @@
     "baseline_migration_analysis_complete",
     "phase_2a_schema_alignment_complete",
     "phase_2b_options_extractor_created",
-    "phase_2b_apa_tested_and_integrated"
+    "phase_2b_apa_tested_and_integrated",
+    "phase_2c_template_compiler_complete"
   ],
-  "current_task": "phase_2c_compressor_enhancement",
+  "current_task": "phase_2d_oracle_verification",
   "last_updated": "2026-01-28",
   "next_steps": [
-    "refactor compressor to emit TemplateComponent instead of CslnNode",
-    "create new Style output combining options + templates",
-    "set up citeproc-js oracle verification"
+    "set up citeproc-js npm harness",
+    "compare rendered output for APA",
+    "refine TemplateCompiler for missing cases"
   ],
   "files_created": [
     "crates/csln_core/src/options.rs",
     "crates/csln_core/src/template.rs",
-    "crates/csln_migrate/src/options_extractor.rs"
+    "crates/csln_migrate/src/options_extractor.rs",
+    "crates/csln_migrate/src/template_compiler.rs"
   ],
-  "tests_passing": 16,
+  "tests_passing": 20,
   "commits_today": [
     "0501dc0 - feat: add CSLN schema and OptionsExtractor",
-    "b767d88 - fix: improve substitute extraction for real styles", 
-    "d5816e8 - feat: integrate OptionsExtractor into migration CLI"
+    "b767d88 - fix: improve substitute extraction for real styles",
+    "db842a1 - feat: integrate OptionsExtractor into migration CLI",
+    "e919140 - feat: add TemplateCompiler for clean CSLN output"
   ]
 }
