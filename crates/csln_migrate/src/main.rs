@@ -135,6 +135,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         number: csln_core::template::NumberVariable::Volume,
                         form: None,
                         rendering: csln_core::template::Rendering::default(),
+                        overrides: None,
                     }),
                     TemplateComponent::Number(csln_core::template::TemplateNumber {
                         number: csln_core::template::NumberVariable::Issue,
@@ -143,6 +144,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                             wrap: Some(csln_core::template::WrapPunctuation::Parentheses),
                             ..Default::default()
                         },
+                        overrides: None,
                     }),
                 ],
                 delimiter: Some(csln_core::template::DelimiterPunctuation::None),  // No delimiter between volume and (issue)
@@ -156,6 +158,20 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         // - Chapters need "(pp. pages)"
         // - Journals just need "pages"
         // This requires type overrides which aren't yet implemented.
+        
+        // Add type-specific override: suppress publisher for journal articles
+        for component in &mut new_bib {
+            if let TemplateComponent::Variable(v) = component {
+                if v.variable == csln_core::template::SimpleVariable::Publisher {
+                    let mut overrides = std::collections::HashMap::new();
+                    overrides.insert("article-journal".to_string(), csln_core::template::Rendering {
+                        suppress: Some(true),
+                        ..Default::default()
+                    });
+                    v.overrides = Some(overrides);
+                }
+            }
+        }
     }
 
     // 5. Build Style in correct format for csln_processor

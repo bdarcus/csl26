@@ -237,6 +237,7 @@ impl TemplateCompiler {
                 number: num_var,
                 form: None,
                 rendering: self.convert_formatting(&var.formatting),
+                overrides: None,
             }));
         }
 
@@ -245,6 +246,7 @@ impl TemplateCompiler {
             return Some(TemplateComponent::Variable(TemplateVariable {
                 variable: simple_var,
                 rendering: self.convert_formatting(&var.formatting),
+                overrides: None,
             }));
         }
 
@@ -297,6 +299,7 @@ impl TemplateCompiler {
             prefix: fmt.prefix.clone(),
             suffix: fmt.suffix.clone(),
             wrap: None, // Would need to infer from prefix/suffix patterns like "(" and ")"
+            suppress: None,
         }
     }
 }

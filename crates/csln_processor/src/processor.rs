@@ -140,18 +140,38 @@ impl Processor {
         let default_hint = ProcHints::default();
         let hint = self.hints.get(&reference.id).unwrap_or(&default_hint);
 
+        // Track rendered variables to prevent duplicates (CSL 1.0 spec)
+        let mut rendered_vars: std::collections::HashSet<String> = std::collections::HashSet::new();
+
         let components: Vec<ProcTemplateComponent> = template
             .iter()
             .filter_map(|component| {
+                // Get variable key for deduplication
+                let var_key = get_variable_key(component);
+                
+                // Skip if this variable was already rendered (CSL 1.0 spec)
+                if let Some(ref key) = var_key {
+                    if rendered_vars.contains(key) {
+                        return None;
+                    }
+                }
+                
                 let values = component.values(reference, hint, &options)?;
                 if values.value.is_empty() {
                     return None;
                 }
+                
+                // Mark variable as rendered
+                if let Some(key) = var_key {
+                    rendered_vars.insert(key);
+                }
+                
                 Some(ProcTemplateComponent {
                     template_component: component.clone(),
                     value: values.value,
                     prefix: values.prefix,
                     suffix: values.suffix,
+                    ref_type: Some(reference.ref_type.clone()),
                 })
             })
             .collect();
@@ -266,6 +286,22 @@ impl Processor {
     pub fn render_bibliography(&self) -> String {
         let processed = self.process_references();
         refs_to_string(processed.bibliography)
+    }
+}
+
+/// Get a unique key for a template component's variable.
+/// Used to prevent duplicate variable rendering (CSL 1.0 spec).
+fn get_variable_key(component: &TemplateComponent) -> Option<String> {
+    use csln_core::template::*;
+    
+    match component {
+        TemplateComponent::Contributor(c) => Some(format!("contributor:{:?}", c.contributor)),
+        TemplateComponent::Date(d) => Some(format!("date:{:?}", d.date)),
+        TemplateComponent::Title(t) => Some(format!("title:{:?}", t.title)),
+        TemplateComponent::Number(n) => Some(format!("number:{:?}", n.number)),
+        TemplateComponent::Variable(v) => Some(format!("variable:{:?}", v.variable)),
+        TemplateComponent::List(_) => None, // Lists can contain multiple variables
+        _ => None, // Future component types
     }
 }
 

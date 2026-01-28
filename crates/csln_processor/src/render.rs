@@ -5,7 +5,7 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 
 //! Rendering utilities for CSLN templates.
 
-use csln_core::template::{TemplateComponent, WrapPunctuation};
+use csln_core::template::{TemplateComponent, WrapPunctuation, Rendering};
 use std::fmt::Write;
 
 /// A processed template component with its rendered value.
@@ -19,6 +19,8 @@ pub struct ProcTemplateComponent {
     pub prefix: Option<String>,
     /// Optional suffix from value extraction.
     pub suffix: Option<String>,
+    /// Reference type for type-specific overrides.
+    pub ref_type: Option<String>,
 }
 
 /// A processed template (list of rendered components).
@@ -51,14 +53,16 @@ pub fn refs_to_string(proc_templates: Vec<ProcTemplate>) -> String {
             }
             let _ = write!(&mut output, "{}", rendered);
         }
-        // Don't add period if last component is DOI/URL (they end with the link)
-        let last_is_link = proc_template.last().map_or(false, |c| {
-            matches!(&c.template_component, 
-                TemplateComponent::Variable(v) if matches!(v.variable, 
-                    csln_core::template::SimpleVariable::Doi | csln_core::template::SimpleVariable::Url
+        // Don't add period if last *rendered* component is DOI/URL
+        let last_is_link = proc_template.iter().rev()
+            .find(|c| !render_component(c).is_empty())
+            .map_or(false, |c| {
+                matches!(&c.template_component, 
+                    TemplateComponent::Variable(v) if matches!(v.variable, 
+                        csln_core::template::SimpleVariable::Doi | csln_core::template::SimpleVariable::Url
+                    )
                 )
-            )
-        });
+            });
         if !output.ends_with('.') && !last_is_link {
             output.push('.');
         }
@@ -85,7 +89,14 @@ pub fn citation_to_string(proc_template: &ProcTemplate, wrap_parens: bool) -> St
 
 /// Render a single component to string.
 fn render_component(component: &ProcTemplateComponent) -> String {
-    let rendering = component.template_component.rendering();
+    // Get base rendering and apply type-specific overrides if present
+    let base_rendering = component.template_component.rendering();
+    let rendering = get_effective_rendering(component, base_rendering);
+    
+    // Check if suppressed
+    if rendering.suppress == Some(true) {
+        return String::new();
+    }
 
     let prefix = rendering.prefix.as_deref().unwrap_or_default();
     let suffix = rendering.suffix.as_deref().unwrap_or_default();
@@ -121,6 +132,38 @@ fn render_component(component: &ProcTemplateComponent) -> String {
     )
 }
 
+/// Get effective rendering, applying type-specific overrides if present.
+fn get_effective_rendering(component: &ProcTemplateComponent, base: &Rendering) -> Rendering {
+    let ref_type = match &component.ref_type {
+        Some(t) => t,
+        None => return base.clone(),
+    };
+    
+    // Check for overrides based on component type
+    let overrides = match &component.template_component {
+        TemplateComponent::Number(n) => n.overrides.as_ref(),
+        TemplateComponent::Variable(v) => v.overrides.as_ref(),
+        _ => None,
+    };
+    
+    if let Some(override_map) = overrides {
+        if let Some(type_override) = override_map.get(ref_type) {
+            // Merge: override takes precedence, but use base for None values
+            return Rendering {
+                emph: type_override.emph.or(base.emph),
+                quote: type_override.quote.or(base.quote),
+                strong: type_override.strong.or(base.strong),
+                prefix: type_override.prefix.clone().or(base.prefix.clone()),
+                suffix: type_override.suffix.clone().or(base.suffix.clone()),
+                wrap: type_override.wrap.clone().or(base.wrap.clone()),
+                suppress: type_override.suppress.or(base.suppress),
+            };
+        }
+    }
+    
+    base.clone()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -142,6 +185,7 @@ mod tests {
                 value: "Kuhn".to_string(),
                 prefix: None,
                 suffix: None,
+                ref_type: None,
             },
             ProcTemplateComponent {
                 template_component: TemplateComponent::Date(TemplateDate {
@@ -152,6 +196,7 @@ mod tests {
                 value: "1962".to_string(),
                 prefix: None,
                 suffix: None,
+                ref_type: None,
             },
         ];
 
@@ -173,6 +218,7 @@ mod tests {
             value: "1962".to_string(),
             prefix: None,
             suffix: None,
+            ref_type: None,
         };
 
         let result = render_component(&component);
@@ -193,6 +239,7 @@ mod tests {
             value: "The Structure of Scientific Revolutions".to_string(),
             prefix: None,
             suffix: None,
+            ref_type: None,
         };
 
         let result = render_component(&component);

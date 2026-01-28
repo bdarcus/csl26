@@ -10,6 +10,7 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 //! are simple, typed instructions that the processor interprets.
 
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 /// Rendering instructions applied to template components.
 /// 
@@ -35,6 +36,9 @@ pub struct Rendering {
     pub suffix: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub wrap: Option<WrapPunctuation>,
+    /// If true, suppress this component entirely.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub suppress: Option<bool>,
 }
 
 /// Punctuation to wrap a component in.
@@ -189,21 +193,25 @@ pub enum TitleForm {
 }
 
 /// A number component (volume, issue, pages, etc.).
-#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
-#[serde(rename_all = "kebab-case")]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Default)]
+#[serde(rename_all = "kebab-case", default, deny_unknown_fields)]
 pub struct TemplateNumber {
     pub number: NumberVariable,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub form: Option<NumberForm>,
-    #[serde(flatten, default)]
+    #[serde(flatten)]
     pub rendering: Rendering,
+    /// Type-specific rendering overrides.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub overrides: Option<HashMap<String, Rendering>>,
 }
 
 /// Number variables.
-#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+#[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq)]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub enum NumberVariable {
+    #[default]
     Volume,
     Issue,
     Pages,
@@ -225,19 +233,23 @@ pub enum NumberForm {
 }
 
 /// A simple variable component (DOI, ISBN, URL, etc.).
-#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
-#[serde(rename_all = "kebab-case")]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Default)]
+#[serde(rename_all = "kebab-case", default, deny_unknown_fields)]
 pub struct TemplateVariable {
     pub variable: SimpleVariable,
-    #[serde(flatten, default)]
+    #[serde(flatten)]
     pub rendering: Rendering,
+    /// Type-specific rendering overrides. Use `suppress: true` to hide for certain types.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub overrides: Option<HashMap<String, Rendering>>,
 }
 
 /// Simple string variables.
-#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+#[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq)]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub enum SimpleVariable {
+    #[default]
     Doi,
     Isbn,
     Issn,
@@ -372,5 +384,37 @@ wrap: parentheses
         let comp: TemplateContributor = serde_yaml::from_str(yaml).unwrap();
         assert_eq!(comp.contributor, ContributorRole::Publisher);
         assert_eq!(comp.rendering.wrap, Some(WrapPunctuation::Parentheses));
+    }
+    
+    #[test]
+    fn test_variable_deserialization() {
+        // Test that `variable: publisher` parses as Variable, not Number
+        let yaml = "variable: publisher\n";
+        let comp: TemplateComponent = serde_yaml::from_str(yaml).unwrap();
+        match comp {
+            TemplateComponent::Variable(v) => {
+                assert_eq!(v.variable, SimpleVariable::Publisher);
+            }
+            _ => panic!("Expected Variable(Publisher), got {:?}", comp),
+        }
+    }
+    
+    #[test]
+    fn test_variable_array_parsing() {
+        let yaml = r#"
+- variable: doi
+  prefix: "https://doi.org/"
+- variable: publisher
+"#;
+        let comps: Vec<TemplateComponent> = serde_yaml::from_str(yaml).unwrap();
+        assert_eq!(comps.len(), 2);
+        match &comps[0] {
+            TemplateComponent::Variable(v) => assert_eq!(v.variable, SimpleVariable::Doi),
+            _ => panic!("Expected Variable for doi, got {:?}", comps[0]),
+        }
+        match &comps[1] {
+            TemplateComponent::Variable(v) => assert_eq!(v.variable, SimpleVariable::Publisher),
+            _ => panic!("Expected Variable for publisher, got {:?}", comps[1]),
+        }
     }
 }
