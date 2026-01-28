@@ -145,13 +145,28 @@ fn create_test_bibliography() -> Bibliography {
         },
     );
 
+    // ITEM-5: World Bank report (corporate author)
+    bib.insert(
+        "ITEM-5".to_string(),
+        Reference {
+            id: "ITEM-5".to_string(),
+            ref_type: "report".to_string(),
+            author: Some(vec![Name::literal("World Bank")]),
+            title: Some("World Development Report 2023".to_string()),
+            issued: Some(DateVariable::year(2023)),
+            publisher: Some("World Bank Group".to_string()),
+            publisher_place: Some("Washington, DC".to_string()),
+            ..Default::default()
+        },
+    );
+
     bib
 }
 
 fn print_human(processor: &Processor, style_name: &str, show_cite: bool, show_bib: bool) {
     println!("\n=== {} ===\n", style_name);
 
-    let item_ids = ["ITEM-1", "ITEM-2", "ITEM-3", "ITEM-4"];
+    let item_ids = ["ITEM-1", "ITEM-2", "ITEM-3", "ITEM-4", "ITEM-5"];
 
     if show_cite {
         println!("CITATIONS:");
