@@ -254,6 +254,12 @@ pub enum SimpleVariable {
     Status,
     Archive,
     ArchiveLocation,
+    Publisher,
+    PublisherPlace,
+    EventPlace,
+    Dimensions,
+    Scale,
+    Version,
 }
 
 /// A list component for grouping multiple items with a delimiter.

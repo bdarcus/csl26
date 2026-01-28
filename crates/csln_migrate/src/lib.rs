@@ -4,10 +4,12 @@ use std::collections::HashMap;
 pub mod upsampler;
 pub mod compressor;
 pub mod options_extractor;
+pub mod template_compiler;
 
 pub use upsampler::Upsampler;
 pub use compressor::Compressor;
 pub use options_extractor::OptionsExtractor;
+pub use template_compiler::TemplateCompiler;
 pub struct MacroInliner {
     macros: HashMap<String, Vec<CslNode>>,
 }

@@ -260,7 +260,7 @@ pub struct EtAlSubsequent {
     pub use_first: u8,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct DateOptions {
     pub form: Option<DateForm>,

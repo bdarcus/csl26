@@ -4,18 +4,18 @@ info:
 locale:
   terms:
     post: online post
-    bc: ' B.C.E.'
+    software: computer software
+    review-of: review of the
     supplement:short: "\n        "
     illustrator:short: illus.
-    legislation:short: Pub. L.
-    circa:short: ca.
-    manuscript: unpublished manuscript
     performer:verb: recorded by
-    ad: ' C.E.'
-    review-of: review of the
-    interviewer:short: "\n        "
     review-of:short: review of
-    software: computer software
+    bc: ' B.C.E.'
+    ad: ' C.E.'
+    circa:short: ca.
+    legislation:short: Pub. L.
+    interviewer:short: "\n        "
+    manuscript: unpublished manuscript
     guest: "\n        "
 citation:
 - type: group

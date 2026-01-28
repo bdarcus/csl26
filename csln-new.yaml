@@ -1,0 +1,62 @@
+info:
+  title: APA Style 7th edition
+  id: http://www.zotero.org/styles/apa
+options:
+  substitute:
+    template:
+    - title
+    - editor
+  processing: author-date
+  contributors:
+    display-as-sort: all
+    shorten:
+      min: 3
+      use-first: 1
+      and-others: et-al
+      delimiter-precedes-last: contextual
+    delimiter: '-'
+    and: symbol
+citation:
+- title: primary
+  quote: true
+- contributor: interviewer
+  form: short
+- variable: genre
+- contributor: composer
+  form: short
+- date: original-published
+  form: year
+- date: issued
+  form: year
+bibliography:
+- title: primary
+- contributor: author
+  form: short
+- date: issued
+  form: full
+- variable: genre
+- number: chapter-number
+- number: volume
+- title: parent-serial
+- variable: doi
+  prefix: https://doi.org/
+- date: accessed
+  form: full
+- variable: url
+- contributor: composer
+  form: long
+- contributor: interviewer
+  form: long
+  delimiter: '; '
+- contributor: container-author
+  form: long
+- number: edition
+- title: parent-monograph
+- number: number-of-volumes
+- number: issue
+- number: pages
+- variable: publisher
+- date: event-date
+  form: full
+- date: original-published
+  form: year
