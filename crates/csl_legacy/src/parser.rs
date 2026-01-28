@@ -293,6 +293,10 @@ fn parse_names(node: Node) -> Result<Names, String> {
     Ok(Names {
         variable,
         delimiter: node.attribute("delimiter").map(|s| s.to_string()),
+        et_al_min: node.attribute("et-al-min").and_then(|s| s.parse().ok()),
+        et_al_use_first: node.attribute("et-al-use-first").and_then(|s| s.parse().ok()),
+        et_al_subsequent_min: node.attribute("et-al-subsequent-min").and_then(|s| s.parse().ok()),
+        et_al_subsequent_use_first: node.attribute("et-al-subsequent-use-first").and_then(|s| s.parse().ok()),
         children,
     })
 }
@@ -395,6 +399,10 @@ fn parse_name(node: Node) -> Result<Name, String> {
         initialize_with: node.attribute("initialize-with").map(|s| s.to_string()),
         form: node.attribute("form").map(|s| s.to_string()),
         delimiter_precedes_last: node.attribute("delimiter-precedes-last").map(|s| s.to_string()),
+        et_al_min: node.attribute("et-al-min").and_then(|s| s.parse().ok()),
+        et_al_use_first: node.attribute("et-al-use-first").and_then(|s| s.parse().ok()),
+        et_al_subsequent_min: node.attribute("et-al-subsequent-min").and_then(|s| s.parse().ok()),
+        et_al_subsequent_use_first: node.attribute("et-al-subsequent-use-first").and_then(|s| s.parse().ok()),
     })
 }
 

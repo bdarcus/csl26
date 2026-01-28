@@ -2,12 +2,12 @@ use std::fs;
 use roxmltree::Document;
 use serde_json::to_string_pretty;
 use csl_legacy::parser::parse_style;
-use csln_migrate::{MacroInliner, Upsampler};
+use csln_migrate::{MacroInliner, Upsampler, Compressor};
 use csln_core::{CslnStyle, CslnInfo, CslnLocale};
 use std::collections::HashMap;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let path = "styles/chicago-author-date.csl";
+    let path = "styles/apa.csl";
     println!("Migrating {} to CSLN...", path);
     
     let text = fs::read_to_string(path)?;
@@ -21,8 +21,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // 2. Semantic Upsampling
     let upsampler = Upsampler;
-    let csln_bib = upsampler.upsample_nodes(&flattened_bib);
-    let csln_cit = upsampler.upsample_nodes(&flattened_cit);
+    let raw_bib = upsampler.upsample_nodes(&flattened_bib);
+    let raw_cit = upsampler.upsample_nodes(&flattened_cit);
+
+    // 3. Compression (Pattern Recognition)
+    println!("Compressing logic...");
+    let compressor = Compressor;
+    let csln_bib = compressor.compress_nodes(raw_bib);
+    let csln_cit = compressor.compress_nodes(raw_cit);
 
     // 2.5 Locale Upsampling
     let mut terms = HashMap::new();
@@ -50,9 +56,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     // 3. Output
-    let output_path = "csln.json";
-    println!("Migration complete. Writing to {}...", output_path);
-    fs::write(output_path, to_string_pretty(&csln_style)?)?;
+    let json_path = "csln.json";
+    let yaml_path = "csln.yaml";
+    println!("Migration complete. Writing to {} and {}...", json_path, yaml_path);
+    fs::write(json_path, serde_json::to_string_pretty(&csln_style)?)?;
+    fs::write(yaml_path, serde_yaml::to_string(&csln_style)?)?;
 
     Ok(())
 }

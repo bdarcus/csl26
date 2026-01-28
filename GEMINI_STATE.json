@@ -1,6 +1,6 @@
 {
-  "phase": "4_rendering_verification",
-  "status": "complete",
+  "phase": "csln_model_alignment",
+  "status": "in_progress",
   "completed_milestones": [
     "csl_legacy_strict_parser",
     "macro_inliner_recursion",
@@ -10,8 +10,14 @@
     "bulk_migration_proof_of_concept",
     "deep_verification_node_types",
     "rendering_oracle_vertical_slice",
-    "names_substitution_options_verification"
+    "names_substitution_options_verification",
+    "refactor_plan_created",
+    "baseline_migration_analysis_complete"
   ],
   "current_task": "awaiting_user_instructions",
-  "last_updated": "2026-01-27"
+  "last_updated": "2026-01-28",
+  "next_steps": [
+    "refactor csln_core to match csln-first.yaml schema",
+    "enhance compressor.rs for group merging and substitution detection"
+  ]
 }

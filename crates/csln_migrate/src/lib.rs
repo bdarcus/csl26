@@ -2,7 +2,9 @@ use csl_legacy::model::{Style, CslNode, Macro};
 use std::collections::HashMap;
 
 pub mod upsampler;
+pub mod compressor;
 pub use upsampler::Upsampler;
+pub use compressor::Compressor;
 pub struct MacroInliner {
     macros: HashMap<String, Vec<CslNode>>,
 }

@@ -4,9 +4,6 @@ use std::collections::HashMap;
 pub mod renderer; // Expose the renderer
 pub use renderer::{Renderer, CitationItem};
 
-// Re-exporting the previous enums (ItemType, Variable, etc. are already there)
-// I'll include them in the full file write for completeness and to ensure it compiles.
-
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Hash)]
 #[serde(rename_all = "kebab-case")]
 pub enum ItemType {
@@ -38,16 +35,14 @@ pub enum Variable {
 #[serde(rename_all = "kebab-case")]
 pub struct CslnStyle {
     pub info: CslnInfo,
-    pub locale: CslnLocale, // Simplification: Single merged locale for now
+    pub locale: CslnLocale,
     pub citation: Vec<CslnNode>,
     pub bibliography: Vec<CslnNode>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct CslnLocale {
-    pub terms: HashMap<String, String>, // term_name -> value (simplified)
-    // In reality, terms have forms (long/short/verb/symbol) and pluralization.
-    // We should probably model that key as "term:form".
+    pub terms: HashMap<String, String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -59,17 +54,11 @@ pub struct CslnInfo {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "kebab-case")]
 pub enum CslnNode {
-    /// A literal string (prefix/suffix/delimiter).
     Text { value: String },
-    /// A bibliographic variable with intelligent options.
     Variable(VariableBlock),
-    /// A date variable with specialized formatting options.
     Date(DateBlock),
-    /// A name variable with substitution and et-al logic.
     Names(NamesBlock),
-    /// A group of nodes with shared formatting and delimiter.
     Group(GroupBlock),
-    /// A conditional block (fallback for logic that can't be upsampled).
     Condition(ConditionBlock),
 }
 
@@ -80,7 +69,6 @@ pub struct VariableBlock {
     pub label: Option<LabelOptions>,
     #[serde(flatten)]
     pub formatting: FormattingOptions,
-    /// Type-specific overrides (e.g. Italics for Books).
     #[serde(skip_serializing_if = "HashMap::is_empty", default)]
     pub overrides: HashMap<ItemType, FormattingOptions>,
 }
@@ -145,9 +133,9 @@ pub struct NamesOptions {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub delimiter: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub mode: Option<NameMode>, // short, long, count
+    pub mode: Option<NameMode>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub and: Option<AndTerm>, // text, symbol
+    pub and: Option<AndTerm>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub delimiter_precedes_last: Option<DelimiterPrecedes>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -166,52 +154,50 @@ pub struct NamesOptions {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
-pub enum NameMode {
-    Long,
-    Short,
-    Count,
-}
+pub enum NameMode { Long, Short, Count }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
-pub enum AndTerm {
-    Text,
-    Symbol,
-}
+pub enum AndTerm { Text, Symbol }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
-pub enum DelimiterPrecedes {
-    Contextual,
-    AfterInvertedName,
-    Always,
-    Never,
-}
+pub enum DelimiterPrecedes { Contextual, AfterInvertedName, Always, Never }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
-pub enum NameAsSortOrder {
-    First,
-    All,
-}
+pub enum NameAsSortOrder { First, All }
 
-// Reusing EtAlOptions from previous definition in GEMINI.md, ensuring it's in the code
+/// Configuration for et-al abbreviation in names.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct EtAlOptions {
-    pub min: Option<usize>,
-    pub use_first: Option<usize>,
+    /// Minimum number of names to trigger abbreviation.
+    pub min: u8,
+    /// Number of names to show when triggered.
+    pub use_first: u8,
+    /// Optional separate configuration for subsequent citations (CSL 1.0 legacy).
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub term: Option<String>,
+    pub subsequent: Option<Box<EtAlSubsequent>>,
+    /// The term to use (e.g., "et al.", "and others").
+    pub term: String,
+    /// Formatting for the term (italic, bold).
+    pub formatting: FormattingOptions,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct EtAlSubsequent {
+    pub min: u8,
+    pub use_first: u8,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct DateOptions {
     pub form: Option<DateForm>,
-    pub parts: Option<DateParts>, // "year", "year-month", etc.
+    pub parts: Option<DateParts>,
     pub delimiter: Option<String>,
-    // Per-part formatting
     #[serde(skip_serializing_if = "Option::is_none")]
     pub year_form: Option<DatePartForm>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -222,28 +208,15 @@ pub struct DateOptions {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
-pub enum DateForm {
-    Text,
-    Numeric,
-}
+pub enum DateForm { Text, Numeric }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
-pub enum DateParts {
-    Year,
-    YearMonth,
-    YearMonthDay,
-}
+pub enum DateParts { Year, YearMonth, YearMonthDay }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
-pub enum DatePartForm {
-    Numeric,
-    NumericLeadingZeros,
-    Ordinal,
-    Long,
-    Short,
-}
+pub enum DatePartForm { Numeric, NumericLeadingZeros, Ordinal, Long, Short }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "kebab-case")]
@@ -255,6 +228,10 @@ pub struct FormattingOptions {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub font_weight: Option<FontWeight>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub text_decoration: Option<TextDecoration>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub vertical_align: Option<VerticalAlign>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub quotes: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub prefix: Option<String>,
@@ -265,10 +242,19 @@ pub struct FormattingOptions {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum FontStyle { Normal, Italic, Oblique }
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum FontVariant { Normal, SmallCaps }
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum FontWeight { Normal, Bold, Light }
-// ... (EtAlOptions etc from previous turn would go here too)
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum TextDecoration { None, Underline }
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum VerticalAlign { Baseline, Superscript, Subscript }

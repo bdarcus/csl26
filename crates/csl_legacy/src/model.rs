@@ -121,6 +121,10 @@ pub struct Name {
     pub initialize_with: Option<String>,
     pub form: Option<String>,
     pub delimiter_precedes_last: Option<String>,
+    pub et_al_min: Option<usize>,
+    pub et_al_use_first: Option<usize>,
+    pub et_al_subsequent_min: Option<usize>,
+    pub et_al_subsequent_use_first: Option<usize>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -182,6 +186,10 @@ pub struct Label {
 pub struct Names {
     pub variable: String,
     pub delimiter: Option<String>,
+    pub et_al_min: Option<usize>,
+    pub et_al_use_first: Option<usize>,
+    pub et_al_subsequent_min: Option<usize>,
+    pub et_al_subsequent_use_first: Option<usize>,
     pub children: Vec<CslNode>, // <name>, <label>, <substitute>, <et-al>
 }
 

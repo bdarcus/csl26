@@ -5,8 +5,6 @@ use std::collections::HashMap;
 pub struct CitationItem {
     pub item_type: ItemType,
     pub variables: HashMap<Variable, String>,
-    // In a real engine, dates and names would be structured.
-    // Here we use strings for simplicity of the vertical slice.
 }
 
 pub struct Renderer;
@@ -35,20 +33,17 @@ impl Renderer {
         if let Some(val) = item.variables.get(&block.variable) {
             let mut text = val.clone();
             
-            // Apply Label
             if let Some(label_opts) = &block.label {
-                // Simplistic label rendering
                 let prefix = label_opts.formatting.prefix.as_deref().unwrap_or("");
                 let suffix = label_opts.formatting.suffix.as_deref().unwrap_or("");
-                // Mock label lookup
                 let label_text = match block.variable {
                     Variable::Page => "p.",
+                    Variable::Volume => "vol.",
                     _ => "",
                 };
                 text = format!("{}{}{}{}", prefix, label_text, suffix, text);
             }
 
-            // Apply Formatting (Prefix/Suffix/Font)
             self.apply_formatting(&text, &block.formatting)
         } else {
             String::new()
@@ -57,7 +52,6 @@ impl Renderer {
 
     fn render_date(&self, block: &DateBlock, item: &CitationItem) -> String {
         if let Some(val) = item.variables.get(&block.variable) {
-            // Mock date rendering
             self.apply_formatting(val, &block.formatting)
         } else {
             String::new()
@@ -65,7 +59,6 @@ impl Renderer {
     }
 
     fn render_names(&self, block: &NamesBlock, item: &CitationItem) -> String {
-        // Find the active variable (primary or substitute)
         let active_val = if let Some(val) = item.variables.get(&block.variable) {
             Some(val.clone())
         } else {
@@ -74,14 +67,12 @@ impl Renderer {
         };
 
         if let Some(mut formatted) = active_val {
-            // 1. Initialize
             if let Some(init) = &block.options.initialize_with {
                 if !formatted.contains(init) {
                     formatted = format!("{} [Init: {}]", formatted, init);
                 }
             }
             
-            // 2. Sort Order
             if let Some(order) = &block.options.name_as_sort_order {
                 formatted = format!("{} [Sort: {:?}]", formatted, order);
             }
@@ -112,20 +103,11 @@ impl Renderer {
     }
 
     fn render_condition(&self, block: &ConditionBlock, item: &CitationItem) -> String {
-        // Evaluate IF (OR logic usually in CSL, but let's assume AND for different attributes? 
-        // CSL 1.0 <if type="book" variable="author"> is AND.
-        // But <if type="book article"> is OR.
-        
         let type_match = block.if_item_type.is_empty() || block.if_item_type.contains(&item.item_type);
-        
         let var_match = block.if_variables.is_empty() || block.if_variables.iter().any(|v| item.variables.contains_key(v));
         
-        // If both lists are empty, it's a "True" block (shouldn't happen in valid CSL but handled here)
-        // If one is non-empty, it must match.
-        // Wait, if if_item_type is empty, it means "No type constraint".
-        
         let match_found = if block.if_item_type.is_empty() && block.if_variables.is_empty() {
-            false // Empty condition matches nothing (or maybe it was "is-numeric" which we ignore)
+            false
         } else {
             type_match && var_match
         };
@@ -151,13 +133,18 @@ impl Renderer {
         let prefix = fmt.prefix.as_deref().unwrap_or("");
         let suffix = fmt.suffix.as_deref().unwrap_or("");
         
-        // Mock font styles with markdown or HTML? Let's use simple indicators for console
         let mut res = text.to_string();
         if fmt.font_style == Some(crate::FontStyle::Italic) {
             res = format!("_{}_", res);
         }
         if fmt.font_weight == Some(crate::FontWeight::Bold) {
             res = format!("*{}*", res);
+        }
+        if fmt.text_decoration == Some(crate::TextDecoration::Underline) {
+            res = format!("<u>{}</u>", res);
+        }
+        if fmt.vertical_align == Some(crate::VerticalAlign::Superscript) {
+            res = format!("^{}^", res);
         }
 
         format!("{}{}{}", prefix, res, suffix)

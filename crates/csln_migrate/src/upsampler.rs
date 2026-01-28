@@ -13,8 +13,6 @@ impl Upsampler {
         while i < legacy_nodes.len() {
             let node = &legacy_nodes[i];
 
-            // HEURISTIC 1: Label + Variable Grouping
-            // If we see a Group containing exactly a Label and a Text/Number variable of the same type, collapse them.
             if let LNode::Group(group) = node {
                 if let Some(collapsed) = self.try_collapse_label_variable(group) {
                     csln_nodes.push(collapsed);
@@ -23,7 +21,6 @@ impl Upsampler {
                 }
             }
 
-            // HEURISTIC 2: Simple Variable Mapping
             if let Some(mapped) = self.map_node(node) {
                 csln_nodes.push(mapped);
             }
@@ -50,7 +47,6 @@ impl Upsampler {
                 if let Some(val) = &t.value {
                     return Some(csln::CslnNode::Text { value: val.clone() });
                 }
-                // eprintln!("Dropping text node: {:?}", t);
                 None
             }
             LNode::Group(g) => {
@@ -65,10 +61,7 @@ impl Upsampler {
             LNode::Choose(c) => self.map_choose(c),
             LNode::Number(n) => self.map_number(n),
             LNode::Label(l) => self.map_label(l),
-            _ => {
-                eprintln!("Dropping node type: {:?}", node); 
-                None
-            }
+            _ => None
         }
     }
 
@@ -80,11 +73,24 @@ impl Upsampler {
             ..Default::default()
         };
 
-        // Analyze children to populate options
+        // Extract et-al defaults from Names node
+        let mut et_al_min = n.et_al_min;
+        let mut et_al_use_first = n.et_al_use_first;
+        let mut et_al_subsequent = if n.et_al_subsequent_min.is_some() || n.et_al_subsequent_use_first.is_some() {
+            Some(Box::new(csln::EtAlSubsequent {
+                min: n.et_al_subsequent_min.unwrap_or(0) as u8,
+                use_first: n.et_al_subsequent_use_first.unwrap_or(0) as u8,
+            }))
+        } else {
+            None
+        };
+
+        let mut et_al_term = "et al.".to_string();
+        let mut et_al_formatting = FormattingOptions::default();
+
         for child in &n.children {
             match child {
                 LNode::Name(name) => {
-                    eprintln!("Mapping Name: {:?}", name);
                     options.mode = match name.form.as_deref() {
                         Some("short") => Some(csln::NameMode::Short),
                         Some("count") => Some(csln::NameMode::Count),
@@ -102,30 +108,34 @@ impl Upsampler {
                         Some("all") => Some(csln::NameAsSortOrder::All),
                         _ => None,
                     };
-                    options.delimiter_precedes_last = match name.delimiter_precedes_last.as_deref() { // Assuming I added this field to legacy model earlier? No wait.
-                        // I need to check if legacy Name model has this field.
-                        // Assuming it does for now, or I'll check model.rs
-                        _ => None, 
+                    options.delimiter_precedes_last = match name.delimiter_precedes_last.as_deref() {
+                        Some("contextual") => Some(csln::DelimiterPrecedes::Contextual),
+                        Some("after-inverted-name") => Some(csln::DelimiterPrecedes::AfterInvertedName),
+                        Some("always") => Some(csln::DelimiterPrecedes::Always),
+                        Some("never") => Some(csln::DelimiterPrecedes::Never),
+                        _ => None,
                     };
-                    // Actually, let me check legacy::Name struct first.
+                    
+                    // Name node can also have et-al attributes
+                    if name.et_al_min.is_some() { et_al_min = name.et_al_min; }
+                    if name.et_al_use_first.is_some() { et_al_use_first = name.et_al_use_first; }
                 }
                 LNode::Label(label) => {
                     options.label = Some(csln::LabelOptions {
                         form: self.map_label_form(&label.form),
-                        pluralize: true, // Auto-pluralization implied in Names
+                        pluralize: true,
                         formatting: self.map_formatting(&label.formatting, &label.prefix, &label.suffix, None),
                     });
                 }
                 LNode::EtAl(et_al) => {
-                    options.et_al = Some(csln::EtAlOptions {
-                        min: None, // CSL 1.0 puts this on <citation>/<bibliography> often, needs inheritance logic later
-                        use_first: None,
-                        term: et_al.term.clone(),
-                    });
+                    if let Some(term) = &et_al.term {
+                        et_al_term = term.clone();
+                    }
+                    // Formatting from et-al node? Legacy model needs to capture it.
+                    // For now, default.
                 }
                 LNode::Substitute(sub) => {
                     for sub_node in &sub.children {
-                        // Extract variables from substitute block
                         if let LNode::Names(sub_names) = sub_node {
                             if let Some(sub_var) = self.map_variable(&sub_names.variable) {
                                 options.substitute.push(sub_var);
@@ -137,17 +147,25 @@ impl Upsampler {
             }
         }
 
+        if let Some(min) = et_al_min {
+            options.et_al = Some(csln::EtAlOptions {
+                min: min as u8,
+                use_first: et_al_use_first.unwrap_or(1) as u8,
+                subsequent: et_al_subsequent,
+                term: et_al_term,
+                formatting: et_al_formatting,
+            });
+        }
+
         Some(csln::CslnNode::Names(csln::NamesBlock {
             variable,
             options,
-            formatting: FormattingOptions::default(), // Names node itself rarely has formatting, usually children do
+            formatting: FormattingOptions::default(),
         }))
     }
 
     fn map_number(&self, n: &legacy::Number) -> Option<csln::CslnNode> {
         let variable = self.map_variable(&n.variable)?;
-        // Numbers in CSLN are just Variables. 
-        // We capture the formatting from the legacy Number node.
         Some(csln::CslnNode::Variable(csln::VariableBlock {
             variable,
             label: None,
@@ -157,30 +175,8 @@ impl Upsampler {
     }
 
     fn map_label(&self, l: &legacy::Label) -> Option<csln::CslnNode> {
-        // Standalone labels are tricky.
-        // In CSLN, labels are usually attached to variables.
-        // For now, if we see a standalone label, we might map it to a Variable block 
-        // but this implies printing the variable too, which might not be intended 
-        // if the original XML had <label variable="page"/> without <text variable="page"/>.
-        // However, usually they appear together.
-        // If they appear apart, it's often inside a complex macro.
-        
-        // Strategy: Map to a VariableBlock but we need a way to say "Label Only".
-        // CSLN doesn't have "Label Only" yet.
-        // Let's Skip them for now but log them less noisily, OR map them to Text if they have constant content?
-        // No, they are dynamic.
-        
-        // Temporary Solution: Map to VariableBlock with a special "LabelOnly" override?
-        // Let's just drop them for now but I'll comment out the log to reduce noise, 
-        // knowing this is a known limitation of the current CSLN spec.
-        // Actually, let's map them to Text with a placeholder to signal "Label Here".
-        
         if let Some(var_str) = &l.variable {
              if let Some(var) = self.map_variable(var_str) {
-                 // We return a VariableBlock. If CSLN prints the variable value by default,
-                 // this might duplicate data if the style also has a Text node.
-                 // But typically, a Label node *without* a grouped Text node is rare or used for specific effects.
-                 // Let's return it as a VariableBlock and assume the user wants the label + variable.
                  return Some(csln::CslnNode::Variable(csln::VariableBlock {
                     variable: var,
                     label: Some(csln::LabelOptions {
@@ -188,7 +184,7 @@ impl Upsampler {
                         pluralize: true,
                         formatting: self.map_formatting(&l.formatting, &l.prefix, &l.suffix, None),
                     }),
-                    formatting: FormattingOptions::default(), // The variable value itself has no formatting from the label node
+                    formatting: FormattingOptions::default(),
                     overrides: HashMap::new(),
                 }));
              }
@@ -197,12 +193,7 @@ impl Upsampler {
     }
 
     fn map_choose(&self, c: &legacy::Choose) -> Option<csln::CslnNode> {
-        // For now, we just map the structure recursively.
-        // We aren't doing intelligent condition mapping yet (that's complex),
-        // but we MUST recurse to find the dates inside.
-        
         let mut if_item_type = Vec::new();
-        // Naive extraction of types from the if-branch for now
         if let Some(types) = &c.if_branch.type_ {
             for t in types.split_whitespace() {
                  if let Some(it) = self.map_item_type(t) {
@@ -227,8 +218,6 @@ impl Upsampler {
             else_branch: if let Some(else_children) = &c.else_branch {
                 Some(self.upsample_nodes(else_children))
             } else if !c.else_if_branches.is_empty() {
-                 // Flatten else-if into nested else for now, or just take the first one
-                 // This is lossy but lets us proceed with finding the dates.
                  Some(self.upsample_nodes(&c.else_if_branches[0].children))
             } else {
                 None
@@ -279,8 +268,6 @@ impl Upsampler {
 
     fn map_date(&self, d: &legacy::Date) -> Option<csln::CslnNode> {
         let variable = self.map_variable(&d.variable)?;
-        
-        // Infer configuration from date-parts
         let mut year_form = None;
         let mut month_form = None;
         let mut day_form = None;
@@ -305,7 +292,7 @@ impl Upsampler {
                 parts: match d.date_parts.as_deref() {
                     Some("year") => Some(csln::DateParts::Year),
                     Some("year-month") => Some(csln::DateParts::YearMonth),
-                    _ => None, // Default is usually full date
+                    _ => None,
                 },
                 delimiter: d.delimiter.clone(),
                 year_form,
@@ -340,7 +327,7 @@ impl Upsampler {
                                 variable: var,
                                 label: Some(csln::LabelOptions {
                                     form: self.map_label_form(&l.form),
-                                    pluralize: true, // Upsampled assumption
+                                    pluralize: true,
                                     formatting: self.map_formatting(&l.formatting, &l.prefix, &l.suffix, None),
                                 }),
                                 formatting: self.map_formatting(&t.formatting, &t.prefix, &t.suffix, t.quotes),
@@ -398,7 +385,6 @@ impl Upsampler {
             "citation-label" => Some(Variable::CitationLabel),
             "citation-number" => Some(Variable::CitationNumber),
             "year-suffix" => Some(Variable::YearSuffix),
-            // Names
             "author" => Some(Variable::Author),
             "editor" => Some(Variable::Editor),
             "editorial-director" => Some(Variable::EditorialDirector),
@@ -412,11 +398,10 @@ impl Upsampler {
             "interviewer" => Some(Variable::Interviewer),
             "recipient" => Some(Variable::Recipient),
             "reviewed-author" => Some(Variable::ReviewedAuthor),
-            // Dates
             "issued" => Some(Variable::Issued),
             "event-date" => Some(Variable::EventDate),
             "accessed" => Some(Variable::Accessed),
-            "container" => Some(Variable::Submitted), // Approximate mapping for now
+            "container" => Some(Variable::Submitted),
             "original-date" => Some(Variable::OriginalDate),
             "available-date" => Some(Variable::AvailableDate),
             _ => None,
@@ -435,15 +420,26 @@ impl Upsampler {
         FormattingOptions {
             font_style: f.font_style.as_ref().and_then(|s| match s.as_str() {
                 "italic" => Some(csln::FontStyle::Italic),
-                _ => None,
+                "oblique" => Some(csln::FontStyle::Oblique),
+                _ => Some(csln::FontStyle::Normal),
             }),
             font_weight: f.font_weight.as_ref().and_then(|s| match s.as_str() {
                 "bold" => Some(csln::FontWeight::Bold),
-                _ => None,
+                "light" => Some(csln::FontWeight::Light),
+                _ => Some(csln::FontWeight::Normal),
             }),
             font_variant: f.font_variant.as_ref().and_then(|s| match s.as_str() {
                 "small-caps" => Some(csln::FontVariant::SmallCaps),
-                _ => None,
+                _ => Some(csln::FontVariant::Normal),
+            }),
+            text_decoration: f.text_decoration.as_ref().and_then(|s| match s.as_str() {
+                "underline" => Some(csln::TextDecoration::Underline),
+                _ => Some(csln::TextDecoration::None),
+            }),
+            vertical_align: f.vertical_align.as_ref().and_then(|s| match s.as_str() {
+                "superscript" => Some(csln::VerticalAlign::Superscript),
+                "subscript" => Some(csln::VerticalAlign::Subscript),
+                _ => Some(csln::VerticalAlign::Baseline),
             }),
             quotes,
             prefix: prefix.clone(),

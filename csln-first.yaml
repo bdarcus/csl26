@@ -1,0 +1,62 @@
+---
+info:
+  title: APA
+options: 
+  substitute: 
+    contributor_role_form: short
+    template:
+      - editor
+      - title
+  processing: author-date # this sets sorting and grouping for author-date
+  titles:
+    component:
+      quote: true
+    default:
+      emph: true
+  contributors:
+    display_as_sort: first
+    and: symbol
+templates:
+  title-apa:
+    - title: primary
+  container-title:
+  # the below titles are mutually-exclusive, so at most one will be output
+    - title: parent-monograph
+      prefix: In 
+      emph: true
+    - title: parent-serial
+  author-apa-full:
+    - contributor: author
+      form: long
+  howpublished-apa:
+    - contributor: publisher
+      form: short
+      wrap: parentheses
+citation:
+  template:
+    - contributor: author
+      form: short
+    - date: issued
+      form: year
+bibliography: 
+  template:
+    - contributor: author
+      form: long
+    - date: issued
+      form: year
+      rendering: # not a fan of this
+        wrap: parentheses
+    - title: primary
+    - contributor: editor
+      form: verb
+    - title: parent-monograph
+      prefix: In 
+      emph: true
+    - title: parent-serial
+    - date: issued
+      form: month-day
+    - number: volume
+    - variable: doi
+    - contributor: publisher # location?
+      form: long # make optional, with default?
+      delimiter: colon # scope? delimiter vs item-delimiter?

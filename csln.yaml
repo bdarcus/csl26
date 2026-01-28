@@ -1,0 +1,3774 @@
+info:
+  title: APA Style 7th edition
+  id: http://www.zotero.org/styles/apa
+locale:
+  terms:
+    ad: ' C.E.'
+    guest: "\n        "
+    performer:verb: recorded by
+    post: online post
+    review-of: review of the
+    interviewer:short: "\n        "
+    circa:short: ca.
+    software: computer software
+    bc: ' B.C.E.'
+    manuscript: unpublished manuscript
+    legislation:short: Pub. L.
+    supplement:short: "\n        "
+    review-of:short: review of
+    illustrator:short: illus.
+citation:
+- type: group
+  children:
+  - type: condition
+    if_item_type:
+    - bill
+    - legal-case
+    - legislation
+    - treaty
+    then_branch:
+    - type: condition
+      if_variables:
+      - title
+      then_branch:
+      - type: condition
+        if_item_type:
+        - review
+        - review-book
+        if_variables:
+        - reviewed-author
+        then_branch:
+        - type: condition
+          if_variables:
+          - title
+          then_branch:
+          - type: variable
+            variable: title
+            quotes: true
+          else_branch:
+          - type: group
+            children:
+            - type: condition
+              if_item_type:
+              - interview
+              if_variables:
+              - interviewer
+              then_branch:
+              - type: names
+                variable: interviewer
+                mode: short
+                and: symbol
+                label:
+                  form: long
+                  pluralize: true
+                  suffix: ' '
+              else_branch:
+              - type: condition
+                if_variables:
+                - genre
+                then_branch:
+                - type: variable
+                  variable: genre
+                else_branch:
+                - type: condition
+                  if_item_type:
+                  - broadcast
+                  then_branch: []
+                  else_branch: []
+            delimiter: null
+            prefix: '['
+            suffix: ']'
+        else_branch:
+        - type: variable
+          variable: title
+          font-style: italic
+      else_branch:
+      - type: group
+        children:
+        - type: condition
+          if_item_type:
+          - interview
+          if_variables:
+          - interviewer
+          then_branch:
+          - type: names
+            variable: interviewer
+            mode: short
+            and: symbol
+            label:
+              form: long
+              pluralize: true
+              suffix: ' '
+          else_branch:
+          - type: condition
+            if_variables:
+            - genre
+            then_branch:
+            - type: variable
+              variable: genre
+            else_branch:
+            - type: condition
+              if_item_type:
+              - broadcast
+              then_branch: []
+              else_branch: []
+        delimiter: null
+        prefix: '['
+        suffix: ']'
+    else_branch:
+    - type: names
+      variable: composer
+      mode: short
+      and: symbol
+      substitute:
+      - author
+      - illustrator
+      - director
+      - editor
+      - editorial-director
+      - collection-editor
+  - type: group
+    children:
+    - type: condition
+      if_variables:
+      - issued
+      then_branch:
+      - type: group
+        children:
+        - type: group
+          children:
+          - type: condition
+            then_branch: []
+            else_branch: null
+          - type: date
+            variable: original-date
+            form: numeric
+            parts: year
+            delimiter: null
+          delimiter: ' '
+        - type: group
+          children:
+          - type: condition
+            if_variables:
+            - archive
+            - archive-place
+            - container-title
+            - d-o-i
+            - number
+            - publisher
+            - u-r-l
+            then_branch:
+            - type: group
+              children:
+              - type: condition
+                then_branch: []
+                else_branch: null
+              - type: date
+                variable: issued
+                form: numeric
+                parts: year
+                delimiter: null
+              delimiter: ' '
+            else_branch:
+            - type: group
+              children:
+              - type: condition
+                then_branch: []
+                else_branch: null
+              - type: date
+                variable: issued
+                form: numeric
+                parts: year
+                delimiter: null
+              delimiter: ' '
+          - type: variable
+            variable: year-suffix
+          delimiter: null
+        delimiter: /
+      else_branch:
+      - type: variable
+        variable: year-suffix
+    delimiter: '-'
+  - type: group
+    children:
+    - type: variable
+      variable: locator
+      label:
+        form: long
+        pluralize: true
+    - type: variable
+      variable: locator
+    delimiter: ' '
+  delimiter: ', '
+bibliography:
+- type: condition
+  if_variables:
+  - archive
+  - archive-place
+  - container-title
+  - d-o-i
+  - number
+  - publisher
+  - u-r-l
+  then_branch:
+  - type: group
+    children:
+    - type: condition
+      if_item_type:
+      - bill
+      - legal-case
+      - legislation
+      - treaty
+      then_branch:
+      - type: group
+        children:
+        - type: condition
+          if_item_type:
+          - treaty
+          then_branch:
+          - type: condition
+            if_item_type:
+            - bill
+            - legal-case
+            - legislation
+            - treaty
+            then_branch:
+            - type: variable
+              variable: title
+            else_branch:
+            - type: group
+              children:
+              - type: variable
+                variable: title
+              - type: group
+                children:
+                - type: group
+                  children:
+                  - type: variable
+                    variable: number
+                  delimiter: ' '
+                - type: group
+                  children:
+                  - type: text
+                    value: before the
+                  - type: variable
+                    variable: section
+                  delimiter: ' '
+                delimiter: ' '
+              delimiter: ': '
+              font-style: italic
+          - type: names
+            variable: author
+            mode: short
+            et-al:
+              min: 100
+              use-first: 99
+              term: et al.
+              formatting: {}
+          - type: condition
+            if_item_type:
+            - treaty
+            then_branch:
+            - type: group
+              children:
+              - type: condition
+                then_branch: []
+                else_branch: null
+              - type: date
+                variable: issued
+                form: text
+                parts: null
+                delimiter: null
+              delimiter: ' '
+            else_branch:
+            - type: group
+              children:
+              - type: condition
+                if_variables:
+                - container-title
+                then_branch:
+                - type: group
+                  children:
+                  - type: condition
+                    then_branch: []
+                    else_branch: null
+                  - type: date
+                    variable: issued
+                    form: numeric
+                    parts: year
+                    delimiter: null
+                  delimiter: ' '
+                else_branch:
+                - type: group
+                  children:
+                  - type: condition
+                    then_branch: []
+                    else_branch: null
+                  - type: date
+                    variable: issued
+                    form: text
+                    parts: null
+                    delimiter: null
+                  delimiter: ' '
+              delimiter: ' '
+              prefix: (
+              suffix: )
+          - type: condition
+            if_item_type:
+            - bill
+            then_branch:
+            - type: group
+              children:
+              - type: group
+                children:
+                - type: variable
+                  variable: genre
+                - type: condition
+                  if_variables:
+                  - chapter-number
+                  - container-title
+                  then_branch:
+                  - type: variable
+                    variable: number
+                  else_branch:
+                  - type: group
+                    children:
+                    - type: condition
+                      then_branch: []
+                      else_branch:
+                      - type: variable
+                        variable: number
+                        label:
+                          form: short
+                          pluralize: true
+                    - type: variable
+                      variable: number
+                    delimiter: ' '
+                delimiter: ' '
+              - type: group
+                children:
+                - type: variable
+                  variable: chapter-number
+                delimiter: ' '
+              - type: group
+                children:
+                - type: variable
+                  variable: volume
+                - type: variable
+                  variable: container-title
+                delimiter: ' '
+              delimiter: ', '
+            else_branch:
+            - type: group
+              children:
+              - type: variable
+                variable: chapter-number
+              delimiter: ' '
+          else_branch:
+          - type: group
+            children:
+            - type: group
+              children:
+              - type: condition
+                if_item_type:
+                - bill
+                - legal-case
+                - legislation
+                - treaty
+                then_branch:
+                - type: variable
+                  variable: title
+                else_branch:
+                - type: group
+                  children:
+                  - type: variable
+                    variable: title
+                  - type: group
+                    children:
+                    - type: group
+                      children:
+                      - type: variable
+                        variable: number
+                      delimiter: ' '
+                    - type: group
+                      children:
+                      - type: text
+                        value: before the
+                      - type: variable
+                        variable: section
+                      delimiter: ' '
+                    delimiter: ' '
+                  delimiter: ': '
+                  font-style: italic
+              - type: condition
+                if_item_type:
+                - bill
+                then_branch:
+                - type: group
+                  children:
+                  - type: group
+                    children:
+                    - type: variable
+                      variable: genre
+                    - type: condition
+                      if_variables:
+                      - chapter-number
+                      - container-title
+                      then_branch:
+                      - type: variable
+                        variable: number
+                      else_branch:
+                      - type: group
+                        children:
+                        - type: condition
+                          then_branch: []
+                          else_branch:
+                          - type: variable
+                            variable: number
+                            label:
+                              form: short
+                              pluralize: true
+                        - type: variable
+                          variable: number
+                        delimiter: ' '
+                    delimiter: ' '
+                  - type: group
+                    children:
+                    - type: variable
+                      variable: chapter-number
+                    delimiter: ' '
+                  - type: group
+                    children:
+                    - type: variable
+                      variable: volume
+                    - type: variable
+                      variable: container-title
+                    delimiter: ' '
+                  delimiter: ', '
+                else_branch:
+                - type: group
+                  children:
+                  - type: variable
+                    variable: chapter-number
+                  delimiter: ' '
+              delimiter: ', '
+            - type: condition
+              if_item_type:
+              - treaty
+              then_branch:
+              - type: group
+                children:
+                - type: condition
+                  then_branch: []
+                  else_branch: null
+                - type: date
+                  variable: issued
+                  form: text
+                  parts: null
+                  delimiter: null
+                delimiter: ' '
+              else_branch:
+              - type: group
+                children:
+                - type: condition
+                  if_variables:
+                  - container-title
+                  then_branch:
+                  - type: group
+                    children:
+                    - type: condition
+                      then_branch: []
+                      else_branch: null
+                    - type: date
+                      variable: issued
+                      form: numeric
+                      parts: year
+                      delimiter: null
+                    delimiter: ' '
+                  else_branch:
+                  - type: group
+                    children:
+                    - type: condition
+                      then_branch: []
+                      else_branch: null
+                    - type: date
+                      variable: issued
+                      form: text
+                      parts: null
+                      delimiter: null
+                    delimiter: ' '
+                delimiter: ' '
+                prefix: (
+                suffix: )
+            - type: group
+              children:
+              - type: condition
+                then_branch:
+                - type: names
+                  variable: author
+                  mode: long
+                  and: symbol
+                else_branch:
+                - type: variable
+                  variable: status
+              delimiter: ' '
+              prefix: (
+              suffix: )
+            delimiter: ' '
+        - type: group
+          children:
+          - type: condition
+            if_variables:
+            - page
+            then_branch: []
+            else_branch: null
+          - type: group
+            children:
+            - type: variable
+              variable: locator
+              label:
+                form: long
+                pluralize: true
+            - type: variable
+              variable: locator
+            delimiter: ' '
+          delimiter: ' '
+        delimiter: ', '
+      - type: condition
+        if_variables:
+        - d-o-i
+        then_branch:
+        - type: variable
+          variable: d-o-i
+          prefix: https://doi.org/
+        else_branch:
+        - type: group
+          children:
+          - type: condition
+            if_variables:
+            - issued
+            - status
+            then_branch:
+            - type: group
+              children:
+              - type: date
+                variable: accessed
+                form: text
+                parts: null
+                delimiter: null
+              delimiter: ', '
+            else_branch: null
+          - type: variable
+            variable: u-r-l
+          delimiter: ' '
+      else_branch:
+      - type: group
+        children:
+        - type: group
+          children:
+          - type: names
+            variable: composer
+            mode: long
+            and: symbol
+            delimiter-precedes-last: always
+            name-as-sort-order: all
+            label:
+              form: short
+              pluralize: true
+              prefix: ' ('
+              suffix: )
+            substitute:
+            - author
+            - illustrator
+            - director
+            - editor
+            - editorial-director
+            - collection-editor
+          - type: condition
+            if_variables:
+            - author
+            - composer
+            - editor
+            - illustrator
+            then_branch: []
+            else_branch: []
+          delimiter: ' '
+        - type: group
+          children:
+          - type: condition
+            if_variables:
+            - issued
+            then_branch:
+            - type: group
+              children:
+              - type: group
+                children:
+                - type: group
+                  children:
+                  - type: condition
+                    then_branch: []
+                    else_branch: null
+                  - type: date
+                    variable: issued
+                    form: numeric
+                    parts: year
+                    delimiter: null
+                  delimiter: ' '
+                - type: variable
+                  variable: year-suffix
+                delimiter: null
+              - type: condition
+                if_item_type:
+                - article-magazine
+                - article-newspaper
+                - broadcast
+                - motion-picture
+                - pamphlet
+                - personal-communication
+                - post
+                - post-weblog
+                - song
+                - speech
+                - webpage
+                then_branch:
+                - type: date
+                  variable: issued
+                  form: null
+                  parts: null
+                  delimiter: null
+                else_branch: []
+              delimiter: ', '
+            else_branch:
+            - type: variable
+              variable: year-suffix
+          delimiter: '-'
+          prefix: (
+          suffix: )
+        - type: group
+          children:
+          - type: condition
+            if_variables:
+            - title
+            then_branch:
+            - type: condition
+              if_item_type:
+              - post
+              - webpage
+              then_branch:
+              - type: condition
+                if_item_type:
+                - review
+                - review-book
+                if_variables:
+                - reviewed-author
+                then_branch:
+                - type: condition
+                  if_variables:
+                  - title
+                  then_branch:
+                  - type: group
+                    children:
+                    - type: variable
+                      variable: title
+                    - type: condition
+                      then_branch:
+                      - type: group
+                        children:
+                        - type: group
+                          children:
+                          - type: condition
+                            then_branch: []
+                            else_branch: null
+                          delimiter: ' '
+                        delimiter: '. '
+                      else_branch:
+                      - type: group
+                        children:
+                        - type: condition
+                          then_branch: []
+                          else_branch: null
+                        delimiter: ' '
+                    delimiter: ': '
+                  else_branch:
+                  - type: group
+                    children:
+                    - type: variable
+                      variable: title
+                    - type: condition
+                      then_branch:
+                      - type: group
+                        children:
+                        - type: group
+                          children:
+                          - type: condition
+                            then_branch: []
+                            else_branch: null
+                          delimiter: ' '
+                        delimiter: '. '
+                      else_branch:
+                      - type: group
+                        children:
+                        - type: condition
+                          then_branch: []
+                          else_branch: null
+                        delimiter: ' '
+                    delimiter: ': '
+                else_branch:
+                - type: group
+                  children:
+                  - type: variable
+                    variable: title
+                  - type: condition
+                    then_branch:
+                    - type: group
+                      children:
+                      - type: group
+                        children:
+                        - type: condition
+                          then_branch: []
+                          else_branch: null
+                        delimiter: ' '
+                      delimiter: '. '
+                    else_branch:
+                    - type: group
+                      children:
+                      - type: condition
+                        then_branch: []
+                        else_branch: null
+                      delimiter: ' '
+                  delimiter: ': '
+              else_branch:
+              - type: condition
+                if_variables:
+                - container-title
+                then_branch:
+                - type: variable
+                  variable: title
+                else_branch:
+                - type: group
+                  children:
+                  - type: variable
+                    variable: title
+                  - type: group
+                    children:
+                    - type: condition
+                      then_branch:
+                      - type: group
+                        children:
+                        - type: group
+                          children:
+                          - type: group
+                            children:
+                            - type: condition
+                              then_branch:
+                              - type: variable
+                                variable: volume
+                                label:
+                                  form: short
+                                  pluralize: true
+                              else_branch: null
+                            - type: variable
+                              variable: volume
+                            delimiter: ' '
+                          delimiter: '. '
+                        - type: condition
+                          then_branch:
+                          - type: group
+                            children:
+                            - type: group
+                              children:
+                              - type: condition
+                                then_branch: []
+                                else_branch: null
+                              delimiter: ' '
+                            delimiter: '. '
+                          else_branch:
+                          - type: group
+                            children:
+                            - type: condition
+                              then_branch: []
+                              else_branch: null
+                            delimiter: ' '
+                        delimiter: ': '
+                      else_branch:
+                      - type: group
+                        children:
+                        - type: condition
+                          then_branch:
+                          - type: variable
+                            variable: volume
+                            label:
+                              form: short
+                              pluralize: true
+                          else_branch: null
+                        - type: variable
+                          variable: volume
+                        delimiter: ' '
+                      - type: group
+                        children:
+                        - type: condition
+                          then_branch: []
+                          else_branch: null
+                        delimiter: ' '
+                    delimiter: ', '
+                  delimiter: ': '
+            - type: group
+              children:
+              - type: condition
+                if_item_type:
+                - patent
+                then_branch:
+                - type: group
+                  children:
+                  - type: condition
+                    if_variables:
+                    - genre
+                    then_branch:
+                    - type: variable
+                      variable: genre
+                    else_branch: []
+                  - type: group
+                    children:
+                    - type: condition
+                      then_branch: []
+                      else_branch:
+                      - type: variable
+                        variable: number
+                        label:
+                          form: short
+                          pluralize: true
+                    - type: variable
+                      variable: number
+                    delimiter: ' '
+                  delimiter: ' '
+                else_branch:
+                - type: condition
+                  if_item_type:
+                  - article-journal
+                  - article-magazine
+                  - article-newspaper
+                  - post-weblog
+                  - review
+                  - review-book
+                  then_branch:
+                  - type: group
+                    children:
+                    - type: condition
+                      if_variables:
+                      - title
+                      then_branch:
+                      - type: names
+                        variable: interviewer
+                        delimiter: '; '
+                        mode: long
+                        and: symbol
+                        label:
+                          form: short
+                          pluralize: true
+                          prefix: ', '
+                      else_branch: null
+                    delimiter: '; '
+                  else_branch:
+                  - type: group
+                    children:
+                    - type: condition
+                      if_variables:
+                      - title
+                      then_branch:
+                      - type: names
+                        variable: interviewer
+                        mode: long
+                        and: symbol
+                        label:
+                          form: short
+                          pluralize: true
+                          prefix: ', '
+                      else_branch: null
+                    - type: condition
+                      if_item_type:
+                      - post
+                      - webpage
+                      then_branch:
+                      - type: names
+                        variable: container-author
+                        mode: long
+                        and: symbol
+                        label:
+                          form: long
+                          pluralize: true
+                          suffix: ' '
+                      else_branch:
+                      - type: condition
+                        if_variables:
+                        - container-title
+                        then_branch: []
+                        else_branch:
+                        - type: names
+                          variable: container-author
+                          mode: long
+                          and: symbol
+                          label:
+                            form: long
+                            pluralize: true
+                            suffix: ' '
+                    delimiter: '; '
+                - type: group
+                  children:
+                  - type: condition
+                    if_item_type:
+                    - thesis
+                    if_variables:
+                    - genre
+                    then_branch:
+                    - type: text
+                      value: publication
+                    else_branch:
+                    - type: variable
+                      variable: genre
+                  - type: group
+                    children:
+                    - type: condition
+                      then_branch: []
+                      else_branch:
+                      - type: variable
+                        variable: number
+                        label:
+                          form: short
+                          pluralize: true
+                    - type: variable
+                      variable: number
+                    delimiter: ' '
+                  delimiter: ' '
+                - type: condition
+                  if_item_type:
+                  - article-journal
+                  - article-magazine
+                  - article-newspaper
+                  - broadcast
+                  - patent
+                  - post
+                  - post-weblog
+                  - review
+                  - review-book
+                  - speech
+                  - webpage
+                  then_branch: []
+                  else_branch:
+                  - type: group
+                    children:
+                    - type: variable
+                      variable: version
+                      label:
+                        form: long
+                        pluralize: true
+                    - type: group
+                      children:
+                      - type: condition
+                        then_branch:
+                        - type: variable
+                          variable: edition
+                        - type: variable
+                          variable: edition
+                          label:
+                            form: short
+                            pluralize: true
+                        else_branch:
+                        - type: variable
+                          variable: edition
+                      delimiter: ' '
+                    - type: condition
+                      if_item_type:
+                      - report
+                      then_branch:
+                      - type: group
+                        children:
+                        - type: variable
+                          variable: collection-title
+                        delimiter: ' '
+                      else_branch: null
+                    - type: group
+                      children:
+                      - type: condition
+                        then_branch: []
+                        else_branch: null
+                      delimiter: ' '
+                    - type: condition
+                      if_variables:
+                      - volume
+                      then_branch: []
+                      else_branch:
+                      - type: group
+                        children:
+                        - type: condition
+                          then_branch:
+                          - type: variable
+                            variable: number-of-volumes
+                            label:
+                              form: short
+                              pluralize: true
+                          - type: group
+                            children:
+                            - type: variable
+                              variable: number-of-volumes
+                            delimiter: null
+                          else_branch:
+                          - type: variable
+                            variable: number-of-volumes
+                        delimiter: ' '
+                    - type: condition
+                      then_branch: []
+                      else_branch:
+                      - type: group
+                        children:
+                        - type: condition
+                          then_branch: []
+                          else_branch: null
+                        delimiter: ' '
+                    - type: variable
+                      variable: issue
+                      label:
+                        form: long
+                        pluralize: true
+                    - type: condition
+                      if_variables:
+                      - page
+                      then_branch:
+                      - type: variable
+                        variable: page
+                        label:
+                          form: short
+                          pluralize: true
+                      else_branch:
+                      - type: group
+                        children:
+                        - type: condition
+                          if_item_type:
+                          - song
+                          then_branch:
+                          - type: text
+                            value: track
+                          else_branch:
+                          - type: variable
+                            variable: chapter-number
+                            label:
+                              form: long
+                              pluralize: true
+                        - type: variable
+                          variable: chapter-number
+                        delimiter: ' '
+                    delimiter: ', '
+                - type: condition
+                  if_item_type:
+                  - article-journal
+                  - article-magazine
+                  - article-newspaper
+                  - post-weblog
+                  - review
+                  - review-book
+                  then_branch:
+                  - type: condition
+                    then_branch: []
+                    else_branch:
+                    - type: group
+                      children:
+                      - type: condition
+                        then_branch: []
+                        else_branch: null
+                      delimiter: ' '
+                  else_branch: []
+              delimiter: '; '
+              prefix: (
+              suffix: )
+            - type: group
+              children:
+              - type: condition
+                if_item_type:
+                - interview
+                if_variables:
+                - interviewer
+                then_branch:
+                - type: group
+                  children:
+                  - type: condition
+                    if_variables:
+                    - interviewer
+                    - title
+                    then_branch:
+                    - type: condition
+                      if_variables:
+                      - number
+                      then_branch:
+                      - type: variable
+                        variable: genre
+                      else_branch: null
+                    - type: variable
+                      variable: medium
+                    else_branch:
+                    - type: condition
+                      if_variables:
+                      - genre
+                      - medium
+                      then_branch:
+                      - type: group
+                        children:
+                        - type: condition
+                          if_variables:
+                          - number
+                          then_branch:
+                          - type: variable
+                            variable: genre
+                          else_branch: null
+                        - type: variable
+                          variable: medium
+                        delimiter: '; '
+                      else_branch:
+                      - type: condition
+                        if_item_type:
+                        - broadcast
+                        then_branch: []
+                        else_branch: []
+                  delimiter: '; '
+                else_branch:
+                - type: condition
+                  if_variables:
+                  - genre
+                  - medium
+                  then_branch:
+                  - type: group
+                    children:
+                    - type: condition
+                      if_variables:
+                      - number
+                      then_branch:
+                      - type: variable
+                        variable: genre
+                      else_branch: null
+                    - type: variable
+                      variable: medium
+                    delimiter: '; '
+                  else_branch:
+                  - type: condition
+                    if_item_type:
+                    - broadcast
+                    then_branch: []
+                    else_branch: []
+              delimiter: null
+              prefix: '['
+              suffix: ']'
+            else_branch:
+            - type: group
+              children:
+              - type: condition
+                if_item_type:
+                - interview
+                if_variables:
+                - interviewer
+                then_branch:
+                - type: group
+                  children:
+                  - type: condition
+                    if_variables:
+                    - interviewer
+                    - title
+                    then_branch:
+                    - type: condition
+                      if_variables:
+                      - number
+                      then_branch:
+                      - type: variable
+                        variable: genre
+                      else_branch: null
+                    - type: variable
+                      variable: medium
+                    else_branch:
+                    - type: condition
+                      if_variables:
+                      - genre
+                      - medium
+                      then_branch:
+                      - type: group
+                        children:
+                        - type: condition
+                          if_variables:
+                          - number
+                          then_branch:
+                          - type: variable
+                            variable: genre
+                          else_branch: null
+                        - type: variable
+                          variable: medium
+                        delimiter: '; '
+                      else_branch:
+                      - type: condition
+                        if_item_type:
+                        - broadcast
+                        then_branch: []
+                        else_branch: []
+                  delimiter: '; '
+                else_branch:
+                - type: condition
+                  if_variables:
+                  - genre
+                  - medium
+                  then_branch:
+                  - type: group
+                    children:
+                    - type: condition
+                      if_variables:
+                      - number
+                      then_branch:
+                      - type: variable
+                        variable: genre
+                      else_branch: null
+                    - type: variable
+                      variable: medium
+                    delimiter: '; '
+                  else_branch:
+                  - type: condition
+                    if_item_type:
+                    - broadcast
+                    then_branch: []
+                    else_branch: []
+              delimiter: null
+              prefix: '['
+              suffix: ']'
+            - type: group
+              children:
+              - type: condition
+                if_item_type:
+                - patent
+                then_branch:
+                - type: group
+                  children:
+                  - type: condition
+                    if_variables:
+                    - genre
+                    then_branch:
+                    - type: variable
+                      variable: genre
+                    else_branch: []
+                  - type: group
+                    children:
+                    - type: condition
+                      then_branch: []
+                      else_branch:
+                      - type: variable
+                        variable: number
+                        label:
+                          form: short
+                          pluralize: true
+                    - type: variable
+                      variable: number
+                    delimiter: ' '
+                  delimiter: ' '
+                else_branch:
+                - type: condition
+                  if_item_type:
+                  - article-journal
+                  - article-magazine
+                  - article-newspaper
+                  - post-weblog
+                  - review
+                  - review-book
+                  then_branch:
+                  - type: group
+                    children:
+                    - type: condition
+                      if_variables:
+                      - title
+                      then_branch:
+                      - type: names
+                        variable: interviewer
+                        delimiter: '; '
+                        mode: long
+                        and: symbol
+                        label:
+                          form: short
+                          pluralize: true
+                          prefix: ', '
+                      else_branch: null
+                    delimiter: '; '
+                  else_branch:
+                  - type: group
+                    children:
+                    - type: condition
+                      if_variables:
+                      - title
+                      then_branch:
+                      - type: names
+                        variable: interviewer
+                        mode: long
+                        and: symbol
+                        label:
+                          form: short
+                          pluralize: true
+                          prefix: ', '
+                      else_branch: null
+                    - type: condition
+                      if_item_type:
+                      - post
+                      - webpage
+                      then_branch:
+                      - type: names
+                        variable: container-author
+                        mode: long
+                        and: symbol
+                        label:
+                          form: long
+                          pluralize: true
+                          suffix: ' '
+                      else_branch:
+                      - type: condition
+                        if_variables:
+                        - container-title
+                        then_branch: []
+                        else_branch:
+                        - type: names
+                          variable: container-author
+                          mode: long
+                          and: symbol
+                          label:
+                            form: long
+                            pluralize: true
+                            suffix: ' '
+                    delimiter: '; '
+                - type: group
+                  children:
+                  - type: condition
+                    if_item_type:
+                    - thesis
+                    if_variables:
+                    - genre
+                    then_branch:
+                    - type: text
+                      value: publication
+                    else_branch:
+                    - type: variable
+                      variable: genre
+                  - type: group
+                    children:
+                    - type: condition
+                      then_branch: []
+                      else_branch:
+                      - type: variable
+                        variable: number
+                        label:
+                          form: short
+                          pluralize: true
+                    - type: variable
+                      variable: number
+                    delimiter: ' '
+                  delimiter: ' '
+                - type: condition
+                  if_item_type:
+                  - article-journal
+                  - article-magazine
+                  - article-newspaper
+                  - broadcast
+                  - patent
+                  - post
+                  - post-weblog
+                  - review
+                  - review-book
+                  - speech
+                  - webpage
+                  then_branch: []
+                  else_branch:
+                  - type: group
+                    children:
+                    - type: variable
+                      variable: version
+                      label:
+                        form: long
+                        pluralize: true
+                    - type: group
+                      children:
+                      - type: condition
+                        then_branch:
+                        - type: variable
+                          variable: edition
+                        - type: variable
+                          variable: edition
+                          label:
+                            form: short
+                            pluralize: true
+                        else_branch:
+                        - type: variable
+                          variable: edition
+                      delimiter: ' '
+                    - type: condition
+                      if_item_type:
+                      - report
+                      then_branch:
+                      - type: group
+                        children:
+                        - type: variable
+                          variable: collection-title
+                        delimiter: ' '
+                      else_branch: null
+                    - type: group
+                      children:
+                      - type: condition
+                        then_branch: []
+                        else_branch: null
+                      delimiter: ' '
+                    - type: condition
+                      if_variables:
+                      - volume
+                      then_branch: []
+                      else_branch:
+                      - type: group
+                        children:
+                        - type: condition
+                          then_branch:
+                          - type: variable
+                            variable: number-of-volumes
+                            label:
+                              form: short
+                              pluralize: true
+                          - type: group
+                            children:
+                            - type: variable
+                              variable: number-of-volumes
+                            delimiter: null
+                          else_branch:
+                          - type: variable
+                            variable: number-of-volumes
+                        delimiter: ' '
+                    - type: condition
+                      then_branch: []
+                      else_branch:
+                      - type: group
+                        children:
+                        - type: condition
+                          then_branch: []
+                          else_branch: null
+                        delimiter: ' '
+                    - type: variable
+                      variable: issue
+                      label:
+                        form: long
+                        pluralize: true
+                    - type: condition
+                      if_variables:
+                      - page
+                      then_branch:
+                      - type: variable
+                        variable: page
+                        label:
+                          form: short
+                          pluralize: true
+                      else_branch:
+                      - type: group
+                        children:
+                        - type: condition
+                          if_item_type:
+                          - song
+                          then_branch:
+                          - type: text
+                            value: track
+                          else_branch:
+                          - type: variable
+                            variable: chapter-number
+                            label:
+                              form: long
+                              pluralize: true
+                        - type: variable
+                          variable: chapter-number
+                        delimiter: ' '
+                    delimiter: ', '
+                - type: condition
+                  if_item_type:
+                  - article-journal
+                  - article-magazine
+                  - article-newspaper
+                  - post-weblog
+                  - review
+                  - review-book
+                  then_branch:
+                  - type: condition
+                    then_branch: []
+                    else_branch:
+                    - type: group
+                      children:
+                      - type: condition
+                        then_branch: []
+                        else_branch: null
+                      delimiter: ' '
+                  else_branch: []
+              delimiter: '; '
+              prefix: (
+              suffix: )
+          delimiter: ' '
+        - type: group
+          children:
+          - type: condition
+            if_item_type:
+            - post
+            - webpage
+            then_branch: []
+            else_branch:
+            - type: condition
+              if_variables:
+              - container-title
+              then_branch:
+              - type: group
+                children:
+                - type: condition
+                  if_item_type:
+                  - song
+                  then_branch: []
+                  else_branch: []
+                - type: group
+                  children:
+                  - type: names
+                    variable: container-author
+                    mode: long
+                    and: symbol
+                    label:
+                      form: long
+                      pluralize: true
+                      prefix: ' ('
+                      suffix: )
+                    substitute:
+                    - editor
+                    - editorial-director
+                    - collection-editor
+                  - type: group
+                    children:
+                    - type: variable
+                      variable: container-title
+                    - type: group
+                      children:
+                      - type: condition
+                        then_branch:
+                        - type: group
+                          children:
+                          - type: group
+                            children:
+                            - type: group
+                              children:
+                              - type: condition
+                                then_branch:
+                                - type: variable
+                                  variable: volume
+                                  label:
+                                    form: short
+                                    pluralize: true
+                                else_branch: null
+                              - type: variable
+                                variable: volume
+                              delimiter: ' '
+                            delimiter: '. '
+                          - type: condition
+                            then_branch:
+                            - type: group
+                              children:
+                              - type: group
+                                children:
+                                - type: condition
+                                  then_branch: []
+                                  else_branch: null
+                                delimiter: ' '
+                              delimiter: '. '
+                            else_branch:
+                            - type: group
+                              children:
+                              - type: condition
+                                then_branch: []
+                                else_branch: null
+                              delimiter: ' '
+                          delimiter: ': '
+                        else_branch:
+                        - type: group
+                          children:
+                          - type: condition
+                            then_branch:
+                            - type: variable
+                              variable: volume
+                              label:
+                                form: short
+                                pluralize: true
+                            else_branch: null
+                          - type: variable
+                            variable: volume
+                          delimiter: ' '
+                        - type: group
+                          children:
+                          - type: condition
+                            then_branch: []
+                            else_branch: null
+                          delimiter: ' '
+                      delimiter: ', '
+                    delimiter: ': '
+                    font-style: italic
+                  delimiter: ', '
+                - type: condition
+                  if_variables:
+                  - container-title
+                  then_branch:
+                  - type: group
+                    children:
+                    - type: condition
+                      if_item_type:
+                      - broadcast
+                      - graphic
+                      - map
+                      - motion-picture
+                      then_branch:
+                      - type: group
+                        children:
+                        - type: condition
+                          if_item_type:
+                          - thesis
+                          if_variables:
+                          - genre
+                          then_branch:
+                          - type: text
+                            value: publication
+                          else_branch:
+                          - type: variable
+                            variable: genre
+                        - type: group
+                          children:
+                          - type: condition
+                            then_branch: []
+                            else_branch:
+                            - type: variable
+                              variable: number
+                              label:
+                                form: short
+                                pluralize: true
+                          - type: variable
+                            variable: number
+                          delimiter: ' '
+                        delimiter: ' '
+                      else_branch: null
+                    - type: condition
+                      if_item_type:
+                      - article-journal
+                      - article-magazine
+                      - article-newspaper
+                      - broadcast
+                      - patent
+                      - post
+                      - post-weblog
+                      - review
+                      - review-book
+                      - speech
+                      - webpage
+                      then_branch: []
+                      else_branch:
+                      - type: group
+                        children:
+                        - type: variable
+                          variable: version
+                          label:
+                            form: long
+                            pluralize: true
+                        - type: group
+                          children:
+                          - type: condition
+                            then_branch:
+                            - type: variable
+                              variable: edition
+                            - type: variable
+                              variable: edition
+                              label:
+                                form: short
+                                pluralize: true
+                            else_branch:
+                            - type: variable
+                              variable: edition
+                          delimiter: ' '
+                        - type: condition
+                          if_item_type:
+                          - report
+                          then_branch:
+                          - type: group
+                            children:
+                            - type: variable
+                              variable: collection-title
+                            delimiter: ' '
+                          else_branch: null
+                        - type: group
+                          children:
+                          - type: condition
+                            then_branch: []
+                            else_branch: null
+                          delimiter: ' '
+                        - type: condition
+                          if_variables:
+                          - volume
+                          then_branch: []
+                          else_branch:
+                          - type: group
+                            children:
+                            - type: condition
+                              then_branch:
+                              - type: variable
+                                variable: number-of-volumes
+                                label:
+                                  form: short
+                                  pluralize: true
+                              - type: group
+                                children:
+                                - type: variable
+                                  variable: number-of-volumes
+                                delimiter: null
+                              else_branch:
+                              - type: variable
+                                variable: number-of-volumes
+                            delimiter: ' '
+                        - type: condition
+                          then_branch: []
+                          else_branch:
+                          - type: group
+                            children:
+                            - type: condition
+                              then_branch: []
+                              else_branch: null
+                            delimiter: ' '
+                        - type: variable
+                          variable: issue
+                          label:
+                            form: long
+                            pluralize: true
+                        - type: condition
+                          if_variables:
+                          - page
+                          then_branch:
+                          - type: variable
+                            variable: page
+                            label:
+                              form: short
+                              pluralize: true
+                          else_branch:
+                          - type: group
+                            children:
+                            - type: condition
+                              if_item_type:
+                              - song
+                              then_branch:
+                              - type: text
+                                value: track
+                              else_branch:
+                              - type: variable
+                                variable: chapter-number
+                                label:
+                                  form: long
+                                  pluralize: true
+                            - type: variable
+                              variable: chapter-number
+                            delimiter: ' '
+                        delimiter: ', '
+                    delimiter: '; '
+                    prefix: (
+                    suffix: )
+                  else_branch: null
+                - type: group
+                  children:
+                  - type: condition
+                    if_item_type:
+                    - report
+                    then_branch:
+                    - type: condition
+                      if_variables:
+                      - genre
+                      - medium
+                      then_branch:
+                      - type: group
+                        children:
+                        - type: condition
+                          if_variables:
+                          - number
+                          then_branch:
+                          - type: variable
+                            variable: genre
+                          else_branch: null
+                        - type: variable
+                          variable: medium
+                        delimiter: '; '
+                      else_branch:
+                      - type: condition
+                        if_item_type:
+                        - broadcast
+                        then_branch: []
+                        else_branch: []
+                    else_branch: []
+                  delimiter: null
+                  prefix: '['
+                  suffix: ']'
+                delimiter: ' '
+              else_branch: null
+          - type: condition
+            if_item_type:
+            - thesis
+            then_branch:
+            - type: condition
+              if_variables:
+              - archive
+              - d-o-i
+              - u-r-l
+              then_branch:
+              - type: variable
+                variable: publisher
+              else_branch: null
+            else_branch:
+            - type: variable
+              variable: publisher
+          - type: group
+            children:
+            - type: condition
+              then_branch:
+              - type: group
+                children:
+                - type: variable
+                  variable: archive-location
+                  prefix: (
+                  suffix: )
+                delimiter: ' '
+              - type: variable
+                variable: archive
+              - type: variable
+                variable: archive-place
+              else_branch:
+              - type: group
+                children:
+                - type: variable
+                  variable: archive
+                - type: variable
+                  variable: archive-location
+                  prefix: (
+                  suffix: )
+                delimiter: ' '
+              - type: variable
+                variable: archive-place
+            delimiter: ', '
+          - type: condition
+            if_variables:
+            - event
+            then_branch:
+            - type: condition
+              if_item_type:
+              - paper-conference
+              then_branch:
+              - type: condition
+                if_variables:
+                - collection-editor
+                - editor
+                - editorial-director
+                - issue
+                - page
+                - volume
+                then_branch:
+                - type: group
+                  children:
+                  - type: condition
+                    then_branch: []
+                    else_branch:
+                    - type: variable
+                      variable: event
+                  - type: variable
+                    variable: event-place
+                  - type: group
+                    children:
+                    - type: condition
+                      then_branch: []
+                      else_branch: null
+                    - type: date
+                      variable: event-date
+                      form: text
+                      parts: null
+                      delimiter: null
+                    delimiter: ' '
+                  delimiter: ', '
+                else_branch: null
+              else_branch:
+              - type: group
+                children:
+                - type: condition
+                  then_branch: []
+                  else_branch:
+                  - type: variable
+                    variable: event
+                - type: variable
+                  variable: event-place
+                - type: group
+                  children:
+                  - type: condition
+                    then_branch: []
+                    else_branch: null
+                  - type: date
+                    variable: event-date
+                    form: text
+                    parts: null
+                    delimiter: null
+                  delimiter: ' '
+                delimiter: ', '
+            else_branch: null
+          - type: condition
+            if_item_type:
+            - post
+            - webpage
+            then_branch:
+            - type: variable
+              variable: container-title
+            else_branch: null
+          delimiter: '. '
+        delimiter: '. '
+        suffix: .
+      - type: condition
+        if_variables:
+        - d-o-i
+        then_branch:
+        - type: variable
+          variable: d-o-i
+          prefix: https://doi.org/
+        else_branch:
+        - type: group
+          children:
+          - type: condition
+            if_variables:
+            - issued
+            - status
+            then_branch:
+            - type: group
+              children:
+              - type: date
+                variable: accessed
+                form: text
+                parts: null
+                delimiter: null
+              delimiter: ', '
+            else_branch: null
+          - type: variable
+            variable: u-r-l
+          delimiter: ' '
+      - type: group
+        children:
+        - type: condition
+          if_item_type:
+          - patent
+          then_branch: []
+          else_branch:
+          - type: condition
+            if_variables:
+            - issued
+            then_branch: []
+            else_branch:
+            - type: variable
+              variable: status
+          - type: condition
+            then_branch: []
+            else_branch:
+            - type: group
+              children:
+              - type: group
+                children:
+                - type: group
+                  children:
+                  - type: text
+                    value: as
+                  - type: variable
+                    variable: original-title
+                    font-style: italic
+                  delimiter: ' '
+                - type: group
+                  children:
+                  - type: condition
+                    then_branch: []
+                    else_branch: null
+                  - type: date
+                    variable: original-date
+                    form: numeric
+                    parts: year
+                    delimiter: null
+                  delimiter: ' '
+                delimiter: ', '
+              delimiter: ' '
+        delimiter: '; '
+        prefix: (
+        suffix: )
+    delimiter: ' '
+  else_branch:
+  - type: group
+    children:
+    - type: condition
+      if_item_type:
+      - bill
+      - legal-case
+      - legislation
+      - treaty
+      then_branch:
+      - type: group
+        children:
+        - type: condition
+          if_item_type:
+          - treaty
+          then_branch:
+          - type: condition
+            if_item_type:
+            - bill
+            - legal-case
+            - legislation
+            - treaty
+            then_branch:
+            - type: variable
+              variable: title
+            else_branch:
+            - type: group
+              children:
+              - type: variable
+                variable: title
+              - type: group
+                children:
+                - type: group
+                  children:
+                  - type: variable
+                    variable: number
+                  delimiter: ' '
+                - type: group
+                  children:
+                  - type: text
+                    value: before the
+                  - type: variable
+                    variable: section
+                  delimiter: ' '
+                delimiter: ' '
+              delimiter: ': '
+              font-style: italic
+          - type: names
+            variable: author
+            mode: short
+            et-al:
+              min: 100
+              use-first: 99
+              term: et al.
+              formatting: {}
+          - type: condition
+            if_item_type:
+            - treaty
+            then_branch:
+            - type: group
+              children:
+              - type: condition
+                then_branch: []
+                else_branch: null
+              - type: date
+                variable: issued
+                form: text
+                parts: null
+                delimiter: null
+              delimiter: ' '
+            else_branch:
+            - type: group
+              children:
+              - type: condition
+                if_variables:
+                - container-title
+                then_branch:
+                - type: group
+                  children:
+                  - type: condition
+                    then_branch: []
+                    else_branch: null
+                  - type: date
+                    variable: issued
+                    form: numeric
+                    parts: year
+                    delimiter: null
+                  delimiter: ' '
+                else_branch:
+                - type: group
+                  children:
+                  - type: condition
+                    then_branch: []
+                    else_branch: null
+                  - type: date
+                    variable: issued
+                    form: text
+                    parts: null
+                    delimiter: null
+                  delimiter: ' '
+              delimiter: ' '
+              prefix: (
+              suffix: )
+          - type: condition
+            if_item_type:
+            - bill
+            then_branch:
+            - type: group
+              children:
+              - type: group
+                children:
+                - type: variable
+                  variable: genre
+                - type: condition
+                  if_variables:
+                  - chapter-number
+                  - container-title
+                  then_branch:
+                  - type: variable
+                    variable: number
+                  else_branch:
+                  - type: group
+                    children:
+                    - type: condition
+                      then_branch: []
+                      else_branch:
+                      - type: variable
+                        variable: number
+                        label:
+                          form: short
+                          pluralize: true
+                    - type: variable
+                      variable: number
+                    delimiter: ' '
+                delimiter: ' '
+              - type: group
+                children:
+                - type: variable
+                  variable: chapter-number
+                delimiter: ' '
+              - type: group
+                children:
+                - type: variable
+                  variable: volume
+                - type: variable
+                  variable: container-title
+                delimiter: ' '
+              delimiter: ', '
+            else_branch:
+            - type: group
+              children:
+              - type: variable
+                variable: chapter-number
+              delimiter: ' '
+          else_branch:
+          - type: group
+            children:
+            - type: group
+              children:
+              - type: condition
+                if_item_type:
+                - bill
+                - legal-case
+                - legislation
+                - treaty
+                then_branch:
+                - type: variable
+                  variable: title
+                else_branch:
+                - type: group
+                  children:
+                  - type: variable
+                    variable: title
+                  - type: group
+                    children:
+                    - type: group
+                      children:
+                      - type: variable
+                        variable: number
+                      delimiter: ' '
+                    - type: group
+                      children:
+                      - type: text
+                        value: before the
+                      - type: variable
+                        variable: section
+                      delimiter: ' '
+                    delimiter: ' '
+                  delimiter: ': '
+                  font-style: italic
+              - type: condition
+                if_item_type:
+                - bill
+                then_branch:
+                - type: group
+                  children:
+                  - type: group
+                    children:
+                    - type: variable
+                      variable: genre
+                    - type: condition
+                      if_variables:
+                      - chapter-number
+                      - container-title
+                      then_branch:
+                      - type: variable
+                        variable: number
+                      else_branch:
+                      - type: group
+                        children:
+                        - type: condition
+                          then_branch: []
+                          else_branch:
+                          - type: variable
+                            variable: number
+                            label:
+                              form: short
+                              pluralize: true
+                        - type: variable
+                          variable: number
+                        delimiter: ' '
+                    delimiter: ' '
+                  - type: group
+                    children:
+                    - type: variable
+                      variable: chapter-number
+                    delimiter: ' '
+                  - type: group
+                    children:
+                    - type: variable
+                      variable: volume
+                    - type: variable
+                      variable: container-title
+                    delimiter: ' '
+                  delimiter: ', '
+                else_branch:
+                - type: group
+                  children:
+                  - type: variable
+                    variable: chapter-number
+                  delimiter: ' '
+              delimiter: ', '
+            - type: condition
+              if_item_type:
+              - treaty
+              then_branch:
+              - type: group
+                children:
+                - type: condition
+                  then_branch: []
+                  else_branch: null
+                - type: date
+                  variable: issued
+                  form: text
+                  parts: null
+                  delimiter: null
+                delimiter: ' '
+              else_branch:
+              - type: group
+                children:
+                - type: condition
+                  if_variables:
+                  - container-title
+                  then_branch:
+                  - type: group
+                    children:
+                    - type: condition
+                      then_branch: []
+                      else_branch: null
+                    - type: date
+                      variable: issued
+                      form: numeric
+                      parts: year
+                      delimiter: null
+                    delimiter: ' '
+                  else_branch:
+                  - type: group
+                    children:
+                    - type: condition
+                      then_branch: []
+                      else_branch: null
+                    - type: date
+                      variable: issued
+                      form: text
+                      parts: null
+                      delimiter: null
+                    delimiter: ' '
+                delimiter: ' '
+                prefix: (
+                suffix: )
+            - type: group
+              children:
+              - type: condition
+                then_branch:
+                - type: names
+                  variable: author
+                  mode: long
+                  and: symbol
+                else_branch:
+                - type: variable
+                  variable: status
+              delimiter: ' '
+              prefix: (
+              suffix: )
+            delimiter: ' '
+        - type: group
+          children:
+          - type: condition
+            if_variables:
+            - page
+            then_branch: []
+            else_branch: null
+          - type: group
+            children:
+            - type: variable
+              variable: locator
+              label:
+                form: long
+                pluralize: true
+            - type: variable
+              variable: locator
+            delimiter: ' '
+          delimiter: ' '
+        delimiter: ', '
+      - type: condition
+        if_variables:
+        - d-o-i
+        then_branch:
+        - type: variable
+          variable: d-o-i
+          prefix: https://doi.org/
+        else_branch:
+        - type: group
+          children:
+          - type: condition
+            if_variables:
+            - issued
+            - status
+            then_branch:
+            - type: group
+              children:
+              - type: date
+                variable: accessed
+                form: text
+                parts: null
+                delimiter: null
+              delimiter: ', '
+            else_branch: null
+          - type: variable
+            variable: u-r-l
+          delimiter: ' '
+      else_branch:
+      - type: group
+        children:
+        - type: group
+          children:
+          - type: names
+            variable: composer
+            mode: long
+            and: symbol
+            delimiter-precedes-last: always
+            name-as-sort-order: all
+            label:
+              form: short
+              pluralize: true
+              prefix: ' ('
+              suffix: )
+            substitute:
+            - author
+            - illustrator
+            - director
+            - editor
+            - editorial-director
+            - collection-editor
+          - type: condition
+            if_variables:
+            - author
+            - composer
+            - editor
+            - illustrator
+            then_branch: []
+            else_branch: []
+          delimiter: ' '
+        - type: group
+          children:
+          - type: condition
+            if_variables:
+            - issued
+            then_branch:
+            - type: group
+              children:
+              - type: group
+                children:
+                - type: group
+                  children:
+                  - type: condition
+                    then_branch: []
+                    else_branch: null
+                  - type: date
+                    variable: issued
+                    form: numeric
+                    parts: year
+                    delimiter: null
+                  delimiter: ' '
+                - type: variable
+                  variable: year-suffix
+                delimiter: null
+              - type: condition
+                if_item_type:
+                - article-magazine
+                - article-newspaper
+                - broadcast
+                - motion-picture
+                - pamphlet
+                - personal-communication
+                - post
+                - post-weblog
+                - song
+                - speech
+                - webpage
+                then_branch:
+                - type: date
+                  variable: issued
+                  form: null
+                  parts: null
+                  delimiter: null
+                else_branch: []
+              delimiter: ', '
+            else_branch:
+            - type: variable
+              variable: year-suffix
+          delimiter: '-'
+          prefix: (
+          suffix: )
+        - type: group
+          children:
+          - type: condition
+            if_variables:
+            - title
+            then_branch:
+            - type: condition
+              if_item_type:
+              - post
+              - webpage
+              then_branch:
+              - type: condition
+                if_item_type:
+                - review
+                - review-book
+                if_variables:
+                - reviewed-author
+                then_branch:
+                - type: condition
+                  if_variables:
+                  - title
+                  then_branch:
+                  - type: group
+                    children:
+                    - type: variable
+                      variable: title
+                    - type: condition
+                      then_branch:
+                      - type: group
+                        children:
+                        - type: group
+                          children:
+                          - type: condition
+                            then_branch: []
+                            else_branch: null
+                          delimiter: ' '
+                        delimiter: '. '
+                      else_branch:
+                      - type: group
+                        children:
+                        - type: condition
+                          then_branch: []
+                          else_branch: null
+                        delimiter: ' '
+                    delimiter: ': '
+                  else_branch:
+                  - type: group
+                    children:
+                    - type: variable
+                      variable: title
+                    - type: condition
+                      then_branch:
+                      - type: group
+                        children:
+                        - type: group
+                          children:
+                          - type: condition
+                            then_branch: []
+                            else_branch: null
+                          delimiter: ' '
+                        delimiter: '. '
+                      else_branch:
+                      - type: group
+                        children:
+                        - type: condition
+                          then_branch: []
+                          else_branch: null
+                        delimiter: ' '
+                    delimiter: ': '
+                else_branch:
+                - type: group
+                  children:
+                  - type: variable
+                    variable: title
+                  - type: condition
+                    then_branch:
+                    - type: group
+                      children:
+                      - type: group
+                        children:
+                        - type: condition
+                          then_branch: []
+                          else_branch: null
+                        delimiter: ' '
+                      delimiter: '. '
+                    else_branch:
+                    - type: group
+                      children:
+                      - type: condition
+                        then_branch: []
+                        else_branch: null
+                      delimiter: ' '
+                  delimiter: ': '
+              else_branch:
+              - type: condition
+                if_variables:
+                - container-title
+                then_branch:
+                - type: variable
+                  variable: title
+                else_branch:
+                - type: group
+                  children:
+                  - type: variable
+                    variable: title
+                  - type: group
+                    children:
+                    - type: condition
+                      then_branch:
+                      - type: group
+                        children:
+                        - type: group
+                          children:
+                          - type: group
+                            children:
+                            - type: condition
+                              then_branch:
+                              - type: variable
+                                variable: volume
+                                label:
+                                  form: short
+                                  pluralize: true
+                              else_branch: null
+                            - type: variable
+                              variable: volume
+                            delimiter: ' '
+                          delimiter: '. '
+                        - type: condition
+                          then_branch:
+                          - type: group
+                            children:
+                            - type: group
+                              children:
+                              - type: condition
+                                then_branch: []
+                                else_branch: null
+                              delimiter: ' '
+                            delimiter: '. '
+                          else_branch:
+                          - type: group
+                            children:
+                            - type: condition
+                              then_branch: []
+                              else_branch: null
+                            delimiter: ' '
+                        delimiter: ': '
+                      else_branch:
+                      - type: group
+                        children:
+                        - type: condition
+                          then_branch:
+                          - type: variable
+                            variable: volume
+                            label:
+                              form: short
+                              pluralize: true
+                          else_branch: null
+                        - type: variable
+                          variable: volume
+                        delimiter: ' '
+                      - type: group
+                        children:
+                        - type: condition
+                          then_branch: []
+                          else_branch: null
+                        delimiter: ' '
+                    delimiter: ', '
+                  delimiter: ': '
+            - type: group
+              children:
+              - type: condition
+                if_item_type:
+                - patent
+                then_branch:
+                - type: group
+                  children:
+                  - type: condition
+                    if_variables:
+                    - genre
+                    then_branch:
+                    - type: variable
+                      variable: genre
+                    else_branch: []
+                  - type: group
+                    children:
+                    - type: condition
+                      then_branch: []
+                      else_branch:
+                      - type: variable
+                        variable: number
+                        label:
+                          form: short
+                          pluralize: true
+                    - type: variable
+                      variable: number
+                    delimiter: ' '
+                  delimiter: ' '
+                else_branch:
+                - type: condition
+                  if_item_type:
+                  - article-journal
+                  - article-magazine
+                  - article-newspaper
+                  - post-weblog
+                  - review
+                  - review-book
+                  then_branch:
+                  - type: group
+                    children:
+                    - type: condition
+                      if_variables:
+                      - title
+                      then_branch:
+                      - type: names
+                        variable: interviewer
+                        delimiter: '; '
+                        mode: long
+                        and: symbol
+                        label:
+                          form: short
+                          pluralize: true
+                          prefix: ', '
+                      else_branch: null
+                    delimiter: '; '
+                  else_branch:
+                  - type: group
+                    children:
+                    - type: condition
+                      if_variables:
+                      - title
+                      then_branch:
+                      - type: names
+                        variable: interviewer
+                        mode: long
+                        and: symbol
+                        label:
+                          form: short
+                          pluralize: true
+                          prefix: ', '
+                      else_branch: null
+                    - type: condition
+                      if_item_type:
+                      - post
+                      - webpage
+                      then_branch:
+                      - type: names
+                        variable: container-author
+                        mode: long
+                        and: symbol
+                        label:
+                          form: long
+                          pluralize: true
+                          suffix: ' '
+                      else_branch:
+                      - type: condition
+                        if_variables:
+                        - container-title
+                        then_branch: []
+                        else_branch:
+                        - type: names
+                          variable: container-author
+                          mode: long
+                          and: symbol
+                          label:
+                            form: long
+                            pluralize: true
+                            suffix: ' '
+                    delimiter: '; '
+                - type: group
+                  children:
+                  - type: condition
+                    if_item_type:
+                    - thesis
+                    if_variables:
+                    - genre
+                    then_branch:
+                    - type: text
+                      value: publication
+                    else_branch:
+                    - type: variable
+                      variable: genre
+                  - type: group
+                    children:
+                    - type: condition
+                      then_branch: []
+                      else_branch:
+                      - type: variable
+                        variable: number
+                        label:
+                          form: short
+                          pluralize: true
+                    - type: variable
+                      variable: number
+                    delimiter: ' '
+                  delimiter: ' '
+                - type: condition
+                  if_item_type:
+                  - article-journal
+                  - article-magazine
+                  - article-newspaper
+                  - broadcast
+                  - patent
+                  - post
+                  - post-weblog
+                  - review
+                  - review-book
+                  - speech
+                  - webpage
+                  then_branch: []
+                  else_branch:
+                  - type: group
+                    children:
+                    - type: variable
+                      variable: version
+                      label:
+                        form: long
+                        pluralize: true
+                    - type: group
+                      children:
+                      - type: condition
+                        then_branch:
+                        - type: variable
+                          variable: edition
+                        - type: variable
+                          variable: edition
+                          label:
+                            form: short
+                            pluralize: true
+                        else_branch:
+                        - type: variable
+                          variable: edition
+                      delimiter: ' '
+                    - type: condition
+                      if_item_type:
+                      - report
+                      then_branch:
+                      - type: group
+                        children:
+                        - type: variable
+                          variable: collection-title
+                        delimiter: ' '
+                      else_branch: null
+                    - type: group
+                      children:
+                      - type: condition
+                        then_branch: []
+                        else_branch: null
+                      delimiter: ' '
+                    - type: condition
+                      if_variables:
+                      - volume
+                      then_branch: []
+                      else_branch:
+                      - type: group
+                        children:
+                        - type: condition
+                          then_branch:
+                          - type: variable
+                            variable: number-of-volumes
+                            label:
+                              form: short
+                              pluralize: true
+                          - type: group
+                            children:
+                            - type: variable
+                              variable: number-of-volumes
+                            delimiter: null
+                          else_branch:
+                          - type: variable
+                            variable: number-of-volumes
+                        delimiter: ' '
+                    - type: condition
+                      then_branch: []
+                      else_branch:
+                      - type: group
+                        children:
+                        - type: condition
+                          then_branch: []
+                          else_branch: null
+                        delimiter: ' '
+                    - type: variable
+                      variable: issue
+                      label:
+                        form: long
+                        pluralize: true
+                    - type: condition
+                      if_variables:
+                      - page
+                      then_branch:
+                      - type: variable
+                        variable: page
+                        label:
+                          form: short
+                          pluralize: true
+                      else_branch:
+                      - type: group
+                        children:
+                        - type: condition
+                          if_item_type:
+                          - song
+                          then_branch:
+                          - type: text
+                            value: track
+                          else_branch:
+                          - type: variable
+                            variable: chapter-number
+                            label:
+                              form: long
+                              pluralize: true
+                        - type: variable
+                          variable: chapter-number
+                        delimiter: ' '
+                    delimiter: ', '
+                - type: condition
+                  if_item_type:
+                  - article-journal
+                  - article-magazine
+                  - article-newspaper
+                  - post-weblog
+                  - review
+                  - review-book
+                  then_branch:
+                  - type: condition
+                    then_branch: []
+                    else_branch:
+                    - type: group
+                      children:
+                      - type: condition
+                        then_branch: []
+                        else_branch: null
+                      delimiter: ' '
+                  else_branch: []
+              delimiter: '; '
+              prefix: (
+              suffix: )
+            - type: group
+              children:
+              - type: condition
+                if_item_type:
+                - interview
+                if_variables:
+                - interviewer
+                then_branch:
+                - type: group
+                  children:
+                  - type: condition
+                    if_variables:
+                    - interviewer
+                    - title
+                    then_branch:
+                    - type: condition
+                      if_variables:
+                      - number
+                      then_branch:
+                      - type: variable
+                        variable: genre
+                      else_branch: null
+                    - type: variable
+                      variable: medium
+                    else_branch:
+                    - type: condition
+                      if_variables:
+                      - genre
+                      - medium
+                      then_branch:
+                      - type: group
+                        children:
+                        - type: condition
+                          if_variables:
+                          - number
+                          then_branch:
+                          - type: variable
+                            variable: genre
+                          else_branch: null
+                        - type: variable
+                          variable: medium
+                        delimiter: '; '
+                      else_branch:
+                      - type: condition
+                        if_item_type:
+                        - broadcast
+                        then_branch: []
+                        else_branch: []
+                  delimiter: '; '
+                else_branch:
+                - type: condition
+                  if_variables:
+                  - genre
+                  - medium
+                  then_branch:
+                  - type: group
+                    children:
+                    - type: condition
+                      if_variables:
+                      - number
+                      then_branch:
+                      - type: variable
+                        variable: genre
+                      else_branch: null
+                    - type: variable
+                      variable: medium
+                    delimiter: '; '
+                  else_branch:
+                  - type: condition
+                    if_item_type:
+                    - broadcast
+                    then_branch: []
+                    else_branch: []
+              delimiter: null
+              prefix: '['
+              suffix: ']'
+            else_branch:
+            - type: group
+              children:
+              - type: condition
+                if_item_type:
+                - interview
+                if_variables:
+                - interviewer
+                then_branch:
+                - type: group
+                  children:
+                  - type: condition
+                    if_variables:
+                    - interviewer
+                    - title
+                    then_branch:
+                    - type: condition
+                      if_variables:
+                      - number
+                      then_branch:
+                      - type: variable
+                        variable: genre
+                      else_branch: null
+                    - type: variable
+                      variable: medium
+                    else_branch:
+                    - type: condition
+                      if_variables:
+                      - genre
+                      - medium
+                      then_branch:
+                      - type: group
+                        children:
+                        - type: condition
+                          if_variables:
+                          - number
+                          then_branch:
+                          - type: variable
+                            variable: genre
+                          else_branch: null
+                        - type: variable
+                          variable: medium
+                        delimiter: '; '
+                      else_branch:
+                      - type: condition
+                        if_item_type:
+                        - broadcast
+                        then_branch: []
+                        else_branch: []
+                  delimiter: '; '
+                else_branch:
+                - type: condition
+                  if_variables:
+                  - genre
+                  - medium
+                  then_branch:
+                  - type: group
+                    children:
+                    - type: condition
+                      if_variables:
+                      - number
+                      then_branch:
+                      - type: variable
+                        variable: genre
+                      else_branch: null
+                    - type: variable
+                      variable: medium
+                    delimiter: '; '
+                  else_branch:
+                  - type: condition
+                    if_item_type:
+                    - broadcast
+                    then_branch: []
+                    else_branch: []
+              delimiter: null
+              prefix: '['
+              suffix: ']'
+            - type: group
+              children:
+              - type: condition
+                if_item_type:
+                - patent
+                then_branch:
+                - type: group
+                  children:
+                  - type: condition
+                    if_variables:
+                    - genre
+                    then_branch:
+                    - type: variable
+                      variable: genre
+                    else_branch: []
+                  - type: group
+                    children:
+                    - type: condition
+                      then_branch: []
+                      else_branch:
+                      - type: variable
+                        variable: number
+                        label:
+                          form: short
+                          pluralize: true
+                    - type: variable
+                      variable: number
+                    delimiter: ' '
+                  delimiter: ' '
+                else_branch:
+                - type: condition
+                  if_item_type:
+                  - article-journal
+                  - article-magazine
+                  - article-newspaper
+                  - post-weblog
+                  - review
+                  - review-book
+                  then_branch:
+                  - type: group
+                    children:
+                    - type: condition
+                      if_variables:
+                      - title
+                      then_branch:
+                      - type: names
+                        variable: interviewer
+                        delimiter: '; '
+                        mode: long
+                        and: symbol
+                        label:
+                          form: short
+                          pluralize: true
+                          prefix: ', '
+                      else_branch: null
+                    delimiter: '; '
+                  else_branch:
+                  - type: group
+                    children:
+                    - type: condition
+                      if_variables:
+                      - title
+                      then_branch:
+                      - type: names
+                        variable: interviewer
+                        mode: long
+                        and: symbol
+                        label:
+                          form: short
+                          pluralize: true
+                          prefix: ', '
+                      else_branch: null
+                    - type: condition
+                      if_item_type:
+                      - post
+                      - webpage
+                      then_branch:
+                      - type: names
+                        variable: container-author
+                        mode: long
+                        and: symbol
+                        label:
+                          form: long
+                          pluralize: true
+                          suffix: ' '
+                      else_branch:
+                      - type: condition
+                        if_variables:
+                        - container-title
+                        then_branch: []
+                        else_branch:
+                        - type: names
+                          variable: container-author
+                          mode: long
+                          and: symbol
+                          label:
+                            form: long
+                            pluralize: true
+                            suffix: ' '
+                    delimiter: '; '
+                - type: group
+                  children:
+                  - type: condition
+                    if_item_type:
+                    - thesis
+                    if_variables:
+                    - genre
+                    then_branch:
+                    - type: text
+                      value: publication
+                    else_branch:
+                    - type: variable
+                      variable: genre
+                  - type: group
+                    children:
+                    - type: condition
+                      then_branch: []
+                      else_branch:
+                      - type: variable
+                        variable: number
+                        label:
+                          form: short
+                          pluralize: true
+                    - type: variable
+                      variable: number
+                    delimiter: ' '
+                  delimiter: ' '
+                - type: condition
+                  if_item_type:
+                  - article-journal
+                  - article-magazine
+                  - article-newspaper
+                  - broadcast
+                  - patent
+                  - post
+                  - post-weblog
+                  - review
+                  - review-book
+                  - speech
+                  - webpage
+                  then_branch: []
+                  else_branch:
+                  - type: group
+                    children:
+                    - type: variable
+                      variable: version
+                      label:
+                        form: long
+                        pluralize: true
+                    - type: group
+                      children:
+                      - type: condition
+                        then_branch:
+                        - type: variable
+                          variable: edition
+                        - type: variable
+                          variable: edition
+                          label:
+                            form: short
+                            pluralize: true
+                        else_branch:
+                        - type: variable
+                          variable: edition
+                      delimiter: ' '
+                    - type: condition
+                      if_item_type:
+                      - report
+                      then_branch:
+                      - type: group
+                        children:
+                        - type: variable
+                          variable: collection-title
+                        delimiter: ' '
+                      else_branch: null
+                    - type: group
+                      children:
+                      - type: condition
+                        then_branch: []
+                        else_branch: null
+                      delimiter: ' '
+                    - type: condition
+                      if_variables:
+                      - volume
+                      then_branch: []
+                      else_branch:
+                      - type: group
+                        children:
+                        - type: condition
+                          then_branch:
+                          - type: variable
+                            variable: number-of-volumes
+                            label:
+                              form: short
+                              pluralize: true
+                          - type: group
+                            children:
+                            - type: variable
+                              variable: number-of-volumes
+                            delimiter: null
+                          else_branch:
+                          - type: variable
+                            variable: number-of-volumes
+                        delimiter: ' '
+                    - type: condition
+                      then_branch: []
+                      else_branch:
+                      - type: group
+                        children:
+                        - type: condition
+                          then_branch: []
+                          else_branch: null
+                        delimiter: ' '
+                    - type: variable
+                      variable: issue
+                      label:
+                        form: long
+                        pluralize: true
+                    - type: condition
+                      if_variables:
+                      - page
+                      then_branch:
+                      - type: variable
+                        variable: page
+                        label:
+                          form: short
+                          pluralize: true
+                      else_branch:
+                      - type: group
+                        children:
+                        - type: condition
+                          if_item_type:
+                          - song
+                          then_branch:
+                          - type: text
+                            value: track
+                          else_branch:
+                          - type: variable
+                            variable: chapter-number
+                            label:
+                              form: long
+                              pluralize: true
+                        - type: variable
+                          variable: chapter-number
+                        delimiter: ' '
+                    delimiter: ', '
+                - type: condition
+                  if_item_type:
+                  - article-journal
+                  - article-magazine
+                  - article-newspaper
+                  - post-weblog
+                  - review
+                  - review-book
+                  then_branch:
+                  - type: condition
+                    then_branch: []
+                    else_branch:
+                    - type: group
+                      children:
+                      - type: condition
+                        then_branch: []
+                        else_branch: null
+                      delimiter: ' '
+                  else_branch: []
+              delimiter: '; '
+              prefix: (
+              suffix: )
+          delimiter: ' '
+        - type: group
+          children:
+          - type: condition
+            if_item_type:
+            - post
+            - webpage
+            then_branch: []
+            else_branch:
+            - type: condition
+              if_variables:
+              - container-title
+              then_branch:
+              - type: group
+                children:
+                - type: condition
+                  if_item_type:
+                  - song
+                  then_branch: []
+                  else_branch: []
+                - type: group
+                  children:
+                  - type: names
+                    variable: container-author
+                    mode: long
+                    and: symbol
+                    label:
+                      form: long
+                      pluralize: true
+                      prefix: ' ('
+                      suffix: )
+                    substitute:
+                    - editor
+                    - editorial-director
+                    - collection-editor
+                  - type: group
+                    children:
+                    - type: variable
+                      variable: container-title
+                    - type: group
+                      children:
+                      - type: condition
+                        then_branch:
+                        - type: group
+                          children:
+                          - type: group
+                            children:
+                            - type: group
+                              children:
+                              - type: condition
+                                then_branch:
+                                - type: variable
+                                  variable: volume
+                                  label:
+                                    form: short
+                                    pluralize: true
+                                else_branch: null
+                              - type: variable
+                                variable: volume
+                              delimiter: ' '
+                            delimiter: '. '
+                          - type: condition
+                            then_branch:
+                            - type: group
+                              children:
+                              - type: group
+                                children:
+                                - type: condition
+                                  then_branch: []
+                                  else_branch: null
+                                delimiter: ' '
+                              delimiter: '. '
+                            else_branch:
+                            - type: group
+                              children:
+                              - type: condition
+                                then_branch: []
+                                else_branch: null
+                              delimiter: ' '
+                          delimiter: ': '
+                        else_branch:
+                        - type: group
+                          children:
+                          - type: condition
+                            then_branch:
+                            - type: variable
+                              variable: volume
+                              label:
+                                form: short
+                                pluralize: true
+                            else_branch: null
+                          - type: variable
+                            variable: volume
+                          delimiter: ' '
+                        - type: group
+                          children:
+                          - type: condition
+                            then_branch: []
+                            else_branch: null
+                          delimiter: ' '
+                      delimiter: ', '
+                    delimiter: ': '
+                    font-style: italic
+                  delimiter: ', '
+                - type: condition
+                  if_variables:
+                  - container-title
+                  then_branch:
+                  - type: group
+                    children:
+                    - type: condition
+                      if_item_type:
+                      - broadcast
+                      - graphic
+                      - map
+                      - motion-picture
+                      then_branch:
+                      - type: group
+                        children:
+                        - type: condition
+                          if_item_type:
+                          - thesis
+                          if_variables:
+                          - genre
+                          then_branch:
+                          - type: text
+                            value: publication
+                          else_branch:
+                          - type: variable
+                            variable: genre
+                        - type: group
+                          children:
+                          - type: condition
+                            then_branch: []
+                            else_branch:
+                            - type: variable
+                              variable: number
+                              label:
+                                form: short
+                                pluralize: true
+                          - type: variable
+                            variable: number
+                          delimiter: ' '
+                        delimiter: ' '
+                      else_branch: null
+                    - type: condition
+                      if_item_type:
+                      - article-journal
+                      - article-magazine
+                      - article-newspaper
+                      - broadcast
+                      - patent
+                      - post
+                      - post-weblog
+                      - review
+                      - review-book
+                      - speech
+                      - webpage
+                      then_branch: []
+                      else_branch:
+                      - type: group
+                        children:
+                        - type: variable
+                          variable: version
+                          label:
+                            form: long
+                            pluralize: true
+                        - type: group
+                          children:
+                          - type: condition
+                            then_branch:
+                            - type: variable
+                              variable: edition
+                            - type: variable
+                              variable: edition
+                              label:
+                                form: short
+                                pluralize: true
+                            else_branch:
+                            - type: variable
+                              variable: edition
+                          delimiter: ' '
+                        - type: condition
+                          if_item_type:
+                          - report
+                          then_branch:
+                          - type: group
+                            children:
+                            - type: variable
+                              variable: collection-title
+                            delimiter: ' '
+                          else_branch: null
+                        - type: group
+                          children:
+                          - type: condition
+                            then_branch: []
+                            else_branch: null
+                          delimiter: ' '
+                        - type: condition
+                          if_variables:
+                          - volume
+                          then_branch: []
+                          else_branch:
+                          - type: group
+                            children:
+                            - type: condition
+                              then_branch:
+                              - type: variable
+                                variable: number-of-volumes
+                                label:
+                                  form: short
+                                  pluralize: true
+                              - type: group
+                                children:
+                                - type: variable
+                                  variable: number-of-volumes
+                                delimiter: null
+                              else_branch:
+                              - type: variable
+                                variable: number-of-volumes
+                            delimiter: ' '
+                        - type: condition
+                          then_branch: []
+                          else_branch:
+                          - type: group
+                            children:
+                            - type: condition
+                              then_branch: []
+                              else_branch: null
+                            delimiter: ' '
+                        - type: variable
+                          variable: issue
+                          label:
+                            form: long
+                            pluralize: true
+                        - type: condition
+                          if_variables:
+                          - page
+                          then_branch:
+                          - type: variable
+                            variable: page
+                            label:
+                              form: short
+                              pluralize: true
+                          else_branch:
+                          - type: group
+                            children:
+                            - type: condition
+                              if_item_type:
+                              - song
+                              then_branch:
+                              - type: text
+                                value: track
+                              else_branch:
+                              - type: variable
+                                variable: chapter-number
+                                label:
+                                  form: long
+                                  pluralize: true
+                            - type: variable
+                              variable: chapter-number
+                            delimiter: ' '
+                        delimiter: ', '
+                    delimiter: '; '
+                    prefix: (
+                    suffix: )
+                  else_branch: null
+                - type: group
+                  children:
+                  - type: condition
+                    if_item_type:
+                    - report
+                    then_branch:
+                    - type: condition
+                      if_variables:
+                      - genre
+                      - medium
+                      then_branch:
+                      - type: group
+                        children:
+                        - type: condition
+                          if_variables:
+                          - number
+                          then_branch:
+                          - type: variable
+                            variable: genre
+                          else_branch: null
+                        - type: variable
+                          variable: medium
+                        delimiter: '; '
+                      else_branch:
+                      - type: condition
+                        if_item_type:
+                        - broadcast
+                        then_branch: []
+                        else_branch: []
+                    else_branch: []
+                  delimiter: null
+                  prefix: '['
+                  suffix: ']'
+                delimiter: ' '
+              else_branch: null
+          - type: condition
+            if_item_type:
+            - thesis
+            then_branch:
+            - type: condition
+              if_variables:
+              - archive
+              - d-o-i
+              - u-r-l
+              then_branch:
+              - type: variable
+                variable: publisher
+              else_branch: null
+            else_branch:
+            - type: variable
+              variable: publisher
+          - type: group
+            children:
+            - type: condition
+              then_branch:
+              - type: group
+                children:
+                - type: variable
+                  variable: archive-location
+                  prefix: (
+                  suffix: )
+                delimiter: ' '
+              - type: variable
+                variable: archive
+              - type: variable
+                variable: archive-place
+              else_branch:
+              - type: group
+                children:
+                - type: variable
+                  variable: archive
+                - type: variable
+                  variable: archive-location
+                  prefix: (
+                  suffix: )
+                delimiter: ' '
+              - type: variable
+                variable: archive-place
+            delimiter: ', '
+          - type: condition
+            if_variables:
+            - event
+            then_branch:
+            - type: condition
+              if_item_type:
+              - paper-conference
+              then_branch:
+              - type: condition
+                if_variables:
+                - collection-editor
+                - editor
+                - editorial-director
+                - issue
+                - page
+                - volume
+                then_branch:
+                - type: group
+                  children:
+                  - type: condition
+                    then_branch: []
+                    else_branch:
+                    - type: variable
+                      variable: event
+                  - type: variable
+                    variable: event-place
+                  - type: group
+                    children:
+                    - type: condition
+                      then_branch: []
+                      else_branch: null
+                    - type: date
+                      variable: event-date
+                      form: text
+                      parts: null
+                      delimiter: null
+                    delimiter: ' '
+                  delimiter: ', '
+                else_branch: null
+              else_branch:
+              - type: group
+                children:
+                - type: condition
+                  then_branch: []
+                  else_branch:
+                  - type: variable
+                    variable: event
+                - type: variable
+                  variable: event-place
+                - type: group
+                  children:
+                  - type: condition
+                    then_branch: []
+                    else_branch: null
+                  - type: date
+                    variable: event-date
+                    form: text
+                    parts: null
+                    delimiter: null
+                  delimiter: ' '
+                delimiter: ', '
+            else_branch: null
+          - type: condition
+            if_item_type:
+            - post
+            - webpage
+            then_branch:
+            - type: variable
+              variable: container-title
+            else_branch: null
+          delimiter: '. '
+        delimiter: '. '
+        suffix: .
+      - type: condition
+        if_variables:
+        - d-o-i
+        then_branch:
+        - type: variable
+          variable: d-o-i
+          prefix: https://doi.org/
+        else_branch:
+        - type: group
+          children:
+          - type: condition
+            if_variables:
+            - issued
+            - status
+            then_branch:
+            - type: group
+              children:
+              - type: date
+                variable: accessed
+                form: text
+                parts: null
+                delimiter: null
+              delimiter: ', '
+            else_branch: null
+          - type: variable
+            variable: u-r-l
+          delimiter: ' '
+      - type: group
+        children:
+        - type: condition
+          if_item_type:
+          - patent
+          then_branch: []
+          else_branch:
+          - type: condition
+            if_variables:
+            - issued
+            then_branch: []
+            else_branch:
+            - type: variable
+              variable: status
+          - type: condition
+            then_branch: []
+            else_branch:
+            - type: group
+              children:
+              - type: group
+                children:
+                - type: group
+                  children:
+                  - type: text
+                    value: as
+                  - type: variable
+                    variable: original-title
+                    font-style: italic
+                  delimiter: ' '
+                - type: group
+                  children:
+                  - type: condition
+                    then_branch: []
+                    else_branch: null
+                  - type: date
+                    variable: original-date
+                    form: numeric
+                    parts: year
+                    delimiter: null
+                  delimiter: ' '
+                delimiter: ', '
+              delimiter: ' '
+        delimiter: '; '
+        prefix: (
+        suffix: )
+    delimiter: ' '
