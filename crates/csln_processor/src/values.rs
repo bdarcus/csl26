@@ -41,10 +41,19 @@ pub struct ProcHints {
     pub group_key: String,
 }
 
+/// Context for rendering (citation vs bibliography).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum RenderContext {
+    #[default]
+    Citation,
+    Bibliography,
+}
+
 /// Options for rendering.
 pub struct RenderOptions<'a> {
     pub config: &'a Config,
     pub locale: &'a Locale,
+    pub context: RenderContext,
 }
 
 /// Trait for extracting values from template components.
@@ -158,8 +167,12 @@ fn format_names(names: &[Name], form: &ContributorForm, options: &RenderOptions<
     let config = options.config.contributors.as_ref();
     let locale = options.locale;
 
-    // Check for et al. truncation
-    let shorten: Option<&ShortenListOptions> = config.and_then(|c| c.shorten.as_ref());
+    // Only apply et al. truncation in citations, not bibliographies
+    let shorten: Option<&ShortenListOptions> = if options.context == RenderContext::Citation {
+        config.and_then(|c| c.shorten.as_ref())
+    } else {
+        None
+    };
     let (display_names, use_et_al) = if let Some(opts) = shorten {
         if names.len() >= opts.min as usize {
             let display: Vec<&Name> = names.iter().take(opts.use_first as usize).collect();
@@ -280,7 +293,16 @@ impl ComponentValues for TemplateDate {
                     None => Some(year.to_string()),
                 }
             }
-            DateForm::Full | DateForm::MonthDay => {
+            DateForm::MonthDay => {
+                // Only output month-day if present; return None if only year
+                let month = date.month_value()?;
+                let day = date.day_value();
+                match day {
+                    Some(d) => Some(format!("{} {}", locale.month_name(month as u8, false), d)),
+                    None => Some(locale.month_name(month as u8, false).to_string()),
+                }
+            }
+            DateForm::Full => {
                 let year = date.year_value()?;
                 let month = date.month_value();
                 let day = date.day_value();
@@ -436,7 +458,7 @@ mod tests {
     fn test_contributor_values() {
         let config = make_config();
         let locale = make_locale();
-        let options = RenderOptions { config: &config, locale: &locale };
+        let options = RenderOptions { config: &config, locale: &locale, context: RenderContext::Citation };
         let reference = make_reference();
         let hints = ProcHints::default();
 
@@ -455,7 +477,7 @@ mod tests {
     fn test_date_values() {
         let config = make_config();
         let locale = make_locale();
-        let options = RenderOptions { config: &config, locale: &locale };
+        let options = RenderOptions { config: &config, locale: &locale, context: RenderContext::Citation };
         let reference = make_reference();
         let hints = ProcHints::default();
 
@@ -473,7 +495,7 @@ mod tests {
     fn test_et_al() {
         let config = make_config();
         let locale = make_locale();
-        let options = RenderOptions { config: &config, locale: &locale };
+        let options = RenderOptions { config: &config, locale: &locale, context: RenderContext::Citation };
         let hints = ProcHints::default();
 
         let reference = Reference {

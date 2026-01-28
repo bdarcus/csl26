@@ -32,12 +32,17 @@ pub fn refs_to_string(proc_templates: Vec<ProcTemplate>) -> String {
             output.push_str("\n\n");
         }
         for (j, component) in proc_template.iter().enumerate() {
-            if j > 0 {
+            let rendered = render_component(component);
+            if j > 0 && !output.ends_with(". ") && !output.ends_with('.') {
                 output.push_str(". ");
+            } else if j > 0 && output.ends_with('.') {
+                output.push(' ');
             }
-            let _ = write!(&mut output, "{}", render_component(component));
+            let _ = write!(&mut output, "{}", rendered);
         }
-        output.push('.');
+        if !output.ends_with('.') {
+            output.push('.');
+        }
     }
     output
 }

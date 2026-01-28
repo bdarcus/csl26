@@ -8,7 +8,7 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 use crate::error::ProcessorError;
 use crate::reference::{Bibliography, Citation, Reference};
 use crate::render::{citation_to_string, refs_to_string, ProcTemplate, ProcTemplateComponent};
-use crate::values::{ComponentValues, ProcHints, RenderOptions};
+use crate::values::{ComponentValues, ProcHints, RenderContext, RenderOptions};
 use csln_core::locale::Locale;
 use csln_core::options::{Config, Processing, SortKey};
 use csln_core::template::TemplateComponent;
@@ -108,7 +108,7 @@ impl Processor {
                 .get(&item.id)
                 .ok_or_else(|| ProcessorError::ReferenceNotFound(item.id.clone()))?;
             
-            if let Some(proc) = self.process_template(reference, template) {
+            if let Some(proc) = self.process_template(reference, template, RenderContext::Citation) {
                 all_items.extend(proc);
             }
         }
@@ -125,7 +125,7 @@ impl Processor {
     /// Process a bibliography entry.
     fn process_bibliography_entry(&self, reference: &Reference) -> Option<ProcTemplate> {
         let bib_spec = self.style.bibliography.as_ref()?;
-        self.process_template(reference, &bib_spec.template)
+        self.process_template(reference, &bib_spec.template, RenderContext::Bibliography)
     }
 
     /// Process a template for a reference.
@@ -133,9 +133,10 @@ impl Processor {
         &self,
         reference: &Reference,
         template: &[TemplateComponent],
+        context: RenderContext,
     ) -> Option<ProcTemplate> {
         let config = self.get_config();
-        let options = RenderOptions { config, locale: &self.locale };
+        let options = RenderOptions { config, locale: &self.locale, context };
         let default_hint = ProcHints::default();
         let hint = self.hints.get(&reference.id).unwrap_or(&default_hint);
 
