@@ -9,15 +9,17 @@ description = "CSLN citation and bibliography processor"
 [lib]
 name = "csln_processor"
 
+[[bin]]
+name = "csln_processor"
+path = "src/main.rs"
+
 [dependencies]
 csln_core = { path = "../csln_core" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+serde_yaml = "0.9"
 thiserror = "2.0"
 edtf = { version = "0.2.0", features = ["chrono"] }
-
-[dev-dependencies]
-serde_yaml = "0.9"
 
 [lints]
 workspace = true
