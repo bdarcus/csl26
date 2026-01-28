@@ -225,6 +225,7 @@ mod tests {
                 template_component: TemplateComponent::Contributor(TemplateContributor {
                     contributor: ContributorRole::Author,
                     form: ContributorForm::Short,
+                    name_order: None,
                     delimiter: None,
                     rendering: Rendering::default(),
                 }),

@@ -96,8 +96,9 @@ Code should be self-documenting with clear comments explaining:
 ## Current Status
 
 - **Citations**: 5/5 exact match with oracle ✅
-- **Bibliography**: 4/5 exact match (editor name inversion pending)
+- **Bibliography**: 5/5 exact match with oracle ✅
 - **Locale**: en-US with terms, months, contributor roles
+- **Key Features**: Variable-once rule, type-specific overrides, name_order control
 
 ## Test Commands
 

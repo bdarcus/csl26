@@ -115,12 +115,30 @@ impl TemplateComponent {
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
 #[serde(rename_all = "kebab-case")]
 pub struct TemplateContributor {
+    /// Which contributor role to render (author, editor, etc.).
     pub contributor: ContributorRole,
+    /// How to display the contributor (long names, short, with label, etc.).
     pub form: ContributorForm,
+    /// Override the global name order for this specific component.
+    /// Use to show editors as "Given Family" even when global setting is "Family, Given".
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name_order: Option<NameOrder>,
+    /// Custom delimiter between names (overrides global setting).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub delimiter: Option<String>,
     #[serde(flatten, default)]
     pub rendering: Rendering,
+}
+
+/// Name display order.
+#[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq)]
+#[serde(rename_all = "kebab-case")]
+pub enum NameOrder {
+    /// Display as "Given Family" (e.g., "John Smith").
+    GivenFirst,
+    /// Display as "Family, Given" (e.g., "Smith, John").
+    #[default]
+    FamilyFirst,
 }
 
 /// How to render contributor names.

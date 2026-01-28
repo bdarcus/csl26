@@ -47,6 +47,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             new_cit.insert(0, TemplateComponent::Contributor(csln_core::template::TemplateContributor {
                 contributor: csln_core::template::ContributorRole::Author,
                 form: csln_core::template::ContributorForm::Short,
+                name_order: None,
                 delimiter: None,
                 rendering: csln_core::template::Rendering::default(),
             }));
@@ -94,6 +95,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         });
         if !has_editor {
             // Insert editor before parent-monograph title
+            // Use given-first name order for "In Editor (Eds.)," context per APA
             let container_pos = new_bib.iter().position(|c| {
                 matches!(c, TemplateComponent::Title(tt) if tt.title == csln_core::template::TitleType::ParentMonograph)
             });
@@ -101,6 +103,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 new_bib.insert(pos, TemplateComponent::Contributor(csln_core::template::TemplateContributor {
                     contributor: csln_core::template::ContributorRole::Editor,
                     form: csln_core::template::ContributorForm::Verb,
+                    name_order: Some(csln_core::template::NameOrder::GivenFirst),  // APA: "K. A. Ericsson", not "Ericsson, K. A."
                     delimiter: None,
                     rendering: csln_core::template::Rendering {
                         prefix: Some("In ".to_string()),

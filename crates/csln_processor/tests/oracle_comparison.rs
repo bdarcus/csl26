@@ -42,6 +42,7 @@ fn make_apa_style() -> Style {
                 TemplateComponent::Contributor(TemplateContributor {
                     contributor: ContributorRole::Author,
                     form: ContributorForm::Short,
+                    name_order: None,
                     delimiter: None,
                     rendering: Rendering::default(),
                 }),
@@ -58,6 +59,7 @@ fn make_apa_style() -> Style {
                 TemplateComponent::Contributor(TemplateContributor {
                     contributor: ContributorRole::Author,
                     form: ContributorForm::Long,
+                    name_order: None,
                     delimiter: None,
                     rendering: Rendering::default(),
                 }),

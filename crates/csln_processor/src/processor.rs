@@ -385,6 +385,7 @@ mod tests {
                     TemplateComponent::Contributor(TemplateContributor {
                         contributor: ContributorRole::Author,
                         form: ContributorForm::Short,
+                        name_order: None,
                         delimiter: None,
                         rendering: Rendering::default(),
                     }),
@@ -401,6 +402,7 @@ mod tests {
                     TemplateComponent::Contributor(TemplateContributor {
                         contributor: ContributorRole::Author,
                         form: ContributorForm::Long,
+                        name_order: None,
                         delimiter: None,
                         rendering: Rendering::default(),
                     }),

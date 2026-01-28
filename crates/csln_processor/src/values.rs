@@ -107,7 +107,8 @@ impl ComponentValues for TemplateContributor {
                         SubstituteKey::Editor => {
                             if let Some(editors) = &reference.editor {
                                 if !editors.is_empty() {
-                                    let formatted = format_names(editors, &self.form, options);
+                                    // Substituted editors use the contributor's name_order
+                                    let formatted = format_names(editors, &self.form, options, self.name_order.as_ref());
                                     // Add role suffix if configured
                                     let suffix = substitute.contributor_role_form.as_ref().map(|_| " (Ed.)".to_string());
                                     return Some(ProcValues {
@@ -130,7 +131,7 @@ impl ComponentValues for TemplateContributor {
                         SubstituteKey::Translator => {
                             if let Some(translators) = &reference.translator {
                                 if !translators.is_empty() {
-                                    let formatted = format_names(translators, &self.form, options);
+                                    let formatted = format_names(translators, &self.form, options, self.name_order.as_ref());
                                     return Some(ProcValues {
                                         value: formatted,
                                         prefix: None,
@@ -150,7 +151,8 @@ impl ComponentValues for TemplateContributor {
             return None;
         }
 
-        let formatted = format_names(names, &self.form, options);
+        // Use explicit name_order if provided on this contributor template
+        let formatted = format_names(names, &self.form, options, self.name_order.as_ref());
         
         // Add role label suffix for verb forms (e.g., "Name (Ed.)")
         let suffix = match (&self.form, &self.contributor) {
@@ -175,7 +177,16 @@ impl ComponentValues for TemplateContributor {
 }
 
 /// Format a list of names according to style options.
-fn format_names(names: &[Name], form: &ContributorForm, options: &RenderOptions<'_>) -> String {
+///
+/// The `name_order` parameter overrides the global `display-as-sort` setting
+/// for this specific rendering. Used when editors need "Given Family" format
+/// even when the global setting is "Family, Given".
+fn format_names(
+    names: &[Name], 
+    form: &ContributorForm, 
+    options: &RenderOptions<'_>,
+    name_order: Option<&csln_core::template::NameOrder>,
+) -> String {
     if names.is_empty() {
         return String::new();
     }
@@ -201,11 +212,12 @@ fn format_names(names: &[Name], form: &ContributorForm, options: &RenderOptions<
     };
 
     // Format each name
+    // Use explicit name_order if provided, otherwise use global display_as_sort
     let display_as_sort = config.and_then(|c| c.display_as_sort.clone());
     let formatted: Vec<String> = display_names
         .iter()
         .enumerate()
-        .map(|(i, name)| format_single_name(name, form, i, &display_as_sort))
+        .map(|(i, name)| format_single_name(name, form, i, &display_as_sort, name_order))
         .collect();
 
     // Join with appropriate delimiter and "and" from locale
@@ -230,13 +242,20 @@ fn format_names(names: &[Name], form: &ContributorForm, options: &RenderOptions<
 }
 
 /// Format a single name.
+///
+/// The `name_order` override takes precedence over `display_as_sort`.
+/// This allows specific template components (like editors) to use
+/// different name formatting than the global setting.
 fn format_single_name(
     name: &Name,
     form: &ContributorForm,
     index: usize,
     display_as_sort: &Option<DisplayAsSort>,
+    name_order: Option<&csln_core::template::NameOrder>,
 ) -> String {
-    // Handle literal names
+    use csln_core::template::NameOrder;
+    
+    // Handle literal names (e.g., corporate authors)
     if let Some(literal) = &name.literal {
         return literal.clone();
     }
@@ -245,39 +264,49 @@ fn format_single_name(
     let given = name.given.as_deref().unwrap_or("");
 
     // Determine if we should invert (Family, Given)
-    let inverted = match display_as_sort {
-        Some(DisplayAsSort::All) => true,
-        Some(DisplayAsSort::First) => index == 0,
-        _ => false,
+    // Explicit name_order override takes precedence over global display_as_sort
+    let inverted = match name_order {
+        Some(NameOrder::GivenFirst) => false,  // Explicit: show as "Given Family"
+        Some(NameOrder::FamilyFirst) => true,   // Explicit: show as "Family, Given"
+        None => {
+            // Fall back to global display_as_sort setting
+            match display_as_sort {
+                Some(DisplayAsSort::All) => true,
+                Some(DisplayAsSort::First) => index == 0,
+                _ => false,
+            }
+        }
     };
 
     match form {
         ContributorForm::Short => family.to_string(),
         ContributorForm::Long | ContributorForm::Verb | ContributorForm::VerbShort => {
+            // Convert given name(s) to initials (e.g., "Karl Anders" → "K. A.")
+            // Handles both full names and pre-initialized input like "K. A."
+            let initials: String = given
+                .split_whitespace()
+                .map(|w| {
+                    w.chars()
+                        .next()
+                        .map(|c| format!("{}.", c))
+                        .unwrap_or_default()
+                })
+                .collect::<Vec<_>>()
+                .join(" ");
+            
             if inverted {
-                // Initialize given name(s)
-                let initials: String = given
-                    .split_whitespace()
-                    .map(|w| {
-                        w.chars()
-                            .next()
-                            .map(|c| format!("{}.", c))
-                            .unwrap_or_default()
-                    })
-                    .collect::<Vec<_>>()
-                    .join(" ");
+                // "Family, G. A." format
                 if initials.is_empty() {
                     family.to_string()
                 } else {
                     format!("{}, {}", family, initials)
                 }
             } else {
-                // Given Family format
-                if given.is_empty() {
+                // "G. A. Family" format (e.g., for editors in "In ... (Eds.)" context)
+                if initials.is_empty() {
                     family.to_string()
                 } else {
-                    let initial = given.chars().next().map(|c| format!("{}.", c)).unwrap_or_default();
-                    format!("{} {}", initial, family)
+                    format!("{} {}", initials, family)
                 }
             }
         }
@@ -557,6 +586,7 @@ mod tests {
         let component = TemplateContributor {
             contributor: ContributorRole::Author,
             form: ContributorForm::Short,
+            name_order: None,
             delimiter: None,
             rendering: Default::default(),
         };
@@ -604,6 +634,7 @@ mod tests {
         let component = TemplateContributor {
             contributor: ContributorRole::Author,
             form: ContributorForm::Short,
+            name_order: None,
             delimiter: None,
             rendering: Default::default(),
         };

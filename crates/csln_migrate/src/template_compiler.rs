@@ -152,6 +152,7 @@ impl TemplateCompiler {
         Some(TemplateComponent::Contributor(TemplateContributor {
             contributor: role,
             form,
+            name_order: None,  // Use global setting by default
             delimiter: names.options.delimiter.clone(),
             rendering: self.convert_formatting(&names.formatting),
         }))
@@ -217,6 +218,7 @@ impl TemplateCompiler {
             return Some(TemplateComponent::Contributor(TemplateContributor {
                 contributor: role,
                 form: ContributorForm::Long,
+                name_order: None,  // Use global setting by default
                 delimiter: None,
                 rendering: self.convert_formatting(&var.formatting),
             }));
