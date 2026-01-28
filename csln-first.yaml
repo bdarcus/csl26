@@ -16,6 +16,9 @@ options:
   contributors:
     display-as-sort: first
     and: symbol
+    shorten:
+      min: 3
+      use-first: 1
 templates:
   title-apa:
     - title: primary
