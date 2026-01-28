@@ -1,0 +1,17 @@
+[package]
+name = "csln_analyze"
+version = "0.1.0"
+edition = "2021"
+license = "MPL-2.0"
+description = "Analyze CSL 1.0 styles to guide migration development"
+
+[[bin]]
+name = "csln_analyze"
+path = "src/main.rs"
+
+[dependencies]
+csl_legacy = { path = "../csl_legacy" }
+roxmltree = "0.20"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+walkdir = "2.4"
