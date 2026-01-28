@@ -68,6 +68,17 @@ const testItems = {
         "container-title": "The Cambridge Handbook of Expertise",
         "publisher": "Cambridge University Press",
         "page": "683-703"
+    },
+    "ITEM-5": {
+        "id": "ITEM-5",
+        "type": "report",
+        "title": "World Development Report 2023",
+        "author": [
+            { "literal": "World Bank" }
+        ],
+        "issued": { "date-parts": [[2023]] },
+        "publisher": "World Bank Group",
+        "publisher-place": "Washington, DC"
     }
 };
 
