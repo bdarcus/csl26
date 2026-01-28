@@ -378,6 +378,7 @@ mod tests {
                             emph: Some(true),
                             ..Default::default()
                         },
+                        overrides: None,
                     }),
                 ],
             }),

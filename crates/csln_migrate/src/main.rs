@@ -149,20 +149,42 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ],
                 delimiter: Some(csln_core::template::DelimiterPunctuation::None),  // No delimiter between volume and (issue)
                 rendering: csln_core::template::Rendering::default(),
+                overrides: None,
             });
             
             new_bib.insert(min_idx, vol_issue_list);
         }
         
-        // NOTE: Pages formatting is type-specific:
-        // - Chapters need "(pp. pages)"
-        // - Journals just need "pages"
-        // This requires type overrides which aren't yet implemented.
-        
-        // Add type-specific override: suppress publisher for journal articles
+        // Add type-specific overrides
         for component in &mut new_bib {
-            if let TemplateComponent::Variable(v) = component {
-                if v.variable == csln_core::template::SimpleVariable::Publisher {
+            match component {
+                // Container-title (parent-serial): journals use comma suffix
+                TemplateComponent::Title(t) if t.title == csln_core::template::TitleType::ParentSerial => {
+                    let mut overrides = std::collections::HashMap::new();
+                    overrides.insert("article-journal".to_string(), csln_core::template::Rendering {
+                        suffix: Some(",".to_string()),
+                        ..Default::default()
+                    });
+                    t.overrides = Some(overrides);
+                }
+                // Pages: different formatting per type
+                TemplateComponent::Number(n) if n.number == csln_core::template::NumberVariable::Pages => {
+                    let mut overrides = std::collections::HashMap::new();
+                    // Chapters need "(pp. pages)"
+                    overrides.insert("chapter".to_string(), csln_core::template::Rendering {
+                        prefix: Some("pp. ".to_string()),
+                        wrap: Some(csln_core::template::WrapPunctuation::Parentheses),
+                        ..Default::default()
+                    });
+                    // Journals: comma prefix to connect with volume
+                    overrides.insert("article-journal".to_string(), csln_core::template::Rendering {
+                        prefix: Some(", ".to_string()),
+                        ..Default::default()
+                    });
+                    n.overrides = Some(overrides);
+                }
+                // Publisher: suppress for journal articles
+                TemplateComponent::Variable(v) if v.variable == csln_core::template::SimpleVariable::Publisher => {
                     let mut overrides = std::collections::HashMap::new();
                     overrides.insert("article-journal".to_string(), csln_core::template::Rendering {
                         suppress: Some(true),
@@ -170,6 +192,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     });
                     v.overrides = Some(overrides);
                 }
+                _ => {}
             }
         }
     }

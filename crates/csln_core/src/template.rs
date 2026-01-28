@@ -168,6 +168,9 @@ pub struct TemplateTitle {
     pub form: Option<TitleForm>,
     #[serde(flatten, default)]
     pub rendering: Rendering,
+    /// Type-specific rendering overrides.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub overrides: Option<HashMap<String, Rendering>>,
 }
 
 /// Types of titles.
@@ -283,6 +286,9 @@ pub struct TemplateList {
     pub delimiter: Option<DelimiterPunctuation>,
     #[serde(flatten, default)]
     pub rendering: Rendering,
+    /// Type-specific rendering overrides.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub overrides: Option<HashMap<String, Rendering>>,
 }
 
 /// Delimiter punctuation options.

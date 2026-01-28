@@ -76,6 +76,7 @@ fn make_apa_style() -> Style {
                         emph: Some(true),
                         ..Default::default()
                     },
+                    overrides: None,
                 }),
             ],
         }),

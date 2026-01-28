@@ -39,10 +39,23 @@ pub fn refs_to_string(proc_templates: Vec<ProcTemplate>) -> String {
             if rendered.is_empty() {
                 continue;
             }
-            // Add separator if needed (not after punctuation)
+            // Add separator if needed
             if j > 0 && !output.is_empty() {
                 let last_char = output.chars().last().unwrap_or(' ');
-                if !matches!(last_char, '.' | ',' | ':' | ';' | ' ') {
+                let first_char = rendered.chars().next().unwrap_or(' ');
+                
+                // Check if this is a date component (always needs period separator)
+                let is_date = matches!(&component.template_component, TemplateComponent::Date(_));
+                
+                // If next component starts with comma/semicolon/colon, no space needed
+                if matches!(first_char, ',' | ';' | ':') {
+                    // No separator - component provides its own punctuation
+                } else if first_char == '(' && !is_date {
+                    // Non-date parentheses need just a space (e.g., chapter pages)
+                    if !last_char.is_whitespace() {
+                        output.push(' ');
+                    }
+                } else if !matches!(last_char, '.' | ',' | ':' | ';' | ' ') {
                     output.push_str(". ");
                 } else if last_char == '.' {
                     output.push(' ');
@@ -143,6 +156,8 @@ fn get_effective_rendering(component: &ProcTemplateComponent, base: &Rendering) 
     let overrides = match &component.template_component {
         TemplateComponent::Number(n) => n.overrides.as_ref(),
         TemplateComponent::Variable(v) => v.overrides.as_ref(),
+        TemplateComponent::Title(t) => t.overrides.as_ref(),
+        TemplateComponent::List(l) => l.overrides.as_ref(),
         _ => None,
     };
     
@@ -235,6 +250,7 @@ mod tests {
                     emph: Some(true),
                     ..Default::default()
                 },
+                overrides: None,
             }),
             value: "The Structure of Scientific Revolutions".to_string(),
             prefix: None,

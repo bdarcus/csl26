@@ -228,6 +228,7 @@ impl TemplateCompiler {
                 title: title_type,
                 form: None,
                 rendering: self.convert_formatting(&var.formatting),
+                overrides: None,
             }));
         }
 
