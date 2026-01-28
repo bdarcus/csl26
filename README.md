@@ -130,19 +130,30 @@ Every CSL 1.0 style can be automatically migrated to CSLN. We verify correctness
 | Component | Status |
 |-----------|--------|
 | CSL 1.0 Parser (`csl_legacy`) | ✅ Complete - parses all 2,844 official styles |
-| CSLN Schema (`csln_core`) | ✅ Complete - options, templates, rendering |
+| CSLN Schema (`csln_core`) | ✅ Complete - options, templates, locale, rendering |
 | Migration Tool (`csln_migrate`) | ✅ Complete - extracts options, compiles templates |
-| CSLN Processor (`csln_processor`) | 🟡 In Progress - citations and bibliographies render correctly |
-| Oracle Verification | ✅ APA and Chicago verified against citeproc-js |
+| CSLN Processor (`csln_processor`) | 🟡 In Progress - citations match, bibliography ~85% |
+| Oracle Verification | ✅ APA citations verified against citeproc-js |
 
-### Test Results
+### Current Test Results
 
 ```
-36 tests passing
+40 tests passing
 
-✓ (Kuhn, 1962)           - single author citation
-✓ (LeCun et al., 2015)   - 3+ author et-al
-✓ Kuhn, T. (1962). _The Structure of Scientific Revolutions_.
+Citations (5/5 exact match):
+✓ (Kuhn, 1962)           - single author
+✓ (Hawking, 1988)        - book
+✓ (LeCun et al., 2015)   - 3+ authors (et al.)
+✓ (Ericsson, 2006)       - chapter
+✓ (World Bank, 2023)     - corporate author
+
+Bibliography:
+✓ Author names with initials
+✓ Date in parentheses
+✓ Italic titles
+✓ Volume(issue) combined format
+✓ Editor role labels (Ed.)
+✓ DOI with prefix
 ```
 
 ## Architecture
@@ -152,14 +163,20 @@ crates/
 ├── csl_legacy/      # CSL 1.0 XML parser (read-only)
 ├── csln_core/       # CSLN schema and types
 │   ├── options.rs   # Style configuration
-│   └── template.rs  # Template components
+│   ├── template.rs  # Template components
+│   └── locale.rs    # Localization (terms, dates)
 ├── csln_migrate/    # CSL 1.0 → CSLN converter
 │   ├── options_extractor.rs
 │   └── template_compiler.rs
 └── csln_processor/  # Citation/bibliography renderer
     ├── processor.rs # Core processing logic
     ├── values.rs    # Value extraction
-    └── render.rs    # String formatting
+    ├── render.rs    # String formatting
+    └── main.rs      # CLI tool
+
+.agent/              # LLM agent instructions
+scripts/             # Oracle verification (citeproc-js)
+styles/              # 2,844 CSL 1.0 styles (submodule)
 ```
 
 ## For Style Maintainers
@@ -200,15 +217,21 @@ cargo build --workspace
 cargo test --workspace
 ```
 
-### Running Migration
+### Running the Processor
 
 ```bash
-# Migrate a single style
-cargo run --bin csln_migrate -- styles/apa.csl
+# Run CSLN processor with a style
+cargo run --bin csln_processor -- csln-first.yaml
+
+# Citations only
+cargo run --bin csln_processor -- csln-first.yaml --cite
+
+# Bibliography only  
+cargo run --bin csln_processor -- csln-first.yaml --bib
 
 # Compare with citeproc-js oracle
 cd scripts && npm install
-node oracle.js
+node oracle.js ../styles/apa.csl
 ```
 
 ### Crate Documentation
@@ -220,19 +243,19 @@ cargo doc --workspace --open
 ## Roadmap
 
 ### Near-term
-- [ ] Locale support for terms ("and", "et al.", "ed.")
+- [ ] Complete bibliography formatting (page ranges, punctuation)
 - [ ] Full APA test suite verification
-- [ ] Chicago note-bibliography style support
+- [ ] Chicago author-date style support
 - [ ] Bulk migration of all 2,844 styles
 
 ### Medium-term
 - [ ] WASM build for browser use
-- [ ] Language server for style editing
-- [ ] Visual style editor
+- [ ] Additional locales (de-DE, fr-FR, etc.)
+- [ ] Note-bibliography citation style support
 
 ### Long-term
 - [ ] CSLN 1.0 specification
-- [ ] Community style repository
+- [ ] Visual style editor
 - [ ] Integration guides for reference managers
 
 ## Contributing
