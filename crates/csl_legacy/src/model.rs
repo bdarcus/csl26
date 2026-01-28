@@ -11,6 +11,7 @@ pub struct Style {
     pub name_as_sort_order: Option<String>,
     pub sort_separator: Option<String>,
     pub delimiter_precedes_last: Option<String>,
+    pub delimiter_precedes_et_al: Option<String>,
     pub and: Option<String>,
     /// Page range formatting (expanded, minimal, chicago, chicago-16)
     pub page_range_format: Option<String>,

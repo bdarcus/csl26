@@ -198,6 +198,9 @@ pub struct ContributorConfig {
     /// When to include delimiter before the last contributor.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub delimiter_precedes_last: Option<DelimiterPrecedesLast>,
+    /// When to include delimiter before "et al.".
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub delimiter_precedes_et_al: Option<DelimiterPrecedesLast>,
     /// When and how to display contributor roles.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub role: Option<RoleOptions>,

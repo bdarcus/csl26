@@ -236,7 +236,31 @@ fn format_names(
     };
 
     if use_et_al {
-        format!("{} {}", result, locale.et_al())
+        // Determine delimiter before "et al." based on delimiter_precedes_et_al option
+        use csln_core::options::DelimiterPrecedesLast;
+        let delimiter_precedes = config.and_then(|c| c.delimiter_precedes_et_al.as_ref());
+        let use_delimiter = match delimiter_precedes {
+            Some(DelimiterPrecedesLast::Always) => true,
+            Some(DelimiterPrecedesLast::Never) => false,
+            Some(DelimiterPrecedesLast::AfterInvertedName) => {
+                // Use delimiter if last displayed name was inverted (family-first)
+                display_as_sort.as_ref().map_or(false, |das| {
+                    matches!(das, DisplayAsSort::All) || 
+                    (matches!(das, DisplayAsSort::First) && display_names.len() == 1)
+                })
+            }
+            Some(DelimiterPrecedesLast::Contextual) | None => {
+                // Default: use delimiter only if more than one name displayed
+                display_names.len() > 1
+            }
+            _ => display_names.len() > 1, // Fallback for non_exhaustive
+        };
+        
+        if use_delimiter {
+            format!("{}, {}", result, locale.et_al())
+        } else {
+            format!("{} {}", result, locale.et_al())
+        }
     } else {
         result
     }
@@ -790,5 +814,87 @@ mod tests {
     fn test_format_page_range_no_format() {
         // No format specified: just convert hyphen to en-dash
         assert_eq!(format_page_range("321-328", None), "321–328");
+    }
+
+    #[test]
+    fn test_et_al_delimiter_never() {
+        use csln_core::options::DelimiterPrecedesLast;
+        
+        let mut config = make_config();
+        if let Some(ref mut contributors) = config.contributors {
+            contributors.shorten = Some(ShortenListOptions {
+                min: 2,
+                use_first: 1,
+                ..Default::default()
+            });
+            contributors.delimiter_precedes_et_al = Some(DelimiterPrecedesLast::Never);
+        }
+        
+        let locale = make_locale();
+        let options = RenderOptions { config: &config, locale: &locale, context: RenderContext::Citation };
+        let hints = ProcHints::default();
+
+        let reference = Reference {
+            id: "multi".to_string(),
+            ref_type: "article-journal".to_string(),
+            author: Some(vec![
+                Name::new("Smith", "John"),
+                Name::new("Jones", "Jane"),
+            ]),
+            ..Default::default()
+        };
+
+        let component = TemplateContributor {
+            contributor: ContributorRole::Author,
+            form: ContributorForm::Short,
+            name_order: None,
+            delimiter: None,
+            rendering: Default::default(),
+        };
+
+        let values = component.values(&reference, &hints, &options).unwrap();
+        // With "never", no comma before et al.
+        assert_eq!(values.value, "Smith et al.");
+    }
+
+    #[test]
+    fn test_et_al_delimiter_always() {
+        use csln_core::options::DelimiterPrecedesLast;
+        
+        let mut config = make_config();
+        if let Some(ref mut contributors) = config.contributors {
+            contributors.shorten = Some(ShortenListOptions {
+                min: 2,
+                use_first: 1,
+                ..Default::default()
+            });
+            contributors.delimiter_precedes_et_al = Some(DelimiterPrecedesLast::Always);
+        }
+        
+        let locale = make_locale();
+        let options = RenderOptions { config: &config, locale: &locale, context: RenderContext::Citation };
+        let hints = ProcHints::default();
+
+        let reference = Reference {
+            id: "multi".to_string(),
+            ref_type: "article-journal".to_string(),
+            author: Some(vec![
+                Name::new("Smith", "John"),
+                Name::new("Jones", "Jane"),
+            ]),
+            ..Default::default()
+        };
+
+        let component = TemplateContributor {
+            contributor: ContributorRole::Author,
+            form: ContributorForm::Short,
+            name_order: None,
+            delimiter: None,
+            rendering: Default::default(),
+        };
+
+        let values = component.values(&reference, &hints, &options).unwrap();
+        // With "always", comma before et al.
+        assert_eq!(values.value, "Smith, et al.");
     }
 }

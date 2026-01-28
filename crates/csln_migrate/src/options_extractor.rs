@@ -108,6 +108,16 @@ impl OptionsExtractor {
             };
             if config.delimiter_precedes_last.is_some() { has_config = true; }
         }
+        if let Some(dpea) = &style.delimiter_precedes_et_al {
+            config.delimiter_precedes_et_al = match dpea.as_str() {
+                "contextual" => Some(DelimiterPrecedesLast::Contextual),
+                "after-inverted-name" => Some(DelimiterPrecedesLast::AfterInvertedName),
+                "always" => Some(DelimiterPrecedesLast::Always),
+                "never" => Some(DelimiterPrecedesLast::Never),
+                _ => None,
+            };
+            if config.delimiter_precedes_et_al.is_some() { has_config = true; }
+        }
 
         // Check citation-level et-al settings
         let citation = &style.citation;
