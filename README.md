@@ -221,17 +221,40 @@ cargo test --workspace
 
 ```bash
 # Run CSLN processor with a style
-cargo run --bin csln_processor -- csln-first.yaml
+cargo run --bin csln_processor -- examples/apa-style.yaml
+```
 
-# Citations only
-cargo run --bin csln_processor -- csln-first.yaml --cite
+### Oracle Verification (citeproc-js)
 
-# Bibliography only  
-cargo run --bin csln_processor -- csln-first.yaml --bib
+The `scripts/` directory contains tools to verify CSLN output against citeproc-js, the reference CSL 1.0 implementation.
 
-# Compare with citeproc-js oracle
-cd scripts && npm install
-node oracle.js ../styles/apa.csl
+```bash
+cd scripts
+npm install   # First time only - installs citeproc
+
+# oracle.js - Render citations/bibliography with citeproc-js
+node oracle.js ../styles/apa.csl              # Both citations and bibliography
+node oracle.js ../styles/apa.csl --cite       # Citations only
+node oracle.js ../styles/apa.csl --bib        # Bibliography only
+node oracle.js ../styles/apa.csl --json       # JSON output for scripting
+
+# oracle-e2e.js - End-to-end migration test
+# Migrates CSL 1.0 → CSLN → csln_processor, then compares with citeproc-js
+node oracle-e2e.js ../styles/apa.csl
+```
+
+Example output from `oracle-e2e.js`:
+```
+=== End-to-End Oracle Test: apa ===
+
+--- CITATIONS ---
+  ✅ ITEM-1
+  ✅ ITEM-2
+  ✅ ITEM-3
+  ✅ ITEM-4
+  ✅ ITEM-5
+
+Citations: 5/5 match
 ```
 
 ### Crate Documentation
