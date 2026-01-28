@@ -1,6 +1,6 @@
 {
   "phase": "csln_processor_implementation",
-  "status": "phase_3a_complete",
+  "status": "phase_3b_locale_complete",
   "completed_milestones": [
     "csl_legacy_strict_parser",
     "macro_inliner_recursion",
@@ -19,13 +19,13 @@
     "phase_2c_template_compiler_complete",
     "phase_2d_oracle_setup_complete",
     "phase_2d_apa_semantic_match",
-    "phase_3a_processor_crate_created"
+    "phase_3a_processor_crate_created",
+    "phase_3b_locale_support_added"
   ],
   "current_task": "expand_processor_coverage",
   "last_updated": "2026-01-28",
   "next_steps": [
-    "add locale support for terms",
-    "add more template component types",
+    "add more template component types (List)",
     "run full APA test suite comparison",
     "migrate Chicago style",
     "bulk migrate all 2844 styles"
@@ -33,6 +33,7 @@
   "files_created": [
     "crates/csln_core/src/options.rs",
     "crates/csln_core/src/template.rs",
+    "crates/csln_core/src/locale.rs",
     "crates/csln_migrate/src/options_extractor.rs",
     "crates/csln_migrate/src/template_compiler.rs",
     "scripts/oracle.js",
@@ -42,7 +43,7 @@
     "crates/csln_processor/src/render.rs",
     "crates/csln_processor/src/values.rs"
   ],
-  "tests_passing": 36,
+  "tests_passing": 40,
   "oracle_verified": ["apa.csl", "chicago-author-date.csl"],
   "commits_today": [
     "0501dc0 - feat: add CSLN schema and OptionsExtractor",
@@ -51,11 +52,13 @@
     "e919140 - feat: add TemplateCompiler for clean CSLN output",
     "0459ae1 - feat: add citeproc-js oracle",
     "a80aeee - feat: improve template ordering and author-date citation",
-    "bbdc3f1 - feat: add csln_processor crate with rendering"
+    "bbdc3f1 - feat: add csln_processor crate with rendering",
+    "233f5dc - feat: add locale support for terms and dates"
   ],
-  "semantic_match": {
-    "apa_citation": "author:short + date:year → (Kuhn, 1962)",
-    "apa_et_al": "options.contributors.shorten → (LeCun et al., 2015)",
-    "apa_bibliography": "Kuhn, T. (1962). _The Structure of Scientific Revolutions_."
+  "locale_features": {
+    "terms": ["and", "et al.", "ibid", "no date", "retrieved"],
+    "contributor_roles": ["editor", "translator", "director"],
+    "date_terms": ["months (long/short)", "seasons"],
+    "default": "en-US"
   }
 }
