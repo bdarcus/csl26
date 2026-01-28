@@ -178,6 +178,7 @@ function normalizeText(text) {
   return text
     .replace(/<[^>]+>/g, '')   // Strip HTML tags
     .replace(/&#38;/g, '&')    // HTML entity for &
+    .replace(/_([^_]+)_/g, '$1') // Strip markdown italics    // HTML entity for &
     .replace(/\s+/g, ' ')      // Normalize whitespace
     .trim();
 }

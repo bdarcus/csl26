@@ -34,11 +34,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // 4. Template Compilation
     let template_compiler = TemplateCompiler;
-    let new_bib = template_compiler.compile_bibliography(&csln_bib);
+    let mut new_bib = template_compiler.compile_bibliography(&csln_bib);
     let mut new_cit = template_compiler.compile_citation(&csln_cit);
     
-    // For author-date styles, ensure citation has author + date
+    // For author-date styles, apply standard formatting
     if matches!(options.processing, Some(csln_core::options::Processing::AuthorDate)) {
+        // Citation: ensure author (short) + date (year)
         let has_author = new_cit.iter().any(|c| {
             matches!(c, TemplateComponent::Contributor(tc) if tc.contributor == csln_core::template::ContributorRole::Author)
         });
@@ -69,6 +70,23 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 TemplateComponent::Date(td) if td.date == csln_core::template::DateVariable::Issued
             )
         });
+        
+        // Bibliography: fix author form (long), date wrap (parentheses), title emph
+        for component in &mut new_bib {
+            match component {
+                TemplateComponent::Contributor(tc) if tc.contributor == csln_core::template::ContributorRole::Author => {
+                    tc.form = csln_core::template::ContributorForm::Long;
+                }
+                TemplateComponent::Date(td) if td.date == csln_core::template::DateVariable::Issued => {
+                    td.form = csln_core::template::DateForm::Year;
+                    td.rendering.wrap = Some(csln_core::template::WrapPunctuation::Parentheses);
+                }
+                TemplateComponent::Title(tt) if tt.title == csln_core::template::TitleType::Primary => {
+                    tt.rendering.emph = Some(true);
+                }
+                _ => {}
+            }
+        }
     }
 
     // 5. Build Style in correct format for csln_processor

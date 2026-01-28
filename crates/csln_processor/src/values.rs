@@ -392,7 +392,10 @@ impl ComponentValues for TemplateNumber {
         let value = match self.number {
             NumberVariable::Volume => reference.volume.as_ref().map(|v| v.to_string()),
             NumberVariable::Issue => reference.issue.as_ref().map(|v| v.to_string()),
-            NumberVariable::Pages => reference.page.clone(),
+            NumberVariable::Pages => reference.page.clone().map(|p| {
+                // Convert ASCII hyphen to en-dash for page ranges
+                p.replace("-", "–")
+            }),
             NumberVariable::Edition => reference.edition.as_ref().map(|v| v.to_string()),
             _ => None,
         };

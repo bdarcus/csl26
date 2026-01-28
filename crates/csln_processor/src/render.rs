@@ -31,6 +31,7 @@ pub fn refs_to_string(proc_templates: Vec<ProcTemplate>) -> String {
         if i > 0 {
             output.push_str("\n\n");
         }
+        let num_components = proc_template.len();
         for (j, component) in proc_template.iter().enumerate() {
             let rendered = render_component(component);
             if j > 0 && !output.ends_with(". ") && !output.ends_with('.') {
@@ -40,7 +41,15 @@ pub fn refs_to_string(proc_templates: Vec<ProcTemplate>) -> String {
             }
             let _ = write!(&mut output, "{}", rendered);
         }
-        if !output.ends_with('.') {
+        // Don't add period if last component is DOI/URL (they end with the link)
+        let last_is_link = proc_template.last().map_or(false, |c| {
+            matches!(&c.template_component, 
+                TemplateComponent::Variable(v) if matches!(v.variable, 
+                    csln_core::template::SimpleVariable::Doi | csln_core::template::SimpleVariable::Url
+                )
+            )
+        });
+        if !output.ends_with('.') && !last_is_link {
             output.push('.');
         }
     }
