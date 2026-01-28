@@ -22,13 +22,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         variables,
     };
 
-    // 3. Render
+    // 3. Render Citation
     let renderer = Renderer;
-    let output = renderer.render_citation(&style.citation, &item);
+    let cit_output = renderer.render_citation(&style.citation, &item);
 
     println!("\n=== RENDERED CITATION ===");
-    println!("{}", output);
+    println!("{}", cit_output);
     println!("=========================");
+
+    // 4. Render Bibliography
+    let bib_output = renderer.render_citation(&style.bibliography, &item);
+    println!("\n=== RENDERED BIBLIOGRAPHY ===");
+    println!("{}", bib_output);
+    println!("=============================");
 
     Ok(())
 }

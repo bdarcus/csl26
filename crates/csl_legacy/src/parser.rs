@@ -358,6 +358,7 @@ fn parse_name(node: Node) -> Result<Name, String> {
         sort_separator: node.attribute("sort-separator").map(|s| s.to_string()),
         initialize_with: node.attribute("initialize-with").map(|s| s.to_string()),
         form: node.attribute("form").map(|s| s.to_string()),
+        delimiter_precedes_last: node.attribute("delimiter-precedes-last").map(|s| s.to_string()),
     })
 }
 

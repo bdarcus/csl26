@@ -65,19 +65,31 @@ impl Renderer {
     }
 
     fn render_names(&self, block: &NamesBlock, item: &CitationItem) -> String {
-        // Try primary variable
-        if let Some(val) = item.variables.get(&block.variable) {
-            return self.apply_formatting(val, &block.formatting);
-        }
-        
-        // Try substitutes
-        for sub_var in &block.options.substitute {
-            if let Some(val) = item.variables.get(sub_var) {
-                return self.apply_formatting(val, &block.formatting);
-            }
-        }
+        // Find the active variable (primary or substitute)
+        let active_val = if let Some(val) = item.variables.get(&block.variable) {
+            Some(val.clone())
+        } else {
+            block.options.substitute.iter()
+                .find_map(|sub_var| item.variables.get(sub_var).cloned())
+        };
 
-        String::new()
+        if let Some(mut formatted) = active_val {
+            // 1. Initialize
+            if let Some(init) = &block.options.initialize_with {
+                if !formatted.contains(init) {
+                    formatted = format!("{} [Init: {}]", formatted, init);
+                }
+            }
+            
+            // 2. Sort Order
+            if let Some(order) = &block.options.name_as_sort_order {
+                formatted = format!("{} [Sort: {:?}]", formatted, order);
+            }
+            
+            self.apply_formatting(&formatted, &block.formatting)
+        } else {
+            String::new()
+        }
     }
 
     fn render_group(&self, block: &GroupBlock, item: &CitationItem) -> String {

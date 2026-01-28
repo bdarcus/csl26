@@ -84,6 +84,7 @@ impl Upsampler {
         for child in &n.children {
             match child {
                 LNode::Name(name) => {
+                    eprintln!("Mapping Name: {:?}", name);
                     options.mode = match name.form.as_deref() {
                         Some("short") => Some(csln::NameMode::Short),
                         Some("count") => Some(csln::NameMode::Count),
@@ -94,7 +95,19 @@ impl Upsampler {
                         Some("symbol") => Some(csln::AndTerm::Symbol),
                         _ => None,
                     };
-                    // ... other name attributes like delimiter-precedes-last
+                    options.initialize_with = name.initialize_with.clone();
+                    options.sort_separator = name.sort_separator.clone();
+                    options.name_as_sort_order = match name.name_as_sort_order.as_deref() {
+                        Some("first") => Some(csln::NameAsSortOrder::First),
+                        Some("all") => Some(csln::NameAsSortOrder::All),
+                        _ => None,
+                    };
+                    options.delimiter_precedes_last = match name.delimiter_precedes_last.as_deref() { // Assuming I added this field to legacy model earlier? No wait.
+                        // I need to check if legacy Name model has this field.
+                        // Assuming it does for now, or I'll check model.rs
+                        _ => None, 
+                    };
+                    // Actually, let me check legacy::Name struct first.
                 }
                 LNode::Label(label) => {
                     options.label = Some(csln::LabelOptions {

@@ -111,6 +111,7 @@ pub struct Name {
     pub sort_separator: Option<String>,
     pub initialize_with: Option<String>,
     pub form: Option<String>,
+    pub delimiter_precedes_last: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

@@ -143,6 +143,12 @@ pub struct NamesOptions {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub delimiter_precedes_last: Option<DelimiterPrecedes>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub initialize_with: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sort_separator: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name_as_sort_order: Option<NameAsSortOrder>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub et_al: Option<EtAlOptions>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub label: Option<LabelOptions>,
@@ -172,6 +178,13 @@ pub enum DelimiterPrecedes {
     AfterInvertedName,
     Always,
     Never,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum NameAsSortOrder {
+    First,
+    All,
 }
 
 // Reusing EtAlOptions from previous definition in GEMINI.md, ensuring it's in the code
