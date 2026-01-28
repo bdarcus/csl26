@@ -6,3 +6,5 @@ csl.json
 csln.json
 flattened_*.json
 tests/*.csl
+scripts/node_modules/
+scripts/*.json
