@@ -61,9 +61,62 @@ impl TemplateCompiler {
     }
 
     /// Compile and sort for citation output (author first, then date).
+    /// Uses simplified compile that skips else branches to avoid extra fields.
     pub fn compile_citation(&self, nodes: &[CslnNode]) -> Vec<TemplateComponent> {
-        let mut components = self.compile(nodes);
+        let mut components = self.compile_simple(nodes);
         self.sort_citation_components(&mut components);
+        components
+    }
+
+    /// Simplified compile that only takes then_branch (for citations).
+    /// This avoids pulling in type-specific variations from else branches.
+    fn compile_simple(&self, nodes: &[CslnNode]) -> Vec<TemplateComponent> {
+        use csln_core::ItemType;
+        let mut components = Vec::new();
+
+        for node in nodes {
+            if let Some(component) = self.compile_node(node) {
+                components.push(component);
+            } else {
+                match node {
+                    CslnNode::Group(g) => {
+                        components.extend(self.compile_simple(&g.children));
+                    }
+                    CslnNode::Condition(c) => {
+                        // For citations, prefer else_branch for uncommon type conditions
+                        let uncommon_types = [
+                            ItemType::PersonalCommunication,
+                            ItemType::Interview,
+                            ItemType::LegalCase,
+                            ItemType::Legislation,
+                            ItemType::Bill,
+                            ItemType::Treaty,
+                        ];
+                        let is_uncommon_type = !c.if_item_type.is_empty()
+                            && c.if_item_type.iter().any(|t| uncommon_types.contains(t));
+
+                        if is_uncommon_type {
+                            // Prefer else_branch for common/default case
+                            if let Some(ref else_nodes) = c.else_branch {
+                                components.extend(self.compile_simple(else_nodes));
+                            } else {
+                                components.extend(self.compile_simple(&c.then_branch));
+                            }
+                        } else {
+                            // Take then_branch, but fall back to else_branch if empty
+                            let then_components = self.compile_simple(&c.then_branch);
+                            if !then_components.is_empty() {
+                                components.extend(then_components);
+                            } else if let Some(ref else_nodes) = c.else_branch {
+                                components.extend(self.compile_simple(else_nodes));
+                            }
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
+
         components
     }
 
@@ -274,6 +327,7 @@ impl TemplateCompiler {
             Variable::Edition => Some(NumberVariable::Edition),
             Variable::ChapterNumber => Some(NumberVariable::ChapterNumber),
             Variable::NumberOfVolumes => Some(NumberVariable::NumberOfVolumes),
+            Variable::CitationNumber => Some(NumberVariable::CitationNumber),
             _ => None,
         }
     }
