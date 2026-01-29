@@ -71,6 +71,8 @@ pub struct Bibliography {
     pub et_al_min: Option<usize>,
     pub et_al_use_first: Option<usize>,
     pub hanging_indent: Option<bool>,
+    pub subsequent_author_substitute: Option<String>,
+    pub subsequent_author_substitute_rule: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
