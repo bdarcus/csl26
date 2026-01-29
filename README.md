@@ -4,6 +4,21 @@
 
 CSLN is a ground-up reimagining of the [Citation Style Language](https://citationstyles.org/) (CSL), designed to make citation styles easier to write, maintain, and reason about—while remaining fully compatible with the existing ecosystem of 10,000+ styles.
 
+## Table of Contents
+
+- [Why CSLN?](#why-csln)
+  - [The Problem with CSL 1.0](#the-problem-with-csl-10)
+  - [The CSLN Solution](#the-csln-solution)
+- [Key Design Principles](#key-design-principles)
+- [Project Status](#project-status)
+- [Architecture](#architecture)
+- [For Style Maintainers](#for-style-maintainers)
+- [For Developers](#for-developers)
+- [Roadmap](#roadmap)
+- [Contributing](#contributing)
+- [License](#license)
+- [Acknowledgments](#acknowledgments)
+
 ## Why CSLN?
 
 CSL 1.0 has been tremendously successful. It powers citation formatting in Zotero, Mendeley, Pandoc, and countless other tools. But after 15+ years of evolution, the XML-based format has accumulated complexity that makes styles difficult to author and maintain.
