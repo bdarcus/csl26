@@ -25,14 +25,41 @@ scripts/           # oracle.js for citeproc-js verification
 tests/             # Integration tests
 ```
 
-## Key Design Principles
+## Development Principles
 
-### 1. Explicit Over Magic
+### 1. High-Fidelity Data & Math Support
+
+- **EDTF as Primary**: Prioritize Extended Date/Time Format (EDTF) for all date fields. The engine must support ranges, uncertainty, and approximations natively.
+- **Math in Variables**: Support mathematical notation and rich text within metadata variables (e.g., title or note). Prefer standard encodings (e.g., Unicode) over format-specific markup where possible, while ensuring the processor can handle complex fragments without corruption. Ref: csln#64
+- **Scoped Multilingualism**: Support multilingual/multiscript data via field 'scopes' (e.g., author+an:mslang). Ref: csln#66
+- **Contributor Distinction**: Maintain a strict distinction between individual and organizational authors.
+
+### 2. Hybrid Processing Architecture
+
+- **Dual-Mode Support**: The architecture must cater to both Batch Processing (CLI-based like Pandoc/LaTeX) and Interactive/Real-time usage (GUI-based like Word/Zotero).
+- **JSON Server Mode**: Consider a service-oriented approach (similar to Haskell citeproc) where the engine can run as a background process to minimize startup latency for interactive apps.
+
+### 3. Future-Proofing & Versioning (Stability)
+
+- **Forward/Backward Compatibility**: We must ensure that a style written in 2026 works in 2030, and ideally, that a newer style degrades gracefully in an older engine.
+- **Schema Evolution**: Utilize Serde’s `#[serde(default)]` and `#[serde(flatten)]` to handle unknown or new fields gracefully. Implement a versioning strategy within the Rust types to allow for non-breaking extensions to the specification.
+
+**Strategy: Permissive Runtime, Strict Linter**
+1. **Explicit Versioning**: Add a `version` field to the top-level Style struct.
+2. **Graceful Degradation**: Do NOT use `deny_unknown_fields`. Use `#[serde(flatten)]` to capture unknown fields in a private map (`_extra`) to preserve them during round-trip editing.
+3. **Strict Linting**: The runtime processor ignores extra fields, but `csln_analyze` (and language servers) must report them as warnings or errors to catch typos.
+4. **Extension via Defaults**: All new features must be `Option<T>` with `#[serde(default)]`.
+
+### 4. Rust Engineering Standards (Code-as-Schema)
+
+- **Serde-Driven Truth**: We use a Code-First approach. The Rust structs and enums are the source of truth for the schema.
+- **Total Stability**: Prohibit the use of `unwrap()` or `unsafe`. Use idiomatic Rust `Result` patterns for all processing logic.
+
+### 5. Explicit Over Magic
 
 **The style language should be explicit; the processor should be dumb.**
 
-If special behavior is needed (e.g., different punctuation for journals vs books), 
-it should be expressed in the style YAML, not hardcoded in the processor.
+If special behavior is needed (e.g., different punctuation for journals vs books), it should be expressed in the style YAML, not hardcoded in the processor.
 
 Bad (magic in processor):
 ```rust
@@ -53,14 +80,8 @@ Good (explicit in style):
 
 This makes styles portable, testable, and understandable without reading processor code.
 
-### 2. Type Safety
-Use Rust enums for controlled vocabularies. No string typing.
-```rust
-pub enum ContributorRole { Author, Editor, Translator, ... }
-pub enum DateForm { Year, YearMonth, Full, MonthDay }
-```
+### 6. Declarative Templates
 
-### 3. Declarative Templates
 Replace CSL 1.0's procedural `<choose>/<if>` with flat templates + type overrides:
 ```yaml
 bibliography:
@@ -77,16 +98,19 @@ bibliography:
           suppress: true  # Journals don't show publisher
 ```
 
-### 4. Structured Name Input
+### 7. Structured Name Input
+
 Names must be structured (`family`/`given` or `literal`), never parsed from strings. Corporate names can contain commas.
 
-### 5. Oracle Verification
+### 8. Oracle Verification
+
 All changes must pass the verification loop:
 1. Render with citeproc-js → String A
 2. Render with CSLN → String B  
 3. **Pass**: A == B (for supported features)
 
-### 6. Well-Commented Code
+### 9. Well-Commented Code
+
 Code should be self-documenting with clear comments explaining:
 - **Why** decisions were made, not just what the code does
 - Non-obvious behavior or edge cases
@@ -174,17 +198,30 @@ All changes must be made on feature branches. The user will handle merging via G
    git checkout -b feat/my-feature
    ```
 
-   ```
 2. **Format code before committing**
    ```bash
    cargo fmt
    ```
+
 3. **Make changes and commit**
+   Follow these commit message guidelines:
+   - **Conventional Commits**: Use `type(scope): subject` format.
+   - **Lowercase Subject**: Subject lines must be lowercase.
+   - **50/72 Rule**: Limit the subject line to 50 characters and wrap the body at 72 characters.
+   - **Explain What and Why**: The body should explain the rationale behind the change.
+   - **Issue References**: Include GitHub issue references where relevant (e.g., `Refs: #123` or `csln#64`).
+
+   Example:
    ```bash
-   git add -A && git commit -m "feat(scope): description"
+   git add -A && git commit -m "docs: update architectural principles
+   
+   Update AGENTS.md with new development and engineering standards
+   derived from csln project requirements.
+   
+   Refs: csln#64, csln#66"
    ```
 
-3. **Stop here.** Do NOT attempt to merge. The user will review and merge when ready.
+4. **Stop here.** Do NOT attempt to merge. The user will review and merge when ready.
 
 Branch naming conventions:
 - `feat/` - New features
