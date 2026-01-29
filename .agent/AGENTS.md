@@ -189,7 +189,7 @@ Before designing new features, consult [PRIOR_ART.md](./PRIOR_ART.md) to underst
 Specialized expertise is available via the following skills in `.agent/skills/`:
 
 - **[rust-pro](./skills/rust-pro/SKILL.md)**: Modern Rust engineering (1.75+), async patterns, and performance optimization. Use proactively for core processor development.
-- **[git-advanced-workflows](git-advanced-workflows)**: Advanced Git operations (rebasing, cherry-picking, bisecting).
+- **[git-advanced-workflows](./skills/git-advanced-workflows/SKILL.md)**: Advanced Git operations (rebasing, cherry-picking, bisecting).
 
 ### Style Classes
 - **in-text**: 2,302 styles (80.9%) - author-date
