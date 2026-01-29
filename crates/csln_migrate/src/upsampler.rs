@@ -223,6 +223,25 @@ impl Upsampler {
             // Fall through to if-branch if no else exists
         }
 
+        // Handle position conditions (ibid, subsequent, etc.) by preferring else branch.
+        // Position conditions are for repeated citations - else branch has full first-citation.
+        let has_position_condition = c.if_branch.position.is_some()
+            || c.else_if_branches.iter().any(|b| b.position.is_some());
+        if has_position_condition {
+            if let Some(else_children) = &c.else_branch {
+                let nodes = self.upsample_nodes(else_children);
+                return nodes.into_iter().next();
+            }
+            // If no else, try to find a branch without position (the "first" case)
+            for branch in &c.else_if_branches {
+                if branch.position.is_none() {
+                    let nodes = self.upsample_nodes(&branch.children);
+                    return nodes.into_iter().next();
+                }
+            }
+            // Fall through if all branches have position conditions
+        }
+
         let mut if_item_type = Vec::new();
         if let Some(types) = &c.if_branch.type_ {
             for t in types.split_whitespace() {
