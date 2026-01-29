@@ -125,6 +125,19 @@ Typos become compile errors. Invalid combinations are impossible.
 
 Every CSL 1.0 style can be automatically migrated to CSLN. We verify correctness by comparing output against [citeproc-js](https://github.com/Juris-M/citeproc-js), the reference CSL implementation.
 
+### 5. High-Fidelity Data
+
+CSLN prevents data loss by supporting:
+- **EDTF Dates**: ranges, uncertainty, and approximations
+- **Rich Text/Math**: mathematical notation and strict Unicode handling
+- **Multilingualism**: scoped fields for multi-script data
+
+### 6. Hybrid Architecture
+
+The engine is built for dual-mode operation:
+- **Batch**: High-throughput CLI for build systems (like Pandoc)
+- **Interactive**: Low-latency JSON server mode for reference managers (like Zotero)
+
 ## Project Status
 
 | Component | Status |
@@ -150,9 +163,10 @@ Features implemented:
 ✓ is-uncertain-date handling - [1962?] format
 ✓ disambiguate-add-givenname (935 styles) - name expansion
 ✓ disambiguate-add-names (1,241 styles) - et-al expansion
+✓ subsequent-author-substitute (314 styles) - "———" replacement
 
 Remaining high-priority:
-○ subsequent-author-substitute (314 styles)
+○ (None - Core feature set complete)
 ```
 
 ## Architecture
