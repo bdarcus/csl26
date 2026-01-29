@@ -113,11 +113,11 @@ Run `cargo run --bin csln_analyze -- styles/` to regenerate these statistics.
 | `name-as-sort-order` | 48 styles | Family-first formatting |
 | `disambiguate-add-givenname`| 935 styles | Add initials when ambiguous |
 | `disambiguate-add-names` | 1,241 styles | Add more authors to resolve ambiguity |
+| `subsequent-author-substitute` | 314 styles | "———" for repeated authors |
 
 ### High Priority (Not Yet Implemented)
 | Feature | Usage | Notes |
 |---------|-------|-------|
-| `subsequent-author-substitute` | 314 styles | "———" for repeated authors |
 
 ### Implemented ✅
 | Feature | Usage | Notes |
@@ -174,9 +174,14 @@ All changes must be made on feature branches. The user will handle merging via G
    git checkout -b feat/my-feature
    ```
 
-2. **Make changes and commit**
+   ```
+2. **Format code before committing**
    ```bash
-   git add -A && git commit -m "feat: description"
+   cargo fmt
+   ```
+3. **Make changes and commit**
+   ```bash
+   git add -A && git commit -m "feat(scope): description"
    ```
 
 3. **Stop here.** Do NOT attempt to merge. The user will review and merge when ready.

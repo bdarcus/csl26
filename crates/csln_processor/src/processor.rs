@@ -21,7 +21,7 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 //! This is tracked via `rendered_vars` in `process_template()`.
 
 use crate::error::ProcessorError;
-use crate::reference::{Bibliography, Citation, Reference};
+use crate::reference::{Bibliography, Citation, Name, Reference};
 use crate::render::{citation_to_string, refs_to_string, ProcTemplate, ProcTemplateComponent};
 use crate::values::{ComponentValues, ProcHints, RenderContext, RenderOptions};
 use csln_core::locale::Locale;
@@ -97,11 +97,28 @@ impl Processor {
     /// Process all references to get rendered output.
     pub fn process_references(&self) -> ProcessedReferences {
         let sorted_refs = self.sort_references(self.bibliography.values().collect());
+        let mut bibliography: Vec<ProcTemplate> = Vec::new();
+        let mut prev_reference: Option<&Reference> = None;
 
-        let bibliography: Vec<ProcTemplate> = sorted_refs
-            .iter()
-            .filter_map(|reference| self.process_bibliography_entry(reference))
-            .collect();
+        let bib_config = self.get_config().bibliography.as_ref();
+        let substitute = bib_config.and_then(|c| c.subsequent_author_substitute.as_ref());
+
+        for reference in sorted_refs {
+            if let Some(mut proc) = self.process_bibliography_entry(reference) {
+                // Apply subsequent author substitution if enabled
+                if let Some(sub_string) = substitute {
+                    if let Some(prev) = prev_reference {
+                        // Check if primary contributor matches
+                        if self.contributors_match(prev, reference) {
+                            self.apply_author_substitution(&mut proc, sub_string);
+                        }
+                    }
+                }
+
+                bibliography.push(proc);
+                prev_reference = Some(reference);
+            }
+        }
 
         ProcessedReferences {
             bibliography,
@@ -244,7 +261,12 @@ impl Processor {
                                 .and_then(|names| names.first())
                                 .map(|n| n.family_or_literal().to_lowercase())
                                 .unwrap_or_default();
-                            a_author.cmp(&b_author)
+
+                            if sort.ascending {
+                                a_author.cmp(&b_author)
+                            } else {
+                                b_author.cmp(&a_author)
+                            }
                         });
                     }
                     SortKey::Year => {
@@ -253,14 +275,24 @@ impl Processor {
                                 a.issued.as_ref().and_then(|d| d.year_value()).unwrap_or(0);
                             let b_year =
                                 b.issued.as_ref().and_then(|d| d.year_value()).unwrap_or(0);
-                            b_year.cmp(&a_year) // Descending
+
+                            if sort.ascending {
+                                a_year.cmp(&b_year)
+                            } else {
+                                b_year.cmp(&a_year)
+                            }
                         });
                     }
                     SortKey::Title => {
                         refs.sort_by(|a, b| {
                             let a_title = a.title.as_deref().unwrap_or("").to_lowercase();
                             let b_title = b.title.as_deref().unwrap_or("").to_lowercase();
-                            a_title.cmp(&b_title)
+
+                            if sort.ascending {
+                                a_title.cmp(&b_title)
+                            } else {
+                                b_title.cmp(&a_title)
+                            }
                         });
                     }
                     _ => {}
@@ -526,6 +558,43 @@ impl Processor {
             .unwrap_or_default();
 
         format!("{}:{}", author_key, year)
+    }
+
+    /// Check if primary contributors (authors/editors) match between two references.
+    fn contributors_match(&self, prev: &Reference, current: &Reference) -> bool {
+        // TODO: This should ideally check the *primary* contributor variables as defined
+        // by the style's substitution logic (e.g., Author -> Editor -> Title).
+        // For now, we'll just check names for simplification.
+
+        let prev_contributors = self.get_primary_contributors(prev);
+        let curr_contributors = self.get_primary_contributors(current);
+
+        match (prev_contributors, curr_contributors) {
+            (Some(p), Some(c)) => p == c,
+            _ => false,
+        }
+    }
+
+    /// Get the primary contributors for a reference (currently just Author).
+    fn get_primary_contributors<'a>(&self, reference: &'a Reference) -> Option<&'a Vec<Name>> {
+        // Simple fallback logic: Author -> Editor -> Translator
+        reference
+            .author
+            .as_ref()
+            .or(reference.editor.as_ref())
+            .or(reference.translator.as_ref())
+    }
+
+    /// Apply the substitution string to the primary contributor component.
+    fn apply_author_substitution(&self, proc: &mut ProcTemplate, substitute: &str) {
+        if let Some(component) = proc
+            .iter_mut()
+            .find(|c| matches!(c.template_component, TemplateComponent::Contributor(_)))
+        {
+            component.value = substitute.to_string();
+            // Important: Verify if we need to clear prefix/suffix or not depending on specs
+            // Usually suffixes like "." remain, but prefixes might not.
+        }
     }
 
     /// Render the bibliography to a string.

@@ -11,10 +11,10 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 
 use csl_legacy::model::{CslNode, Names, Style, Substitute};
 use csln_core::options::{
-    AndOptions, Config, ContributorConfig, DateConfig, DelimiterPrecedesLast,
+    AndOptions, BibliographyConfig, Config, ContributorConfig, DateConfig, DelimiterPrecedesLast,
     DemoteNonDroppingParticle, Disambiguation, DisplayAsSort, Group, PageRangeFormat, Processing,
-    ProcessingCustom, ShortenListOptions, Sort, SortKey, SortSpec, Substitute as CslnSubstitute,
-    SubstituteKey, TitlesConfig,
+    ProcessingCustom, ShortenListOptions, Sort, SortKey, SortSpec, SubsequentAuthorSubstituteRule,
+    Substitute as CslnSubstitute, SubstituteKey, TitlesConfig,
 };
 
 /// Extracts global configuration options from a CSL 1.0 style.
@@ -42,6 +42,9 @@ impl OptionsExtractor {
             // 6. Extract page range format from style-level attribute
             page_range_format: Self::extract_page_range_format(style),
 
+            // 7. Extract bibliography-specific settings
+            bibliography: Self::extract_bibliography_config(style),
+
             ..Config::default()
         }
     }
@@ -60,6 +63,37 @@ impl OptionsExtractor {
                 "chicago-16" => Some(PageRangeFormat::Chicago16),
                 _ => None,
             })
+    }
+
+    /// Extract bibliography-specific configuration.
+    fn extract_bibliography_config(style: &Style) -> Option<BibliographyConfig> {
+        let bib = style.bibliography.as_ref()?;
+
+        let mut config = BibliographyConfig::default();
+
+        if let Some(sub) = &bib.subsequent_author_substitute {
+            config.subsequent_author_substitute = Some(sub.clone());
+        }
+
+        if let Some(rule) = &bib.subsequent_author_substitute_rule {
+            config.subsequent_author_substitute_rule = match rule.as_str() {
+                "complete-all" => Some(SubsequentAuthorSubstituteRule::CompleteAll),
+                "complete-each" => Some(SubsequentAuthorSubstituteRule::CompleteEach),
+                "partial-each" => Some(SubsequentAuthorSubstituteRule::PartialEach),
+                "partial-first" => Some(SubsequentAuthorSubstituteRule::PartialFirst),
+                _ => Some(SubsequentAuthorSubstituteRule::CompleteAll),
+            };
+        }
+
+        if let Some(hanging) = bib.hanging_indent {
+            config.hanging_indent = Some(hanging);
+        }
+
+        if config.subsequent_author_substitute.is_some() || config.hanging_indent.is_some() {
+            Some(config)
+        } else {
+            None
+        }
     }
 
     /// Detect the processing mode (author-date, numeric, note) from citation attributes.

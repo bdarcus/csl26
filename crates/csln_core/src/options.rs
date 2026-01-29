@@ -36,6 +36,9 @@ pub struct Config {
     /// Page range formatting (expanded, minimal, chicago).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub page_range_format: Option<PageRangeFormat>,
+    /// Bibliography-specific settings.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub bibliography: Option<BibliographyConfig>,
 }
 
 /// Page range formatting options.
@@ -351,6 +354,36 @@ pub enum Scope {
 #[serde(rename_all = "kebab-case")]
 pub struct Group {
     pub template: Vec<SortKey>,
+}
+
+/// Bibliography-specific configuration.
+#[derive(Debug, Default, PartialEq, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct BibliographyConfig {
+    /// String to substitute for repeating authors (e.g., "———").
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub subsequent_author_substitute: Option<String>,
+    /// Rule for when to apply the substitute.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub subsequent_author_substitute_rule: Option<SubsequentAuthorSubstituteRule>,
+    /// Whether to use a hanging indent.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub hanging_indent: Option<bool>,
+}
+
+/// Rules for subsequent author substitution.
+#[derive(Debug, Default, PartialEq, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum SubsequentAuthorSubstituteRule {
+    /// Substitute only if ALL authors match.
+    #[default]
+    CompleteAll,
+    /// Substitute each matching name individually.
+    CompleteEach,
+    /// Substitute each matching name until the first mismatch.
+    PartialEach,
+    /// Substitute only the first name if it matches.
+    PartialFirst,
 }
 
 /// Substitution rules for missing author data.

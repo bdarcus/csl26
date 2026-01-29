@@ -203,6 +203,13 @@ fn parse_bibliography(node: Node) -> Result<Bibliography, String> {
         .and_then(|s| s.parse().ok());
     let hanging_indent = node.attribute("hanging-indent").map(|s| s == "true");
 
+    let subsequent_author_substitute = node
+        .attribute("subsequent-author-substitute")
+        .map(|s| s.to_string());
+    let subsequent_author_substitute_rule = node
+        .attribute("subsequent-author-substitute-rule")
+        .map(|s| s.to_string());
+
     for child in node.children() {
         if !child.is_element() {
             continue;
@@ -219,6 +226,8 @@ fn parse_bibliography(node: Node) -> Result<Bibliography, String> {
         et_al_min,
         et_al_use_first,
         hanging_indent,
+        subsequent_author_substitute,
+        subsequent_author_substitute_rule,
     })
 }
 
