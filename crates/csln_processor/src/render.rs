@@ -115,20 +115,36 @@ pub fn refs_to_string(proc_templates: Vec<ProcTemplate>) -> String {
 }
 
 /// Render a single citation.
-pub fn citation_to_string(proc_template: &ProcTemplate, wrap_parens: bool) -> String {
+///
+/// Uses wrap if specified, otherwise falls back to prefix/suffix.
+/// Delimiter defaults to ", " if not specified.
+pub fn citation_to_string(
+    proc_template: &ProcTemplate,
+    wrap: Option<&WrapPunctuation>,
+    prefix: Option<&str>,
+    suffix: Option<&str>,
+    delimiter: Option<&str>,
+) -> String {
     let mut parts: Vec<String> = Vec::new();
 
     for component in proc_template {
-        parts.push(render_component(component));
+        let rendered = render_component(component);
+        if !rendered.is_empty() {
+            parts.push(rendered);
+        }
     }
 
-    let content = parts.join(", ");
+    let delim = delimiter.unwrap_or(", ");
+    let content = parts.join(delim);
 
-    if wrap_parens {
-        format!("({})", content)
-    } else {
-        content
-    }
+    // wrap takes precedence over prefix/suffix
+    let (open, close) = match wrap {
+        Some(WrapPunctuation::Parentheses) => ("(", ")"),
+        Some(WrapPunctuation::Brackets) => ("[", "]"),
+        _ => (prefix.unwrap_or(""), suffix.unwrap_or("")),
+    };
+
+    format!("{}{}{}", open, content, close)
 }
 
 /// Render a single component to string.
@@ -253,8 +269,72 @@ mod tests {
             },
         ];
 
-        let result = citation_to_string(&template, true);
+        let result = citation_to_string(
+            &template,
+            Some(&WrapPunctuation::Parentheses),
+            None,
+            None,
+            Some(", "),
+        );
         assert_eq!(result, "(Kuhn, 1962)");
+    }
+
+    #[test]
+    fn test_citation_to_string_no_parens() {
+        let template = vec![
+            ProcTemplateComponent {
+                template_component: TemplateComponent::Contributor(TemplateContributor {
+                    contributor: ContributorRole::Author,
+                    form: ContributorForm::Short,
+                    name_order: None,
+                    delimiter: None,
+                    rendering: Rendering::default(),
+                    ..Default::default()
+                }),
+                value: "Kuhn".to_string(),
+                prefix: None,
+                suffix: None,
+                ref_type: None,
+            },
+            ProcTemplateComponent {
+                template_component: TemplateComponent::Date(TemplateDate {
+                    date: DateVariable::Issued,
+                    form: DateForm::Year,
+                    rendering: Rendering::default(),
+                    ..Default::default()
+                }),
+                value: "1962".to_string(),
+                prefix: None,
+                suffix: None,
+                ref_type: None,
+            },
+        ];
+
+        // No wrap, space delimiter
+        let result = citation_to_string(&template, None, None, None, Some(" "));
+        assert_eq!(result, "Kuhn 1962");
+    }
+
+    #[test]
+    fn test_citation_to_string_prefix_suffix_fallback() {
+        let template = vec![ProcTemplateComponent {
+            template_component: TemplateComponent::Contributor(TemplateContributor {
+                contributor: ContributorRole::Author,
+                form: ContributorForm::Short,
+                name_order: None,
+                delimiter: None,
+                rendering: Rendering::default(),
+                ..Default::default()
+            }),
+            value: "Kuhn".to_string(),
+            prefix: None,
+            suffix: None,
+            ref_type: None,
+        }];
+
+        // Edge case: space before paren
+        let result = citation_to_string(&template, None, Some(" ("), Some(")"), None);
+        assert_eq!(result, " (Kuhn)");
     }
 
     #[test]

@@ -25,8 +25,8 @@ use crate::reference::{Bibliography, Citation, Name, Reference};
 use crate::render::{citation_to_string, refs_to_string, ProcTemplate, ProcTemplateComponent};
 use crate::values::{ComponentValues, ProcHints, RenderContext, RenderOptions};
 use csln_core::locale::Locale;
-use csln_core::options::{Config, Processing, SortKey};
-use csln_core::template::TemplateComponent;
+use csln_core::options::{Config, SortKey};
+use csln_core::template::{TemplateComponent, WrapPunctuation};
 use csln_core::Style;
 use std::collections::HashMap;
 
@@ -45,6 +45,8 @@ pub struct Processor {
     default_config: Config,
     /// Pre-calculated processing hints.
     hints: HashMap<String, ProcHints>,
+    /// Citation numbers assigned to references (for numeric styles).
+    citation_numbers: std::cell::RefCell<HashMap<String, usize>>,
 }
 
 impl Default for Processor {
@@ -55,6 +57,7 @@ impl Default for Processor {
             locale: Locale::en_us(),
             default_config: Config::default(),
             hints: HashMap::new(),
+            citation_numbers: std::cell::RefCell::new(HashMap::new()),
         }
     }
 }
@@ -82,11 +85,29 @@ impl Processor {
             locale,
             default_config: Config::default(),
             hints: HashMap::new(),
+            citation_numbers: std::cell::RefCell::new(HashMap::new()),
         };
 
         // Pre-calculate hints for disambiguation
         processor.hints = processor.calculate_hints();
         processor
+    }
+
+    /// Create a new processor, loading the locale based on the style's default-locale.
+    ///
+    /// The `locales_dir` should point to a directory containing YAML locale files
+    /// (e.g., "en-US.yaml", "de-DE.yaml").
+    pub fn with_style_locale(
+        style: Style,
+        bibliography: Bibliography,
+        locales_dir: &std::path::Path,
+    ) -> Self {
+        let locale = if let Some(ref locale_id) = style.info.default_locale {
+            Locale::load(locale_id, locales_dir)
+        } else {
+            Locale::en_us()
+        };
+        Self::with_locale(style, bibliography, locale)
     }
 
     /// Get the style configuration.
@@ -133,7 +154,13 @@ impl Processor {
             .map(|cs| cs.template.as_slice())
             .unwrap_or_default();
 
-        let mut all_items = Vec::new();
+        // Get intra-citation delimiter (between components like author and year)
+        let intra_delimiter = citation_spec
+            .and_then(|cs| cs.delimiter.as_deref())
+            .unwrap_or(", ");
+
+        // Render each citation item, then join with inter-citation delimiter
+        let mut rendered_items = Vec::new();
 
         for item in &citation.items {
             let reference = self
@@ -141,19 +168,49 @@ impl Processor {
                 .get(&item.id)
                 .ok_or_else(|| ProcessorError::ReferenceNotFound(item.id.clone()))?;
 
-            if let Some(proc) = self.process_template(reference, template, RenderContext::Citation)
-            {
-                all_items.extend(proc);
+            // Get or assign citation number for numeric styles
+            let citation_number = self.get_or_assign_citation_number(&item.id);
+
+            if let Some(proc) = self.process_template_with_number(
+                reference,
+                template,
+                RenderContext::Citation,
+                citation_number,
+            ) {
+                // Each item's parts are joined with intra-citation delimiter
+                let item_str = citation_to_string(&proc, None, None, None, Some(intra_delimiter));
+                if !item_str.is_empty() {
+                    rendered_items.push(item_str);
+                }
             }
         }
 
-        // Determine if we should wrap in parentheses
-        let wrap_parens = matches!(self.get_config().processing, Some(Processing::AuthorDate));
+        // Get wrap/prefix/suffix/multi-cite-delimiter from citation spec
+        let wrap = citation_spec.and_then(|cs| cs.wrap.as_ref());
+        let prefix = citation_spec.and_then(|cs| cs.prefix.as_deref());
+        let suffix = citation_spec.and_then(|cs| cs.suffix.as_deref());
+        // Inter-citation delimiter (between multiple refs)
+        let inter_delimiter = citation_spec
+            .and_then(|cs| cs.multi_cite_delimiter.as_deref())
+            .unwrap_or("; ");
 
-        Ok(citation_to_string(
-            &all_items.into_iter().collect(),
-            wrap_parens,
-        ))
+        let content = rendered_items.join(inter_delimiter);
+
+        // Apply wrap or prefix/suffix
+        let (open, close) = match wrap {
+            Some(WrapPunctuation::Parentheses) => ("(", ")"),
+            Some(WrapPunctuation::Brackets) => ("[", "]"),
+            _ => (prefix.unwrap_or(""), suffix.unwrap_or("")),
+        };
+
+        Ok(format!("{}{}{}", open, content, close))
+    }
+
+    /// Get the citation number for a reference, assigning one if not yet cited.
+    fn get_or_assign_citation_number(&self, ref_id: &str) -> usize {
+        let mut numbers = self.citation_numbers.borrow_mut();
+        let next_num = numbers.len() + 1;
+        *numbers.entry(ref_id.to_string()).or_insert(next_num)
     }
 
     /// Process a bibliography entry.
@@ -162,7 +219,17 @@ impl Processor {
         self.process_template(reference, &bib_spec.template, RenderContext::Bibliography)
     }
 
-    /// Process a template for a reference.
+    /// Process a template for a reference (without citation number).
+    fn process_template(
+        &self,
+        reference: &Reference,
+        template: &[TemplateComponent],
+        context: RenderContext,
+    ) -> Option<ProcTemplate> {
+        self.process_template_with_number(reference, template, context, 0)
+    }
+
+    /// Process a template for a reference with citation number.
     ///
     /// Iterates through template components, extracting values from the reference.
     /// Empty values are skipped. Implements the CSL 1.0 "variable-once" rule:
@@ -176,11 +243,12 @@ impl Processor {
     ///
     /// This prevents issues like author appearing twice if used as substitute
     /// for editor.
-    fn process_template(
+    fn process_template_with_number(
         &self,
         reference: &Reference,
         template: &[TemplateComponent],
         context: RenderContext,
+        citation_number: usize,
     ) -> Option<ProcTemplate> {
         let config = self.get_config();
         let options = RenderOptions {
@@ -189,7 +257,17 @@ impl Processor {
             context,
         };
         let default_hint = ProcHints::default();
-        let hint = self.hints.get(&reference.id).unwrap_or(&default_hint);
+        let base_hint = self.hints.get(&reference.id).unwrap_or(&default_hint);
+
+        // Create a hint with citation number
+        let hint = ProcHints {
+            citation_number: if citation_number > 0 {
+                Some(citation_number)
+            } else {
+                None
+            },
+            ..base_hint.clone()
+        };
 
         // Track rendered variables to prevent duplicates (CSL 1.0 spec:
         // "Substituted variables are suppressed in the rest of the output")
@@ -209,7 +287,7 @@ impl Processor {
                 }
 
                 // Extract value from reference
-                let values = component.values(reference, hint, &options)?;
+                let values = component.values(reference, &hint, &options)?;
                 if values.value.is_empty() {
                     return None;
                 }
@@ -343,6 +421,7 @@ impl Processor {
                                     group_key: key.clone(),
                                     expand_given_names: false,
                                     min_names_to_show: Some(n),
+                                    ..Default::default()
                                 },
                             );
                         }
@@ -362,6 +441,7 @@ impl Processor {
                                 group_key: key.clone(),
                                 expand_given_names: true,
                                 min_names_to_show: None,
+                                ..Default::default()
                             },
                         );
                     }
@@ -389,6 +469,7 @@ impl Processor {
                                         group_key: key.clone(),
                                         expand_given_names: true,
                                         min_names_to_show: Some(n),
+                                        ..Default::default()
                                     },
                                 );
                             }
@@ -429,6 +510,7 @@ impl Processor {
                     group_key: key.clone(),
                     expand_given_names: expand_names,
                     min_names_to_show: None,
+                    ..Default::default()
                 },
             );
         }
@@ -635,7 +717,9 @@ fn get_variable_key(component: &TemplateComponent) -> Option<String> {
 mod tests {
     use super::*;
     use crate::reference::{DateVariable, Name};
-    use csln_core::options::{AndOptions, ContributorConfig, DisplayAsSort, ShortenListOptions};
+    use csln_core::options::{
+        AndOptions, ContributorConfig, DisplayAsSort, Processing, ShortenListOptions,
+    };
     use csln_core::template::{
         ContributorForm, ContributorRole, DateForm, DateVariable as TDateVar, Rendering,
         TemplateComponent, TemplateContributor, TemplateDate, TemplateTitle, TitleType,
@@ -682,6 +766,7 @@ mod tests {
                         ..Default::default()
                     }),
                 ],
+                wrap: Some(WrapPunctuation::Parentheses),
                 ..Default::default()
             }),
             bibliography: Some(BibliographySpec {

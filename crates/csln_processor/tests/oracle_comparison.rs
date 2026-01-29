@@ -57,6 +57,7 @@ fn make_apa_style() -> Style {
                     ..Default::default()
                 }),
             ],
+            wrap: Some(WrapPunctuation::Parentheses),
             ..Default::default()
         }),
         bibliography: Some(BibliographySpec {

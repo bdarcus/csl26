@@ -26,6 +26,7 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 //! options:
 //!   processing: author-date
 //! citation:
+//!   wrap: parentheses
 //!   template:
 //!     - contributor: author
 //!       form: short

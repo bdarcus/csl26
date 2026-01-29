@@ -323,6 +323,20 @@ impl OptionsExtractor {
                     config.delimiter = name.delimiter.clone();
                     *has_config = true;
                 }
+
+                // delimiter-precedes-last (from <name> element)
+                if let Some(dpl) = &name.delimiter_precedes_last {
+                    config.delimiter_precedes_last = match dpl.as_str() {
+                        "contextual" => Some(DelimiterPrecedesLast::Contextual),
+                        "after-inverted-name" => Some(DelimiterPrecedesLast::AfterInvertedName),
+                        "always" => Some(DelimiterPrecedesLast::Always),
+                        "never" => Some(DelimiterPrecedesLast::Never),
+                        _ => None,
+                    };
+                    if config.delimiter_precedes_last.is_some() {
+                        *has_config = true;
+                    }
+                }
             }
         }
 

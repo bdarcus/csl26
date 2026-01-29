@@ -291,6 +291,7 @@ pub enum NumberVariable {
     CollectionNumber,
     NumberOfPages,
     NumberOfVolumes,
+    CitationNumber,
 }
 
 /// Number rendering forms.
