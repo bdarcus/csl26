@@ -48,13 +48,16 @@ fn make_apa_style() -> Style {
                     name_order: None,
                     delimiter: None,
                     rendering: Rendering::default(),
+                    ..Default::default()
                 }),
                 TemplateComponent::Date(TemplateDate {
                     date: TDateVar::Issued,
                     form: DateForm::Year,
                     rendering: Rendering::default(),
+                    ..Default::default()
                 }),
             ],
+            ..Default::default()
         }),
         bibliography: Some(BibliographySpec {
             options: None,
@@ -65,6 +68,7 @@ fn make_apa_style() -> Style {
                     name_order: None,
                     delimiter: None,
                     rendering: Rendering::default(),
+                    ..Default::default()
                 }),
                 TemplateComponent::Date(TemplateDate {
                     date: TDateVar::Issued,
@@ -73,6 +77,7 @@ fn make_apa_style() -> Style {
                         wrap: Some(WrapPunctuation::Parentheses),
                         ..Default::default()
                     },
+                    ..Default::default()
                 }),
                 TemplateComponent::Title(TemplateTitle {
                     title: TitleType::Primary,
@@ -82,10 +87,13 @@ fn make_apa_style() -> Style {
                         ..Default::default()
                     },
                     overrides: None,
+                    ..Default::default()
                 }),
             ],
+            ..Default::default()
         }),
         templates: None,
+        ..Default::default()
     }
 }
 

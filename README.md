@@ -138,12 +138,20 @@ The engine is built for dual-mode operation:
 - **Batch**: High-throughput CLI for build systems (like Pandoc)
 - **Interactive**: Low-latency JSON server mode for reference managers (like Zotero)
 
+### 7. Stability & Forward Compatibility
+
+CSLN is built for a long-lived ecosystem:
+- **Explicit Versioning**: Styles include a `version` field for unambiguous schema identification.
+- **Permissive Runtime**: The engine ignores unknown fields, allowing older versions of the processor to run newer styles gracefully.
+- **Round-trip Safety**: Unknown fields are captured during parsing and preserved during serialization, ensuring no data loss when editing with different tool versions.
+- **Strict Linting**: While the runtime is permissive, development tools (like `csln_analyze`) are strict, catching typos and deprecated fields.
+
 ## Project Status
 
 | Component | Status |
 |-----------|--------|
 | CSL 1.0 Parser (`csl_legacy`) | ✅ Complete - parses all 2,844 official styles |
-| CSLN Schema (`csln_core`) | ✅ Complete - options, templates, locale, rendering |
+| CSLN Schema (`csln_core`) | ✅ Complete - options, templates, locale, rendering, versioning |
 | Migration Tool (`csln_migrate`) | ✅ Complete - extracts options, compiles templates |
 | CSLN Processor (`csln_processor`) | ✅ APA 5/5 match - citations and bibliography verified |
 | Oracle Verification | ✅ APA verified against citeproc-js |

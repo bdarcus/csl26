@@ -1,10 +1,11 @@
 {
-  "phase": "cleanup_complete",
-  "status": "ready_for_collaboration",
+  "phase": "schema_versioning_implemented",
+  "status": "ready_for_linter_implementation",
   "repo": "https://github.com/bdarcus/csl26",
-  "last_updated": "2026-01-29T01:55:00Z",
+  "last_updated": "2026-01-29T07:37:00Z",
   "citation_status": "5/5 exact match with citeproc-js oracle (including disambiguation)",
   "bibliography_status": "~85% match - core elements working",
+  "schema_versioning": "Implemented permissive runtime with round-trip safety via _extra fields",
   "structure": {
     ".agent/": "LLM agent instructions (AGENTS.md) and state (state.json)",
     "crates/": "Rust workspace (csl_legacy, csln_core, csln_migrate, csln_processor)",
@@ -13,9 +14,9 @@
     "styles/": "2,844 CSL 1.0 styles (submodule)"
   },
   "next_steps": [
-    "refine bibliography formatting (page ranges, punctuation)",
-    "Chicago author-date style support",
-    "bulk migration of all 2,844 styles"
+    "implement strict linter in csln_analyze to report unknown fields",
+    "define processor behavior for math/unicode fragments in variables (Issue #64)",
+    "migrate and test Chicago author-date style"
   ],
-  "tests_passing": 48
+  "tests_passing": 56
 }

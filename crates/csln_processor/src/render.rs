@@ -228,6 +228,7 @@ mod tests {
                     name_order: None,
                     delimiter: None,
                     rendering: Rendering::default(),
+                    ..Default::default()
                 }),
                 value: "Kuhn".to_string(),
                 prefix: None,
@@ -239,6 +240,7 @@ mod tests {
                     date: DateVariable::Issued,
                     form: DateForm::Year,
                     rendering: Rendering::default(),
+                    ..Default::default()
                 }),
                 value: "1962".to_string(),
                 prefix: None,
@@ -261,6 +263,7 @@ mod tests {
                     wrap: Some(WrapPunctuation::Parentheses),
                     ..Default::default()
                 },
+                ..Default::default()
             }),
             value: "1962".to_string(),
             prefix: None,
@@ -283,6 +286,7 @@ mod tests {
                     ..Default::default()
                 },
                 overrides: None,
+                ..Default::default()
             }),
             value: "The Structure of Scientific Revolutions".to_string(),
             prefix: None,

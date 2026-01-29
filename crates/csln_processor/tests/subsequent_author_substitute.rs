@@ -42,14 +42,18 @@ fn make_style_with_substitute(substitute: Option<String>) -> Style {
                     name_order: None,
                     delimiter: None,
                     rendering: Rendering::default(),
+                    ..Default::default()
                 }),
                 TemplateComponent::Date(TemplateDate {
                     date: TDateVar::Issued,
                     form: DateForm::Year,
                     rendering: Rendering::default(),
+                    ..Default::default()
                 }),
             ],
+            ..Default::default()
         }),
+        ..Default::default()
     }
 }
 

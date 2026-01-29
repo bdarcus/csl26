@@ -673,13 +673,16 @@ mod tests {
                         name_order: None,
                         delimiter: None,
                         rendering: Rendering::default(),
+                        ..Default::default()
                     }),
                     TemplateComponent::Date(TemplateDate {
                         date: TDateVar::Issued,
                         form: DateForm::Year,
                         rendering: Rendering::default(),
+                        ..Default::default()
                     }),
                 ],
+                ..Default::default()
             }),
             bibliography: Some(BibliographySpec {
                 options: None,
@@ -690,6 +693,7 @@ mod tests {
                         name_order: None,
                         delimiter: None,
                         rendering: Rendering::default(),
+                        ..Default::default()
                     }),
                     TemplateComponent::Date(TemplateDate {
                         date: TDateVar::Issued,
@@ -698,6 +702,7 @@ mod tests {
                             wrap: Some(WrapPunctuation::Parentheses),
                             ..Default::default()
                         },
+                        ..Default::default()
                     }),
                     TemplateComponent::Title(TemplateTitle {
                         title: TitleType::Primary,
@@ -707,10 +712,13 @@ mod tests {
                             ..Default::default()
                         },
                         overrides: None,
+                        ..Default::default()
                     }),
                 ],
+                ..Default::default()
             }),
             templates: None,
+            ..Default::default()
         }
     }
 

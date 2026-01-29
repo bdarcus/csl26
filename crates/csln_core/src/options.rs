@@ -10,6 +10,7 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 //! instead configured declaratively here.
 
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 /// Top-level style configuration.
 #[derive(Debug, Default, PartialEq, Clone, Serialize, Deserialize)]
@@ -39,6 +40,9 @@ pub struct Config {
     /// Bibliography-specific settings.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub bibliography: Option<BibliographyConfig>,
+    /// Unknown fields captured for forward compatibility.
+    #[serde(flatten)]
+    pub _extra: HashMap<String, serde_json::Value>,
 }
 
 /// Page range formatting options.
@@ -72,6 +76,9 @@ pub struct TitlesConfig {
     /// Default formatting for all titles.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub default: Option<TitleRendering>,
+    /// Unknown fields captured for forward compatibility.
+    #[serde(flatten)]
+    pub _extra: HashMap<String, serde_json::Value>,
 }
 
 /// Rendering options for titles.
@@ -182,12 +189,16 @@ impl Default for Disambiguation {
 #[serde(rename_all = "kebab-case")]
 pub struct DateConfig {
     pub month: MonthFormat,
+    /// Unknown fields captured for forward compatibility.
+    #[serde(flatten)]
+    pub _extra: HashMap<String, serde_json::Value>,
 }
 
 impl Default for DateConfig {
     fn default() -> Self {
         Self {
             month: MonthFormat::Long,
+            _extra: HashMap::new(),
         }
     }
 }
@@ -234,6 +245,9 @@ pub struct ContributorConfig {
     /// Handling of non-dropping particles (e.g., "van" in "van Gogh").
     #[serde(skip_serializing_if = "Option::is_none")]
     pub demote_non_dropping_particle: Option<DemoteNonDroppingParticle>,
+    /// Unknown fields captured for forward compatibility.
+    #[serde(flatten)]
+    pub _extra: HashMap<String, serde_json::Value>,
 }
 
 /// Options for demoting non-dropping particles.
@@ -369,6 +383,9 @@ pub struct BibliographyConfig {
     /// Whether to use a hanging indent.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub hanging_indent: Option<bool>,
+    /// Unknown fields captured for forward compatibility.
+    #[serde(flatten)]
+    pub _extra: HashMap<String, serde_json::Value>,
 }
 
 /// Rules for subsequent author substitution.

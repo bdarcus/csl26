@@ -57,6 +57,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     name_order: None,
                     delimiter: None,
                     rendering: csln_core::template::Rendering::default(),
+                    ..Default::default()
                 }),
             );
         }
@@ -74,6 +75,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     date: csln_core::template::DateVariable::Issued,
                     form: csln_core::template::DateForm::Year,
                     rendering: csln_core::template::Rendering::default(),
+                    ..Default::default()
                 }),
             );
         }
@@ -132,6 +134,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                             suffix: Some(", ".to_string()),
                             ..Default::default()
                         },
+                        ..Default::default()
                     }),
                 );
             }
@@ -162,6 +165,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         form: None,
                         rendering: csln_core::template::Rendering::default(),
                         overrides: None,
+                        ..Default::default()
                     }),
                     TemplateComponent::Number(csln_core::template::TemplateNumber {
                         number: csln_core::template::NumberVariable::Issue,
@@ -171,11 +175,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                             ..Default::default()
                         },
                         overrides: None,
+                        ..Default::default()
                     }),
                 ],
                 delimiter: Some(csln_core::template::DelimiterPunctuation::None), // No delimiter between volume and (issue)
                 rendering: csln_core::template::Rendering::default(),
                 overrides: None,
+                ..Default::default()
             });
 
             new_bib.insert(min_idx, vol_issue_list);
@@ -246,18 +252,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         info: StyleInfo {
             title: Some(legacy_style.info.title.clone()),
             id: Some(legacy_style.info.id.clone()),
-            description: None,
+            ..Default::default()
         },
         templates: None,
         options: Some(options),
         citation: Some(CitationSpec {
             options: None,
             template: new_cit,
+            ..Default::default()
         }),
         bibliography: Some(BibliographySpec {
             options: None,
             template: new_bib,
+            ..Default::default()
         }),
+        ..Default::default()
     };
 
     // Output YAML to stdout
