@@ -165,20 +165,21 @@ Session state is stored in `.agent/state.json`. Read on start, update on complet
 
 ## Git Workflow
 
-**IMPORTANT: Do not commit directly to `main` branch.**
+**IMPORTANT: NEVER commit to or merge into the `main` branch.**
 
-All changes must be made on feature branches and merged via pull request:
+All changes must be made on feature branches. The user will handle merging via GitHub Pull Request.
 
-```bash
-# Create a feature branch
-git checkout -b feat/my-feature
+1. **Create a feature branch**
+   ```bash
+   git checkout -b feat/my-feature
+   ```
 
-# Make changes, commit
-git add -A && git commit -m "feat: description"
+2. **Make changes and commit**
+   ```bash
+   git add -A && git commit -m "feat: description"
+   ```
 
-# Push and create PR
-git push -u origin feat/my-feature
-```
+3. **Stop here.** Do NOT attempt to merge. The user will review and merge when ready.
 
 Branch naming conventions:
 - `feat/` - New features
