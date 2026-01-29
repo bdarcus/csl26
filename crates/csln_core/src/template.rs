@@ -33,6 +33,7 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 //!
 //! This keeps all conditional logic in the style, making it testable and portable.
 
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -45,7 +46,7 @@ use std::collections::HashMap;
 ///   prefix: "In "
 /// ```
 /// Rather than nesting under a `rendering:` key.
-#[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq)]
+#[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq, JsonSchema)]
 #[serde(rename_all = "kebab-case", default)]
 pub struct Rendering {
     /// Render in italics/emphasis.
@@ -76,7 +77,7 @@ pub struct Rendering {
 }
 
 /// Punctuation to wrap a component in.
-#[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq)]
+#[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub enum WrapPunctuation {
     Parentheses,
@@ -88,7 +89,7 @@ pub enum WrapPunctuation {
 /// A template component - the building blocks of citation/bibliography templates.
 ///
 /// Each variant handles a specific data type with appropriate formatting options.
-#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, JsonSchema)]
 #[serde(untagged)]
 #[non_exhaustive]
 pub enum TemplateComponent {
@@ -115,7 +116,7 @@ impl TemplateComponent {
 }
 
 /// A contributor component for rendering names.
-#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Default)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Default, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct TemplateContributor {
     /// Which contributor role to render (author, editor, etc.).
@@ -137,7 +138,7 @@ pub struct TemplateContributor {
 }
 
 /// Name display order.
-#[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq)]
+#[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub enum NameOrder {
     /// Display as "Given Family" (e.g., "John Smith").
@@ -148,7 +149,7 @@ pub enum NameOrder {
 }
 
 /// How to render contributor names.
-#[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq)]
+#[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub enum ContributorForm {
     #[default]
@@ -159,7 +160,7 @@ pub enum ContributorForm {
 }
 
 /// Contributor roles.
-#[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq, Eq, Hash, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub enum ContributorRole {
@@ -184,7 +185,7 @@ pub enum ContributorRole {
 }
 
 /// A date component for rendering dates.
-#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Default)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Default, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct TemplateDate {
     pub date: DateVariable,
@@ -197,7 +198,7 @@ pub struct TemplateDate {
 }
 
 /// Date variables.
-#[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq)]
+#[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub enum DateVariable {
     #[default]
@@ -209,7 +210,7 @@ pub enum DateVariable {
 }
 
 /// Date rendering forms.
-#[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq)]
+#[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub enum DateForm {
     #[default]
@@ -220,7 +221,7 @@ pub enum DateForm {
 }
 
 /// A title component.
-#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Default)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Default, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct TemplateTitle {
     pub title: TitleType,
@@ -237,7 +238,7 @@ pub struct TemplateTitle {
 }
 
 /// Types of titles.
-#[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq)]
+#[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub enum TitleType {
@@ -251,7 +252,7 @@ pub enum TitleType {
 }
 
 /// Title rendering forms.
-#[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq)]
+#[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub enum TitleForm {
     Short,
@@ -260,7 +261,7 @@ pub enum TitleForm {
 }
 
 /// A number component (volume, issue, pages, etc.).
-#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Default)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Default, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct TemplateNumber {
     pub number: NumberVariable,
@@ -277,7 +278,7 @@ pub struct TemplateNumber {
 }
 
 /// Number variables.
-#[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq)]
+#[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub enum NumberVariable {
@@ -293,7 +294,7 @@ pub enum NumberVariable {
 }
 
 /// Number rendering forms.
-#[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq)]
+#[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq, JsonSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum NumberForm {
     #[default]
@@ -303,7 +304,7 @@ pub enum NumberForm {
 }
 
 /// A simple variable component (DOI, ISBN, URL, etc.).
-#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Default)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Default, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct TemplateVariable {
     pub variable: SimpleVariable,
@@ -318,7 +319,7 @@ pub struct TemplateVariable {
 }
 
 /// Simple string variables.
-#[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq)]
+#[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub enum SimpleVariable {
@@ -348,7 +349,7 @@ pub enum SimpleVariable {
 }
 
 /// A list component for grouping multiple items with a delimiter.
-#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Default)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Default, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct TemplateList {
     pub items: Vec<TemplateComponent>,
@@ -365,7 +366,7 @@ pub struct TemplateList {
 }
 
 /// Delimiter punctuation options.
-#[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq)]
+#[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub enum DelimiterPunctuation {
     #[default]

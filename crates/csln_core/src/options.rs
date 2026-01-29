@@ -9,11 +9,12 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 //! Much of the logic that CSL 1.0 handles in procedural template conditionals is
 //! instead configured declaratively here.
 
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 /// Top-level style configuration.
-#[derive(Debug, Default, PartialEq, Clone, Serialize, Deserialize)]
+#[derive(Debug, Default, PartialEq, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct Config {
     /// Substitution rules for missing data.
@@ -46,7 +47,7 @@ pub struct Config {
 }
 
 /// Page range formatting options.
-#[derive(Debug, Default, PartialEq, Clone, Serialize, Deserialize)]
+#[derive(Debug, Default, PartialEq, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub enum PageRangeFormat {
@@ -64,7 +65,7 @@ pub enum PageRangeFormat {
 }
 
 /// Title formatting configuration by title type.
-#[derive(Debug, Default, PartialEq, Clone, Serialize, Deserialize)]
+#[derive(Debug, Default, PartialEq, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct TitlesConfig {
     /// Formatting for component titles (articles, chapters).
@@ -82,7 +83,7 @@ pub struct TitlesConfig {
 }
 
 /// Rendering options for titles.
-#[derive(Debug, Default, PartialEq, Clone, Serialize, Deserialize)]
+#[derive(Debug, Default, PartialEq, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct TitleRendering {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -94,7 +95,7 @@ pub struct TitleRendering {
 }
 
 /// Processing mode for citation/bibliography generation.
-#[derive(Debug, Default, PartialEq, Clone, Serialize, Deserialize)]
+#[derive(Debug, Default, PartialEq, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub enum Processing {
@@ -106,7 +107,7 @@ pub enum Processing {
 }
 
 /// Custom processing configuration.
-#[derive(Debug, Default, PartialEq, Clone, Serialize, Deserialize)]
+#[derive(Debug, Default, PartialEq, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct ProcessingCustom {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -165,7 +166,7 @@ impl Processing {
 }
 
 /// Disambiguation settings.
-#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct Disambiguation {
     pub names: bool,
@@ -185,7 +186,7 @@ impl Default for Disambiguation {
 }
 
 /// Date formatting configuration.
-#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct DateConfig {
     pub month: MonthFormat,
@@ -204,7 +205,7 @@ impl Default for DateConfig {
 }
 
 /// Month display format.
-#[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq)]
+#[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq, JsonSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum MonthFormat {
     #[default]
@@ -214,7 +215,7 @@ pub enum MonthFormat {
 }
 
 /// Contributor formatting configuration.
-#[derive(Debug, Default, PartialEq, Clone, Serialize, Deserialize)]
+#[derive(Debug, Default, PartialEq, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct ContributorConfig {
     /// When to display a contributor's name in sort order.
@@ -254,7 +255,7 @@ pub struct ContributorConfig {
 }
 
 /// Options for demoting non-dropping particles.
-#[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq)]
+#[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub enum DemoteNonDroppingParticle {
     Never,
@@ -264,7 +265,7 @@ pub enum DemoteNonDroppingParticle {
 }
 
 /// When to display names in sort order (family-first).
-#[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq)]
+#[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq, JsonSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum DisplayAsSort {
     All,
@@ -274,7 +275,7 @@ pub enum DisplayAsSort {
 }
 
 /// Conjunction options between contributors.
-#[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq)]
+#[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq, JsonSchema)]
 #[serde(rename_all = "lowercase")]
 #[non_exhaustive]
 pub enum AndOptions {
@@ -285,7 +286,7 @@ pub enum AndOptions {
 }
 
 /// Role display options.
-#[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq)]
+#[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct RoleOptions {
     /// Contributor roles for which to omit the role description.
@@ -296,7 +297,7 @@ pub struct RoleOptions {
 }
 
 /// When to use delimiter before last contributor.
-#[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq)]
+#[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub enum DelimiterPrecedesLast {
     AfterInvertedName,
@@ -307,7 +308,7 @@ pub enum DelimiterPrecedesLast {
 }
 
 /// Et al. / list shortening options.
-#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct ShortenListOptions {
     /// Minimum number of names to trigger shortening.
@@ -334,7 +335,7 @@ impl Default for ShortenListOptions {
 }
 
 /// How to render "and others" / et al.
-#[derive(Debug, Default, PartialEq, Clone, Serialize, Deserialize)]
+#[derive(Debug, Default, PartialEq, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub enum AndOtherOptions {
     #[default]
@@ -343,7 +344,7 @@ pub enum AndOtherOptions {
 }
 
 /// Localization scope settings.
-#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct Localize {
     pub scope: Scope,
@@ -358,7 +359,7 @@ impl Default for Localize {
 }
 
 /// Localization scope.
-#[derive(Debug, Default, PartialEq, Clone, Serialize, Deserialize)]
+#[derive(Debug, Default, PartialEq, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub enum Scope {
     #[default]
@@ -367,14 +368,14 @@ pub enum Scope {
 }
 
 /// Grouping configuration for bibliography.
-#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct Group {
     pub template: Vec<SortKey>,
 }
 
 /// Bibliography-specific configuration.
-#[derive(Debug, Default, PartialEq, Clone, Serialize, Deserialize)]
+#[derive(Debug, Default, PartialEq, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct BibliographyConfig {
     /// String to substitute for repeating authors (e.g., "———").
@@ -392,7 +393,7 @@ pub struct BibliographyConfig {
 }
 
 /// Rules for subsequent author substitution.
-#[derive(Debug, Default, PartialEq, Clone, Serialize, Deserialize)]
+#[derive(Debug, Default, PartialEq, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub enum SubsequentAuthorSubstituteRule {
     /// Substitute only if ALL authors match.
@@ -407,7 +408,7 @@ pub enum SubsequentAuthorSubstituteRule {
 }
 
 /// Substitution rules for missing author data.
-#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct Substitute {
     /// Form to use for contributor roles when substituting.
@@ -431,7 +432,7 @@ impl Default for Substitute {
 }
 
 /// Fields that can be used as author substitutes.
-#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum SubstituteKey {
     Editor,
@@ -440,7 +441,7 @@ pub enum SubstituteKey {
 }
 
 /// Sorting configuration.
-#[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq)]
+#[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct Sort {
     /// Shorten name lists for sorting the same as for display.
@@ -454,7 +455,7 @@ pub struct Sort {
 }
 
 /// A single sort specification.
-#[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq)]
+#[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct SortSpec {
     pub key: SortKey,
@@ -467,7 +468,7 @@ fn default_ascending() -> bool {
 }
 
 /// Available sort keys.
-#[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq)]
+#[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq, JsonSchema)]
 #[serde(rename_all = "lowercase")]
 #[non_exhaustive]
 pub enum SortKey {

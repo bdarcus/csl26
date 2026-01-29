@@ -16,6 +16,7 @@ Transition the citation management ecosystem from CSL 1.0 (procedural XML) to CS
 ```
 crates/
   csl_legacy/      # CSL 1.0 XML parser (complete)
+  csln_cli/        # CLI tools (schema generation)
   csln_core/       # CSLN types: Style, Template, Options, Locale
   csln_migrate/    # CSL 1.0 → CSLN conversion
   csln_processor/  # Citation/bibliography rendering engine
@@ -211,6 +212,9 @@ cd scripts && node oracle-e2e.js ../styles/apa.csl
 
 # Run CSLN processor  
 cargo run --bin csln_processor -- examples/apa-style.yaml
+
+# Generate JSON Schema
+cargo run --bin csln_cli -- schema > csln.schema.json
 
 # Analyze all styles for feature usage
 cargo run --bin csln_analyze -- styles/
