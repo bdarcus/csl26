@@ -132,30 +132,35 @@ Run `cargo run --bin csln_analyze -- styles/` to regenerate these statistics.
 | Feature | Usage | Notes |
 |---------|-------|-------|
 | `initialize-with` | 8,035 uses | Controls name initials vs full names |
+| `name-as-sort-order` | 2,100+ styles | Family-first formatting |
 | `is-uncertain-date` | 1,668 uses | Handled by preferring else branch |
-| `and` (text/symbol) | 172 styles | Conjunction between names |
-| `name-as-sort-order` | 48 styles | Family-first formatting |
-| `disambiguate-add-givenname`| 935 styles | Add initials when ambiguous |
+| `page-range-format` | 1,076 styles | expanded, minimal, chicago |
 | `disambiguate-add-names` | 1,241 styles | Add more authors to resolve ambiguity |
+| `disambiguate-add-givenname`| 935 styles | Add initials when ambiguous |
+| `delimiter-precedes-et-al` | 786 uses | always, never, contextual |
 | `subsequent-author-substitute` | 314 styles | "———" for repeated authors |
+| `and` (text/symbol) | 172 styles | Conjunction between names |
 
 ### High Priority (Not Yet Implemented)
 | Feature | Usage | Notes |
 |---------|-------|-------|
-
-### Implemented ✅
-| Feature | Usage | Notes |
-|---------|-------|-------|
-| `page-range-format` | 1,076 styles | expanded, minimal, chicago |
-| `delimiter-precedes-et-al` | 786 uses | always, never, contextual |
-| `initialize-with` | 1,437 styles | Style-level name initialization |
-| `name-as-sort-order` | 2,100+ styles | Family-first name ordering |
 
 ### Medium Priority (Note Styles)
 | Feature | Usage | Notes |
 |---------|-------|-------|
 | `position` conditions | 2,431 uses | ibid, subsequent, first |
 | Note style class | 542 styles | 19% of corpus |
+
+## Personas
+
+When designing features or writing code, evaluate your decisions against the [CSLN Design Personas](./PERSONAS.md). This ensures we satisfy the needs of style authors, web developers, systems architects, and domain experts.
+
+## Skills
+
+Specialized expertise is available via the following skills in `.agent/skills/`:
+
+- **[rust-pro](./skills/rust-pro/SKILL.md)**: Modern Rust engineering (1.75+), async patterns, and performance optimization. Use proactively for core processor development.
+- **[git-advanced-workflows](git-advanced-workflows)**: Advanced Git operations (rebasing, cherry-picking, bisecting).
 
 ### Style Classes
 - **in-text**: 2,302 styles (80.9%) - author-date
