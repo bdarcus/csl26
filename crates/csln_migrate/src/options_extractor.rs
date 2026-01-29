@@ -153,6 +153,10 @@ impl OptionsExtractor {
             config.initialize_with = Some(init_with.clone());
             has_config = true;
         }
+        if let Some(init_hyphen) = style.initialize_with_hyphen {
+            config.initialize_with_hyphen = Some(init_hyphen);
+            has_config = true;
+        }
         if let Some(and) = &style.and {
             config.and = match and.as_str() {
                 "text" => Some(AndOptions::Text),
@@ -288,6 +292,12 @@ impl OptionsExtractor {
         // Check children for <name> element
         for child in &names.children {
             if let CslNode::Name(name) = child {
+                // initialize-with-hyphen
+                if let Some(hyphen) = name.initialize_with_hyphen {
+                    config.initialize_with_hyphen = Some(hyphen);
+                    *has_config = true;
+                }
+
                 // name-as-sort-order
                 if let Some(order) = &name.name_as_sort_order {
                     config.display_as_sort = Some(match order.as_str() {

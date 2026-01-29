@@ -224,6 +224,9 @@ pub struct ContributorConfig {
     /// If None, full given names are used (e.g., "John Smith").
     #[serde(skip_serializing_if = "Option::is_none")]
     pub initialize_with: Option<String>,
+    /// Whether to include a hyphen when initializing names (e.g., "J.-P. Sartre").
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub initialize_with_hyphen: Option<bool>,
     /// Shorten the list of contributors (et al. handling).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub shorten: Option<ShortenListOptions>,

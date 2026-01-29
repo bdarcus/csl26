@@ -132,6 +132,8 @@ Run `cargo run --bin csln_analyze -- styles/` to regenerate these statistics.
 | Feature | Usage | Notes |
 |---------|-------|-------|
 | `initialize-with` | 8,035 uses | Controls name initials vs full names |
+| `initialize-with-hyphen` | - | Support for "J.-P. Sartre" initials |
+| `font-variant: small-caps` | 498 styles | Small caps rendering support |
 | `name-as-sort-order` | 2,100+ styles | Family-first formatting |
 | `is-uncertain-date` | 1,668 uses | Handled by preferring else branch |
 | `page-range-format` | 1,076 styles | expanded, minimal, chicago |

@@ -167,6 +167,8 @@ Features implemented:
 ✓ page-range-format (1,076 styles) - expanded, minimal, chicago
 ✓ delimiter-precedes-et-al (786 styles) - always, never, contextual  
 ✓ initialize-with (1,437 styles) - name initialization
+✓ initialize-with-hyphen - hyphenated initials support
+✓ small-caps (498 styles) - font-variant: small-caps support
 ✓ name-as-sort-order (2,100+ styles) - family-first ordering
 ✓ is-uncertain-date handling - [1962?] format
 ✓ disambiguate-add-givenname (935 styles) - name expansion
