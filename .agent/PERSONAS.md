@@ -1,6 +1,6 @@
 # CSLN Design Personas
 
-When evaluating features, consider these three stakeholder perspectives.
+When evaluating features, consider these four stakeholder perspectives.
 
 ---
 
