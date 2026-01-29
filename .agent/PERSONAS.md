@@ -71,6 +71,27 @@ When evaluating features, consider these three stakeholder perspectives.
 
 ---
 
+## 4. Domain Expert
+
+**Who**: Domain expert, researcher, bibliographer
+
+**Goals**:
+- Research existing solutions (CSL 1.0, CSL-M, biblatex, CSLN issues) and apply their lessons
+- Ensure semantic correctness and continuity with established standards
+- Verify coverage of complex edge cases
+
+**Priorities**:
+- "Don't reinvent the wheel"
+- Continuity with prior art (CSL 1.0, biblatex)
+- Robustness for complex styles (legal, multilingual)
+
+**Pain points**:
+- "We solved this 10 years ago, why ignore that?"
+- "This model is too simple for real-world bibliography"
+- "Inconsistent terminology with standard practices"
+
+---
+
 ## Feature Evaluation Checklist
 
 Before adding or modifying a feature, verify it works for all three personas:
@@ -93,6 +114,12 @@ Before adding or modifying a feature, verify it works for all three personas:
 - [ ] Is the implementation well-commented?
 - [ ] Are edge cases tested?
 
+### Domain Expert
+- [ ] Has this been implemented or researched in CSL 1.0/M and biblatex?
+- [ ] Does this handle known complex edge cases?
+- [ ] Is the terminology consistent with domain standards?
+- [ ] Are we reinventing the wheel unnecessarily?
+
 ---
 
 ## Example: Evaluating `name-order` Field
@@ -104,5 +131,6 @@ Before adding or modifying a feature, verify it works for all three personas:
 | Style Author | ✅ Explicit YAML field, no magic. `name-order: given-first` is readable |
 | Web Developer | ✅ Enum with two values, easy dropdown. No hidden interaction |
 | Systems Architect | ✅ `NameOrder` enum, not String. Well-documented in template.rs |
+| Domain Expert | ✅ Matches `given-family` distinction in biblatex. Consistent with CSL 1.0 `name-part` logic but simplified |
 
 **Result**: Feature approved for all personas.
