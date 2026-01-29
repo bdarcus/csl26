@@ -148,6 +148,7 @@ impl TemplateCompiler {
             name_order: None, // Use global setting by default
             delimiter: names.options.delimiter.clone(),
             rendering: self.convert_formatting(&names.formatting),
+            ..Default::default()
         }))
     }
 
@@ -189,6 +190,7 @@ impl TemplateCompiler {
             date: date_var,
             form,
             rendering: self.convert_formatting(&date.formatting),
+            ..Default::default()
         }))
     }
 
@@ -214,6 +216,7 @@ impl TemplateCompiler {
                 name_order: None, // Use global setting by default
                 delimiter: None,
                 rendering: self.convert_formatting(&var.formatting),
+                ..Default::default()
             }));
         }
 
@@ -224,6 +227,7 @@ impl TemplateCompiler {
                 form: None,
                 rendering: self.convert_formatting(&var.formatting),
                 overrides: None,
+                ..Default::default()
             }));
         }
 
@@ -234,6 +238,7 @@ impl TemplateCompiler {
                 form: None,
                 rendering: self.convert_formatting(&var.formatting),
                 overrides: None,
+                ..Default::default()
             }));
         }
 
@@ -243,6 +248,7 @@ impl TemplateCompiler {
                 variable: simple_var,
                 rendering: self.convert_formatting(&var.formatting),
                 overrides: None,
+                ..Default::default()
             }));
         }
 

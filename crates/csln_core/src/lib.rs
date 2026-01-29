@@ -23,6 +23,9 @@ pub type Template = Vec<TemplateComponent>;
 #[derive(Debug, Default, Deserialize, Serialize, Clone)]
 #[serde(rename_all = "kebab-case")]
 pub struct Style {
+    /// Style schema version.
+    #[serde(default = "default_version")]
+    pub version: String,
     /// Style metadata.
     pub info: StyleInfo,
     /// Named reusable templates.
@@ -37,24 +40,37 @@ pub struct Style {
     /// Bibliography specification.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub bibliography: Option<BibliographySpec>,
+    /// Unknown fields captured for forward compatibility.
+    #[serde(flatten)]
+    pub _extra: HashMap<String, serde_json::Value>,
+}
+
+fn default_version() -> String {
+    "1.0".to_string()
 }
 
 /// Citation specification.
-#[derive(Debug, Deserialize, Serialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone, Default)]
 #[serde(rename_all = "kebab-case")]
 pub struct CitationSpec {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub options: Option<Config>,
     pub template: Template,
+    /// Unknown fields captured for forward compatibility.
+    #[serde(flatten)]
+    pub _extra: HashMap<String, serde_json::Value>,
 }
 
 /// Bibliography specification.
-#[derive(Debug, Deserialize, Serialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone, Default)]
 #[serde(rename_all = "kebab-case")]
 pub struct BibliographySpec {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub options: Option<Config>,
     pub template: Template,
+    /// Unknown fields captured for forward compatibility.
+    #[serde(flatten)]
+    pub _extra: HashMap<String, serde_json::Value>,
 }
 
 /// Style metadata.
@@ -586,5 +602,47 @@ bibliography:
             }
             _ => panic!("Expected Title"),
         }
+    }
+
+    #[test]
+    fn test_style_forward_compatibility() {
+        let yaml = r#"
+version: "1.1"
+info:
+  title: Future Style
+future-option: true
+citation:
+  template:
+    - contributor: author
+      form: long
+      future-modifier: bold
+"#;
+        let style: Style = serde_yaml::from_str(yaml).unwrap();
+        assert_eq!(style.version, "1.1");
+        assert_eq!(
+            style._extra.get("future-option").unwrap(),
+            &serde_json::Value::Bool(true)
+        );
+
+        let citation = style.citation.as_ref().unwrap();
+        match &citation.template[0] {
+            template::TemplateComponent::Contributor(c) => {
+                assert_eq!(
+                    c._extra.get("future-modifier").unwrap(),
+                    &serde_json::Value::String("bold".to_string())
+                );
+            }
+            _ => panic!("Expected Contributor"),
+        }
+
+        // Round-trip test
+        let round_tripped = serde_yaml::to_string(&style).unwrap();
+        assert!(
+            round_tripped.contains("version: 1.1")
+                || round_tripped.contains("version: \"1.1\"")
+                || round_tripped.contains("version: '1.1'")
+        );
+        assert!(round_tripped.contains("future-option: true"));
+        assert!(round_tripped.contains("future-modifier: bold"));
     }
 }

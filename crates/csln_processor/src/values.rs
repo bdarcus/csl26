@@ -852,6 +852,7 @@ mod tests {
             name_order: None,
             delimiter: None,
             rendering: Default::default(),
+            _extra: Default::default(),
         };
 
         let values = component.values(&reference, &hints, &options).unwrap();
@@ -874,6 +875,7 @@ mod tests {
             date: TemplateDateVar::Issued,
             form: DateForm::Year,
             rendering: Default::default(),
+            _extra: Default::default(),
         };
 
         let values = component.values(&reference, &hints, &options).unwrap();
@@ -908,6 +910,7 @@ mod tests {
             name_order: None,
             delimiter: None,
             rendering: Default::default(),
+            _extra: Default::default(),
         };
 
         let values = component.values(&reference, &hints, &options).unwrap();
@@ -1018,6 +1021,7 @@ mod tests {
             name_order: None,
             delimiter: None,
             rendering: Default::default(),
+            _extra: Default::default(),
         };
 
         let values = component.values(&reference, &hints, &options).unwrap();
@@ -1060,6 +1064,7 @@ mod tests {
             name_order: None,
             delimiter: None,
             rendering: Default::default(),
+            _extra: Default::default(),
         };
 
         let values = component.values(&reference, &hints, &options).unwrap();

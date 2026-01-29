@@ -112,7 +112,7 @@ impl TemplateComponent {
 }
 
 /// A contributor component for rendering names.
-#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Default)]
 #[serde(rename_all = "kebab-case")]
 pub struct TemplateContributor {
     /// Which contributor role to render (author, editor, etc.).
@@ -128,6 +128,9 @@ pub struct TemplateContributor {
     pub delimiter: Option<String>,
     #[serde(flatten, default)]
     pub rendering: Rendering,
+    /// Unknown fields captured for forward compatibility.
+    #[serde(flatten)]
+    pub _extra: HashMap<String, serde_json::Value>,
 }
 
 /// Name display order.
@@ -153,10 +156,11 @@ pub enum ContributorForm {
 }
 
 /// Contributor roles.
-#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq, Eq, Hash)]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub enum ContributorRole {
+    #[default]
     Author,
     Editor,
     Translator,
@@ -177,19 +181,23 @@ pub enum ContributorRole {
 }
 
 /// A date component for rendering dates.
-#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Default)]
 #[serde(rename_all = "kebab-case")]
 pub struct TemplateDate {
     pub date: DateVariable,
     pub form: DateForm,
     #[serde(flatten, default)]
     pub rendering: Rendering,
+    /// Unknown fields captured for forward compatibility.
+    #[serde(flatten)]
+    pub _extra: HashMap<String, serde_json::Value>,
 }
 
 /// Date variables.
-#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+#[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq)]
 #[serde(rename_all = "kebab-case")]
 pub enum DateVariable {
+    #[default]
     Issued,
     Accessed,
     OriginalPublished,
@@ -209,7 +217,7 @@ pub enum DateForm {
 }
 
 /// A title component.
-#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Default)]
 #[serde(rename_all = "kebab-case")]
 pub struct TemplateTitle {
     pub title: TitleType,
@@ -220,14 +228,18 @@ pub struct TemplateTitle {
     /// Type-specific rendering overrides.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub overrides: Option<HashMap<String, Rendering>>,
+    /// Unknown fields captured for forward compatibility.
+    #[serde(flatten)]
+    pub _extra: HashMap<String, serde_json::Value>,
 }
 
 /// Types of titles.
-#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+#[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq)]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub enum TitleType {
     /// The primary title of the cited work.
+    #[default]
     Primary,
     /// Title of a book/monograph containing the cited work.
     ParentMonograph,
@@ -246,7 +258,7 @@ pub enum TitleForm {
 
 /// A number component (volume, issue, pages, etc.).
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Default)]
-#[serde(rename_all = "kebab-case", default, deny_unknown_fields)]
+#[serde(rename_all = "kebab-case")]
 pub struct TemplateNumber {
     pub number: NumberVariable,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -256,6 +268,9 @@ pub struct TemplateNumber {
     /// Type-specific rendering overrides.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub overrides: Option<HashMap<String, Rendering>>,
+    /// Unknown fields captured for forward compatibility.
+    #[serde(flatten)]
+    pub _extra: HashMap<String, serde_json::Value>,
 }
 
 /// Number variables.
@@ -286,7 +301,7 @@ pub enum NumberForm {
 
 /// A simple variable component (DOI, ISBN, URL, etc.).
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Default)]
-#[serde(rename_all = "kebab-case", default, deny_unknown_fields)]
+#[serde(rename_all = "kebab-case")]
 pub struct TemplateVariable {
     pub variable: SimpleVariable,
     #[serde(flatten)]
@@ -294,6 +309,9 @@ pub struct TemplateVariable {
     /// Type-specific rendering overrides. Use `suppress: true` to hide for certain types.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub overrides: Option<HashMap<String, Rendering>>,
+    /// Unknown fields captured for forward compatibility.
+    #[serde(flatten)]
+    pub _extra: HashMap<String, serde_json::Value>,
 }
 
 /// Simple string variables.
@@ -327,7 +345,7 @@ pub enum SimpleVariable {
 }
 
 /// A list component for grouping multiple items with a delimiter.
-#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Default)]
 #[serde(rename_all = "kebab-case")]
 pub struct TemplateList {
     pub items: Vec<TemplateComponent>,
@@ -338,6 +356,9 @@ pub struct TemplateList {
     /// Type-specific rendering overrides.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub overrides: Option<HashMap<String, Rendering>>,
+    /// Unknown fields captured for forward compatibility.
+    #[serde(flatten)]
+    pub _extra: HashMap<String, serde_json::Value>,
 }
 
 /// Delimiter punctuation options.
