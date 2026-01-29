@@ -156,11 +156,11 @@ Run `cargo run --bin csln_analyze -- styles/` to regenerate these statistics.
 
 ## Personas
 
-When designing features or writing code, evaluate your decisions against the [CSLN Design Personas](./PERSONAS.md). This ensures we satisfy the needs of style authors, web developers, systems architects, and domain experts.
+When designing features or writing code, evaluate your decisions against the [CSLN Design Personas](.agent/PERSONAS.md). This ensures we satisfy the needs of style authors, web developers, systems architects, and domain experts.
 
 ## Prior Art
 
-Before designing new features, consult [PRIOR_ART.md](./PRIOR_ART.md) to understand how existing systems (CSL 1.0, CSL-M, biblatex, citeproc-rs) handle similar problems. Key references:
+Before designing new features, consult [PRIOR_ART.md](.agent/PRIOR_ART.md) to understand how existing systems (CSL 1.0, CSL-M, biblatex, citeproc-rs) handle similar problems. Key references:
 
 - **CSL 1.0**: Established vocabulary, locale system, 2,844+ styles
 - **CSL-M**: Legal citations, multilingual locale layouts, institutional names
@@ -191,8 +191,8 @@ Before designing new features, consult [PRIOR_ART.md](./PRIOR_ART.md) to underst
 
 Specialized expertise is available via the following skills in `.agent/skills/`:
 
-- **[rust-pro](./skills/rust-pro/SKILL.md)**: Modern Rust engineering (1.75+), async patterns, and performance optimization. Use proactively for core processor development.
-- **[git-advanced-workflows](./skills/git-advanced-workflows/SKILL.md)**: Advanced Git operations (rebasing, cherry-picking, bisecting).
+- **[rust-pro](.agent/skills/rust-pro/SKILL.md)**: Modern Rust engineering (1.75+), async patterns, and performance optimization. Use proactively for core processor development.
+- **[git-advanced-workflows](.agent/skills/git-advanced-workflows/SKILL.md)**: Advanced Git operations (rebasing, cherry-picking, bisecting).
 
 ### Style Classes
 - **in-text**: 2,302 styles (80.9%) - author-date
