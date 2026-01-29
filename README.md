@@ -214,7 +214,8 @@ crates/
     └── main.rs      # CLI tool
 
 .agent/              # LLM agent instructions
-scripts/             # Oracle verification (citeproc-js)
+locales/             # CSLN YAML locale files (en-US, de-DE, fr-FR, tr-TR)
+scripts/             # Oracle verification and locale conversion
 styles/              # 2,844 CSL 1.0 styles (submodule)
 ```
 
@@ -340,7 +341,7 @@ This schema can be used to validate styles or provide intellisense in editors li
 
 ### Medium-term
 - [ ] WASM build for browser use
-- [ ] Additional locales (de-DE, fr-FR, etc.)
+- [x] Additional locales (de-DE, fr-FR, tr-TR, etc.)
 - [ ] Note-bibliography citation style support
 
 ### Long-term

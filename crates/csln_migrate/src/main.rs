@@ -1,5 +1,8 @@
 use csl_legacy::parser::parse_style;
-use csln_core::{template::TemplateComponent, BibliographySpec, CitationSpec, Style, StyleInfo};
+use csln_core::{
+    template::{TemplateComponent, WrapPunctuation},
+    BibliographySpec, CitationSpec, Style, StyleInfo,
+};
 use csln_migrate::{Compressor, MacroInliner, OptionsExtractor, TemplateCompiler, Upsampler};
 use roxmltree::Document;
 use std::fs;
@@ -252,14 +255,27 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         info: StyleInfo {
             title: Some(legacy_style.info.title.clone()),
             id: Some(legacy_style.info.id.clone()),
+            default_locale: legacy_style.default_locale.clone(),
             ..Default::default()
         },
         templates: None,
         options: Some(options),
-        citation: Some(CitationSpec {
-            options: None,
-            template: new_cit,
-            ..Default::default()
+        citation: Some({
+            let (wrap, prefix, suffix) = infer_citation_wrapping(
+                &legacy_style.citation.layout.prefix,
+                &legacy_style.citation.layout.suffix,
+            );
+            CitationSpec {
+                options: None,
+                template: new_cit,
+                wrap,
+                prefix,
+                suffix,
+                // Extract delimiter from first group in CSL layout (author-year separator)
+                delimiter: extract_citation_delimiter(&legacy_style.citation.layout),
+                multi_cite_delimiter: legacy_style.citation.layout.delimiter.clone(),
+                ..Default::default()
+            }
         }),
         bibliography: Some(BibliographySpec {
             options: None,
@@ -274,4 +290,72 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("{}", yaml);
 
     Ok(())
+}
+
+/// Infer citation wrapping from CSL prefix/suffix.
+/// Returns (wrap, prefix, suffix) - uses wrap when possible, falls back to affixes.
+fn infer_citation_wrapping(
+    prefix: &Option<String>,
+    suffix: &Option<String>,
+) -> (Option<WrapPunctuation>, Option<String>, Option<String>) {
+    match (prefix.as_deref(), suffix.as_deref()) {
+        // Clean cases -> use wrap
+        (Some("("), Some(")")) => (Some(WrapPunctuation::Parentheses), None, None),
+        (Some("["), Some("]")) => (Some(WrapPunctuation::Brackets), None, None),
+        // No affixes
+        (None, None) | (Some(""), Some("")) | (Some(""), None) | (None, Some("")) => {
+            (None, None, None)
+        }
+        // Edge cases -> use prefix/suffix
+        _ => (None, prefix.clone(), suffix.clone()),
+    }
+}
+
+/// Extract the intra-citation delimiter from the first group in the layout.
+/// In CSL, the author-year separator is often in `<group delimiter=" ">` or `<group delimiter=", ">`.
+/// We look for the innermost group containing text elements (author/date), not outer wrapper groups.
+fn extract_citation_delimiter(layout: &csl_legacy::model::Layout) -> Option<String> {
+    use csl_legacy::model::CslNode;
+
+    fn find_text_group_delimiter(nodes: &[CslNode]) -> Option<String> {
+        for node in nodes {
+            match node {
+                CslNode::Group(group) => {
+                    // First recurse into child groups to find innermost pattern
+                    if let Some(d) = find_text_group_delimiter(&group.children) {
+                        return Some(d);
+                    }
+                    // If no inner group found, check if this group directly contains text/names
+                    let has_text_or_names = group
+                        .children
+                        .iter()
+                        .any(|c| matches!(c, CslNode::Text(_) | CslNode::Names(_)));
+                    if has_text_or_names && group.delimiter.is_some() {
+                        return group.delimiter.clone();
+                    }
+                }
+                CslNode::Choose(choose) => {
+                    // Search inside choose if-branch first (most common case for author-date)
+                    if let Some(d) = find_text_group_delimiter(&choose.if_branch.children) {
+                        return Some(d);
+                    }
+                    // Also check else-if and else branches
+                    for else_if in &choose.else_if_branches {
+                        if let Some(d) = find_text_group_delimiter(&else_if.children) {
+                            return Some(d);
+                        }
+                    }
+                    if let Some(ref else_children) = choose.else_branch {
+                        if let Some(d) = find_text_group_delimiter(else_children) {
+                            return Some(d);
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+        None
+    }
+
+    find_text_group_delimiter(&layout.children)
 }
