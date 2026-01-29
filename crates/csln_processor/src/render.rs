@@ -163,6 +163,9 @@ fn render_component(component: &ProcTemplateComponent) -> String {
     if rendering.quote == Some(true) {
         text = format!("\"{}\"", text);
     }
+    if rendering.small_caps == Some(true) {
+        text = format!("<span style=\"font-variant:small-caps\">{}</span>", text);
+    }
 
     format!(
         "{}{}{}{}{}{}{}",
@@ -199,6 +202,7 @@ fn get_effective_rendering(component: &ProcTemplateComponent, base: &Rendering) 
                 emph: type_override.emph.or(base.emph),
                 quote: type_override.quote.or(base.quote),
                 strong: type_override.strong.or(base.strong),
+                small_caps: type_override.small_caps.or(base.small_caps),
                 prefix: type_override.prefix.clone().or(base.prefix.clone()),
                 suffix: type_override.suffix.clone().or(base.suffix.clone()),
                 wrap: type_override.wrap.clone().or(base.wrap.clone()),

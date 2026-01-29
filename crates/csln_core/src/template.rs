@@ -57,6 +57,9 @@ pub struct Rendering {
     /// Render in bold/strong.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub strong: Option<bool>,
+    /// Render in small caps.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub small_caps: Option<bool>,
     /// Text to prepend to the rendered value.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub prefix: Option<String>,

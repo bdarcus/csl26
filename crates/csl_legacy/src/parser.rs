@@ -8,6 +8,9 @@ pub fn parse_style(node: Node) -> Result<Style, String> {
 
     // Style-level name options (inherited by all names)
     let initialize_with = node.attribute("initialize-with").map(|s| s.to_string());
+    let initialize_with_hyphen = node
+        .attribute("initialize-with-hyphen")
+        .map(|s| s == "true");
     let names_delimiter = node.attribute("names-delimiter").map(|s| s.to_string());
     let name_as_sort_order = node.attribute("name-as-sort-order").map(|s| s.to_string());
     let sort_separator = node.attribute("sort-separator").map(|s| s.to_string());
@@ -19,6 +22,9 @@ pub fn parse_style(node: Node) -> Result<Style, String> {
         .map(|s| s.to_string());
     let and = node.attribute("and").map(|s| s.to_string());
     let page_range_format = node.attribute("page-range-format").map(|s| s.to_string());
+    let demote_non_dropping_particle = node
+        .attribute("demote-non-dropping-particle")
+        .map(|s| s.to_string());
 
     let mut info = Info::default();
     let mut locale = Vec::new();
@@ -62,12 +68,13 @@ pub fn parse_style(node: Node) -> Result<Style, String> {
         xmlns,
         class,
         initialize_with,
+        initialize_with_hyphen,
         names_delimiter,
         name_as_sort_order,
         sort_separator,
         delimiter_precedes_last,
         delimiter_precedes_et_al,
-        demote_non_dropping_particle: None, // Missing attribute in parse_style for now
+        demote_non_dropping_particle,
         and,
         page_range_format,
         info,
@@ -405,9 +412,13 @@ fn parse_names(node: Node) -> Result<Names, String> {
         .ok_or("Names missing variable")?
         .to_string();
     let children = parse_children(node)?;
+    let formatting = parse_formatting(node);
     Ok(Names {
         variable,
         delimiter: node.attribute("delimiter").map(|s| s.to_string()),
+        delimiter_precedes_et_al: node
+            .attribute("delimiter-precedes-et-al")
+            .map(|s| s.to_string()),
         et_al_min: node.attribute("et-al-min").and_then(|s| s.parse().ok()),
         et_al_use_first: node
             .attribute("et-al-use-first")
@@ -418,7 +429,10 @@ fn parse_names(node: Node) -> Result<Names, String> {
         et_al_subsequent_use_first: node
             .attribute("et-al-subsequent-use-first")
             .and_then(|s| s.parse().ok()),
+        prefix: node.attribute("prefix").map(|s| s.to_string()),
+        suffix: node.attribute("suffix").map(|s| s.to_string()),
         children,
+        formatting,
     })
 }
 
@@ -517,15 +531,22 @@ fn parse_number(node: Node) -> Result<Number, String> {
 }
 
 fn parse_name(node: Node) -> Result<Name, String> {
+    let formatting = parse_formatting(node);
     Ok(Name {
         and: node.attribute("and").map(|s| s.to_string()),
         delimiter: node.attribute("delimiter").map(|s| s.to_string()),
         name_as_sort_order: node.attribute("name-as-sort-order").map(|s| s.to_string()),
         sort_separator: node.attribute("sort-separator").map(|s| s.to_string()),
         initialize_with: node.attribute("initialize-with").map(|s| s.to_string()),
+        initialize_with_hyphen: node
+            .attribute("initialize-with-hyphen")
+            .map(|s| s == "true"),
         form: node.attribute("form").map(|s| s.to_string()),
         delimiter_precedes_last: node
             .attribute("delimiter-precedes-last")
+            .map(|s| s.to_string()),
+        delimiter_precedes_et_al: node
+            .attribute("delimiter-precedes-et-al")
             .map(|s| s.to_string()),
         et_al_min: node.attribute("et-al-min").and_then(|s| s.parse().ok()),
         et_al_use_first: node
@@ -537,6 +558,9 @@ fn parse_name(node: Node) -> Result<Name, String> {
         et_al_subsequent_use_first: node
             .attribute("et-al-subsequent-use-first")
             .and_then(|s| s.parse().ok()),
+        prefix: node.attribute("prefix").map(|s| s.to_string()),
+        suffix: node.attribute("suffix").map(|s| s.to_string()),
+        formatting,
     })
 }
 

@@ -303,6 +303,10 @@ impl TemplateCompiler {
                 .font_weight
                 .as_ref()
                 .map(|w| matches!(w, csln_core::FontWeight::Bold)),
+            small_caps: fmt
+                .font_variant
+                .as_ref()
+                .map(|v| matches!(v, csln_core::FontVariant::SmallCaps)),
             quote: fmt.quotes,
             prefix: fmt.prefix.clone(),
             suffix: fmt.suffix.clone(),

@@ -7,6 +7,7 @@ pub struct Style {
     pub class: String,
     /// Style-level name formatting options (inherited by all names unless overridden)
     pub initialize_with: Option<String>,
+    pub initialize_with_hyphen: Option<bool>,
     pub names_delimiter: Option<String>,
     pub name_as_sort_order: Option<String>,
     pub sort_separator: Option<String>,
@@ -134,12 +135,18 @@ pub struct Name {
     pub name_as_sort_order: Option<String>,
     pub sort_separator: Option<String>,
     pub initialize_with: Option<String>,
+    pub initialize_with_hyphen: Option<bool>,
     pub form: Option<String>,
     pub delimiter_precedes_last: Option<String>,
+    pub delimiter_precedes_et_al: Option<String>,
     pub et_al_min: Option<usize>,
     pub et_al_use_first: Option<usize>,
     pub et_al_subsequent_min: Option<usize>,
     pub et_al_subsequent_use_first: Option<usize>,
+    pub prefix: Option<String>,
+    pub suffix: Option<String>,
+    #[serde(flatten)]
+    pub formatting: Formatting,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -201,11 +208,16 @@ pub struct Label {
 pub struct Names {
     pub variable: String,
     pub delimiter: Option<String>,
+    pub delimiter_precedes_et_al: Option<String>,
     pub et_al_min: Option<usize>,
     pub et_al_use_first: Option<usize>,
     pub et_al_subsequent_min: Option<usize>,
     pub et_al_subsequent_use_first: Option<usize>,
+    pub prefix: Option<String>,
+    pub suffix: Option<String>,
     pub children: Vec<CslNode>, // <name>, <label>, <substitute>, <et-al>
+    #[serde(flatten)]
+    pub formatting: Formatting,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

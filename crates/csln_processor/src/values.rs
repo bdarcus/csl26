@@ -247,6 +247,7 @@ fn format_names(
     // Use explicit name_order if provided, otherwise use global display_as_sort
     let display_as_sort = config.and_then(|c| c.display_as_sort.clone());
     let initialize_with = config.and_then(|c| c.initialize_with.as_ref());
+    let initialize_with_hyphen = config.and_then(|c| c.initialize_with_hyphen);
     let demote_ndp = config.and_then(|c| c.demote_non_dropping_particle.as_ref());
 
     let formatted: Vec<String> = display_names
@@ -260,6 +261,7 @@ fn format_names(
                 &display_as_sort,
                 name_order,
                 initialize_with,
+                initialize_with_hyphen,
                 demote_ndp,
                 hints.expand_given_names,
             )
@@ -319,6 +321,7 @@ fn format_single_name(
     display_as_sort: &Option<DisplayAsSort>,
     name_order: Option<&csln_core::template::NameOrder>,
     initialize_with: Option<&String>,
+    initialize_with_hyphen: Option<bool>,
     demote_ndp: Option<&DemoteNonDroppingParticle>,
     expand_given_names: bool,
 ) -> String {
@@ -376,17 +379,41 @@ fn format_single_name(
                 family.to_string()
             };
 
-            let given_part = if let Some(_init) = initialize_with {
-                given
-                    .split_whitespace()
-                    .map(|w| {
-                        w.chars()
-                            .next()
-                            .map(|c| format!("{}.", c))
-                            .unwrap_or_default()
-                    })
-                    .collect::<Vec<_>>()
-                    .join(" ")
+            let given_part = if let Some(init) = initialize_with {
+                let separators = if initialize_with_hyphen == Some(false) {
+                    vec![' ', '\u{00A0}'] // Non-breaking space too
+                } else {
+                    vec![' ', '-', '\u{00A0}']
+                };
+
+                let mut result = String::new();
+                let mut current_part = String::new();
+
+                for c in given.chars() {
+                    if separators.contains(&c) {
+                        if !current_part.is_empty() {
+                            if let Some(first) = current_part.chars().next() {
+                                result.push(first);
+                                result.push_str(init);
+                            }
+                            current_part.clear();
+                        }
+                        // Only push separator if it's not whitespace, or if init doesn't already have one
+                        if !c.is_whitespace() || !init.chars().any(|ic| ic.is_whitespace()) {
+                            result.push(c);
+                        }
+                    } else {
+                        current_part.push(c);
+                    }
+                }
+
+                if !current_part.is_empty() {
+                    if let Some(first) = current_part.chars().next() {
+                        result.push(first);
+                        result.push_str(init);
+                    }
+                }
+                result.trim().to_string()
             } else {
                 given.to_string()
             };
@@ -1093,6 +1120,7 @@ mod tests {
             &Some(DisplayAsSort::All), // Force inverted
             None,
             None,
+            None, // initialize_with_hyphen
             Some(&DemoteNonDroppingParticle::Never),
             false,
         );
@@ -1107,6 +1135,7 @@ mod tests {
             &Some(DisplayAsSort::All), // Force inverted
             None,
             None,
+            None, // initialize_with_hyphen
             Some(&DemoteNonDroppingParticle::DisplayAndSort),
             false,
         );
@@ -1121,6 +1150,7 @@ mod tests {
             &Some(DisplayAsSort::All), // Force inverted
             None,
             None,
+            None, // initialize_with_hyphen
             Some(&DemoteNonDroppingParticle::SortOnly),
             false,
         );
@@ -1135,6 +1165,7 @@ mod tests {
             &Some(DisplayAsSort::None), // Not inverted
             None,
             None,
+            None, // initialize_with_hyphen
             Some(&DemoteNonDroppingParticle::DisplayAndSort),
             false,
         );
