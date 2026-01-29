@@ -204,6 +204,19 @@ pub struct ContributorConfig {
     /// When and how to display contributor roles.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub role: Option<RoleOptions>,
+    /// Handling of non-dropping particles (e.g., "van" in "van Gogh").
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub demote_non_dropping_particle: Option<DemoteNonDroppingParticle>,
+}
+
+/// Options for demoting non-dropping particles.
+#[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq)]
+#[serde(rename_all = "kebab-case")]
+pub enum DemoteNonDroppingParticle {
+    Never,
+    SortOnly,
+    #[default]
+    DisplayAndSort,
 }
 
 /// When to display names in sort order (family-first).

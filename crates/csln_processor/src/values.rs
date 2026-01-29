@@ -10,7 +10,7 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 
 use crate::reference::{DateVariable, Name, Reference};
 use csln_core::locale::{Locale, TermForm};
-use csln_core::options::{AndOptions, Config, DisplayAsSort, ShortenListOptions, SubstituteKey};
+use csln_core::options::{AndOptions, Config, DemoteNonDroppingParticle, DisplayAsSort, ShortenListOptions, SubstituteKey};
 use csln_core::template::{
     ContributorForm, ContributorRole, DateForm, DateVariable as TemplateDateVar,
     DelimiterPunctuation, NumberVariable, SimpleVariable, TemplateComponent, TemplateContributor,
@@ -215,10 +215,12 @@ fn format_names(
     // Use explicit name_order if provided, otherwise use global display_as_sort
     let display_as_sort = config.and_then(|c| c.display_as_sort.clone());
     let initialize_with = config.and_then(|c| c.initialize_with.as_ref());
+    let demote_ndp = config.and_then(|c| c.demote_non_dropping_particle.as_ref());
+    
     let formatted: Vec<String> = display_names
         .iter()
         .enumerate()
-        .map(|(i, name)| format_single_name(name, form, i, &display_as_sort, name_order, initialize_with))
+        .map(|(i, name)| format_single_name(name, form, i, &display_as_sort, name_order, initialize_with, demote_ndp))
         .collect();
 
     // Join with appropriate delimiter and "and" from locale
@@ -253,7 +255,6 @@ fn format_names(
                 // Default: use delimiter only if more than one name displayed
                 display_names.len() > 1
             }
-            _ => display_names.len() > 1, // Fallback for non_exhaustive
         };
         
         if use_delimiter {
@@ -267,13 +268,6 @@ fn format_names(
 }
 
 /// Format a single name.
-///
-/// The `name_order` override takes precedence over `display_as_sort`.
-/// This allows specific template components (like editors) to use
-/// different name formatting than the global setting.
-///
-/// If `initialize_with` is Some (e.g., ". "), given names are abbreviated to initials.
-/// If None, full given names are used.
 fn format_single_name(
     name: &Name,
     form: &ContributorForm,
@@ -281,6 +275,7 @@ fn format_single_name(
     display_as_sort: &Option<DisplayAsSort>,
     name_order: Option<&csln_core::template::NameOrder>,
     initialize_with: Option<&String>,
+    demote_ndp: Option<&DemoteNonDroppingParticle>,
 ) -> String {
     use csln_core::template::NameOrder;
     
@@ -291,14 +286,15 @@ fn format_single_name(
 
     let family = name.family.as_deref().unwrap_or("");
     let given = name.given.as_deref().unwrap_or("");
+    let dp = name.dropping_particle.as_deref().unwrap_or("");
+    let ndp = name.non_dropping_particle.as_deref().unwrap_or("");
+    let suffix = name.suffix.as_deref().unwrap_or("");
 
     // Determine if we should invert (Family, Given)
-    // Explicit name_order override takes precedence over global display_as_sort
     let inverted = match name_order {
-        Some(NameOrder::GivenFirst) => false,  // Explicit: show as "Given Family"
-        Some(NameOrder::FamilyFirst) => true,   // Explicit: show as "Family, Given"
+        Some(NameOrder::GivenFirst) => false,
+        Some(NameOrder::FamilyFirst) => true,
         None => {
-            // Fall back to global display_as_sort setting
             match display_as_sort {
                 Some(DisplayAsSort::All) => true,
                 Some(DisplayAsSort::First) => index == 0,
@@ -308,14 +304,29 @@ fn format_single_name(
     };
 
     match form {
-        ContributorForm::Short => family.to_string(),
+        ContributorForm::Short => {
+            // Short form usually just family name, but includes non-dropping particle
+            // e.g. "van Beethoven" (unless demoted? CSL spec says demote only affects sorting/display of full names mostly?)
+            // Spec: "demote-non-dropping-particle ... This attribute does not affect ... the short form"
+            // So for short form, we keep ndp with family.
+            let full_family = if !ndp.is_empty() {
+                format!("{} {}", ndp, family)
+            } else {
+                family.to_string()
+            };
+            full_family
+        },
         ContributorForm::Long | ContributorForm::Verb | ContributorForm::VerbShort => {
-            // Format given name based on initialize_with:
-            // - If Some (e.g., ". "), use initials: "Thomas S." → "T. S."
-            // - If None, use full given names: "Thomas S." → "Thomas S."
-            let formatted_given = if let Some(_init) = initialize_with {
-                // Convert given name(s) to initials (e.g., "Karl Anders" → "K. A.")
-                // Handles both full names and pre-initialized input like "K. A."
+            // Determine parts based on demotion
+            let demote = matches!(demote_ndp, Some(DemoteNonDroppingParticle::DisplayAndSort));
+            
+            let family_part = if !ndp.is_empty() && !demote {
+                format!("{} {}", ndp, family)
+            } else {
+                family.to_string()
+            };
+
+            let given_part = if let Some(_init) = initialize_with {
                 given
                     .split_whitespace()
                     .map(|w| {
@@ -327,24 +338,56 @@ fn format_single_name(
                     .collect::<Vec<_>>()
                     .join(" ")
             } else {
-                // Use full given names
                 given.to_string()
             };
             
+            // Construct particle part (dropping + demoted non-dropping)
+            let mut particle_part = String::new();
+            if !dp.is_empty() {
+                particle_part.push_str(dp);
+            }
+            if demote && !ndp.is_empty() {
+                if !particle_part.is_empty() {
+                    particle_part.push(' ');
+                }
+                particle_part.push_str(ndp);
+            }
+
             if inverted {
-                // "Family, Given" format (e.g., "Kuhn, Thomas S." or "Kuhn, T. S.")
-                if formatted_given.is_empty() {
-                    family.to_string()
+                // "Family, Given" format
+                // Family Part + "," + Given Part + Particle Part + Suffix
+                let mut parts = Vec::new();
+                
+                parts.push(family_part);
+                
+                let mut suffix_part = String::new();
+                if !given_part.is_empty() {
+                    suffix_part.push_str(&given_part);
+                }
+                if !particle_part.is_empty() {
+                    if !suffix_part.is_empty() { suffix_part.push(' '); }
+                    suffix_part.push_str(&particle_part);
+                }
+                if !suffix.is_empty() {
+                    if !suffix_part.is_empty() { suffix_part.push(' '); }
+                    suffix_part.push_str(suffix);
+                }
+                
+                if !suffix_part.is_empty() {
+                    format!("{}, {}", parts[0], suffix_part)
                 } else {
-                    format!("{}, {}", family, formatted_given)
+                    parts[0].clone()
                 }
             } else {
-                // "Given Family" format (e.g., "Thomas S. Kuhn" or "T. S. Kuhn")
-                if formatted_given.is_empty() {
-                    family.to_string()
-                } else {
-                    format!("{} {}", formatted_given, family)
-                }
+                // "Given Family" format
+                // Given Part + Particle Part + Family Part + Suffix
+                let mut parts = Vec::new();
+                if !given_part.is_empty() { parts.push(given_part); }
+                if !particle_part.is_empty() { parts.push(particle_part); }
+                if !family_part.is_empty() { parts.push(family_part); }
+                if !suffix.is_empty() { parts.push(suffix.to_string()); }
+                
+                parts.join(" ")
             }
         }
     }
@@ -896,5 +939,70 @@ mod tests {
         let values = component.values(&reference, &hints, &options).unwrap();
         // With "always", comma before et al.
         assert_eq!(values.value, "Smith, et al.");
+    }
+
+    #[test]
+    fn test_demote_non_dropping_particle() {
+        use csln_core::options::DemoteNonDroppingParticle;
+
+        // Name: Ludwig van Beethoven
+        let name = Name {
+            family: Some("Beethoven".to_string()),
+            given: Some("Ludwig".to_string()),
+            non_dropping_particle: Some("van".to_string()),
+            ..Default::default()
+        };
+
+        // Case 1: Never demote (default CSL behavior for display)
+        // Inverted: "van Beethoven, Ludwig"
+        let res_never = format_single_name(
+            &name,
+            &ContributorForm::Long,
+            0,
+            &Some(DisplayAsSort::All), // Force inverted
+            None,
+            None,
+            Some(&DemoteNonDroppingParticle::Never),
+        );
+        assert_eq!(res_never, "van Beethoven, Ludwig");
+
+        // Case 2: Display-and-sort (demote)
+        // Inverted: "Beethoven, Ludwig van"
+        let res_demote = format_single_name(
+            &name,
+            &ContributorForm::Long,
+            0,
+            &Some(DisplayAsSort::All), // Force inverted
+            None,
+            None,
+            Some(&DemoteNonDroppingParticle::DisplayAndSort),
+        );
+        assert_eq!(res_demote, "Beethoven, Ludwig van");
+
+        // Case 3: Sort-only (same as Never for display)
+        // Inverted: "van Beethoven, Ludwig"
+        let res_sort_only = format_single_name(
+            &name,
+            &ContributorForm::Long,
+            0,
+            &Some(DisplayAsSort::All), // Force inverted
+            None,
+            None,
+            Some(&DemoteNonDroppingParticle::SortOnly),
+        );
+        assert_eq!(res_sort_only, "van Beethoven, Ludwig");
+
+        // Case 4: Not inverted (should be same for all)
+        // "Ludwig van Beethoven"
+        let res_straight = format_single_name(
+            &name,
+            &ContributorForm::Long,
+            0,
+            &Some(DisplayAsSort::None), // Not inverted
+            None,
+            None,
+            Some(&DemoteNonDroppingParticle::DisplayAndSort),
+        );
+        assert_eq!(res_straight, "Ludwig van Beethoven");
     }
 }

@@ -32,6 +32,7 @@ fn make_apa_style() -> Style {
                 }),
                 and: Some(AndOptions::Symbol),
                 display_as_sort: Some(DisplayAsSort::First),
+                initialize_with: Some(". ".to_string()),
                 ..Default::default()
             }),
             ..Default::default()

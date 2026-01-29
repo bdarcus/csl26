@@ -12,7 +12,7 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 use csl_legacy::model::{CslNode, Style, Names, Substitute};
 use csln_core::options::{
     AndOptions, Config, ContributorConfig, DateConfig,
-    DelimiterPrecedesLast, DisplayAsSort, PageRangeFormat, Processing, 
+    DelimiterPrecedesLast, DemoteNonDroppingParticle, DisplayAsSort, PageRangeFormat, Processing, 
     ShortenListOptions, Substitute as CslnSubstitute, SubstituteKey, TitlesConfig,
 };
 
@@ -117,6 +117,15 @@ impl OptionsExtractor {
                 _ => None,
             };
             if config.delimiter_precedes_et_al.is_some() { has_config = true; }
+        }
+        if let Some(dndp) = &style.demote_non_dropping_particle {
+            config.demote_non_dropping_particle = match dndp.as_str() {
+                "never" => Some(DemoteNonDroppingParticle::Never),
+                "sort-only" => Some(DemoteNonDroppingParticle::SortOnly),
+                "display-and-sort" => Some(DemoteNonDroppingParticle::DisplayAndSort),
+                _ => None,
+            };
+            if config.demote_non_dropping_particle.is_some() { has_config = true; }
         }
 
         // Check citation-level et-al settings
