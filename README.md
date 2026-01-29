@@ -320,12 +320,34 @@ cargo doc --workspace --open
 
 ## Contributing
 
-We welcome contributions! Areas where help is especially valuable:
+CSLN follows an **AI-first development model**. The majority of the codebase is authored by AI agents (like Gemini and Antigravity) guided by human contributors. This approach lowers the barrier to entry, allowing the most valuable contributions to come from **Domain Experts** and **Style Authors** rather than just systems programmers.
 
-- **Style testing**: Run your favorite styles through migration and report issues
-- **Processor features**: Implement remaining template component types
-- **Documentation**: Improve examples and guides
-- **Locales**: Help with internationalization
+### How to Contribute
+
+The most impactful way to contribute is by providing the "raw material" that the AI needs to understand and solve complex citation problems:
+
+- **Surface Real-World Gaps**: Describe formatting requirements or edge cases that current systems (including CSL 1.0) handle poorly.
+- **Provide Contextual Resources**: Shared style guides, official manuals, and sample documents are high-value inputs that allow the LLM to extract logic and implement it.
+- **Refine Instructions**: Help improve the "identity" and "skills" of the AI agents by suggesting updates to the `.agent` directory.
+- **Report Pain Points**: Use GitHub issues to describe what is difficult or counter-intuitive in the current CSLN model.
+
+### AI-Augmented Workflow
+
+We treat GitHub Issues as **Context Packets** for our AI agents. Here is the current lifecycle:
+
+1. **Context Submission**: A Domain Expert submits an issue with dense context (e.g., "Legal citations in this jurisdiction require X, see attached PDF").
+2. **Agent Activation**: A project maintainer activates an AI agent (using tools like `antigravity` or `gemini`) initialized with the [Domain Expert Persona](.agent/PERSONAS.md).
+3. **Implementation**: The agent reads the issue, extracts the rules, and generates the necessary Rust code, YAML schema changes, or tests.
+4. **Verification**: The Code and tests are verified against the Oracle (citeproc-js) to ensure correctness.
+
+*Note: While maintainers currently trigger these agents manually, we are actively developing workflows to automate this loop directly from GitHub Actions.*
+
+### For Developers
+
+If you want to contribute code directly, focus on:
+- **Core Engine Architecture**: Improving the performance and correctness of `csln_processor`.
+- **Schema Design**: Ensuring `csln_core` remains robust and extensible.
+- **Agent Tooling**: Developing new "skills" or scripts that enhance the autonomy and capabilities of the AI agents.
 
 ## License
 
