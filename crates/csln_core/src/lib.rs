@@ -57,6 +57,24 @@ pub struct CitationSpec {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub options: Option<Config>,
     pub template: Template,
+    /// Wrap the entire citation in punctuation. Preferred over prefix/suffix.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub wrap: Option<template::WrapPunctuation>,
+    /// Prefix for the citation (use only when `wrap` doesn't suffice, e.g., " (" or "[Ref ").
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub prefix: Option<String>,
+    /// Suffix for the citation (use only when `wrap` doesn't suffice).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub suffix: Option<String>,
+    /// Delimiter between components within a single citation item (e.g., ", " or " ").
+    /// Defaults to ", ".
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub delimiter: Option<String>,
+    /// Delimiter between multiple citation items (e.g., "; ").
+    /// Defaults to "; ".
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "multi-cite-delimiter")]
+    pub multi_cite_delimiter: Option<String>,
     /// Unknown fields captured for forward compatibility.
     #[serde(flatten)]
     pub _extra: HashMap<String, serde_json::Value>,
@@ -84,6 +102,10 @@ pub struct StyleInfo {
     pub id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
+    /// Default locale for the style (e.g., "en-US", "de-DE").
+    /// Used for locale-aware term resolution.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub default_locale: Option<String>,
 }
 
 // ============================================================================

@@ -44,6 +44,8 @@ pub struct ProcHints {
     pub expand_given_names: bool,
     /// Minimum number of names to show to resolve ambiguity (overrides et-al-use-first).
     pub min_names_to_show: Option<usize>,
+    /// Citation number for numeric citation styles (1-based).
+    pub citation_number: Option<usize>,
 }
 
 /// Context for rendering (citation vs bibliography).
@@ -270,16 +272,49 @@ fn format_names(
 
     // Join with appropriate delimiter and "and" from locale
     let use_symbol = matches!(config.and_then(|c| c.and.clone()), Some(AndOptions::Symbol));
-    let and_str = format!(" {} ", locale.and_term(use_symbol));
+    let and_str = locale.and_term(use_symbol);
+
+    // Check if delimiter should precede last name (Oxford comma)
+    use csln_core::options::DelimiterPrecedesLast;
+    let delimiter_precedes_last = config.and_then(|c| c.delimiter_precedes_last.as_ref());
 
     let result = if formatted.len() == 1 {
         formatted[0].clone()
     } else if formatted.len() == 2 {
-        format!("{}{}{}", formatted[0], and_str, formatted[1])
+        // For two names, check delimiter_precedes_last setting
+        let use_delimiter = match delimiter_precedes_last {
+            Some(DelimiterPrecedesLast::Always) => true,
+            Some(DelimiterPrecedesLast::Never) => false,
+            Some(DelimiterPrecedesLast::Contextual) | None => false, // Default: no comma for 2 names
+            Some(DelimiterPrecedesLast::AfterInvertedName) => display_as_sort
+                .as_ref()
+                .is_some_and(|das| matches!(das, DisplayAsSort::All | DisplayAsSort::First)),
+        };
+        if use_delimiter {
+            format!("{}, {} {}", formatted[0], and_str, formatted[1])
+        } else {
+            format!("{} {} {}", formatted[0], and_str, formatted[1])
+        }
     } else {
         let last = formatted.last().unwrap();
         let rest = &formatted[..formatted.len() - 1];
-        format!("{},{} {}", rest.join(", "), and_str.trim_end(), last)
+        // Check if delimiter should precede "and" (Oxford comma)
+        let use_delimiter = match delimiter_precedes_last {
+            Some(DelimiterPrecedesLast::Always) => true,
+            Some(DelimiterPrecedesLast::Never) => false,
+            Some(DelimiterPrecedesLast::Contextual) | None => true, // Default: comma for 3+ names
+            Some(DelimiterPrecedesLast::AfterInvertedName) => {
+                display_as_sort.as_ref().is_some_and(|das| {
+                    matches!(das, DisplayAsSort::All)
+                        || (matches!(das, DisplayAsSort::First) && display_names.len() == 1)
+                })
+            }
+        };
+        if use_delimiter {
+            format!("{}, {} {}", rest.join(", "), and_str, last)
+        } else {
+            format!("{} {} {}", rest.join(", "), and_str, last)
+        }
     };
 
     if use_et_al {
@@ -599,7 +634,7 @@ impl ComponentValues for TemplateNumber {
     fn values(
         &self,
         reference: &Reference,
-        _hints: &ProcHints,
+        hints: &ProcHints,
         options: &RenderOptions<'_>,
     ) -> Option<ProcValues> {
         let value = match self.number {
@@ -610,6 +645,7 @@ impl ComponentValues for TemplateNumber {
                 .clone()
                 .map(|p| format_page_range(&p, options.config.page_range_format.as_ref())),
             NumberVariable::Edition => reference.edition.as_ref().map(|v| v.to_string()),
+            NumberVariable::CitationNumber => hints.citation_number.map(|n| n.to_string()),
             _ => None,
         };
 
