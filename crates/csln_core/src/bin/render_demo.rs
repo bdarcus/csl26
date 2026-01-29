@@ -1,6 +1,6 @@
-use std::fs;
+use csln_core::{CitationItem, CslnStyle, ItemType, Renderer, Variable};
 use std::collections::HashMap;
-use csln_core::{CslnStyle, Renderer, CitationItem, ItemType, Variable};
+use std::fs;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 1. Load the Migrated Style

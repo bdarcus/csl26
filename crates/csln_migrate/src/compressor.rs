@@ -13,7 +13,11 @@ impl Compressor {
                     let else_compressed = cond.else_branch.map(|e| self.compress_nodes(e));
 
                     // Attempt Merge
-                    if let Some(merged) = self.try_merge_branches(&cond.if_item_type, &then_compressed, &else_compressed) {
+                    if let Some(merged) = self.try_merge_branches(
+                        &cond.if_item_type,
+                        &then_compressed,
+                        &else_compressed,
+                    ) {
                         compressed.push(merged);
                     } else {
                         // Keep Condition if merge fails, but use compressed children
@@ -36,16 +40,25 @@ impl Compressor {
         compressed
     }
 
-    fn try_merge_branches(&self, if_types: &[ItemType], then_nodes: &[CslnNode], else_nodes: &Option<Vec<CslnNode>>) -> Option<CslnNode> {
+    fn try_merge_branches(
+        &self,
+        if_types: &[ItemType],
+        then_nodes: &[CslnNode],
+        else_nodes: &Option<Vec<CslnNode>>,
+    ) -> Option<CslnNode> {
         // Simple Case: 1 node in THEN, 1 node in ELSE (or empty ELSE)
         // And they are the SAME VARIABLE.
-        
-        if then_nodes.len() != 1 { return None; }
-        
+
+        if then_nodes.len() != 1 {
+            return None;
+        }
+
         // Handle "Then vs Else"
         if let Some(else_nodes) = else_nodes {
-            if else_nodes.len() != 1 { return None; }
-            
+            if else_nodes.len() != 1 {
+                return None;
+            }
+
             let then_node = &then_nodes[0];
             let else_node = &else_nodes[0];
 
@@ -53,7 +66,7 @@ impl Compressor {
                 if v1.variable == v2.variable {
                     // MERGE!
                     let mut merged = v2.clone(); // Start with base (else) defaults
-                    // Add override for the 'if' condition
+                                                 // Add override for the 'if' condition
                     for t in if_types {
                         merged.overrides.insert(t.clone(), v1.formatting.clone());
                     }

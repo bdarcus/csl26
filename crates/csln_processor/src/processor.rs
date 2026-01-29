@@ -15,7 +15,7 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 //! ## CSL 1.0 Compatibility
 //!
 //! The processor implements the CSL 1.0 "variable-once" rule:
-//! > "Substituted variables are suppressed in the rest of the output to 
+//! > "Substituted variables are suppressed in the rest of the output to
 //! > prevent duplication."
 //!
 //! This is tracked via `rendered_vars` in `process_template()`.
@@ -97,7 +97,7 @@ impl Processor {
     /// Process all references to get rendered output.
     pub fn process_references(&self) -> ProcessedReferences {
         let sorted_refs = self.sort_references(self.bibliography.values().collect());
-        
+
         let bibliography: Vec<ProcTemplate> = sorted_refs
             .iter()
             .filter_map(|reference| self.process_bibliography_entry(reference))
@@ -117,24 +117,26 @@ impl Processor {
             .unwrap_or_default();
 
         let mut all_items = Vec::new();
-        
+
         for item in &citation.items {
-            let reference = self.bibliography
+            let reference = self
+                .bibliography
                 .get(&item.id)
                 .ok_or_else(|| ProcessorError::ReferenceNotFound(item.id.clone()))?;
-            
-            if let Some(proc) = self.process_template(reference, template, RenderContext::Citation) {
+
+            if let Some(proc) = self.process_template(reference, template, RenderContext::Citation)
+            {
                 all_items.extend(proc);
             }
         }
 
         // Determine if we should wrap in parentheses
-        let wrap_parens = matches!(
-            self.get_config().processing,
-            Some(Processing::AuthorDate)
-        );
+        let wrap_parens = matches!(self.get_config().processing, Some(Processing::AuthorDate));
 
-        Ok(citation_to_string(&all_items.into_iter().collect(), wrap_parens))
+        Ok(citation_to_string(
+            &all_items.into_iter().collect(),
+            wrap_parens,
+        ))
     }
 
     /// Process a bibliography entry.
@@ -150,7 +152,7 @@ impl Processor {
     /// each variable can only be rendered once per reference to prevent duplication.
     ///
     /// ## Variable Deduplication
-    /// 
+    ///
     /// Per CSL 1.0 spec: "Substituted variables are suppressed in the rest of the
     /// output to prevent duplication." We implement this by tracking rendered
     /// variables in a HashSet and skipping any that have already been rendered.
@@ -164,7 +166,11 @@ impl Processor {
         context: RenderContext,
     ) -> Option<ProcTemplate> {
         let config = self.get_config();
-        let options = RenderOptions { config, locale: &self.locale, context };
+        let options = RenderOptions {
+            config,
+            locale: &self.locale,
+            context,
+        };
         let default_hint = ProcHints::default();
         let hint = self.hints.get(&reference.id).unwrap_or(&default_hint);
 
@@ -177,25 +183,25 @@ impl Processor {
             .filter_map(|component| {
                 // Get unique key for this variable (e.g., "contributor:Author")
                 let var_key = get_variable_key(component);
-                
+
                 // Skip if this variable was already rendered
                 if let Some(ref key) = var_key {
                     if rendered_vars.contains(key) {
                         return None;
                     }
                 }
-                
+
                 // Extract value from reference
                 let values = component.values(reference, hint, &options)?;
                 if values.value.is_empty() {
                     return None;
                 }
-                
+
                 // Mark variable as rendered for deduplication
                 if let Some(key) = var_key {
                     rendered_vars.insert(key);
                 }
-                
+
                 Some(ProcTemplateComponent {
                     template_component: component.clone(),
                     value: values.value,
@@ -226,12 +232,14 @@ impl Processor {
                 match sort.key {
                     SortKey::Author => {
                         refs.sort_by(|a, b| {
-                            let a_author = a.author
+                            let a_author = a
+                                .author
                                 .as_ref()
                                 .and_then(|names| names.first())
                                 .map(|n| n.family_or_literal().to_lowercase())
                                 .unwrap_or_default();
-                            let b_author = b.author
+                            let b_author = b
+                                .author
                                 .as_ref()
                                 .and_then(|names| names.first())
                                 .map(|n| n.family_or_literal().to_lowercase())
@@ -241,8 +249,10 @@ impl Processor {
                     }
                     SortKey::Year => {
                         refs.sort_by(|a, b| {
-                            let a_year = a.issued.as_ref().and_then(|d| d.year_value()).unwrap_or(0);
-                            let b_year = b.issued.as_ref().and_then(|d| d.year_value()).unwrap_or(0);
+                            let a_year =
+                                a.issued.as_ref().and_then(|d| d.year_value()).unwrap_or(0);
+                            let b_year =
+                                b.issued.as_ref().and_then(|d| d.year_value()).unwrap_or(0);
                             b_year.cmp(&a_year) // Descending
                         });
                     }
@@ -263,53 +273,259 @@ impl Processor {
 
     /// Calculate processing hints for disambiguation.
     fn calculate_hints(&self) -> HashMap<String, ProcHints> {
+        let mut hints = HashMap::new();
+        let config = self.get_config();
+
         let refs: Vec<&Reference> = self.bibliography.values().collect();
+        // Group by base citation key (e.g. "smith:2020")
         let grouped = self.group_references(refs);
 
-        grouped
+        for (key, group) in grouped {
+            let group_len = group.len();
+
+            if group_len > 1 {
+                // Different references colliding in their base citation form
+                let disamb_config = config
+                    .processing
+                    .as_ref()
+                    .and_then(|p| p.config().disambiguate);
+
+                let add_names = disamb_config.as_ref().map(|d| d.names).unwrap_or(false);
+                let add_givenname = disamb_config
+                    .as_ref()
+                    .map(|d| d.add_givenname)
+                    .unwrap_or(false);
+
+                let mut resolved = false;
+
+                // 1. Try expanding names (et-al expansion)
+                if add_names {
+                    if let Some(n) = self.check_names_resolution(&group) {
+                        for (i, reference) in group.iter().enumerate() {
+                            hints.insert(
+                                reference.id.clone(),
+                                ProcHints {
+                                    disamb_condition: false,
+                                    group_index: i + 1,
+                                    group_length: group_len,
+                                    group_key: key.clone(),
+                                    expand_given_names: false,
+                                    min_names_to_show: Some(n),
+                                },
+                            );
+                        }
+                        resolved = true;
+                    }
+                }
+
+                // 2. Try expanding given names for the base name list
+                if !resolved && add_givenname && self.check_givenname_resolution(&group, None) {
+                    for (i, reference) in group.iter().enumerate() {
+                        hints.insert(
+                            reference.id.clone(),
+                            ProcHints {
+                                disamb_condition: false,
+                                group_index: i + 1,
+                                group_length: group_len,
+                                group_key: key.clone(),
+                                expand_given_names: true,
+                                min_names_to_show: None,
+                            },
+                        );
+                    }
+                    resolved = true;
+                }
+
+                // 3. Try combined expansion: multiple names + given names
+                if !resolved && add_names && add_givenname {
+                    // Find if there's an N such that expanding both names and given names works
+                    let max_authors = group
+                        .iter()
+                        .map(|r| r.author.as_ref().map(|a| a.len()).unwrap_or(0))
+                        .max()
+                        .unwrap_or(0);
+
+                    for n in 2..=max_authors {
+                        if self.check_givenname_resolution(&group, Some(n)) {
+                            for (idx, reference) in group.iter().enumerate() {
+                                hints.insert(
+                                    reference.id.clone(),
+                                    ProcHints {
+                                        disamb_condition: false,
+                                        group_index: idx + 1,
+                                        group_length: group_len,
+                                        group_key: key.clone(),
+                                        expand_given_names: true,
+                                        min_names_to_show: Some(n),
+                                    },
+                                );
+                            }
+                            resolved = true;
+                            break;
+                        }
+                    }
+                }
+
+                // 4. Fallback to year-suffix
+                if !resolved {
+                    self.apply_year_suffix(&mut hints, &group, key, group_len, false);
+                }
+            } else {
+                // No collision
+                hints.insert(group[0].id.clone(), ProcHints::default());
+            }
+        }
+
+        hints
+    }
+
+    fn apply_year_suffix(
+        &self,
+        hints: &mut HashMap<String, ProcHints>,
+        group: &[&Reference],
+        key: String,
+        len: usize,
+        expand_names: bool,
+    ) {
+        for (i, reference) in group.iter().enumerate() {
+            hints.insert(
+                reference.id.clone(),
+                ProcHints {
+                    disamb_condition: true,
+                    group_index: i + 1,
+                    group_length: len,
+                    group_key: key.clone(),
+                    expand_given_names: expand_names,
+                    min_names_to_show: None,
+                },
+            );
+        }
+    }
+
+    /// Check if showing more names resolves ambiguity in the group.
+    fn check_names_resolution(&self, group: &[&Reference]) -> Option<usize> {
+        let max_authors = group
             .iter()
-            .flat_map(|(key, group)| {
-                let group_len = group.len();
-                group.iter().enumerate().map(move |(i, reference)| {
-                    let hint = ProcHints {
-                        disamb_condition: group_len > 1,
-                        group_index: i + 1,
-                        group_length: group_len,
-                        group_key: key.clone(),
-                    };
-                    (reference.id.clone(), hint)
-                })
-            })
-            .collect()
+            .map(|r| r.author.as_ref().map(|a| a.len()).unwrap_or(0))
+            .max()
+            .unwrap_or(0);
+
+        for n in 2..=max_authors {
+            let mut seen = std::collections::HashSet::new();
+            let mut collision = false;
+            for reference in group {
+                let authors = reference.author.as_ref();
+                let key = if let Some(a) = authors {
+                    a.iter()
+                        .take(n)
+                        .map(|name| name.family_or_literal().to_lowercase())
+                        .collect::<Vec<_>>()
+                        .join("|")
+                } else {
+                    "".to_string()
+                };
+                if !seen.insert(key) {
+                    collision = true;
+                    break;
+                }
+            }
+            if !collision {
+                return Some(n);
+            }
+        }
+        None
+    }
+
+    /// Check if expanding to full names resolves ambiguity in the group.
+    /// If `min_names` is Some(n), it checks resolution when showing n names.
+    fn check_givenname_resolution(&self, group: &[&Reference], min_names: Option<usize>) -> bool {
+        let mut seen = std::collections::HashSet::new();
+        for reference in group {
+            if let Some(authors) = &reference.author {
+                let n = min_names.unwrap_or(1);
+                // Create a key for the first n authors with full names
+                let key = authors
+                    .iter()
+                    .take(n)
+                    .map(|n| {
+                        format!(
+                            "{:?}|{:?}|{:?}|{:?}",
+                            n.family, n.given, n.non_dropping_particle, n.dropping_particle
+                        )
+                    })
+                    .collect::<Vec<_>>()
+                    .join("||");
+
+                if !seen.insert(key) {
+                    return false;
+                }
+            } else if !seen.insert("".to_string()) {
+                return false;
+            }
+        }
+        true
     }
 
     /// Group references by author-year for disambiguation.
-    fn group_references<'a>(&self, references: Vec<&'a Reference>) -> HashMap<String, Vec<&'a Reference>> {
+    fn group_references<'a>(
+        &self,
+        references: Vec<&'a Reference>,
+    ) -> HashMap<String, Vec<&'a Reference>> {
         let mut groups: HashMap<String, Vec<&'a Reference>> = HashMap::new();
+        let config = self.get_config();
 
         for reference in references {
-            let key = self.make_group_key(reference);
+            let key = self.make_group_key(reference, config);
             groups.entry(key).or_default().push(reference);
         }
 
         groups
     }
 
-    /// Create a grouping key for a reference.
-    fn make_group_key(&self, reference: &Reference) -> String {
-        let author = reference.author
+    /// Create a grouping key for a reference based on its base citation form.
+    fn make_group_key(&self, reference: &Reference, config: &Config) -> String {
+        let shorten = config
+            .contributors
             .as_ref()
-            .and_then(|names| names.first())
-            .map(|n| n.family_or_literal())
-            .unwrap_or("");
-        
-        let year = reference.issued
+            .and_then(|c| c.shorten.as_ref());
+
+        let author_key = if let Some(authors) = &reference.author {
+            if let Some(opts) = shorten {
+                if authors.len() >= opts.min as usize {
+                    // Show 'use_first' names in the base citation
+                    authors
+                        .iter()
+                        .take(opts.use_first as usize)
+                        .map(|n| n.family_or_literal().to_lowercase())
+                        .collect::<Vec<_>>()
+                        .join(",")
+                        + ",et-al"
+                } else {
+                    authors
+                        .iter()
+                        .map(|n| n.family_or_literal().to_lowercase())
+                        .collect::<Vec<_>>()
+                        .join(",")
+                }
+            } else {
+                authors
+                    .iter()
+                    .map(|n| n.family_or_literal().to_lowercase())
+                    .collect::<Vec<_>>()
+                    .join(",")
+            }
+        } else {
+            "".to_string()
+        };
+
+        let year = reference
+            .issued
             .as_ref()
             .and_then(|d| d.year_value())
             .map(|y| y.to_string())
             .unwrap_or_default();
 
-        format!("{}:{}", author.to_lowercase(), year)
+        format!("{}:{}", author_key, year)
     }
 
     /// Render the bibliography to a string.
@@ -334,7 +550,7 @@ impl Processor {
 /// - `Title(ParentSerial)` → `"title:ParentSerial"`
 fn get_variable_key(component: &TemplateComponent) -> Option<String> {
     use csln_core::template::*;
-    
+
     match component {
         TemplateComponent::Contributor(c) => Some(format!("contributor:{:?}", c.contributor)),
         TemplateComponent::Date(d) => Some(format!("date:{:?}", d.date)),
@@ -342,7 +558,7 @@ fn get_variable_key(component: &TemplateComponent) -> Option<String> {
         TemplateComponent::Number(n) => Some(format!("number:{:?}", n.number)),
         TemplateComponent::Variable(v) => Some(format!("variable:{:?}", v.variable)),
         TemplateComponent::List(_) => None, // Lists contain multiple variables, not deduplicated
-        _ => None, // Future component types
+        _ => None,                          // Future component types
     }
 }
 
@@ -352,9 +568,9 @@ mod tests {
     use crate::reference::{DateVariable, Name};
     use csln_core::options::{AndOptions, ContributorConfig, DisplayAsSort, ShortenListOptions};
     use csln_core::template::{
-        ContributorForm, ContributorRole, DateForm, DateVariable as TDateVar,
-        Rendering, TemplateComponent, TemplateContributor, TemplateDate, TemplateTitle,
-        TitleType, WrapPunctuation,
+        ContributorForm, ContributorRole, DateForm, DateVariable as TDateVar, Rendering,
+        TemplateComponent, TemplateContributor, TemplateDate, TemplateTitle, TitleType,
+        WrapPunctuation,
     };
     use csln_core::{BibliographySpec, CitationSpec, StyleInfo};
 
@@ -431,16 +647,19 @@ mod tests {
 
     fn make_bibliography() -> Bibliography {
         let mut bib = HashMap::new();
-        
-        bib.insert("kuhn1962".to_string(), Reference {
-            id: "kuhn1962".to_string(),
-            ref_type: "book".to_string(),
-            author: Some(vec![Name::new("Kuhn", "Thomas S.")]),
-            title: Some("The Structure of Scientific Revolutions".to_string()),
-            issued: Some(DateVariable::year(1962)),
-            publisher: Some("University of Chicago Press".to_string()),
-            ..Default::default()
-        });
+
+        bib.insert(
+            "kuhn1962".to_string(),
+            Reference {
+                id: "kuhn1962".to_string(),
+                ref_type: "book".to_string(),
+                author: Some(vec![Name::new("Kuhn", "Thomas S.")]),
+                title: Some("The Structure of Scientific Revolutions".to_string()),
+                issued: Some(DateVariable::year(1962)),
+                publisher: Some("University of Chicago Press".to_string()),
+                ..Default::default()
+            },
+        );
 
         bib
     }
@@ -470,7 +689,7 @@ mod tests {
         let processor = Processor::new(style, bib);
 
         let result = processor.render_bibliography();
-        
+
         // Check it contains the key parts
         assert!(result.contains("Kuhn"));
         assert!(result.contains("(1962)"));
@@ -481,16 +700,19 @@ mod tests {
     fn test_disambiguation_hints() {
         let style = make_style();
         let mut bib = make_bibliography();
-        
+
         // Add another Kuhn 1962 reference to trigger disambiguation
-        bib.insert("kuhn1962b".to_string(), Reference {
-            id: "kuhn1962b".to_string(),
-            ref_type: "article-journal".to_string(),
-            author: Some(vec![Name::new("Kuhn", "Thomas S.")]),
-            title: Some("The Function of Measurement in Modern Physical Science".to_string()),
-            issued: Some(DateVariable::year(1962)),
-            ..Default::default()
-        });
+        bib.insert(
+            "kuhn1962b".to_string(),
+            Reference {
+                id: "kuhn1962b".to_string(),
+                ref_type: "article-journal".to_string(),
+                author: Some(vec![Name::new("Kuhn", "Thomas S.")]),
+                title: Some("The Function of Measurement in Modern Physical Science".to_string()),
+                issued: Some(DateVariable::year(1962)),
+                ..Default::default()
+            },
+        );
 
         let processor = Processor::new(style, bib);
         let hints = &processor.hints;
@@ -498,5 +720,322 @@ mod tests {
         // Both should have disambiguation condition true
         assert!(hints.get("kuhn1962").unwrap().disamb_condition);
         assert!(hints.get("kuhn1962b").unwrap().disamb_condition);
+    }
+
+    #[test]
+    fn test_disambiguation_givenname() {
+        use csln_core::options::{
+            Disambiguation, Group, Processing, ProcessingCustom, Sort, SortKey, SortSpec,
+        };
+
+        // Style with add-givenname enabled
+        let mut style = make_style();
+        style.options = Some(Config {
+            processing: Some(Processing::Custom(ProcessingCustom {
+                sort: Some(Sort {
+                    shorten_names: false,
+                    render_substitutions: false,
+                    template: vec![
+                        SortSpec {
+                            key: SortKey::Author,
+                            ascending: true,
+                        },
+                        SortSpec {
+                            key: SortKey::Year,
+                            ascending: true,
+                        },
+                    ],
+                }),
+                group: Some(Group {
+                    template: vec![SortKey::Author, SortKey::Year],
+                }),
+                disambiguate: Some(Disambiguation {
+                    names: true,
+                    add_givenname: true,
+                    year_suffix: true,
+                }),
+            })),
+            contributors: Some(ContributorConfig {
+                initialize_with: Some(". ".to_string()),
+                ..Default::default()
+            }),
+            ..Default::default()
+        });
+
+        let mut bib = HashMap::new();
+        bib.insert(
+            "smith2020a".to_string(),
+            Reference {
+                id: "smith2020a".to_string(),
+                ref_type: "book".to_string(),
+                author: Some(vec![Name::new("Smith", "John")]),
+                issued: Some(DateVariable::year(2020)),
+                ..Default::default()
+            },
+        );
+        bib.insert(
+            "smith2020b".to_string(),
+            Reference {
+                id: "smith2020b".to_string(),
+                ref_type: "book".to_string(),
+                author: Some(vec![Name::new("Smith", "Alice")]),
+                issued: Some(DateVariable::year(2020)),
+                ..Default::default()
+            },
+        );
+
+        let processor = Processor::new(style, bib);
+
+        let hints = &processor.hints;
+
+        // Verify hints
+        assert!(hints.get("smith2020a").unwrap().expand_given_names);
+        assert!(hints.get("smith2020b").unwrap().expand_given_names);
+        assert!(!hints.get("smith2020a").unwrap().disamb_condition); // No year suffix
+
+        // Verify output
+        let cit_a = processor
+            .process_citation(&Citation {
+                id: Some("c1".to_string()),
+                items: vec![crate::reference::CitationItem {
+                    id: "smith2020a".to_string(),
+                    ..Default::default()
+                }],
+            })
+            .unwrap();
+
+        let cit_b = processor
+            .process_citation(&Citation {
+                id: Some("c2".to_string()),
+                items: vec![crate::reference::CitationItem {
+                    id: "smith2020b".to_string(),
+                    ..Default::default()
+                }],
+            })
+            .unwrap();
+
+        // Should expand to "J. Smith" and "A. Smith" (because initialized)
+        assert!(cit_a.contains("J. Smith"));
+        assert!(cit_b.contains("A. Smith"));
+    }
+
+    #[test]
+    fn test_disambiguation_add_names() {
+        use csln_core::options::{
+            Disambiguation, Group, Processing, ProcessingCustom, Sort, SortKey, SortSpec,
+        };
+
+        let mut style = make_style();
+        style.options = Some(Config {
+            processing: Some(Processing::Custom(ProcessingCustom {
+                sort: Some(Sort {
+                    shorten_names: false,
+                    render_substitutions: false,
+                    template: vec![
+                        SortSpec {
+                            key: SortKey::Author,
+                            ascending: true,
+                        },
+                        SortSpec {
+                            key: SortKey::Year,
+                            ascending: true,
+                        },
+                    ],
+                }),
+                group: Some(Group {
+                    template: vec![SortKey::Author, SortKey::Year],
+                }),
+                disambiguate: Some(Disambiguation {
+                    names: true, // disambiguate-add-names
+                    add_givenname: false,
+                    year_suffix: true,
+                }),
+            })),
+            contributors: Some(ContributorConfig {
+                shorten: Some(ShortenListOptions {
+                    min: 2,
+                    use_first: 1,
+                    ..Default::default()
+                }),
+                ..Default::default()
+            }),
+            ..Default::default()
+        });
+
+        let mut bib = HashMap::new();
+        // Two works by Smith & Jones and Smith & Brown
+        // Both would be "Smith et al. (2020)"
+        bib.insert(
+            "ref1".to_string(),
+            Reference {
+                id: "ref1".to_string(),
+                ref_type: "book".to_string(),
+                author: Some(vec![
+                    Name::new("Smith", "John"),
+                    Name::new("Jones", "Peter"),
+                ]),
+                issued: Some(DateVariable::year(2020)),
+                ..Default::default()
+            },
+        );
+        bib.insert(
+            "ref2".to_string(),
+            Reference {
+                id: "ref2".to_string(),
+                ref_type: "book".to_string(),
+                author: Some(vec![
+                    Name::new("Smith", "John"),
+                    Name::new("Brown", "Alice"),
+                ]),
+                issued: Some(DateVariable::year(2020)),
+                ..Default::default()
+            },
+        );
+
+        let processor = Processor::new(style, bib);
+
+        // Verify hints
+        assert_eq!(
+            processor.hints.get("ref1").unwrap().min_names_to_show,
+            Some(2)
+        );
+        assert_eq!(
+            processor.hints.get("ref2").unwrap().min_names_to_show,
+            Some(2)
+        );
+
+        // Verify output
+        let cit_1 = processor
+            .process_citation(&Citation {
+                id: Some("c1".to_string()),
+                items: vec![crate::reference::CitationItem {
+                    id: "ref1".to_string(),
+                    ..Default::default()
+                }],
+            })
+            .unwrap();
+
+        let cit_2 = processor
+            .process_citation(&Citation {
+                id: Some("c2".to_string()),
+                items: vec![crate::reference::CitationItem {
+                    id: "ref2".to_string(),
+                    ..Default::default()
+                }],
+            })
+            .unwrap();
+
+        // Should expand to "Smith, Jones" and "Smith, Brown" (no et al. because only 2 names)
+        assert!(cit_1.contains("Smith") && cit_1.contains("Jones"));
+        assert!(cit_2.contains("Smith") && cit_2.contains("Brown"));
+    }
+
+    #[test]
+    fn test_disambiguation_combined_expansion() {
+        use csln_core::options::{
+            Disambiguation, Group, Processing, ProcessingCustom, Sort, SortKey, SortSpec,
+        };
+
+        // This test simulates the "Sam Smith & Julie Smith" scenario but with
+        // two items that remain ambiguous after name expansion alone.
+        // Item 1: [Sam Smith, Julie Smith] 2020 -> "Smith & Smith" (base)
+        // Item 2: [Sam Smith, Bob Smith] 2020   -> "Smith & Smith" (base)
+        // Both would be "Smith et al." if min=3, but here they collide even as "Smith & Smith".
+        // They need both expanded names AND expanded given names.
+
+        let mut style = make_style();
+        style.options = Some(Config {
+            processing: Some(Processing::Custom(ProcessingCustom {
+                sort: Some(Sort {
+                    shorten_names: false,
+                    render_substitutions: false,
+                    template: vec![
+                        SortSpec {
+                            key: SortKey::Author,
+                            ascending: true,
+                        },
+                        SortSpec {
+                            key: SortKey::Year,
+                            ascending: true,
+                        },
+                    ],
+                }),
+                group: Some(Group {
+                    template: vec![SortKey::Author, SortKey::Year],
+                }),
+                disambiguate: Some(Disambiguation {
+                    names: true,
+                    add_givenname: true,
+                    year_suffix: true,
+                }),
+            })),
+            contributors: Some(ContributorConfig {
+                shorten: Some(ShortenListOptions {
+                    min: 2,
+                    use_first: 1,
+                    ..Default::default()
+                }),
+                initialize_with: Some(". ".to_string()),
+                ..Default::default()
+            }),
+            ..Default::default()
+        });
+
+        let mut bib = HashMap::new();
+        bib.insert(
+            "ref1".to_string(),
+            Reference {
+                id: "ref1".to_string(),
+                ref_type: "book".to_string(),
+                author: Some(vec![Name::new("Smith", "Sam"), Name::new("Smith", "Julie")]),
+                issued: Some(DateVariable::year(2020)),
+                ..Default::default()
+            },
+        );
+        bib.insert(
+            "ref2".to_string(),
+            Reference {
+                id: "ref2".to_string(),
+                ref_type: "book".to_string(),
+                author: Some(vec![Name::new("Smith", "Sam"), Name::new("Smith", "Bob")]),
+                issued: Some(DateVariable::year(2020)),
+                ..Default::default()
+            },
+        );
+
+        let processor = Processor::new(style, bib);
+
+        // Verify output
+        let cit_1 = processor
+            .process_citation(&Citation {
+                id: Some("c1".to_string()),
+                items: vec![crate::reference::CitationItem {
+                    id: "ref1".to_string(),
+                    ..Default::default()
+                }],
+            })
+            .unwrap();
+
+        let cit_2 = processor
+            .process_citation(&Citation {
+                id: Some("c2".to_string()),
+                items: vec![crate::reference::CitationItem {
+                    id: "ref2".to_string(),
+                    ..Default::default()
+                }],
+            })
+            .unwrap();
+
+        // Should expand to "S. Smith & J. Smith" and "S. Smith & B. Smith"
+        assert!(
+            cit_1.contains("S. Smith") && cit_1.contains("J. Smith"),
+            "Output was: {}",
+            cit_1
+        );
+        assert!(
+            cit_2.contains("S. Smith") && cit_2.contains("B. Smith"),
+            "Output was: {}",
+            cit_2
+        );
     }
 }

@@ -1,15 +1,15 @@
-use csl_legacy::model::{Style, CslNode};
+use csl_legacy::model::{CslNode, Style};
 use std::collections::HashMap;
 
-pub mod upsampler;
 pub mod compressor;
 pub mod options_extractor;
 pub mod template_compiler;
+pub mod upsampler;
 
-pub use upsampler::Upsampler;
 pub use compressor::Compressor;
 pub use options_extractor::OptionsExtractor;
 pub use template_compiler::TemplateCompiler;
+pub use upsampler::Upsampler;
 pub struct MacroInliner {
     macros: HashMap<String, Vec<CslNode>>,
 }
@@ -74,7 +74,10 @@ impl MacroInliner {
 
     /// Returns a version of the bibliography layout with all macros inlined.
     pub fn inline_bibliography(&self, style: &Style) -> Option<Vec<CslNode>> {
-        style.bibliography.as_ref().map(|bib| self.expand_nodes(&bib.layout.children))
+        style
+            .bibliography
+            .as_ref()
+            .map(|bib| self.expand_nodes(&bib.layout.children))
     }
 
     /// Returns a version of the citation layout with all macros inlined.

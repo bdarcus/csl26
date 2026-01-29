@@ -59,6 +59,8 @@ pub struct Citation {
     pub et_al_min: Option<usize>,
     pub et_al_use_first: Option<usize>,
     pub disambiguate_add_year_suffix: Option<bool>,
+    pub disambiguate_add_names: Option<bool>,
+    pub disambiguate_add_givenname: Option<bool>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

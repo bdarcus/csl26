@@ -9,15 +9,12 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 //! into the clean, declarative TemplateComponent format.
 
 use csln_core::{
-    CslnNode, Variable, FormattingOptions,
     template::{
-        TemplateComponent, Rendering,
-        TemplateContributor, ContributorRole, ContributorForm,
-        TemplateDate, DateVariable, DateForm,
-        TemplateTitle, TitleType,
-        TemplateNumber, NumberVariable,
-        TemplateVariable, SimpleVariable,
+        ContributorForm, ContributorRole, DateForm, DateVariable, NumberVariable, Rendering,
+        SimpleVariable, TemplateComponent, TemplateContributor, TemplateDate, TemplateNumber,
+        TemplateTitle, TemplateVariable, TitleType,
     },
+    CslnNode, FormattingOptions, Variable,
 };
 
 /// Compiles CslnNode trees into TemplateComponents.
@@ -25,12 +22,12 @@ pub struct TemplateCompiler;
 
 impl TemplateCompiler {
     /// Compile a list of CslnNodes into TemplateComponents.
-    /// 
+    ///
     /// Recursively processes Groups and Conditions to extract all components.
     /// In the future, Condition logic should be handled by Options/overrides.
     pub fn compile(&self, nodes: &[CslnNode]) -> Vec<TemplateComponent> {
         let mut components = Vec::new();
-        
+
         for node in nodes {
             if let Some(component) = self.compile_node(node) {
                 components.push(component);
@@ -59,7 +56,7 @@ impl TemplateCompiler {
                 }
             }
         }
-        
+
         components
     }
 
@@ -78,7 +75,7 @@ impl TemplateCompiler {
     }
 
     /// Sort components for citation: author/date first.
-    fn sort_citation_components(&self, components: &mut Vec<TemplateComponent>) {
+    fn sort_citation_components(&self, components: &mut [TemplateComponent]) {
         components.sort_by_key(|c| match c {
             TemplateComponent::Contributor(c) if c.contributor == ContributorRole::Author => 0,
             TemplateComponent::Contributor(_) => 1,
@@ -90,7 +87,7 @@ impl TemplateCompiler {
     }
 
     /// Sort components for bibliography: author, date, title, then rest.
-    fn sort_bibliography_components(&self, components: &mut Vec<TemplateComponent>) {
+    fn sort_bibliography_components(&self, components: &mut [TemplateComponent]) {
         components.sort_by_key(|c| match c {
             TemplateComponent::Contributor(c) if c.contributor == ContributorRole::Author => 0,
             TemplateComponent::Date(d) if d.date == DateVariable::Issued => 1,
@@ -113,12 +110,8 @@ impl TemplateCompiler {
             (TemplateComponent::Contributor(c1), TemplateComponent::Contributor(c2)) => {
                 c1.contributor == c2.contributor
             }
-            (TemplateComponent::Date(d1), TemplateComponent::Date(d2)) => {
-                d1.date == d2.date
-            }
-            (TemplateComponent::Title(t1), TemplateComponent::Title(t2)) => {
-                t1.title == t2.title
-            }
+            (TemplateComponent::Date(d1), TemplateComponent::Date(d2)) => d1.date == d2.date,
+            (TemplateComponent::Title(t1), TemplateComponent::Title(t2)) => t1.title == t2.title,
             (TemplateComponent::Number(n1), TemplateComponent::Number(n2)) => {
                 n1.number == n2.number
             }
@@ -142,7 +135,7 @@ impl TemplateCompiler {
     /// Compile a Names block into a Contributor component.
     fn compile_names(&self, names: &csln_core::NamesBlock) -> Option<TemplateComponent> {
         let role = self.map_variable_to_role(&names.variable)?;
-        
+
         let form = match names.options.mode {
             Some(csln_core::NameMode::Short) => ContributorForm::Short,
             Some(csln_core::NameMode::Count) => ContributorForm::Short, // Map count to short
@@ -152,7 +145,7 @@ impl TemplateCompiler {
         Some(TemplateComponent::Contributor(TemplateContributor {
             contributor: role,
             form,
-            name_order: None,  // Use global setting by default
+            name_order: None, // Use global setting by default
             delimiter: names.options.delimiter.clone(),
             rendering: self.convert_formatting(&names.formatting),
         }))
@@ -181,7 +174,7 @@ impl TemplateCompiler {
     /// Compile a Date block into a Date component.
     fn compile_date(&self, date: &csln_core::DateBlock) -> Option<TemplateComponent> {
         let date_var = self.map_variable_to_date(&date.variable)?;
-        
+
         let form = match &date.options.parts {
             Some(csln_core::DateParts::Year) => DateForm::Year,
             Some(csln_core::DateParts::YearMonth) => DateForm::YearMonth,
@@ -218,7 +211,7 @@ impl TemplateCompiler {
             return Some(TemplateComponent::Contributor(TemplateContributor {
                 contributor: role,
                 form: ContributorForm::Long,
-                name_order: None,  // Use global setting by default
+                name_order: None, // Use global setting by default
                 delimiter: None,
                 rendering: self.convert_formatting(&var.formatting),
             }));
@@ -296,8 +289,14 @@ impl TemplateCompiler {
     /// Convert FormattingOptions to Rendering.
     fn convert_formatting(&self, fmt: &FormattingOptions) -> Rendering {
         Rendering {
-            emph: fmt.font_style.as_ref().map(|s| matches!(s, csln_core::FontStyle::Italic)),
-            strong: fmt.font_weight.as_ref().map(|w| matches!(w, csln_core::FontWeight::Bold)),
+            emph: fmt
+                .font_style
+                .as_ref()
+                .map(|s| matches!(s, csln_core::FontStyle::Italic)),
+            strong: fmt
+                .font_weight
+                .as_ref()
+                .map(|w| matches!(w, csln_core::FontWeight::Bold)),
             quote: fmt.quotes,
             prefix: fmt.prefix.clone(),
             suffix: fmt.suffix.clone(),
@@ -310,7 +309,7 @@ impl TemplateCompiler {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use csln_core::{NamesBlock, NamesOptions, DateBlock, DateOptions, VariableBlock};
+    use csln_core::{DateBlock, DateOptions, NamesBlock, NamesOptions, VariableBlock};
     use std::collections::HashMap;
 
     #[test]
@@ -324,7 +323,7 @@ mod tests {
 
         let result = compiler.compile(&[names]);
         assert_eq!(result.len(), 1);
-        
+
         if let TemplateComponent::Contributor(c) = &result[0] {
             assert_eq!(c.contributor, ContributorRole::Author);
             assert_eq!(c.form, ContributorForm::Long);
@@ -347,7 +346,7 @@ mod tests {
 
         let result = compiler.compile(&[date]);
         assert_eq!(result.len(), 1);
-        
+
         if let TemplateComponent::Date(d) = &result[0] {
             assert_eq!(d.date, DateVariable::Issued);
             assert_eq!(d.form, DateForm::Year);
@@ -371,7 +370,7 @@ mod tests {
 
         let result = compiler.compile(&[var]);
         assert_eq!(result.len(), 1);
-        
+
         if let TemplateComponent::Title(t) = &result[0] {
             assert_eq!(t.title, TitleType::Primary);
             assert_eq!(t.rendering.emph, Some(true));
@@ -392,7 +391,7 @@ mod tests {
 
         let result = compiler.compile(&[var]);
         assert_eq!(result.len(), 1);
-        
+
         if let TemplateComponent::Variable(v) = &result[0] {
             assert_eq!(v.variable, SimpleVariable::Doi);
         } else {

@@ -6,18 +6,18 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 //! Rendering utilities for CSLN templates.
 //!
 //! This module converts processed template components into final output strings.
-//! 
+//!
 //! ## Design Notes
-//! 
+//!
 //! The separator logic here is currently somewhat implicit (checking punctuation
 //! characters). Ideally, separators should be explicitly declared in the style.
-//! 
+//!
 //! TODO: Consider adding explicit `separator` field to template components,
 //! allowing styles to declare `separator: ". "` or `separator: ", "` directly.
 //! This would move the logic from processor to style, making behavior more
 //! predictable and testable.
 
-use csln_core::template::{TemplateComponent, WrapPunctuation, Rendering};
+use csln_core::template::{Rendering, TemplateComponent, WrapPunctuation};
 use std::fmt::Write;
 
 /// A processed template component with its rendered value.
@@ -41,13 +41,13 @@ pub type ProcTemplate = Vec<ProcTemplateComponent>;
 /// Render processed templates into a final bibliography string.
 ///
 /// ## Separator Logic
-/// 
+///
 /// The default separator between components is `. ` (period-space).
 /// This is modified based on:
 /// - Component's rendered prefix (comma/semicolon skip separator)
 /// - Component type (dates always get period separator)
 /// - Parenthetical content (gets space only, not period)
-/// 
+///
 /// Components can override this via their `prefix` rendering field.
 /// For example, `prefix: ", "` will suppress the default `. ` separator.
 pub fn refs_to_string(proc_templates: Vec<ProcTemplate>) -> String {
@@ -62,22 +62,22 @@ pub fn refs_to_string(proc_templates: Vec<ProcTemplate>) -> String {
             if rendered.is_empty() {
                 continue;
             }
-            
+
             // Add separator between components
             // NOTE: This logic is implicit based on punctuation. A future improvement
             // would be to add explicit `separator` field to template components.
             if j > 0 && !output.is_empty() {
                 let last_char = output.chars().last().unwrap_or(' ');
                 let first_char = rendered.chars().next().unwrap_or(' ');
-                
+
                 // Date components always need period separator (author-date style)
                 let is_date = matches!(&component.template_component, TemplateComponent::Date(_));
-                
+
                 if matches!(first_char, ',' | ';' | ':') {
                     // Component provides its own punctuation via prefix (e.g., ", 436–444")
                     // No separator needed
                 } else if first_char == '(' && !is_date {
-                    // Parenthetical content (e.g., chapter pages "(pp. 1-10)") 
+                    // Parenthetical content (e.g., chapter pages "(pp. 1-10)")
                     // gets space only, not period
                     if !last_char.is_whitespace() {
                         output.push(' ');
@@ -95,14 +95,14 @@ pub fn refs_to_string(proc_templates: Vec<ProcTemplate>) -> String {
             }
             let _ = write!(&mut output, "{}", rendered);
         }
-        
+
         // Add trailing period unless entry ends with DOI/URL
         // (links are self-terminating and shouldn't have period after)
         let last_is_link = proc_template.iter().rev()
             .find(|c| !render_component(c).is_empty())
-            .map_or(false, |c| {
-                matches!(&c.template_component, 
-                    TemplateComponent::Variable(v) if matches!(v.variable, 
+            .is_some_and(|c| {
+                matches!(&c.template_component,
+                    TemplateComponent::Variable(v) if matches!(v.variable,
                         csln_core::template::SimpleVariable::Doi | csln_core::template::SimpleVariable::Url
                     )
                 )
@@ -117,13 +117,13 @@ pub fn refs_to_string(proc_templates: Vec<ProcTemplate>) -> String {
 /// Render a single citation.
 pub fn citation_to_string(proc_template: &ProcTemplate, wrap_parens: bool) -> String {
     let mut parts: Vec<String> = Vec::new();
-    
+
     for component in proc_template {
         parts.push(render_component(component));
     }
-    
+
     let content = parts.join(", ");
-    
+
     if wrap_parens {
         format!("({})", content)
     } else {
@@ -136,7 +136,7 @@ fn render_component(component: &ProcTemplateComponent) -> String {
     // Get base rendering and apply type-specific overrides if present
     let base_rendering = component.template_component.rendering();
     let rendering = get_effective_rendering(component, base_rendering);
-    
+
     // Check if suppressed
     if rendering.suppress == Some(true) {
         return String::new();
@@ -182,7 +182,7 @@ fn get_effective_rendering(component: &ProcTemplateComponent, base: &Rendering) 
         Some(t) => t,
         None => return base.clone(),
     };
-    
+
     // Check for overrides based on component type
     let overrides = match &component.template_component {
         TemplateComponent::Number(n) => n.overrides.as_ref(),
@@ -191,7 +191,7 @@ fn get_effective_rendering(component: &ProcTemplateComponent, base: &Rendering) 
         TemplateComponent::List(l) => l.overrides.as_ref(),
         _ => None,
     };
-    
+
     if let Some(override_map) = overrides {
         if let Some(type_override) = override_map.get(ref_type) {
             // Merge: override takes precedence, but use base for None values
@@ -206,7 +206,7 @@ fn get_effective_rendering(component: &ProcTemplateComponent, base: &Rendering) 
             };
         }
     }
-    
+
     base.clone()
 }
 
@@ -214,8 +214,8 @@ fn get_effective_rendering(component: &ProcTemplateComponent, base: &Rendering) 
 mod tests {
     use super::*;
     use csln_core::template::{
-        ContributorForm, ContributorRole, DateForm, DateVariable, Rendering,
-        TemplateContributor, TemplateDate,
+        ContributorForm, ContributorRole, DateForm, DateVariable, Rendering, TemplateContributor,
+        TemplateDate,
     };
 
     #[test]

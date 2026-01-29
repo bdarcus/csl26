@@ -1,39 +1,59 @@
-use roxmltree::Node;
 use crate::model::*;
+use roxmltree::Node;
 
 pub fn parse_style(node: Node) -> Result<Style, String> {
     let version = node.attribute("version").unwrap_or_default().to_string();
     let xmlns = node.attribute("xmlns").unwrap_or_default().to_string();
     let class = node.attribute("class").unwrap_or_default().to_string();
-    
+
     // Style-level name options (inherited by all names)
     let initialize_with = node.attribute("initialize-with").map(|s| s.to_string());
     let names_delimiter = node.attribute("names-delimiter").map(|s| s.to_string());
     let name_as_sort_order = node.attribute("name-as-sort-order").map(|s| s.to_string());
     let sort_separator = node.attribute("sort-separator").map(|s| s.to_string());
-    let delimiter_precedes_last = node.attribute("delimiter-precedes-last").map(|s| s.to_string());
-    let delimiter_precedes_et_al = node.attribute("delimiter-precedes-et-al").map(|s| s.to_string());
+    let delimiter_precedes_last = node
+        .attribute("delimiter-precedes-last")
+        .map(|s| s.to_string());
+    let delimiter_precedes_et_al = node
+        .attribute("delimiter-precedes-et-al")
+        .map(|s| s.to_string());
     let and = node.attribute("and").map(|s| s.to_string());
     let page_range_format = node.attribute("page-range-format").map(|s| s.to_string());
 
     let mut info = Info::default();
     let mut locale = Vec::new();
     let mut macros = Vec::new();
-    let mut citation = Citation { 
-        layout: Layout { children: vec![], prefix: None, suffix: None, delimiter: None }, 
-        et_al_min: None, et_al_use_first: None, disambiguate_add_year_suffix: None 
+    let mut citation = Citation {
+        layout: Layout {
+            children: vec![],
+            prefix: None,
+            suffix: None,
+            delimiter: None,
+        },
+        et_al_min: None,
+        et_al_use_first: None,
+        disambiguate_add_year_suffix: None,
+        disambiguate_add_names: None,
+        disambiguate_add_givenname: None,
     };
     let mut bibliography = None;
 
     for child in node.children() {
-        if !child.is_element() { continue; }
+        if !child.is_element() {
+            continue;
+        }
         match child.tag_name().name() {
             "info" => info = parse_info(child)?,
             "locale" => locale.push(parse_locale(child)?),
             "macro" => macros.push(parse_macro(child)?),
             "citation" => citation = parse_citation(child)?,
             "bibliography" => bibliography = Some(parse_bibliography(child)?),
-            _ => return Err(format!("Unknown top-level tag: {}", child.tag_name().name())),
+            _ => {
+                return Err(format!(
+                    "Unknown top-level tag: {}",
+                    child.tag_name().name()
+                ))
+            }
         }
     }
 
@@ -47,6 +67,7 @@ pub fn parse_style(node: Node) -> Result<Style, String> {
         sort_separator,
         delimiter_precedes_last,
         delimiter_precedes_et_al,
+        demote_non_dropping_particle: None, // Missing attribute in parse_style for now
         and,
         page_range_format,
         info,
@@ -60,7 +81,9 @@ pub fn parse_style(node: Node) -> Result<Style, String> {
 fn parse_info(node: Node) -> Result<Info, String> {
     let mut info = Info::default();
     for child in node.children() {
-        if !child.is_element() { continue; }
+        if !child.is_element() {
+            continue;
+        }
         match child.tag_name().name() {
             "title" => info.title = child.text().unwrap_or_default().to_string(),
             "id" => info.id = child.text().unwrap_or_default().to_string(),
@@ -74,7 +97,7 @@ fn parse_info(node: Node) -> Result<Info, String> {
 fn parse_locale(node: Node) -> Result<Locale, String> {
     let lang = node.attribute("lang").map(|s| s.to_string());
     let mut terms = Vec::new();
-    
+
     for child in node.children() {
         if child.is_element() && child.tag_name().name() == "terms" {
             for term_node in child.children() {
@@ -84,7 +107,7 @@ fn parse_locale(node: Node) -> Result<Locale, String> {
             }
         }
     }
-    
+
     Ok(Locale { lang, terms })
 }
 
@@ -105,51 +128,98 @@ fn parse_term(node: Node) -> Result<Term, String> {
             }
         }
     }
-    
+
     // If no single/multiple, value is the text content
     // Actually, simple terms just have text content.
-    
-    Ok(Term { name, form, value, single, multiple })
+
+    Ok(Term {
+        name,
+        form,
+        value,
+        single,
+        multiple,
+    })
 }
 
 fn parse_macro(node: Node) -> Result<Macro, String> {
-    let name = node.attribute("name").ok_or("Macro missing name")?.to_string();
+    let name = node
+        .attribute("name")
+        .ok_or("Macro missing name")?
+        .to_string();
     let children = parse_children(node)?;
     Ok(Macro { name, children })
 }
 
 fn parse_citation(node: Node) -> Result<Citation, String> {
-    let mut layout = Layout { children: vec![], prefix: None, suffix: None, delimiter: None };
+    let mut layout = Layout {
+        children: vec![],
+        prefix: None,
+        suffix: None,
+        delimiter: None,
+    };
     let et_al_min = node.attribute("et-al-min").and_then(|s| s.parse().ok());
-    let et_al_use_first = node.attribute("et-al-use-first").and_then(|s| s.parse().ok());
-    let disambiguate_add_year_suffix = node.attribute("disambiguate-add-year-suffix").map(|s| s == "true");
+    let et_al_use_first = node
+        .attribute("et-al-use-first")
+        .and_then(|s| s.parse().ok());
+    let disambiguate_add_year_suffix = node
+        .attribute("disambiguate-add-year-suffix")
+        .map(|s| s == "true");
+    let disambiguate_add_names = node
+        .attribute("disambiguate-add-names")
+        .map(|s| s == "true");
+    let disambiguate_add_givenname = node
+        .attribute("disambiguate-add-givenname")
+        .map(|s| s == "true");
 
     for child in node.children() {
-        if !child.is_element() { continue; }
-        match child.tag_name().name() {
-            "layout" => layout = parse_layout(child)?,
-            _ => {}
+        if !child.is_element() {
+            continue;
+        }
+        if child.tag_name().name() == "layout" {
+            layout = parse_layout(child)?;
         }
     }
-    Ok(Citation { layout, et_al_min, et_al_use_first, disambiguate_add_year_suffix })
+    Ok(Citation {
+        layout,
+        et_al_min,
+        et_al_use_first,
+        disambiguate_add_year_suffix,
+        disambiguate_add_names,
+        disambiguate_add_givenname,
+    })
 }
 
 fn parse_bibliography(node: Node) -> Result<Bibliography, String> {
-    let mut layout = Layout { children: vec![], prefix: None, suffix: None, delimiter: None };
+    let mut layout = Layout {
+        children: vec![],
+        prefix: None,
+        suffix: None,
+        delimiter: None,
+    };
     let mut sort = None;
     let et_al_min = node.attribute("et-al-min").and_then(|s| s.parse().ok());
-    let et_al_use_first = node.attribute("et-al-use-first").and_then(|s| s.parse().ok());
+    let et_al_use_first = node
+        .attribute("et-al-use-first")
+        .and_then(|s| s.parse().ok());
     let hanging_indent = node.attribute("hanging-indent").map(|s| s == "true");
 
     for child in node.children() {
-        if !child.is_element() { continue; }
+        if !child.is_element() {
+            continue;
+        }
         match child.tag_name().name() {
             "layout" => layout = parse_layout(child)?,
             "sort" => sort = Some(parse_sort(child)?),
             _ => {}
         }
     }
-    Ok(Bibliography { layout, sort, et_al_min, et_al_use_first, hanging_indent })
+    Ok(Bibliography {
+        layout,
+        sort,
+        et_al_min,
+        et_al_use_first,
+        hanging_indent,
+    })
 }
 
 fn parse_layout(node: Node) -> Result<Layout, String> {
@@ -157,13 +227,20 @@ fn parse_layout(node: Node) -> Result<Layout, String> {
     let suffix = node.attribute("suffix").map(|s| s.to_string());
     let delimiter = node.attribute("delimiter").map(|s| s.to_string());
     let children = parse_children(node)?;
-    Ok(Layout { prefix, suffix, delimiter, children })
+    Ok(Layout {
+        prefix,
+        suffix,
+        delimiter,
+        children,
+    })
 }
 
 fn parse_sort(node: Node) -> Result<Sort, String> {
     let mut keys = Vec::new();
     for child in node.children() {
-        if !child.is_element() { continue; }
+        if !child.is_element() {
+            continue;
+        }
         if child.tag_name().name() == "key" {
             keys.push(parse_sort_key(child)?);
         }
@@ -175,13 +252,19 @@ fn parse_sort_key(node: Node) -> Result<SortKey, String> {
     let variable = node.attribute("variable").map(|s| s.to_string());
     let macro_name = node.attribute("macro").map(|s| s.to_string());
     let sort = node.attribute("sort").map(|s| s.to_string());
-    Ok(SortKey { variable, macro_name, sort })
+    Ok(SortKey {
+        variable,
+        macro_name,
+        sort,
+    })
 }
 
 fn parse_children(node: Node) -> Result<Vec<CslNode>, String> {
     let mut children = Vec::new();
     for child in node.children() {
-        if !child.is_element() { continue; }
+        if !child.is_element() {
+            continue;
+        }
         if let Some(csl_node) = parse_node(child)? {
             children.push(csl_node);
         }
@@ -208,15 +291,13 @@ fn parse_node(node: Node) -> Result<Option<CslNode>, String> {
 fn parse_text(node: Node) -> Result<Text, String> {
     for attr in node.attributes() {
         match attr.name() {
-            "value" | "variable" | "macro" | "term" | "form" | 
-            "prefix" | "suffix" | "quotes" | "text-case" |
-            "strip-periods" | "plural" |
-            "font-style" | "font-variant" | "font-weight" | 
-            "text-decoration" | "vertical-align" | "display" => {}
+            "value" | "variable" | "macro" | "term" | "form" | "prefix" | "suffix" | "quotes"
+            | "text-case" | "strip-periods" | "plural" | "font-style" | "font-variant"
+            | "font-weight" | "text-decoration" | "vertical-align" | "display" => {}
             _ => return Err(format!("Text has unknown attribute: {}", attr.name())),
         }
     }
-    
+
     let formatting = parse_formatting(node);
     Ok(Text {
         value: node.attribute("value").map(|s| s.to_string()),
@@ -235,14 +316,16 @@ fn parse_text(node: Node) -> Result<Text, String> {
 }
 
 fn parse_date(node: Node) -> Result<Date, String> {
-    let variable = node.attribute("variable").ok_or("Date missing variable")?.to_string();
-    
+    let variable = node
+        .attribute("variable")
+        .ok_or("Date missing variable")?
+        .to_string();
+
     for attr in node.attributes() {
         match attr.name() {
-            "variable" | "form" | "prefix" | "suffix" | "date-parts" | 
-            "delimiter" | "text-case" |
-            "font-style" | "font-variant" | "font-weight" | 
-            "text-decoration" | "vertical-align" | "display" => {}
+            "variable" | "form" | "prefix" | "suffix" | "date-parts" | "delimiter"
+            | "text-case" | "font-style" | "font-variant" | "font-weight" | "text-decoration"
+            | "vertical-align" | "display" => {}
             _ => return Err(format!("Date has unknown attribute: {}", attr.name())),
         }
     }
@@ -253,7 +336,7 @@ fn parse_date(node: Node) -> Result<Date, String> {
             parts.push(parse_date_part(child)?);
         }
     }
-    
+
     // Dates can also have formatting!
     let formatting = parse_formatting(node);
 
@@ -272,7 +355,10 @@ fn parse_date(node: Node) -> Result<Date, String> {
 
 fn parse_date_part(node: Node) -> Result<DatePart, String> {
     Ok(DatePart {
-        name: node.attribute("name").ok_or("Date-part missing name")?.to_string(),
+        name: node
+            .attribute("name")
+            .ok_or("Date-part missing name")?
+            .to_string(),
         form: node.attribute("form").map(|s| s.to_string()),
         prefix: node.attribute("prefix").map(|s| s.to_string()),
         suffix: node.attribute("suffix").map(|s| s.to_string()),
@@ -282,14 +368,13 @@ fn parse_date_part(node: Node) -> Result<DatePart, String> {
 fn parse_label(node: Node) -> Result<Label, String> {
     for attr in node.attributes() {
         match attr.name() {
-            "variable" | "form" | "prefix" | "suffix" | "text-case" |
-            "strip-periods" | "plural" |
-            "font-style" | "font-variant" | "font-weight" | 
-            "text-decoration" | "vertical-align" | "display" => {}
+            "variable" | "form" | "prefix" | "suffix" | "text-case" | "strip-periods"
+            | "plural" | "font-style" | "font-variant" | "font-weight" | "text-decoration"
+            | "vertical-align" | "display" => {}
             _ => return Err(format!("Label has unknown attribute: {}", attr.name())),
         }
     }
-    
+
     // Labels have formatting too!
     let formatting = parse_formatting(node);
 
@@ -306,15 +391,24 @@ fn parse_label(node: Node) -> Result<Label, String> {
 }
 
 fn parse_names(node: Node) -> Result<Names, String> {
-    let variable = node.attribute("variable").ok_or("Names missing variable")?.to_string();
+    let variable = node
+        .attribute("variable")
+        .ok_or("Names missing variable")?
+        .to_string();
     let children = parse_children(node)?;
     Ok(Names {
         variable,
         delimiter: node.attribute("delimiter").map(|s| s.to_string()),
         et_al_min: node.attribute("et-al-min").and_then(|s| s.parse().ok()),
-        et_al_use_first: node.attribute("et-al-use-first").and_then(|s| s.parse().ok()),
-        et_al_subsequent_min: node.attribute("et-al-subsequent-min").and_then(|s| s.parse().ok()),
-        et_al_subsequent_use_first: node.attribute("et-al-subsequent-use-first").and_then(|s| s.parse().ok()),
+        et_al_use_first: node
+            .attribute("et-al-use-first")
+            .and_then(|s| s.parse().ok()),
+        et_al_subsequent_min: node
+            .attribute("et-al-subsequent-min")
+            .and_then(|s| s.parse().ok()),
+        et_al_subsequent_use_first: node
+            .attribute("et-al-subsequent-use-first")
+            .and_then(|s| s.parse().ok()),
         children,
     })
 }
@@ -333,9 +427,8 @@ fn parse_formatting(node: Node) -> Formatting {
 fn parse_group(node: Node) -> Result<Group, String> {
     for attr in node.attributes() {
         match attr.name() {
-            "delimiter" | "prefix" | "suffix" |
-            "font-style" | "font-variant" | "font-weight" | 
-            "text-decoration" | "vertical-align" | "display" => {}
+            "delimiter" | "prefix" | "suffix" | "font-style" | "font-variant" | "font-weight"
+            | "text-decoration" | "vertical-align" | "display" => {}
             _ => return Err(format!("Group has unknown attribute: {}", attr.name())),
         }
     }
@@ -356,7 +449,9 @@ fn parse_choose(node: Node) -> Result<Choose, String> {
     let mut else_branch = None;
 
     for child in node.children() {
-        if !child.is_element() { continue; }
+        if !child.is_element() {
+            continue;
+        }
         match child.tag_name().name() {
             "if" => if_branch = Some(parse_choose_branch(child)?),
             "else-if" => else_if_branches.push(parse_choose_branch(child)?),
@@ -386,17 +481,20 @@ fn parse_choose_branch(node: Node) -> Result<ChooseBranch, String> {
 }
 
 fn parse_number(node: Node) -> Result<Number, String> {
-    let variable = node.attribute("variable").ok_or("Number missing variable")?.to_string();
-    
+    let variable = node
+        .attribute("variable")
+        .ok_or("Number missing variable")?
+        .to_string();
+
     for attr in node.attributes() {
         match attr.name() {
-            "variable" | "form" | "prefix" | "suffix" | "text-case" |
-            "font-style" | "font-variant" | "font-weight" | 
-            "text-decoration" | "vertical-align" | "display" => {}
+            "variable" | "form" | "prefix" | "suffix" | "text-case" | "font-style"
+            | "font-variant" | "font-weight" | "text-decoration" | "vertical-align" | "display" => {
+            }
             _ => return Err(format!("Number has unknown attribute: {}", attr.name())),
         }
     }
-    
+
     let formatting = parse_formatting(node);
 
     Ok(Number {
@@ -417,11 +515,19 @@ fn parse_name(node: Node) -> Result<Name, String> {
         sort_separator: node.attribute("sort-separator").map(|s| s.to_string()),
         initialize_with: node.attribute("initialize-with").map(|s| s.to_string()),
         form: node.attribute("form").map(|s| s.to_string()),
-        delimiter_precedes_last: node.attribute("delimiter-precedes-last").map(|s| s.to_string()),
+        delimiter_precedes_last: node
+            .attribute("delimiter-precedes-last")
+            .map(|s| s.to_string()),
         et_al_min: node.attribute("et-al-min").and_then(|s| s.parse().ok()),
-        et_al_use_first: node.attribute("et-al-use-first").and_then(|s| s.parse().ok()),
-        et_al_subsequent_min: node.attribute("et-al-subsequent-min").and_then(|s| s.parse().ok()),
-        et_al_subsequent_use_first: node.attribute("et-al-subsequent-use-first").and_then(|s| s.parse().ok()),
+        et_al_use_first: node
+            .attribute("et-al-use-first")
+            .and_then(|s| s.parse().ok()),
+        et_al_subsequent_min: node
+            .attribute("et-al-subsequent-min")
+            .and_then(|s| s.parse().ok()),
+        et_al_subsequent_use_first: node
+            .attribute("et-al-subsequent-use-first")
+            .and_then(|s| s.parse().ok()),
     })
 }
 

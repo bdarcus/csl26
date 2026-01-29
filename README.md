@@ -148,10 +148,10 @@ Features implemented:
 ✓ initialize-with (1,437 styles) - name initialization
 ✓ name-as-sort-order (2,100+ styles) - family-first ordering
 ✓ is-uncertain-date handling - [1962?] format
+✓ disambiguate-add-givenname (935 styles) - name expansion
+✓ disambiguate-add-names (1,241 styles) - et-al expansion
 
 Remaining high-priority:
-○ demote-non-dropping-particle (2,570 styles)
-○ disambiguate-add-givenname (935 styles)
 ○ subsequent-author-substitute (314 styles)
 ```
 

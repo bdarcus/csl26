@@ -1,4 +1,6 @@
-use crate::{CslnNode, Variable, ItemType, VariableBlock, DateBlock, NamesBlock, GroupBlock, ConditionBlock};
+use crate::{
+    ConditionBlock, CslnNode, DateBlock, GroupBlock, ItemType, NamesBlock, Variable, VariableBlock,
+};
 use std::collections::HashMap;
 
 /// A mock citation item with metadata.
@@ -32,7 +34,7 @@ impl Renderer {
     fn render_variable(&self, block: &VariableBlock, item: &CitationItem) -> String {
         if let Some(val) = item.variables.get(&block.variable) {
             let mut text = val.clone();
-            
+
             if let Some(label_opts) = &block.label {
                 let prefix = label_opts.formatting.prefix.as_deref().unwrap_or("");
                 let suffix = label_opts.formatting.suffix.as_deref().unwrap_or("");
@@ -62,7 +64,10 @@ impl Renderer {
         let active_val = if let Some(val) = item.variables.get(&block.variable) {
             Some(val.clone())
         } else {
-            block.options.substitute.iter()
+            block
+                .options
+                .substitute
+                .iter()
                 .find_map(|sub_var| item.variables.get(sub_var).cloned())
         };
 
@@ -72,11 +77,11 @@ impl Renderer {
                     formatted = format!("{} [Init: {}]", formatted, init);
                 }
             }
-            
+
             if let Some(order) = &block.options.name_as_sort_order {
                 formatted = format!("{} [Sort: {:?}]", formatted, order);
             }
-            
+
             self.apply_formatting(&formatted, &block.formatting)
         } else {
             String::new()
@@ -98,20 +103,25 @@ impl Renderer {
 
         let delimiter = block.delimiter.as_deref().unwrap_or("");
         let content = parts.join(delimiter);
-        
+
         self.apply_formatting(&content, &block.formatting)
     }
 
     fn render_condition(&self, block: &ConditionBlock, item: &CitationItem) -> String {
-        let type_match = block.if_item_type.is_empty() || block.if_item_type.contains(&item.item_type);
-        let var_match = block.if_variables.is_empty() || block.if_variables.iter().any(|v| item.variables.contains_key(v));
-        
+        let type_match =
+            block.if_item_type.is_empty() || block.if_item_type.contains(&item.item_type);
+        let var_match = block.if_variables.is_empty()
+            || block
+                .if_variables
+                .iter()
+                .any(|v| item.variables.contains_key(v));
+
         let match_found = if block.if_item_type.is_empty() && block.if_variables.is_empty() {
             false
         } else {
             type_match && var_match
         };
-        
+
         if match_found {
             let mut output = String::new();
             for child in &block.then_branch {
@@ -132,7 +142,7 @@ impl Renderer {
     fn apply_formatting(&self, text: &str, fmt: &crate::FormattingOptions) -> String {
         let prefix = fmt.prefix.as_deref().unwrap_or("");
         let suffix = fmt.suffix.as_deref().unwrap_or("");
-        
+
         let mut res = text.to_string();
         if fmt.font_style == Some(crate::FontStyle::Italic) {
             res = format!("_{}_", res);
