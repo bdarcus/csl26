@@ -9,13 +9,14 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 //!
 //! Usage: csln_processor <style.yaml> [--bib] [--cite]
 
-use csln_core::Style;
+use csln_core::{Locale, Style};
 use csln_processor::{
     Bibliography, Citation, CitationItem, DateVariable, Name, Processor, Reference, StringOrNumber,
 };
 use std::collections::HashMap;
 use std::env;
 use std::fs;
+use std::path::Path;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -54,8 +55,16 @@ fn main() {
     // Create test bibliography (same items as oracle.js)
     let bibliography = create_test_bibliography();
 
-    // Create processor
-    let processor = Processor::new(style, bibliography);
+    // Determine locales directory - look relative to the style file, then cwd
+    let locales_dir = find_locales_dir(style_path);
+
+    // Create processor with locale support
+    let processor = if let Some(ref locale_id) = style.info.default_locale {
+        let locale = Locale::load(locale_id, &locales_dir);
+        Processor::with_locale(style, bibliography, locale)
+    } else {
+        Processor::new(style, bibliography)
+    };
 
     let style_name = std::path::Path::new(style_path)
         .file_name()
@@ -67,6 +76,28 @@ fn main() {
     } else {
         print_human(&processor, &style_name, show_cite, show_bib);
     }
+}
+
+/// Find the locales directory by looking in common locations.
+fn find_locales_dir(style_path: &str) -> std::path::PathBuf {
+    // 1. Try relative to the style file (../locales or ../../locales)
+    let style_dir = Path::new(style_path).parent().unwrap_or(Path::new("."));
+    let candidates = [
+        style_dir.join("locales"),
+        style_dir.join("../locales"),
+        style_dir.join("../../locales"),
+        Path::new("locales").to_path_buf(),
+        Path::new("../locales").to_path_buf(),
+    ];
+
+    for candidate in &candidates {
+        if candidate.exists() && candidate.is_dir() {
+            return candidate.clone();
+        }
+    }
+
+    // Default to current directory if no locales found
+    Path::new(".").to_path_buf()
 }
 
 fn create_test_bibliography() -> Bibliography {

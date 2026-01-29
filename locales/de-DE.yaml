@@ -1,0 +1,726 @@
+locale: de-DE
+dates:
+  months:
+    long:
+      - Januar
+      - Februar
+      - März
+      - April
+      - Mai
+      - Juni
+      - Juli
+      - August
+      - September
+      - Oktober
+      - November
+      - Dezember
+    short:
+      - Jan.
+      - Feb.
+      - März
+      - Apr.
+      - Mai
+      - Juni
+      - Juli
+      - Aug.
+      - Sep.
+      - Okt.
+      - Nov.
+      - Dez.
+  seasons:
+    - Frühjahr
+    - Sommer
+    - Herbst
+    - Winter
+roles:
+  author:
+    long: 
+  chair:
+    long:
+      singular: Vorsitz
+      plural: Vorsitz
+    verb: Vorsitz durch
+  collection-editor:
+    long:
+      singular: Reihenherausgeber
+      plural: Reihenherausgeber
+    short:
+      singular: Hrsg.
+      plural: Hrsg.
+    verb: herausgegeben von
+    verb-short: hrsg. von
+  compiler:
+    long:
+      singular: Bearbeiter
+      plural: Bearbeiter
+    short:
+      singular: comp.
+      plural: comps.
+    verb: kompiliert von
+    verb-short: komp. von
+  composer:
+    long: 
+  container-author:
+    long: 
+    verb: von
+  contributor:
+    long:
+      singular: Beitragende
+      plural: Beitragende
+    short:
+      singular: contrib.
+      plural: contribs.
+    verb: mit
+    verb-short: m.
+  curator:
+    long:
+      singular: Direktor
+      plural: Direktor
+    short:
+      singular: cur.
+      plural: curs.
+    verb: kuriert von
+    verb-short: kur. von
+  director:
+    long:
+      singular: Regisseur
+      plural: Regisseure
+    short:
+      singular: Reg.
+      plural: Reg.
+    verb: Regie von
+    verb-short: Reg.
+  editor:
+    long:
+      singular: Herausgeber
+      plural: Herausgeber
+    short:
+      singular: Hrsg.
+      plural: Hrsg.
+    verb: herausgegeben von
+    verb-short: hrsg. von
+  editor-translator:
+    long:
+      singular: "Herausgeber&#160;& Übersetzer"
+      plural: "Herausgeber&#160;& Übersetzer"
+    short:
+      singular: "Hrsg.&#160;& Übers."
+      plural: "Hrsg.&#160;& Übers."
+    verb: herausgegeben und übersetzt von
+    verb-short: "hg.&#160;& übers. von"
+  editortranslator:
+    long:
+      singular: "Herausgeber&#160;& Übersetzer"
+      plural: "Herausgeber&#160;& Übersetzer"
+    short:
+      singular: "Hrsg.&#160;& Übers."
+      plural: "Hrsg.&#160;& Übers."
+    verb: herausgegeben und übersetzt von
+    verb-short: "hg.&#160;& übers. von"
+  editorial-director:
+    long:
+      singular: Herausgeber
+      plural: Herausgeber
+    short:
+      singular: Hrsg.
+      plural: Hrsg.
+    verb: herausgegeben von
+    verb-short: hrsg. von
+  executive-producer:
+    long:
+      singular: Produktionsleiter
+      plural: Produktionsleiter
+    short:
+      singular: exec. prod.
+      plural: exec. prods.
+    verb: Produktionsleitung von
+    verb-short: Prod. gel. v.
+  guest:
+    long:
+      singular: Gast
+      plural: Gäste
+    verb: mit Gast
+    verb-short: w. guest
+  host:
+    long:
+      singular: Gastgeber
+      plural: Gastgeber
+    verb: veranstaltet von
+    verb-short: veranst. von
+  illustrator:
+    long:
+      singular: Illustrator
+      plural: Illustratoren
+    short:
+      singular: Ill.
+      plural: Ill.
+    verb: illustriert von
+    verb-short: illus. von
+  interviewer:
+    long: 
+    verb: interviewt von
+  narrator:
+    long:
+      singular: Erzähler
+      plural: Erzähler
+    short:
+      singular: narr.
+      plural: narrs.
+    verb: Narration von
+    verb-short: Narr. von
+  organizer:
+    long:
+      singular: Veranstalter
+      plural: Veranstalter
+    short:
+      singular: org.
+      plural: orgs.
+    verb: organisiert von
+    verb-short: org. von
+  original-author:
+    long: 
+  performer:
+    long:
+      singular: Künstler
+      plural: Künstler
+    short:
+      singular: perf.
+      plural: perfs.
+    verb: Aufführung von
+    verb-short: aufg. von
+  producer:
+    long:
+      singular: Produzent
+      plural: Produzenten
+    short:
+      singular: prod.
+      plural: prods.
+    verb: produziert von
+    verb-short: prod. von
+  recipient:
+    long: 
+    verb: an
+  reviewed-author:
+    long: 
+    verb: von
+  script-writer:
+    long:
+      singular: Drehbuchautor
+      plural: Drehbuchautoren
+    short:
+      singular: writ.
+      plural: writs.
+    verb: geschrieben von
+    verb-short: writ. by
+  series-creator:
+    long:
+      singular: Idee
+      plural: Idee
+    short:
+      singular: Idee
+      plural: Idee
+    verb: Idee von
+    verb-short: Idee von
+  translator:
+    long:
+      singular: Übersetzer
+      plural: Übersetzer
+    short:
+      singular: Übers.
+      plural: Übers.
+    verb: übersetzt von
+    verb-short: übers. von
+terms:
+  accessed:
+    long: zugegriffen
+  advance_online_publication:
+    long: Online-Vorab-Publikation
+  album:
+    long: Album
+  and:
+    long: und
+  and others:
+    long: und andere
+  anonymous:
+    long: ohne Autor
+    short: "o.&#160;A."
+  at:
+    long: auf
+  audio_recording:
+    long: Tonaufnahme
+  available at:
+    long: verfügbar unter
+  by:
+    long: von
+  circa:
+    long: circa
+    short: ca.
+  cited:
+    long: zitiert
+  et_al:
+    long: "u.&#160;a."
+  film:
+    long: Film
+  forthcoming:
+    long: "i.&#160;E."
+  from:
+    long: von
+  henceforth:
+    long: zukünftig
+  ibid:
+    long: ebd.
+  in:
+    long: in
+  in press:
+    long: im Druck
+  internet:
+    long: Internet
+  letter:
+    long: Brief
+  loc_cit:
+    long: loc. cit.
+  no date:
+    long: ohne Datum
+    short: "o.&#160;J."
+  no_place:
+    long: ohne Ort
+    short: "o.&#160;O."
+  no_publisher:
+    long: ohne Verlag
+    short: "o.&#160;V."
+  on:
+    long: auf
+  online:
+    long: online
+  op_cit:
+    long: op. cit.
+  original_work_published:
+    long: Ursprünglich erschienen
+  personal_communication:
+    long: persönliche Kommunikation
+  podcast:
+    long: Podcast
+  podcast_episode:
+    long: Podcast-Episode
+  preprint:
+    long: Preprint
+  presented at:
+    long: gehalten auf der
+  radio_broadcast:
+    long: Radioaufzeichnung
+  radio_series:
+    long: Sendereihe
+  radio_series_episode:
+    long: Sendereihenfolge
+  reference:
+    long:
+      singular: Referenz
+      plural: Referenzen
+    short:
+      singular: Ref.
+      plural: Ref.
+  retrieved:
+    long: abgerufen
+  review_of:
+    long: review of
+    short: rev. of
+  scale:
+    long: Maßstab
+  special_issue:
+    long: Spezialausgabe
+  special_section:
+    long: Sonderbereich
+  television_broadcast:
+    long: Fernsehsendung
+  television_series:
+    long: Fernsehserie
+  television_series_episode:
+    long: Serienfolge
+  video:
+    long: Video
+  working_paper:
+    long: Arbeitspapier
+  article:
+    long: preprint
+  article_journal:
+    long: Zeitschriftenartikel
+    short: Zeitschriftenart.
+  article_magazine:
+    long: Magazinartikel
+    short: Mag. Art.
+  article_newspaper:
+    long: Zeitungsartikel
+    short: newspaper art.
+  bill:
+    long: Gesetzentwurf
+  broadcast:
+    long: Sendung
+  classic:
+    long: Klassiker
+  collection:
+    long: Sammlung
+  dataset:
+    long: Datensatz
+  document:
+    long: Dokument
+    short: doc.
+  entry:
+    long: Eintrag
+  entry_dictionary:
+    long: Wörterbucheintrag
+  entry_encyclopedia:
+    long: Lexikoneintrag
+  event:
+    long: Event
+  graphic:
+    long: Bild
+    short: Bild
+  hearing:
+    long: Anhörung
+    verb: testimony of
+  interview:
+    long: Interview
+    short: Interv.
+  legal_case:
+    long: Rechtsfall
+  legislation:
+    long: Gesetz
+  manuscript:
+    long: Manuskript
+    short: MS
+  map:
+    long: Karte
+  motion_picture:
+    long: Videoaufnahme
+    short: video rec.
+  musical_score:
+    long: Partitur
+  pamphlet:
+    long: Broschüre
+  paper_conference:
+    long: Konferenzbeitrag
+  patent:
+    long: Patent
+  performance:
+    long: Aufführung
+  periodical:
+    long: Zeitschrift
+  post:
+    long: Post
+  post_weblog:
+    long: Blogeintrag
+  regulation:
+    long: Verordnung
+  report:
+    long: Bericht
+    short: rep.
+  review:
+    long: Rezension
+    short: rev.
+    verb: review of
+  review_book:
+    long: Buchbesprechung
+    short: bk. rev.
+    verb: review of the book
+  software:
+    long: Software
+  song:
+    long: Audioaufnahme
+    short: audio rec.
+  speech:
+    long: Vortrag
+  standard:
+    long: Norm
+  thesis:
+    long: Abschlussarbeit
+  treaty:
+    long: Abkommen
+  webpage:
+    long: Webseite
+  ad:
+    long: "&#160;n.&#160;Chr."
+  bc:
+    long: "&#160;v.&#160;Chr."
+  bce:
+    long: BCE
+  ce:
+    long: CE
+  open_quote:
+    long: „
+  close_quote:
+    long: “
+  open_inner_quote:
+    long: ‚
+  close_inner_quote:
+    long: ‘
+  page_range_delimiter:
+    long: –
+  colon:
+    long: ":"
+  comma:
+    long: ,
+  semicolon:
+    long: ;
+  ordinal:
+    long: .
+  long_ordinal_01:
+    long: erster
+  long_ordinal_02:
+    long: zweiter
+  long_ordinal_03:
+    long: dritter
+  long_ordinal_04:
+    long: vierter
+  long_ordinal_05:
+    long: fünfter
+  long_ordinal_06:
+    long: sechster
+  long_ordinal_07:
+    long: siebter
+  long_ordinal_08:
+    long: achter
+  long_ordinal_09:
+    long: neunter
+  long_ordinal_10:
+    long: zehnter
+  act:
+    long:
+      singular: Akt
+      plural: Akten
+  appendix:
+    long:
+      singular: Appendix
+      plural: Appendices
+    short:
+      singular: app.
+      plural: apps.
+  article_locator:
+    long:
+      singular: Artikel
+      plural: Artikel
+    short:
+      singular: art.
+      plural: arts.
+  book:
+    long:
+      singular: Buch
+      plural: Bücher
+    short: B.
+  canon:
+    long:
+      singular: canon
+      plural: canons
+  chapter:
+    long:
+      singular: Kapitel
+      plural: Kapitel
+    short: Kap.
+  column:
+    long:
+      singular: Spalte
+      plural: Spalten
+    short: Sp.
+  elocation:
+    long:
+      singular: location
+      plural: locations
+    short:
+      singular: loc.
+      plural: locs.
+  equation:
+    long:
+      singular: equation
+      plural: equations
+    short:
+      singular: eq.
+      plural: eqs.
+  figure:
+    long:
+      singular: Abbildung
+      plural: Abbildungen
+    short: Abb.
+  folio:
+    long:
+      singular: Blatt
+      plural: Blätter
+    short: Fol.
+  issue:
+    long:
+      singular: Nummer
+      plural: Nummern
+    short: Nr.
+  line:
+    long:
+      singular: Zeile
+      plural: Zeilen
+    short: Z.
+  note:
+    long:
+      singular: Anmerkung
+      plural: Anmerkungen
+    short: Anm.
+  opus:
+    long:
+      singular: Opus
+      plural: Opera
+    short: op.
+  page:
+    long:
+      singular: Seite
+      plural: Seiten
+    short:
+      singular: S.
+      plural: S.
+  paragraph:
+    long:
+      singular: Absatz
+      plural: Absätze
+    short: Abs.
+    symbol:
+      singular: ¶
+      plural: ¶¶
+  part:
+    long:
+      singular: Teil
+      plural: Teile
+    short: Teil
+  rule:
+    long:
+      singular: rule
+      plural: rules
+    short:
+      singular: r.
+      plural: rr.
+  scene:
+    long:
+      singular: scene
+      plural: scenes
+    short:
+      singular: sc.
+      plural: scs.
+  section:
+    long:
+      singular: Abschnitt
+      plural: Abschnitte
+    short: Abschn.
+    symbol:
+      singular: §
+      plural: §§
+  sub_verbo:
+    long:
+      singular: sub verbo
+      plural: sub verbis
+    short:
+      singular: "s.&#160;v."
+      plural: "s.&#160;vv."
+  supplement:
+    long:
+      singular: supplement
+      plural: supplements
+    short:
+      singular: supp.
+      plural: supps.
+  table:
+    long:
+      singular: table
+      plural: tables
+    short:
+      singular: tbl.
+      plural: tbls.
+  timestamp:
+    long: "<!-- generally blank -->
+      <single/>
+      <multiple/>"
+    short: "<!-- generally blank -->
+      <single/>
+      <multiple/>"
+  title_locator:
+    long:
+      singular: title
+      plural: titles
+    short:
+      singular: tit.
+      plural: tits.
+  verse:
+    long:
+      singular: Vers
+      plural: Verse
+    short:
+      singular: V.
+      plural: V.
+  volume:
+    long:
+      singular: Band
+      plural: Bände
+    short:
+      singular: Bd.
+      plural: Bde.
+  chapter_number:
+    long:
+      singular: chapter
+      plural: chapters
+    short:
+      singular: chap.
+      plural: chaps.
+  citation_number:
+    long:
+      singular: citation
+      plural: citations
+    short:
+      singular: cit.
+      plural: cits.
+  collection_number:
+    long:
+      singular: Nummer
+      plural: Nummern
+    short: Nr.
+  edition:
+    long:
+      singular: Auflage
+      plural: Auflagen
+    short: Aufl.
+  first_reference_note_number:
+    long:
+      singular: Ref.
+      plural: Ref.
+    short:
+      singular: Ref.
+      plural: Ref.
+  number:
+    long:
+      singular: Nummer
+      plural: Nummern
+    short:
+      singular: Nr.
+      plural: Nr.
+  number_of_pages:
+    long:
+      singular: Seite
+      plural: Seiten
+    short:
+      singular: S.
+      plural: S.
+  number_of_volumes:
+    long:
+      singular: volume
+      plural: volumes
+    short:
+      singular: vol.
+      plural: vols.
+  page_first:
+    long:
+      singular: page
+      plural: pages
+    short:
+      singular: p.
+      plural: pp.
+  printing:
+    long:
+      singular: printing
+      plural: printings
+    short:
+      singular: print.
+      plural: prints.
+  version:
+    long: Version
+

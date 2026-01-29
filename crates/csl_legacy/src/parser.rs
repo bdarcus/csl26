@@ -5,6 +5,7 @@ pub fn parse_style(node: Node) -> Result<Style, String> {
     let version = node.attribute("version").unwrap_or_default().to_string();
     let xmlns = node.attribute("xmlns").unwrap_or_default().to_string();
     let class = node.attribute("class").unwrap_or_default().to_string();
+    let default_locale = node.attribute("default-locale").map(|s| s.to_string());
 
     // Style-level name options (inherited by all names)
     let initialize_with = node.attribute("initialize-with").map(|s| s.to_string());
@@ -67,6 +68,7 @@ pub fn parse_style(node: Node) -> Result<Style, String> {
         version,
         xmlns,
         class,
+        default_locale,
         initialize_with,
         initialize_with_hyphen,
         names_delimiter,

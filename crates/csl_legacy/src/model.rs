@@ -5,6 +5,8 @@ pub struct Style {
     pub version: String,
     pub xmlns: String,
     pub class: String,
+    /// The default locale for this style (e.g., "en-US", "de-DE")
+    pub default_locale: Option<String>,
     /// Style-level name formatting options (inherited by all names unless overridden)
     pub initialize_with: Option<String>,
     pub initialize_with_hyphen: Option<bool>,

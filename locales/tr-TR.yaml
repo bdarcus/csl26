@@ -1,0 +1,723 @@
+locale: tr-TR
+dates:
+  months:
+    long:
+      - Ocak
+      - Şubat
+      - Mart
+      - Nisan
+      - Mayıs
+      - Haziran
+      - Temmuz
+      - Ağustos
+      - Eylül
+      - Ekim
+      - Kasım
+      - Aralık
+    short:
+      - Oca.
+      - Şub.
+      - Mar.
+      - Nis.
+      - May.
+      - Haz.
+      - Tem.
+      - Ağu.
+      - Eyl.
+      - Eki.
+      - Kas.
+      - Ara.
+  seasons:
+    - Bahar
+    - Yaz
+    - Sonbahar
+    - Kış
+roles:
+  author:
+    long: 
+  chair:
+    long:
+      singular: başkan
+      plural: başkanlar
+    verb: chaired by
+  collection-editor:
+    long:
+      singular: editör
+      plural: editörler
+    verb: edited by
+    verb-short: ed. by
+  compiler:
+    long:
+      singular: derleye
+      plural: derleyenler
+    short:
+      singular: comp.
+      plural: comps.
+    verb: compiled by
+    verb-short: comp. by
+  composer:
+    long: 
+  container-author:
+    long: 
+    verb: kitap editörü
+  contributor:
+    long:
+      singular: katkıda bulunan
+      plural: katkıda bulunanlar
+    short:
+      singular: contrib.
+      plural: contribs.
+    verb: with
+    verb-short: w.
+  curator:
+    long:
+      singular: küratör
+      plural: küratörler
+    short:
+      singular: cur.
+      plural: curs.
+    verb: curated by
+    verb-short: cur. by
+  director:
+    long:
+      singular: direktör
+      plural: direktörler
+    short:
+      singular: dir.
+      plural: dir.
+    verb: direktör
+    verb-short: dir.
+  editor:
+    long:
+      singular: editör
+      plural: editörler
+    short:
+      singular: ed.
+      plural: ed.
+    verb: editör
+    verb-short: ed.
+  editor-translator:
+    long:
+      singular: editör & çeviren
+      plural: editörler & çevirenler
+    short:
+      singular: ed. & çev.
+      plural: ed. & çev.
+    verb: düzenleyen & çeviren by
+    verb-short: ed. & çev.
+  editortranslator:
+    long:
+      singular: editör & çeviren
+      plural: editörler & çevirenler
+    short:
+      singular: ed. & çev.
+      plural: ed. & çev.
+    verb: düzenleyen & çeviren by
+    verb-short: ed. & çev.
+  editorial-director:
+    long:
+      singular: sorumlu editör
+      plural: sorumlu editörler
+    short:
+      singular: sor.ed.
+      plural: sor.ed.
+    verb: sorumlu editör
+    verb-short: sor.ed.
+  executive-producer:
+    long:
+      singular: baş yapımcı
+      plural: baş yapımcılar
+    short:
+      singular: exec. prod.
+      plural: exec. prods.
+    verb: executive produced by
+    verb-short: exec. prod. by
+  guest:
+    long:
+      singular: misafir
+      plural: misafirler
+    verb: with guest
+    verb-short: w. guest
+  host:
+    long:
+      singular: ev sahibi
+      plural: ev sahipleri
+    verb: hosted by
+    verb-short: hosted by
+  illustrator:
+    long:
+      singular: çizen
+      plural: çizenler
+    short:
+      singular: çzm.
+      plural: çzm.
+    verb: çizen
+    verb-short: çizen
+  interviewer:
+    long: 
+    verb: röportaj yapan
+  narrator:
+    long:
+      singular: anlatıcı
+      plural: anlatıcılar
+    short:
+      singular: narr.
+      plural: narrs.
+    verb: narrated by
+    verb-short: narr. by
+  organizer:
+    long:
+      singular: düzenleyen
+      plural: düzenleyenler
+    short:
+      singular: org.
+      plural: orgs.
+    verb: organized by
+    verb-short: org. by
+  original-author:
+    long: 
+  performer:
+    long:
+      singular: icra eden
+      plural: icra edenler
+    short:
+      singular: perf.
+      plural: perfs.
+    verb: performed by
+    verb-short: perf. by
+  producer:
+    long:
+      singular: yapımcı
+      plural: yapımcılar
+    short:
+      singular: prod.
+      plural: prods.
+    verb: produced by
+    verb-short: prod. by
+  recipient:
+    long: 
+    verb: alıcı
+  reviewed-author:
+    long: 
+    verb: tanıtım yazarı
+  script-writer:
+    long:
+      singular: metin yazarı
+      plural: metin yazarları
+    short:
+      singular: writ.
+      plural: writs.
+    verb: written by
+    verb-short: writ. by
+  series-creator:
+    long:
+      singular: dizi yapımcısı
+      plural: dizi yapımcıları
+    short:
+      singular: cre.
+      plural: cres.
+    verb: created by
+    verb-short: cre. by
+  translator:
+    long:
+      singular: çeviren
+      plural: çevirenler
+    short:
+      singular: çev.
+      plural: çev.
+    verb: çeviren
+    verb-short: çev.
+terms:
+  accessed:
+    long: erişim
+  advance_online_publication:
+    long: çevrimiçi erken görünüm
+  album:
+    long: albüm
+  and:
+    long: ve
+  and others:
+    long: ve diğerleri
+  anonymous:
+    long: anonim
+    short: anonim
+  at:
+    long: de
+  audio_recording:
+    long: ses kaydı
+  available at:
+    long: erişim adresi
+  by:
+    long: tarafından
+  circa:
+    long: yaklaşık
+    short: yakl.
+  cited:
+    long: a.yer
+  et_al:
+    long: vd.
+  film:
+    long: film
+  forthcoming:
+    long: gelecek
+  from:
+    long: gönderen
+  henceforth:
+    long: bundan sonra
+  ibid:
+    long: a.g.e.
+  in:
+    long: içinde
+  in press:
+    long: basımda
+  internet:
+    long: internet
+  letter:
+    long: mektup
+  loc_cit:
+    long: a.e.
+  no date:
+    long: tarih yok
+    short: t.y.
+  no_place:
+    long: yer yok
+    short: y.y.
+  no_publisher:
+    long: yayıncı yok
+    short: y.y.
+  on:
+    long: üzerinde
+  online:
+    long: çevrimiçi
+  op_cit:
+    long: a.g.e.
+  original_work_published:
+    long: yayınlanan asıl eser
+  personal_communication:
+    long: kişisel iletişim
+  podcast:
+    long: podcast
+  podcast_episode:
+    long: podcast bölümü
+  preprint:
+    long: önbasım
+  presented at:
+    long: "program adı:"
+  radio_broadcast:
+    long: radyo yayını
+  radio_series:
+    long: radyo dizisi
+  radio_series_episode:
+    long: radyo dizi bölümü
+  reference:
+    long:
+      singular: atıf
+      plural: atıflar
+    short:
+      singular: atf.
+      plural: atf.
+  retrieved:
+    long: geliş tarihi
+  review_of:
+    long: gözden geçirme
+    short: g.g.
+  scale:
+    long: ölçek
+  special_issue:
+    long: özel sayı
+  special_section:
+    long: özel bölüm
+  television_broadcast:
+    long: televizyon yayını
+  television_series:
+    long: televizyon dizisi
+  television_series_episode:
+    long: televizyon dizisi bölümü
+  video:
+    long: video
+  working_paper:
+    long: ön makale
+  article:
+    long: önbasım
+  article_journal:
+    long: dergi makalesi
+    short: dergi mak.
+  article_magazine:
+    long: dergi makalesi
+    short: derg. mak.
+  article_newspaper:
+    long: gazete yazısı
+    short: gazete yzs.
+  bill:
+    long: kanun taslağı
+  broadcast:
+    long: yayın
+  classic:
+    long: klasik
+  collection:
+    long: koleksiyon
+  dataset:
+    long: veri kümesi
+  document:
+    long: belge
+    short: belg.
+  entry:
+    long: girdi
+  entry_dictionary:
+    long: sözlük maddesi
+  entry_encyclopedia:
+    long: ansiklopedi maddesi
+  event:
+    long: etkinlik
+  graphic:
+    long: grafik
+    short: graf.
+  hearing:
+    long: duruşma
+    verb: ifadesi
+  interview:
+    long: mülakat
+    short: mülak.
+  legal_case:
+    long: dava
+  legislation:
+    long: mevzuat
+  manuscript:
+    long: el yazması
+    short: el yazm.
+  map:
+    long: harita
+  motion_picture:
+    long: video kaydı
+    short: video kyd.
+  musical_score:
+    long: müzik notaları
+  pamphlet:
+    long: broşür
+  paper_conference:
+    long: konferans bildirisi
+  patent:
+    long: patent
+  performance:
+    long: performans
+  periodical:
+    long: süreli
+  post:
+    long: gönderi
+  post_weblog:
+    long: blog gönderisi
+  regulation:
+    long: düzenleme
+  report:
+    long: rapor
+    short: rap.
+  review:
+    long: inceleme
+    short: inc.
+    verb: incelemesi
+  review_book:
+    long: kitap incelemesi
+    short: kit. inc.
+    verb: kitabın incelemesi
+  software:
+    long: yazılım
+  song:
+    long: ses kaydı
+    short: ses kyd.
+  speech:
+    long: sunum
+  standard:
+    long: standart
+  thesis:
+    long: tez
+  treaty:
+    long: antlaşma
+  webpage:
+    long: web sayfası
+  ad:
+    long: M.S.
+  bc:
+    long: M.Ö.
+  bce:
+    long: BCE
+  ce:
+    long: CE
+  open_quote:
+    long: “
+  close_quote:
+    long: ”
+  open_inner_quote:
+    long: ‘
+  close_inner_quote:
+    long: ’
+  page_range_delimiter:
+    long: -
+  colon:
+    long: ":"
+  comma:
+    long: ,
+  semicolon:
+    long: ;
+  ordinal:
+    long: .
+  long_ordinal_01:
+    long: birinci
+  long_ordinal_02:
+    long: ikinci
+  long_ordinal_03:
+    long: üçüncü
+  long_ordinal_04:
+    long: dördüncü
+  long_ordinal_05:
+    long: beşinci
+  long_ordinal_06:
+    long: altıncı
+  long_ordinal_07:
+    long: yedinci
+  long_ordinal_08:
+    long: sekizinci
+  long_ordinal_09:
+    long: dokuzuncu
+  long_ordinal_10:
+    long: onuncu
+  act:
+    long:
+      singular: perde
+      plural: perdeler
+  appendix:
+    long:
+      singular: ek
+      plural: ekler
+    short:
+      singular: ek.
+      plural: eklr.
+  article_locator:
+    long:
+      singular: makale
+      plural: makaleler
+    short:
+      singular: mak.
+      plural: mak.
+  book:
+    long:
+      singular: kitap
+      plural: kitaplar
+    short: kit.
+  canon:
+    long:
+      singular: kitap
+      plural: kitaplar
+  chapter:
+    long:
+      singular: bölüm
+      plural: bölümler
+    short: böl.
+  column:
+    long:
+      singular: sütun
+      plural: sütunlar
+    short: süt.
+  elocation:
+    long:
+      singular: konum
+      plural: konumlar
+    short:
+      singular: kon.
+      plural: kon.
+  equation:
+    long:
+      singular: eşitlik
+      plural: eşitlikler
+    short:
+      singular: eşt.
+      plural: eşt.
+  figure:
+    long:
+      singular: şekil
+      plural: şekiller
+    short: şek.
+  folio:
+    long:
+      singular: folyo
+      plural: folyo
+    short: fl.
+  issue:
+    long:
+      singular: sayı
+      plural: sayılar
+    short: sy.
+  line:
+    long:
+      singular: satır
+      plural: satırlar
+    short: satır
+  note:
+    long:
+      singular: not
+      plural: notlar
+    short: n.
+  opus:
+    long:
+      singular: eser
+      plural: eserler
+    short: eser
+  page:
+    long:
+      singular: sayfa
+      plural: sayfalar
+    short:
+      singular: s.
+      plural: ss.
+  paragraph:
+    long:
+      singular: paragraf
+      plural: paragraflar
+    short: par.
+    symbol:
+      singular: par.
+      plural: par.
+  part:
+    long:
+      singular: kısım
+      plural: kısımlar
+    short: ksm.
+  rule:
+    long:
+      singular: kural
+      plural: kurallar
+    short:
+      singular: kur.
+      plural: kur.
+  scene:
+    long:
+      singular: sahne
+      plural: sahneler
+    short:
+      singular: sahn.
+      plural: sahn.
+  section:
+    long:
+      singular: bölüm
+      plural: bölümler
+    short: blm.
+    symbol:
+      singular: kısım
+      plural: kısımlar
+  sub_verbo:
+    long:
+      singular: madde
+      plural: maddeler
+    short:
+      singular: md.
+      plural: md.
+  supplement:
+    long:
+      singular: zeyil
+      plural: zeyil
+    short:
+      singular: supp.
+      plural: supps.
+  table:
+    long:
+      singular: masa
+      plural: masalar
+    short:
+      singular: mas.
+      plural: mas.
+  timestamp:
+    long: "<!-- generally blank -->
+      <single/>
+      <multiple/>"
+    short: "<!-- generally blank -->
+      <single/>
+      <multiple/>"
+  title_locator:
+    long:
+      singular: başlık
+      plural: başlıklar
+    short:
+      singular: başl.
+      plural: başl.
+  verse:
+    long:
+      singular: ayet
+      plural: ayetler
+    short:
+      singular: ay.
+      plural: ay.
+  volume:
+    long:
+      singular: cilt
+      plural: ciltler
+    short:
+      singular: c.
+      plural: c.
+  chapter_number:
+    long:
+      singular: bölüm numarası
+      plural: bölümler numarası
+    short:
+      singular: böl. num.
+      plural: böl. num.
+  citation_number:
+    long:
+      singular: atıf
+      plural: atıflar
+    short:
+      singular: cit.
+      plural: cits.
+  collection_number:
+    long:
+      singular: sayı
+      plural: sayı
+    short: sy
+  edition:
+    long:
+      singular: baskı
+      plural: baskılar
+    short: bs.
+  first_reference_note_number:
+    long:
+      singular: atıf
+      plural: atıflar
+    short:
+      singular: atf.
+      plural: atf.
+  number:
+    long:
+      singular: sayı
+      plural: sayılar
+    short:
+      singular: sy.
+      plural: sy.
+  number_of_pages:
+    long:
+      singular: sayfa sayısı
+      plural: sayfa sayıları
+    short:
+      singular: s.
+      plural: ss.
+  number_of_volumes:
+    long:
+      singular: cilt
+      plural: ciltler
+    short:
+      singular: cilt
+      plural: ciltler
+  page_first:
+    long:
+      singular: ilk sayfa
+      plural: ilk sayfa
+    short:
+      singular: i.s.
+      plural: i.s.
+  printing:
+    long:
+      singular: çıktı
+      plural: çıktılar
+    short:
+      singular: çıktı
+      plural: çıktılar
+  version:
+    long: versiyon
+
