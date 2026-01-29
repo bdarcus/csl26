@@ -199,6 +199,7 @@ Remaining high-priority:
 ```
 crates/
 ├── csl_legacy/      # CSL 1.0 XML parser (read-only)
+├── csln_cli/        # CLI tools (schema generation, etc.)
 ├── csln_core/       # CSLN schema and types
 │   ├── options.rs   # Style configuration
 │   ├── template.rs  # Template components
@@ -314,6 +315,20 @@ Citations: 5/5 match
 ```bash
 cargo doc --workspace --open
 ```
+
+### JSON Schema Generation
+
+You can generate a formal JSON Schema for CSLN styles using the CLI:
+
+```bash
+# Output schema to stdout
+cargo run --bin csln_cli -- schema
+
+# Save to file
+cargo run --bin csln_cli -- schema > csln.schema.json
+```
+
+This schema can be used to validate styles or provide intellisense in editors like VS Code.
 
 ## Roadmap
 

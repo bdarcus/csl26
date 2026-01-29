@@ -9,11 +9,12 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 //! for citation formatting.
 
 use crate::template::ContributorRole;
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 /// A locale definition containing language-specific terms and formatting rules.
-#[derive(Debug, Default, Deserialize, Serialize, Clone)]
+#[derive(Debug, Default, Deserialize, Serialize, Clone, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct Locale {
     /// The locale identifier (e.g., "en-US", "de-DE").
@@ -144,7 +145,7 @@ impl Locale {
 }
 
 /// Form for term lookup.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, JsonSchema)]
 pub enum TermForm {
     Long,
     Short,
@@ -153,7 +154,7 @@ pub enum TermForm {
 }
 
 /// General terms used in citations and bibliographies.
-#[derive(Debug, Default, Deserialize, Serialize, Clone)]
+#[derive(Debug, Default, Deserialize, Serialize, Clone, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct Terms {
     /// The word "and" (e.g., "Smith and Jones").
@@ -220,7 +221,7 @@ impl Terms {
 }
 
 /// A simple term with long and short forms.
-#[derive(Debug, Default, Deserialize, Serialize, Clone)]
+#[derive(Debug, Default, Deserialize, Serialize, Clone, JsonSchema)]
 pub struct SimpleTerm {
     /// The long form of the term.
     pub long: String,
@@ -229,7 +230,7 @@ pub struct SimpleTerm {
 }
 
 /// Terms for contributor roles.
-#[derive(Debug, Default, Deserialize, Serialize, Clone)]
+#[derive(Debug, Default, Deserialize, Serialize, Clone, JsonSchema)]
 pub struct ContributorTerm {
     /// Singular form (editor, translator).
     pub singular: SimpleTerm,
@@ -240,7 +241,7 @@ pub struct ContributorTerm {
 }
 
 /// Date-related terms.
-#[derive(Debug, Default, Deserialize, Serialize, Clone)]
+#[derive(Debug, Default, Deserialize, Serialize, Clone, JsonSchema)]
 pub struct DateTerms {
     /// Month names.
     #[serde(default)]
@@ -266,7 +267,7 @@ impl DateTerms {
 }
 
 /// Month name lists.
-#[derive(Debug, Default, Deserialize, Serialize, Clone)]
+#[derive(Debug, Default, Deserialize, Serialize, Clone, JsonSchema)]
 pub struct MonthNames {
     /// Full month names.
     pub long: Vec<String>,
