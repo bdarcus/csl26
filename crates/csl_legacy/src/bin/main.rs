@@ -1,7 +1,7 @@
-use std::fs;
+use csl_legacy::parser::parse_style;
 use roxmltree::Document;
 use serde_json::to_string_pretty;
-use csl_legacy::parser::parse_style;
+use std::fs;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let text = fs::read_to_string("../styles/chicago-author-date.csl")?;

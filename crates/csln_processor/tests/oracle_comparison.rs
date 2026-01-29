@@ -5,7 +5,9 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 
 //! Integration test comparing CSLN processor output with citeproc-js.
 
-use csln_core::options::{AndOptions, ContributorConfig, DisplayAsSort, Processing, ShortenListOptions};
+use csln_core::options::{
+    AndOptions, ContributorConfig, DisplayAsSort, Processing, ShortenListOptions,
+};
 use csln_core::template::{
     ContributorForm, ContributorRole, DateForm, DateVariable as TDateVar, Rendering,
     TemplateComponent, TemplateContributor, TemplateDate, TemplateTitle, TitleType,
@@ -143,7 +145,7 @@ fn test_apa_single_author_citation() {
     };
 
     let result = processor.process_citation(&citation).unwrap();
-    
+
     // Expected: (Kuhn, 1962) - matches citeproc-js APA output
     assert_eq!(result, "(Kuhn, 1962)");
 }
@@ -163,7 +165,7 @@ fn test_apa_multi_author_citation_et_al() {
     };
 
     let result = processor.process_citation(&citation).unwrap();
-    
+
     // Expected: (LeCun et al., 2015) - matches citeproc-js APA output for 3+ authors
     assert_eq!(result, "(LeCun et al., 2015)");
 }
@@ -175,11 +177,14 @@ fn test_apa_bibliography_entry() {
     let processor = Processor::new(style, bib);
 
     let result = processor.render_bibliography();
-    
+
     // Check Kuhn entry has correct format
     assert!(result.contains("Kuhn, T."), "Should have 'Kuhn, T.'");
     assert!(result.contains("(1962)"), "Should have '(1962)'");
-    assert!(result.contains("_The Structure of Scientific Revolutions_"), "Should have italicized title");
+    assert!(
+        result.contains("_The Structure of Scientific Revolutions_"),
+        "Should have italicized title"
+    );
 }
 
 #[test]

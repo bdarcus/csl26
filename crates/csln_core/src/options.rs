@@ -116,12 +116,24 @@ impl Processing {
                     shorten_names: false,
                     render_substitutions: false,
                     template: vec![
-                        SortSpec { key: SortKey::Author, ascending: true },
-                        SortSpec { key: SortKey::Year, ascending: true },
+                        SortSpec {
+                            key: SortKey::Author,
+                            ascending: true,
+                        },
+                        SortSpec {
+                            key: SortKey::Year,
+                            ascending: true,
+                        },
                     ],
                 }),
-                group: Some(Group { template: vec![SortKey::Author, SortKey::Year] }),
-                disambiguate: Some(Disambiguation { names: true, year_suffix: true }),
+                group: Some(Group {
+                    template: vec![SortKey::Author, SortKey::Year],
+                }),
+                disambiguate: Some(Disambiguation {
+                    names: true,
+                    add_givenname: true,
+                    year_suffix: true,
+                }),
             },
             Processing::Numeric => ProcessingCustom {
                 sort: None,
@@ -131,7 +143,11 @@ impl Processing {
             Processing::Note => ProcessingCustom {
                 sort: None,
                 group: None,
-                disambiguate: Some(Disambiguation { names: true, year_suffix: false }),
+                disambiguate: Some(Disambiguation {
+                    names: true,
+                    add_givenname: false,
+                    year_suffix: false,
+                }),
             },
             Processing::Custom(custom) => custom.clone(),
         }
@@ -143,12 +159,18 @@ impl Processing {
 #[serde(rename_all = "kebab-case")]
 pub struct Disambiguation {
     pub names: bool,
+    #[serde(default)]
+    pub add_givenname: bool,
     pub year_suffix: bool,
 }
 
 impl Default for Disambiguation {
     fn default() -> Self {
-        Self { names: true, year_suffix: false }
+        Self {
+            names: true,
+            add_givenname: false,
+            year_suffix: false,
+        }
     }
 }
 
@@ -161,7 +183,9 @@ pub struct DateConfig {
 
 impl Default for DateConfig {
     fn default() -> Self {
-        Self { month: MonthFormat::Long }
+        Self {
+            month: MonthFormat::Long,
+        }
     }
 }
 
@@ -307,7 +331,9 @@ pub struct Localize {
 
 impl Default for Localize {
     fn default() -> Self {
-        Self { scope: Scope::Global }
+        Self {
+            scope: Scope::Global,
+        }
     }
 }
 
@@ -438,6 +464,9 @@ contributors:
         let config: Config = serde_yaml::from_str(yaml).unwrap();
         assert!(config.substitute.is_some());
         assert_eq!(config.processing, Some(Processing::AuthorDate));
-        assert_eq!(config.contributors.as_ref().unwrap().and, Some(AndOptions::Symbol));
+        assert_eq!(
+            config.contributors.as_ref().unwrap().and,
+            Some(AndOptions::Symbol)
+        );
     }
 }

@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 pub mod renderer; // Expose the renderer
-pub use renderer::{Renderer, CitationItem};
+pub use renderer::{CitationItem, Renderer};
 
 // New CSLN schema modules
 pub mod locale;
@@ -77,28 +77,120 @@ pub struct StyleInfo {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Hash)]
 #[serde(rename_all = "kebab-case")]
 pub enum ItemType {
-    Article, ArticleJournal, ArticleMagazine, ArticleNewspaper, Bill, Book, Broadcast, 
-    Chapter, Dataset, Entry, EntryDictionary, EntryEncyclopedia, Figure, Graphic, 
-    Interview, LegalCase, Legislation, Manuscript, Map, MotionPicture, MusicalScore, 
-    Pamphlet, PaperConference, Patent, PersonalCommunication, Post, PostWeblog, 
-    Report, Review, ReviewBook, Song, Speech, Thesis, Treaty, Webpage, Software, Standard,
+    Article,
+    ArticleJournal,
+    ArticleMagazine,
+    ArticleNewspaper,
+    Bill,
+    Book,
+    Broadcast,
+    Chapter,
+    Dataset,
+    Entry,
+    EntryDictionary,
+    EntryEncyclopedia,
+    Figure,
+    Graphic,
+    Interview,
+    LegalCase,
+    Legislation,
+    Manuscript,
+    Map,
+    MotionPicture,
+    MusicalScore,
+    Pamphlet,
+    PaperConference,
+    Patent,
+    PersonalCommunication,
+    Post,
+    PostWeblog,
+    Report,
+    Review,
+    ReviewBook,
+    Song,
+    Speech,
+    Thesis,
+    Treaty,
+    Webpage,
+    Software,
+    Standard,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Hash)]
 #[serde(rename_all = "kebab-case")]
 pub enum Variable {
-    Author, CollectionEditor, Composer, ContainerAuthor, Director, Editor, 
-    EditorialDirector, Illustrator, Interviewer, OriginalAuthor, Recipient, 
-    ReviewedAuthor, Translator, Accessed, AvailableDate, EventDate, Issued, 
-    OriginalDate, Submitted, ChapterNumber, CollectionNumber, Edition, Issue, 
-    Number, NumberOfPages, NumberOfVolumes, Volume, Abstract, Annote, Archive, 
-    ArchiveLocation, ArchivePlace, Authority, CallNumber, CitationLabel, 
-    CitationNumber, CollectionTitle, ContainerTitle, ContainerTitleShort, 
-    Dimensions, DOI, Event, EventPlace, FirstReferenceNoteNumber, Genre, ISBN, 
-    ISSN, Jurisdiction, Keyword, Locator, Medium, Note, OriginalPublisher, 
-    OriginalPublisherPlace, OriginalTitle, Page, PageFirst, PMCID, PMID, 
-    Publisher, PublisherPlace, References, ReviewedTitle, Scale, Section, 
-    Source, Status, Title, TitleShort, URL, Version, YearSuffix,
+    Author,
+    CollectionEditor,
+    Composer,
+    ContainerAuthor,
+    Director,
+    Editor,
+    EditorialDirector,
+    Illustrator,
+    Interviewer,
+    OriginalAuthor,
+    Recipient,
+    ReviewedAuthor,
+    Translator,
+    Accessed,
+    AvailableDate,
+    EventDate,
+    Issued,
+    OriginalDate,
+    Submitted,
+    ChapterNumber,
+    CollectionNumber,
+    Edition,
+    Issue,
+    Number,
+    NumberOfPages,
+    NumberOfVolumes,
+    Volume,
+    Abstract,
+    Annote,
+    Archive,
+    ArchiveLocation,
+    ArchivePlace,
+    Authority,
+    CallNumber,
+    CitationLabel,
+    CitationNumber,
+    CollectionTitle,
+    ContainerTitle,
+    ContainerTitleShort,
+    Dimensions,
+    DOI,
+    Event,
+    EventPlace,
+    FirstReferenceNoteNumber,
+    Genre,
+    ISBN,
+    ISSN,
+    Jurisdiction,
+    Keyword,
+    Locator,
+    Medium,
+    Note,
+    OriginalPublisher,
+    OriginalPublisherPlace,
+    OriginalTitle,
+    Page,
+    PageFirst,
+    PMCID,
+    PMID,
+    Publisher,
+    PublisherPlace,
+    References,
+    ReviewedTitle,
+    Scale,
+    Section,
+    Source,
+    Status,
+    Title,
+    TitleShort,
+    URL,
+    Version,
+    YearSuffix,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -224,19 +316,34 @@ pub struct NamesOptions {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
-pub enum NameMode { Long, Short, Count }
+pub enum NameMode {
+    Long,
+    Short,
+    Count,
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
-pub enum AndTerm { Text, Symbol }
+pub enum AndTerm {
+    Text,
+    Symbol,
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
-pub enum DelimiterPrecedes { Contextual, AfterInvertedName, Always, Never }
+pub enum DelimiterPrecedes {
+    Contextual,
+    AfterInvertedName,
+    Always,
+    Never,
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
-pub enum NameAsSortOrder { First, All }
+pub enum NameAsSortOrder {
+    First,
+    All,
+}
 
 /// Configuration for et-al abbreviation in names.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -278,15 +385,28 @@ pub struct DateOptions {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
-pub enum DateForm { Text, Numeric }
+pub enum DateForm {
+    Text,
+    Numeric,
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
-pub enum DateParts { Year, YearMonth, YearMonthDay }
+pub enum DateParts {
+    Year,
+    YearMonth,
+    YearMonthDay,
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
-pub enum DatePartForm { Numeric, NumericLeadingZeros, Ordinal, Long, Short }
+pub enum DatePartForm {
+    Numeric,
+    NumericLeadingZeros,
+    Ordinal,
+    Long,
+    Short,
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "kebab-case")]
@@ -311,23 +431,41 @@ pub struct FormattingOptions {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
-pub enum FontStyle { Normal, Italic, Oblique }
+pub enum FontStyle {
+    Normal,
+    Italic,
+    Oblique,
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
-pub enum FontVariant { Normal, SmallCaps }
+pub enum FontVariant {
+    Normal,
+    SmallCaps,
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
-pub enum FontWeight { Normal, Bold, Light }
+pub enum FontWeight {
+    Normal,
+    Bold,
+    Light,
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
-pub enum TextDecoration { None, Underline }
+pub enum TextDecoration {
+    None,
+    Underline,
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
-pub enum VerticalAlign { Baseline, Superscript, Subscript }
+pub enum VerticalAlign {
+    Baseline,
+    Superscript,
+    Subscript,
+}
 
 #[cfg(test)]
 mod tests {
@@ -382,8 +520,8 @@ options:
         let yaml = r#"
 info:
   title: APA
-options: 
-  substitute: 
+options:
+  substitute:
     contributor-role-form: short
     template:
       - editor
@@ -398,7 +536,7 @@ citation:
       form: short
     - date: issued
       form: year
-bibliography: 
+bibliography:
   template:
     - contributor: author
       form: long
@@ -413,31 +551,34 @@ bibliography:
     - variable: doi
 "#;
         let style: Style = serde_yaml::from_str(yaml).unwrap();
-        
+
         // Verify info
         assert_eq!(style.info.title.as_ref().unwrap(), "APA");
-        
+
         // Verify options
         let options = style.options.unwrap();
         assert_eq!(options.processing, Some(options::Processing::AuthorDate));
         assert!(options.substitute.is_some());
-        
+
         // Verify citation
         let citation = style.citation.unwrap();
         assert_eq!(citation.template.len(), 2);
-        
-        // Verify bibliography  
+
+        // Verify bibliography
         let bib = style.bibliography.unwrap();
         assert_eq!(bib.template.len(), 6);
-        
+
         // Verify flattened rendering worked
         match &bib.template[1] {
             template::TemplateComponent::Date(d) => {
-                assert_eq!(d.rendering.wrap, Some(template::WrapPunctuation::Parentheses));
+                assert_eq!(
+                    d.rendering.wrap,
+                    Some(template::WrapPunctuation::Parentheses)
+                );
             }
             _ => panic!("Expected Date"),
         }
-        
+
         match &bib.template[3] {
             template::TemplateComponent::Title(t) => {
                 assert_eq!(t.rendering.prefix, Some("In ".to_string()));

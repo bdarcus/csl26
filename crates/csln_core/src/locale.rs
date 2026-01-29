@@ -33,24 +33,60 @@ impl Locale {
     /// Create a new English (US) locale with default terms.
     pub fn en_us() -> Self {
         let mut roles = HashMap::new();
-        
-        roles.insert(ContributorRole::Editor, ContributorTerm {
-            singular: SimpleTerm { long: "editor".into(), short: "Ed.".into() },
-            plural: SimpleTerm { long: "editors".into(), short: "Eds.".into() },
-            verb: SimpleTerm { long: "edited by".into(), short: "Ed.".into() },
-        });
-        
-        roles.insert(ContributorRole::Translator, ContributorTerm {
-            singular: SimpleTerm { long: "translator".into(), short: "Trans.".into() },
-            plural: SimpleTerm { long: "translators".into(), short: "Trans.".into() },
-            verb: SimpleTerm { long: "translated by".into(), short: "Trans.".into() },
-        });
 
-        roles.insert(ContributorRole::Director, ContributorTerm {
-            singular: SimpleTerm { long: "director".into(), short: "Dir.".into() },
-            plural: SimpleTerm { long: "directors".into(), short: "dirs.".into() },
-            verb: SimpleTerm { long: "directed by".into(), short: "dir.".into() },
-        });
+        roles.insert(
+            ContributorRole::Editor,
+            ContributorTerm {
+                singular: SimpleTerm {
+                    long: "editor".into(),
+                    short: "Ed.".into(),
+                },
+                plural: SimpleTerm {
+                    long: "editors".into(),
+                    short: "Eds.".into(),
+                },
+                verb: SimpleTerm {
+                    long: "edited by".into(),
+                    short: "Ed.".into(),
+                },
+            },
+        );
+
+        roles.insert(
+            ContributorRole::Translator,
+            ContributorTerm {
+                singular: SimpleTerm {
+                    long: "translator".into(),
+                    short: "Trans.".into(),
+                },
+                plural: SimpleTerm {
+                    long: "translators".into(),
+                    short: "Trans.".into(),
+                },
+                verb: SimpleTerm {
+                    long: "translated by".into(),
+                    short: "Trans.".into(),
+                },
+            },
+        );
+
+        roles.insert(
+            ContributorRole::Director,
+            ContributorTerm {
+                singular: SimpleTerm {
+                    long: "director".into(),
+                    short: "Dir.".into(),
+                },
+                plural: SimpleTerm {
+                    long: "directors".into(),
+                    short: "dirs.".into(),
+                },
+                verb: SimpleTerm {
+                    long: "directed by".into(),
+                    short: "dir.".into(),
+                },
+            },
+        );
 
         Self {
             locale: "en-US".into(),
@@ -90,9 +126,19 @@ impl Locale {
     pub fn month_name(&self, month: u8, short: bool) -> &str {
         let idx = (month.saturating_sub(1)) as usize;
         if short {
-            self.dates.months.short.get(idx).map(|s| s.as_str()).unwrap_or("")
+            self.dates
+                .months
+                .short
+                .get(idx)
+                .map(|s| s.as_str())
+                .unwrap_or("")
         } else {
-            self.dates.months.long.get(idx).map(|s| s.as_str()).unwrap_or("")
+            self.dates
+                .months
+                .long
+                .get(idx)
+                .map(|s| s.as_str())
+                .unwrap_or("")
         }
     }
 }
@@ -151,12 +197,18 @@ impl Terms {
             and: Some("and".into()),
             and_symbol: Some("&".into()),
             and_others: Some("and others".into()),
-            anonymous: SimpleTerm { long: "anonymous".into(), short: "anon.".into() },
+            anonymous: SimpleTerm {
+                long: "anonymous".into(),
+                short: "anon.".into(),
+            },
             at: Some("at".into()),
             accessed: Some("accessed".into()),
             available_at: Some("available at".into()),
             by: Some("by".into()),
-            circa: SimpleTerm { long: "circa".into(), short: "c.".into() },
+            circa: SimpleTerm {
+                long: "circa".into(),
+                short: "c.".into(),
+            },
             et_al: Some("et al.".into()),
             from: Some("from".into()),
             ibid: Some("ibid.".into()),
@@ -204,7 +256,10 @@ impl DateTerms {
         Self {
             months: MonthNames::en_us(),
             seasons: vec![
-                "Spring".into(), "Summer".into(), "Autumn".into(), "Winter".into(),
+                "Spring".into(),
+                "Summer".into(),
+                "Autumn".into(),
+                "Winter".into(),
             ],
         }
     }
@@ -224,14 +279,32 @@ impl MonthNames {
     pub fn en_us() -> Self {
         Self {
             long: vec![
-                "January".into(), "February".into(), "March".into(), "April".into(),
-                "May".into(), "June".into(), "July".into(), "August".into(),
-                "September".into(), "October".into(), "November".into(), "December".into(),
+                "January".into(),
+                "February".into(),
+                "March".into(),
+                "April".into(),
+                "May".into(),
+                "June".into(),
+                "July".into(),
+                "August".into(),
+                "September".into(),
+                "October".into(),
+                "November".into(),
+                "December".into(),
             ],
             short: vec![
-                "Jan.".into(), "Feb.".into(), "Mar.".into(), "Apr.".into(),
-                "May".into(), "June".into(), "July".into(), "Aug.".into(),
-                "Sept.".into(), "Oct.".into(), "Nov.".into(), "Dec.".into(),
+                "Jan.".into(),
+                "Feb.".into(),
+                "Mar.".into(),
+                "Apr.".into(),
+                "May".into(),
+                "June".into(),
+                "July".into(),
+                "Aug.".into(),
+                "Sept.".into(),
+                "Oct.".into(),
+                "Nov.".into(),
+                "Dec.".into(),
             ],
         }
     }
@@ -261,7 +334,7 @@ mod tests {
     #[test]
     fn test_role_terms() {
         let locale = Locale::en_us();
-        
+
         assert_eq!(
             locale.role_term(&ContributorRole::Editor, false, TermForm::Short),
             Some("Ed.")
@@ -282,9 +355,9 @@ mod tests {
             "locale": "en-US",
             "dates": {
                 "months": {
-                    "long": ["January", "February", "March", "April", "May", "June", 
+                    "long": ["January", "February", "March", "April", "May", "June",
                              "July", "August", "September", "October", "November", "December"],
-                    "short": ["Jan", "Feb", "Mar", "Apr", "May", "Jun", 
+                    "short": ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
                               "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
                 },
                 "seasons": ["Spring", "Summer", "Autumn", "Winter"]
@@ -295,7 +368,7 @@ mod tests {
                 "et-al": "et al."
             }
         }"#;
-        
+
         let locale: Locale = serde_json::from_str(json).unwrap();
         assert_eq!(locale.locale, "en-US");
         assert_eq!(locale.dates.months.long[0], "January");

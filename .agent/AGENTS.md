@@ -111,12 +111,12 @@ Run `cargo run --bin csln_analyze -- styles/` to regenerate these statistics.
 | `is-uncertain-date` | 1,668 uses | Handled by preferring else branch |
 | `and` (text/symbol) | 172 styles | Conjunction between names |
 | `name-as-sort-order` | 48 styles | Family-first formatting |
+| `disambiguate-add-givenname`| 935 styles | Add initials when ambiguous |
+| `disambiguate-add-names` | 1,241 styles | Add more authors to resolve ambiguity |
 
 ### High Priority (Not Yet Implemented)
 | Feature | Usage | Notes |
 |---------|-------|-------|
-| `demote-non-dropping-particle` | 2,570 styles | "van Gogh" sorting |
-| `disambiguate-add-givenname` | 935 styles | Add initials when ambiguous |
 | `subsequent-author-substitute` | 314 styles | "———" for repeated authors |
 
 ### Implemented ✅

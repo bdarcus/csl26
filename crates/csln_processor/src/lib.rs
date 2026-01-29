@@ -69,7 +69,9 @@ pub mod values;
 
 pub use error::ProcessorError;
 pub use processor::{ProcessedReferences, Processor};
-pub use reference::{Bibliography, Citation, CitationItem, DateVariable, Name, Reference, StringOrNumber};
+pub use reference::{
+    Bibliography, Citation, CitationItem, DateVariable, Name, Reference, StringOrNumber,
+};
 pub use render::{citation_to_string, refs_to_string, ProcTemplate, ProcTemplateComponent};
 pub use values::{ComponentValues, ProcHints, ProcValues, RenderContext, RenderOptions};
 

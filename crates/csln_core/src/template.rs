@@ -37,7 +37,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 /// Rendering instructions applied to template components.
-/// 
+///
 /// These fields are flattened into parent structs, so in YAML you write:
 /// ```yaml
 /// - title: primary
@@ -383,14 +383,14 @@ form: long
 "#;
         let components: Vec<TemplateComponent> = serde_yaml::from_str(yaml).unwrap();
         assert_eq!(components.len(), 3);
-        
+
         match &components[0] {
             TemplateComponent::Contributor(c) => {
                 assert_eq!(c.contributor, ContributorRole::Author);
             }
             _ => panic!("Expected Contributor"),
         }
-        
+
         match &components[1] {
             TemplateComponent::Date(d) => {
                 assert_eq!(d.date, DateVariable::Issued);
@@ -412,7 +412,7 @@ form: long
 "#;
         let components: Vec<TemplateComponent> = serde_yaml::from_str(yaml).unwrap();
         assert_eq!(components.len(), 2);
-        
+
         match &components[0] {
             TemplateComponent::Title(t) => {
                 assert_eq!(t.rendering.prefix, Some("In ".to_string()));
@@ -420,7 +420,7 @@ form: long
             }
             _ => panic!("Expected Title"),
         }
-        
+
         match &components[1] {
             TemplateComponent::Date(d) => {
                 assert_eq!(d.rendering.wrap, Some(WrapPunctuation::Parentheses));
@@ -440,7 +440,7 @@ wrap: parentheses
         assert_eq!(comp.contributor, ContributorRole::Publisher);
         assert_eq!(comp.rendering.wrap, Some(WrapPunctuation::Parentheses));
     }
-    
+
     #[test]
     fn test_variable_deserialization() {
         // Test that `variable: publisher` parses as Variable, not Number
@@ -453,7 +453,7 @@ wrap: parentheses
             _ => panic!("Expected Variable(Publisher), got {:?}", comp),
         }
     }
-    
+
     #[test]
     fn test_variable_array_parsing() {
         let yaml = r#"

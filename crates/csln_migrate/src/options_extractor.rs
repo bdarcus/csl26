@@ -9,11 +9,12 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 //! intent from CSL 1.0's procedural template structure and encoding it as
 //! declarative options in CSLN.
 
-use csl_legacy::model::{CslNode, Style, Names, Substitute};
+use csl_legacy::model::{CslNode, Names, Style, Substitute};
 use csln_core::options::{
-    AndOptions, Config, ContributorConfig, DateConfig,
-    DelimiterPrecedesLast, DemoteNonDroppingParticle, DisplayAsSort, PageRangeFormat, Processing, 
-    ShortenListOptions, Substitute as CslnSubstitute, SubstituteKey, TitlesConfig,
+    AndOptions, Config, ContributorConfig, DateConfig, DelimiterPrecedesLast,
+    DemoteNonDroppingParticle, Disambiguation, DisplayAsSort, Group, PageRangeFormat, Processing,
+    ProcessingCustom, ShortenListOptions, Sort, SortKey, SortSpec, Substitute as CslnSubstitute,
+    SubstituteKey, TitlesConfig,
 };
 
 /// Extracts global configuration options from a CSL 1.0 style.
@@ -22,47 +23,83 @@ pub struct OptionsExtractor;
 impl OptionsExtractor {
     /// Extract a Config from the given CSL 1.0 style.
     pub fn extract(style: &Style) -> Config {
-        let mut config = Config::default();
+        Config {
+            // 1. Detect processing mode from citation attributes
+            processing: Self::detect_processing_mode(style),
 
-        // 1. Detect processing mode from citation attributes
-        config.processing = Self::detect_processing_mode(style);
+            // 2. Extract contributor options from style-level attributes and citation/bibliography
+            contributors: Self::extract_contributor_config(style),
 
-        // 2. Extract contributor options from style-level attributes and citation/bibliography
-        config.contributors = Self::extract_contributor_config(style);
+            // 3. Extract substitute patterns from the first <names> block with <substitute>
+            substitute: Self::extract_substitute_pattern(style),
 
-        // 3. Extract substitute patterns from the first <names> block with <substitute>
-        config.substitute = Self::extract_substitute_pattern(style);
+            // 4. Extract date configuration
+            dates: Self::extract_date_config(style),
 
-        // 4. Extract date configuration
-        config.dates = Self::extract_date_config(style);
+            // 5. Extract title configuration from formatting patterns
+            titles: Self::extract_title_config(style),
 
-        // 5. Extract title configuration from formatting patterns
-        config.titles = Self::extract_title_config(style);
+            // 6. Extract page range format from style-level attribute
+            page_range_format: Self::extract_page_range_format(style),
 
-        // 6. Extract page range format from style-level attribute
-        config.page_range_format = Self::extract_page_range_format(style);
-
-        config
+            ..Config::default()
+        }
     }
 
     /// Extract page range format from style-level page-range-format attribute.
     fn extract_page_range_format(style: &Style) -> Option<PageRangeFormat> {
-        style.page_range_format.as_ref().and_then(|f| match f.as_str() {
-            "expanded" => Some(PageRangeFormat::Expanded),
-            "minimal" => Some(PageRangeFormat::Minimal),
-            "minimal-two" => Some(PageRangeFormat::MinimalTwo),
-            "chicago" => Some(PageRangeFormat::Chicago),
-            "chicago-15" => Some(PageRangeFormat::Chicago),
-            "chicago-16" => Some(PageRangeFormat::Chicago16),
-            _ => None,
-        })
+        style
+            .page_range_format
+            .as_ref()
+            .and_then(|f| match f.as_str() {
+                "expanded" => Some(PageRangeFormat::Expanded),
+                "minimal" => Some(PageRangeFormat::Minimal),
+                "minimal-two" => Some(PageRangeFormat::MinimalTwo),
+                "chicago" => Some(PageRangeFormat::Chicago),
+                "chicago-15" => Some(PageRangeFormat::Chicago),
+                "chicago-16" => Some(PageRangeFormat::Chicago16),
+                _ => None,
+            })
     }
 
     /// Detect the processing mode (author-date, numeric, note) from citation attributes.
     fn detect_processing_mode(style: &Style) -> Option<Processing> {
         // disambiguate-add-year-suffix is a strong signal for author-date
         if style.citation.disambiguate_add_year_suffix == Some(true) {
-            return Some(Processing::AuthorDate);
+            let names = style.citation.disambiguate_add_names.unwrap_or(false);
+            let add_givenname = style.citation.disambiguate_add_givenname.unwrap_or(false);
+
+            // Standard AuthorDate profile in CSLN is names=true, givenname=true
+            // If style matches, use the enum. If not, use Custom.
+            if names && add_givenname {
+                return Some(Processing::AuthorDate);
+            }
+
+            // Custom author-date config
+            return Some(Processing::Custom(ProcessingCustom {
+                sort: Some(Sort {
+                    shorten_names: false,
+                    render_substitutions: false,
+                    template: vec![
+                        SortSpec {
+                            key: SortKey::Author,
+                            ascending: true,
+                        },
+                        SortSpec {
+                            key: SortKey::Year,
+                            ascending: true,
+                        },
+                    ],
+                }),
+                group: Some(Group {
+                    template: vec![SortKey::Author, SortKey::Year],
+                }),
+                disambiguate: Some(Disambiguation {
+                    names,
+                    add_givenname,
+                    year_suffix: true,
+                }),
+            }));
         }
 
         // Check style class attribute if available
@@ -88,7 +125,9 @@ impl OptionsExtractor {
                 "symbol" => Some(AndOptions::Symbol),
                 _ => None,
             };
-            if config.and.is_some() { has_config = true; }
+            if config.and.is_some() {
+                has_config = true;
+            }
         }
         if let Some(sort_order) = &style.name_as_sort_order {
             config.display_as_sort = match sort_order.as_str() {
@@ -96,7 +135,9 @@ impl OptionsExtractor {
                 "all" => Some(DisplayAsSort::All),
                 _ => None,
             };
-            if config.display_as_sort.is_some() { has_config = true; }
+            if config.display_as_sort.is_some() {
+                has_config = true;
+            }
         }
         if let Some(dpl) = &style.delimiter_precedes_last {
             config.delimiter_precedes_last = match dpl.as_str() {
@@ -106,7 +147,9 @@ impl OptionsExtractor {
                 "never" => Some(DelimiterPrecedesLast::Never),
                 _ => None,
             };
-            if config.delimiter_precedes_last.is_some() { has_config = true; }
+            if config.delimiter_precedes_last.is_some() {
+                has_config = true;
+            }
         }
         if let Some(dpea) = &style.delimiter_precedes_et_al {
             config.delimiter_precedes_et_al = match dpea.as_str() {
@@ -116,7 +159,9 @@ impl OptionsExtractor {
                 "never" => Some(DelimiterPrecedesLast::Never),
                 _ => None,
             };
-            if config.delimiter_precedes_et_al.is_some() { has_config = true; }
+            if config.delimiter_precedes_et_al.is_some() {
+                has_config = true;
+            }
         }
         if let Some(dndp) = &style.demote_non_dropping_particle {
             config.demote_non_dropping_particle = match dndp.as_str() {
@@ -125,7 +170,9 @@ impl OptionsExtractor {
                 "display-and-sort" => Some(DemoteNonDroppingParticle::DisplayAndSort),
                 _ => None,
             };
-            if config.demote_non_dropping_particle.is_some() { has_config = true; }
+            if config.demote_non_dropping_particle.is_some() {
+                has_config = true;
+            }
         }
 
         // Check citation-level et-al settings
@@ -156,7 +203,11 @@ impl OptionsExtractor {
 
         // Walk macros to find <name> elements with global settings
         for macro_def in &style.macros {
-            Self::extract_name_options_from_nodes(&macro_def.children, &mut config, &mut has_config);
+            Self::extract_name_options_from_nodes(
+                &macro_def.children,
+                &mut config,
+                &mut has_config,
+            );
         }
 
         if has_config {
@@ -181,7 +232,11 @@ impl OptionsExtractor {
                     Self::extract_name_options_from_nodes(&g.children, config, has_config);
                 }
                 CslNode::Choose(c) => {
-                    Self::extract_name_options_from_nodes(&c.if_branch.children, config, has_config);
+                    Self::extract_name_options_from_nodes(
+                        &c.if_branch.children,
+                        config,
+                        has_config,
+                    );
                     for branch in &c.else_if_branches {
                         Self::extract_name_options_from_nodes(&branch.children, config, has_config);
                     }
@@ -324,18 +379,16 @@ impl OptionsExtractor {
             CslNode::Text(t) => {
                 // Check if it's a title variable or a macro (likely containing title)
                 if let Some(var) = &t.variable {
-                    if var == "title" || var == "container-title" {
-                        if !template.contains(&SubstituteKey::Title) {
-                            template.push(SubstituteKey::Title);
-                        }
+                    if (var == "title" || var == "container-title")
+                        && !template.contains(&SubstituteKey::Title)
+                    {
+                        template.push(SubstituteKey::Title);
                     }
                 }
                 // Macro calls that likely contain title
                 if let Some(macro_name) = &t.macro_name {
-                    if macro_name.contains("title") {
-                        if !template.contains(&SubstituteKey::Title) {
-                            template.push(SubstituteKey::Title);
-                        }
+                    if macro_name.contains("title") && !template.contains(&SubstituteKey::Title) {
+                        template.push(SubstituteKey::Title);
                     }
                 }
             }
@@ -393,7 +446,7 @@ mod tests {
         let csl = r#"<?xml version="1.0" encoding="utf-8"?>
 <style xmlns="http://purl.org/net/xbiblio/csl" class="in-text" version="1.0">
   <info><title>Test</title></info>
-  <citation disambiguate-add-year-suffix="true">
+  <citation disambiguate-add-year-suffix="true" disambiguate-add-names="true" disambiguate-add-givenname="true">
     <layout><text variable="title"/></layout>
   </citation>
   <bibliography><layout><text variable="title"/></layout></bibliography>
@@ -458,24 +511,34 @@ mod tests {
     #[test]
     fn test_extract_from_real_apa() {
         let apa_path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-            .parent().unwrap()
-            .parent().unwrap()
+            .parent()
+            .unwrap()
+            .parent()
+            .unwrap()
             .join("styles/apa.csl");
-        
-        let xml = std::fs::read_to_string(&apa_path)
-            .expect("Failed to read apa.csl");
+
+        let xml = std::fs::read_to_string(&apa_path).expect("Failed to read apa.csl");
         let style = parse_csl(&xml).expect("Failed to parse apa.csl");
         let config = OptionsExtractor::extract(&style);
 
         // APA should have author-date processing (has disambiguate-add-year-suffix)
-        assert_eq!(config.processing, Some(Processing::AuthorDate), 
-            "APA should be detected as author-date style");
+        assert_eq!(
+            config.processing,
+            Some(Processing::AuthorDate),
+            "APA should be detected as author-date style"
+        );
 
         // APA has et-al settings
-        assert!(config.contributors.is_some(), "APA should have contributor config");
-        
+        assert!(
+            config.contributors.is_some(),
+            "APA should have contributor config"
+        );
+
         // APA has substitute pattern (editor, then title)
-        assert!(config.substitute.is_some(), "APA should have substitute config");
+        assert!(
+            config.substitute.is_some(),
+            "APA should have substitute config"
+        );
 
         // Print for debugging
         println!("APA Config extracted:");

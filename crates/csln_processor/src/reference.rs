@@ -102,14 +102,9 @@ pub struct Reference {
 }
 
 /// A name (person or organization).
-#[derive(Debug, Clone, Default, Deserialize, Serialize)]
-#[serde(rename_all = "kebab-case")]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct Name {
-    /// Family name (surname)
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub family: Option<String>,
-    /// Given name (first name)
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub given: Option<String>,
     /// Literal name (for organizations or single-field names)
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -145,7 +140,8 @@ impl Name {
 
     /// Get the family name or literal.
     pub fn family_or_literal(&self) -> &str {
-        self.family.as_deref()
+        self.family
+            .as_deref()
             .or(self.literal.as_deref())
             .unwrap_or("")
     }
@@ -294,7 +290,10 @@ mod tests {
         let reference: Reference = serde_json::from_str(json).unwrap();
         assert_eq!(reference.id, "kuhn1962");
         assert_eq!(reference.ref_type, "book");
-        assert_eq!(reference.author.as_ref().unwrap()[0].family, Some("Kuhn".to_string()));
+        assert_eq!(
+            reference.author.as_ref().unwrap()[0].family,
+            Some("Kuhn".to_string())
+        );
         assert_eq!(reference.issued.as_ref().unwrap().year_value(), Some(1962));
     }
 

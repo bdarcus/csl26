@@ -11,8 +11,7 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 
 use csln_core::Style;
 use csln_processor::{
-    Bibliography, Citation, CitationItem, DateVariable, Name, Processor, Reference,
-    StringOrNumber,
+    Bibliography, Citation, CitationItem, DateVariable, Name, Processor, Reference, StringOrNumber,
 };
 use std::collections::HashMap;
 use std::env;
@@ -142,7 +141,9 @@ fn create_test_bibliography() -> Bibliography {
                 Name::new("Hoffman", "Robert R."),
             ]),
             title: Some("The Role of Deliberate Practice".to_string()),
-            collection_title: Some("The Cambridge Handbook of Expertise and Expert Performance".to_string()),
+            collection_title: Some(
+                "The Cambridge Handbook of Expertise and Expert Performance".to_string(),
+            ),
             issued: Some(DateVariable::year(2006)),
             publisher: Some("Cambridge University Press".to_string()),
             page: Some("683-703".to_string()),

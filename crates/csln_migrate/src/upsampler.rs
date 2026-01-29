@@ -1,5 +1,5 @@
 use csl_legacy::model::{self as legacy, CslNode as LNode};
-use csln_core::{self as csln, Variable, ItemType, FormattingOptions};
+use csln_core::{self as csln, FormattingOptions, ItemType, Variable};
 use std::collections::HashMap;
 
 pub struct Upsampler;
@@ -39,7 +39,12 @@ impl Upsampler {
                         return Some(csln::CslnNode::Variable(csln::VariableBlock {
                             variable: var,
                             label: None,
-                            formatting: self.map_formatting(&t.formatting, &t.prefix, &t.suffix, t.quotes),
+                            formatting: self.map_formatting(
+                                &t.formatting,
+                                &t.prefix,
+                                &t.suffix,
+                                t.quotes,
+                            ),
                             overrides: HashMap::new(),
                         }));
                     }
@@ -49,25 +54,23 @@ impl Upsampler {
                 }
                 None
             }
-            LNode::Group(g) => {
-                Some(csln::CslnNode::Group(csln::GroupBlock {
-                    children: self.upsample_nodes(&g.children),
-                    delimiter: g.delimiter.clone(),
-                    formatting: self.map_formatting(&g.formatting, &g.prefix, &g.suffix, None),
-                }))
-            }
+            LNode::Group(g) => Some(csln::CslnNode::Group(csln::GroupBlock {
+                children: self.upsample_nodes(&g.children),
+                delimiter: g.delimiter.clone(),
+                formatting: self.map_formatting(&g.formatting, &g.prefix, &g.suffix, None),
+            })),
             LNode::Date(d) => self.map_date(d),
             LNode::Names(n) => self.map_names(n),
             LNode::Choose(c) => self.map_choose(c),
             LNode::Number(n) => self.map_number(n),
             LNode::Label(l) => self.map_label(l),
-            _ => None
+            _ => None,
         }
     }
 
     fn map_names(&self, n: &legacy::Names) -> Option<csln::CslnNode> {
         let variable = self.map_variable(&n.variable)?;
-        
+
         let mut options = csln::NamesOptions {
             delimiter: n.delimiter.clone(),
             ..Default::default()
@@ -76,14 +79,15 @@ impl Upsampler {
         // Extract et-al defaults from Names node
         let mut et_al_min = n.et_al_min;
         let mut et_al_use_first = n.et_al_use_first;
-        let et_al_subsequent = if n.et_al_subsequent_min.is_some() || n.et_al_subsequent_use_first.is_some() {
-            Some(Box::new(csln::EtAlSubsequent {
-                min: n.et_al_subsequent_min.unwrap_or(0) as u8,
-                use_first: n.et_al_subsequent_use_first.unwrap_or(0) as u8,
-            }))
-        } else {
-            None
-        };
+        let et_al_subsequent =
+            if n.et_al_subsequent_min.is_some() || n.et_al_subsequent_use_first.is_some() {
+                Some(Box::new(csln::EtAlSubsequent {
+                    min: n.et_al_subsequent_min.unwrap_or(0) as u8,
+                    use_first: n.et_al_subsequent_use_first.unwrap_or(0) as u8,
+                }))
+            } else {
+                None
+            };
 
         let mut et_al_term = "et al.".to_string();
         let et_al_formatting = FormattingOptions::default();
@@ -108,23 +112,35 @@ impl Upsampler {
                         Some("all") => Some(csln::NameAsSortOrder::All),
                         _ => None,
                     };
-                    options.delimiter_precedes_last = match name.delimiter_precedes_last.as_deref() {
+                    options.delimiter_precedes_last = match name.delimiter_precedes_last.as_deref()
+                    {
                         Some("contextual") => Some(csln::DelimiterPrecedes::Contextual),
-                        Some("after-inverted-name") => Some(csln::DelimiterPrecedes::AfterInvertedName),
+                        Some("after-inverted-name") => {
+                            Some(csln::DelimiterPrecedes::AfterInvertedName)
+                        }
                         Some("always") => Some(csln::DelimiterPrecedes::Always),
                         Some("never") => Some(csln::DelimiterPrecedes::Never),
                         _ => None,
                     };
-                    
+
                     // Name node can also have et-al attributes
-                    if name.et_al_min.is_some() { et_al_min = name.et_al_min; }
-                    if name.et_al_use_first.is_some() { et_al_use_first = name.et_al_use_first; }
+                    if name.et_al_min.is_some() {
+                        et_al_min = name.et_al_min;
+                    }
+                    if name.et_al_use_first.is_some() {
+                        et_al_use_first = name.et_al_use_first;
+                    }
                 }
                 LNode::Label(label) => {
                     options.label = Some(csln::LabelOptions {
                         form: self.map_label_form(&label.form),
                         pluralize: true,
-                        formatting: self.map_formatting(&label.formatting, &label.prefix, &label.suffix, None),
+                        formatting: self.map_formatting(
+                            &label.formatting,
+                            &label.prefix,
+                            &label.suffix,
+                            None,
+                        ),
                     });
                 }
                 LNode::EtAl(et_al) => {
@@ -176,8 +192,8 @@ impl Upsampler {
 
     fn map_label(&self, l: &legacy::Label) -> Option<csln::CslnNode> {
         if let Some(var_str) = &l.variable {
-             if let Some(var) = self.map_variable(var_str) {
-                 return Some(csln::CslnNode::Variable(csln::VariableBlock {
+            if let Some(var) = self.map_variable(var_str) {
+                return Some(csln::CslnNode::Variable(csln::VariableBlock {
                     variable: var,
                     label: Some(csln::LabelOptions {
                         form: self.map_label_form(&l.form),
@@ -187,7 +203,7 @@ impl Upsampler {
                     formatting: FormattingOptions::default(),
                     overrides: HashMap::new(),
                 }));
-             }
+            }
         }
         None
     }
@@ -206,13 +222,13 @@ impl Upsampler {
             }
             // Fall through to if-branch if no else exists
         }
-        
+
         let mut if_item_type = Vec::new();
         if let Some(types) = &c.if_branch.type_ {
             for t in types.split_whitespace() {
-                 if let Some(it) = self.map_item_type(t) {
-                     if_item_type.push(it);
-                 }
+                if let Some(it) = self.map_item_type(t) {
+                    if_item_type.push(it);
+                }
             }
         }
 
@@ -232,7 +248,7 @@ impl Upsampler {
             else_branch: if let Some(else_children) = &c.else_branch {
                 Some(self.upsample_nodes(else_children))
             } else if !c.else_if_branches.is_empty() {
-                 Some(self.upsample_nodes(&c.else_if_branches[0].children))
+                Some(self.upsample_nodes(&c.else_if_branches[0].children))
             } else {
                 None
             },
@@ -342,9 +358,19 @@ impl Upsampler {
                                 label: Some(csln::LabelOptions {
                                     form: self.map_label_form(&l.form),
                                     pluralize: true,
-                                    formatting: self.map_formatting(&l.formatting, &l.prefix, &l.suffix, None),
+                                    formatting: self.map_formatting(
+                                        &l.formatting,
+                                        &l.prefix,
+                                        &l.suffix,
+                                        None,
+                                    ),
                                 }),
-                                formatting: self.map_formatting(&t.formatting, &t.prefix, &t.suffix, t.quotes),
+                                formatting: self.map_formatting(
+                                    &t.formatting,
+                                    &t.prefix,
+                                    &t.suffix,
+                                    t.quotes,
+                                ),
                                 overrides: HashMap::new(),
                             }));
                         }
@@ -430,30 +456,36 @@ impl Upsampler {
         }
     }
 
-    fn map_formatting(&self, f: &legacy::Formatting, prefix: &Option<String>, suffix: &Option<String>, quotes: Option<bool>) -> FormattingOptions {
+    fn map_formatting(
+        &self,
+        f: &legacy::Formatting,
+        prefix: &Option<String>,
+        suffix: &Option<String>,
+        quotes: Option<bool>,
+    ) -> FormattingOptions {
         FormattingOptions {
-            font_style: f.font_style.as_ref().and_then(|s| match s.as_str() {
-                "italic" => Some(csln::FontStyle::Italic),
-                "oblique" => Some(csln::FontStyle::Oblique),
-                _ => Some(csln::FontStyle::Normal),
+            font_style: f.font_style.as_ref().map(|s| match s.as_str() {
+                "italic" => csln::FontStyle::Italic,
+                "oblique" => csln::FontStyle::Oblique,
+                _ => csln::FontStyle::Normal,
             }),
-            font_weight: f.font_weight.as_ref().and_then(|s| match s.as_str() {
-                "bold" => Some(csln::FontWeight::Bold),
-                "light" => Some(csln::FontWeight::Light),
-                _ => Some(csln::FontWeight::Normal),
+            font_weight: f.font_weight.as_ref().map(|s| match s.as_str() {
+                "bold" => csln::FontWeight::Bold,
+                "light" => csln::FontWeight::Light,
+                _ => csln::FontWeight::Normal,
             }),
-            font_variant: f.font_variant.as_ref().and_then(|s| match s.as_str() {
-                "small-caps" => Some(csln::FontVariant::SmallCaps),
-                _ => Some(csln::FontVariant::Normal),
+            font_variant: f.font_variant.as_ref().map(|s| match s.as_str() {
+                "small-caps" => csln::FontVariant::SmallCaps,
+                _ => csln::FontVariant::Normal,
             }),
-            text_decoration: f.text_decoration.as_ref().and_then(|s| match s.as_str() {
-                "underline" => Some(csln::TextDecoration::Underline),
-                _ => Some(csln::TextDecoration::None),
+            text_decoration: f.text_decoration.as_ref().map(|s| match s.as_str() {
+                "underline" => csln::TextDecoration::Underline,
+                _ => csln::TextDecoration::None,
             }),
-            vertical_align: f.vertical_align.as_ref().and_then(|s| match s.as_str() {
-                "superscript" => Some(csln::VerticalAlign::Superscript),
-                "subscript" => Some(csln::VerticalAlign::Subscript),
-                _ => Some(csln::VerticalAlign::Baseline),
+            vertical_align: f.vertical_align.as_ref().map(|s| match s.as_str() {
+                "superscript" => csln::VerticalAlign::Superscript,
+                "subscript" => csln::VerticalAlign::Subscript,
+                _ => csln::VerticalAlign::Baseline,
             }),
             quotes,
             prefix: prefix.clone(),
