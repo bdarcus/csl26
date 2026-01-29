@@ -155,6 +155,35 @@ Run `cargo run --bin csln_analyze -- styles/` to regenerate these statistics.
 
 When designing features or writing code, evaluate your decisions against the [CSLN Design Personas](./PERSONAS.md). This ensures we satisfy the needs of style authors, web developers, systems architects, and domain experts.
 
+## Prior Art
+
+Before designing new features, consult [PRIOR_ART.md](./PRIOR_ART.md) to understand how existing systems (CSL 1.0, CSL-M, biblatex, citeproc-rs) handle similar problems. Key references:
+
+- **CSL 1.0**: Established vocabulary, locale system, 2,844+ styles
+- **CSL-M**: Legal citations, multilingual locale layouts, institutional names
+- **biblatex**: Flat options architecture, EDTF dates, sorting templates
+- **citeproc-rs**: Rust implementation patterns, incremental computation, WASM bindings
+
+### Feature Roadmap (from Prior Art)
+
+| Priority | Feature | Source | Issue |
+|----------|---------|--------|-------|
+| High | EDTF native date handling | biblatex | - |
+| High | Locale-specific template sections | CSL-M | #66 |
+| High | Entry-level `language` field | biblatex/CSL-M | #66 |
+| High | Pluggable renderers (HTML, LaTeX, Typst) | citeproc-rs, jotdown | #105 |
+| Medium | Presets for common configurations | CSLN-native | #89 |
+| Medium | Hyperlink configuration | CSL Appendix VI | #155 |
+| Medium | Separate citation/bibliography name limits | biblatex | #64 |
+| Medium | Sorting shortcuts (`nty`, `ynt`) | biblatex | #61 |
+| Medium | Extended legal types | CSL-M | - |
+| Medium | `court-class` jurisdiction hierarchies | CSL-M | - |
+| Medium | Djot integration (documents + fields) | - | #86 |
+| Low | Parallel citation support | CSL-M | - |
+| Low | `hereinafter` variable | CSL-M | - |
+| Low | Extended position conditions | CSL-M | - |
+| Low | Incremental computation (salsa) | citeproc-rs | - |
+
 ## Skills
 
 Specialized expertise is available via the following skills in `.agent/skills/`:

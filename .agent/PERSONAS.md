@@ -119,6 +119,29 @@ Before adding or modifying a feature, verify it works for all three personas:
 - [ ] Does this handle known complex edge cases?
 - [ ] Is the terminology consistent with domain standards?
 - [ ] Are we reinventing the wheel unnecessarily?
+- [ ] For multilingual: Does it support locale-specific formatting?
+- [ ] For legal: Does it handle jurisdiction hierarchies and parallel citations?
+
+---
+
+## Specialized Checklists
+
+### Multilingual Features
+When adding multilingual support, verify:
+- [ ] Entry-level `language` field is respected
+- [ ] Locale-specific templates can override defaults
+- [ ] RTL scripts (Arabic, Hebrew) render correctly
+- [ ] CJK conventions (no spaces, different delimiters) are supported
+- [ ] Locale terms switch appropriately per item language
+
+### Legal Citation Features
+When adding legal support, verify:
+- [ ] Extended types (`hearing`, `regulation`) are supported
+- [ ] Jurisdiction hierarchies work (e.g., `us:federal:circuit:9`)
+- [ ] Court classes can be defined and matched
+- [ ] Parallel citations suppress repeated elements
+- [ ] `hereinafter` short forms are available
+- [ ] Position conditions (`subsequent`, `ibid`, `far-note`) work
 
 ---
 
