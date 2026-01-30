@@ -292,9 +292,30 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     );
                     v.overrides = Some(overrides);
                 }
-                // Note: Page formatting varies by style. We don't apply these
-                // as universal defaults - need to extract from each CSL style.
-                // TODO: Extract page formatting from CSL choose blocks.
+                // Pages: journal articles use comma prefix, chapters use (pp. X-Y)
+                TemplateComponent::Number(n)
+                    if n.number == csln_core::template::NumberVariable::Pages =>
+                {
+                    let mut overrides = std::collections::HashMap::new();
+                    // Journals: comma before pages (e.g., "521, 436-444")
+                    overrides.insert(
+                        "article-journal".to_string(),
+                        csln_core::template::Rendering {
+                            prefix: Some(", ".to_string()),
+                            ..Default::default()
+                        },
+                    );
+                    // Chapters: parenthesized with label (e.g., "(pp. 683-703)")
+                    overrides.insert(
+                        "chapter".to_string(),
+                        csln_core::template::Rendering {
+                            prefix: Some("pp. ".to_string()),
+                            wrap: Some(WrapPunctuation::Parentheses),
+                            ..Default::default()
+                        },
+                    );
+                    n.overrides = Some(overrides);
+                }
                 _ => {}
             }
         }
