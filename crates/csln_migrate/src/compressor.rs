@@ -10,25 +10,38 @@ impl Compressor {
                 CslnNode::Condition(cond) => {
                     // Recurse first
                     let then_compressed = self.compress_nodes(cond.then_branch);
+                    let else_if_compressed: Vec<csln_core::ElseIfBranch> = cond
+                        .else_if_branches
+                        .into_iter()
+                        .map(|branch| csln_core::ElseIfBranch {
+                            if_item_type: branch.if_item_type,
+                            if_variables: branch.if_variables,
+                            children: self.compress_nodes(branch.children),
+                        })
+                        .collect();
                     let else_compressed = cond.else_branch.map(|e| self.compress_nodes(e));
 
-                    // Attempt Merge
-                    if let Some(merged) = self.try_merge_branches(
-                        &cond.if_item_type,
-                        &then_compressed,
-                        &else_compressed,
-                    ) {
-                        compressed.push(merged);
-                    } else {
-                        // Keep Condition if merge fails, but use compressed children
-                        let new_cond = csln_core::ConditionBlock {
-                            if_item_type: cond.if_item_type.clone(),
-                            if_variables: cond.if_variables.clone(),
-                            then_branch: then_compressed,
-                            else_branch: else_compressed,
-                        };
-                        compressed.push(CslnNode::Condition(new_cond));
+                    // Attempt Merge (only when no else-if branches)
+                    if else_if_compressed.is_empty() {
+                        if let Some(merged) = self.try_merge_branches(
+                            &cond.if_item_type,
+                            &then_compressed,
+                            &else_compressed,
+                        ) {
+                            compressed.push(merged);
+                            continue;
+                        }
                     }
+
+                    // Keep Condition if merge fails, but use compressed children
+                    let new_cond = csln_core::ConditionBlock {
+                        if_item_type: cond.if_item_type.clone(),
+                        if_variables: cond.if_variables.clone(),
+                        then_branch: then_compressed,
+                        else_if_branches: else_if_compressed,
+                        else_branch: else_compressed,
+                    };
+                    compressed.push(CslnNode::Condition(new_cond));
                 }
                 CslnNode::Group(mut group) => {
                     group.children = self.compress_nodes(group.children);

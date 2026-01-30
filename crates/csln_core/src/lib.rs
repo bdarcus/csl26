@@ -86,7 +86,13 @@ pub struct CitationSpec {
 pub struct BibliographySpec {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub options: Option<Config>,
+    /// The default template for bibliography entries.
     pub template: Template,
+    /// Type-specific template overrides. When present, replaces the default
+    /// template for entries of the specified types. Keys are reference type
+    /// names (e.g., "chapter", "article-journal").
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub type_templates: Option<HashMap<String, Template>>,
     /// Unknown fields captured for forward compatibility.
     #[serde(flatten)]
     pub _extra: HashMap<String, serde_json::Value>,
@@ -289,7 +295,20 @@ pub struct ConditionBlock {
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub if_variables: Vec<Variable>,
     pub then_branch: Vec<CslnNode>,
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    pub else_if_branches: Vec<ElseIfBranch>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub else_branch: Option<Vec<CslnNode>>,
+}
+
+/// An else-if branch in a condition block, capturing type or variable conditions.
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct ElseIfBranch {
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    pub if_item_type: Vec<ItemType>,
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    pub if_variables: Vec<Variable>,
+    pub children: Vec<CslnNode>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
