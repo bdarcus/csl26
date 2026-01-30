@@ -675,11 +675,99 @@ impl OptionsExtractor {
         None
     }
 
-    /// Extract title configuration from formatting patterns.
-    fn extract_title_config(_style: &Style) -> Option<TitlesConfig> {
-        // TODO: Analyze title formatting in templates
-        // Look for patterns like italics on container-title vs quotes on article-title
-        None
+    /// Extract title formatting configuration by scanning for quote/emph usage on titles.
+    fn extract_title_config(style: &Style) -> Option<TitlesConfig> {
+        let mut component_quotes = false;
+        let mut periodical_emph = false;
+
+        // Scan bibliography macros for title formatting patterns
+        let bib_macros = Self::collect_bibliography_macros(style);
+
+        for macro_def in &style.macros {
+            if bib_macros.contains(&macro_def.name) {
+                Self::scan_for_title_formatting(
+                    &macro_def.children,
+                    &mut component_quotes,
+                    &mut periodical_emph,
+                );
+            }
+        }
+
+        if component_quotes || periodical_emph {
+            Some(TitlesConfig {
+                component: if component_quotes {
+                    Some(csln_core::options::TitleRendering {
+                        quote: Some(true),
+                        ..Default::default()
+                    })
+                } else {
+                    None
+                },
+                periodical: if periodical_emph {
+                    Some(csln_core::options::TitleRendering {
+                        emph: Some(true),
+                        ..Default::default()
+                    })
+                } else {
+                    None
+                },
+                ..Default::default()
+            })
+        } else {
+            None
+        }
+    }
+
+    /// Recursively scan nodes for title formatting (quotes on title variable).
+    fn scan_for_title_formatting(
+        nodes: &[CslNode],
+        component_quotes: &mut bool,
+        periodical_emph: &mut bool,
+    ) {
+        for node in nodes {
+            match node {
+                CslNode::Text(t) => {
+                    // Check for quotes on title variable (article/chapter titles)
+                    if t.variable.as_ref().is_some_and(|v| v == "title") && t.quotes == Some(true) {
+                        *component_quotes = true;
+                    }
+                    // Check for italics on container-title (journal/periodical names)
+                    if t.variable.as_ref().is_some_and(|v| v == "container-title")
+                        && t.formatting
+                            .font_style
+                            .as_ref()
+                            .is_some_and(|s| s == "italic")
+                    {
+                        *periodical_emph = true;
+                    }
+                }
+                CslNode::Group(g) => {
+                    Self::scan_for_title_formatting(&g.children, component_quotes, periodical_emph);
+                }
+                CslNode::Choose(c) => {
+                    Self::scan_for_title_formatting(
+                        &c.if_branch.children,
+                        component_quotes,
+                        periodical_emph,
+                    );
+                    for branch in &c.else_if_branches {
+                        Self::scan_for_title_formatting(
+                            &branch.children,
+                            component_quotes,
+                            periodical_emph,
+                        );
+                    }
+                    if let Some(else_children) = &c.else_branch {
+                        Self::scan_for_title_formatting(
+                            else_children,
+                            component_quotes,
+                            periodical_emph,
+                        );
+                    }
+                }
+                _ => {}
+            }
+        }
     }
 }
 
