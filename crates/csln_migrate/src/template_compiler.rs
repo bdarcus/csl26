@@ -13,7 +13,6 @@ use csln_core::{
         ContributorForm, ContributorRole, DateForm, DateVariable, DelimiterPunctuation,
         NumberVariable, Rendering, SimpleVariable, TemplateComponent, TemplateContributor,
         TemplateDate, TemplateList, TemplateNumber, TemplateTitle, TemplateVariable, TitleType,
-        WrapPunctuation,
     },
     CslnNode, FormattingOptions, ItemType, Variable,
 };
@@ -78,9 +77,20 @@ impl TemplateCompiler {
                         let group_components =
                             self.compile_with_wrap(&g.children, &effective_wrap, current_types);
 
-                        // Decide whether to emit a TemplateList or flatten
-                        let should_be_list = g.delimiter.is_some()
-                            || (group_wrap.0.is_some() && group_components.len() > 1);
+                        // Only create a List for meaningful structural groups:
+                        // - Groups with explicit non-default delimiters (not period/comma)
+                        // - AND containing 2-3 components that form a logical unit
+                        // Most groups should just be flattened.
+                        let meaningful_delimiter = g.delimiter.as_ref().is_some_and(|d| {
+                            // Keep lists for special delimiters like none (volume+issue)
+                            // or colon (title: subtitle)
+                            matches!(d.as_str(), "" | "none" | ": " | " " | ", ")
+                        });
+                        let is_small_structural_group =
+                            group_components.len() >= 2 && group_components.len() <= 3;
+                        let should_be_list = meaningful_delimiter
+                            && is_small_structural_group
+                            && group_wrap.0.is_none();
 
                         if should_be_list && !group_components.is_empty() {
                             let list = TemplateComponent::List(TemplateList {
@@ -165,7 +175,11 @@ impl TemplateCompiler {
                 let rendering = self.get_component_rendering(&new_component);
                 for item_type in current_types {
                     let type_str = self.item_type_to_string(item_type);
-                    self.add_override_to_component(&mut components[idx], type_str, rendering.clone());
+                    self.add_override_to_component(
+                        &mut components[idx],
+                        type_str,
+                        rendering.clone(),
+                    );
                 }
             }
         } else {
@@ -280,6 +294,10 @@ impl TemplateCompiler {
     ) {
         // Compile the default template
         let mut default_template = self.compile(nodes);
+
+        // Deduplicate and flatten to remove redundant nesting from branch processing
+        default_template = self.deduplicate_and_flatten(default_template);
+
         self.sort_bibliography_components(&mut default_template);
 
         // Type-specific template generation is disabled for now.
@@ -288,6 +306,151 @@ impl TemplateCompiler {
         let type_templates: HashMap<String, Vec<TemplateComponent>> = HashMap::new();
 
         (default_template, type_templates)
+    }
+
+    /// Remove duplicate components and flatten unnecessary nesting.
+    ///
+    /// The compile_with_wrap function processes ALL branches of conditions,
+    /// which can result in duplicate components and deeply nested Lists.
+    /// This function cleans up the result by:
+    /// 1. First pass: add all non-List components (primary variables)
+    /// 2. Second pass: recursively clean Lists by removing items that are at top-level
+    /// 3. Skip Lists that become empty or only have one item after cleaning
+    fn deduplicate_and_flatten(
+        &self,
+        components: Vec<TemplateComponent>,
+    ) -> Vec<TemplateComponent> {
+        let mut seen_vars: Vec<String> = Vec::new();
+        let mut seen_list_signatures: Vec<String> = Vec::new();
+        let mut result: Vec<TemplateComponent> = Vec::new();
+
+        // First pass: add all non-List components and track their keys
+        for component in &components {
+            if !matches!(component, TemplateComponent::List(_)) {
+                if let Some(key) = self.get_variable_key(component) {
+                    if !seen_vars.contains(&key) {
+                        seen_vars.push(key);
+                        result.push(component.clone());
+                    }
+                } else {
+                    result.push(component.clone());
+                }
+            }
+        }
+
+        // Second pass: process Lists with recursive cleaning
+        for component in components {
+            if let TemplateComponent::List(list) = component {
+                // Recursively clean the list
+                if let Some(cleaned) = self.clean_list_recursive(&list, &seen_vars) {
+                    // Check if it's a List or was unwrapped
+                    if let TemplateComponent::List(cleaned_list) = &cleaned {
+                        // Create signature for duplicate detection
+                        let list_vars = self.extract_list_vars(cleaned_list);
+                        let mut signature_parts = list_vars.clone();
+                        signature_parts.sort();
+                        let signature = signature_parts.join("|");
+
+                        // Skip duplicate lists
+                        if seen_list_signatures.contains(&signature) {
+                            continue;
+                        }
+                        seen_list_signatures.push(signature);
+
+                        // Track variables in this list
+                        for var in list_vars {
+                            if !seen_vars.contains(&var) {
+                                seen_vars.push(var);
+                            }
+                        }
+                    } else if let Some(key) = self.get_variable_key(&cleaned) {
+                        // If it was unwrapped to a single component, check if already seen
+                        if seen_vars.contains(&key) {
+                            continue;
+                        }
+                        seen_vars.push(key);
+                    }
+
+                    result.push(cleaned);
+                }
+            }
+        }
+
+        result
+    }
+
+    /// Recursively clean a List by removing items that duplicate seen variables.
+    /// Returns None if the list becomes empty, unwraps single-item lists.
+    fn clean_list_recursive(
+        &self,
+        list: &TemplateList,
+        seen_vars: &[String],
+    ) -> Option<TemplateComponent> {
+        let mut cleaned_items: Vec<TemplateComponent> = Vec::new();
+
+        for item in &list.items {
+            if let TemplateComponent::List(nested) = item {
+                // Recursively clean nested lists
+                if let Some(cleaned) = self.clean_list_recursive(nested, seen_vars) {
+                    cleaned_items.push(cleaned);
+                }
+            } else if let Some(key) = self.get_variable_key(item) {
+                // Only keep if not already seen
+                if !seen_vars.contains(&key) {
+                    cleaned_items.push(item.clone());
+                }
+            } else {
+                // Keep other items (shouldn't happen often)
+                cleaned_items.push(item.clone());
+            }
+        }
+
+        // Skip empty lists
+        if cleaned_items.is_empty() {
+            return None;
+        }
+
+        // If only one item remains and no special rendering, unwrap it
+        if cleaned_items.len() == 1
+            && list.delimiter.is_none()
+            && list.rendering == Rendering::default()
+        {
+            return Some(cleaned_items.remove(0));
+        }
+
+        Some(TemplateComponent::List(TemplateList {
+            items: cleaned_items,
+            delimiter: list.delimiter.clone(),
+            rendering: list.rendering.clone(),
+            ..Default::default()
+        }))
+    }
+
+    /// Extract all variable keys from a List (recursively).
+    fn extract_list_vars(&self, list: &TemplateList) -> Vec<String> {
+        let mut vars = Vec::new();
+        for item in &list.items {
+            if let Some(key) = self.get_variable_key(item) {
+                vars.push(key);
+            } else if let TemplateComponent::List(nested) = item {
+                vars.extend(self.extract_list_vars(nested));
+            }
+        }
+        vars
+    }
+
+    /// Get a unique key for a component for deduplication purposes.
+    fn get_variable_key(&self, component: &TemplateComponent) -> Option<String> {
+        match component {
+            TemplateComponent::Contributor(c) => Some(format!("contributor:{:?}", c.contributor)),
+            TemplateComponent::Date(d) => Some(format!("date:{:?}", d.date)),
+            TemplateComponent::Title(t) => Some(format!("title:{:?}", t.title)),
+            TemplateComponent::Number(n) => Some(format!("number:{:?}", n.number)),
+            TemplateComponent::Variable(v) => Some(format!("variable:{:?}", v.variable)),
+            // Lists don't have a single key - they contain multiple variables
+            TemplateComponent::List(_) => None,
+            _ => None,
+        }
     }
 
     /// Collect all ItemTypes that have specific branches in conditions.

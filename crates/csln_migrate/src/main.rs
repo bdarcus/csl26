@@ -37,7 +37,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }),
             container_monograph: Some(csln_core::options::TitleRendering {
                 emph: Some(true),
-                prefix: Some("In ".to_string()),
+                // Note: "In " prefix is on the editor component, not here
                 ..Default::default()
             }),
             component: Some(csln_core::options::TitleRendering {
@@ -244,6 +244,52 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
 
+        // Combine volume and issue into a List component: volume(issue)
+        let vol_pos = new_bib.iter().position(|c| {
+            matches!(c, TemplateComponent::Number(n) if n.number == csln_core::template::NumberVariable::Volume)
+        });
+        let issue_pos = new_bib.iter().position(|c| {
+            matches!(c, TemplateComponent::Number(n) if n.number == csln_core::template::NumberVariable::Issue)
+        });
+
+        if let (Some(vol_idx), Some(issue_idx)) = (vol_pos, issue_pos) {
+            // Remove both and insert a List at the earlier position
+            let min_idx = vol_idx.min(issue_idx);
+            let max_idx = vol_idx.max(issue_idx);
+
+            // Remove from end first to preserve indices
+            new_bib.remove(max_idx);
+            new_bib.remove(min_idx);
+
+            // Create volume(issue) list
+            let vol_issue_list = TemplateComponent::List(csln_core::template::TemplateList {
+                items: vec![
+                    TemplateComponent::Number(csln_core::template::TemplateNumber {
+                        number: csln_core::template::NumberVariable::Volume,
+                        form: None,
+                        rendering: csln_core::template::Rendering::default(),
+                        overrides: None,
+                        ..Default::default()
+                    }),
+                    TemplateComponent::Number(csln_core::template::TemplateNumber {
+                        number: csln_core::template::NumberVariable::Issue,
+                        form: None,
+                        rendering: csln_core::template::Rendering {
+                            wrap: Some(csln_core::template::WrapPunctuation::Parentheses),
+                            ..Default::default()
+                        },
+                        overrides: None,
+                        ..Default::default()
+                    }),
+                ],
+                delimiter: Some(csln_core::template::DelimiterPunctuation::None),
+                rendering: csln_core::template::Rendering::default(),
+                overrides: None,
+                ..Default::default()
+            });
+
+            new_bib.insert(min_idx, vol_issue_list);
+        }
 
         // Add type-specific overrides
         for component in &mut new_bib {
