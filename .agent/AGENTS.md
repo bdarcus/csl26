@@ -187,6 +187,12 @@ Before designing new features, consult [PRIOR_ART.md](./PRIOR_ART.md) to underst
 | Low | Extended position conditions | CSL-M | - |
 | Low | Incremental computation (salsa) | citeproc-rs | - |
 
+## Vision Documents
+
+When designing features that affect the API surface or schema, consult:
+
+- **[STYLE_EDITOR_VISION.md](./STYLE_EDITOR_VISION.md)**: User stories and API requirements for a web-based style editor. Ensures the core library supports progressive-refinement UIs and JSON API exposure.
+
 ## Skills
 
 Specialized expertise is available via the following skills in `.agent/skills/`:
