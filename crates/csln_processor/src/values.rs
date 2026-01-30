@@ -433,8 +433,9 @@ fn format_single_name(
                             }
                             current_part.clear();
                         }
-                        // Only push separator if it's not whitespace, or if init doesn't already have one
-                        if !c.is_whitespace() || !init.chars().any(|ic| ic.is_whitespace()) {
+                        // Push separator if: it's not whitespace (e.g., hyphen for J.-P.),
+                        // or if init already has whitespace (so we don't double-space)
+                        if !c.is_whitespace() || init.chars().any(|ic| ic.is_whitespace()) {
                             result.push(c);
                         }
                     } else {
