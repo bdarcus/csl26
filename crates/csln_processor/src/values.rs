@@ -650,7 +650,10 @@ impl ComponentValues for TemplateTitle {
             TitleType::ParentSerial => {
                 // For chapters/entries, the container is a book (not a serial).
                 // Suppress ParentSerial to avoid duplication with ParentMonograph.
-                if matches!(ref_type, "chapter" | "entry" | "entry-dictionary" | "entry-encyclopedia") {
+                if matches!(
+                    ref_type,
+                    "chapter" | "entry" | "entry-dictionary" | "entry-encyclopedia"
+                ) {
                     None
                 } else {
                     reference.container_title.clone()
@@ -659,7 +662,10 @@ impl ComponentValues for TemplateTitle {
             TitleType::ParentMonograph => {
                 // For chapters/entries, the containing book uses container_title.
                 // For books in a series, use collection_title.
-                if matches!(ref_type, "chapter" | "entry" | "entry-dictionary" | "entry-encyclopedia") {
+                if matches!(
+                    ref_type,
+                    "chapter" | "entry" | "entry-dictionary" | "entry-encyclopedia"
+                ) {
                     reference.container_title.clone()
                 } else {
                     reference.collection_title.clone()
