@@ -291,78 +291,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             new_bib.insert(min_idx, vol_issue_list);
         }
 
-        // Add type-specific overrides
+        // Add type-specific overrides (recursively to handle nested Lists)
         for component in &mut new_bib {
-            match component {
-                // Container-title (parent-serial): journals use comma suffix
-                TemplateComponent::Title(t)
-                    if t.title == csln_core::template::TitleType::ParentSerial =>
-                {
-                    let mut overrides = std::collections::HashMap::new();
-                    overrides.insert(
-                        "article-journal".to_string(),
-                        csln_core::template::Rendering {
-                            suffix: Some(",".to_string()),
-                            ..Default::default()
-                        },
-                    );
-                    t.overrides = Some(overrides);
-                }
-                // Publisher: suppress for journal articles
-                // This is a common pattern - journals don't show publisher
-                TemplateComponent::Variable(v)
-                    if v.variable == csln_core::template::SimpleVariable::Publisher =>
-                {
-                    let mut overrides = std::collections::HashMap::new();
-                    overrides.insert(
-                        "article-journal".to_string(),
-                        csln_core::template::Rendering {
-                            suppress: Some(true),
-                            ..Default::default()
-                        },
-                    );
-                    v.overrides = Some(overrides);
-                }
-                // Publisher-place: also suppress for journal articles
-                TemplateComponent::Variable(v)
-                    if v.variable == csln_core::template::SimpleVariable::PublisherPlace =>
-                {
-                    let mut overrides = std::collections::HashMap::new();
-                    overrides.insert(
-                        "article-journal".to_string(),
-                        csln_core::template::Rendering {
-                            suppress: Some(true),
-                            ..Default::default()
-                        },
-                    );
-                    v.overrides = Some(overrides);
-                }
-                // Pages: journal articles use comma prefix, chapters use (pp. X-Y)
-                TemplateComponent::Number(n)
-                    if n.number == csln_core::template::NumberVariable::Pages =>
-                {
-                    let mut overrides = std::collections::HashMap::new();
-                    // Journals: comma before pages (e.g., "521, 436-444")
-                    overrides.insert(
-                        "article-journal".to_string(),
-                        csln_core::template::Rendering {
-                            prefix: Some(", ".to_string()),
-                            ..Default::default()
-                        },
-                    );
-                    // Chapters: parenthesized with label (e.g., "(pp. 683-703)")
-                    overrides.insert(
-                        "chapter".to_string(),
-                        csln_core::template::Rendering {
-                            prefix: Some("pp. ".to_string()),
-                            wrap: Some(WrapPunctuation::Parentheses),
-                            ..Default::default()
-                        },
-                    );
-                    n.overrides = Some(overrides);
-                }
-                _ => {}
-            }
+            apply_type_overrides(component);
         }
     }
 
@@ -538,4 +469,79 @@ fn extract_citation_delimiter(layout: &csl_legacy::model::Layout) -> Option<Stri
 
     // No delimiter found - return None (processor will use default)
     None
+}
+
+/// Recursively apply type-specific overrides to components, including nested Lists.
+fn apply_type_overrides(component: &mut TemplateComponent) {
+    match component {
+        // Container-title (parent-serial): journals use comma suffix
+        TemplateComponent::Title(t) if t.title == csln_core::template::TitleType::ParentSerial => {
+            let mut overrides = std::collections::HashMap::new();
+            overrides.insert(
+                "article-journal".to_string(),
+                csln_core::template::Rendering {
+                    suffix: Some(",".to_string()),
+                    ..Default::default()
+                },
+            );
+            t.overrides = Some(overrides);
+        }
+        // Publisher: suppress for journal articles
+        TemplateComponent::Variable(v)
+            if v.variable == csln_core::template::SimpleVariable::Publisher =>
+        {
+            let mut overrides = std::collections::HashMap::new();
+            overrides.insert(
+                "article-journal".to_string(),
+                csln_core::template::Rendering {
+                    suppress: Some(true),
+                    ..Default::default()
+                },
+            );
+            v.overrides = Some(overrides);
+        }
+        // Publisher-place: suppress for most types
+        // Chicago doesn't typically show publisher-place for books, reports, journals
+        TemplateComponent::Variable(v)
+            if v.variable == csln_core::template::SimpleVariable::PublisherPlace =>
+        {
+            let mut overrides = std::collections::HashMap::new();
+            let suppress_rendering = csln_core::template::Rendering {
+                suppress: Some(true),
+                ..Default::default()
+            };
+            overrides.insert("article-journal".to_string(), suppress_rendering.clone());
+            overrides.insert("book".to_string(), suppress_rendering.clone());
+            overrides.insert("report".to_string(), suppress_rendering.clone());
+            overrides.insert("thesis".to_string(), suppress_rendering.clone());
+            v.overrides = Some(overrides);
+        }
+        // Pages: journal articles use comma prefix, chapters use (pp. X-Y)
+        TemplateComponent::Number(n) if n.number == csln_core::template::NumberVariable::Pages => {
+            let mut overrides = std::collections::HashMap::new();
+            overrides.insert(
+                "article-journal".to_string(),
+                csln_core::template::Rendering {
+                    prefix: Some(", ".to_string()),
+                    ..Default::default()
+                },
+            );
+            overrides.insert(
+                "chapter".to_string(),
+                csln_core::template::Rendering {
+                    prefix: Some("pp. ".to_string()),
+                    wrap: Some(WrapPunctuation::Parentheses),
+                    ..Default::default()
+                },
+            );
+            n.overrides = Some(overrides);
+        }
+        // Recursively process Lists
+        TemplateComponent::List(list) => {
+            for item in &mut list.items {
+                apply_type_overrides(item);
+            }
+        }
+        _ => {}
+    }
 }
