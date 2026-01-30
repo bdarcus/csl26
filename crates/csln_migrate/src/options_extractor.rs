@@ -378,6 +378,15 @@ impl OptionsExtractor {
         // Check children for <name> element
         for child in &names.children {
             if let CslNode::Name(name) = child {
+                // initialize-with (controls whether names are initialized to initials)
+                // Only set if not already set, to prefer first/most common value
+                if config.initialize_with.is_none() {
+                    if let Some(init_with) = &name.initialize_with {
+                        config.initialize_with = Some(init_with.clone());
+                        *has_config = true;
+                    }
+                }
+
                 // initialize-with-hyphen
                 if let Some(hyphen) = name.initialize_with_hyphen {
                     config.initialize_with_hyphen = Some(hyphen);
