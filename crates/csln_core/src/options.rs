@@ -41,6 +41,11 @@ pub struct Config {
     /// Bibliography-specific settings.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub bibliography: Option<BibliographyConfig>,
+    /// Whether to place periods/commas inside quotation marks.
+    /// true = American style ("text."), false = British style ("text".)
+    /// Defaults to false; en-US locale typically sets this to true.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub punctuation_in_quote: bool,
     /// Unknown fields captured for forward compatibility.
     #[serde(flatten)]
     pub _extra: HashMap<String, serde_json::Value>,
