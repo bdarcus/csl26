@@ -124,8 +124,10 @@ impl Processor {
         let bib_config = self.get_config().bibliography.as_ref();
         let substitute = bib_config.and_then(|c| c.subsequent_author_substitute.as_ref());
 
-        for reference in sorted_refs {
-            if let Some(mut proc) = self.process_bibliography_entry(reference) {
+        for (index, reference) in sorted_refs.iter().enumerate() {
+            // Bibliography entry number is 1-based position in sorted list
+            let entry_number = index + 1;
+            if let Some(mut proc) = self.process_bibliography_entry(reference, entry_number) {
                 // Apply subsequent author substitution if enabled
                 if let Some(sub_string) = substitute {
                     if let Some(prev) = prev_reference {
@@ -214,9 +216,18 @@ impl Processor {
     }
 
     /// Process a bibliography entry.
-    fn process_bibliography_entry(&self, reference: &Reference) -> Option<ProcTemplate> {
+    fn process_bibliography_entry(
+        &self,
+        reference: &Reference,
+        entry_number: usize,
+    ) -> Option<ProcTemplate> {
         let bib_spec = self.style.bibliography.as_ref()?;
-        self.process_template(reference, &bib_spec.template, RenderContext::Bibliography)
+        self.process_template_with_number(
+            reference,
+            &bib_spec.template,
+            RenderContext::Bibliography,
+            entry_number,
+        )
     }
 
     /// Process a template for a reference (without citation number).
