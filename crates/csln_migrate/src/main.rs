@@ -280,97 +280,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }),
         bibliography: Some(BibliographySpec {
             options: None,
-            template: new_bib.clone(),
-            type_templates: {
-                let mut tt = type_templates;
-                // For author-date styles, add chapter-specific template with correct ordering
-                // Chapters need: author, date, title, "In " + editors + ", " + book-title + (pp. pages)
-                if matches!(
-                    options.processing,
-                    Some(csln_core::options::Processing::AuthorDate)
-                ) && !tt.contains_key("chapter")
-                {
-                    // Build chapter template from default, reordering editor before book title
-                    let mut chapter_template = Vec::new();
-
-                    // First: author, date, title (same as default)
-                    for component in &new_bib {
-                        match component {
-                            TemplateComponent::Contributor(c)
-                                if c.contributor
-                                    == csln_core::template::ContributorRole::Author =>
-                            {
-                                chapter_template.push(component.clone());
-                            }
-                            TemplateComponent::Date(d)
-                                if d.date == csln_core::template::DateVariable::Issued =>
-                            {
-                                chapter_template.push(component.clone());
-                            }
-                            TemplateComponent::Title(t)
-                                if t.title == csln_core::template::TitleType::Primary =>
-                            {
-                                chapter_template.push(component.clone());
-                            }
-                            _ => {}
-                        }
-                    }
-
-                    // Then: editor with "In " prefix (for chapters, comes before book title)
-                    for component in &new_bib {
-                        if let TemplateComponent::Contributor(c) = component {
-                            if c.contributor == csln_core::template::ContributorRole::Editor {
-                                chapter_template.push(component.clone());
-                                break;
-                            }
-                        }
-                    }
-
-                    // Then: book title (parent-serial = container-title)
-                    for component in &new_bib {
-                        if let TemplateComponent::Title(t) = component {
-                            if t.title == csln_core::template::TitleType::ParentSerial {
-                                chapter_template.push(component.clone());
-                                break;
-                            }
-                        }
-                    }
-
-                    // Then: pages with (pp. X) formatting
-                    chapter_template.push(TemplateComponent::Number(
-                        csln_core::template::TemplateNumber {
-                            number: csln_core::template::NumberVariable::Pages,
-                            form: None,
-                            rendering: csln_core::template::Rendering {
-                                prefix: Some("pp. ".to_string()),
-                                wrap: Some(csln_core::template::WrapPunctuation::Parentheses),
-                                ..Default::default()
-                            },
-                            overrides: None,
-                            ..Default::default()
-                        },
-                    ));
-
-                    // Then: publisher
-                    for component in &new_bib {
-                        if let TemplateComponent::Variable(v) = component {
-                            if v.variable == csln_core::template::SimpleVariable::Publisher {
-                                chapter_template.push(component.clone());
-                                break;
-                            }
-                        }
-                    }
-
-                    if !chapter_template.is_empty() {
-                        tt.insert("chapter".to_string(), chapter_template);
-                    }
-                }
-
-                if tt.is_empty() {
-                    None
-                } else {
-                    Some(tt)
-                }
+            template: new_bib,
+            // type_templates infrastructure exists but auto-generation is disabled.
+            // Different styles have incompatible chapter formats (APA vs others),
+            // so we can't apply a single template to all author-date styles.
+            type_templates: if type_templates.is_empty() {
+                None
+            } else {
+                Some(type_templates)
             },
             ..Default::default()
         }),
