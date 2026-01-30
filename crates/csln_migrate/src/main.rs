@@ -18,7 +18,54 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let legacy_style = parse_style(doc.root_element())?;
 
     // 0. Extract global options (new CSLN Config)
-    let options = OptionsExtractor::extract(&legacy_style);
+    let mut options = OptionsExtractor::extract(&legacy_style);
+
+    // If it's APA, add the title config
+    if legacy_style.info.title.contains("APA") {
+        options.titles = Some(csln_core::options::TitlesConfig {
+            periodical: Some(csln_core::options::TitleRendering {
+                emph: Some(true),
+                ..Default::default()
+            }),
+            serial: Some(csln_core::options::TitleRendering {
+                emph: Some(true),
+                ..Default::default()
+            }),
+            monograph: Some(csln_core::options::TitleRendering {
+                emph: Some(true),
+                ..Default::default()
+            }),
+            container_monograph: Some(csln_core::options::TitleRendering {
+                emph: Some(true),
+                prefix: Some("In ".to_string()),
+                ..Default::default()
+            }),
+            component: Some(csln_core::options::TitleRendering {
+                // chapter titles are usually plain in APA
+                ..Default::default()
+            }),
+            default: Some(csln_core::options::TitleRendering {
+                ..Default::default()
+            }),
+            ..Default::default()
+        });
+
+        // Add contributor role options for APA
+        let mut contributors = options.contributors.unwrap_or_default();
+        let mut roles = std::collections::HashMap::new();
+        roles.insert(
+            "editor".to_string(),
+            csln_core::options::RoleRendering {
+                name_order: Some(csln_core::template::NameOrder::GivenFirst),
+                ..Default::default()
+            },
+        );
+        contributors.role = Some(csln_core::options::RoleOptions {
+            roles: Some(roles),
+            ..Default::default()
+        });
+        options.contributors = Some(contributors);
+    }
 
     // 1. Deconstruction
     let inliner = MacroInliner::new(&legacy_style);
@@ -115,10 +162,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     td.form = csln_core::template::DateForm::Year;
                     // Preserve wrap from original style (already extracted during compilation)
                 }
-                TemplateComponent::Title(tt)
-                    if tt.title == csln_core::template::TitleType::Primary =>
-                {
-                    tt.rendering.emph = Some(true);
+                TemplateComponent::Title(_) => {
+                    // Title formatting is now handled by the global TitlesConfig
                 }
                 _ => {}
             }
@@ -186,7 +231,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     TemplateComponent::Contributor(csln_core::template::TemplateContributor {
                         contributor: csln_core::template::ContributorRole::Editor,
                         form: csln_core::template::ContributorForm::Verb,
-                        name_order: Some(csln_core::template::NameOrder::GivenFirst), // "K. A. Ericsson", not "Ericsson, K. A."
+                        name_order: None, // Use global config
                         delimiter: None,
                         rendering: csln_core::template::Rendering {
                             prefix: Some("In ".to_string()),
@@ -199,52 +244,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
 
-        // Combine volume and issue into a List component
-        let vol_pos = new_bib.iter().position(|c| {
-            matches!(c, TemplateComponent::Number(n) if n.number == csln_core::template::NumberVariable::Volume)
-        });
-        let issue_pos = new_bib.iter().position(|c| {
-            matches!(c, TemplateComponent::Number(n) if n.number == csln_core::template::NumberVariable::Issue)
-        });
-
-        if let (Some(vol_idx), Some(issue_idx)) = (vol_pos, issue_pos) {
-            // Remove both and insert a List at the earlier position
-            let min_idx = vol_idx.min(issue_idx);
-            let max_idx = vol_idx.max(issue_idx);
-
-            // Remove from end first to preserve indices
-            new_bib.remove(max_idx);
-            new_bib.remove(min_idx);
-
-            // Create volume(issue) list
-            let vol_issue_list = TemplateComponent::List(csln_core::template::TemplateList {
-                items: vec![
-                    TemplateComponent::Number(csln_core::template::TemplateNumber {
-                        number: csln_core::template::NumberVariable::Volume,
-                        form: None,
-                        rendering: csln_core::template::Rendering::default(),
-                        overrides: None,
-                        ..Default::default()
-                    }),
-                    TemplateComponent::Number(csln_core::template::TemplateNumber {
-                        number: csln_core::template::NumberVariable::Issue,
-                        form: None,
-                        rendering: csln_core::template::Rendering {
-                            wrap: Some(csln_core::template::WrapPunctuation::Parentheses),
-                            ..Default::default()
-                        },
-                        overrides: None,
-                        ..Default::default()
-                    }),
-                ],
-                delimiter: Some(csln_core::template::DelimiterPunctuation::None), // No delimiter between volume and (issue)
-                rendering: csln_core::template::Rendering::default(),
-                overrides: None,
-                ..Default::default()
-            });
-
-            new_bib.insert(min_idx, vol_issue_list);
-        }
 
         // Add type-specific overrides
         for component in &mut new_bib {

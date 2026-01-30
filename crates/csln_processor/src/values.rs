@@ -117,11 +117,26 @@ impl ComponentValues for TemplateContributor {
                             if let Some(editors) = &reference.editor {
                                 if !editors.is_empty() {
                                     // Substituted editors use the contributor's name_order and and
+                                    let effective_name_order =
+                                        self.name_order.as_ref().or_else(|| {
+                                            options
+                                                .config
+                                                .contributors
+                                                .as_ref()?
+                                                .role
+                                                .as_ref()?
+                                                .roles
+                                                .as_ref()?
+                                                .get(self.contributor.as_str())?
+                                                .name_order
+                                                .as_ref()
+                                        });
+
                                     let formatted = format_names(
                                         editors,
                                         &self.form,
                                         options,
-                                        self.name_order.as_ref(),
+                                        effective_name_order,
                                         self.and.as_ref(),
                                         hints,
                                     );
@@ -177,12 +192,27 @@ impl ComponentValues for TemplateContributor {
             return None;
         }
 
-        // Use explicit name_order if provided on this contributor template
+        // Use explicit name_order if provided on this contributor template,
+        // otherwise check global config for this role.
+        let effective_name_order = self.name_order.as_ref().or_else(|| {
+            options
+                .config
+                .contributors
+                .as_ref()?
+                .role
+                .as_ref()?
+                .roles
+                .as_ref()?
+                .get(self.contributor.as_str())?
+                .name_order
+                .as_ref()
+        });
+
         let formatted = format_names(
             names,
             &self.form,
             options,
-            self.name_order.as_ref(),
+            effective_name_order,
             self.and.as_ref(),
             hints,
         );
@@ -839,7 +869,6 @@ impl ComponentValues for TemplateList {
         hints: &ProcHints,
         options: &RenderOptions<'_>,
     ) -> Option<ProcValues> {
-        use csln_core::template::WrapPunctuation;
 
         // Collect values from all items, applying their rendering
         let values: Vec<String> = self
@@ -851,33 +880,17 @@ impl ComponentValues for TemplateList {
                     return None;
                 }
 
-                // Apply rendering from the item
-                let rendering = item.rendering();
-                let (wrap_open, wrap_close) =
-                    match rendering.wrap.as_ref().unwrap_or(&WrapPunctuation::None) {
-                        WrapPunctuation::Parentheses => ("(", ")"),
-                        WrapPunctuation::Brackets => ("[", "]"),
-                        WrapPunctuation::None => ("", ""),
-                    };
+                // Use the central rendering logic to apply global config, local settings, and overrides
+                let proc_item = crate::render::ProcTemplateComponent {
+                    template_component: item.clone(),
+                    value: v.value,
+                    prefix: v.prefix,
+                    suffix: v.suffix,
+                    ref_type: Some(reference.ref_type.clone()),
+                    config: Some(options.config.clone()),
+                };
 
-                let prefix = rendering.prefix.as_deref().unwrap_or_default();
-                let suffix = rendering.suffix.as_deref().unwrap_or_default();
-
-                // Build the formatted value
-                let mut s = String::new();
-                s.push_str(wrap_open);
-                s.push_str(prefix);
-                if let Some(p) = &v.prefix {
-                    s.push_str(p);
-                }
-                s.push_str(&v.value);
-                if let Some(suf) = &v.suffix {
-                    s.push_str(suf);
-                }
-                s.push_str(suffix);
-                s.push_str(wrap_close);
-
-                Some(s)
+                Some(crate::render::render_component(&proc_item))
             })
             .collect();
 
@@ -1267,5 +1280,39 @@ mod tests {
             false,
         );
         assert_eq!(res_straight, "Ludwig van Beethoven");
+    }
+
+    #[test]
+    fn test_template_list_suppression() {
+        let config = make_config();
+        let locale = make_locale();
+        let options = RenderOptions {
+            config: &config,
+            locale: &locale,
+            context: RenderContext::Citation,
+        };
+        let reference = Reference {
+            id: "empty".to_string(),
+            ..Default::default()
+        };
+        let hints = ProcHints::default();
+
+        let component = TemplateList {
+            items: vec![
+                TemplateComponent::Variable(TemplateVariable {
+                    variable: SimpleVariable::Doi,
+                    ..Default::default()
+                }),
+                TemplateComponent::Variable(TemplateVariable {
+                    variable: SimpleVariable::Url,
+                    ..Default::default()
+                }),
+            ],
+            delimiter: Some(DelimiterPunctuation::Comma),
+            ..Default::default()
+        };
+
+        let values = component.values(&reference, &hints, &options);
+        assert!(values.is_none());
     }
 }

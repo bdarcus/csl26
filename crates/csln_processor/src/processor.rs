@@ -317,6 +317,7 @@ impl Processor {
                     prefix: values.prefix,
                     suffix: values.suffix,
                     ref_type: Some(reference.ref_type.clone()),
+                    config: Some(options.config.clone()),
                 })
             })
             .collect();
@@ -1219,5 +1220,103 @@ mod tests {
             "Output was: {}",
             cit_2
         );
+    }
+
+    #[test]
+    fn test_apa_titles_config() {
+        use csln_core::options::{Config, TitleRendering, TitlesConfig};
+        use csln_core::template::{Rendering, TemplateTitle, TitleType};
+        use crate::reference::{DateVariable, Name, Reference};
+
+        let config = Config {
+            titles: Some(TitlesConfig {
+                periodical: Some(TitleRendering {
+                    emph: Some(true),
+                    ..Default::default()
+                }),
+                monograph: Some(TitleRendering {
+                    emph: Some(true),
+                    ..Default::default()
+                }),
+                container_monograph: Some(TitleRendering {
+                    emph: Some(true),
+                    prefix: Some("In ".to_string()),
+                    ..Default::default()
+                }),
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+
+        let bib_template = vec![
+            TemplateComponent::Title(TemplateTitle {
+                title: TitleType::Primary,
+                rendering: Rendering::default(),
+                ..Default::default()
+            }),
+            TemplateComponent::Title(TemplateTitle {
+                title: TitleType::ParentSerial,
+                rendering: Rendering::default(),
+                ..Default::default()
+            }),
+            TemplateComponent::Title(TemplateTitle {
+                title: TitleType::ParentMonograph,
+                rendering: Rendering::default(),
+                ..Default::default()
+            }),
+        ];
+
+        let style = Style {
+            options: Some(config),
+            bibliography: Some(csln_core::BibliographySpec {
+                template: bib_template,
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+
+        let references = vec![
+            Reference {
+                id: "art1".to_string(),
+                ref_type: "article-journal".to_string(),
+                title: Some("A Title".to_string()),
+                container_title: Some("Nature".to_string()),
+                ..Default::default()
+            },
+            Reference {
+                id: "ch1".to_string(),
+                ref_type: "chapter".to_string(),
+                title: Some("A Chapter".to_string()),
+                container_title: Some("A Book".to_string()),
+                ..Default::default()
+            },
+            Reference {
+                id: "bk1".to_string(),
+                ref_type: "book".to_string(),
+                title: Some("A Global Book".to_string()),
+                ..Default::default()
+            },
+        ];
+
+        let processor = Processor::new(
+            style,
+            references
+                .into_iter()
+                .map(|r| (r.id.clone(), r))
+                .collect(),
+        );
+
+        let res = processor.render_bibliography();
+        
+        // Book Case: Primary title -> monograph category -> Italic, No "In "
+        assert!(res.contains("_A Global Book_"), "Book title should be italicized: {}", res);
+        assert!(!res.contains("In _A Global Book_"), "Book title should NOT have 'In ' prefix: {}", res);
+
+        // Journal Article Case: ParentSerial -> periodical category -> Italic, No "In "
+        assert!(res.contains("_Nature_"), "Journal title should be italicized: {}", res);
+        assert!(!res.contains("In _Nature_"), "Journal title should NOT have 'In ' prefix: {}", res);
+
+        // Chapter Case: ParentMonograph -> container_monograph category -> Italic, WITH "In "
+        assert!(res.contains("In _A Book_"), "Chapter container title should have 'In ' prefix: {}", res);
     }
 }

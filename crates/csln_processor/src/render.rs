@@ -17,11 +17,12 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 //! This would move the logic from processor to style, making behavior more
 //! predictable and testable.
 
-use csln_core::template::{Rendering, TemplateComponent, WrapPunctuation};
+use csln_core::options::Config;
+use csln_core::template::{Rendering, TemplateComponent, TitleType, WrapPunctuation};
 use std::fmt::Write;
 
 /// A processed template component with its rendered value.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct ProcTemplateComponent {
     /// The original template component (for rendering instructions).
     pub template_component: TemplateComponent,
@@ -33,6 +34,8 @@ pub struct ProcTemplateComponent {
     pub suffix: Option<String>,
     /// Reference type for type-specific overrides.
     pub ref_type: Option<String>,
+    /// Optional global configuration.
+    pub config: Option<Config>,
 }
 
 /// A processed template (list of rendered components).
@@ -148,10 +151,9 @@ pub fn citation_to_string(
 }
 
 /// Render a single component to string.
-fn render_component(component: &ProcTemplateComponent) -> String {
-    // Get base rendering and apply type-specific overrides if present
-    let base_rendering = component.template_component.rendering();
-    let rendering = get_effective_rendering(component, base_rendering);
+pub fn render_component(component: &ProcTemplateComponent) -> String {
+    // Get merged rendering (global config + local settings + overrides)
+    let rendering = get_effective_rendering(component);
 
     // Check if suppressed
     if rendering.suppress == Some(true) {
@@ -195,41 +197,101 @@ fn render_component(component: &ProcTemplateComponent) -> String {
     )
 }
 
-/// Get effective rendering, applying type-specific overrides if present.
-fn get_effective_rendering(component: &ProcTemplateComponent, base: &Rendering) -> Rendering {
-    let ref_type = match &component.ref_type {
-        Some(t) => t,
-        None => return base.clone(),
-    };
+/// Get effective rendering, applying global config, then local template settings, then type-specific overrides.
+pub fn get_effective_rendering(component: &ProcTemplateComponent) -> Rendering {
+    let mut effective = Rendering::default();
 
-    // Check for overrides based on component type
-    let overrides = match &component.template_component {
-        TemplateComponent::Contributor(c) => c.overrides.as_ref(),
-        TemplateComponent::Date(d) => d.overrides.as_ref(),
-        TemplateComponent::Number(n) => n.overrides.as_ref(),
-        TemplateComponent::Variable(v) => v.overrides.as_ref(),
-        TemplateComponent::Title(t) => t.overrides.as_ref(),
-        TemplateComponent::List(l) => l.overrides.as_ref(),
-        _ => None,
-    };
-
-    if let Some(override_map) = overrides {
-        if let Some(type_override) = override_map.get(ref_type) {
-            // Merge: override takes precedence, but use base for None values
-            return Rendering {
-                emph: type_override.emph.or(base.emph),
-                quote: type_override.quote.or(base.quote),
-                strong: type_override.strong.or(base.strong),
-                small_caps: type_override.small_caps.or(base.small_caps),
-                prefix: type_override.prefix.clone().or(base.prefix.clone()),
-                suffix: type_override.suffix.clone().or(base.suffix.clone()),
-                wrap: type_override.wrap.clone().or(base.wrap.clone()),
-                suppress: type_override.suppress.or(base.suppress),
-            };
+    // 1. Layer global config
+    if let Some(config) = &component.config {
+        match &component.template_component {
+            TemplateComponent::Title(t) => {
+                if let Some(global_title) =
+                    get_title_category_rendering(&t.title, component.ref_type.as_deref(), config)
+                {
+                    effective.merge(&global_title);
+                }
+            }
+            TemplateComponent::Contributor(c) => {
+                if let Some(contributors_config) = &config.contributors {
+                    if let Some(role_config) = &contributors_config.role {
+                        if let Some(role_rendering) = role_config
+                            .roles
+                            .as_ref()
+                            .and_then(|r| r.get(c.contributor.as_str()))
+                        {
+                            effective.merge(&role_rendering.to_rendering());
+                        }
+                    }
+                }
+            }
+            // Add other component types here as we expand Config
+            _ => {}
         }
     }
 
-    base.clone()
+    // 2. Layer local template rendering
+    effective.merge(component.template_component.rendering());
+
+    // 3. Layer type-specific overrides
+    if let Some(ref_type) = &component.ref_type {
+        if let Some(overrides) = component.template_component.overrides() {
+            if let Some(type_override) = overrides.get(ref_type) {
+                effective.merge(type_override);
+            }
+        }
+    }
+
+    effective
+}
+
+pub fn get_title_category_rendering(
+    title_type: &TitleType,
+    ref_type: Option<&str>,
+    config: &Config,
+) -> Option<Rendering> {
+    let titles_config = config.titles.as_ref()?;
+
+    let rendering = match title_type {
+        TitleType::ParentSerial => {
+            if let Some(rt) = ref_type {
+                if matches!(
+                    rt,
+                    "article-journal" | "article-magazine" | "article-newspaper"
+                ) {
+                    titles_config.periodical.as_ref()
+                } else {
+                    titles_config.serial.as_ref()
+                }
+            } else {
+                titles_config.periodical.as_ref()
+            }
+        }
+        TitleType::ParentMonograph => titles_config
+            .container_monograph
+            .as_ref()
+            .or(titles_config.monograph.as_ref()),
+        TitleType::Primary => {
+            if let Some(rt) = ref_type {
+                if matches!(
+                    rt,
+                    "chapter" | "entry" | "entry-dictionary" | "entry-encyclopedia"
+                ) {
+                    titles_config.component.as_ref()
+                } else if matches!(rt, "book" | "thesis" | "report") {
+                    titles_config.monograph.as_ref()
+                } else {
+                    titles_config.default.as_ref()
+                }
+            } else {
+                titles_config.default.as_ref()
+            }
+        }
+        _ => None,
+    };
+
+    rendering
+        .map(|r| r.to_rendering())
+        .or_else(|| titles_config.default.as_ref().map(|d| d.to_rendering()))
 }
 
 #[cfg(test)]
@@ -256,6 +318,7 @@ mod tests {
                 prefix: None,
                 suffix: None,
                 ref_type: None,
+                config: None,
             },
             ProcTemplateComponent {
                 template_component: TemplateComponent::Date(TemplateDate {
@@ -268,6 +331,7 @@ mod tests {
                 prefix: None,
                 suffix: None,
                 ref_type: None,
+                config: None,
             },
         ];
 
@@ -297,6 +361,7 @@ mod tests {
                 prefix: None,
                 suffix: None,
                 ref_type: None,
+                config: None,
             },
             ProcTemplateComponent {
                 template_component: TemplateComponent::Date(TemplateDate {
@@ -309,6 +374,7 @@ mod tests {
                 prefix: None,
                 suffix: None,
                 ref_type: None,
+                config: None,
             },
         ];
 
@@ -332,6 +398,7 @@ mod tests {
             prefix: None,
             suffix: None,
             ref_type: None,
+            config: None,
         }];
 
         // Edge case: space before paren
@@ -355,6 +422,7 @@ mod tests {
             prefix: None,
             suffix: None,
             ref_type: None,
+            config: None,
         };
 
         let result = render_component(&component);
@@ -378,6 +446,7 @@ mod tests {
             prefix: None,
             suffix: None,
             ref_type: None,
+            config: None,
         };
 
         let result = render_component(&component);
