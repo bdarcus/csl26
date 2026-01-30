@@ -27,39 +27,91 @@ impl TemplateCompiler {
     /// Recursively processes Groups and Conditions to extract all components.
     /// In the future, Condition logic should be handled by Options/overrides.
     pub fn compile(&self, nodes: &[CslnNode]) -> Vec<TemplateComponent> {
+        // Use compile_with_wrap with no initial wrap
+        let no_wrap = (None, None, None);
+        self.compile_with_wrap(nodes, &no_wrap)
+    }
+
+    /// Compile and sort for citation output (author first, then date).
+    /// Uses simplified compile that skips else branches to avoid extra fields.
+    pub fn compile_citation(&self, nodes: &[CslnNode]) -> Vec<TemplateComponent> {
+        let mut components = self.compile_simple(nodes);
+        self.sort_citation_components(&mut components);
+        components
+    }
+
+    /// Compile with inherited wrap formatting.
+    ///
+    /// When a group has wrap formatting (e.g., parentheses), this is passed down
+    /// to descendant date components. This handles CSL patterns like:
+    /// ```xml
+    /// <group prefix="(" suffix=")">
+    ///   <choose>
+    ///     <if variable="issued">
+    ///       <text macro="date-issued-year"/>  <!-- Date is nested inside -->
+    ///     </if>
+    ///   </choose>
+    /// </group>
+    /// ```
+    fn compile_with_wrap(
+        &self,
+        nodes: &[CslnNode],
+        inherited_wrap: &(
+            Option<csln_core::template::WrapPunctuation>,
+            Option<String>,
+            Option<String>,
+        ),
+    ) -> Vec<TemplateComponent> {
         let mut components = Vec::new();
 
         for node in nodes {
-            if let Some(component) = self.compile_node(node) {
-                components.push(component);
+            if let Some(mut component) = self.compile_node(node) {
+                // Apply inherited wrap to date components
+                if inherited_wrap.0.is_some() && matches!(&component, TemplateComponent::Date(_)) {
+                    self.apply_wrap_to_component(&mut component, inherited_wrap);
+                }
+                // Add or replace with better-formatted version
+                self.add_or_upgrade_component(&mut components, component);
             } else {
                 match node {
                     CslnNode::Group(g) => {
-                        // Flatten groups - recurse into children
-                        components.extend(self.compile(&g.children));
+                        // Check if this group has its own wrap
+                        let group_wrap = Self::infer_wrap_from_affixes(
+                            &g.formatting.prefix,
+                            &g.formatting.suffix,
+                        );
+                        // Use group's wrap if it has one, otherwise inherit from parent
+                        let effective_wrap = if group_wrap.0.is_some() {
+                            group_wrap
+                        } else {
+                            inherited_wrap.clone()
+                        };
+                        let group_components = self.compile_with_wrap(&g.children, &effective_wrap);
+                        for gc in group_components {
+                            self.add_or_upgrade_component(&mut components, gc);
+                        }
                     }
                     CslnNode::Condition(c) => {
-                        // Process then_branch (most common case)
-                        // TODO: Use overrides for type-specific formatting
-                        components.extend(self.compile(&c.then_branch));
+                        // Pass wrap through conditions
+                        let then_components =
+                            self.compile_with_wrap(&c.then_branch, inherited_wrap);
+                        for tc in then_components {
+                            self.add_or_upgrade_component(&mut components, tc);
+                        }
 
-                        // Process all else-if branches to not lose type-specific components
                         for else_if in &c.else_if_branches {
-                            let branch_components = self.compile(&else_if.children);
+                            let branch_components =
+                                self.compile_with_wrap(&else_if.children, inherited_wrap);
                             for bc in branch_components {
-                                if !components.iter().any(|c| self.same_variable(c, &bc)) {
-                                    components.push(bc);
-                                }
+                                self.add_or_upgrade_component(&mut components, bc);
                             }
                         }
 
-                        // Also process else_branch
                         if let Some(ref else_nodes) = c.else_branch {
-                            let else_components = self.compile(else_nodes);
+                            let else_components =
+                                self.compile_with_wrap(else_nodes, inherited_wrap);
                             for ec in else_components {
-                                if !components.iter().any(|c| self.same_variable(c, &ec)) {
-                                    components.push(ec);
-                                }
+                                self.add_or_upgrade_component(&mut components, ec);
                             }
                         }
                     }
@@ -71,12 +123,34 @@ impl TemplateCompiler {
         components
     }
 
-    /// Compile and sort for citation output (author first, then date).
-    /// Uses simplified compile that skips else branches to avoid extra fields.
-    pub fn compile_citation(&self, nodes: &[CslnNode]) -> Vec<TemplateComponent> {
-        let mut components = self.compile_simple(nodes);
-        self.sort_citation_components(&mut components);
-        components
+    /// Add a component to the list, or upgrade an existing one if the new one has better formatting.
+    ///
+    /// For dates, if we have Date(issued) without wrap and find one with wrap,
+    /// replace the old one with the new one. This handles CSL styles where the
+    /// date appears in multiple branches, only some of which have parentheses.
+    fn add_or_upgrade_component(
+        &self,
+        components: &mut Vec<TemplateComponent>,
+        new_component: TemplateComponent,
+    ) {
+        // Check if we already have this component
+        if let Some(idx) = components
+            .iter()
+            .position(|c| self.same_variable(c, &new_component))
+        {
+            // For dates, upgrade if the new one has wrap and the old one doesn't
+            if let (TemplateComponent::Date(existing), TemplateComponent::Date(new)) =
+                (&components[idx], &new_component)
+            {
+                if existing.rendering.wrap.is_none() && new.rendering.wrap.is_some() {
+                    // Upgrade: replace with the wrapped version
+                    components[idx] = new_component;
+                }
+            }
+            // For other types, keep the existing one (first wins)
+        } else {
+            components.push(new_component);
+        }
     }
 
     /// Simplified compile that only takes then_branch (for citations).
@@ -581,6 +655,9 @@ impl TemplateCompiler {
 
     /// Convert FormattingOptions to Rendering.
     fn convert_formatting(&self, fmt: &FormattingOptions) -> Rendering {
+        // Infer wrap from prefix/suffix patterns
+        let (wrap, prefix, suffix) = Self::infer_wrap_from_affixes(&fmt.prefix, &fmt.suffix);
+
         Rendering {
             emph: fmt
                 .font_style
@@ -595,10 +672,142 @@ impl TemplateCompiler {
                 .as_ref()
                 .map(|v| matches!(v, csln_core::FontVariant::SmallCaps)),
             quote: fmt.quotes,
-            prefix: fmt.prefix.clone(),
-            suffix: fmt.suffix.clone(),
-            wrap: None, // Would need to infer from prefix/suffix patterns like "(" and ")"
+            prefix,
+            suffix,
+            wrap,
             suppress: None,
+        }
+    }
+
+    /// Infer wrap type from prefix/suffix patterns.
+    ///
+    /// CSL 1.0 uses `prefix="("` and `suffix=")"` for parentheses wrapping.
+    /// CSLN prefers explicit `wrap: parentheses` for cleaner representation.
+    ///
+    /// Returns (wrap, remaining_prefix, remaining_suffix) where the wrap chars
+    /// have been extracted and remaining affixes are returned.
+    fn infer_wrap_from_affixes(
+        prefix: &Option<String>,
+        suffix: &Option<String>,
+    ) -> (
+        Option<csln_core::template::WrapPunctuation>,
+        Option<String>,
+        Option<String>,
+    ) {
+        use csln_core::template::WrapPunctuation;
+
+        match (prefix.as_deref(), suffix.as_deref()) {
+            // Clean parentheses: prefix ends with "(", suffix starts with ")"
+            (Some(p), Some(s)) if p.ends_with('(') && s.starts_with(')') => {
+                let remaining_prefix = p
+                    .strip_suffix('(')
+                    .map(|r| r.to_string())
+                    .filter(|s| !s.is_empty());
+                let remaining_suffix = s
+                    .strip_prefix(')')
+                    .map(|r| r.to_string())
+                    .filter(|s| !s.is_empty());
+                (
+                    Some(WrapPunctuation::Parentheses),
+                    remaining_prefix,
+                    remaining_suffix,
+                )
+            }
+            // Clean brackets
+            (Some(p), Some(s)) if p.ends_with('[') && s.starts_with(']') => {
+                let remaining_prefix = p
+                    .strip_suffix('[')
+                    .map(|r| r.to_string())
+                    .filter(|s| !s.is_empty());
+                let remaining_suffix = s
+                    .strip_prefix(']')
+                    .map(|r| r.to_string())
+                    .filter(|s| !s.is_empty());
+                (
+                    Some(WrapPunctuation::Brackets),
+                    remaining_prefix,
+                    remaining_suffix,
+                )
+            }
+            // No wrap pattern found - keep original affixes
+            _ => (None, prefix.clone(), suffix.clone()),
+        }
+    }
+
+    /// Apply wrap formatting from a parent group to a component.
+    ///
+    /// When a group with `prefix="(" suffix=")"` wraps a date, the date
+    /// should inherit the wrap property since groups are flattened.
+    fn apply_wrap_to_component(
+        &self,
+        component: &mut TemplateComponent,
+        group_wrap: &(
+            Option<csln_core::template::WrapPunctuation>,
+            Option<String>,
+            Option<String>,
+        ),
+    ) {
+        let (wrap, prefix, suffix) = group_wrap;
+
+        // Only apply wrap if the component doesn't already have one
+        match component {
+            TemplateComponent::Date(d) => {
+                if d.rendering.wrap.is_none() && wrap.is_some() {
+                    d.rendering.wrap = wrap.clone();
+                }
+                // Also apply remaining prefix/suffix if not already set
+                if d.rendering.prefix.is_none() && prefix.is_some() {
+                    d.rendering.prefix = prefix.clone();
+                }
+                if d.rendering.suffix.is_none() && suffix.is_some() {
+                    d.rendering.suffix = suffix.clone();
+                }
+            }
+            TemplateComponent::Contributor(c) => {
+                if c.rendering.wrap.is_none() && wrap.is_some() {
+                    c.rendering.wrap = wrap.clone();
+                }
+                if c.rendering.prefix.is_none() && prefix.is_some() {
+                    c.rendering.prefix = prefix.clone();
+                }
+                if c.rendering.suffix.is_none() && suffix.is_some() {
+                    c.rendering.suffix = suffix.clone();
+                }
+            }
+            TemplateComponent::Title(t) => {
+                if t.rendering.wrap.is_none() && wrap.is_some() {
+                    t.rendering.wrap = wrap.clone();
+                }
+                if t.rendering.prefix.is_none() && prefix.is_some() {
+                    t.rendering.prefix = prefix.clone();
+                }
+                if t.rendering.suffix.is_none() && suffix.is_some() {
+                    t.rendering.suffix = suffix.clone();
+                }
+            }
+            TemplateComponent::Number(n) => {
+                if n.rendering.wrap.is_none() && wrap.is_some() {
+                    n.rendering.wrap = wrap.clone();
+                }
+                if n.rendering.prefix.is_none() && prefix.is_some() {
+                    n.rendering.prefix = prefix.clone();
+                }
+                if n.rendering.suffix.is_none() && suffix.is_some() {
+                    n.rendering.suffix = suffix.clone();
+                }
+            }
+            TemplateComponent::Variable(v) => {
+                if v.rendering.wrap.is_none() && wrap.is_some() {
+                    v.rendering.wrap = wrap.clone();
+                }
+                if v.rendering.prefix.is_none() && prefix.is_some() {
+                    v.rendering.prefix = prefix.clone();
+                }
+                if v.rendering.suffix.is_none() && suffix.is_some() {
+                    v.rendering.suffix = suffix.clone();
+                }
+            }
+            _ => {} // List and future variants - don't modify
         }
     }
 }
