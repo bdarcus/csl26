@@ -172,7 +172,8 @@ fn create_test_bibliography() -> Bibliography {
                 Name::new("Hoffman", "Robert R."),
             ]),
             title: Some("The Role of Deliberate Practice".to_string()),
-            collection_title: Some(
+            // Note: container-title is used for the book title in CSL-JSON for chapters
+            container_title: Some(
                 "The Cambridge Handbook of Expertise and Expert Performance".to_string(),
             ),
             issued: Some(DateVariable::year(2006)),

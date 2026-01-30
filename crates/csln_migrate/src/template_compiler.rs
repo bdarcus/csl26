@@ -171,71 +171,127 @@ impl TemplateCompiler {
 
     /// Compile bibliography with type-specific templates.
     ///
-    /// Returns the default template and a HashMap of type-specific templates
-    /// extracted from type-based conditions in the node tree.
+    /// Returns the default template and a HashMap of type-specific templates.
+    /// Each type-specific template is COMPLETE - it includes all components,
+    /// not just the type-specific parts.
+    ///
+    /// Currently DISABLED - returns empty type_templates because the extraction
+    /// produces malformed templates with duplicates and missing components.
+    /// The infrastructure is in place for future enhancement.
     pub fn compile_bibliography_with_types(
         &self,
         nodes: &[CslnNode],
     ) -> (Vec<TemplateComponent>, HashMap<String, Vec<TemplateComponent>>) {
-        let mut type_templates: HashMap<String, Vec<TemplateComponent>> = HashMap::new();
-
-        // First, extract type-specific templates from conditions
-        self.extract_type_templates(nodes, &mut type_templates);
-
         // Compile the default template
         let mut default_template = self.compile(nodes);
         self.sort_bibliography_components(&mut default_template);
 
-        // Sort type-specific templates
-        for template in type_templates.values_mut() {
-            self.sort_bibliography_components(template);
-        }
+        // Type-specific template generation is disabled for now.
+        // The compile_for_type approach produces malformed templates.
+        // Future work: properly merge common components with type-specific branches.
+        let type_templates: HashMap<String, Vec<TemplateComponent>> = HashMap::new();
 
         (default_template, type_templates)
     }
 
-    /// Extract type-specific templates from conditions.
-    fn extract_type_templates(
-        &self,
-        nodes: &[CslnNode],
-        type_templates: &mut HashMap<String, Vec<TemplateComponent>>,
-    ) {
+    /// Collect all ItemTypes that have specific branches in conditions.
+    fn collect_types_with_branches(&self, nodes: &[CslnNode]) -> Vec<ItemType> {
+        let mut types = Vec::new();
+        self.collect_types_recursive(nodes, &mut types);
+        types.sort_by_key(|t| self.item_type_to_string(t));
+        types.dedup_by_key(|t| self.item_type_to_string(t));
+        types
+    }
+
+    fn collect_types_recursive(&self, nodes: &[CslnNode], types: &mut Vec<ItemType>) {
         for node in nodes {
             match node {
                 CslnNode::Group(g) => {
-                    self.extract_type_templates(&g.children, type_templates);
+                    self.collect_types_recursive(&g.children, types);
                 }
                 CslnNode::Condition(c) => {
-                    // Only process conditions with type-based branching
-                    if !c.if_item_type.is_empty() || c.else_if_branches.iter().any(|b| !b.if_item_type.is_empty()) {
-                        // Compile each branch for its specific types
-                        for item_type in &c.if_item_type {
-                            let type_key = self.item_type_to_string(item_type);
-                            let components = self.compile(&c.then_branch);
-                            type_templates.entry(type_key).or_insert_with(Vec::new).extend(components);
-                        }
+                    // Collect types from if branch
+                    types.extend(c.if_item_type.clone());
 
-                        for else_if in &c.else_if_branches {
-                            for item_type in &else_if.if_item_type {
-                                let type_key = self.item_type_to_string(item_type);
-                                let components = self.compile(&else_if.children);
-                                type_templates.entry(type_key).or_insert_with(Vec::new).extend(components);
-                            }
-                        }
+                    // Collect types from else-if branches
+                    for else_if in &c.else_if_branches {
+                        types.extend(else_if.if_item_type.clone());
                     }
 
-                    // Continue extracting from branches
-                    self.extract_type_templates(&c.then_branch, type_templates);
+                    // Recurse into branches
+                    self.collect_types_recursive(&c.then_branch, types);
                     for else_if in &c.else_if_branches {
-                        self.extract_type_templates(&else_if.children, type_templates);
+                        self.collect_types_recursive(&else_if.children, types);
                     }
                     if let Some(ref else_nodes) = c.else_branch {
-                        self.extract_type_templates(else_nodes, type_templates);
+                        self.collect_types_recursive(else_nodes, types);
                     }
                 }
                 _ => {}
             }
         }
+    }
+
+    /// Compile a complete template for a specific item type.
+    ///
+    /// When encountering type-based conditions, selects the matching branch
+    /// for the given type, or falls back to else branch if no match.
+    fn compile_for_type(&self, nodes: &[CslnNode], target_type: &ItemType) -> Vec<TemplateComponent> {
+        let mut components = Vec::new();
+
+        for node in nodes {
+            if let Some(component) = self.compile_node(node) {
+                components.push(component);
+            } else {
+                match node {
+                    CslnNode::Group(g) => {
+                        components.extend(self.compile_for_type(&g.children, target_type));
+                    }
+                    CslnNode::Condition(c) => {
+                        // Check if this is a type-based condition
+                        let has_type_condition = !c.if_item_type.is_empty()
+                            || c.else_if_branches.iter().any(|b| !b.if_item_type.is_empty());
+
+                        if has_type_condition {
+                            // Select the matching branch for target_type
+                            if c.if_item_type.contains(target_type) {
+                                components.extend(self.compile_for_type(&c.then_branch, target_type));
+                            } else {
+                                // Check else-if branches
+                                let mut found = false;
+                                for else_if in &c.else_if_branches {
+                                    if else_if.if_item_type.contains(target_type) {
+                                        components.extend(self.compile_for_type(&else_if.children, target_type));
+                                        found = true;
+                                        break;
+                                    }
+                                }
+                                if !found {
+                                    // Fall back to else branch
+                                    if let Some(ref else_nodes) = c.else_branch {
+                                        components.extend(self.compile_for_type(else_nodes, target_type));
+                                    }
+                                }
+                            }
+                        } else {
+                            // Not a type condition, use default compile behavior
+                            components.extend(self.compile_for_type(&c.then_branch, target_type));
+                            if let Some(ref else_nodes) = c.else_branch {
+                                let else_components = self.compile_for_type(else_nodes, target_type);
+                                for ec in else_components {
+                                    if !components.iter().any(|c| self.same_variable(c, &ec)) {
+                                        components.push(ec);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
+
+        components
     }
 
     /// Convert ItemType to its string representation.
