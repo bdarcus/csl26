@@ -151,6 +151,9 @@ fn count_csln_nodes(nodes: &[CNode]) -> usize {
             CNode::Group(g) => count += count_csln_nodes(&g.children),
             CNode::Condition(c) => {
                 count += count_csln_nodes(&c.then_branch);
+                for else_if in &c.else_if_branches {
+                    count += count_csln_nodes(&else_if.children);
+                }
                 if let Some(e) = &c.else_branch {
                     count += count_csln_nodes(e);
                 }

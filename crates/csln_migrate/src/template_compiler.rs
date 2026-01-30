@@ -38,12 +38,22 @@ impl TemplateCompiler {
                         components.extend(self.compile(&g.children));
                     }
                     CslnNode::Condition(c) => {
-                        // For now, take the then_branch (most common case)
+                        // Process then_branch (most common case)
                         // TODO: Use overrides for type-specific formatting
                         components.extend(self.compile(&c.then_branch));
-                        // Also process else_branch to not lose components
+
+                        // Process all else-if branches to not lose type-specific components
+                        for else_if in &c.else_if_branches {
+                            let branch_components = self.compile(&else_if.children);
+                            for bc in branch_components {
+                                if !components.iter().any(|c| self.same_variable(c, &bc)) {
+                                    components.push(bc);
+                                }
+                            }
+                        }
+
+                        // Also process else_branch
                         if let Some(ref else_nodes) = c.else_branch {
-                            // Only add else components if they're different from then
                             let else_components = self.compile(else_nodes);
                             for ec in else_components {
                                 if !components.iter().any(|c| self.same_variable(c, &ec)) {
@@ -97,18 +107,49 @@ impl TemplateCompiler {
 
                         if is_uncommon_type {
                             // Prefer else_branch for common/default case
-                            if let Some(ref else_nodes) = c.else_branch {
-                                components.extend(self.compile_simple(else_nodes));
-                            } else {
-                                components.extend(self.compile_simple(&c.then_branch));
+                            // Check else_if_branches first for common types
+                            let mut found = false;
+                            for else_if in &c.else_if_branches {
+                                let has_common_types = else_if.if_item_type.is_empty()
+                                    || else_if
+                                        .if_item_type
+                                        .iter()
+                                        .any(|t| !uncommon_types.contains(t));
+                                if has_common_types {
+                                    components.extend(self.compile_simple(&else_if.children));
+                                    found = true;
+                                    break;
+                                }
+                            }
+                            if !found {
+                                if let Some(ref else_nodes) = c.else_branch {
+                                    components.extend(self.compile_simple(else_nodes));
+                                } else {
+                                    components.extend(self.compile_simple(&c.then_branch));
+                                }
                             }
                         } else {
-                            // Take then_branch, but fall back to else_branch if empty
+                            // Take then_branch, but fall back to else_if/else_branch if empty
                             let then_components = self.compile_simple(&c.then_branch);
                             if !then_components.is_empty() {
                                 components.extend(then_components);
-                            } else if let Some(ref else_nodes) = c.else_branch {
-                                components.extend(self.compile_simple(else_nodes));
+                            } else {
+                                // Try else_if branches first
+                                let mut found = false;
+                                for else_if in &c.else_if_branches {
+                                    let branch_components =
+                                        self.compile_simple(&else_if.children);
+                                    if !branch_components.is_empty() {
+                                        components.extend(branch_components);
+                                        found = true;
+                                        break;
+                                    }
+                                }
+                                if !found {
+                                    if let Some(ref else_nodes) = c.else_branch {
+                                        components.extend(self.compile_simple(else_nodes));
+                                    }
+                                }
                             }
                         }
                     }

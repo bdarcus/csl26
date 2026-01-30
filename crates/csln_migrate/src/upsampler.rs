@@ -260,17 +260,41 @@ impl Upsampler {
             }
         }
 
+        // Map all else-if branches to preserve type-specific formatting
+        let else_if_branches: Vec<csln::ElseIfBranch> = c
+            .else_if_branches
+            .iter()
+            .map(|branch| {
+                let mut branch_item_types = Vec::new();
+                if let Some(types) = &branch.type_ {
+                    for t in types.split_whitespace() {
+                        if let Some(it) = self.map_item_type(t) {
+                            branch_item_types.push(it);
+                        }
+                    }
+                }
+                let mut branch_variables = Vec::new();
+                if let Some(vars) = &branch.variable {
+                    for v in vars.split_whitespace() {
+                        if let Some(var) = self.map_variable(v) {
+                            branch_variables.push(var);
+                        }
+                    }
+                }
+                csln::ElseIfBranch {
+                    if_item_type: branch_item_types,
+                    if_variables: branch_variables,
+                    children: self.upsample_nodes(&branch.children),
+                }
+            })
+            .collect();
+
         Some(csln::CslnNode::Condition(csln::ConditionBlock {
             if_item_type,
             if_variables,
             then_branch: self.upsample_nodes(&c.if_branch.children),
-            else_branch: if let Some(else_children) = &c.else_branch {
-                Some(self.upsample_nodes(else_children))
-            } else if !c.else_if_branches.is_empty() {
-                Some(self.upsample_nodes(&c.else_if_branches[0].children))
-            } else {
-                None
-            },
+            else_if_branches,
+            else_branch: c.else_branch.as_ref().map(|e| self.upsample_nodes(e)),
         }))
     }
 

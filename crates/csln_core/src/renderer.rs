@@ -108,6 +108,7 @@ impl Renderer {
     }
 
     fn render_condition(&self, block: &ConditionBlock, item: &CitationItem) -> String {
+        // Check if the main if-branch matches
         let type_match =
             block.if_item_type.is_empty() || block.if_item_type.contains(&item.item_type);
         let var_match = block.if_variables.is_empty()
@@ -127,8 +128,37 @@ impl Renderer {
             for child in &block.then_branch {
                 output.push_str(&self.render_node(child, item));
             }
-            output
-        } else if let Some(else_branch) = &block.else_branch {
+            return output;
+        }
+
+        // Check else-if branches in order
+        for else_if in &block.else_if_branches {
+            let type_match =
+                else_if.if_item_type.is_empty() || else_if.if_item_type.contains(&item.item_type);
+            let var_match = else_if.if_variables.is_empty()
+                || else_if
+                    .if_variables
+                    .iter()
+                    .any(|v| item.variables.contains_key(v));
+
+            let branch_match =
+                if else_if.if_item_type.is_empty() && else_if.if_variables.is_empty() {
+                    false
+                } else {
+                    type_match && var_match
+                };
+
+            if branch_match {
+                let mut output = String::new();
+                for child in &else_if.children {
+                    output.push_str(&self.render_node(child, item));
+                }
+                return output;
+            }
+        }
+
+        // Fall back to else branch
+        if let Some(else_branch) = &block.else_branch {
             let mut output = String::new();
             for child in else_branch {
                 output.push_str(&self.render_node(child, item));

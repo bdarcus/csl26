@@ -216,15 +216,28 @@ impl Processor {
     }
 
     /// Process a bibliography entry.
+    ///
+    /// Uses type-specific template if available for the reference's item type,
+    /// otherwise falls back to the default template.
     fn process_bibliography_entry(
         &self,
         reference: &Reference,
         entry_number: usize,
     ) -> Option<ProcTemplate> {
         let bib_spec = self.style.bibliography.as_ref()?;
+
+        // Check for type-specific template
+        let template = if let Some(type_templates) = &bib_spec.type_templates {
+            type_templates
+                .get(&reference.ref_type)
+                .unwrap_or(&bib_spec.template)
+        } else {
+            &bib_spec.template
+        };
+
         self.process_template_with_number(
             reference,
-            &bib_spec.template,
+            template,
             RenderContext::Bibliography,
             entry_number,
         )
