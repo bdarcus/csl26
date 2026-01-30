@@ -139,20 +139,23 @@ impl TemplateCompiler {
         });
     }
 
-    /// Sort components for bibliography: author, date, title, then rest.
+    /// Sort components for bibliography: citation-number first (for numeric styles),
+    /// then author, date, title, then rest.
     fn sort_bibliography_components(&self, components: &mut [TemplateComponent]) {
         components.sort_by_key(|c| match c {
-            TemplateComponent::Contributor(c) if c.contributor == ContributorRole::Author => 0,
-            TemplateComponent::Date(d) if d.date == DateVariable::Issued => 1,
-            TemplateComponent::Title(t) if t.title == TitleType::Primary => 2,
-            TemplateComponent::Title(t) if t.title == TitleType::ParentSerial => 3,
-            TemplateComponent::Title(t) if t.title == TitleType::ParentMonograph => 4,
-            TemplateComponent::Number(_) => 5,
-            TemplateComponent::Variable(_) => 6,
-            TemplateComponent::Contributor(_) => 7,
-            TemplateComponent::Date(_) => 8,
-            TemplateComponent::Title(_) => 9,
-            TemplateComponent::List(_) => 10,
+            // Citation number goes first for numeric bibliography styles
+            TemplateComponent::Number(n) if n.number == NumberVariable::CitationNumber => 0,
+            TemplateComponent::Contributor(c) if c.contributor == ContributorRole::Author => 1,
+            TemplateComponent::Date(d) if d.date == DateVariable::Issued => 2,
+            TemplateComponent::Title(t) if t.title == TitleType::Primary => 3,
+            TemplateComponent::Title(t) if t.title == TitleType::ParentSerial => 4,
+            TemplateComponent::Title(t) if t.title == TitleType::ParentMonograph => 5,
+            TemplateComponent::Number(_) => 6,
+            TemplateComponent::Variable(_) => 7,
+            TemplateComponent::Contributor(_) => 8,
+            TemplateComponent::Date(_) => 9,
+            TemplateComponent::Title(_) => 10,
+            TemplateComponent::List(_) => 11,
             _ => 99,
         });
     }
