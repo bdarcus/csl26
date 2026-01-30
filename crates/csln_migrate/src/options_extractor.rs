@@ -9,7 +9,7 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 //! intent from CSL 1.0's procedural template structure and encoding it as
 //! declarative options in CSLN.
 
-use csl_legacy::model::{CslNode, Names, Sort as LegacySort, Style, Substitute};
+use csl_legacy::model::{CslNode, Macro, Names, Sort as LegacySort, Style, Substitute};
 use csln_core::options::{
     AndOptions, BibliographyConfig, Config, ContributorConfig, DateConfig, DelimiterPrecedesLast,
     DemoteNonDroppingParticle, Disambiguation, DisplayAsSort, Group, PageRangeFormat, Processing,
@@ -228,7 +228,11 @@ impl OptionsExtractor {
         None
     }
 
-    /// Extract contributor formatting options from style-level attributes and citation/bibliography.
+    /// Extract contributor formatting options from style-level attributes and bibliography context.
+    ///
+    /// This only extracts name options from macros that are transitively called from
+    /// the bibliography layout. This avoids picking up citation-specific or legal-specific
+    /// name formats that shouldn't apply to general bibliography rendering.
     fn extract_contributor_config(style: &Style) -> Option<ContributorConfig> {
         let mut config = ContributorConfig::default();
         let mut has_config = false;
@@ -339,19 +343,87 @@ impl OptionsExtractor {
             }
         }
 
-        // Walk macros to find <name> elements with global settings
+        // Collect macros that are transitively called from bibliography layout
+        let bib_macros = Self::collect_bibliography_macros(style);
+
+        // Only extract name options from macros used in bibliography context
         for macro_def in &style.macros {
-            Self::extract_name_options_from_nodes(
-                &macro_def.children,
-                &mut config,
-                &mut has_config,
-            );
+            if bib_macros.contains(&macro_def.name) {
+                Self::extract_name_options_from_nodes(
+                    &macro_def.children,
+                    &mut config,
+                    &mut has_config,
+                );
+            }
         }
 
         if has_config {
             Some(config)
         } else {
             None
+        }
+    }
+
+    /// Collect all macro names that are transitively called from bibliography layout.
+    fn collect_bibliography_macros(style: &Style) -> std::collections::HashSet<String> {
+        let mut macros = std::collections::HashSet::new();
+
+        // Start with macros called directly from bibliography layout
+        if let Some(bib) = &style.bibliography {
+            Self::collect_macro_refs_from_nodes(&bib.layout.children, &mut macros);
+        }
+
+        // Transitively expand: for each macro in the set, add macros it calls
+        let macro_map: std::collections::HashMap<&str, &Macro> =
+            style.macros.iter().map(|m| (m.name.as_str(), m)).collect();
+
+        let mut changed = true;
+        while changed {
+            changed = false;
+            let current: Vec<String> = macros.iter().cloned().collect();
+            for name in current {
+                if let Some(macro_def) = macro_map.get(name.as_str()) {
+                    let before = macros.len();
+                    Self::collect_macro_refs_from_nodes(&macro_def.children, &mut macros);
+                    if macros.len() > before {
+                        changed = true;
+                    }
+                }
+            }
+        }
+
+        macros
+    }
+
+    /// Collect macro names referenced in nodes via <text macro="..."/>.
+    fn collect_macro_refs_from_nodes(
+        nodes: &[CslNode],
+        macros: &mut std::collections::HashSet<String>,
+    ) {
+        for node in nodes {
+            match node {
+                CslNode::Text(t) => {
+                    if let Some(macro_name) = &t.macro_name {
+                        macros.insert(macro_name.clone());
+                    }
+                }
+                CslNode::Group(g) => {
+                    Self::collect_macro_refs_from_nodes(&g.children, macros);
+                }
+                CslNode::Choose(c) => {
+                    Self::collect_macro_refs_from_nodes(&c.if_branch.children, macros);
+                    for branch in &c.else_if_branches {
+                        Self::collect_macro_refs_from_nodes(&branch.children, macros);
+                    }
+                    if let Some(else_children) = &c.else_branch {
+                        Self::collect_macro_refs_from_nodes(else_children, macros);
+                    }
+                }
+                CslNode::Names(n) => {
+                    Self::collect_macro_refs_from_nodes(&n.children, macros);
+                }
+                _ => {}
+            }
         }
     }
 
@@ -436,10 +508,14 @@ impl OptionsExtractor {
                     }
                 }
 
-                // delimiter
+                // delimiter - only extract from name elements with name-as-sort-order
+                // to avoid picking up specialized delimiters (e.g., "-" for treaty parties)
                 if name.delimiter.is_some() && config.delimiter.is_none() {
-                    config.delimiter = name.delimiter.clone();
-                    *has_config = true;
+                    let is_primary_bib_format = name.name_as_sort_order.is_some();
+                    if is_primary_bib_format {
+                        config.delimiter = name.delimiter.clone();
+                        *has_config = true;
+                    }
                 }
 
                 // delimiter-precedes-last (from <name> element)
