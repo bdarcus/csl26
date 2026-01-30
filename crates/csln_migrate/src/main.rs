@@ -39,9 +39,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // 4. Template Compilation
     let template_compiler = TemplateCompiler;
-    // Note: compile_bibliography_with_types extracts type-specific templates but they're
-    // currently incomplete (missing common components). Using regular compile for now.
-    let mut new_bib = template_compiler.compile_bibliography(&csln_bib);
+    let (mut new_bib, type_templates) = template_compiler.compile_bibliography_with_types(&csln_bib);
     let mut new_cit = template_compiler.compile_citation(&csln_cit);
 
     // For author-date styles, apply standard formatting
@@ -282,7 +280,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         bibliography: Some(BibliographySpec {
             options: None,
             template: new_bib,
-            type_templates: None, // TODO: Generate complete type-specific templates
+            type_templates: if type_templates.is_empty() {
+                None
+            } else {
+                Some(type_templates)
+            },
             ..Default::default()
         }),
         ..Default::default()
