@@ -120,16 +120,18 @@ Code should be self-documenting with clear comments explaining:
 
 ## Current Status
 
-- **APA 7th**: 5/5 citations, 3/5 bibliography (page formatting issues)
-- **Academy of Management Review**: 5/5 citations
-- **Batch (100 styles)**: 24 styles have 5/5 citation match
+- **APA 7th**: 5/5 citations ✅, 5/5 bibliography ✅
+- **Academy of Management Review**: 5/5 citations ✅, 0/5 bibliography (style-specific formatting)
+- **Batch (50 styles)**: 74% with 5/5 citation match, bibliography work in progress
 - **Locale**: en-US with terms, months, contributor roles
-- **Key Features**: Variable-once rule, type-specific overrides, name_order control, initials formatting
+- **Key Features**: Variable-once rule, type-specific overrides, name_order control, initials formatting, volume(issue) grouping
 
 ### Known Gaps
 - Group delimiter extraction (colon vs period between components)
 - Page label extraction ("pp." from CSL Label nodes)
-- Volume-pages delimiter varies by style
+- Volume-pages delimiter varies by style (comma vs colon)
+- DOI suppression for styles that don't output DOI
+- Editor name-order varies by style (given-first vs family-first)
 
 ## Feature Priority (Based on Corpus Analysis)
 
@@ -261,10 +263,11 @@ All changes must be made on feature branches. The user will handle merging via G
    git checkout -b feat/my-feature
    ```
 
-2. **Format code before committing**
+2. **Format code before committing** (REQUIRED - CI will fail without this)
    ```bash
    cargo fmt
    ```
+   Always run `cargo fmt` immediately before `git commit`. This is mandatory.
 
 3. **Make changes and commit**
    Follow these commit message guidelines:
