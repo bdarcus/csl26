@@ -59,6 +59,14 @@ pub fn refs_to_string(proc_templates: Vec<ProcTemplate>) -> String {
         if i > 0 {
             output.push_str("\n\n");
         }
+
+        // Check locale option for punctuation placement in quotes.
+        // Extract from first component's config (all components share the same config).
+        let punctuation_in_quote = proc_template
+            .first()
+            .and_then(|c| c.config.as_ref())
+            .is_some_and(|cfg| cfg.punctuation_in_quote);
+
         for (j, component) in proc_template.iter().enumerate() {
             let rendered = render_component(component);
             // Skip empty components (e.g., suppressed by type override)
@@ -87,8 +95,8 @@ pub fn refs_to_string(proc_templates: Vec<ProcTemplate>) -> String {
                     }
                 } else if !matches!(last_char, '.' | ',' | ':' | ';' | ' ') {
                     // Default: add period-space separator
-                    // American typography: periods go inside quotation marks
-                    if last_char == '"' {
+                    // Locale option: place periods inside quotation marks (American style)
+                    if punctuation_in_quote && last_char == '"' {
                         output.pop(); // Remove closing quote
                         output.push_str(".\" "); // Add period inside, then quote + space
                     } else {
@@ -117,8 +125,8 @@ pub fn refs_to_string(proc_templates: Vec<ProcTemplate>) -> String {
                 )
             });
         if !output.ends_with('.') && !last_is_link {
-            // American typography: periods go inside quotation marks
-            if output.ends_with('"') {
+            // Locale option: place periods inside quotation marks (American style)
+            if punctuation_in_quote && output.ends_with('"') {
                 output.pop();
                 output.push_str(".\"");
             } else {

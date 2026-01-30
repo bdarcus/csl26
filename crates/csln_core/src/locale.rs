@@ -28,6 +28,10 @@ pub struct Locale {
     /// General terms (and, et al., etc.).
     #[serde(default)]
     pub terms: Terms,
+    /// Whether to place periods/commas inside quotation marks.
+    /// true = American style ("text."), false = British style ("text".)
+    #[serde(default)]
+    pub punctuation_in_quote: bool,
 }
 
 impl Locale {
@@ -94,6 +98,7 @@ impl Locale {
             dates: DateTerms::en_us(),
             roles,
             terms: Terms::en_us(),
+            punctuation_in_quote: true, // American English convention
         }
     }
 
@@ -442,6 +447,11 @@ impl Locale {
 
     /// Convert a RawLocale to a Locale.
     fn from_raw(raw: RawLocale) -> Self {
+        // Determine punctuation-in-quote from locale ID
+        // en-US uses American style (inside), en-GB and others use outside
+        let punctuation_in_quote = raw.locale.starts_with("en-US")
+            || (raw.locale.starts_with("en") && !raw.locale.starts_with("en-GB"));
+
         let mut locale = Locale {
             locale: raw.locale,
             dates: DateTerms {
@@ -453,6 +463,7 @@ impl Locale {
             },
             roles: HashMap::new(),
             terms: Terms::default(),
+            punctuation_in_quote,
         };
 
         // Map raw terms to structured terms

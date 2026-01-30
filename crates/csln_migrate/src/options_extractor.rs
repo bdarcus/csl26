@@ -45,7 +45,28 @@ impl OptionsExtractor {
             // 7. Extract bibliography-specific settings
             bibliography: Self::extract_bibliography_config(style),
 
+            // 8. Punctuation-in-quote from locale (en-US has true by default)
+            punctuation_in_quote: Self::extract_punctuation_in_quote(style),
+
             ..Config::default()
+        }
+    }
+
+    /// Extract punctuation-in-quote setting from locale.
+    /// en-US locale uses American style (punctuation inside quotes).
+    /// Most other locales default to false.
+    fn extract_punctuation_in_quote(style: &Style) -> bool {
+        // Check default-locale attribute; en-US/en-GB have different conventions
+        // en-US: punctuation inside quotes (true)
+        // en-GB and most others: punctuation outside quotes (false)
+        match style.default_locale.as_deref() {
+            Some(locale) if locale.starts_with("en-US") => true,
+            Some(locale) if locale.starts_with("en-GB") => false,
+            // Default to true for unspecified (CSL defaults to en-US)
+            // or generic "en" which is typically American
+            Some(locale) if locale.starts_with("en") => true,
+            None => true, // CSL default locale is en-US
+            _ => false,   // Other languages typically don't use American style
         }
     }
 
