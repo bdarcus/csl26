@@ -14,8 +14,9 @@ use csln_core::{
         SimpleVariable, TemplateComponent, TemplateContributor, TemplateDate, TemplateNumber,
         TemplateTitle, TemplateVariable, TitleType,
     },
-    CslnNode, FormattingOptions, Variable,
+    CslnNode, FormattingOptions, ItemType, Variable,
 };
+use std::collections::HashMap;
 
 /// Compiles CslnNode trees into TemplateComponents.
 pub struct TemplateCompiler;
@@ -166,6 +167,118 @@ impl TemplateCompiler {
         let mut components = self.compile(nodes);
         self.sort_bibliography_components(&mut components);
         components
+    }
+
+    /// Compile bibliography with type-specific templates.
+    ///
+    /// Returns the default template and a HashMap of type-specific templates
+    /// extracted from type-based conditions in the node tree.
+    pub fn compile_bibliography_with_types(
+        &self,
+        nodes: &[CslnNode],
+    ) -> (Vec<TemplateComponent>, HashMap<String, Vec<TemplateComponent>>) {
+        let mut type_templates: HashMap<String, Vec<TemplateComponent>> = HashMap::new();
+
+        // First, extract type-specific templates from conditions
+        self.extract_type_templates(nodes, &mut type_templates);
+
+        // Compile the default template
+        let mut default_template = self.compile(nodes);
+        self.sort_bibliography_components(&mut default_template);
+
+        // Sort type-specific templates
+        for template in type_templates.values_mut() {
+            self.sort_bibliography_components(template);
+        }
+
+        (default_template, type_templates)
+    }
+
+    /// Extract type-specific templates from conditions.
+    fn extract_type_templates(
+        &self,
+        nodes: &[CslnNode],
+        type_templates: &mut HashMap<String, Vec<TemplateComponent>>,
+    ) {
+        for node in nodes {
+            match node {
+                CslnNode::Group(g) => {
+                    self.extract_type_templates(&g.children, type_templates);
+                }
+                CslnNode::Condition(c) => {
+                    // Only process conditions with type-based branching
+                    if !c.if_item_type.is_empty() || c.else_if_branches.iter().any(|b| !b.if_item_type.is_empty()) {
+                        // Compile each branch for its specific types
+                        for item_type in &c.if_item_type {
+                            let type_key = self.item_type_to_string(item_type);
+                            let components = self.compile(&c.then_branch);
+                            type_templates.entry(type_key).or_insert_with(Vec::new).extend(components);
+                        }
+
+                        for else_if in &c.else_if_branches {
+                            for item_type in &else_if.if_item_type {
+                                let type_key = self.item_type_to_string(item_type);
+                                let components = self.compile(&else_if.children);
+                                type_templates.entry(type_key).or_insert_with(Vec::new).extend(components);
+                            }
+                        }
+                    }
+
+                    // Continue extracting from branches
+                    self.extract_type_templates(&c.then_branch, type_templates);
+                    for else_if in &c.else_if_branches {
+                        self.extract_type_templates(&else_if.children, type_templates);
+                    }
+                    if let Some(ref else_nodes) = c.else_branch {
+                        self.extract_type_templates(else_nodes, type_templates);
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+
+    /// Convert ItemType to its string representation.
+    fn item_type_to_string(&self, item_type: &ItemType) -> String {
+        match item_type {
+            ItemType::Article => "article".to_string(),
+            ItemType::ArticleJournal => "article-journal".to_string(),
+            ItemType::ArticleMagazine => "article-magazine".to_string(),
+            ItemType::ArticleNewspaper => "article-newspaper".to_string(),
+            ItemType::Bill => "bill".to_string(),
+            ItemType::Book => "book".to_string(),
+            ItemType::Broadcast => "broadcast".to_string(),
+            ItemType::Chapter => "chapter".to_string(),
+            ItemType::Dataset => "dataset".to_string(),
+            ItemType::Entry => "entry".to_string(),
+            ItemType::EntryDictionary => "entry-dictionary".to_string(),
+            ItemType::EntryEncyclopedia => "entry-encyclopedia".to_string(),
+            ItemType::Figure => "figure".to_string(),
+            ItemType::Graphic => "graphic".to_string(),
+            ItemType::Interview => "interview".to_string(),
+            ItemType::LegalCase => "legal_case".to_string(),
+            ItemType::Legislation => "legislation".to_string(),
+            ItemType::Manuscript => "manuscript".to_string(),
+            ItemType::Map => "map".to_string(),
+            ItemType::MotionPicture => "motion_picture".to_string(),
+            ItemType::MusicalScore => "musical_score".to_string(),
+            ItemType::Pamphlet => "pamphlet".to_string(),
+            ItemType::PaperConference => "paper-conference".to_string(),
+            ItemType::Patent => "patent".to_string(),
+            ItemType::PersonalCommunication => "personal_communication".to_string(),
+            ItemType::Post => "post".to_string(),
+            ItemType::PostWeblog => "post-weblog".to_string(),
+            ItemType::Report => "report".to_string(),
+            ItemType::Review => "review".to_string(),
+            ItemType::ReviewBook => "review-book".to_string(),
+            ItemType::Song => "song".to_string(),
+            ItemType::Speech => "speech".to_string(),
+            ItemType::Thesis => "thesis".to_string(),
+            ItemType::Treaty => "treaty".to_string(),
+            ItemType::Webpage => "webpage".to_string(),
+            ItemType::Software => "software".to_string(),
+            ItemType::Standard => "standard".to_string(),
+        }
     }
 
     /// Sort components for citation: author/date first.
