@@ -120,10 +120,10 @@ Code should be self-documenting with clear comments explaining:
 
 ## Current Status
 
-- **Citations**: 5/5 exact match with oracle ✅
-- **Bibliography**: 5/5 exact match with oracle ✅
+- **APA 7th**: 5/5 citations ✅, 5/5 bibliography ✅
+- **Batch (100 styles)**: 69% with 5/5 citation match
 - **Locale**: en-US with terms, months, contributor roles
-- **Key Features**: Variable-once rule, type-specific overrides, name_order control
+- **Key Features**: Variable-once rule, type-specific overrides, name_order control, initials formatting
 
 ## Feature Priority (Based on Corpus Analysis)
 

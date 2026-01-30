@@ -116,12 +116,13 @@ impl ComponentValues for TemplateContributor {
                         SubstituteKey::Editor => {
                             if let Some(editors) = &reference.editor {
                                 if !editors.is_empty() {
-                                    // Substituted editors use the contributor's name_order
+                                    // Substituted editors use the contributor's name_order and and
                                     let formatted = format_names(
                                         editors,
                                         &self.form,
                                         options,
                                         self.name_order.as_ref(),
+                                        self.and.as_ref(),
                                         hints,
                                     );
                                     // Add role suffix if configured
@@ -154,6 +155,7 @@ impl ComponentValues for TemplateContributor {
                                         &self.form,
                                         options,
                                         self.name_order.as_ref(),
+                                        self.and.as_ref(),
                                         hints,
                                     );
                                     return Some(ProcValues {
@@ -176,7 +178,14 @@ impl ComponentValues for TemplateContributor {
         }
 
         // Use explicit name_order if provided on this contributor template
-        let formatted = format_names(names, &self.form, options, self.name_order.as_ref(), hints);
+        let formatted = format_names(
+            names,
+            &self.form,
+            options,
+            self.name_order.as_ref(),
+            self.and.as_ref(),
+            hints,
+        );
 
         // Add role label suffix for verb forms (e.g., "Name (Ed.)")
         let suffix = match (&self.form, &self.contributor) {
@@ -207,11 +216,16 @@ impl ComponentValues for TemplateContributor {
 /// The `name_order` parameter overrides the global `display-as-sort` setting
 /// for this specific rendering. Used when editors need "Given Family" format
 /// even when the global setting is "Family, Given".
+///
+/// The `and_override` parameter allows per-component override of the conjunction
+/// between the last two names. Use `Some(AndOptions::None)` to suppress the
+/// "and" when the global setting would add it.
 fn format_names(
     names: &[Name],
     form: &ContributorForm,
     options: &RenderOptions<'_>,
     name_order: Option<&csln_core::template::NameOrder>,
+    and_override: Option<&AndOptions>,
     hints: &ProcHints,
 ) -> String {
     if names.is_empty() {
@@ -270,17 +284,29 @@ fn format_names(
         })
         .collect();
 
-    // Join with appropriate delimiter and "and" from locale
-    let use_symbol = matches!(config.and_then(|c| c.and.clone()), Some(AndOptions::Symbol));
-    let and_str = locale.and_term(use_symbol);
+    // Determine "and" setting: use override if provided, else global config
+    let and_option = and_override.or_else(|| config.and_then(|c| c.and.as_ref()));
+    // Determine conjunction between last two names
+    // Default (None or no config) means no conjunction, matching CSL behavior
+    let and_str = match and_option {
+        Some(AndOptions::Text) => Some(locale.and_term(false)),
+        Some(AndOptions::Symbol) => Some(locale.and_term(true)),
+        Some(AndOptions::None) | None => None, // No conjunction
+        _ => None,                             // Future variants: default to none
+    };
 
     // Check if delimiter should precede last name (Oxford comma)
     use csln_core::options::DelimiterPrecedesLast;
     let delimiter_precedes_last = config.and_then(|c| c.delimiter_precedes_last.as_ref());
 
+    let delimiter = config.and_then(|c| c.delimiter.as_deref()).unwrap_or(", ");
     let result = if formatted.len() == 1 {
         formatted[0].clone()
+    } else if and_str.is_none() {
+        // No conjunction - just join all with delimiter
+        formatted.join(delimiter)
     } else if formatted.len() == 2 {
+        let and_str = and_str.unwrap();
         // For two names, check delimiter_precedes_last setting
         let use_delimiter = match delimiter_precedes_last {
             Some(DelimiterPrecedesLast::Always) => true,
@@ -291,11 +317,12 @@ fn format_names(
                 .is_some_and(|das| matches!(das, DisplayAsSort::All | DisplayAsSort::First)),
         };
         if use_delimiter {
-            format!("{}, {} {}", formatted[0], and_str, formatted[1])
+            format!("{}{}{} {}", formatted[0], delimiter, and_str, formatted[1])
         } else {
             format!("{} {} {}", formatted[0], and_str, formatted[1])
         }
     } else {
+        let and_str = and_str.unwrap();
         let last = formatted.last().unwrap();
         let rest = &formatted[..formatted.len() - 1];
         // Check if delimiter should precede "and" (Oxford comma)
@@ -311,9 +338,9 @@ fn format_names(
             }
         };
         if use_delimiter {
-            format!("{}, {} {}", rest.join(", "), and_str, last)
+            format!("{}{}{} {}", rest.join(delimiter), delimiter, and_str, last)
         } else {
-            format!("{} {} {}", rest.join(", "), and_str, last)
+            format!("{} {} {}", rest.join(delimiter), and_str, last)
         }
     };
 
@@ -915,6 +942,7 @@ mod tests {
             form: ContributorForm::Short,
             name_order: None,
             delimiter: None,
+            and: None,
             rendering: Default::default(),
             _extra: Default::default(),
         };
@@ -973,6 +1001,7 @@ mod tests {
             form: ContributorForm::Short,
             name_order: None,
             delimiter: None,
+            and: None,
             rendering: Default::default(),
             _extra: Default::default(),
         };
@@ -1084,6 +1113,7 @@ mod tests {
             form: ContributorForm::Short,
             name_order: None,
             delimiter: None,
+            and: None,
             rendering: Default::default(),
             _extra: Default::default(),
         };
@@ -1127,6 +1157,7 @@ mod tests {
             form: ContributorForm::Short,
             name_order: None,
             delimiter: None,
+            and: None,
             rendering: Default::default(),
             _extra: Default::default(),
         };
