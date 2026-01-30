@@ -87,7 +87,13 @@ pub fn refs_to_string(proc_templates: Vec<ProcTemplate>) -> String {
                     }
                 } else if !matches!(last_char, '.' | ',' | ':' | ';' | ' ') {
                     // Default: add period-space separator
-                    output.push_str(". ");
+                    // American typography: periods go inside quotation marks
+                    if last_char == '"' {
+                        output.pop(); // Remove closing quote
+                        output.push_str(".\" "); // Add period inside, then quote + space
+                    } else {
+                        output.push_str(". ");
+                    }
                 } else if last_char == '.' {
                     // Already have period, just add space
                     output.push(' ');
@@ -111,7 +117,13 @@ pub fn refs_to_string(proc_templates: Vec<ProcTemplate>) -> String {
                 )
             });
         if !output.ends_with('.') && !last_is_link {
-            output.push('.');
+            // American typography: periods go inside quotation marks
+            if output.ends_with('"') {
+                output.pop();
+                output.push_str(".\"");
+            } else {
+                output.push('.');
+            }
         }
     }
     output
@@ -272,9 +284,19 @@ pub fn get_title_category_rendering(
             .or(titles_config.monograph.as_ref()),
         TitleType::Primary => {
             if let Some(rt) = ref_type {
+                // "Component" titles: articles, chapters, entries - typically quoted
                 if matches!(
                     rt,
-                    "chapter" | "entry" | "entry-dictionary" | "entry-encyclopedia"
+                    "article-journal"
+                        | "article-magazine"
+                        | "article-newspaper"
+                        | "chapter"
+                        | "entry"
+                        | "entry-dictionary"
+                        | "entry-encyclopedia"
+                        | "paper-conference"
+                        | "post"
+                        | "post-weblog"
                 ) {
                     titles_config.component.as_ref()
                 } else if matches!(rt, "book" | "thesis" | "report") {
