@@ -333,8 +333,8 @@ fn infer_citation_wrapping(
 ///
 /// 1. Group delimiter (most common):
 ///    <group delimiter=", ">
-///      <text macro="author-short"/>
-///      <text macro="year-date"/>
+///    <text macro="author-short"/>
+///    <text macro="year-date"/>
 ///    </group>
 ///
 /// 2. Prefix on date element:
