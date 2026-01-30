@@ -163,35 +163,42 @@ CSLN is built for a long-lived ecosystem:
 
 ## Project Status
 
+> **Note**: This project is in active development. While the core architecture is solid, rendering fidelity across the full corpus of 2,844 styles is still a work in progress.
+
 | Component | Status |
 |-----------|--------|
 | CSL 1.0 Parser (`csl_legacy`) | ✅ Complete - parses all 2,844 official styles |
-| CSLN Schema (`csln_core`) | ✅ Complete - options, templates, locale, rendering, versioning |
-| Migration Tool (`csln_migrate`) | ✅ Complete - extracts options, compiles templates |
-| CSLN Processor (`csln_processor`) | ✅ APA 5/5 match - citations and bibliography verified |
-| Oracle Verification | ✅ APA verified against citeproc-js |
+| CSLN Schema (`csln_core`) | ✅ Complete - options, templates, locale, rendering |
+| Migration Tool (`csln_migrate`) | 🔄 In Progress - compiles templates, extracting style-specific formatting |
+| CSLN Processor (`csln_processor`) | 🔄 In Progress - APA verified, other styles need work |
+| Oracle Verification | ✅ Infrastructure complete - citeproc-js comparison |
 | Corpus Analyzer (`csln_analyze`) | ✅ Complete - feature usage stats for 2,844 styles |
 
 ### Current Test Results
 
 ```
-18 unit tests passing
-APA 7th: 5/5 citations, 5/5 bibliography (exact match)
+APA 7th: 5/5 citations, 5/5 bibliography (exact match with citeproc-js)
+
+Batch Testing (50 styles sampled):
+  Citations:    74% with 5/5 match
+  Bibliography: Limited matches (style-specific formatting issues)
+  Errors:       0 migration errors, 0 processor errors
 
 Features implemented:
 ✓ page-range-format (1,076 styles) - expanded, minimal, chicago
-✓ delimiter-precedes-et-al (786 styles) - always, never, contextual  
+✓ delimiter-precedes-et-al (786 styles) - always, never, contextual
 ✓ initialize-with (1,437 styles) - name initialization
-✓ initialize-with-hyphen - hyphenated initials support
-✓ small-caps (498 styles) - font-variant: small-caps support
 ✓ name-as-sort-order (2,100+ styles) - family-first ordering
-✓ is-uncertain-date handling - [1962?] format
 ✓ disambiguate-add-givenname (935 styles) - name expansion
 ✓ disambiguate-add-names (1,241 styles) - et-al expansion
 ✓ subsequent-author-substitute (314 styles) - "———" replacement
+✓ type-specific overrides - publisher suppression, page formatting
 
-Remaining high-priority:
-○ (None - Core feature set complete)
+Known gaps (in progress):
+○ Group delimiter extraction (colon vs period between components)
+○ Page label extraction ("pp." from CSL Label nodes)
+○ Volume-pages delimiter varies by style (comma vs colon)
+○ DOI suppression for styles that don't output DOI
 ```
 
 ## Architecture
