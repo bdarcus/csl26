@@ -130,6 +130,10 @@ pub struct TemplateContributor {
     /// Custom delimiter between names (overrides global setting).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub delimiter: Option<String>,
+    /// Override the conjunction between the last two names.
+    /// Use `none` for bibliography when citation uses `text` or `symbol`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub and: Option<crate::options::AndOptions>,
     #[serde(flatten, default)]
     pub rendering: Rendering,
     /// Unknown fields captured for forward compatibility.

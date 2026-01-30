@@ -275,13 +275,16 @@ pub enum DisplayAsSort {
 }
 
 /// Conjunction options between contributors.
+///
+/// In CSL 1.0, absence of the `and` attribute means no conjunction.
+/// So `None` is the default to match that behavior.
 #[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq, JsonSchema)]
 #[serde(rename_all = "lowercase")]
 #[non_exhaustive]
 pub enum AndOptions {
-    #[default]
     Text,
     Symbol,
+    #[default]
     None,
 }
 

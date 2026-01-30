@@ -263,6 +263,20 @@ impl OptionsExtractor {
                 has_config = true;
             }
         }
+        // Extract names-delimiter from style level (this is the canonical delimiter)
+        if let Some(delim) = &style.names_delimiter {
+            config.delimiter = Some(delim.clone());
+            has_config = true;
+        }
+        // Extract 'and' from style level if present
+        if let Some(and) = &style.and {
+            config.and = Some(match and.as_str() {
+                "symbol" => AndOptions::Symbol,
+                "text" => AndOptions::Text,
+                _ => AndOptions::None,
+            });
+            has_config = true;
+        }
         if let Some(dpl) = &style.delimiter_precedes_last {
             config.delimiter_precedes_last = match dpl.as_str() {
                 "contextual" => Some(DelimiterPrecedesLast::Contextual),
@@ -403,14 +417,23 @@ impl OptionsExtractor {
                     *has_config = true;
                 }
 
-                // and
-                if let Some(and) = &name.and {
-                    config.and = Some(match and.as_str() {
-                        "symbol" => AndOptions::Symbol,
-                        "text" => AndOptions::Text,
-                        _ => AndOptions::None,
-                    });
-                    *has_config = true;
+                // Extract 'and' preferring from name elements with name-as-sort-order
+                // (typically bibliography formatting). This avoids picking up citation-only
+                // settings that shouldn't apply to bibliography.
+                if config.and.is_none() {
+                    if let Some(and) = &name.and {
+                        // Only extract if this name has name-as-sort-order (bibliography indicator)
+                        // or if no better option found (will be overwritten by better match)
+                        let is_bib_context = name.name_as_sort_order.is_some();
+                        if is_bib_context {
+                            config.and = Some(match and.as_str() {
+                                "symbol" => AndOptions::Symbol,
+                                "text" => AndOptions::Text,
+                                _ => AndOptions::None,
+                            });
+                            *has_config = true;
+                        }
+                    }
                 }
 
                 // delimiter

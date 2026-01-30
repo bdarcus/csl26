@@ -230,16 +230,6 @@ impl Processor {
         )
     }
 
-    /// Process a template for a reference (without citation number).
-    fn process_template(
-        &self,
-        reference: &Reference,
-        template: &[TemplateComponent],
-        context: RenderContext,
-    ) -> Option<ProcTemplate> {
-        self.process_template_with_number(reference, template, context, 0)
-    }
-
     /// Process a template for a reference with citation number.
     ///
     /// Iterates through template components, extracting values from the reference.
