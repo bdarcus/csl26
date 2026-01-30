@@ -8,3 +8,5 @@ flattened_*.json
 tests/*.csl
 scripts/node_modules/
 scripts/*.json
+styles-report.json
+.migrated-temp.yaml

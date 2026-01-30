@@ -141,12 +141,12 @@ impl Renderer {
                     .iter()
                     .any(|v| item.variables.contains_key(v));
 
-            let branch_match =
-                if else_if.if_item_type.is_empty() && else_if.if_variables.is_empty() {
-                    false
-                } else {
-                    type_match && var_match
-                };
+            let branch_match = if else_if.if_item_type.is_empty() && else_if.if_variables.is_empty()
+            {
+                false
+            } else {
+                type_match && var_match
+            };
 
             if branch_match {
                 let mut output = String::new();
