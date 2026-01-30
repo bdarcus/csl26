@@ -10,3 +10,4 @@ scripts/node_modules/
 scripts/*.json
 styles-report.json
 .migrated-temp.yaml
+migrated_*.yaml
