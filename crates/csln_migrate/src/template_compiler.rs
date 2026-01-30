@@ -165,7 +165,11 @@ impl TemplateCompiler {
                 let rendering = self.get_component_rendering(&new_component);
                 for item_type in current_types {
                     let type_str = self.item_type_to_string(item_type);
-                    self.add_override_to_component(&mut components[idx], type_str, rendering.clone());
+                    self.add_override_to_component(
+                        &mut components[idx],
+                        type_str,
+                        rendering.clone(),
+                    );
                 }
             }
         } else {

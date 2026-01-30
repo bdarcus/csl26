@@ -244,7 +244,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
 
-
         // Add type-specific overrides
         for component in &mut new_bib {
             match component {

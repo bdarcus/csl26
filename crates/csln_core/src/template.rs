@@ -79,14 +79,30 @@ pub struct Rendering {
 impl Rendering {
     /// Merge another rendering into this one, with the other taking precedence.
     pub fn merge(&mut self, other: &Rendering) {
-        if other.emph.is_some() { self.emph = other.emph; }
-        if other.quote.is_some() { self.quote = other.quote; }
-        if other.strong.is_some() { self.strong = other.strong; }
-        if other.small_caps.is_some() { self.small_caps = other.small_caps; }
-        if other.prefix.is_some() { self.prefix = other.prefix.clone(); }
-        if other.suffix.is_some() { self.suffix = other.suffix.clone(); }
-        if other.wrap.is_some() { self.wrap = other.wrap.clone(); }
-        if other.suppress.is_some() { self.suppress = other.suppress; }
+        if other.emph.is_some() {
+            self.emph = other.emph;
+        }
+        if other.quote.is_some() {
+            self.quote = other.quote;
+        }
+        if other.strong.is_some() {
+            self.strong = other.strong;
+        }
+        if other.small_caps.is_some() {
+            self.small_caps = other.small_caps;
+        }
+        if other.prefix.is_some() {
+            self.prefix = other.prefix.clone();
+        }
+        if other.suffix.is_some() {
+            self.suffix = other.suffix.clone();
+        }
+        if other.wrap.is_some() {
+            self.wrap = other.wrap.clone();
+        }
+        if other.suppress.is_some() {
+            self.suppress = other.suppress;
+        }
     }
 }
 

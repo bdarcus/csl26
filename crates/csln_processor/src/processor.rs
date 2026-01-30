@@ -1224,9 +1224,9 @@ mod tests {
 
     #[test]
     fn test_apa_titles_config() {
+        use crate::reference::{DateVariable, Name, Reference};
         use csln_core::options::{Config, TitleRendering, TitlesConfig};
         use csln_core::template::{Rendering, TemplateTitle, TitleType};
-        use crate::reference::{DateVariable, Name, Reference};
 
         let config = Config {
             titles: Some(TitlesConfig {
@@ -1300,23 +1300,40 @@ mod tests {
 
         let processor = Processor::new(
             style,
-            references
-                .into_iter()
-                .map(|r| (r.id.clone(), r))
-                .collect(),
+            references.into_iter().map(|r| (r.id.clone(), r)).collect(),
         );
 
         let res = processor.render_bibliography();
-        
+
         // Book Case: Primary title -> monograph category -> Italic, No "In "
-        assert!(res.contains("_A Global Book_"), "Book title should be italicized: {}", res);
-        assert!(!res.contains("In _A Global Book_"), "Book title should NOT have 'In ' prefix: {}", res);
+        assert!(
+            res.contains("_A Global Book_"),
+            "Book title should be italicized: {}",
+            res
+        );
+        assert!(
+            !res.contains("In _A Global Book_"),
+            "Book title should NOT have 'In ' prefix: {}",
+            res
+        );
 
         // Journal Article Case: ParentSerial -> periodical category -> Italic, No "In "
-        assert!(res.contains("_Nature_"), "Journal title should be italicized: {}", res);
-        assert!(!res.contains("In _Nature_"), "Journal title should NOT have 'In ' prefix: {}", res);
+        assert!(
+            res.contains("_Nature_"),
+            "Journal title should be italicized: {}",
+            res
+        );
+        assert!(
+            !res.contains("In _Nature_"),
+            "Journal title should NOT have 'In ' prefix: {}",
+            res
+        );
 
         // Chapter Case: ParentMonograph -> container_monograph category -> Italic, WITH "In "
-        assert!(res.contains("In _A Book_"), "Chapter container title should have 'In ' prefix: {}", res);
+        assert!(
+            res.contains("In _A Book_"),
+            "Chapter container title should have 'In ' prefix: {}",
+            res
+        );
     }
 }

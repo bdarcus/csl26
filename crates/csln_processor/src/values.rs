@@ -869,7 +869,6 @@ impl ComponentValues for TemplateList {
         hints: &ProcHints,
         options: &RenderOptions<'_>,
     ) -> Option<ProcValues> {
-
         // Collect values from all items, applying their rendering
         let values: Vec<String> = self
             .items
