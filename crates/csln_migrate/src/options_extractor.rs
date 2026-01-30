@@ -9,7 +9,7 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 //! intent from CSL 1.0's procedural template structure and encoding it as
 //! declarative options in CSLN.
 
-use csl_legacy::model::{CslNode, Names, Style, Substitute};
+use csl_legacy::model::{CslNode, Names, Sort as LegacySort, Style, Substitute};
 use csln_core::options::{
     AndOptions, BibliographyConfig, Config, ContributorConfig, DateConfig, DelimiterPrecedesLast,
     DemoteNonDroppingParticle, Disambiguation, DisplayAsSort, Group, PageRangeFormat, Processing,
@@ -96,35 +96,112 @@ impl OptionsExtractor {
         }
     }
 
+    /// Extract sort configuration from CSL 1.0 bibliography.
+    ///
+    /// Maps CSL sort keys to CSLN SortKey enum:
+    /// - `citation-number` → CitationNumber (numeric styles)
+    /// - `author` or macro containing "author" → Author
+    /// - `issued` or macro containing "date"/"year" → Year
+    /// - `title` → Title
+    fn extract_sort_from_bibliography(sort: &LegacySort) -> Option<Sort> {
+        let mut specs = Vec::new();
+
+        for key in &sort.keys {
+            let ascending = key.sort.as_deref() != Some("descending");
+
+            // Determine sort key from variable or macro name
+            let sort_key = if let Some(var) = &key.variable {
+                match var.as_str() {
+                    "citation-number" => Some(SortKey::CitationNumber),
+                    "author" => Some(SortKey::Author),
+                    "issued" => Some(SortKey::Year),
+                    "title" => Some(SortKey::Title),
+                    _ => None,
+                }
+            } else if let Some(macro_name) = &key.macro_name {
+                let m = macro_name.to_lowercase();
+                if m.contains("author") || m.contains("contributor") {
+                    Some(SortKey::Author)
+                } else if m.contains("date") || m.contains("year") || m.contains("issued") {
+                    Some(SortKey::Year)
+                } else if m.contains("title") {
+                    Some(SortKey::Title)
+                } else {
+                    None
+                }
+            } else {
+                None
+            };
+
+            if let Some(sk) = sort_key {
+                specs.push(SortSpec { key: sk, ascending });
+            }
+        }
+
+        if specs.is_empty() {
+            None
+        } else {
+            Some(Sort {
+                shorten_names: false,
+                render_substitutions: false,
+                template: specs,
+            })
+        }
+    }
+
     /// Detect the processing mode (author-date, numeric, note) from citation attributes.
     fn detect_processing_mode(style: &Style) -> Option<Processing> {
+        // First, extract sort configuration from bibliography if available
+        let bib_sort = style
+            .bibliography
+            .as_ref()
+            .and_then(|b| b.sort.as_ref())
+            .and_then(Self::extract_sort_from_bibliography);
+
+        // Check if this is a numeric style (sorts by citation-number)
+        let is_numeric = bib_sort.as_ref().is_some_and(|s| {
+            s.template
+                .first()
+                .is_some_and(|spec| spec.key == SortKey::CitationNumber)
+        });
+
+        if is_numeric {
+            return Some(Processing::Custom(ProcessingCustom {
+                sort: bib_sort,
+                group: None,
+                disambiguate: None,
+            }));
+        }
+
         // disambiguate-add-year-suffix is a strong signal for author-date
         if style.citation.disambiguate_add_year_suffix == Some(true) {
             let names = style.citation.disambiguate_add_names.unwrap_or(false);
             let add_givenname = style.citation.disambiguate_add_givenname.unwrap_or(false);
 
             // Standard AuthorDate profile in CSLN is names=true, givenname=true
-            // If style matches, use the enum. If not, use Custom.
+            // Use the enum which has built-in Author+Year sort
             if names && add_givenname {
                 return Some(Processing::AuthorDate);
             }
 
-            // Custom author-date config
+            // Custom author-date config with extracted sort or default
+            let sort = bib_sort.unwrap_or_else(|| Sort {
+                shorten_names: false,
+                render_substitutions: false,
+                template: vec![
+                    SortSpec {
+                        key: SortKey::Author,
+                        ascending: true,
+                    },
+                    SortSpec {
+                        key: SortKey::Year,
+                        ascending: true,
+                    },
+                ],
+            });
+
             return Some(Processing::Custom(ProcessingCustom {
-                sort: Some(Sort {
-                    shorten_names: false,
-                    render_substitutions: false,
-                    template: vec![
-                        SortSpec {
-                            key: SortKey::Author,
-                            ascending: true,
-                        },
-                        SortSpec {
-                            key: SortKey::Year,
-                            ascending: true,
-                        },
-                    ],
-                }),
+                sort: Some(sort),
                 group: Some(Group {
                     template: vec![SortKey::Author, SortKey::Year],
                 }),
@@ -133,6 +210,15 @@ impl OptionsExtractor {
                     add_givenname,
                     year_suffix: true,
                 }),
+            }));
+        }
+
+        // If we have explicit sort but no disambiguation, still use it
+        if let Some(sort) = bib_sort {
+            return Some(Processing::Custom(ProcessingCustom {
+                sort: Some(sort),
+                group: None,
+                disambiguate: None,
             }));
         }
 
