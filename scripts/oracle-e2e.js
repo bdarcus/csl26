@@ -151,11 +151,11 @@ function renderWithCslnProcessor(stylePath) {
     );
   } catch (e) {
     console.error('Processor failed:', e.stderr || e.message);
-    fs.unlinkSync(tempFile);
+    try { fs.unlinkSync(tempFile); } catch {} // Ignore if already deleted
     return null;
   }
-  
-  fs.unlinkSync(tempFile);
+
+  try { fs.unlinkSync(tempFile); } catch {} // Ignore if already deleted
   
   // Parse output
   const lines = output.split('\n');
@@ -183,10 +183,11 @@ function renderWithCslnProcessor(stylePath) {
 
 function normalizeText(text) {
   return text
-    .replace(/<[^>]+>/g, '')   // Strip HTML tags
-    .replace(/&#38;/g, '&')    // HTML entity for &
-    .replace(/_([^_]+)_/g, '$1') // Strip markdown italics    // HTML entity for &
-    .replace(/\s+/g, ' ')      // Normalize whitespace
+    .replace(/<[^>]+>/g, '')       // Strip HTML tags
+    .replace(/&#38;/g, '&')        // HTML entity for &
+    .replace(/_([^_]+)_/g, '$1')   // Strip markdown italics
+    .replace(/\*\*([^*]+)\*\*/g, '$1') // Strip markdown bold
+    .replace(/\s+/g, ' ')          // Normalize whitespace
     .trim();
 }
 

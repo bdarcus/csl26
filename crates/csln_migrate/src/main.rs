@@ -124,13 +124,59 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
 
-        // Add editor for chapters: "In Editor (Eds.), Container"
+        // Add editor and parent-monograph (container) for chapters
+        // Pattern: "In K. A. Ericsson... (Eds.), The Cambridge Handbook..."
         let has_editor = new_bib.iter().any(|c| {
             matches!(c, TemplateComponent::Contributor(tc) if tc.contributor == csln_core::template::ContributorRole::Editor)
         });
+        let has_container = new_bib.iter().any(|c| {
+            matches!(c, TemplateComponent::Title(tt) if tt.title == csln_core::template::TitleType::ParentMonograph)
+        });
+
+        // If we don't have ParentMonograph, check if ParentSerial exists
+        // (some styles use container-title for both)
+        let has_serial = new_bib.iter().any(|c| {
+            matches!(c, TemplateComponent::Title(tt) if tt.title == csln_core::template::TitleType::ParentSerial)
+        });
+
+        // Add ParentMonograph if missing - for chapters, container-title is the book title
+        if !has_container {
+            // Find position after primary title
+            let title_pos = new_bib.iter().position(|c| {
+                matches!(c, TemplateComponent::Title(tt) if tt.title == csln_core::template::TitleType::Primary)
+            });
+            if let Some(pos) = title_pos {
+                // Insert after primary title, or after ParentSerial if it exists
+                let insert_pos = if has_serial {
+                    new_bib
+                        .iter()
+                        .position(|c| {
+                            matches!(c, TemplateComponent::Title(tt) if tt.title == csln_core::template::TitleType::ParentSerial)
+                        })
+                        .map(|p| p + 1)
+                        .unwrap_or(pos + 1)
+                } else {
+                    pos + 1
+                };
+                new_bib.insert(
+                    insert_pos,
+                    TemplateComponent::Title(csln_core::template::TemplateTitle {
+                        title: csln_core::template::TitleType::ParentMonograph,
+                        form: None,
+                        rendering: csln_core::template::Rendering {
+                            emph: Some(true), // Book titles are typically italic
+                            ..Default::default()
+                        },
+                        overrides: None,
+                        ..Default::default()
+                    }),
+                );
+            }
+        }
+
+        // Now add editor before ParentMonograph if missing
         if !has_editor {
-            // Insert editor before parent-monograph title
-            // Use given-first name order for "In Editor (Eds.)," context per APA
+            // Find the container position (now guaranteed to exist)
             let container_pos = new_bib.iter().position(|c| {
                 matches!(c, TemplateComponent::Title(tt) if tt.title == csln_core::template::TitleType::ParentMonograph)
             });
@@ -140,7 +186,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     TemplateComponent::Contributor(csln_core::template::TemplateContributor {
                         contributor: csln_core::template::ContributorRole::Editor,
                         form: csln_core::template::ContributorForm::Verb,
-                        name_order: Some(csln_core::template::NameOrder::GivenFirst), // APA: "K. A. Ericsson", not "Ericsson, K. A."
+                        name_order: Some(csln_core::template::NameOrder::GivenFirst), // "K. A. Ericsson", not "Ericsson, K. A."
                         delimiter: None,
                         rendering: csln_core::template::Rendering {
                             prefix: Some("In ".to_string()),
@@ -217,31 +263,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     );
                     t.overrides = Some(overrides);
                 }
-                // Pages: different formatting per type
-                TemplateComponent::Number(n)
-                    if n.number == csln_core::template::NumberVariable::Pages =>
-                {
-                    let mut overrides = std::collections::HashMap::new();
-                    // Chapters need "(pp. pages)"
-                    overrides.insert(
-                        "chapter".to_string(),
-                        csln_core::template::Rendering {
-                            prefix: Some("pp. ".to_string()),
-                            wrap: Some(csln_core::template::WrapPunctuation::Parentheses),
-                            ..Default::default()
-                        },
-                    );
-                    // Journals: comma prefix to connect with volume
-                    overrides.insert(
-                        "article-journal".to_string(),
-                        csln_core::template::Rendering {
-                            prefix: Some(", ".to_string()),
-                            ..Default::default()
-                        },
-                    );
-                    n.overrides = Some(overrides);
-                }
                 // Publisher: suppress for journal articles
+                // This is a common pattern - journals don't show publisher
                 TemplateComponent::Variable(v)
                     if v.variable == csln_core::template::SimpleVariable::Publisher =>
                 {
@@ -255,6 +278,23 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     );
                     v.overrides = Some(overrides);
                 }
+                // Publisher-place: also suppress for journal articles
+                TemplateComponent::Variable(v)
+                    if v.variable == csln_core::template::SimpleVariable::PublisherPlace =>
+                {
+                    let mut overrides = std::collections::HashMap::new();
+                    overrides.insert(
+                        "article-journal".to_string(),
+                        csln_core::template::Rendering {
+                            suppress: Some(true),
+                            ..Default::default()
+                        },
+                    );
+                    v.overrides = Some(overrides);
+                }
+                // Note: Page formatting varies by style. We don't apply these
+                // as universal defaults - need to extract from each CSL style.
+                // TODO: Extract page formatting from CSL choose blocks.
                 _ => {}
             }
         }
