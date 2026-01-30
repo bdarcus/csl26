@@ -10,9 +10,10 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 
 use csln_core::{
     template::{
-        ContributorForm, ContributorRole, DateForm, DateVariable, NumberVariable, Rendering,
-        SimpleVariable, TemplateComponent, TemplateContributor, TemplateDate, TemplateNumber,
-        TemplateTitle, TemplateVariable, TitleType,
+        ContributorForm, ContributorRole, DateForm, DateVariable, DelimiterPunctuation,
+        NumberVariable, Rendering, SimpleVariable, TemplateComponent, TemplateContributor,
+        TemplateDate, TemplateList, TemplateNumber, TemplateTitle, TemplateVariable, TitleType,
+        WrapPunctuation,
     },
     CslnNode, FormattingOptions, ItemType, Variable,
 };
@@ -26,12 +27,12 @@ impl TemplateCompiler {
     ///
     /// Recursively processes Groups and Conditions to extract all components.
     /// In the future, Condition logic should be handled by Options/overrides.
+    /// Compile a list of CslnNodes into TemplateComponents.
     pub fn compile(&self, nodes: &[CslnNode]) -> Vec<TemplateComponent> {
-        // Use compile_with_wrap with no initial wrap
+        // Use compile_with_wrap with no initial wrap and no current types
         let no_wrap = (None, None, None);
-        self.compile_with_wrap(nodes, &no_wrap)
+        self.compile_with_wrap(nodes, &no_wrap, &[])
     }
-
     /// Compile and sort for citation output (author first, then date).
     /// Uses simplified compile that skips else branches to avoid extra fields.
     pub fn compile_citation(&self, nodes: &[CslnNode]) -> Vec<TemplateComponent> {
@@ -40,19 +41,6 @@ impl TemplateCompiler {
         components
     }
 
-    /// Compile with inherited wrap formatting.
-    ///
-    /// When a group has wrap formatting (e.g., parentheses), this is passed down
-    /// to descendant date components. This handles CSL patterns like:
-    /// ```xml
-    /// <group prefix="(" suffix=")">
-    ///   <choose>
-    ///     <if variable="issued">
-    ///       <text macro="date-issued-year"/>  <!-- Date is nested inside -->
-    ///     </if>
-    ///   </choose>
-    /// </group>
-    /// ```
     fn compile_with_wrap(
         &self,
         nodes: &[CslnNode],
@@ -61,6 +49,7 @@ impl TemplateCompiler {
             Option<String>,
             Option<String>,
         ),
+        current_types: &[ItemType],
     ) -> Vec<TemplateComponent> {
         let mut components = Vec::new();
 
@@ -71,7 +60,7 @@ impl TemplateCompiler {
                     self.apply_wrap_to_component(&mut component, inherited_wrap);
                 }
                 // Add or replace with better-formatted version
-                self.add_or_upgrade_component(&mut components, component);
+                self.add_or_upgrade_component(&mut components, component, current_types);
             } else {
                 match node {
                     CslnNode::Group(g) => {
@@ -82,36 +71,62 @@ impl TemplateCompiler {
                         );
                         // Use group's wrap if it has one, otherwise inherit from parent
                         let effective_wrap = if group_wrap.0.is_some() {
-                            group_wrap
+                            group_wrap.clone()
                         } else {
                             inherited_wrap.clone()
                         };
-                        let group_components = self.compile_with_wrap(&g.children, &effective_wrap);
-                        for gc in group_components {
-                            self.add_or_upgrade_component(&mut components, gc);
+                        let group_components =
+                            self.compile_with_wrap(&g.children, &effective_wrap, current_types);
+
+                        // Decide whether to emit a TemplateList or flatten
+                        let should_be_list = g.delimiter.is_some()
+                            || (group_wrap.0.is_some() && group_components.len() > 1);
+
+                        if should_be_list && !group_components.is_empty() {
+                            let list = TemplateComponent::List(TemplateList {
+                                items: group_components,
+                                delimiter: self.map_delimiter(&g.delimiter),
+                                rendering: self.convert_formatting(&g.formatting),
+                                ..Default::default()
+                            });
+                            self.add_or_upgrade_component(&mut components, list, current_types);
+                        } else {
+                            for gc in group_components {
+                                self.add_or_upgrade_component(&mut components, gc, current_types);
+                            }
                         }
                     }
                     CslnNode::Condition(c) => {
+                        // Concatenate current types with if_item_type
+                        let mut then_types = current_types.to_vec();
+                        then_types.extend(c.if_item_type.clone());
+
                         // Pass wrap through conditions
                         let then_components =
-                            self.compile_with_wrap(&c.then_branch, inherited_wrap);
+                            self.compile_with_wrap(&c.then_branch, inherited_wrap, &then_types);
                         for tc in then_components {
-                            self.add_or_upgrade_component(&mut components, tc);
+                            self.add_or_upgrade_component(&mut components, tc, &then_types);
                         }
 
                         for else_if in &c.else_if_branches {
-                            let branch_components =
-                                self.compile_with_wrap(&else_if.children, inherited_wrap);
+                            let mut else_if_types = current_types.to_vec();
+                            else_if_types.extend(else_if.if_item_type.clone());
+
+                            let branch_components = self.compile_with_wrap(
+                                &else_if.children,
+                                inherited_wrap,
+                                &else_if_types,
+                            );
                             for bc in branch_components {
-                                self.add_or_upgrade_component(&mut components, bc);
+                                self.add_or_upgrade_component(&mut components, bc, &else_if_types);
                             }
                         }
 
                         if let Some(ref else_nodes) = c.else_branch {
                             let else_components =
-                                self.compile_with_wrap(else_nodes, inherited_wrap);
+                                self.compile_with_wrap(else_nodes, inherited_wrap, current_types);
                             for ec in else_components {
-                                self.add_or_upgrade_component(&mut components, ec);
+                                self.add_or_upgrade_component(&mut components, ec, current_types);
                             }
                         }
                     }
@@ -124,30 +139,35 @@ impl TemplateCompiler {
     }
 
     /// Add a component to the list, or upgrade an existing one if the new one has better formatting.
-    ///
-    /// For dates, if we have Date(issued) without wrap and find one with wrap,
-    /// replace the old one with the new one. This handles CSL styles where the
-    /// date appears in multiple branches, only some of which have parentheses.
     fn add_or_upgrade_component(
         &self,
         components: &mut Vec<TemplateComponent>,
         new_component: TemplateComponent,
+        current_types: &[ItemType],
     ) {
         // Check if we already have this component
         if let Some(idx) = components
             .iter()
             .position(|c| self.same_variable(c, &new_component))
         {
-            // For dates, upgrade if the new one has wrap and the old one doesn't
-            if let (TemplateComponent::Date(existing), TemplateComponent::Date(new)) =
-                (&components[idx], &new_component)
-            {
-                if existing.rendering.wrap.is_none() && new.rendering.wrap.is_some() {
-                    // Upgrade: replace with the wrapped version
-                    components[idx] = new_component;
+            if current_types.is_empty() {
+                // For dates, upgrade if the new one has wrap and the old one doesn't
+                if let (TemplateComponent::Date(existing), TemplateComponent::Date(new)) =
+                    (&components[idx], &new_component)
+                {
+                    if existing.rendering.wrap.is_none() && new.rendering.wrap.is_some() {
+                        // Upgrade: replace with the wrapped version
+                        components[idx] = new_component;
+                    }
+                }
+            } else {
+                // Found a variable in a type-specific branch. Add to overrides.
+                let rendering = self.get_component_rendering(&new_component);
+                for item_type in current_types {
+                    let type_str = self.item_type_to_string(item_type);
+                    self.add_override_to_component(&mut components[idx], type_str, rendering.clone());
                 }
             }
-            // For other types, keep the existing one (first wins)
         } else {
             components.push(new_component);
         }
@@ -808,6 +828,83 @@ impl TemplateCompiler {
                 }
             }
             _ => {} // List and future variants - don't modify
+        }
+    }
+    /// Map a String delimiter to DelimiterPunctuation.
+    fn map_delimiter(&self, delimiter: &Option<String>) -> Option<DelimiterPunctuation> {
+        let d = delimiter.as_ref()?;
+        match d.as_str() {
+            ", " | "," => Some(DelimiterPunctuation::Comma),
+            "; " | ";" => Some(DelimiterPunctuation::Semicolon),
+            ". " | "." => Some(DelimiterPunctuation::Period),
+            ": " | ":" => Some(DelimiterPunctuation::Colon),
+            " & " | "&" => Some(DelimiterPunctuation::Ampersand),
+            " | " | "|" => Some(DelimiterPunctuation::VerticalLine),
+            " / " | "/" => Some(DelimiterPunctuation::Slash),
+            " - " | "-" => Some(DelimiterPunctuation::Hyphen),
+            " " => Some(DelimiterPunctuation::Space),
+            "" => Some(DelimiterPunctuation::None),
+            _ => None,
+        }
+    }
+
+    /// Get the rendering options from a component.
+    fn get_component_rendering(&self, component: &TemplateComponent) -> Rendering {
+        match component {
+            TemplateComponent::Contributor(c) => c.rendering.clone(),
+            TemplateComponent::Date(d) => d.rendering.clone(),
+            TemplateComponent::Number(n) => n.rendering.clone(),
+            TemplateComponent::Title(t) => t.rendering.clone(),
+            TemplateComponent::Variable(v) => v.rendering.clone(),
+            TemplateComponent::List(l) => l.rendering.clone(),
+            _ => Rendering::default(),
+        }
+    }
+
+    /// Add a type-specific override to a component.
+    fn add_override_to_component(
+        &self,
+        component: &mut TemplateComponent,
+        type_str: String,
+        rendering: Rendering,
+    ) {
+        // Skip if override is basically empty/default
+        if rendering == Rendering::default() {
+            return;
+        }
+
+        match component {
+            TemplateComponent::Contributor(c) => {
+                c.overrides
+                    .get_or_insert_with(HashMap::new)
+                    .insert(type_str, rendering);
+            }
+            TemplateComponent::Date(d) => {
+                d.overrides
+                    .get_or_insert_with(HashMap::new)
+                    .insert(type_str, rendering);
+            }
+            TemplateComponent::Number(n) => {
+                n.overrides
+                    .get_or_insert_with(HashMap::new)
+                    .insert(type_str, rendering);
+            }
+            TemplateComponent::Title(t) => {
+                t.overrides
+                    .get_or_insert_with(HashMap::new)
+                    .insert(type_str, rendering);
+            }
+            TemplateComponent::Variable(v) => {
+                v.overrides
+                    .get_or_insert_with(HashMap::new)
+                    .insert(type_str, rendering);
+            }
+            TemplateComponent::List(l) => {
+                l.overrides
+                    .get_or_insert_with(HashMap::new)
+                    .insert(type_str, rendering);
+            }
+            _ => {} // Future variants
         }
     }
 }

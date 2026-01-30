@@ -76,6 +76,20 @@ pub struct Rendering {
     pub suppress: Option<bool>,
 }
 
+impl Rendering {
+    /// Merge another rendering into this one, with the other taking precedence.
+    pub fn merge(&mut self, other: &Rendering) {
+        if other.emph.is_some() { self.emph = other.emph; }
+        if other.quote.is_some() { self.quote = other.quote; }
+        if other.strong.is_some() { self.strong = other.strong; }
+        if other.small_caps.is_some() { self.small_caps = other.small_caps; }
+        if other.prefix.is_some() { self.prefix = other.prefix.clone(); }
+        if other.suffix.is_some() { self.suffix = other.suffix.clone(); }
+        if other.wrap.is_some() { self.wrap = other.wrap.clone(); }
+        if other.suppress.is_some() { self.suppress = other.suppress; }
+    }
+}
+
 /// Punctuation to wrap a component in.
 #[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
@@ -101,6 +115,12 @@ pub enum TemplateComponent {
     List(TemplateList),
 }
 
+impl Default for TemplateComponent {
+    fn default() -> Self {
+        TemplateComponent::Variable(TemplateVariable::default())
+    }
+}
+
 impl TemplateComponent {
     /// Get the rendering options for this component.
     pub fn rendering(&self) -> &Rendering {
@@ -111,6 +131,18 @@ impl TemplateComponent {
             TemplateComponent::Number(n) => &n.rendering,
             TemplateComponent::Variable(v) => &v.rendering,
             TemplateComponent::List(l) => &l.rendering,
+        }
+    }
+
+    /// Get the type-specific rendering overrides for this component.
+    pub fn overrides(&self) -> Option<&HashMap<String, Rendering>> {
+        match self {
+            TemplateComponent::Contributor(c) => c.overrides.as_ref(),
+            TemplateComponent::Date(d) => d.overrides.as_ref(),
+            TemplateComponent::Title(t) => t.overrides.as_ref(),
+            TemplateComponent::Number(n) => n.overrides.as_ref(),
+            TemplateComponent::Variable(v) => v.overrides.as_ref(),
+            TemplateComponent::List(l) => l.overrides.as_ref(),
         }
     }
 }
@@ -189,6 +221,30 @@ pub enum ContributorRole {
     Illustrator,
     OriginalAuthor,
     ReviewedAuthor,
+}
+
+impl ContributorRole {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            ContributorRole::Author => "author",
+            ContributorRole::Editor => "editor",
+            ContributorRole::Translator => "translator",
+            ContributorRole::Director => "director",
+            ContributorRole::Publisher => "publisher",
+            ContributorRole::Recipient => "recipient",
+            ContributorRole::Interviewer => "interviewer",
+            ContributorRole::Interviewee => "interviewee",
+            ContributorRole::Inventor => "inventor",
+            ContributorRole::Counsel => "counsel",
+            ContributorRole::Composer => "composer",
+            ContributorRole::CollectionEditor => "collection-editor",
+            ContributorRole::ContainerAuthor => "container-author",
+            ContributorRole::EditorialDirector => "editorial-director",
+            ContributorRole::Illustrator => "illustrator",
+            ContributorRole::OriginalAuthor => "original-author",
+            ContributorRole::ReviewedAuthor => "reviewed-author",
+        }
+    }
 }
 
 /// A date component for rendering dates.

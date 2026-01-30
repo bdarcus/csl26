@@ -74,6 +74,15 @@ pub struct TitlesConfig {
     /// Formatting for monograph titles (books).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub monograph: Option<TitleRendering>,
+    /// Formatting for monograph containers (book containing chapters).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub container_monograph: Option<TitleRendering>,
+    /// Formatting for periodical titles (journals, magazines).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub periodical: Option<TitleRendering>,
+    /// Formatting for serial titles (series).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub serial: Option<TitleRendering>,
     /// Default formatting for all titles.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub default: Option<TitleRendering>,
@@ -92,6 +101,26 @@ pub struct TitleRendering {
     pub quote: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub strong: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub small_caps: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub prefix: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub suffix: Option<String>,
+}
+
+impl TitleRendering {
+    pub fn to_rendering(&self) -> crate::template::Rendering {
+        crate::template::Rendering {
+            emph: self.emph,
+            quote: self.quote,
+            strong: self.strong,
+            small_caps: self.small_caps,
+            prefix: self.prefix.clone(),
+            suffix: self.suffix.clone(),
+            ..Default::default()
+        }
+    }
 }
 
 /// Processing mode for citation/bibliography generation.
@@ -289,14 +318,55 @@ pub enum AndOptions {
 }
 
 /// Role display options.
-#[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq, JsonSchema)]
+#[derive(Debug, Default, PartialEq, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct RoleOptions {
     /// Contributor roles for which to omit the role description.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub omit: Vec<String>,
+    /// Global role label form.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub form: Option<String>,
+    /// Global prefix for role labels.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub prefix: Option<String>,
+    /// Global suffix for role labels.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub suffix: Option<String>,
+    /// Formatting for specific roles.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub roles: Option<HashMap<String, RoleRendering>>,
+}
+
+/// Rendering options for contributor roles.
+#[derive(Debug, Default, PartialEq, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct RoleRendering {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub prefix: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub suffix: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub emph: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub strong: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub small_caps: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name_order: Option<crate::template::NameOrder>,
+}
+
+impl RoleRendering {
+    pub fn to_rendering(&self) -> crate::template::Rendering {
+        crate::template::Rendering {
+            emph: self.emph,
+            strong: self.strong,
+            small_caps: self.small_caps,
+            prefix: self.prefix.clone(),
+            suffix: self.suffix.clone(),
+            ..Default::default()
+        }
+    }
 }
 
 /// When to use delimiter before last contributor.
