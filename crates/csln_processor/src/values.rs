@@ -944,6 +944,7 @@ mod tests {
             delimiter: None,
             and: None,
             rendering: Default::default(),
+            overrides: None,
             _extra: Default::default(),
         };
 
@@ -967,6 +968,7 @@ mod tests {
             date: TemplateDateVar::Issued,
             form: DateForm::Year,
             rendering: Default::default(),
+            overrides: None,
             _extra: Default::default(),
         };
 
@@ -1003,6 +1005,7 @@ mod tests {
             delimiter: None,
             and: None,
             rendering: Default::default(),
+            overrides: None,
             _extra: Default::default(),
         };
 
@@ -1115,6 +1118,7 @@ mod tests {
             delimiter: None,
             and: None,
             rendering: Default::default(),
+            overrides: None,
             _extra: Default::default(),
         };
 
@@ -1159,6 +1163,7 @@ mod tests {
             delimiter: None,
             and: None,
             rendering: Default::default(),
+            overrides: None,
             _extra: Default::default(),
         };
 

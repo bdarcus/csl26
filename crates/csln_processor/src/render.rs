@@ -204,6 +204,8 @@ fn get_effective_rendering(component: &ProcTemplateComponent, base: &Rendering) 
 
     // Check for overrides based on component type
     let overrides = match &component.template_component {
+        TemplateComponent::Contributor(c) => c.overrides.as_ref(),
+        TemplateComponent::Date(d) => d.overrides.as_ref(),
         TemplateComponent::Number(n) => n.overrides.as_ref(),
         TemplateComponent::Variable(v) => v.overrides.as_ref(),
         TemplateComponent::Title(t) => t.overrides.as_ref(),
