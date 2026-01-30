@@ -262,6 +262,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             new_bib.remove(min_idx);
 
             // Create volume(issue) list
+            // Volume-issue spacing varies by style:
+            // - APA (comma delimiter): no space, e.g., "2(2)"
+            // - Chicago (colon delimiter): space, e.g., "2 (2)"
+            let vol_issue_delimiter = if options
+                .volume_pages_delimiter
+                .as_ref()
+                .is_some_and(|d| d.contains(','))
+            {
+                csln_core::template::DelimiterPunctuation::None
+            } else {
+                csln_core::template::DelimiterPunctuation::Space
+            };
             let vol_issue_list = TemplateComponent::List(csln_core::template::TemplateList {
                 items: vec![
                     TemplateComponent::Number(csln_core::template::TemplateNumber {
@@ -282,7 +294,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         ..Default::default()
                     }),
                 ],
-                delimiter: Some(csln_core::template::DelimiterPunctuation::None),
+                delimiter: Some(vol_issue_delimiter),
                 rendering: csln_core::template::Rendering::default(),
                 overrides: None,
                 ..Default::default()
@@ -292,8 +304,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
 
         // Add type-specific overrides (recursively to handle nested Lists)
+        // Pass the extracted volume-pages delimiter for journal article pages
+        let vol_pages_delim = options.volume_pages_delimiter.clone();
         for component in &mut new_bib {
-            apply_type_overrides(component);
+            apply_type_overrides(component, vol_pages_delim.as_deref());
         }
     }
 
@@ -472,15 +486,24 @@ fn extract_citation_delimiter(layout: &csl_legacy::model::Layout) -> Option<Stri
 }
 
 /// Recursively apply type-specific overrides to components, including nested Lists.
-fn apply_type_overrides(component: &mut TemplateComponent) {
+/// The `volume_pages_delimiter` is extracted from the CSL style's group structure.
+fn apply_type_overrides(component: &mut TemplateComponent, volume_pages_delimiter: Option<&str>) {
     match component {
-        // Container-title (parent-serial): journals use comma suffix
+        // Container-title (parent-serial): use suffix based on extracted delimiter
         TemplateComponent::Title(t) if t.title == csln_core::template::TitleType::ParentSerial => {
             let mut overrides = std::collections::HashMap::new();
+            // Determine suffix based on volume-pages delimiter:
+            // - Comma delimiter (APA): use comma suffix
+            // - Colon/other delimiter (Chicago): use space suffix to prevent period separator
+            let suffix = if volume_pages_delimiter.is_some_and(|d| d.contains(',')) {
+                ","
+            } else {
+                " " // Space prevents default period separator
+            };
             overrides.insert(
                 "article-journal".to_string(),
                 csln_core::template::Rendering {
-                    suffix: Some(",".to_string()),
+                    suffix: Some(suffix.to_string()),
                     ..Default::default()
                 },
             );
@@ -516,13 +539,15 @@ fn apply_type_overrides(component: &mut TemplateComponent) {
             overrides.insert("thesis".to_string(), suppress_rendering.clone());
             v.overrides = Some(overrides);
         }
-        // Pages: journal articles use comma prefix, chapters use (pp. X-Y)
+        // Pages: use extracted delimiter for journal articles, (pp. X-Y) for chapters
         TemplateComponent::Number(n) if n.number == csln_core::template::NumberVariable::Pages => {
             let mut overrides = std::collections::HashMap::new();
+            // Use extracted delimiter or default to comma
+            let delim = volume_pages_delimiter.unwrap_or(", ");
             overrides.insert(
                 "article-journal".to_string(),
                 csln_core::template::Rendering {
-                    prefix: Some(", ".to_string()),
+                    prefix: Some(delim.to_string()),
                     ..Default::default()
                 },
             );
@@ -539,7 +564,7 @@ fn apply_type_overrides(component: &mut TemplateComponent) {
         // Recursively process Lists
         TemplateComponent::List(list) => {
             for item in &mut list.items {
-                apply_type_overrides(item);
+                apply_type_overrides(item, volume_pages_delimiter);
             }
         }
         _ => {}
