@@ -136,6 +136,9 @@ pub struct TemplateContributor {
     pub and: Option<crate::options::AndOptions>,
     #[serde(flatten, default)]
     pub rendering: Rendering,
+    /// Type-specific rendering overrides.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub overrides: Option<HashMap<String, Rendering>>,
     /// Unknown fields captured for forward compatibility.
     #[serde(flatten)]
     pub _extra: HashMap<String, serde_json::Value>,
@@ -196,6 +199,9 @@ pub struct TemplateDate {
     pub form: DateForm,
     #[serde(flatten, default)]
     pub rendering: Rendering,
+    /// Type-specific rendering overrides.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub overrides: Option<HashMap<String, Rendering>>,
     /// Unknown fields captured for forward compatibility.
     #[serde(flatten)]
     pub _extra: HashMap<String, serde_json::Value>,
