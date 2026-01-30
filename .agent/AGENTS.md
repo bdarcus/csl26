@@ -120,10 +120,16 @@ Code should be self-documenting with clear comments explaining:
 
 ## Current Status
 
-- **APA 7th**: 5/5 citations ✅, 5/5 bibliography ✅
-- **Batch (100 styles)**: 69% with 5/5 citation match
+- **APA 7th**: 5/5 citations, 3/5 bibliography (page formatting issues)
+- **Academy of Management Review**: 5/5 citations
+- **Batch (100 styles)**: 24 styles have 5/5 citation match
 - **Locale**: en-US with terms, months, contributor roles
 - **Key Features**: Variable-once rule, type-specific overrides, name_order control, initials formatting
+
+### Known Gaps
+- Group delimiter extraction (colon vs period between components)
+- Page label extraction ("pp." from CSL Label nodes)
+- Volume-pages delimiter varies by style
 
 ## Feature Priority (Based on Corpus Analysis)
 
@@ -267,6 +273,7 @@ All changes must be made on feature branches. The user will handle merging via G
    - **50/72 Rule**: Limit the subject line to 50 characters and wrap the body at 72 characters.
    - **Explain What and Why**: The body should explain the rationale behind the change.
    - **Issue References**: Include GitHub issue references where relevant (e.g., `Refs: #123` or `csln#64`).
+   - **No Co-Authored-By**: Do NOT include `Co-Authored-By` footers in AI-authored commit messages.
 
    Example:
    ```bash
@@ -297,6 +304,13 @@ Branch naming conventions:
 
 ## Priority Styles
 
-1. **APA 7th** - Complex, widely used ✅ (5/5 match)
+**Important**: Do not over-optimize for any single style. APA is widely used but represents just one pattern among many. Test changes against multiple styles to avoid regressions.
+
+1. **APA 7th** - Widely used, complex requirements
 2. **Chicago Author-Date** - Different patterns (full names, different punctuation)
-3. **All 2,844 styles** - Bulk migration target
+3. **Academy of Management Review** - Author-date with different conventions
+4. **IEEE** - Numeric citation style
+5. **Vancouver** - Numeric style for medicine
+6. **All 2,844 styles** - Bulk migration target
+
+When implementing features, verify they work across style families rather than hard-coding patterns from a single style.
