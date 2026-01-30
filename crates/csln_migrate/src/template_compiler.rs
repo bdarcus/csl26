@@ -150,6 +150,13 @@ impl TemplateCompiler {
             .position(|c| self.same_variable(c, &new_component))
         {
             if current_types.is_empty() {
+                // If we find an unconditional version of a component, ensure it's not suppressed by default
+                let mut rendering = self.get_component_rendering(&components[idx]);
+                if rendering.suppress == Some(true) {
+                    rendering.suppress = None;
+                    self.set_component_rendering(&mut components[idx], rendering);
+                }
+
                 // For dates, upgrade if the new one has wrap and the old one doesn't
                 if let (TemplateComponent::Date(existing), TemplateComponent::Date(new)) =
                     (&components[idx], &new_component)
@@ -172,7 +179,44 @@ impl TemplateCompiler {
                 }
             }
         } else {
-            components.push(new_component);
+            let mut component_to_add = new_component;
+            if !current_types.is_empty() {
+                // If it's a new component from a conditional branch, it should be suppressed by default
+                // and enabled only for the specific types.
+                let mut rendering = self.get_component_rendering(&component_to_add);
+                let original_rendering = rendering.clone();
+
+                // Set default suppression
+                rendering.suppress = Some(true);
+                self.set_component_rendering(&mut component_to_add, rendering);
+
+                // Add overrides to enable it for specific types
+                let mut enabled_rendering = original_rendering;
+                enabled_rendering.suppress = Some(false);
+
+                for item_type in current_types {
+                    let type_str = self.item_type_to_string(item_type);
+                    self.add_override_to_component(
+                        &mut component_to_add,
+                        type_str,
+                        enabled_rendering.clone(),
+                    );
+                }
+            }
+            components.push(component_to_add);
+        }
+    }
+
+    /// Set the rendering options for a component.
+    fn set_component_rendering(&self, component: &mut TemplateComponent, rendering: Rendering) {
+        match component {
+            TemplateComponent::Contributor(c) => c.rendering = rendering,
+            TemplateComponent::Date(d) => d.rendering = rendering,
+            TemplateComponent::Number(n) => n.rendering = rendering,
+            TemplateComponent::Title(t) => t.rendering = rendering,
+            TemplateComponent::Variable(v) => v.rendering = rendering,
+            TemplateComponent::List(l) => l.rendering = rendering,
+            _ => {}
         }
     }
 
@@ -500,6 +544,15 @@ impl TemplateCompiler {
             }
             (TemplateComponent::Variable(v1), TemplateComponent::Variable(v2)) => {
                 v1.variable == v2.variable
+            }
+            (TemplateComponent::List(l1), TemplateComponent::List(l2)) => {
+                // Lists are same if they have same number of items and items match
+                l1.items.len() == l2.items.len()
+                    && l1
+                        .items
+                        .iter()
+                        .zip(l2.items.iter())
+                        .all(|(i1, i2)| self.same_variable(i1, i2))
             }
             _ => false,
         }
