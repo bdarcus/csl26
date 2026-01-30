@@ -13,7 +13,6 @@ use csln_core::{
         ContributorForm, ContributorRole, DateForm, DateVariable, DelimiterPunctuation,
         NumberVariable, Rendering, SimpleVariable, TemplateComponent, TemplateContributor,
         TemplateDate, TemplateList, TemplateNumber, TemplateTitle, TemplateVariable, TitleType,
-        WrapPunctuation,
     },
     CslnNode, FormattingOptions, ItemType, Variable,
 };

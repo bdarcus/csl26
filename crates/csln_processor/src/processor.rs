@@ -1224,7 +1224,7 @@ mod tests {
 
     #[test]
     fn test_apa_titles_config() {
-        use crate::reference::{DateVariable, Name, Reference};
+        use crate::reference::Reference;
         use csln_core::options::{Config, TitleRendering, TitlesConfig};
         use csln_core::template::{Rendering, TemplateTitle, TitleType};
 
