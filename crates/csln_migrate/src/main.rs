@@ -99,7 +99,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             )
         });
 
-        // Bibliography: fix author form (long), date wrap (parentheses), title emph
+        // Bibliography: fix author form (long), title emph
+        // NOTE: Date wrapping (parentheses vs period) is now inferred from the original
+        // CSL style during template compilation, not hard-coded here.
         for component in &mut new_bib {
             match component {
                 TemplateComponent::Contributor(tc)
@@ -111,7 +113,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     if td.date == csln_core::template::DateVariable::Issued =>
                 {
                     td.form = csln_core::template::DateForm::Year;
-                    td.rendering.wrap = Some(csln_core::template::WrapPunctuation::Parentheses);
+                    // Preserve wrap from original style (already extracted during compilation)
                 }
                 TemplateComponent::Title(tt)
                     if tt.title == csln_core::template::TitleType::Primary =>
