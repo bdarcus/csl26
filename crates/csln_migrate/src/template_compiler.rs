@@ -138,8 +138,7 @@ impl TemplateCompiler {
                                 // Try else_if branches first
                                 let mut found = false;
                                 for else_if in &c.else_if_branches {
-                                    let branch_components =
-                                        self.compile_simple(&else_if.children);
+                                    let branch_components = self.compile_simple(&else_if.children);
                                     if !branch_components.is_empty() {
                                         components.extend(branch_components);
                                         found = true;
@@ -181,7 +180,10 @@ impl TemplateCompiler {
     pub fn compile_bibliography_with_types(
         &self,
         nodes: &[CslnNode],
-    ) -> (Vec<TemplateComponent>, HashMap<String, Vec<TemplateComponent>>) {
+    ) -> (
+        Vec<TemplateComponent>,
+        HashMap<String, Vec<TemplateComponent>>,
+    ) {
         // Compile the default template
         let mut default_template = self.compile(nodes);
         self.sort_bibliography_components(&mut default_template);
@@ -195,6 +197,8 @@ impl TemplateCompiler {
     }
 
     /// Collect all ItemTypes that have specific branches in conditions.
+    /// Currently unused - infrastructure for future type_templates generation.
+    #[allow(dead_code)]
     fn collect_types_with_branches(&self, nodes: &[CslnNode]) -> Vec<ItemType> {
         let mut types = Vec::new();
         self.collect_types_recursive(nodes, &mut types);
@@ -203,6 +207,8 @@ impl TemplateCompiler {
         types
     }
 
+    #[allow(dead_code)]
+    #[allow(clippy::only_used_in_recursion)]
     fn collect_types_recursive(&self, nodes: &[CslnNode], types: &mut Vec<ItemType>) {
         for node in nodes {
             match node {
@@ -236,7 +242,13 @@ impl TemplateCompiler {
     ///
     /// When encountering type-based conditions, selects the matching branch
     /// for the given type, or falls back to else branch if no match.
-    fn compile_for_type(&self, nodes: &[CslnNode], target_type: &ItemType) -> Vec<TemplateComponent> {
+    /// Currently unused - infrastructure for future type_templates generation.
+    #[allow(dead_code)]
+    fn compile_for_type(
+        &self,
+        nodes: &[CslnNode],
+        target_type: &ItemType,
+    ) -> Vec<TemplateComponent> {
         let mut components = Vec::new();
 
         for node in nodes {
@@ -250,18 +262,23 @@ impl TemplateCompiler {
                     CslnNode::Condition(c) => {
                         // Check if this is a type-based condition
                         let has_type_condition = !c.if_item_type.is_empty()
-                            || c.else_if_branches.iter().any(|b| !b.if_item_type.is_empty());
+                            || c.else_if_branches
+                                .iter()
+                                .any(|b| !b.if_item_type.is_empty());
 
                         if has_type_condition {
                             // Select the matching branch for target_type
                             if c.if_item_type.contains(target_type) {
-                                components.extend(self.compile_for_type(&c.then_branch, target_type));
+                                components
+                                    .extend(self.compile_for_type(&c.then_branch, target_type));
                             } else {
                                 // Check else-if branches
                                 let mut found = false;
                                 for else_if in &c.else_if_branches {
                                     if else_if.if_item_type.contains(target_type) {
-                                        components.extend(self.compile_for_type(&else_if.children, target_type));
+                                        components.extend(
+                                            self.compile_for_type(&else_if.children, target_type),
+                                        );
                                         found = true;
                                         break;
                                     }
@@ -269,7 +286,8 @@ impl TemplateCompiler {
                                 if !found {
                                     // Fall back to else branch
                                     if let Some(ref else_nodes) = c.else_branch {
-                                        components.extend(self.compile_for_type(else_nodes, target_type));
+                                        components
+                                            .extend(self.compile_for_type(else_nodes, target_type));
                                     }
                                 }
                             }
@@ -277,7 +295,8 @@ impl TemplateCompiler {
                             // Not a type condition, use default compile behavior
                             components.extend(self.compile_for_type(&c.then_branch, target_type));
                             if let Some(ref else_nodes) = c.else_branch {
-                                let else_components = self.compile_for_type(else_nodes, target_type);
+                                let else_components =
+                                    self.compile_for_type(else_nodes, target_type);
                                 for ec in else_components {
                                     if !components.iter().any(|c| self.same_variable(c, &ec)) {
                                         components.push(ec);
@@ -295,6 +314,7 @@ impl TemplateCompiler {
     }
 
     /// Convert ItemType to its string representation.
+    #[allow(dead_code)]
     fn item_type_to_string(&self, item_type: &ItemType) -> String {
         match item_type {
             ItemType::Article => "article".to_string(),

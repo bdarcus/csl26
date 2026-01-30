@@ -39,7 +39,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // 4. Template Compilation
     let template_compiler = TemplateCompiler;
-    let (mut new_bib, type_templates) = template_compiler.compile_bibliography_with_types(&csln_bib);
+    let (mut new_bib, type_templates) =
+        template_compiler.compile_bibliography_with_types(&csln_bib);
     let mut new_cit = template_compiler.compile_citation(&csln_cit);
 
     // For author-date styles, apply standard formatting
@@ -296,7 +297,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     for component in &new_bib {
                         match component {
                             TemplateComponent::Contributor(c)
-                                if c.contributor == csln_core::template::ContributorRole::Author =>
+                                if c.contributor
+                                    == csln_core::template::ContributorRole::Author =>
                             {
                                 chapter_template.push(component.clone());
                             }
