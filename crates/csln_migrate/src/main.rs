@@ -43,11 +43,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         template_compiler.compile_bibliography_with_types(&csln_bib);
     let mut new_cit = template_compiler.compile_citation(&csln_cit);
 
-    // For author-date styles, apply standard formatting
-    if matches!(
+    // For author-date styles with in-text class, apply standard formatting.
+    // Note styles (class="note") should NOT have these transformations applied.
+    let is_in_text_class = legacy_style.class == "in-text";
+    let is_author_date_processing = matches!(
         options.processing,
         Some(csln_core::options::Processing::AuthorDate)
-    ) {
+    ) || matches!(
+        options.processing,
+        Some(csln_core::options::Processing::Custom(ref c)) if c.disambiguate.as_ref().is_some_and(|d| d.year_suffix)
+    );
+
+    if is_in_text_class && is_author_date_processing {
         // Citation: ensure author (short) + date (year)
         let has_author = new_cit.iter().any(|c| {
             matches!(c, TemplateComponent::Contributor(tc) if tc.contributor == csln_core::template::ContributorRole::Author)
@@ -320,48 +327,61 @@ fn infer_citation_wrapping(
     }
 }
 
-/// Extract the intra-citation delimiter from the first group in the layout.
-/// In CSL, the author-year separator is often in `<group delimiter=" ">` or `<group delimiter=", ">`.
-/// We look for the innermost group containing text elements (author/date), not outer wrapper groups.
+/// Extract the intra-citation delimiter from the layout.
+///
+/// CSL styles encode the author-year separator in two ways:
+///
+/// 1. Group delimiter (most common):
+///    <group delimiter=", ">
+///      <text macro="author-short"/>
+///      <text macro="year-date"/>
+///    </group>
+///
+/// 2. Prefix on date element:
+///    <text macro="author-short"/>
+///    <text macro="year-date" prefix=" "/>
+///
+/// We prefer the innermost group delimiter, but fall back to date prefix.
 fn extract_citation_delimiter(layout: &csl_legacy::model::Layout) -> Option<String> {
     use csl_legacy::model::CslNode;
 
-    /// Find the outermost group that directly contains text/names elements.
-    /// This captures the author-year delimiter, not inner group delimiters (like locator).
-    fn find_text_group_delimiter(nodes: &[CslNode]) -> Option<String> {
+    /// Find the innermost group that directly contains text/names elements.
+    /// Uses depth-first search: prefer children's delimiters over current group's.
+    fn find_innermost_text_group_delimiter(nodes: &[CslNode]) -> Option<String> {
         for node in nodes {
             match node {
                 CslNode::Group(group) => {
-                    // Check if this group directly contains text/names children (author, date macros)
+                    // FIRST: recurse into children to find deeper groups
+                    // This ensures we prefer innermost groups over outer wrappers
+                    if let Some(d) = find_innermost_text_group_delimiter(&group.children) {
+                        return Some(d);
+                    }
+
+                    // THEN: if no children have a delimiter, check this group
+                    // Only return this group's delimiter if it directly contains text/names
                     let has_text_or_names = group
                         .children
                         .iter()
                         .any(|c| matches!(c, CslNode::Text(_) | CslNode::Names(_)));
 
-                    // If this group has text/names AND a delimiter, prefer it
-                    // This captures the main author-date group delimiter
                     if has_text_or_names && group.delimiter.is_some() {
                         return group.delimiter.clone();
-                    }
-
-                    // Otherwise recurse into children to find a suitable group
-                    if let Some(d) = find_text_group_delimiter(&group.children) {
-                        return Some(d);
                     }
                 }
                 CslNode::Choose(choose) => {
                     // Search inside choose if-branch first (most common case for author-date)
-                    if let Some(d) = find_text_group_delimiter(&choose.if_branch.children) {
+                    if let Some(d) = find_innermost_text_group_delimiter(&choose.if_branch.children)
+                    {
                         return Some(d);
                     }
                     // Also check else-if and else branches
                     for else_if in &choose.else_if_branches {
-                        if let Some(d) = find_text_group_delimiter(&else_if.children) {
+                        if let Some(d) = find_innermost_text_group_delimiter(&else_if.children) {
                             return Some(d);
                         }
                     }
                     if let Some(ref else_children) = choose.else_branch {
-                        if let Some(d) = find_text_group_delimiter(else_children) {
+                        if let Some(d) = find_innermost_text_group_delimiter(else_children) {
                             return Some(d);
                         }
                     }
@@ -372,5 +392,42 @@ fn extract_citation_delimiter(layout: &csl_legacy::model::Layout) -> Option<Stri
         None
     }
 
-    find_text_group_delimiter(&layout.children)
+    /// Find prefix on date-related text elements (fallback when no group delimiter).
+    /// Looks for macros named "date", "year", "year-date", "issued", etc.
+    fn find_date_prefix(nodes: &[CslNode]) -> Option<String> {
+        for node in nodes {
+            match node {
+                CslNode::Text(t) => {
+                    if let Some(macro_name) = &t.macro_name {
+                        let m = macro_name.to_lowercase();
+                        if m.contains("date") || m.contains("year") || m.contains("issued") {
+                            if let Some(prefix) = &t.prefix {
+                                return Some(prefix.clone());
+                            }
+                        }
+                    }
+                }
+                CslNode::Group(g) => {
+                    if let Some(p) = find_date_prefix(&g.children) {
+                        return Some(p);
+                    }
+                }
+                _ => {}
+            }
+        }
+        None
+    }
+
+    // First try to find a group delimiter
+    if let Some(delim) = find_innermost_text_group_delimiter(&layout.children) {
+        return Some(delim);
+    }
+
+    // Fall back to prefix on date element
+    if let Some(prefix) = find_date_prefix(&layout.children) {
+        return Some(prefix);
+    }
+
+    // No delimiter found - return None (processor will use default)
+    None
 }

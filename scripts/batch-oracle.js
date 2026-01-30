@@ -154,11 +154,11 @@ function renderWithCslnProcessor(stylePath) {
       { cwd: projectRoot, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }
     );
   } catch (e) {
-    fs.unlinkSync(tempFile);
+    fs.rmSync(tempFile, { force: true });
     return { error: 'processor', message: (e.stderr || e.message).slice(0, 200) };
   }
-  
-  fs.unlinkSync(tempFile);
+
+  fs.rmSync(tempFile, { force: true });
   
   const lines = output.split('\n');
   const citations = {};
