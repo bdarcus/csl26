@@ -48,8 +48,160 @@ impl OptionsExtractor {
             // 8. Punctuation-in-quote from locale (en-US has true by default)
             punctuation_in_quote: Self::extract_punctuation_in_quote(style),
 
+            // 9. Volume-pages delimiter from serial source groups
+            volume_pages_delimiter: Self::extract_volume_pages_delimiter(style),
+
             ..Config::default()
         }
+    }
+
+    /// Extract the delimiter between volume/issue and pages from serial source macros.
+    /// This looks for groups that contain both volume and page variables.
+    fn extract_volume_pages_delimiter(style: &Style) -> Option<String> {
+        let bib_macros = Self::collect_bibliography_macros(style);
+
+        for macro_def in &style.macros {
+            if bib_macros.contains(&macro_def.name) {
+                if let Some(delimiter) =
+                    Self::find_volume_pages_delimiter_in_nodes(&macro_def.children)
+                {
+                    // Normalize: ensure punctuation delimiters have trailing space
+                    // CSL typically uses ": " not ":" alone
+                    let normalized = if delimiter == ":" || delimiter == ";" {
+                        format!("{} ", delimiter)
+                    } else {
+                        delimiter
+                    };
+                    return Some(normalized);
+                }
+            }
+        }
+        None
+    }
+
+    /// Recursively search for a group containing both volume and page,
+    /// and extract its delimiter. Prefers innermost matching groups.
+    fn find_volume_pages_delimiter_in_nodes(nodes: &[CslNode]) -> Option<String> {
+        for node in nodes {
+            match node {
+                CslNode::Group(g) => {
+                    // First, recurse into children to find innermost match
+                    if let Some(delimiter) = Self::find_volume_pages_delimiter_in_nodes(&g.children)
+                    {
+                        return Some(delimiter);
+                    }
+
+                    // Check if this group directly contains both volume and page
+                    // (not just transitively through deeply nested children)
+                    let has_volume = Self::group_directly_contains_variable(&g.children, "volume");
+                    let has_page = Self::group_directly_contains_variable(&g.children, "page")
+                        || Self::group_contains_macro_with_page(&g.children);
+
+                    if has_volume && has_page {
+                        // Found the group - return its delimiter
+                        if let Some(delim) = &g.delimiter {
+                            return Some(delim.clone());
+                        }
+                    }
+                }
+                CslNode::Choose(c) => {
+                    // Check all branches
+                    if let Some(d) =
+                        Self::find_volume_pages_delimiter_in_nodes(&c.if_branch.children)
+                    {
+                        return Some(d);
+                    }
+                    for branch in &c.else_if_branches {
+                        if let Some(d) =
+                            Self::find_volume_pages_delimiter_in_nodes(&branch.children)
+                        {
+                            return Some(d);
+                        }
+                    }
+                    if let Some(else_children) = &c.else_branch {
+                        if let Some(d) = Self::find_volume_pages_delimiter_in_nodes(else_children) {
+                            return Some(d);
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+        None
+    }
+
+    /// Check if a group's direct children (one level deep only) contain a variable.
+    /// This avoids matching outer groups that only transitively contain the variable.
+    fn group_directly_contains_variable(nodes: &[CslNode], var_name: &str) -> bool {
+        for node in nodes {
+            match node {
+                CslNode::Text(t) => {
+                    if t.variable.as_ref().is_some_and(|v| v == var_name) {
+                        return true;
+                    }
+                }
+                CslNode::Number(n) => {
+                    if n.variable == var_name {
+                        return true;
+                    }
+                }
+                // Check one level of nesting (group containing the variable directly)
+                CslNode::Group(g) => {
+                    for child in &g.children {
+                        match child {
+                            CslNode::Text(t) => {
+                                if t.variable.as_ref().is_some_and(|v| v == var_name) {
+                                    return true;
+                                }
+                            }
+                            CslNode::Number(n) => {
+                                if n.variable == var_name {
+                                    return true;
+                                }
+                            }
+                            _ => {}
+                        }
+                    }
+                }
+                CslNode::Choose(c) => {
+                    // Check choose branches at this level
+                    if Self::group_directly_contains_variable(&c.if_branch.children, var_name) {
+                        return true;
+                    }
+                    for branch in &c.else_if_branches {
+                        if Self::group_directly_contains_variable(&branch.children, var_name) {
+                            return true;
+                        }
+                    }
+                    if let Some(else_children) = &c.else_branch {
+                        if Self::group_directly_contains_variable(else_children, var_name) {
+                            return true;
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+        false
+    }
+
+    /// Check if nodes contain a macro call that likely contains page variable.
+    /// This handles cases where page is in a separate macro like "source-serial-locator".
+    fn group_contains_macro_with_page(nodes: &[CslNode]) -> bool {
+        for node in nodes {
+            if let CslNode::Text(t) = node {
+                if let Some(macro_name) = &t.macro_name {
+                    // Common macro names that contain page variable
+                    if macro_name.contains("locator")
+                        || macro_name.contains("page")
+                        || macro_name.contains("pages")
+                    {
+                        return true;
+                    }
+                }
+            }
+        }
+        false
     }
 
     /// Extract punctuation-in-quote setting from locale.
