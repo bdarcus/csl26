@@ -373,6 +373,12 @@ impl Processor {
                             }
                         });
                     }
+                    SortKey::CitationNumber => {
+                        // For citation-number sorting, we need to use the citation order
+                        // This is typically set during citation processing
+                        // For now, keep original order (first cited = first in bib)
+                    }
+                    // Handle future SortKey variants (non_exhaustive)
                     _ => {}
                 }
             }

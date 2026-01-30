@@ -469,13 +469,15 @@ fn default_ascending() -> bool {
 
 /// Available sort keys.
 #[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq, JsonSchema)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub enum SortKey {
     #[default]
     Author,
     Year,
     Title,
+    /// Sort by citation order (for numeric styles).
+    CitationNumber,
 }
 
 #[cfg(test)]

@@ -317,21 +317,27 @@ fn infer_citation_wrapping(
 fn extract_citation_delimiter(layout: &csl_legacy::model::Layout) -> Option<String> {
     use csl_legacy::model::CslNode;
 
+    /// Find the outermost group that directly contains text/names elements.
+    /// This captures the author-year delimiter, not inner group delimiters (like locator).
     fn find_text_group_delimiter(nodes: &[CslNode]) -> Option<String> {
         for node in nodes {
             match node {
                 CslNode::Group(group) => {
-                    // First recurse into child groups to find innermost pattern
-                    if let Some(d) = find_text_group_delimiter(&group.children) {
-                        return Some(d);
-                    }
-                    // If no inner group found, check if this group directly contains text/names
+                    // Check if this group directly contains text/names children (author, date macros)
                     let has_text_or_names = group
                         .children
                         .iter()
                         .any(|c| matches!(c, CslNode::Text(_) | CslNode::Names(_)));
+
+                    // If this group has text/names AND a delimiter, prefer it
+                    // This captures the main author-date group delimiter
                     if has_text_or_names && group.delimiter.is_some() {
                         return group.delimiter.clone();
+                    }
+
+                    // Otherwise recurse into children to find a suitable group
+                    if let Some(d) = find_text_group_delimiter(&group.children) {
+                        return Some(d);
                     }
                 }
                 CslNode::Choose(choose) => {
