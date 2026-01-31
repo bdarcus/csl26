@@ -311,6 +311,9 @@ pub struct TemplateTitle {
     pub form: Option<TitleForm>,
     #[serde(flatten, default)]
     pub rendering: Rendering,
+    /// Structured link options (DOI, URL).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub links: Option<crate::options::LinksConfig>,
     /// Type-specific rendering overrides.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub overrides: Option<HashMap<String, Rendering>>,
@@ -393,6 +396,9 @@ pub struct TemplateVariable {
     pub variable: SimpleVariable,
     #[serde(flatten)]
     pub rendering: Rendering,
+    /// Structured link options (DOI, URL).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub links: Option<crate::options::LinksConfig>,
     /// Type-specific rendering overrides. Use `suppress: true` to hide for certain types.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub overrides: Option<HashMap<String, Rendering>>,

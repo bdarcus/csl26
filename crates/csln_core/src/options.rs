@@ -102,6 +102,18 @@ pub struct TitlesConfig {
     pub _extra: HashMap<String, serde_json::Value>,
 }
 
+/// Structured link options.
+#[derive(Debug, Default, PartialEq, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct LinksConfig {
+    /// Link value to the item's DOI.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub doi: Option<bool>,
+    /// Link value to the item's URL.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub url: Option<bool>,
+}
+
 /// Rendering options for titles.
 #[derive(Debug, Default, PartialEq, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]

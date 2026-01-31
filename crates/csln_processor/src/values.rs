@@ -28,6 +28,8 @@ pub struct ProcValues {
     pub prefix: Option<String>,
     /// Optional suffix to append.
     pub suffix: Option<String>,
+    /// Optional URL for hyperlinking.
+    pub url: Option<String>,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -149,6 +151,7 @@ impl ComponentValues for TemplateContributor {
                                         value: formatted,
                                         prefix: None,
                                         suffix,
+                                        url: None,
                                     });
                                 }
                             }
@@ -159,6 +162,7 @@ impl ComponentValues for TemplateContributor {
                                     value: title.clone(),
                                     prefix: None,
                                     suffix: None,
+                                    url: None,
                                 });
                             }
                         }
@@ -177,6 +181,7 @@ impl ComponentValues for TemplateContributor {
                                         value: formatted,
                                         prefix: None,
                                         suffix: Some(" (Trans.)".to_string()),
+                                        url: None,
                                     });
                                 }
                             }
@@ -237,6 +242,7 @@ impl ComponentValues for TemplateContributor {
             value: formatted,
             prefix: None,
             suffix,
+            url: None,
         })
     }
 }
@@ -691,6 +697,7 @@ impl ComponentValues for TemplateDate {
             value,
             prefix: None,
             suffix,
+            url: None,
         })
     }
 }
@@ -740,10 +747,25 @@ impl ComponentValues for TemplateTitle {
             _ => None, // Handle future non-exhaustive variants
         };
 
-        value.filter(|s| !s.is_empty()).map(|value| ProcValues {
-            value,
-            prefix: None,
-            suffix: None,
+        value.filter(|s| !s.is_empty()).map(|value| {
+            let mut url = None;
+            if let Some(links) = &self.links {
+                if links.doi == Some(true) {
+                    url = reference
+                        .doi
+                        .as_ref()
+                        .map(|d| format!("https://doi.org/{}", d));
+                }
+                if url.is_none() && links.url == Some(true) {
+                    url = reference.url.clone();
+                }
+            }
+            ProcValues {
+                value,
+                prefix: None,
+                suffix: None,
+                url,
+            }
         })
     }
 }
@@ -771,6 +793,7 @@ impl ComponentValues for TemplateNumber {
             value,
             prefix: None,
             suffix: None,
+            url: None,
         })
     }
 }
@@ -890,10 +913,25 @@ impl ComponentValues for TemplateVariable {
             _ => None,
         };
 
-        value.filter(|s| !s.is_empty()).map(|value| ProcValues {
-            value,
-            prefix: None,
-            suffix: None,
+        value.filter(|s| !s.is_empty()).map(|value| {
+            let mut url = None;
+            if let Some(links) = &self.links {
+                if links.doi == Some(true) {
+                    url = reference
+                        .doi
+                        .as_ref()
+                        .map(|d| format!("https://doi.org/{}", d));
+                }
+                if url.is_none() && links.url == Some(true) {
+                    url = reference.url.clone();
+                }
+            }
+            ProcValues {
+                value,
+                prefix: None,
+                suffix: None,
+                url,
+            }
         })
     }
 }
@@ -921,6 +959,7 @@ impl ComponentValues for TemplateList {
                     value: v.value,
                     prefix: v.prefix,
                     suffix: v.suffix,
+                    url: v.url,
                     ref_type: Some(reference.ref_type.clone()),
                     config: Some(options.config.clone()),
                 };
@@ -955,6 +994,7 @@ impl ComponentValues for TemplateList {
             value: values.join(delimiter),
             prefix: None,
             suffix: None,
+            url: None,
         })
     }
 }
@@ -1435,5 +1475,110 @@ mod tests {
         // use_first(2) + use_last(2) = 4 >= 3 names, so show first 2 + ellipsis + last 1
         // Alpha & Beta … Gamma (skip=max(2, 3-2)=2, so last 1 name)
         assert_eq!(values.value, "Alpha & Beta … Gamma");
+    }
+
+    #[test]
+    fn test_title_hyperlink() {
+        use csln_core::options::LinksConfig;
+
+        let config = make_config();
+        let locale = make_locale();
+        let options = RenderOptions {
+            config: &config,
+            locale: &locale,
+            context: RenderContext::Citation,
+        };
+        let hints = ProcHints::default();
+
+        let reference = Reference {
+            id: "kuhn1962".to_string(),
+            title: Some("The Structure of Scientific Revolutions".to_string()),
+            doi: Some("10.1001/example".to_string()),
+            ..Default::default()
+        };
+
+        let component = TemplateTitle {
+            title: TitleType::Primary,
+            links: Some(LinksConfig {
+                doi: Some(true),
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+
+        let values = component.values(&reference, &hints, &options).unwrap();
+        assert_eq!(
+            values.url,
+            Some("https://doi.org/10.1001/example".to_string())
+        );
+    }
+
+    #[test]
+    fn test_title_hyperlink_url_fallback() {
+        use csln_core::options::LinksConfig;
+
+        let config = make_config();
+        let locale = make_locale();
+        let options = RenderOptions {
+            config: &config,
+            locale: &locale,
+            context: RenderContext::Citation,
+        };
+        let hints = ProcHints::default();
+
+        // Reference with URL but no DOI
+        let reference = Reference {
+            id: "web2024".to_string(),
+            title: Some("A Web Resource".to_string()),
+            url: Some("https://example.com/resource".to_string()),
+            ..Default::default()
+        };
+
+        let component = TemplateTitle {
+            title: TitleType::Primary,
+            links: Some(LinksConfig {
+                doi: Some(true),
+                url: Some(true),
+            }),
+            ..Default::default()
+        };
+
+        let values = component.values(&reference, &hints, &options).unwrap();
+        // Falls back to URL when DOI is absent
+        assert_eq!(values.url, Some("https://example.com/resource".to_string()));
+    }
+
+    #[test]
+    fn test_variable_hyperlink() {
+        use csln_core::options::LinksConfig;
+
+        let config = make_config();
+        let locale = make_locale();
+        let options = RenderOptions {
+            config: &config,
+            locale: &locale,
+            context: RenderContext::Bibliography,
+        };
+        let hints = ProcHints::default();
+
+        let reference = Reference {
+            id: "pub2024".to_string(),
+            publisher: Some("MIT Press".to_string()),
+            doi: Some("10.1234/pub".to_string()),
+            ..Default::default()
+        };
+
+        let component = TemplateVariable {
+            variable: SimpleVariable::Publisher,
+            links: Some(LinksConfig {
+                doi: Some(true),
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+
+        let values = component.values(&reference, &hints, &options).unwrap();
+        assert_eq!(values.value, "MIT Press");
+        assert_eq!(values.url, Some("https://doi.org/10.1234/pub".to_string()));
     }
 }
