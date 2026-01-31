@@ -470,13 +470,33 @@ The CSLN approach separates "what to render" (templates) from "how to render" (o
 
 ---
 
-## Next Steps
+## Implementation Status
 
-1. **Prototype preset enums** in `csln_core::options`
-2. **Implement preset expansion** in processor
-3. **Update migration** to detect and emit presets
-4. **Document preset vocabulary** for style authors
-5. **Evaluate embedded templates** as optional feature
+### Completed ✅
+
+1. **Phase 1: Preset vocabulary** (PR #37)
+   - Added `ContributorPreset`, `DatePreset`, `TitlePreset` enums in `csln_core::presets`
+   - Each preset has a `config()` method to expand to concrete values
+
+2. **Phase 2: Embedded templates** (PR #38)
+   - Added `csln_core::embedded` module (feature-gated via `embedded-templates`)
+   - Pre-built citation and bibliography templates for APA, Chicago, Vancouver, IEEE, Harvard
+
+3. **Phase 3: Migration updates** (PR #40)
+   - Added `csln_migrate::preset_detector` module
+   - Detection functions: `detect_contributor_preset()`, `detect_title_preset()`, `detect_date_preset()`
+
+### Remaining Work
+
+1. **Expose embedded templates to style authors** (Issue #39)
+   - Add `use-preset: apa` syntax to `CitationSpec` and `BibliographySpec`
+   - Currently embedded templates are internal infrastructure only
+
+2. **Implement preset expansion in processor**
+   - Resolve preset names to concrete configs at runtime
+
+3. **Document preset vocabulary** for style authors
+   - Add examples to README and/or schema descriptions
 
 ---
 
