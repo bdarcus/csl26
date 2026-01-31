@@ -8,11 +8,13 @@ pub use renderer::{CitationItem, Renderer};
 // New CSLN schema modules
 pub mod locale;
 pub mod options;
+pub mod presets;
 pub mod reference;
 pub mod template;
 
 pub use locale::Locale;
 pub use options::Config;
+pub use presets::{ContributorPreset, DatePreset, TitlePreset};
 pub use template::TemplateComponent;
 
 /// A named template (reusable sequence of components).
