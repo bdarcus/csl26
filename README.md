@@ -348,13 +348,13 @@ This schema can be used to validate styles or provide intellisense in editors li
 - [ ] Full APA test suite verification
 - [ ] Chicago author-date style support
 - [ ] Bulk migration of all 2,844 styles
-- [ ] Preset-aware migration (emit preset names instead of expanded config)
 
 ### Medium-term
 - [ ] WASM build for browser use
 - [x] Additional locales (de-DE, fr-FR, tr-TR, etc.)
 - [x] Style presets vocabulary (see [STYLE_ALIASING.md](.agent/design/STYLE_ALIASING.md))
 - [x] Embedded priority templates (feature-gated)
+- [x] Preset-aware migration (emit preset names instead of expanded config)
 - [ ] Note-bibliography citation style support
 
 ### Long-term
