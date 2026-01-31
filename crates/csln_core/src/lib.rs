@@ -8,6 +8,7 @@ pub use renderer::{CitationItem, Renderer};
 // New CSLN schema modules
 pub mod locale;
 pub mod options;
+pub mod reference;
 pub mod template;
 
 pub use locale::Locale;
