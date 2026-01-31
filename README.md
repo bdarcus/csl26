@@ -209,6 +209,8 @@ crates/
 ├── csln_cli/        # CLI tools (schema generation, etc.)
 ├── csln_core/       # CSLN schema and types
 │   ├── options.rs   # Style configuration
+│   ├── presets.rs   # Named configuration bundles (APA, Chicago, etc.)
+│   ├── embedded.rs  # Pre-built templates for priority styles (feature-gated)
 │   ├── template.rs  # Template components
 │   └── locale.rs    # Localization (terms, dates)
 ├── csln_migrate/    # CSL 1.0 → CSLN converter
@@ -221,6 +223,7 @@ crates/
     └── main.rs      # CLI tool
 
 .agent/              # LLM agent instructions
+.agent/design/       # Design documents (see STYLE_ALIASING.md for presets architecture)
 locales/             # CSLN YAML locale files (en-US, de-DE, fr-FR, tr-TR)
 scripts/             # Oracle verification and locale conversion
 styles/              # 2,844 CSL 1.0 styles (submodule)
@@ -345,10 +348,13 @@ This schema can be used to validate styles or provide intellisense in editors li
 - [ ] Full APA test suite verification
 - [ ] Chicago author-date style support
 - [ ] Bulk migration of all 2,844 styles
+- [ ] Preset-aware migration (emit preset names instead of expanded config)
 
 ### Medium-term
 - [ ] WASM build for browser use
 - [x] Additional locales (de-DE, fr-FR, tr-TR, etc.)
+- [x] Style presets vocabulary (see [STYLE_ALIASING.md](.agent/design/STYLE_ALIASING.md))
+- [x] Embedded priority templates (feature-gated)
 - [ ] Note-bibliography citation style support
 
 ### Long-term
