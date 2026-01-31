@@ -345,11 +345,11 @@ This schema can be used to validate styles or provide intellisense in editors li
 
 ### Near-term
 - [x] Bibliography formatting (page ranges, subsequent author substitute)
-- [ ] Bibliography formatting (complex punctuation, affixes)
-- [ ] Full APA test suite verification
-- [ ] Chicago author-date style support
-- [ ] Bulk migration of all 2,844 styles
+- [ ] Complete bibliography formatting (complex punctuation, affixes)
+- [ ] Resolve high-frequency gaps identified by `csln_analyze`
+- [ ] Automated verification pipeline for top 100 styles
 - [x] Schema versioning and forward compatibility
+- [ ] Bulk migration of all 2,844 styles
 
 ### Medium-term
 - [ ] WASM build for browser use
