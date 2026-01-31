@@ -344,9 +344,11 @@ This schema can be used to validate styles or provide intellisense in editors li
 ## Roadmap
 
 ### Near-term
-- [ ] Complete bibliography formatting (page ranges, punctuation)
-- [ ] Full APA test suite verification
-- [ ] Chicago author-date style support
+- [x] Bibliography formatting (page ranges, subsequent author substitute)
+- [ ] Complete bibliography formatting (complex punctuation, affixes)
+- [ ] Resolve high-frequency gaps identified by `csln_analyze`
+- [ ] Automated verification pipeline for top 100 styles
+- [x] Schema versioning and forward compatibility
 - [ ] Bulk migration of all 2,844 styles
 
 ### Medium-term
