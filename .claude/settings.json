@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git status)",
+      "Bash(git checkout *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(git pull *)",
+      "Bash(git log *)",
+      "Bash(git diff *)",
+      "Bash(git show *)",
+      "Bash(git mv *)",
+      "Bash(git branch *)",
+      "Bash(cargo build *)",
+      "Bash(cargo test *)",
+      "Bash(cargo run *)",
+      "Bash(cargo fmt)",
+      "Bash(cargo clippy *)",
+      "Bash(gh pr *)",
+      "Bash(gh api *)",
+      "Bash(mkdir *)",
+      "Bash(ls *)"
+    ]
+  }
+}
