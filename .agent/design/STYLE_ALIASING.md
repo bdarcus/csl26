@@ -302,7 +302,7 @@ Each preset expands to concrete `Config` values. Style authors can:
 2. Override individual fields as needed
 3. Skip presets entirely and specify everything explicitly
 
-### Phase 2: Embed Priority Templates (Optional)
+### Phase 2: Embed Priority Templates
 
 For the top 10 parent styles, embed templates as Rust constants:
 
@@ -321,12 +321,11 @@ pub mod embedded {
 }
 ```
 
-This is **optional infrastructure** for:
+This is **core infrastructure** for:
 - Faster migration of simple dependent styles
 - Reference implementations for testing
 - Fallback defaults when template is omitted
 
-**Note:** This should be feature-gated and not required for basic CSLN usage.
 
 ### Phase 3: Migration Updates
 
@@ -365,47 +364,30 @@ bibliography:
 
 ---
 
-## Open Questions
+## Design Decisions
 
-### 1. Should presets be enums or string identifiers?
+### 1. Presets are Enums
 
-**Enums (recommended):**
+**Decision:** Presets are implemented as Rust enums.
 - Type-safe, IDE autocomplete
 - Compile-time validation
 - Clear documentation of available options
+- Uses `#[non_exhaustive]` for forward compatibility.
 
-**Strings:**
-- More flexible for future additions
-- Could allow custom preset names
+### 2. Preset Versioning
 
-**Recommendation:** Start with enums. Use `#[non_exhaustive]` for forward compatibility.
+**Decision:** Use suffixed names (e.g., `apa-6`) with un-suffixed names defaulting to the latest version (e.g., `apa` = APA 7). This is explicit and grep-able.
 
-### 2. How to handle preset versioning (APA 6 vs APA 7)?
+### 3. Embedded Templates are Core
 
-Options:
-- **Suffixed names**: `apa-6`, `apa-7` (explicit)
-- **Default to latest**: `apa` = APA 7, `apa-6` for legacy
-- **Version field**: `contributors: { preset: apa, version: 7 }`
+**Decision:** Embedded templates are core infrastructure, not optional.
+- Ensures consistent behavior across all implementations
+- Simplifies migration tooling
+- Always included (no feature gate)
 
-**Recommendation:** Use suffixed names with un-suffixed = latest. This is explicit and grep-able.
+### 4. Explicit Configuration Overrides Presets
 
-### 3. Should embedded templates be optional (feature flag)?
-
-**Yes.** Embedded templates add binary size and are only needed for:
-- Migration tooling
-- Processor implementations that want defaults
-
-The core `csln_core` crate should work without embedded templates.
-
-```toml
-[features]
-default = []
-embedded-templates = []
-```
-
-### 4. How should presets interact with explicit configuration?
-
-When a preset is specified alongside explicit fields, explicit fields should override:
+**Decision:** When a preset is specified alongside explicit fields, explicit fields override the preset values.
 
 ```yaml
 options:
