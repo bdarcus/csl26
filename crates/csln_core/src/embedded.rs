@@ -12,15 +12,6 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 //! - **Reference implementations**: Battle-tested templates for testing
 //! - **Fallback defaults**: When a style omits templates but specifies presets
 //!
-//! ## Feature Gate
-//!
-//! This module is only available when the `embedded-templates` feature is enabled:
-//!
-//! ```toml
-//! [dependencies]
-//! csln_core = { version = "0.1", features = ["embedded-templates"] }
-//! ```
-//!
 //! ## Priority Styles
 //!
 //! Based on analysis of dependent styles, these are the top parent styles:
