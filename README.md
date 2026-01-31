@@ -358,7 +358,7 @@ This schema can be used to validate styles or provide intellisense in editors li
 
 ## Contributing
 
-CSLN follows an **AI-first development model**. The majority of the codebase is authored by AI agents (like Gemini and Antigravity) guided by human contributors. This approach lowers the barrier to entry, allowing the most valuable contributions to come from **Domain Experts** and **Style Authors** rather than just systems programmers.
+CSLN follows an **AI-first development model**. The core CSLN schema and data model was designed by the project maintainer, and AI agents (like Claude Code) have adapted and extended this work to build out the migration tooling, processor, and analysis infrastructure. This approach lowers the barrier to entry, allowing the most valuable contributions to come from **Domain Experts** and **Style Authors** rather than just systems programmers.
 
 ### How to Contribute
 
