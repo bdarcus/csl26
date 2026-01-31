@@ -449,7 +449,7 @@ pub struct TemplateList {
 }
 
 /// Delimiter punctuation options.
-#[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq, JsonSchema)]
+#[derive(Debug, Default, Deserialize, Serialize, Clone, Copy, PartialEq, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub enum DelimiterPunctuation {
     #[default]
@@ -463,6 +463,44 @@ pub enum DelimiterPunctuation {
     Hyphen,
     Space,
     None,
+}
+
+impl DelimiterPunctuation {
+    /// Convert to string with trailing space (for most delimiters).
+    /// Returns the punctuation followed by a space, except for Space and None.
+    pub fn to_string_with_space(&self) -> &'static str {
+        match self {
+            Self::Comma => ", ",
+            Self::Semicolon => "; ",
+            Self::Period => ". ",
+            Self::Colon => ": ",
+            Self::Ampersand => " & ",
+            Self::VerticalLine => " | ",
+            Self::Slash => "/",
+            Self::Hyphen => "-",
+            Self::Space => " ",
+            Self::None => "",
+        }
+    }
+
+    /// Parse from a CSL delimiter string.
+    /// Handles common patterns like ", ", ": ", etc.
+    pub fn from_csl_string(s: &str) -> Self {
+        let trimmed = s.trim();
+        match trimmed {
+            "," | ", " => Self::Comma,
+            ";" | "; " => Self::Semicolon,
+            "." | ". " => Self::Period,
+            ":" | ": " => Self::Colon,
+            "&" | " & " => Self::Ampersand,
+            "|" | " | " => Self::VerticalLine,
+            "/" => Self::Slash,
+            "-" => Self::Hyphen,
+            " " => Self::Space,
+            "" => Self::None,
+            _ => Self::Comma, // Default fallback
+        }
+    }
 }
 
 #[cfg(test)]
