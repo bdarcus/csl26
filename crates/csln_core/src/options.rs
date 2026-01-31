@@ -469,6 +469,11 @@ pub struct BibliographyConfig {
     /// Whether to use a hanging indent.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub hanging_indent: Option<bool>,
+    /// Suffix appended to each bibliography entry (e.g., ".").
+    /// Extracted from CSL 1.0 `<layout suffix=".">` attribute.
+    /// If None, a trailing period is added by default unless entry ends with DOI/URL.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub entry_suffix: Option<String>,
     /// Unknown fields captured for forward compatibility.
     #[serde(flatten)]
     pub _extra: HashMap<String, serde_json::Value>,

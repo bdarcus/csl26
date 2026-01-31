@@ -243,9 +243,11 @@ impl OptionsExtractor {
         let bib = style.bibliography.as_ref()?;
 
         let mut config = BibliographyConfig::default();
+        let mut has_config = false;
 
         if let Some(sub) = &bib.subsequent_author_substitute {
             config.subsequent_author_substitute = Some(sub.clone());
+            has_config = true;
         }
 
         if let Some(rule) = &bib.subsequent_author_substitute_rule {
@@ -256,13 +258,22 @@ impl OptionsExtractor {
                 "partial-first" => Some(SubsequentAuthorSubstituteRule::PartialFirst),
                 _ => Some(SubsequentAuthorSubstituteRule::CompleteAll),
             };
+            has_config = true;
         }
 
         if let Some(hanging) = bib.hanging_indent {
             config.hanging_indent = Some(hanging);
+            has_config = true;
         }
 
-        if config.subsequent_author_substitute.is_some() || config.hanging_indent.is_some() {
+        // Extract layout suffix (e.g., "." from `<layout suffix=".">`).
+        // This controls entry-terminating punctuation.
+        if let Some(suffix) = &bib.layout.suffix {
+            config.entry_suffix = Some(suffix.clone());
+            has_config = true;
+        }
+
+        if has_config {
             Some(config)
         } else {
             None
