@@ -12,6 +12,10 @@ pub mod presets;
 pub mod reference;
 pub mod template;
 
+// Embedded templates for priority styles (feature-gated)
+#[cfg(feature = "embedded-templates")]
+pub mod embedded;
+
 pub use locale::Locale;
 pub use options::Config;
 pub use presets::{ContributorPreset, DatePreset, TitlePreset};
