@@ -95,7 +95,6 @@ gh pr create --title "<type>(<scope>): <description>" --body "$(cat <<'EOF'
 ## Test Results
 - Relevant test results
 
-🤖 Generated with [Claude Code](https://claude.ai/code)
 EOF
 )"
 ```
