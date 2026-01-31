@@ -32,6 +32,8 @@ pub struct ProcTemplateComponent {
     pub prefix: Option<String>,
     /// Optional suffix from value extraction.
     pub suffix: Option<String>,
+    /// Optional URL for hyperlinking.
+    pub url: Option<String>,
     /// Reference type for type-specific overrides.
     pub ref_type: Option<String>,
     /// Optional global configuration.
@@ -381,6 +383,7 @@ mod tests {
                 suffix: None,
                 ref_type: None,
                 config: None,
+                url: None,
             },
             ProcTemplateComponent {
                 template_component: TemplateComponent::Date(TemplateDate {
@@ -394,6 +397,7 @@ mod tests {
                 suffix: None,
                 ref_type: None,
                 config: None,
+                url: None,
             },
         ];
 
@@ -424,6 +428,7 @@ mod tests {
                 suffix: None,
                 ref_type: None,
                 config: None,
+                url: None,
             },
             ProcTemplateComponent {
                 template_component: TemplateComponent::Date(TemplateDate {
@@ -437,6 +442,7 @@ mod tests {
                 suffix: None,
                 ref_type: None,
                 config: None,
+                url: None,
             },
         ];
 
@@ -461,6 +467,7 @@ mod tests {
             suffix: None,
             ref_type: None,
             config: None,
+            url: None,
         }];
 
         // Edge case: space before paren
@@ -485,6 +492,7 @@ mod tests {
             suffix: None,
             ref_type: None,
             config: None,
+            url: None,
         };
 
         let result = render_component(&component);
@@ -509,6 +517,7 @@ mod tests {
             suffix: None,
             ref_type: None,
             config: None,
+            url: None,
         };
 
         let result = render_component(&component);

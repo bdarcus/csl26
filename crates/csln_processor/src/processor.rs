@@ -324,6 +324,7 @@ impl Processor {
                     value: values.value,
                     prefix: values.prefix,
                     suffix: values.suffix,
+                    url: values.url,
                     ref_type: Some(reference.ref_type.clone()),
                     config: Some(options.config.clone()),
                 })
