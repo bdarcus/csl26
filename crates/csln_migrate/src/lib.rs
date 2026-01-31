@@ -3,11 +3,13 @@ use std::collections::HashMap;
 
 pub mod compressor;
 pub mod options_extractor;
+pub mod preset_detector;
 pub mod template_compiler;
 pub mod upsampler;
 
 pub use compressor::Compressor;
 pub use options_extractor::OptionsExtractor;
+pub use preset_detector::{detect_contributor_preset, detect_date_preset, detect_title_preset};
 pub use template_compiler::TemplateCompiler;
 pub use upsampler::Upsampler;
 pub struct MacroInliner {
