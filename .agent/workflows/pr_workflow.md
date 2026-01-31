@@ -80,6 +80,8 @@ git commit -m "<type>(<scope>): <description>
 **Commit rules**:
 - Use conventional commit format
 - Lowercase subject line
+- **Plain text body only**: No Markdown in the commit body (e.g., use `Result`, not `` `Result` ``).
+- **No escaped backticks**: Do not escape backticks in messages (use `code`, never \`code\`)
 - NO `Co-Authored-By` footer
 - Exclude debug files, `.env`, temp files
 
@@ -87,6 +89,11 @@ git commit -m "<type>(<scope>): <description>
 
 ```bash
 git push -u origin <branch-name>
+
+# NOTE: When generating the body, do NOT escape backticks.
+# Correct: "Added `MyStruct`"
+# Incorrect: "Added \`MyStruct\`"
+
 
 gh pr create --title "<type>(<scope>): <description>" --body "$(cat <<'EOF'
 ## Summary
