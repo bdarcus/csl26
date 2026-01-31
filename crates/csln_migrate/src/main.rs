@@ -268,7 +268,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let vol_issue_delimiter = if options
                 .volume_pages_delimiter
                 .as_ref()
-                .is_some_and(|d| d.contains(','))
+                .is_some_and(|d| matches!(d, csln_core::template::DelimiterPunctuation::Comma))
             {
                 csln_core::template::DelimiterPunctuation::None
             } else {
@@ -305,9 +305,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         // Add type-specific overrides (recursively to handle nested Lists)
         // Pass the extracted volume-pages delimiter for journal article pages
-        let vol_pages_delim = options.volume_pages_delimiter.clone();
+        let vol_pages_delim = options.volume_pages_delimiter;
         for component in &mut new_bib {
-            apply_type_overrides(component, vol_pages_delim.as_deref());
+            apply_type_overrides(component, vol_pages_delim);
         }
     }
 
@@ -487,7 +487,10 @@ fn extract_citation_delimiter(layout: &csl_legacy::model::Layout) -> Option<Stri
 
 /// Recursively apply type-specific overrides to components, including nested Lists.
 /// The `volume_pages_delimiter` is extracted from the CSL style's group structure.
-fn apply_type_overrides(component: &mut TemplateComponent, volume_pages_delimiter: Option<&str>) {
+fn apply_type_overrides(
+    component: &mut TemplateComponent,
+    volume_pages_delimiter: Option<csln_core::template::DelimiterPunctuation>,
+) {
     match component {
         // Container-title (parent-serial): use suffix based on extracted delimiter
         TemplateComponent::Title(t) if t.title == csln_core::template::TitleType::ParentSerial => {
@@ -495,7 +498,9 @@ fn apply_type_overrides(component: &mut TemplateComponent, volume_pages_delimite
             // Determine suffix based on volume-pages delimiter:
             // - Comma delimiter (APA): use comma suffix
             // - Colon/other delimiter (Chicago): use space suffix to prevent period separator
-            let suffix = if volume_pages_delimiter.is_some_and(|d| d.contains(',')) {
+            let suffix = if volume_pages_delimiter
+                .is_some_and(|d| matches!(d, csln_core::template::DelimiterPunctuation::Comma))
+            {
                 ","
             } else {
                 " " // Space prevents default period separator
@@ -543,7 +548,9 @@ fn apply_type_overrides(component: &mut TemplateComponent, volume_pages_delimite
         TemplateComponent::Number(n) if n.number == csln_core::template::NumberVariable::Pages => {
             let mut overrides = std::collections::HashMap::new();
             // Use extracted delimiter or default to comma
-            let delim = volume_pages_delimiter.unwrap_or(", ");
+            let delim = volume_pages_delimiter
+                .unwrap_or(csln_core::template::DelimiterPunctuation::Comma)
+                .to_string_with_space();
             overrides.insert(
                 "article-journal".to_string(),
                 csln_core::template::Rendering {

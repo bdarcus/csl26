@@ -420,7 +420,7 @@ impl TemplateCompiler {
 
         Some(TemplateComponent::List(TemplateList {
             items: cleaned_items,
-            delimiter: list.delimiter.clone(),
+            delimiter: list.delimiter,
             rendering: list.rendering.clone(),
             ..Default::default()
         }))

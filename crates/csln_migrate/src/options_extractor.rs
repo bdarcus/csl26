@@ -16,6 +16,7 @@ use csln_core::options::{
     ProcessingCustom, ShortenListOptions, Sort, SortKey, SortSpec, SubsequentAuthorSubstituteRule,
     Substitute as CslnSubstitute, SubstituteKey, TitlesConfig,
 };
+use csln_core::template::DelimiterPunctuation;
 
 /// Extracts global configuration options from a CSL 1.0 style.
 pub struct OptionsExtractor;
@@ -57,7 +58,7 @@ impl OptionsExtractor {
 
     /// Extract the delimiter between volume/issue and pages from serial source macros.
     /// This looks for groups that contain both volume and page variables.
-    fn extract_volume_pages_delimiter(style: &Style) -> Option<String> {
+    fn extract_volume_pages_delimiter(style: &Style) -> Option<DelimiterPunctuation> {
         let bib_macros = Self::collect_bibliography_macros(style);
 
         for macro_def in &style.macros {
@@ -65,14 +66,7 @@ impl OptionsExtractor {
                 if let Some(delimiter) =
                     Self::find_volume_pages_delimiter_in_nodes(&macro_def.children)
                 {
-                    // Normalize: ensure punctuation delimiters have trailing space
-                    // CSL typically uses ": " not ":" alone
-                    let normalized = if delimiter == ":" || delimiter == ";" {
-                        format!("{} ", delimiter)
-                    } else {
-                        delimiter
-                    };
-                    return Some(normalized);
+                    return Some(DelimiterPunctuation::from_csl_string(&delimiter));
                 }
             }
         }

@@ -9,6 +9,7 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 //! Much of the logic that CSL 1.0 handles in procedural template conditionals is
 //! instead configured declaratively here.
 
+use crate::template::DelimiterPunctuation;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -47,9 +48,10 @@ pub struct Config {
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub punctuation_in_quote: bool,
     /// Delimiter between volume/issue and pages for serial sources.
-    /// Extracted from CSL group delimiters. Examples: ", " (APA), ": " (Chicago).
+    /// Processor adds trailing space when rendering.
+    /// Examples: Comma (APA ", "), Colon (Chicago ": ").
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub volume_pages_delimiter: Option<String>,
+    pub volume_pages_delimiter: Option<DelimiterPunctuation>,
     /// Unknown fields captured for forward compatibility.
     #[serde(flatten)]
     pub _extra: HashMap<String, serde_json::Value>,
