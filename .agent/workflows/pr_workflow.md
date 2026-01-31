@@ -114,9 +114,22 @@ gh pr checks <pr-number>
 4. Force push: `git push --force`
 5. Repeat until CI passes
 
-### 7. Merge (When Approved)
+### 7. Await Maintainer Review
 
-**Always use rebase merge**:
+**IMPORTANT: Do NOT merge the PR yourself.** 
+
+After CI passes:
+1. Notify the user that the PR is ready for review
+2. **Stop and wait** for a maintainer to approve and merge
+3. Only proceed to cleanup after the PR has been merged by a maintainer
+
+```
+PR #XX is ready for review: <URL>
+CI passed. Awaiting maintainer approval before merge.
+```
+
+**Exception**: The maintainer may explicitly instruct you to merge a specific PR. 
+In that case, use rebase merge:
 
 ```bash
 gh pr merge <pr-number> --rebase
@@ -171,15 +184,15 @@ gh pr create --title "feat(scope): description" --body "## Summary
 # Wait for CI
 gh pr checks <pr-number>  # Repeat until pass
 
-# Merge
-gh pr merge <pr-number> --rebase
+# STOP HERE - await maintainer approval
+# "PR #XX ready for review. CI passed. Awaiting maintainer approval."
 
-# Cleanup
+# After maintainer merges:
 git checkout main && git pull --rebase
 git branch -d feat/my-feature
 
 # Report
-# "PR merged. Remaining context: ~XX%"
+# "Remaining context: ~XX%"
 ```
 
 ## Common CI Failures
