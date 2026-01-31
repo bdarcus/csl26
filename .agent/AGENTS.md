@@ -307,13 +307,43 @@ Branch naming conventions:
 
 ## Priority Styles
 
-**Important**: Do not over-optimize for any single style. APA is widely used but represents just one pattern among many. Test changes against multiple styles to avoid regressions.
+**Important**: Do not over-optimize for any single style. Test changes against multiple parent styles to avoid regressions.
 
-1. **APA 7th** - Widely used, complex requirements
-2. **Chicago Author-Date** - Different patterns (full names, different punctuation)
-3. **Academy of Management Review** - Author-date with different conventions
-4. **IEEE** - Numeric citation style
-5. **Vancouver** - Numeric style for medicine
-6. **All 2,844 styles** - Bulk migration target
+See **[docs/STYLE_PRIORITY.md](./docs/STYLE_PRIORITY.md)** for detailed impact analysis based on dependent style counts.
 
-When implementing features, verify they work across style families rather than hard-coding patterns from a single style.
+### Top Parent Styles by Impact
+
+The CSL repository has ~7,987 dependent styles that alias ~300 parent styles. Prioritize by dependent count:
+
+| Parent Style | Dependents | Format | Impact |
+|-------------|------------|--------|--------|
+| apa | 783 | author-date | 9.8% |
+| elsevier-with-titles | 672 | numeric | 8.4% |
+| elsevier-harvard | 665 | author-date | 8.3% |
+| springer-basic-author-date | 460 | author-date | 5.8% |
+| ieee | 176 | numeric | 2.2% |
+
+**The top 10 parent styles cover 60% of dependent styles.**
+
+### Development Order
+
+1. **Author-date styles first** (40% of corpus) - APA, Elsevier Harvard, Springer, Chicago
+2. **Numeric styles second** (57% of corpus) - Elsevier Vancouver, IEEE, AMA
+3. **Note styles last** (2% of corpus) - Chicago Notes, OSCOLA
+
+### Measuring Impact
+
+When reporting progress, calculate impact as:
+```
+Impact = sum(dependent_count for passing parent styles) / 7987 * 100
+```
+
+### Running the Analyzer
+
+```bash
+# Rank parent styles by dependent count
+cargo run --bin csln_analyze -- styles/ --rank-parents
+
+# Filter by citation format
+cargo run --bin csln_analyze -- styles/ --rank-parents --format author-date --json
+```
