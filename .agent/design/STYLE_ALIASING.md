@@ -242,42 +242,60 @@ Add preset enums to `csln_core::options`:
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub enum ProcessingPreset {
-    AuthorDate,   // disambiguation, year-suffix, author-year grouping
-    Numeric,      // citation-order, no disambiguation
-    Note,         // position tracking, ibid handling
+    /// Disambiguation, year-suffix, author-year grouping
+    AuthorDate,
+    /// Citation-order, no disambiguation
+    Numeric,
+    /// Position tracking, ibid handling
+    Note,
 }
 
 /// Contributor formatting presets
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub enum ContributorPreset {
-    Apa,          // First author inverted, & symbol, et al. at 21
-    Chicago,      // First author inverted, "and" text
-    Vancouver,    // All inverted, no conjunction
-    Ieee,         // All inverted, "and" before last
-    Harvard,      // First author inverted, "and" text
+    /// First author family-first, "&" symbol, et al. after 20 authors
+    Apa,
+    /// First author family-first, "and" text, no serial comma
+    Chicago,
+    /// All authors family-first, no conjunction
+    Vancouver,
+    /// All authors family-first, "and" before last
+    Ieee,
+    /// First author family-first, "and" text (Elsevier/Springer variant)
+    Harvard,
 }
 
 /// Date formatting presets
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub enum DatePreset {
-    YearOnly,     // (2024)
-    Full,         // (January 15, 2024)
-    MonthYear,    // (January 2024)
-    Iso,          // (2024-01-15)
+    /// Year only: (2024)
+    YearOnly,
+    /// Full date: (January 15, 2024)
+    Full,
+    /// Month and year: (January 2024)
+    MonthYear,
+    /// ISO format: (2024-01-15)
+    Iso,
 }
 
 /// Title formatting presets
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub enum TitlePreset {
-    Apa,          // Component: no style, Monograph: italic
-    Chicago,      // Component: quoted, Monograph: italic
-    Ieee,         // Component: quoted, Monograph: italic
-    Scientific,   // All italic
+    /// Component titles plain, monograph titles italic
+    Apa,
+    /// Component titles quoted, monograph titles italic
+    Chicago,
+    /// Component titles quoted, monograph titles italic
+    Ieee,
+    /// All titles italic
+    Scientific,
 }
 ```
+
+**Important:** Use doc comments (`///`) not regular comments (`//`) for enum variants. With `schemars`, doc comments become `description` fields in the JSON schema, which editors show as tooltips. This helps style authors who may not know style guide names but understand the formatting behavior.
 
 Each preset expands to concrete `Config` values. Style authors can:
 1. Use a preset name for defaults
