@@ -11,3 +11,8 @@ scripts/*.json
 styles-report.json
 .migrated-temp.yaml
 migrated_*.yaml
+
+# Debug/analysis artifacts
+debug_*.yaml
+oracle_comparison.rs
+styles_analysis.txt

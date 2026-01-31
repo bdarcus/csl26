@@ -195,11 +195,12 @@ Before designing new features, consult [PRIOR_ART.md](./PRIOR_ART.md) to underst
 | Low | Extended position conditions | CSL-M | - |
 | Low | Incremental computation (salsa) | citeproc-rs | - |
 
-## Vision Documents
+## Design Documents
 
-When designing features that affect the API surface or schema, consult:
+Architectural decisions and design rationale:
 
-- **[STYLE_EDITOR_VISION.md](./STYLE_EDITOR_VISION.md)**: User stories and API requirements for a web-based style editor. Ensures the core library supports progressive-refinement UIs and JSON API exposure.
+- **[STYLE_ALIASING.md](./.agent/design/STYLE_ALIASING.md)**: Style aliasing and presets strategy. Recommends presets for configuration reuse instead of CSL 1.0's parent/child aliasing. Refs: #89
+- **[STYLE_EDITOR_VISION.md](./.agent/design/STYLE_EDITOR_VISION.md)**: User stories and API requirements for a web-based style editor. Ensures the core library supports progressive-refinement UIs and JSON API exposure.
 
 ## Skills
 
