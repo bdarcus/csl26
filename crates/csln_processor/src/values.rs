@@ -271,22 +271,30 @@ fn format_names(
     } else {
         None
     };
-    let (display_names, use_et_al) = if let Some(opts) = shorten {
+    let (first_names, use_et_al, last_names) = if let Some(opts) = shorten {
         let use_first = hints.min_names_to_show.unwrap_or(opts.use_first as usize);
         if names.len() >= opts.min as usize
             || (hints.min_names_to_show.is_some() && names.len() > 1)
         {
             if use_first >= names.len() {
-                (names.iter().collect(), false)
+                (names.iter().collect::<Vec<_>>(), false, Vec::new())
             } else {
-                let display: Vec<&Name> = names.iter().take(use_first).collect();
-                (display, true)
+                let first: Vec<&Name> = names.iter().take(use_first).collect();
+                let last: Vec<&Name> = if let Some(ul) = opts.use_last {
+                    // Show ul last names. Ensure no overlap with first names.
+                    let take_last = ul as usize;
+                    let skip = std::cmp::max(use_first, names.len().saturating_sub(take_last));
+                    names.iter().skip(skip).collect()
+                } else {
+                    Vec::new()
+                };
+                (first, true, last)
             }
         } else {
-            (names.iter().collect(), false)
+            (names.iter().collect::<Vec<_>>(), false, Vec::new())
         }
     } else {
-        (names.iter().collect(), false)
+        (names.iter().collect::<Vec<_>>(), false, Vec::new())
     };
 
     // Format each name
@@ -295,8 +303,9 @@ fn format_names(
     let initialize_with = config.and_then(|c| c.initialize_with.as_ref());
     let initialize_with_hyphen = config.and_then(|c| c.initialize_with_hyphen);
     let demote_ndp = config.and_then(|c| c.demote_non_dropping_particle.as_ref());
+    let delimiter = config.and_then(|c| c.delimiter.as_deref()).unwrap_or(", ");
 
-    let formatted: Vec<String> = display_names
+    let formatted_first: Vec<String> = first_names
         .iter()
         .enumerate()
         .map(|(i, name)| {
@@ -304,6 +313,25 @@ fn format_names(
                 name,
                 form,
                 i,
+                &display_as_sort,
+                name_order,
+                initialize_with,
+                initialize_with_hyphen,
+                demote_ndp,
+                hints.expand_given_names,
+            )
+        })
+        .collect();
+
+    let formatted_last: Vec<String> = last_names
+        .iter()
+        .enumerate()
+        .map(|(i, name)| {
+            let original_idx = names.len() - last_names.len() + i;
+            format_single_name(
+                name,
+                form,
+                original_idx,
                 &display_as_sort,
                 name_order,
                 initialize_with,
@@ -329,13 +357,12 @@ fn format_names(
     use csln_core::options::DelimiterPrecedesLast;
     let delimiter_precedes_last = config.and_then(|c| c.delimiter_precedes_last.as_ref());
 
-    let delimiter = config.and_then(|c| c.delimiter.as_deref()).unwrap_or(", ");
-    let result = if formatted.len() == 1 {
-        formatted[0].clone()
+    let result = if formatted_first.len() == 1 {
+        formatted_first[0].clone()
     } else if and_str.is_none() {
         // No conjunction - just join all with delimiter
-        formatted.join(delimiter)
-    } else if formatted.len() == 2 {
+        formatted_first.join(delimiter)
+    } else if formatted_first.len() == 2 {
         let and_str = and_str.unwrap();
         // For two names, check delimiter_precedes_last setting
         let use_delimiter = match delimiter_precedes_last {
@@ -347,14 +374,17 @@ fn format_names(
                 .is_some_and(|das| matches!(das, DisplayAsSort::All | DisplayAsSort::First)),
         };
         if use_delimiter {
-            format!("{}{}{} {}", formatted[0], delimiter, and_str, formatted[1])
+            format!(
+                "{}{}{} {}",
+                formatted_first[0], delimiter, and_str, formatted_first[1]
+            )
         } else {
-            format!("{} {} {}", formatted[0], and_str, formatted[1])
+            format!("{} {} {}", formatted_first[0], and_str, formatted_first[1])
         }
     } else {
         let and_str = and_str.unwrap();
-        let last = formatted.last().unwrap();
-        let rest = &formatted[..formatted.len() - 1];
+        let last = formatted_first.last().unwrap();
+        let rest = &formatted_first[..formatted_first.len() - 1];
         // Check if delimiter should precede "and" (Oxford comma)
         let use_delimiter = match delimiter_precedes_last {
             Some(DelimiterPrecedesLast::Always) => true,
@@ -363,7 +393,7 @@ fn format_names(
             Some(DelimiterPrecedesLast::AfterInvertedName) => {
                 display_as_sort.as_ref().is_some_and(|das| {
                     matches!(das, DisplayAsSort::All)
-                        || (matches!(das, DisplayAsSort::First) && display_names.len() == 1)
+                        || (matches!(das, DisplayAsSort::First) && first_names.len() == 1)
                 })
             }
         };
@@ -375,29 +405,35 @@ fn format_names(
     };
 
     if use_et_al {
-        // Determine delimiter before "et al." based on delimiter_precedes_et_al option
-        use csln_core::options::DelimiterPrecedesLast;
-        let delimiter_precedes = config.and_then(|c| c.delimiter_precedes_et_al.as_ref());
-        let use_delimiter = match delimiter_precedes {
-            Some(DelimiterPrecedesLast::Always) => true,
-            Some(DelimiterPrecedesLast::Never) => false,
-            Some(DelimiterPrecedesLast::AfterInvertedName) => {
-                // Use delimiter if last displayed name was inverted (family-first)
-                display_as_sort.as_ref().is_some_and(|das| {
-                    matches!(das, DisplayAsSort::All)
-                        || (matches!(das, DisplayAsSort::First) && display_names.len() == 1)
-                })
-            }
-            Some(DelimiterPrecedesLast::Contextual) | None => {
-                // Default: use delimiter only if more than one name displayed
-                display_names.len() > 1
-            }
-        };
-
-        if use_delimiter {
-            format!("{}, {}", result, locale.et_al())
+        if !formatted_last.is_empty() {
+            // et-al-use-last: result + ellipsis + last names
+            // CSL typically uses an ellipsis (...) for this.
+            format!("{} … {}", result, formatted_last.join(delimiter))
         } else {
-            format!("{} {}", result, locale.et_al())
+            // Determine delimiter before "et al." based on delimiter_precedes_et_al option
+            use csln_core::options::DelimiterPrecedesLast;
+            let delimiter_precedes = config.and_then(|c| c.delimiter_precedes_et_al.as_ref());
+            let use_delimiter = match delimiter_precedes {
+                Some(DelimiterPrecedesLast::Always) => true,
+                Some(DelimiterPrecedesLast::Never) => false,
+                Some(DelimiterPrecedesLast::AfterInvertedName) => {
+                    // Use delimiter if last displayed name was inverted (family-first)
+                    display_as_sort.as_ref().is_some_and(|das| {
+                        matches!(das, DisplayAsSort::All)
+                            || (matches!(das, DisplayAsSort::First) && first_names.len() == 1)
+                    })
+                }
+                Some(DelimiterPrecedesLast::Contextual) | None => {
+                    // Default: use delimiter only if more than one name displayed
+                    first_names.len() > 1
+                }
+            };
+
+            if use_delimiter {
+                format!("{}, {}", result, locale.et_al())
+            } else {
+                format!("{} {}", result, locale.et_al())
+            }
         }
     } else {
         result
@@ -1313,5 +1349,91 @@ mod tests {
 
         let values = component.values(&reference, &hints, &options);
         assert!(values.is_none());
+    }
+
+    #[test]
+    fn test_et_al_use_last() {
+        let mut config = make_config();
+        if let Some(ref mut contributors) = config.contributors {
+            contributors.shorten = Some(ShortenListOptions {
+                min: 3,
+                use_first: 1,
+                use_last: Some(1),
+                ..Default::default()
+            });
+        }
+
+        let locale = make_locale();
+        let options = RenderOptions {
+            config: &config,
+            locale: &locale,
+            context: RenderContext::Citation,
+        };
+        let hints = ProcHints::default();
+
+        let reference = Reference {
+            id: "multi".to_string(),
+            ref_type: "article-journal".to_string(),
+            author: Some(vec![
+                Name::new("LeCun", "Yann"),
+                Name::new("Bengio", "Yoshua"),
+                Name::new("Hinton", "Geoffrey"),
+            ]),
+            ..Default::default()
+        };
+
+        let component = TemplateContributor {
+            contributor: ContributorRole::Author,
+            form: ContributorForm::Short,
+            ..Default::default()
+        };
+
+        let values = component.values(&reference, &hints, &options).unwrap();
+        // first name (LeCun) + ellipsis + last name (Hinton)
+        assert_eq!(values.value, "LeCun … Hinton");
+    }
+
+    #[test]
+    fn test_et_al_use_last_overlap() {
+        // Edge case: use_first + use_last >= names.len() should show all names
+        let mut config = make_config();
+        if let Some(ref mut contributors) = config.contributors {
+            contributors.shorten = Some(ShortenListOptions {
+                min: 3,
+                use_first: 2,
+                use_last: Some(2),
+                ..Default::default()
+            });
+        }
+
+        let locale = make_locale();
+        let options = RenderOptions {
+            config: &config,
+            locale: &locale,
+            context: RenderContext::Citation,
+        };
+        let hints = ProcHints::default();
+
+        let reference = Reference {
+            id: "overlap".to_string(),
+            ref_type: "article-journal".to_string(),
+            author: Some(vec![
+                Name::new("Alpha", "A."),
+                Name::new("Beta", "B."),
+                Name::new("Gamma", "C."),
+            ]),
+            ..Default::default()
+        };
+
+        let component = TemplateContributor {
+            contributor: ContributorRole::Author,
+            form: ContributorForm::Short,
+            ..Default::default()
+        };
+
+        let values = component.values(&reference, &hints, &options).unwrap();
+        // use_first(2) + use_last(2) = 4 >= 3 names, so show first 2 + ellipsis + last 1
+        // Alpha & Beta … Gamma (skip=max(2, 3-2)=2, so last 1 name)
+        assert_eq!(values.value, "Alpha & Beta … Gamma");
     }
 }

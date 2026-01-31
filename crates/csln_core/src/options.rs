@@ -399,6 +399,9 @@ pub struct ShortenListOptions {
     pub min: u8,
     /// Number of names to show when shortened.
     pub use_first: u8,
+    /// Number of names to show after the ellipsis (et-al-use-last).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub use_last: Option<u8>,
     /// How to render "and others".
     #[serde(default)]
     pub and_others: AndOtherOptions,
@@ -412,6 +415,7 @@ impl Default for ShortenListOptions {
         Self {
             min: 4,
             use_first: 1,
+            use_last: None,
             and_others: AndOtherOptions::default(),
             delimiter_precedes_last: DelimiterPrecedesLast::default(),
         }
