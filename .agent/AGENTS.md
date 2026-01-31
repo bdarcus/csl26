@@ -277,6 +277,8 @@ All changes must be made on feature branches. The user will handle merging via G
    - **50/72 Rule**: Limit the subject line to 50 characters and wrap the body at 72 characters.
    - **Explain What and Why**: The body should explain the rationale behind the change.
    - **Issue References**: Include GitHub issue references where relevant (e.g., `Refs: #123` or `csln#64`).
+   - **Plain Text Body**: Do NOT use Markdown in the commit body. Uses asterisks for bullet points is okay, but do not backtick code elements.
+   - **No Escaped Backticks**: Never escape backticks (e.g., write `code` not \`code\`).
    - **No Co-Authored-By**: Do NOT include `Co-Authored-By` footers in AI-authored commit messages.
 
    Example:
