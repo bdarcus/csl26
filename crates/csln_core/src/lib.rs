@@ -12,8 +12,7 @@ pub mod presets;
 pub mod reference;
 pub mod template;
 
-// Embedded templates for priority styles (feature-gated)
-#[cfg(feature = "embedded-templates")]
+// Embedded templates for priority styles (APA, Chicago, Vancouver, IEEE, Harvard)
 pub mod embedded;
 
 pub use locale::Locale;

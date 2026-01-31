@@ -479,7 +479,7 @@ The CSLN approach separates "what to render" (templates) from "how to render" (o
    - Each preset has a `config()` method to expand to concrete values
 
 2. **Phase 2: Embedded templates** (PR #38)
-   - Added `csln_core::embedded` module (feature-gated via `embedded-templates`)
+   - Added `csln_core::embedded` module (always included)
    - Pre-built citation and bibliography templates for APA, Chicago, Vancouver, IEEE, Harvard
 
 3. **Phase 3: Migration updates** (PR #40)

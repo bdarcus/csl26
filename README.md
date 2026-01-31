@@ -210,7 +210,7 @@ crates/
 ├── csln_core/       # CSLN schema and types
 │   ├── options.rs   # Style configuration
 │   ├── presets.rs   # Named configuration bundles (APA, Chicago, etc.)
-│   ├── embedded.rs  # Pre-built templates for priority styles (feature-gated)
+│   ├── embedded.rs  # Pre-built templates for priority styles
 │   ├── template.rs  # Template components
 │   └── locale.rs    # Localization (terms, dates)
 ├── csln_migrate/    # CSL 1.0 → CSLN converter
@@ -353,7 +353,7 @@ This schema can be used to validate styles or provide intellisense in editors li
 - [ ] WASM build for browser use
 - [x] Additional locales (de-DE, fr-FR, tr-TR, etc.)
 - [x] Style presets vocabulary (see [STYLE_ALIASING.md](.agent/design/STYLE_ALIASING.md))
-- [x] Embedded priority templates (feature-gated)
+- [x] Embedded priority templates (APA, Chicago, Vancouver, IEEE, Harvard)
 - [x] Preset-aware migration (emit preset names instead of expanded config)
 - [ ] Note-bibliography citation style support
 
