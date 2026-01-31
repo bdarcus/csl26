@@ -13,6 +13,9 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+/// A list of month names (12 elements for Jan-Dec).
+pub type MonthList = Vec<String>;
+
 /// A locale definition containing language-specific terms and formatting rules.
 #[derive(Debug, Default, Deserialize, Serialize, Clone, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
