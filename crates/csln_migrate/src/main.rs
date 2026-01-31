@@ -328,7 +328,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             );
             CitationSpec {
                 options: None,
-                template: new_cit,
+                use_preset: None,
+                template: Some(new_cit),
                 wrap,
                 prefix,
                 suffix,
@@ -340,7 +341,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }),
         bibliography: Some(BibliographySpec {
             options: None,
-            template: new_bib,
+            use_preset: None,
+            template: Some(new_bib),
             // type_templates infrastructure exists but auto-generation is disabled.
             // Different styles have incompatible chapter formats (APA vs others),
             // so we can't apply a single template to all author-date styles.

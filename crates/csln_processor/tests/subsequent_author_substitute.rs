@@ -35,7 +35,7 @@ fn make_style_with_substitute(substitute: Option<String>) -> Style {
         citation: None,
         bibliography: Some(BibliographySpec {
             options: None,
-            template: vec![
+            template: Some(vec![
                 TemplateComponent::Contributor(TemplateContributor {
                     contributor: ContributorRole::Author,
                     form: ContributorForm::Long,
@@ -50,7 +50,7 @@ fn make_style_with_substitute(substitute: Option<String>) -> Style {
                     rendering: Rendering::default(),
                     ..Default::default()
                 }),
-            ],
+            ]),
             ..Default::default()
         }),
         ..Default::default()

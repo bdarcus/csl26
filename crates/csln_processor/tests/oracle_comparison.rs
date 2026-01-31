@@ -41,7 +41,7 @@ fn make_apa_style() -> Style {
         }),
         citation: Some(CitationSpec {
             options: None,
-            template: vec![
+            template: Some(vec![
                 TemplateComponent::Contributor(TemplateContributor {
                     contributor: ContributorRole::Author,
                     form: ContributorForm::Short,
@@ -56,13 +56,13 @@ fn make_apa_style() -> Style {
                     rendering: Rendering::default(),
                     ..Default::default()
                 }),
-            ],
+            ]),
             wrap: Some(WrapPunctuation::Parentheses),
             ..Default::default()
         }),
         bibliography: Some(BibliographySpec {
             options: None,
-            template: vec![
+            template: Some(vec![
                 TemplateComponent::Contributor(TemplateContributor {
                     contributor: ContributorRole::Author,
                     form: ContributorForm::Long,
@@ -90,7 +90,7 @@ fn make_apa_style() -> Style {
                     overrides: None,
                     ..Default::default()
                 }),
-            ],
+            ]),
             ..Default::default()
         }),
         templates: None,

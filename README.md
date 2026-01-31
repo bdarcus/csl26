@@ -256,6 +256,20 @@ cargo run --bin csln_migrate -- styles/apa.csl
 # Output: csln-new.yaml with clean CSLN format
 ```
 
+### Using Presets
+
+CSLN includes embedded templates for common styles (APA, Chicago, Vancouver, IEEE, Harvard). Instead of defining a template from scratch, you can reference a preset:
+
+```yaml
+citation:
+  use-preset: apa
+
+bibliography:
+  use-preset: vancouver
+```
+
+This effectively "inherits" the standard template for that style, which you can then customize with options.
+
 ## For Developers
 
 ### Building

@@ -468,17 +468,16 @@ The CSLN approach separates "what to render" (templates) from "how to render" (o
    - Added `csln_migrate::preset_detector` module
    - Detection functions: `detect_contributor_preset()`, `detect_title_preset()`, `detect_date_preset()`
 
+4. **Expose embedded templates + Processor Expansion** (PR #45)
+   - Added `use_preset` field and `TemplatePreset` enum
+   - Implemented `resolve_template()` in core and updated processor to use it
+   - Verified with new integration tests
+
 ### Remaining Work
 
-1. **Expose embedded templates to style authors** (Issue #39)
-   - Add `use-preset: apa` syntax to `CitationSpec` and `BibliographySpec`
-   - Currently embedded templates are internal infrastructure only
-
-2. **Implement preset expansion in processor**
-   - Resolve preset names to concrete configs at runtime
-
-3. **Document preset vocabulary** for style authors
+1. **Document preset vocabulary** for style authors
    - Add examples to README and/or schema descriptions
+
 
 ---
 

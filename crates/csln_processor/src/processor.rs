@@ -152,9 +152,10 @@ impl Processor {
     /// Process a single citation.
     pub fn process_citation(&self, citation: &Citation) -> Result<String, ProcessorError> {
         let citation_spec = self.style.citation.as_ref();
-        let template = citation_spec
-            .map(|cs| cs.template.as_slice())
+        let template_vec = citation_spec
+            .and_then(|cs| cs.resolve_template())
             .unwrap_or_default();
+        let template = template_vec.as_slice();
 
         // Get intra-citation delimiter (between components like author and year)
         let intra_delimiter = citation_spec
@@ -227,17 +228,24 @@ impl Processor {
         let bib_spec = self.style.bibliography.as_ref()?;
 
         // Check for type-specific template
+        // Resolve default template (handles preset vs explicit)
+        let default_template = bib_spec.resolve_template()?;
+
+        // Determine effective template (override or default)
         let template = if let Some(type_templates) = &bib_spec.type_templates {
             type_templates
                 .get(&reference.ref_type)
-                .unwrap_or(&bib_spec.template)
+                .cloned()
+                .unwrap_or(default_template)
         } else {
-            &bib_spec.template
+            default_template
         };
+
+        let template_ref = &template;
 
         self.process_template_with_number(
             reference,
-            template,
+            template_ref,
             RenderContext::Bibliography,
             entry_number,
         )
@@ -771,7 +779,7 @@ mod tests {
             }),
             citation: Some(CitationSpec {
                 options: None,
-                template: vec![
+                template: Some(vec![
                     TemplateComponent::Contributor(TemplateContributor {
                         contributor: ContributorRole::Author,
                         form: ContributorForm::Short,
@@ -786,13 +794,13 @@ mod tests {
                         rendering: Rendering::default(),
                         ..Default::default()
                     }),
-                ],
+                ]),
                 wrap: Some(WrapPunctuation::Parentheses),
                 ..Default::default()
             }),
             bibliography: Some(BibliographySpec {
                 options: None,
-                template: vec![
+                template: Some(vec![
                     TemplateComponent::Contributor(TemplateContributor {
                         contributor: ContributorRole::Author,
                         form: ContributorForm::Long,
@@ -820,7 +828,7 @@ mod tests {
                         overrides: None,
                         ..Default::default()
                     }),
-                ],
+                ]),
                 ..Default::default()
             }),
             templates: None,
@@ -1269,7 +1277,7 @@ mod tests {
         let style = Style {
             options: Some(config),
             bibliography: Some(csln_core::BibliographySpec {
-                template: bib_template,
+                template: Some(bib_template),
                 ..Default::default()
             }),
             ..Default::default()
