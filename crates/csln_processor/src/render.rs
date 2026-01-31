@@ -113,24 +113,56 @@ pub fn refs_to_string(proc_templates: Vec<ProcTemplate>) -> String {
             let _ = write!(&mut output, "{}", rendered);
         }
 
-        // Add trailing period unless entry ends with DOI/URL
-        // (links are self-terminating and shouldn't have period after)
-        let last_is_link = proc_template.iter().rev()
-            .find(|c| !render_component(c).is_empty())
-            .is_some_and(|c| {
-                matches!(&c.template_component,
-                    TemplateComponent::Variable(v) if matches!(v.variable,
-                        csln_core::template::SimpleVariable::Doi | csln_core::template::SimpleVariable::Url
-                    )
-                )
-            });
-        if !output.ends_with('.') && !last_is_link {
-            // Locale option: place periods inside quotation marks (American style)
-            if punctuation_in_quote && output.ends_with('"') {
-                output.pop();
-                output.push_str(".\"");
-            } else {
-                output.push('.');
+        // Apply entry suffix from bibliography config (extracted from CSL layout suffix).
+        // If explicitly set, use that value; otherwise use heuristic (period unless DOI/URL).
+        let entry_suffix = proc_template
+            .first()
+            .and_then(|c| c.config.as_ref())
+            .and_then(|cfg| cfg.bibliography.as_ref())
+            .and_then(|bib| bib.entry_suffix.as_deref());
+
+        match entry_suffix {
+            Some(suffix) if !suffix.is_empty() => {
+                // Explicit suffix from CSL layout (e.g., ".")
+                // Don't double-add if entry already ends with this punctuation
+                if !output.ends_with(suffix.chars().next().unwrap_or('.')) {
+                    // Handle punctuation-in-quote for period suffix
+                    if suffix == "." && punctuation_in_quote && output.ends_with('"') {
+                        output.pop();
+                        output.push_str(".\"");
+                    } else {
+                        output.push_str(suffix);
+                    }
+                }
+            }
+            Some(_) => {
+                // Empty suffix explicitly set - no entry-terminating punctuation
+            }
+            None => {
+                // No explicit suffix - use legacy heuristic: add period unless DOI/URL
+                let last_is_link = proc_template
+                    .iter()
+                    .rev()
+                    .find(|c| !render_component(c).is_empty())
+                    .is_some_and(|c| {
+                        matches!(
+                            &c.template_component,
+                            TemplateComponent::Variable(v)
+                                if matches!(
+                                    v.variable,
+                                    csln_core::template::SimpleVariable::Doi
+                                        | csln_core::template::SimpleVariable::Url
+                                )
+                        )
+                    });
+                if !output.ends_with('.') && !last_is_link {
+                    if punctuation_in_quote && output.ends_with('"') {
+                        output.pop();
+                        output.push_str(".\"");
+                    } else {
+                        output.push('.');
+                    }
+                }
             }
         }
     }
