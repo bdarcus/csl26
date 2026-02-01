@@ -211,7 +211,9 @@ fn create_test_bibliography() -> Bibliography {
             issued: Some(DateVariable::year(1971)),
             publisher: Some("Van Nostrand Reinhold".to_string()),
             publisher_place: Some("New York".to_string()),
-            edition: Some(StringOrNumber::String("Silver Anniversary Edition".to_string())),
+            edition: Some(StringOrNumber::String(
+                "Silver Anniversary Edition".to_string(),
+            )),
             ..Default::default()
         },
     );
@@ -392,9 +394,8 @@ fn print_human(processor: &Processor, style_name: &str, show_cite: bool, show_bi
     println!("\n=== {} ===\n", style_name);
 
     let item_ids = [
-        "ITEM-1", "ITEM-2", "ITEM-3", "ITEM-4", "ITEM-5",
-        "ITEM-6", "ITEM-7", "ITEM-8", "ITEM-9", "ITEM-10",
-        "ITEM-11", "ITEM-12", "ITEM-13", "ITEM-14", "ITEM-15",
+        "ITEM-1", "ITEM-2", "ITEM-3", "ITEM-4", "ITEM-5", "ITEM-6", "ITEM-7", "ITEM-8", "ITEM-9",
+        "ITEM-10", "ITEM-11", "ITEM-12", "ITEM-13", "ITEM-14", "ITEM-15",
     ];
 
     if show_cite {
