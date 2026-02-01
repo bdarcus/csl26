@@ -257,7 +257,7 @@ impl Default for DateConfig {
 }
 
 /// Month display format.
-#[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq, JsonSchema)]
+#[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq, Eq, Hash, JsonSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum MonthFormat {
     #[default]

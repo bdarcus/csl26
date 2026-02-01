@@ -1041,10 +1041,83 @@ impl OptionsExtractor {
     }
 
     /// Extract date configuration from style.
-    fn extract_date_config(_style: &Style) -> Option<DateConfig> {
-        // Date format inference not yet implemented.
-        // See: https://github.com/bdarcus/csl26/issues/67
-        None
+    fn extract_date_config(style: &Style) -> Option<DateConfig> {
+        let mut formats = std::collections::HashMap::new();
+
+        // Scan all macros for date formatting
+        for macro_def in &style.macros {
+            Self::scan_for_month_format(&macro_def.children, &mut formats);
+        }
+
+        // Also scan citation and bibliography layouts if they have direct date calls
+        Self::scan_for_month_format(&style.citation.layout.children, &mut formats);
+
+        if let Some(bib) = &style.bibliography {
+            Self::scan_for_month_format(&bib.layout.children, &mut formats);
+        }
+
+        // Find most frequent format
+        let best_format = formats
+            .into_iter()
+            .max_by_key(|(_, count)| *count)
+            .map(|(fmt, _)| fmt);
+
+        best_format.map(|month| DateConfig {
+            month,
+            _extra: std::collections::HashMap::new(),
+        })
+    }
+
+    /// Recursively scan nodes for month format in date parts.
+    fn scan_for_month_format(
+        nodes: &[CslNode],
+        formats: &mut std::collections::HashMap<csln_core::options::MonthFormat, usize>,
+    ) {
+        use csln_core::options::MonthFormat;
+
+        for node in nodes {
+            match node {
+                CslNode::Date(d) => {
+                    // Check date-parts attribute first
+                    if let Some(parts) = &d.date_parts {
+                        if parts == "year-month-day" || parts == "year-month" {
+                            // Default is usually numeric or long depending on context,
+                            // but explicit date-part children override this.
+                        }
+                    }
+
+                    // Check child date-part elements
+                    // Note: Date parts are in `parts` field, not `children` CslNode variant
+                    for part in &d.parts {
+                        if part.name == "month" {
+                            let fmt = match part.form.as_deref() {
+                                Some("short") => MonthFormat::Short,
+                                Some("numeric") | Some("numeric-leading-zeros") => {
+                                    MonthFormat::Numeric
+                                }
+                                Some("long") | None => MonthFormat::Long,
+                                _ => MonthFormat::Long,
+                            };
+                            *formats.entry(fmt).or_insert(0) += 1;
+                        }
+                    }
+                }
+                CslNode::Group(g) => Self::scan_for_month_format(&g.children, formats),
+                CslNode::Choose(c) => {
+                    // if_branch is direct
+                    Self::scan_for_month_format(&c.if_branch.children, formats);
+
+                    for elseif in &c.else_if_branches {
+                        Self::scan_for_month_format(&elseif.children, formats);
+                    }
+                    // else_branch is Option<Vec<CslNode>>
+                    if let Some(else_nodes) = &c.else_branch {
+                        Self::scan_for_month_format(else_nodes, formats);
+                    }
+                }
+                _ => {}
+            }
+        }
     }
 
     /// Extract title formatting configuration by scanning for quote/emph usage on titles.
