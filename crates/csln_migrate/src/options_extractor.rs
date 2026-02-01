@@ -1497,7 +1497,7 @@ mod tests {
         assert!(config
             .bibliography
             .as_ref()
-            .map_or(true, |b| b.separator.is_none()));
+            .is_none_or(|b| b.separator.is_none()));
 
         // Test Note style heuristic
         let note_csl = r#"<?xml version="1.0" encoding="utf-8"?>
