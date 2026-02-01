@@ -51,8 +51,39 @@ impl TemplateCompiler {
         current_types: &[ItemType],
     ) -> Vec<TemplateComponent> {
         let mut components = Vec::new();
+        let mut i = 0;
 
-        for node in nodes {
+        while i < nodes.len() {
+            let node = &nodes[i];
+
+            // Lookahead merge for Text nodes
+            if let CslnNode::Text { value } = node {
+                if i + 1 < nodes.len() {
+                    // Try to compile next node
+                    if let Some(mut next_comp) = self.compile_node(&nodes[i + 1]) {
+                        // Merge text into prefix
+                        let mut rendering = self.get_component_rendering(&next_comp);
+                        let mut new_prefix = value.clone();
+                        if let Some(p) = rendering.prefix {
+                            new_prefix.push_str(&p);
+                        }
+                        rendering.prefix = Some(new_prefix);
+                        self.set_component_rendering(&mut next_comp, rendering);
+
+                        // Apply inherited wrap if applicable
+                        if inherited_wrap.0.is_some()
+                            && matches!(&next_comp, TemplateComponent::Date(_))
+                        {
+                            self.apply_wrap_to_component(&mut next_comp, inherited_wrap);
+                        }
+
+                        self.add_or_upgrade_component(&mut components, next_comp, current_types);
+                        i += 2;
+                        continue;
+                    }
+                }
+            }
+
             if let Some(mut component) = self.compile_node(node) {
                 // Apply inherited wrap to date components
                 if inherited_wrap.0.is_some() && matches!(&component, TemplateComponent::Date(_)) {
@@ -143,60 +174,135 @@ impl TemplateCompiler {
                     _ => {}
                 }
             }
+            i += 1;
         }
 
         components
     }
 
-    /// Add a component to the list, or upgrade an existing one if the new one has better formatting.
     fn add_or_upgrade_component(
         &self,
         components: &mut Vec<TemplateComponent>,
         new_component: TemplateComponent,
         current_types: &[ItemType],
     ) {
-        // Check if we already have this component
-        if let Some(idx) = components
-            .iter()
-            .position(|c| self.same_variable(c, &new_component))
-        {
+        // Recursive search for existing variable
+        let mut existing_idx = None;
+
+        for (i, c) in components.iter_mut().enumerate() {
+            if self.same_variable(c, &new_component) {
+                existing_idx = Some(i);
+                break;
+            }
+            // Also check inside Lists
+            if let TemplateComponent::List(ref mut list) = c {
+                if self.has_variable_recursive(&list.items, &new_component) {
+                    // Variable exists but is nested. We can't easily merge top-level into nested
+                    // without knowing the structure. For now, mark as "found" so we can add overrides.
+                    // Actually, let's just use a recursive mutation helper.
+                    self.add_overrides_recursive(c, &new_component, current_types);
+                    return;
+                }
+            }
+        }
+
+        if let Some(idx) = existing_idx {
             if current_types.is_empty() {
-                // For dates, upgrade if the new one has wrap and the old one doesn't
+                // ... same global logic ...
+                let mut rendering = self.get_component_rendering(&components[idx]);
+                if rendering.suppress == Some(true) {
+                    rendering.suppress = Some(false);
+                    self.set_component_rendering(&mut components[idx], rendering);
+                }
+
                 if let (TemplateComponent::Date(existing), TemplateComponent::Date(new)) =
                     (&components[idx], &new_component)
                 {
                     if existing.rendering.wrap.is_none() && new.rendering.wrap.is_some() {
-                        // Upgrade: replace with the wrapped version
-                        components[idx] = new_component;
+                        components[idx] = new_component.clone();
                     }
                 }
             } else {
-                // Found a variable in a type-specific branch. Add to overrides.
-                // Use type-specific override from new component if it exists,
-                // otherwise fall back to base rendering.
-                let base_rendering = self.get_component_rendering(&new_component);
-                let new_overrides = self.get_component_overrides(&new_component);
+                // Add overrides to existing top-level component
+                self.add_overrides_to_existing(&mut components[idx], &new_component, current_types);
+            }
+        } else {
+            // ... same NEW component logic ...
+            let mut component_to_add = new_component;
+            if !current_types.is_empty() && !matches!(&component_to_add, TemplateComponent::List(_))
+            {
+                let mut base = self.get_component_rendering(&component_to_add);
+                base.suppress = Some(true);
+                self.set_component_rendering(&mut component_to_add, base.clone());
 
                 for item_type in current_types {
                     let type_str = self.item_type_to_string(item_type);
-                    // Check if new component has a specific override for this type
-                    let rendering = new_overrides
-                        .as_ref()
-                        .and_then(|ovr| ovr.get(&type_str))
-                        .cloned()
-                        .unwrap_or_else(|| base_rendering.clone());
-                    self.add_override_to_component(&mut components[idx], type_str, rendering);
+                    let mut unsuppressed = base.clone();
+                    unsuppressed.suppress = Some(false);
+                    self.add_override_to_component(&mut component_to_add, type_str, unsuppressed);
                 }
             }
-        } else {
-            if let TemplateComponent::Title(t) = &new_component {
-                if let Some(ref ovr) = t.overrides {
-                    for (k, v) in ovr {
-                        eprintln!("  {} -> emph={:?} quote={:?}", k, v.emph, v.quote);
-                    }
+            components.push(component_to_add);
+        }
+    }
+
+    fn has_variable_recursive(
+        &self,
+        items: &[TemplateComponent],
+        target: &TemplateComponent,
+    ) -> bool {
+        for item in items {
+            if self.same_variable(item, target) {
+                return true;
+            }
+            if let TemplateComponent::List(list) = item {
+                if self.has_variable_recursive(&list.items, target) {
+                    return true;
                 }
             }
-            components.push(new_component);
+        }
+        false
+    }
+
+    fn add_overrides_recursive(
+        &self,
+        component: &mut TemplateComponent,
+        new_comp: &TemplateComponent,
+        current_types: &[ItemType],
+    ) {
+        if self.same_variable(component, new_comp) {
+            self.add_overrides_to_existing(component, new_comp, current_types);
+            return;
+        }
+        if let TemplateComponent::List(ref mut list) = component {
+            for item in &mut list.items {
+                self.add_overrides_recursive(item, new_comp, current_types);
+            }
+        }
+    }
+
+    fn add_overrides_to_existing(
+        &self,
+        existing: &mut TemplateComponent,
+        new_comp: &TemplateComponent,
+        current_types: &[ItemType],
+    ) {
+        let base_rendering = self.get_component_rendering(new_comp);
+        let new_overrides = self.get_component_overrides(new_comp);
+
+        for item_type in current_types {
+            let type_str = self.item_type_to_string(item_type);
+            let mut rendering = new_overrides
+                .as_ref()
+                .and_then(|ovr| ovr.get(&type_str))
+                .cloned()
+                .unwrap_or_else(|| base_rendering.clone());
+
+            if rendering.suppress.is_none() || rendering.suppress == Some(true) {
+                rendering.suppress = Some(false);
+            }
+
+            self.add_override_to_component(existing, type_str, rendering);
         }
     }
 
@@ -1093,6 +1199,19 @@ impl TemplateCompiler {
         }
     }
 
+    /// Set the rendering options for a component.
+    fn set_component_rendering(&self, component: &mut TemplateComponent, rendering: Rendering) {
+        match component {
+            TemplateComponent::Contributor(c) => c.rendering = rendering,
+            TemplateComponent::Date(d) => d.rendering = rendering,
+            TemplateComponent::Number(n) => n.rendering = rendering,
+            TemplateComponent::Title(t) => t.rendering = rendering,
+            TemplateComponent::Variable(v) => v.rendering = rendering,
+            TemplateComponent::List(l) => l.rendering = rendering,
+            _ => {}
+        }
+    }
+
     /// Get type-specific overrides from a component.
     fn get_component_overrides(
         &self,
@@ -1247,5 +1366,71 @@ mod tests {
         } else {
             panic!("Expected Variable component");
         }
+    }
+
+    #[test]
+    fn test_compile_recursive_variable_discovery() {
+        use csln_core::{ConditionBlock, ItemType, VariableBlock};
+        let compiler = TemplateCompiler;
+
+        // Branch 1: type="book" -> Group -> Publisher
+        let pub_var = VariableBlock {
+            variable: Variable::Publisher,
+            label: None,
+            formatting: FormattingOptions::default(),
+            overrides: HashMap::new(),
+        };
+        let branch1 = CslnNode::Condition(ConditionBlock {
+            if_item_type: vec![ItemType::Book],
+            if_variables: Vec::new(),
+            then_branch: vec![CslnNode::Group(csln_core::GroupBlock {
+                children: vec![CslnNode::Variable(pub_var.clone())],
+                delimiter: None,
+                formatting: FormattingOptions::default(),
+            })],
+            else_if_branches: Vec::new(),
+            else_branch: None,
+        });
+
+        // Branch 2: type="chapter" -> Group -> Publisher
+        let branch2 = CslnNode::Condition(ConditionBlock {
+            if_item_type: vec![ItemType::Chapter],
+            if_variables: Vec::new(),
+            then_branch: vec![CslnNode::Group(csln_core::GroupBlock {
+                children: vec![CslnNode::Variable(pub_var.clone())],
+                delimiter: None,
+                formatting: FormattingOptions::default(),
+            })],
+            else_if_branches: Vec::new(),
+            else_branch: None,
+        });
+
+        let result = compiler.compile(&[branch1, branch2]);
+
+        // Find publisher (it might be inside a List or flattened)
+        let has_pub = compiler.has_variable_recursive(
+            &result,
+            &TemplateComponent::Variable(csln_core::template::TemplateVariable {
+                variable: SimpleVariable::Publisher,
+                ..Default::default()
+            }),
+        );
+        assert!(has_pub, "Publisher should be in the result");
+
+        // Verify it has overrides for BOTH book and chapter
+        fn check_overrides(items: &[TemplateComponent]) {
+            for item in items {
+                if let TemplateComponent::Variable(v) = item {
+                    if v.variable == SimpleVariable::Publisher {
+                        assert!(v.overrides.as_ref().unwrap().contains_key("book"));
+                        assert!(v.overrides.as_ref().unwrap().contains_key("chapter"));
+                    }
+                }
+                if let TemplateComponent::List(l) = item {
+                    check_overrides(&l.items);
+                }
+            }
+        }
+        check_overrides(&result);
     }
 }

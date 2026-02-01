@@ -66,6 +66,7 @@ Currently, only APA achieves 5/5 oracle match for both citations and bibliograph
 13. 🔄 **Bibliography separator** - Partial: infrastructure added, extraction limited by CSL encoding
 14. 🔄 **Publisher-place visibility** - Style-specific (Chicago: suppress for books, Elsevier: show)
 15. ✅ **Editor verb form** - Fixed: extracted from label position/form in names
+16. ✅ **Container title duplication** - Fixed: recursive variable discovery and type-specific suppression
 
 ---
 
@@ -107,10 +108,15 @@ Currently, only APA achieves 5/5 oracle match for both citations and bibliograph
 
 ### Phase 8: Container Title Deduplication
 
+**Status:** ✅ COMPLETED
+
 **Problem:** Elsevier bibliography shows container title twice for chapters.
 
-**Files:**
-- `crates/csln_migrate/src/template_compiler.rs` - Prevent duplicate parent-monograph
+**Solution:**
+- Improved `Upsampler` to handle multiple space-separated variables in `<names>` (e.g. `editor translator`).
+- Implemented **Type-Specific Suppression** in `TemplateCompiler`: variables discovered only in specific branches are now marked as suppressed by default, with un-suppress overrides for the active types.
+- Implemented **Recursive Variable Discovery** in the flattener: ensures variables nested in Lists are correctly deduplicated and receive type-specific overrides.
+- Removed manual injection hacks in `main.rs` that caused duplication for non-chapter types.
 
 ---
 

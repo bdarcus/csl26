@@ -1,0 +1,74 @@
+
+=== End-to-End Oracle Test: elsevier-harvard ===
+
+Rendering with citeproc-js (oracle)...
+Migrating and rendering with CSLN...
+
+--- CITATIONS ---
+  ✅ ITEM-1
+  ✅ ITEM-2
+  ✅ ITEM-3
+  ✅ ITEM-4
+  ✅ ITEM-5
+  ✅ ITEM-6
+  ✅ ITEM-7
+  ✅ ITEM-8
+  ✅ ITEM-9
+  ✅ ITEM-10
+  ✅ ITEM-11
+  ✅ ITEM-12
+  ✅ ITEM-13
+  ✅ ITEM-14
+  ✅ ITEM-15
+
+--- BIBLIOGRAPHY ---
+  ❌ Entry 1
+     Oracle: Chen, W., 2019. Neural Networks for Natural Language Understanding (PhD thesis). Stanford University.
+     CSLN:   Chen, W., 2019. Neural Networks for Natural Language Understanding. PhD thesis.
+  ❌ Entry 2
+     Oracle: Ericsson, K.A., 2006. The Role of Deliberate Practice, in: Ericsson, K.A., Charness, N., Feltovich, P.J., Hoffman, R.R. (Eds.), The Cambridge Handbook of Expertise and Expert Performance. Cambridge University Press, pp. 683–703.
+     CSLN:   Ericsson, K.A., 2006, in: Ericsson, K.A., Charness, N., Feltovich, P.J., and Hoffman, R.R. (Eds.), The Cambridge Handbook of Expertise and Expert Performance.
+  ❌ Entry 3
+     Oracle: Hawking, S., 1988. A Brief History of Time. Bantam Dell Publishing Group, New York.
+     CSLN:   Hawking, S., 1988. A Brief History of Time.
+  ❌ Entry 4
+     Oracle: Kuhn, T.S., 1962. The Structure of Scientific Revolutions. International Encyclopedia of Unified Science 2. https://doi.org/10.1234/example
+     CSLN:   Kuhn, T.S., 1962. https://doi.org/10.1234/example
+  ❌ Entry 5
+     Oracle: Kuhn, T.S., 1970. Scientific Paradigms and Normal Science. Philosophy of Science 37, 1–13. https://doi.org/10.1086/288273
+     CSLN:   Kuhn, T.S., 1970. https://doi.org/10.1086/288273
+  ❌ Entry 6
+     Oracle: LeCun, Y., Bengio, Y., Hinton, G., 2015. Deep Learning. Nature 521, 436–444. https://doi.org/10.1038/nature14539
+     CSLN:   LeCun, Y., Bengio, Y., and Hinton, G., 2015. https://doi.org/10.1038/nature14539
+  ❌ Entry 7
+     Oracle: Mikolov, T., Sutskever, I., Chen, K., Corrado, G., Dean, J., 2013. Distributed Representations of Words and Phrases, in: Proceedings of NIPS 2013. Presented at the Neural Information Processing Systems, pp. 3111–3119.
+     CSLN:   Mikolov, T., Sutskever, I., Chen, K., Corrado, G., and Dean, J., 2013.
+  ❌ Entry 8
+     Oracle: Reis, H.T., Judd, C.M. (Eds.), 2000. Handbook of Research Methods in Social Psychology. Cambridge University Press, Cambridge.
+     CSLN:   Reis, H.T., and Judd, C.M., 2000. Handbook of Research Methods in Social Psychology, in: Reis, H.T., and Judd, C.M. (Eds.).
+  ❌ Entry 9
+     Oracle: Smith, J., Anderson, M., 2020. Climate Change and Extreme Weather Events. Nature Climate Change 10, 850–855. https://doi.org/10.1038/s41558-020-0871-4
+     CSLN:   Smith, J., and Anderson, M., 2020. https://doi.org/10.1038/s41558-020-0871-4
+  ❌ Entry 10
+     Oracle: Smith, J., Williams, R., 2020. Machine Learning for Climate Prediction. Environmental Research Letters 15, 114042. https://doi.org/10.1088/1748-9326/abc123
+     CSLN:   Smith, J., and Williams, R., 2020. https://doi.org/10.1088/1748-9326/abc123
+  ❌ Entry 11
+     Oracle: State of JS Team, 2023. The State of JavaScript 2023 [WWW Document]. URL https://stateofjs.com/2023 (accessed 1.15.24).
+     CSLN:   State of JS Team, 2023. The State of JavaScript 2023.
+  ❌ Entry 12
+     Oracle: The Role of Theory in Research, 2018. . Journal of Theoretical Psychology 28, 201–215.
+     CSLN:   The Role of Theory in Research, 2018.
+  ❌ Entry 13
+     Oracle: Vaswani, A., Shazeer, N., Parmar, N., Uszkoreit, J., Jones, L., Gomez, A.N., Kaiser, L., Polosukhin, I., 2017. Attention Is All You Need. Advances in Neural Information Processing Systems 30, 5998–6008.
+     CSLN:   Vaswani, A., Shazeer, N., Parmar, N., Uszkoreit, J., Jones, L., Gomez, A.N., Kaiser, L., and Polosukhin, I., 2017.
+  ❌ Entry 14
+     Oracle: Weinberg, G.M., Freedman, D.P., 1971. The Psychology of Computer Programming, Silver Anniversary Edition. ed. Van Nostrand Reinhold, New York.
+     CSLN:   Weinberg, G.M., and Freedman, D.P., 1971. The Psychology of Computer Programming. Silver Anniversary Edition.
+  ❌ Entry 15
+     Oracle: World Bank, 2023. World Development Report 2023. World Bank Group, Washington, DC.
+     CSLN:   World Bank, 2023. World Development Report 2023.
+
+=== SUMMARY ===
+Citations: 15/15 match
+Bibliography: 0/15 match
+
