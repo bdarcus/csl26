@@ -1029,7 +1029,7 @@ impl OptionsExtractor {
                 // support this. Extracting keys from conditionals creates incorrect
                 // substitute templates (e.g., adding "title" before "editor" when only
                 // specific types should use title).
-                // TODO: Support type-conditional substitution in CSLN
+                // See: https://github.com/bdarcus/csl26/issues/66
             }
             CslNode::Group(g) => {
                 for child in &g.children {
@@ -1042,7 +1042,8 @@ impl OptionsExtractor {
 
     /// Extract date configuration from style.
     fn extract_date_config(_style: &Style) -> Option<DateConfig> {
-        // TODO: Walk dates and infer month format from date-parts
+        // Date format inference not yet implemented.
+        // See: https://github.com/bdarcus/csl26/issues/67
         None
     }
 
