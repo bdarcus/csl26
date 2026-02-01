@@ -26,7 +26,9 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 //!
 //! A reference can be a component of a larger work, such as a chapter in a book, or an article.
 //! The parent is represented inline as a Monograph or Serial.
-//! TODO: Add ability to reference a parent by ID.
+//!
+//! Future enhancement: support referencing a parent by ID to reduce duplication.
+//! See: https://github.com/bdarcus/csl26/issues/64
 
 use crate::locale::MonthList;
 use crate::options::{AndOptions, AndOtherOptions, Config, DisplayAsSort};
