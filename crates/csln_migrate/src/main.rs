@@ -628,10 +628,13 @@ fn apply_type_overrides(
     style_id: &str,
 ) {
     match component {
-        // Container-title (parent-serial): add comma suffix for APA-style (no space prefix on volume)
-        // Skip if volume List has space prefix (Elsevier-style handles spacing in List)
+        // Container-title (parent-serial): style-specific suffix
+        // - APA: add comma suffix
+        // - Chicago: no suffix (uses space as volume delimiter)
+        // - Elsevier: handled by List space prefix
         TemplateComponent::Title(t) if t.title == csln_core::template::TitleType::ParentSerial => {
-            if !volume_list_has_space_prefix {
+            let is_chicago = style_id.contains("chicago");
+            if !volume_list_has_space_prefix && !is_chicago {
                 let mut overrides = std::collections::HashMap::new();
                 overrides.insert(
                     "article-journal".to_string(),
