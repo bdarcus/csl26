@@ -12,9 +12,10 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 use csl_legacy::model::{CslNode, Layout, Macro, Names, Sort as LegacySort, Style, Substitute};
 use csln_core::options::{
     AndOptions, BibliographyConfig, Config, ContributorConfig, DateConfig, DelimiterPrecedesLast,
-    DemoteNonDroppingParticle, Disambiguation, DisplayAsSort, EditorLabelFormat, Group, PageRangeFormat,
-    Processing, ProcessingCustom, ShortenListOptions, Sort, SortKey, SortSpec, SubsequentAuthorSubstituteRule,
-    Substitute as CslnSubstitute, SubstituteConfig, SubstituteKey, TitlesConfig,
+    DemoteNonDroppingParticle, Disambiguation, DisplayAsSort, EditorLabelFormat, Group,
+    PageRangeFormat, Processing, ProcessingCustom, ShortenListOptions, Sort, SortKey, SortSpec,
+    SubsequentAuthorSubstituteRule, Substitute as CslnSubstitute, SubstituteConfig, SubstituteKey,
+    TitlesConfig,
 };
 use csln_core::template::DelimiterPunctuation;
 

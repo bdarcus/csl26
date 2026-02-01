@@ -266,21 +266,24 @@ impl ComponentValues for TemplateContributor {
                 let plural = names.len() > 1;
                 match format {
                     EditorLabelFormat::VerbPrefix => {
-                        let term = options
-                            .locale
-                            .role_term(&self.contributor, plural, TermForm::Verb);
+                        let term =
+                            options
+                                .locale
+                                .role_term(&self.contributor, plural, TermForm::Verb);
                         (term.map(|t| format!("{} ", t)), None)
                     }
                     EditorLabelFormat::ShortSuffix => {
-                        let term = options
-                            .locale
-                            .role_term(&self.contributor, plural, TermForm::Short);
+                        let term =
+                            options
+                                .locale
+                                .role_term(&self.contributor, plural, TermForm::Short);
                         (None, term.map(|t| format!(" ({})", t)))
                     }
                     EditorLabelFormat::LongSuffix => {
-                        let term = options
-                            .locale
-                            .role_term(&self.contributor, plural, TermForm::Long);
+                        let term =
+                            options
+                                .locale
+                                .role_term(&self.contributor, plural, TermForm::Long);
                         (None, term.map(|t| format!(", {}", t)))
                     }
                 }
