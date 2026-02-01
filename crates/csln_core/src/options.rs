@@ -570,6 +570,9 @@ pub struct Substitute {
     /// Ordered list of fields to try as substitutes.
     #[serde(default)]
     pub template: Vec<SubstituteKey>,
+    /// Type-specific substitution overrides.
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+    pub overrides: HashMap<String, Vec<SubstituteKey>>,
 }
 
 impl Default for Substitute {
@@ -581,6 +584,7 @@ impl Default for Substitute {
                 SubstituteKey::Title,
                 SubstituteKey::Translator,
             ],
+            overrides: HashMap::new(),
         }
     }
 }

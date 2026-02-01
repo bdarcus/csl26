@@ -931,6 +931,17 @@ impl OptionsExtractor {
                 return Some(sub);
             }
         }
+
+        // Also search layout
+        if let Some(sub) = Self::find_substitute_in_nodes(&style.citation.layout.children) {
+            return Some(sub);
+        }
+        if let Some(bib) = &style.bibliography {
+            if let Some(sub) = Self::find_substitute_in_nodes(&bib.layout.children) {
+                return Some(sub);
+            }
+        }
+
         None
     }
 
@@ -974,19 +985,25 @@ impl OptionsExtractor {
     /// Convert a CSL 1.0 <substitute> to CSLN Substitute.
     fn convert_substitute(sub: &Substitute) -> CslnSubstitute {
         let mut template = Vec::new();
+        let mut overrides = std::collections::HashMap::new();
 
         for child in &sub.children {
-            Self::extract_substitute_keys(child, &mut template);
+            Self::extract_substitute_keys(child, &mut template, &mut overrides);
         }
 
         CslnSubstitute {
             contributor_role_form: None, // Could be inferred from label forms
             template,
+            overrides,
         }
     }
 
     /// Recursively extract substitute keys from a node.
-    fn extract_substitute_keys(node: &CslNode, template: &mut Vec<SubstituteKey>) {
+    fn extract_substitute_keys(
+        node: &CslNode,
+        template: &mut Vec<SubstituteKey>,
+        overrides: &mut std::collections::HashMap<String, Vec<SubstituteKey>>,
+    ) {
         match node {
             CslNode::Names(names) => {
                 // Map the variable to a SubstituteKey
@@ -1022,18 +1039,48 @@ impl OptionsExtractor {
                     }
                 }
             }
-            CslNode::Choose(_c) => {
-                // Skip conditional branches - only extract unconditional substitute keys.
-                // CSL 1.0 supports type-conditional substitution (e.g., use title for
-                // "classic" types but editor for regular books), but CSLN doesn't yet
-                // support this. Extracting keys from conditionals creates incorrect
-                // substitute templates (e.g., adding "title" before "editor" when only
-                // specific types should use title).
+            CslNode::Choose(c) => {
+                // Extract type-conditional substitutions.
                 // See: https://github.com/bdarcus/csl26/issues/66
+
+                // Handle if branch
+                if let Some(types) = &c.if_branch.type_ {
+                    let mut type_template = Vec::new();
+                    for child in &c.if_branch.children {
+                        Self::extract_substitute_keys(child, &mut type_template, overrides);
+                    }
+                    if !type_template.is_empty() {
+                        for t in types.split_whitespace() {
+                            overrides.insert(t.to_string(), type_template.clone());
+                        }
+                    }
+                }
+
+                // Handle else-if branches
+                for elseif in &c.else_if_branches {
+                    if let Some(types) = &elseif.type_ {
+                        let mut type_template = Vec::new();
+                        for child in &elseif.children {
+                            Self::extract_substitute_keys(child, &mut type_template, overrides);
+                        }
+                        if !type_template.is_empty() {
+                            for t in types.split_whitespace() {
+                                overrides.insert(t.to_string(), type_template.clone());
+                            }
+                        }
+                    }
+                }
+
+                // Handle else branch (adds to the default template)
+                if let Some(else_nodes) = &c.else_branch {
+                    for child in else_nodes {
+                        Self::extract_substitute_keys(child, template, overrides);
+                    }
+                }
             }
             CslNode::Group(g) => {
                 for child in &g.children {
-                    Self::extract_substitute_keys(child, template);
+                    Self::extract_substitute_keys(child, template, overrides);
                 }
             }
             _ => {}
