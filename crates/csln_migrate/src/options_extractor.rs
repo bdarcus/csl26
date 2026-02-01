@@ -1494,7 +1494,10 @@ mod tests {
         let config = OptionsExtractor::extract(&style);
 
         // We removed the elsevier heuristic, so it should be None (defaults to ". " in renderer)
-        assert!(config.bibliography.as_ref().map_or(true, |b| b.separator.is_none()));
+        assert!(config
+            .bibliography
+            .as_ref()
+            .map_or(true, |b| b.separator.is_none()));
 
         // Test Note style heuristic
         let note_csl = r#"<?xml version="1.0" encoding="utf-8"?>
