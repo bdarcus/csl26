@@ -741,11 +741,25 @@ impl ComponentValues for TemplateDate {
     }
 }
 
-fn int_to_letter(n: u32) -> Option<String> {
+pub fn int_to_letter(n: u32) -> Option<String> {
     if n == 0 {
         return None;
     }
     char::from_u32(n + 96).map(|c| c.to_string())
+}
+
+/// Format contributors in short form for citation grouping.
+///
+/// Used when collapsing same-author citations to render "Author" part separately.
+pub fn format_contributors_short(names: &[Name], options: &RenderOptions<'_>) -> String {
+    format_names(
+        names,
+        &ContributorForm::Short,
+        options,
+        None,
+        None,
+        &ProcHints::default(),
+    )
 }
 
 impl ComponentValues for TemplateTitle {

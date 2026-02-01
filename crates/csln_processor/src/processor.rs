@@ -156,6 +156,9 @@ impl Processor {
     }
 
     /// Process a single citation.
+    ///
+    /// For author-date styles, groups adjacent items by author to produce
+    /// collapsed output like "(Kuhn 1962a, 1962b; Smith 2020)".
     pub fn process_citation(&self, citation: &Citation) -> Result<String, ProcessorError> {
         let citation_spec = self.style.citation.as_ref();
         let template_vec = citation_spec
@@ -168,16 +171,68 @@ impl Processor {
             .and_then(|cs| cs.delimiter.as_deref())
             .unwrap_or(", ");
 
-        // Render each citation item, then join with inter-citation delimiter
+        // Inter-citation delimiter (between different author groups)
+        let inter_delimiter = citation_spec
+            .and_then(|cs| cs.multi_cite_delimiter.as_deref())
+            .unwrap_or("; ");
+
+        // Check if this is an author-date style that supports grouping
+        let is_author_date = self
+            .style
+            .options
+            .as_ref()
+            .and_then(|o| o.processing.as_ref())
+            .map(|p| matches!(p, csln_core::options::Processing::AuthorDate))
+            .unwrap_or(false);
+
+        // Group adjacent items by author for author-date styles
+        let rendered_groups = if is_author_date && citation.items.len() > 1 {
+            self.render_grouped_citation(&citation.items, template, intra_delimiter)?
+        } else {
+            // No grouping - render each item separately
+            self.render_ungrouped_citation(&citation.items, template, intra_delimiter)?
+        };
+
+        let content = rendered_groups.join(inter_delimiter);
+
+        // Get wrap/prefix/suffix from citation spec
+        let wrap = citation_spec.and_then(|cs| cs.wrap.as_ref());
+        let prefix = citation_spec.and_then(|cs| cs.prefix.as_deref());
+        let suffix = citation_spec.and_then(|cs| cs.suffix.as_deref());
+
+        // Apply citation-level prefix from input
+        let citation_prefix = citation.prefix.as_deref().unwrap_or("");
+        let citation_suffix = citation.suffix.as_deref().unwrap_or("");
+
+        // Apply wrap or prefix/suffix
+        let (open, close) = match wrap {
+            Some(WrapPunctuation::Parentheses) => ("(", ")"),
+            Some(WrapPunctuation::Brackets) => ("[", "]"),
+            Some(WrapPunctuation::Quotes) => ("\u{201C}", "\u{201D}"),
+            _ => (prefix.unwrap_or(""), suffix.unwrap_or("")),
+        };
+
+        Ok(format!(
+            "{}{}{}{}{}",
+            open, citation_prefix, content, citation_suffix, close
+        ))
+    }
+
+    /// Render citation items without grouping.
+    fn render_ungrouped_citation(
+        &self,
+        items: &[crate::reference::CitationItem],
+        template: &[TemplateComponent],
+        intra_delimiter: &str,
+    ) -> Result<Vec<String>, ProcessorError> {
         let mut rendered_items = Vec::new();
 
-        for item in &citation.items {
+        for item in items {
             let reference = self
                 .bibliography
                 .get(&item.id)
                 .ok_or_else(|| ProcessorError::ReferenceNotFound(item.id.clone()))?;
 
-            // Get or assign citation number for numeric styles
             let citation_number = self.get_or_assign_citation_number(&item.id);
 
             if let Some(proc) = self.process_template_with_number(
@@ -186,34 +241,213 @@ impl Processor {
                 RenderContext::Citation,
                 citation_number,
             ) {
-                // Each item's parts are joined with intra-citation delimiter
                 let item_str = citation_to_string(&proc, None, None, None, Some(intra_delimiter));
                 if !item_str.is_empty() {
-                    rendered_items.push(item_str);
+                    // Apply item-level prefix/suffix
+                    let prefix = item.prefix.as_deref().unwrap_or("");
+                    let suffix = item.suffix.as_deref().unwrap_or("");
+                    rendered_items.push(format!("{}{}{}", prefix, item_str, suffix));
                 }
             }
         }
 
-        // Get wrap/prefix/suffix/multi-cite-delimiter from citation spec
-        let wrap = citation_spec.and_then(|cs| cs.wrap.as_ref());
-        let prefix = citation_spec.and_then(|cs| cs.prefix.as_deref());
-        let suffix = citation_spec.and_then(|cs| cs.suffix.as_deref());
-        // Inter-citation delimiter (between multiple refs)
-        let inter_delimiter = citation_spec
-            .and_then(|cs| cs.multi_cite_delimiter.as_deref())
-            .unwrap_or("; ");
+        Ok(rendered_items)
+    }
 
-        let content = rendered_items.join(inter_delimiter);
+    /// Render citation items with author grouping for author-date styles.
+    ///
+    /// Groups adjacent items by author, rendering as "Author 2020a, 2020b"
+    /// instead of "Author 2020a; Author 2020b".
+    ///
+    /// Design decision: Only ADJACENT same-author items are grouped. Non-adjacent
+    /// items with the same author remain separate, preserving user-specified order.
+    /// This is simpler and more predictable than full reordering. If a style wants
+    /// reordering, it can specify citation sorting explicitly.
+    fn render_grouped_citation(
+        &self,
+        items: &[crate::reference::CitationItem],
+        template: &[TemplateComponent],
+        intra_delimiter: &str,
+    ) -> Result<Vec<String>, ProcessorError> {
+        use crate::reference::CitationItem;
 
-        // Apply wrap or prefix/suffix
-        let (open, close) = match wrap {
-            Some(WrapPunctuation::Parentheses) => ("(", ")"),
-            Some(WrapPunctuation::Brackets) => ("[", "]"),
-            Some(WrapPunctuation::Quotes) => ("\u{201C}", "\u{201D}"), // U+201C (") and U+201D (")
-            _ => (prefix.unwrap_or(""), suffix.unwrap_or("")),
+        // Group adjacent items by author key
+        let mut groups: Vec<Vec<&CitationItem>> = Vec::new();
+
+        for item in items {
+            let reference = self.bibliography.get(&item.id);
+            let author_key = reference
+                .and_then(|r| r.author.as_ref())
+                .map(|authors| {
+                    authors
+                        .iter()
+                        .map(|a| a.family_or_literal().to_lowercase())
+                        .collect::<Vec<_>>()
+                        .join("|")
+                })
+                .unwrap_or_default();
+
+            // Check if this item has the same author as the previous group
+            let should_group = if let Some(last_group) = groups.last() {
+                if let Some(last_item) = last_group.last() {
+                    let last_ref = self.bibliography.get(&last_item.id);
+                    let last_key = last_ref
+                        .and_then(|r| r.author.as_ref())
+                        .map(|authors| {
+                            authors
+                                .iter()
+                                .map(|a| a.family_or_literal().to_lowercase())
+                                .collect::<Vec<_>>()
+                                .join("|")
+                        })
+                        .unwrap_or_default();
+                    // Group if same author AND no item-level prefix (prefix breaks grouping)
+                    author_key == last_key && item.prefix.is_none() && !author_key.is_empty()
+                } else {
+                    false
+                }
+            } else {
+                false
+            };
+
+            if should_group {
+                groups.last_mut().unwrap().push(item);
+            } else {
+                groups.push(vec![item]);
+            }
+        }
+
+        // Render each group
+        let mut rendered_groups = Vec::new();
+
+        for group in groups {
+            if group.len() == 1 {
+                // Single item - render normally
+                let item = group[0];
+                let reference = self
+                    .bibliography
+                    .get(&item.id)
+                    .ok_or_else(|| ProcessorError::ReferenceNotFound(item.id.clone()))?;
+
+                let citation_number = self.get_or_assign_citation_number(&item.id);
+
+                if let Some(proc) = self.process_template_with_number(
+                    reference,
+                    template,
+                    RenderContext::Citation,
+                    citation_number,
+                ) {
+                    let item_str =
+                        citation_to_string(&proc, None, None, None, Some(intra_delimiter));
+                    if !item_str.is_empty() {
+                        let prefix = item.prefix.as_deref().unwrap_or("");
+                        let suffix = item.suffix.as_deref().unwrap_or("");
+                        rendered_groups.push(format!("{}{}{}", prefix, item_str, suffix));
+                    }
+                }
+            } else {
+                // Multiple items - render author once, then years
+                let first_item = group[0];
+                let first_ref = self
+                    .bibliography
+                    .get(&first_item.id)
+                    .ok_or_else(|| ProcessorError::ReferenceNotFound(first_item.id.clone()))?;
+
+                // Render author part from first item
+                let author_part = self.render_author_for_grouping(first_ref, template);
+
+                // Render year parts for all items
+                let mut year_parts = Vec::new();
+                for item in &group {
+                    let reference = self
+                        .bibliography
+                        .get(&item.id)
+                        .ok_or_else(|| ProcessorError::ReferenceNotFound(item.id.clone()))?;
+
+                    let year_part = self.render_year_for_grouping(reference);
+                    if !year_part.is_empty() {
+                        let suffix = item.suffix.as_deref().unwrap_or("");
+                        year_parts.push(format!("{}{}", year_part, suffix));
+                    }
+                }
+
+                // Join: "Author" + delimiter + "2020a, 2020b"
+                let prefix = first_item.prefix.as_deref().unwrap_or("");
+                if !author_part.is_empty() && !year_parts.is_empty() {
+                    rendered_groups.push(format!(
+                        "{}{}{}{}",
+                        prefix,
+                        author_part,
+                        intra_delimiter,
+                        year_parts.join(", ")
+                    ));
+                } else if !author_part.is_empty() {
+                    rendered_groups.push(format!("{}{}", prefix, author_part));
+                }
+            }
+        }
+
+        Ok(rendered_groups)
+    }
+
+    /// Render just the author part for citation grouping.
+    fn render_author_for_grouping(
+        &self,
+        reference: &Reference,
+        _template: &[TemplateComponent],
+    ) -> String {
+        // For grouping, we need the short author form
+        let config = self.get_config();
+
+        let options = RenderOptions {
+            config,
+            locale: &self.locale,
+            context: RenderContext::Citation,
         };
 
-        Ok(format!("{}{}{}", open, content, close))
+        // Use short form for citations
+        if let Some(authors) = &reference.author {
+            crate::values::format_contributors_short(authors, &options)
+        } else {
+            String::new()
+        }
+    }
+
+    /// Render just the year part (with suffix) for citation grouping.
+    fn render_year_for_grouping(&self, reference: &Reference) -> String {
+        let hints = self.hints.get(&reference.id).cloned().unwrap_or_default();
+        let config = self.get_config();
+
+        // Format year with disambiguation suffix
+        if let Some(issued) = &reference.issued {
+            if let Some(year) = issued.year_value() {
+                let suffix = if hints.disamb_condition && hints.group_index > 0 {
+                    // Check if year suffix is enabled
+                    let use_suffix = config
+                        .processing
+                        .as_ref()
+                        .map(|p| {
+                            p.config()
+                                .disambiguate
+                                .as_ref()
+                                .map(|d| d.year_suffix)
+                                .unwrap_or(false)
+                        })
+                        .unwrap_or(false);
+
+                    if use_suffix {
+                        crate::values::int_to_letter((hints.group_index % 26) as u32)
+                            .unwrap_or_default()
+                    } else {
+                        String::new()
+                    }
+                } else {
+                    String::new()
+                };
+                return format!("{}{}", year, suffix);
+            }
+        }
+        String::new()
     }
 
     /// Get the citation number for a reference, assigning one if not yet cited.
@@ -561,7 +795,16 @@ impl Processor {
         len: usize,
         expand_names: bool,
     ) {
-        for (i, reference) in group.iter().enumerate() {
+        // Sort group by title for consistent suffix assignment (a, b, c...)
+        // This matches citeproc-js behavior where suffixes are alphabetical by title
+        let mut sorted_group: Vec<&Reference> = group.to_vec();
+        sorted_group.sort_by(|a, b| {
+            let a_title = a.title.as_deref().unwrap_or("").to_lowercase();
+            let b_title = b.title.as_deref().unwrap_or("").to_lowercase();
+            a_title.cmp(&b_title)
+        });
+
+        for (i, reference) in sorted_group.iter().enumerate() {
             hints.insert(
                 reference.id.clone(),
                 ProcHints {
@@ -1469,5 +1712,109 @@ mod tests {
         assert_eq!(cit1, "[1]", "First citation of ref1 should be [1]");
         assert_eq!(cit2, "[2]", "First citation of ref2 should be [2]");
         assert_eq!(cit3, "[1]", "Second citation of ref1 should still be [1]");
+    }
+
+    #[test]
+    fn test_citation_grouping_same_author() {
+        // Test that adjacent citations by the same author are collapsed:
+        // (Kuhn 1962a, 1962b) instead of (Kuhn 1962a; Kuhn 1962b)
+        let style = make_style();
+        let mut bib = make_bibliography();
+
+        // Add second Kuhn 1962 with different title (triggers year-suffix)
+        bib.insert(
+            "kuhn1962b".to_string(),
+            Reference {
+                id: "kuhn1962b".to_string(),
+                ref_type: "article-journal".to_string(),
+                author: Some(vec![Name::new("Kuhn", "Thomas S.")]),
+                title: Some("The Function of Measurement in Modern Physical Science".to_string()),
+                issued: Some(DateVariable::year(1962)),
+                ..Default::default()
+            },
+        );
+
+        let processor = Processor::new(style, bib);
+
+        // Cite both Kuhn works in one citation - should group
+        let result = processor
+            .process_citation(&Citation {
+                id: Some("c1".to_string()),
+                items: vec![
+                    crate::reference::CitationItem {
+                        id: "kuhn1962b".to_string(), // "Function..." comes first alphabetically -> a
+                        ..Default::default()
+                    },
+                    crate::reference::CitationItem {
+                        id: "kuhn1962".to_string(), // "Structure..." comes second -> b
+                        ..Default::default()
+                    },
+                ],
+                ..Default::default()
+            })
+            .unwrap();
+
+        // Should be grouped: "Kuhn, 1962a, 1962b" not "Kuhn, 1962a; Kuhn, 1962b"
+        // Year suffix assigned by title order: "Function..." < "Structure..."
+        assert!(
+            result.contains("Kuhn, 1962a, 1962b") || result.contains("Kuhn, 1962b, 1962a"),
+            "Same-author citations should be grouped. Got: {}",
+            result
+        );
+        assert!(
+            !result.contains("; Kuhn"),
+            "Should not have semicolon between same-author citations. Got: {}",
+            result
+        );
+    }
+
+    #[test]
+    fn test_citation_grouping_different_authors() {
+        // Different authors should NOT be grouped
+        let style = make_style();
+        let mut bib = make_bibliography();
+
+        bib.insert(
+            "smith2020".to_string(),
+            Reference {
+                id: "smith2020".to_string(),
+                ref_type: "book".to_string(),
+                author: Some(vec![Name::new("Smith", "John")]),
+                title: Some("Another Book".to_string()),
+                issued: Some(DateVariable::year(2020)),
+                ..Default::default()
+            },
+        );
+
+        let processor = Processor::new(style, bib);
+
+        let result = processor
+            .process_citation(&Citation {
+                id: Some("c1".to_string()),
+                items: vec![
+                    crate::reference::CitationItem {
+                        id: "kuhn1962".to_string(),
+                        ..Default::default()
+                    },
+                    crate::reference::CitationItem {
+                        id: "smith2020".to_string(),
+                        ..Default::default()
+                    },
+                ],
+                ..Default::default()
+            })
+            .unwrap();
+
+        // Should have semicolon between different authors
+        assert!(
+            result.contains("Kuhn") && result.contains("Smith"),
+            "Should contain both authors. Got: {}",
+            result
+        );
+        assert!(
+            result.contains("; "),
+            "Different authors should be separated by semicolon. Got: {}",
+            result
+        );
     }
 }
