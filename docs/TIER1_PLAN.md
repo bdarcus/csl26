@@ -65,7 +65,7 @@ Currently, only APA achieves 5/5 oracle match for both citations and bibliograph
 12. ✅ **Quote/emph negation** - Fixed: override negates base formatting explicitly
 13. 🔄 **Bibliography separator** - Partial: infrastructure added, extraction limited by CSL encoding
 14. 🔄 **Publisher-place visibility** - Style-specific (Chicago: suppress for books, Elsevier: show)
-15. 🔄 **Editor verb form** - Chicago: "edited by", APA: "(Ed.)"
+15. ✅ **Editor verb form** - Fixed: extracted from label position/form in names
 
 ---
 
@@ -93,18 +93,17 @@ Currently, only APA achieves 5/5 oracle match for both citations and bibliograph
 
 ### Phase 6: Editor Verb Form
 
+**Status:** ✅ COMPLETED
+
 **Problem:** Different styles use different patterns for chapter editors:
 - Chicago: "edited by First Last"
 - APA: "In F. Last (Ed.),"
 - Elsevier: "In: Last, F. (Eds.),"
 
-**Options:**
-1. Add `editor_verb_form` option to contributor options
-2. Extract from CSL editor/translator labels
-
-**Files:**
-- `crates/csln_core/src/options.rs` - Add EditorVerbForm enum
-- `crates/csln_processor/src/processor.rs` - Apply verb form
+**Solution:**
+- Added `EditorLabelFormat` enum to `ContributorConfig`.
+- Implemented extraction logic in `csln_migrate` to detect label position and form.
+- Updated `csln_processor` to use the configured format for editor/translator role labels.
 
 ### Phase 7: Publisher-Place Visibility
 

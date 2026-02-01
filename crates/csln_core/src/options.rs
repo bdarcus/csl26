@@ -298,12 +298,27 @@ pub struct ContributorConfig {
     /// When and how to display contributor roles.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub role: Option<RoleOptions>,
+    /// Global format for editor labels.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub editor_label_format: Option<EditorLabelFormat>,
     /// Handling of non-dropping particles (e.g., "van" in "van Gogh").
     #[serde(skip_serializing_if = "Option::is_none")]
     pub demote_non_dropping_particle: Option<DemoteNonDroppingParticle>,
     /// Unknown fields captured for forward compatibility.
     #[serde(flatten)]
     pub _extra: HashMap<String, serde_json::Value>,
+}
+
+/// Format for editor labels.
+#[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub enum EditorLabelFormat {
+    /// "edited by John Doe"
+    VerbPrefix,
+    /// "John Doe (Ed.)"
+    ShortSuffix,
+    /// "John Doe, editor"
+    LongSuffix,
 }
 
 /// Options for demoting non-dropping particles.
