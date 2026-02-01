@@ -393,9 +393,31 @@ fn format_names(
         formatted_first.join(delimiter)
     } else if formatted_first.len() == 2 {
         let and_str = and_str.unwrap();
-        // For two names, never use delimiter before conjunction in citations.
-        // The delimiter-precedes-last option only applies to 3+ names.
-        format!("{} {} {}", formatted_first[0], and_str, formatted_first[1])
+        // For two names: citations don't use delimiter before conjunction,
+        // but bibliographies do (contextual Oxford comma).
+        let use_delimiter = if options.context == RenderContext::Bibliography {
+            // In bibliography, check delimiter-precedes-last setting
+            match delimiter_precedes_last {
+                Some(DelimiterPrecedesLast::Always) => true,
+                Some(DelimiterPrecedesLast::Never) => false,
+                Some(DelimiterPrecedesLast::Contextual) | None => true, // Default: use comma in bibliography
+                Some(DelimiterPrecedesLast::AfterInvertedName) => display_as_sort
+                    .as_ref()
+                    .is_some_and(|das| matches!(das, DisplayAsSort::All | DisplayAsSort::First)),
+            }
+        } else {
+            // In citations, never use delimiter before conjunction for 2 names
+            false
+        };
+
+        if use_delimiter {
+            format!(
+                "{}{}{} {}",
+                formatted_first[0], delimiter, and_str, formatted_first[1]
+            )
+        } else {
+            format!("{} {} {}", formatted_first[0], and_str, formatted_first[1])
+        }
     } else {
         let and_str = and_str.unwrap();
         let last = formatted_first.last().unwrap();
