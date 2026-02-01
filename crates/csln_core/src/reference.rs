@@ -459,14 +459,30 @@ impl EdtfString {
         }
     }
 
+    /// Extract the day from the date.
+    pub fn day(&self) -> Option<u32> {
+        let parsed_date = self.parse();
+        match parsed_date {
+            RefDate::Edtf(edtf) => match edtf {
+                Edtf::Date(date) => Some(self.component_to_u32(date.day())),
+                Edtf::YYear(_) => None,
+                Edtf::DateTime(datetime) => Some(datetime.date().day()),
+                Edtf::Interval(_, _) => None,
+                Edtf::IntervalFrom(_, _) => None,
+                Edtf::IntervalTo(_, _) => None,
+            },
+            RefDate::Literal(_) => None,
+        }
+        .filter(|&d| d > 0)
+    }
+
     /// Format as "Month Day".
     pub fn month_day(&self, months: MonthList) -> String {
         let month = self.month(months);
-        let day = "1"; // TODO: Extract actual day
-        if month.is_empty() {
-            String::new()
-        } else {
-            format!("{} {}", month, day)
+        let day = self.day();
+        match day {
+            Some(d) if !month.is_empty() => format!("{} {}", month, d),
+            _ => String::new(),
         }
     }
 }
@@ -795,6 +811,55 @@ mod tests {
         ];
         let date = EdtfString("2020-01-01".to_string());
         assert_eq!(date.month(months), "January");
+    }
+
+    #[test]
+    fn test_day_from_edtf_dates() {
+        // Full date: day should be extracted
+        let date = EdtfString("2020-03-15".to_string());
+        assert_eq!(date.day(), Some(15));
+
+        // Year-month only: no day
+        let date_ym = EdtfString("2020-03".to_string());
+        assert_eq!(date_ym.day(), None);
+
+        // Year only: no day
+        let date_y = EdtfString("2020".to_string());
+        assert_eq!(date_y.day(), None);
+
+        // Literal date: no day
+        let literal = EdtfString("Han Dynasty".to_string());
+        assert_eq!(literal.day(), None);
+    }
+
+    #[test]
+    fn test_month_day_format() {
+        let months: MonthList = vec![
+            "January".to_string(),
+            "February".to_string(),
+            "March".to_string(),
+            "April".to_string(),
+            "May".to_string(),
+            "June".to_string(),
+            "July".to_string(),
+            "August".to_string(),
+            "September".to_string(),
+            "October".to_string(),
+            "November".to_string(),
+            "December".to_string(),
+        ];
+
+        // Full date: should format as "Month Day"
+        let date = EdtfString("2020-03-15".to_string());
+        assert_eq!(date.month_day(months.clone()), "March 15");
+
+        // Year-month only: returns empty (no day)
+        let date_ym = EdtfString("2020-03".to_string());
+        assert_eq!(date_ym.month_day(months.clone()), "");
+
+        // Year only: returns empty
+        let date_y = EdtfString("2020".to_string());
+        assert_eq!(date_y.month_day(months), "");
     }
 
     #[test]
