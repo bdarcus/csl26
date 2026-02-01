@@ -378,6 +378,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         // Remove duplicate titles from Lists that already appear at top level.
         // This happens when container-title appears in multiple CSL macros.
         deduplicate_titles_in_lists(&mut new_bib);
+
+        // Reorder publisher-place for Chicago journal articles.
+        // Chicago requires publisher-place to appear immediately after the journal
+        // title, before the volume.
+        reorder_publisher_place_for_chicago(&mut new_bib, style_id);
+
+        // Reorder chapters for Chicago: "In" prefix + book title before editors
+        reorder_chapters_for_chicago(&mut new_bib, style_id);
     }
 
     // 5. Build Style in correct format for csln_processor
@@ -825,6 +833,148 @@ fn deduplicate_titles_in_lists(components: &mut Vec<TemplateComponent>) {
             true
         }
     });
+}
+
+/// Reorder publisher-place for Chicago journal articles.
+///
+/// Chicago style requires publisher-place to appear immediately after the
+/// journal title (parent-serial), before the volume. During CSL macro expansion,
+/// the `source-serial-name` macro (which groups container-title + publisher-place)
+/// gets separated, with publisher-place ending up much later in the template.
+///
+/// This function moves the publisher-place List to the correct position for
+/// Chicago styles.
+fn reorder_publisher_place_for_chicago(components: &mut Vec<TemplateComponent>, style_id: &str) {
+    use csln_core::template::{SimpleVariable, TitleType};
+
+    // Only apply to Chicago styles
+    if !style_id.contains("chicago") {
+        return;
+    }
+
+    // Find the publisher-place component (it's in a List with wrap: parentheses)
+    let publisher_place_pos = components.iter().position(|c| {
+        if let TemplateComponent::List(list) = c {
+            list.items.iter().any(|item| {
+                matches!(
+                    item,
+                    TemplateComponent::Variable(v)
+                    if v.variable == SimpleVariable::PublisherPlace
+                )
+            })
+        } else {
+            false
+        }
+    });
+
+    // Find the parent-serial title position
+    let parent_serial_pos = components.iter().position(|c| {
+        matches!(
+            c,
+            TemplateComponent::Title(t) if t.title == TitleType::ParentSerial
+        )
+    });
+
+    // If we found both, move publisher-place to right after parent-serial
+    if let (Some(pp_pos), Some(ps_pos)) = (publisher_place_pos, parent_serial_pos) {
+        if pp_pos > ps_pos {
+            // Remove the publisher-place List
+            let mut publisher_place_component = components.remove(pp_pos);
+
+            // Add space suffix to prevent default period separator
+            if let TemplateComponent::List(ref mut list) = publisher_place_component {
+                list.rendering.suffix = Some(" ".to_string());
+            }
+
+            // Insert it right after parent-serial
+            components.insert(ps_pos + 1, publisher_place_component);
+        }
+    }
+}
+
+/// Reorder chapter components for Chicago style.
+///
+/// Chicago chapters require: "Chapter Title." In Book Title, edited by Editors.
+/// But the default template has: "Chapter Title." edited by Editors, Book Title.
+///
+/// This function:
+/// 1. Finds the editor and parent-monograph positions
+/// 2. Swaps them so parent-monograph comes first
+/// 3. Adds "In " prefix to parent-monograph for chapters
+/// 4. Adjusts editor prefix to ", edited by " for chapters
+fn reorder_chapters_for_chicago(components: &mut Vec<TemplateComponent>, style_id: &str) {
+    use csln_core::template::{ContributorRole, TitleType};
+
+    // Only apply to Chicago styles
+    if !style_id.contains("chicago") {
+        return;
+    }
+
+    // Find the editor contributor (form: verb)
+    let editor_pos = components.iter().position(|c| {
+        matches!(
+            c,
+            TemplateComponent::Contributor(contrib)
+            if contrib.contributor == ContributorRole::Editor
+        )
+    });
+
+    // Find the parent-monograph title
+    let parent_monograph_pos = components.iter().position(|c| {
+        matches!(
+            c,
+            TemplateComponent::Title(t) if t.title == TitleType::ParentMonograph
+        )
+    });
+
+    // If we found both and editor comes before parent-monograph, swap them
+    if let (Some(editor_pos), Some(pm_pos)) = (editor_pos, parent_monograph_pos) {
+        if editor_pos < pm_pos {
+            // Get mutable references to both components
+            let editor_component = components.remove(editor_pos);
+            let pm_component = components.remove(pm_pos - 1); // Adjust index after removal
+
+            // Add "In " prefix and ", " suffix to parent-monograph for chapters
+            let mut pm_with_prefix = pm_component.clone();
+            if let TemplateComponent::Title(ref mut title) = pm_with_prefix {
+                // Use type-specific override to add "In " prefix and ", " suffix for chapters
+                let mut overrides = title.overrides.clone().unwrap_or_default();
+                overrides.insert(
+                    "chapter".to_string(),
+                    csln_core::template::Rendering {
+                        prefix: Some("In ".to_string()),
+                        suffix: Some(", ".to_string()),
+                        ..Default::default()
+                    },
+                );
+                title.overrides = Some(overrides);
+            }
+
+            // Adjust editor for chapters: use ". " suffix and given-first name order
+            let mut editor_with_suffix = editor_component.clone();
+            if let TemplateComponent::Contributor(ref mut contrib) = editor_with_suffix {
+                // For chapters, editors should use given-first name order
+                // (K. Anders Ericsson, not Ericsson, K. Anders)
+                use csln_core::template::NameOrder;
+                contrib.name_order = Some(NameOrder::GivenFirst);
+
+                // Add override to change suffix for chapters
+                let mut overrides = contrib.overrides.clone().unwrap_or_default();
+                overrides.insert(
+                    "chapter".to_string(),
+                    csln_core::template::Rendering {
+                        suffix: Some(". ".to_string()),
+                        ..Default::default()
+                    },
+                );
+                contrib.overrides = Some(overrides);
+            }
+
+            // Re-insert in new order: parent-monograph, then editor
+            components.insert(editor_pos, pm_with_prefix);
+            components.insert(editor_pos + 1, editor_with_suffix);
+        }
+    }
 }
 
 /// Extract the suffix on the author macro call from the bibliography layout.
