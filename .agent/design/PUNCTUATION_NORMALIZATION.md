@@ -17,7 +17,7 @@ CSLN currently handles punctuation placement with:
 
 ## Better Approach: Separate Normalization Phase
 
-Based on org-cite's `org-cite-adjust-punctuation` design (see [mailing list post](https://lists.nongnu.org/archive/html/emacs-orgmode/2021-05/msg00714.html)), punctuation normalization should be:
+Based on org-cite's `org-cite-adjust-punctuation` design (see [mailing list post](https://lists.nongnu.org/archive/html/emacs-orgmode/2021-05/msg00714.html) and [source code comments](https://github.com/bzg/org-mode/blob/main/lisp/oc.el)), punctuation normalization should be:
 
 1. **A separate processing phase** that runs after component assembly but before final rendering
 2. **Language-aware** based on document locale
@@ -111,7 +111,7 @@ Has `autopunct` feature that's more sophisticated:
 
 ## References
 
-- org-cite design: https://lists.nongnu.org/archive/html/emacs-orgmode/2021-05/msg00714.html
+- org-cite design: https://github.com/bzg/org-mode/blob/main/lisp/oc.el
 - CSL 1.0 spec: https://docs.citationstyles.org/en/stable/specification.html#punctuation-in-quote
 - biblatex autopunct: https://www.ctan.org/pkg/biblatex (sec 3.9)
 
