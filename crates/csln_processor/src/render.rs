@@ -91,7 +91,7 @@ pub fn refs_to_string(proc_templates: Vec<ProcTemplate>) -> String {
                 // Date components always need period separator (author-date style)
                 let is_date = matches!(&component.template_component, TemplateComponent::Date(_));
 
-                if matches!(first_char, ',' | ';' | ':' | ' ') {
+                if matches!(first_char, ',' | ';' | ':' | ' ' | '.') {
                     // Component provides its own punctuation/spacing via prefix
                     // No separator needed
                 } else if first_char == '(' && !is_date {
@@ -647,5 +647,62 @@ mod tests {
 
         let result = render_component(&component);
         assert_eq!(result, "_The Structure of Scientific Revolutions_");
+    }
+
+    #[test]
+    fn test_bibliography_separator_suppression() {
+        use csln_core::options::{BibliographyConfig, Config};
+
+        let config = Config {
+            bibliography: Some(BibliographyConfig {
+                separator: Some(". ".to_string()),
+                entry_suffix: Some("".to_string()),
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+
+        // Component 1 ends without punctuation
+        let c1 = ProcTemplateComponent {
+            template_component: TemplateComponent::Variable(
+                csln_core::template::TemplateVariable {
+                    variable: csln_core::template::SimpleVariable::Publisher,
+                    rendering: Rendering::default(),
+                    ..Default::default()
+                },
+            ),
+            value: "Publisher1".to_string(),
+            prefix: None,
+            suffix: None,
+            ref_type: None,
+            config: Some(config.clone()),
+            url: None,
+        };
+
+        // Component 2 starts with period
+        let c2 = ProcTemplateComponent {
+            template_component: TemplateComponent::Variable(
+                csln_core::template::TemplateVariable {
+                    variable: csln_core::template::SimpleVariable::PublisherPlace,
+                    rendering: Rendering {
+                        prefix: Some(". ".to_string()),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+            ),
+            value: "Place".to_string(),
+            prefix: None,
+            suffix: None,
+            ref_type: None,
+            config: Some(config),
+            url: None,
+        };
+
+        let template = vec![vec![c1, c2]];
+        let result = refs_to_string(template);
+
+        // Should be "Publisher1. Place" (single period)
+        assert_eq!(result, "Publisher1. Place");
     }
 }
