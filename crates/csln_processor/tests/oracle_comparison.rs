@@ -15,7 +15,6 @@ use csln_core::template::{
 };
 use csln_core::{BibliographySpec, CitationSpec, Style, StyleInfo};
 use csln_processor::{Citation, CitationItem, DateVariable, Name, Processor, Reference};
-use std::collections::HashMap;
 
 fn make_apa_style() -> Style {
     Style {
@@ -98,8 +97,8 @@ fn make_apa_style() -> Style {
     }
 }
 
-fn make_test_bibliography() -> HashMap<String, Reference> {
-    let mut bib = HashMap::new();
+fn make_test_bibliography() -> indexmap::IndexMap<String, Reference> {
+    let mut bib = indexmap::IndexMap::new();
 
     // Kuhn 1962
     bib.insert(
@@ -151,6 +150,7 @@ fn test_apa_single_author_citation() {
             id: "kuhn1962".to_string(),
             ..Default::default()
         }],
+        ..Default::default()
     };
 
     let result = processor.process_citation(&citation).unwrap();
@@ -171,6 +171,7 @@ fn test_apa_multi_author_citation_et_al() {
             id: "lecun2015".to_string(),
             ..Default::default()
         }],
+        ..Default::default()
     };
 
     let result = processor.process_citation(&citation).unwrap();
@@ -208,6 +209,7 @@ fn test_reference_not_found_error() {
             id: "nonexistent".to_string(),
             ..Default::default()
         }],
+        ..Default::default()
     };
 
     let result = processor.process_citation(&citation);

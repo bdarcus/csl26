@@ -13,7 +13,6 @@ use csln_core::{Locale, Style};
 use csln_processor::{
     Bibliography, Citation, CitationItem, DateVariable, Name, Processor, Reference, StringOrNumber,
 };
-use std::collections::HashMap;
 use std::env;
 use std::fs;
 use std::path::Path;
@@ -101,7 +100,7 @@ fn find_locales_dir(style_path: &str) -> std::path::PathBuf {
 }
 
 fn create_test_bibliography() -> Bibliography {
-    let mut bib = HashMap::new();
+    let mut bib = indexmap::IndexMap::new();
 
     // ITEM-1: Kuhn journal article
     bib.insert(
@@ -215,6 +214,7 @@ fn print_human(processor: &Processor, style_name: &str, show_cite: bool, show_bi
                     id: id.to_string(),
                     ..Default::default()
                 }],
+                ..Default::default()
             };
             match processor.process_citation(&citation) {
                 Ok(text) => println!("  [{}] {}", id, text),
@@ -255,6 +255,7 @@ fn print_json(processor: &Processor, style_name: &str, show_cite: bool, show_bib
                         id: id.to_string(),
                         ..Default::default()
                     }],
+                    ..Default::default()
                 };
                 json!({
                     "id": id,

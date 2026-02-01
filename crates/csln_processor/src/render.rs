@@ -9,13 +9,10 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 //!
 //! ## Design Notes
 //!
-//! The separator logic here is currently somewhat implicit (checking punctuation
-//! characters). Ideally, separators should be explicitly declared in the style.
-//!
-//! TODO: Consider adding explicit `separator` field to template components,
-//! allowing styles to declare `separator: ". "` or `separator: ", "` directly.
-//! This would move the logic from processor to style, making behavior more
-//! predictable and testable.
+//! The separator between bibliography components can be configured via
+//! `bibliography.separator` in the style's options (e.g., ". " for Chicago/APA,
+//! ", " for Elsevier). The renderer also checks component prefixes to skip
+//! automatic separators when components provide their own punctuation.
 
 use csln_core::options::Config;
 use csln_core::template::{Rendering, TemplateComponent, TitleType, WrapPunctuation};
@@ -47,14 +44,15 @@ pub type ProcTemplate = Vec<ProcTemplateComponent>;
 ///
 /// ## Separator Logic
 ///
-/// The default separator between components is `. ` (period-space).
+/// The separator between components is configured via `bibliography.separator`
+/// in the style's options (defaults to ". " if not specified).
 /// This is modified based on:
 /// - Component's rendered prefix (comma/semicolon skip separator)
 /// - Component type (dates always get period separator)
 /// - Parenthetical content (gets space only, not period)
 ///
 /// Components can override this via their `prefix` rendering field.
-/// For example, `prefix: ", "` will suppress the default `. ` separator.
+/// For example, `prefix: ", "` will suppress the automatic separator.
 pub fn refs_to_string(proc_templates: Vec<ProcTemplate>) -> String {
     let mut output = String::new();
     for (i, proc_template) in proc_templates.iter().enumerate() {
@@ -69,6 +67,14 @@ pub fn refs_to_string(proc_templates: Vec<ProcTemplate>) -> String {
             .and_then(|c| c.config.as_ref())
             .is_some_and(|cfg| cfg.punctuation_in_quote);
 
+        // Get the bibliography separator from the config, defaulting to ". "
+        let default_separator = proc_template
+            .first()
+            .and_then(|c| c.config.as_ref())
+            .and_then(|cfg| cfg.bibliography.as_ref())
+            .and_then(|bib| bib.separator.as_deref())
+            .unwrap_or(". ");
+
         for (j, component) in proc_template.iter().enumerate() {
             let rendered = render_component(component);
             // Skip empty components (e.g., suppressed by type override)
@@ -77,8 +83,7 @@ pub fn refs_to_string(proc_templates: Vec<ProcTemplate>) -> String {
             }
 
             // Add separator between components
-            // NOTE: This logic is implicit based on punctuation. A future improvement
-            // would be to add explicit `separator` field to template components.
+            // The separator is configured via bibliography.separator (defaults to ". ")
             if j > 0 && !output.is_empty() {
                 let last_char = output.chars().last().unwrap_or(' ');
                 let first_char = rendered.chars().next().unwrap_or(' ');
@@ -86,8 +91,8 @@ pub fn refs_to_string(proc_templates: Vec<ProcTemplate>) -> String {
                 // Date components always need period separator (author-date style)
                 let is_date = matches!(&component.template_component, TemplateComponent::Date(_));
 
-                if matches!(first_char, ',' | ';' | ':') {
-                    // Component provides its own punctuation via prefix (e.g., ", 436–444")
+                if matches!(first_char, ',' | ';' | ':' | ' ') {
+                    // Component provides its own punctuation/spacing via prefix
                     // No separator needed
                 } else if first_char == '(' && !is_date {
                     // Parenthetical content (e.g., chapter pages "(pp. 1-10)")
@@ -95,18 +100,25 @@ pub fn refs_to_string(proc_templates: Vec<ProcTemplate>) -> String {
                     if !last_char.is_whitespace() {
                         output.push(' ');
                     }
-                } else if !matches!(last_char, '.' | ',' | ':' | ';' | ' ') {
-                    // Default: add period-space separator
+                } else if !matches!(last_char, '.' | ',' | ':' | ';' | ' ' | ']') {
+                    // Default: add separator between components
+                    // Note: ']' is excluded for numeric citations where [1] directly precedes author
                     // Locale option: place periods inside quotation marks (American style)
-                    if punctuation_in_quote && last_char == '"' {
+                    if punctuation_in_quote
+                        && last_char == '"'
+                        && default_separator.starts_with('.')
+                    {
                         output.pop(); // Remove closing quote
                         output.push_str(".\" "); // Add period inside, then quote + space
                     } else {
-                        output.push_str(". ");
+                        output.push_str(default_separator);
                     }
                 } else if last_char == '.' {
                     // Already have period, just add space
                     output.push(' ');
+                } else if last_char == ']' {
+                    // After closing bracket (numeric citations), no separator
+                    // IEEE: "[1]Author" not "[1] Author"
                 } else if !last_char.is_whitespace() {
                     // After comma/colon/semicolon, just add space
                     output.push(' ');
@@ -168,7 +180,44 @@ pub fn refs_to_string(proc_templates: Vec<ProcTemplate>) -> String {
             }
         }
     }
+
+    // Clean up dangling punctuation from empty components.
+    // When a component is empty/suppressed, its predecessor's suffix may be left behind.
+    // E.g., "Publisher, " + empty location = "Publisher, ." → should be "Publisher."
+    cleanup_dangling_punctuation(&mut output);
+
     output
+}
+
+/// Remove dangling punctuation patterns caused by empty components.
+///
+/// Patterns cleaned:
+/// - ", ." → "."  (comma before final period)
+/// - ", ," → ","  (double comma)
+/// - ": ." → "."  (colon before final period)
+/// - "; ." → "."  (semicolon before final period)
+/// - ",  " → ", " (extra space after comma)
+fn cleanup_dangling_punctuation(output: &mut String) {
+    // Replace common patterns iteratively until no more changes
+    let patterns = [
+        (", .", "."),
+        (", ,", ","),
+        (": .", "."),
+        ("; .", "."),
+        (",  ", ", "),
+        (". .", "."),
+    ];
+
+    let mut changed = true;
+    while changed {
+        changed = false;
+        for (pattern, replacement) in &patterns {
+            if output.contains(pattern) {
+                *output = output.replace(pattern, replacement);
+                changed = true;
+            }
+        }
+    }
 }
 
 /// Render a single citation.
