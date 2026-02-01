@@ -12,8 +12,8 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 use csl_legacy::model::{CslNode, Layout, Macro, Names, Sort as LegacySort, Style, Substitute};
 use csln_core::options::{
     AndOptions, BibliographyConfig, Config, ContributorConfig, DateConfig, DelimiterPrecedesLast,
-    DemoteNonDroppingParticle, Disambiguation, DisplayAsSort, Group, PageRangeFormat, Processing,
-    ProcessingCustom, ShortenListOptions, Sort, SortKey, SortSpec, SubsequentAuthorSubstituteRule,
+    DemoteNonDroppingParticle, Disambiguation, DisplayAsSort, EditorLabelFormat, Group, PageRangeFormat,
+    Processing, ProcessingCustom, ShortenListOptions, Sort, SortKey, SortSpec, SubsequentAuthorSubstituteRule,
     Substitute as CslnSubstitute, SubstituteConfig, SubstituteKey, TitlesConfig,
 };
 use csln_core::template::DelimiterPunctuation;
@@ -912,6 +912,42 @@ impl OptionsExtractor {
             }
         }
 
+        // Check for editor label format
+        if (names.variable.contains("editor") || names.variable.contains("translator"))
+            && config.editor_label_format.is_none()
+        {
+            let mut label_pos = None;
+            let mut name_pos = None;
+            let mut label_form = None;
+
+            for (i, child) in names.children.iter().enumerate() {
+                match child {
+                    CslNode::Name(_) => name_pos = Some(i),
+                    CslNode::Label(label) => {
+                        label_pos = Some(i);
+                        label_form = label.form.clone();
+                    }
+                    _ => {}
+                }
+            }
+
+            if let (Some(l_pos), Some(n_pos)) = (label_pos, name_pos) {
+                if l_pos < n_pos {
+                    // Label before name (VerbPrefix)
+                    config.editor_label_format = Some(EditorLabelFormat::VerbPrefix);
+                    *has_config = true;
+                } else {
+                    // Label after name
+                    config.editor_label_format = match label_form.as_deref() {
+                        Some("short") => Some(EditorLabelFormat::ShortSuffix),
+                        Some("long") | Some("verb") => Some(EditorLabelFormat::LongSuffix),
+                        _ => Some(EditorLabelFormat::ShortSuffix), // Default to short for suffix
+                    };
+                    *has_config = true;
+                }
+            }
+        }
+
         // et-al from names element itself
         if names.et_al_min.is_some() && config.shorten.is_none() {
             config.shorten = Some(ShortenListOptions {
@@ -1381,5 +1417,50 @@ mod tests {
         if let Some(ref sub) = config.substitute {
             println!("  Substitute: {:?}", sub);
         }
+    }
+
+    #[test]
+    fn test_extract_editor_label_format() {
+        // Test VerbPrefix (Chicago style)
+        let chicago_csl = r#"<?xml version="1.0" encoding="utf-8"?>
+<style xmlns="http://purl.org/net/xbiblio/csl" class="in-text" version="1.0">
+  <info><title>Chicago</title></info>
+  <macro name="editor">
+    <names variable="editor">
+      <label form="verb" suffix=" "/>
+      <name/>
+    </names>
+  </macro>
+  <citation><layout><text macro="editor"/></layout></citation>
+  <bibliography><layout><text macro="editor"/></layout></bibliography>
+</style>"#;
+
+        let style = parse_csl(chicago_csl).unwrap();
+        let config = OptionsExtractor::extract(&style);
+        assert_eq!(
+            config.contributors.unwrap().editor_label_format,
+            Some(EditorLabelFormat::VerbPrefix)
+        );
+
+        // Test ShortSuffix (APA style)
+        let apa_csl = r#"<?xml version="1.0" encoding="utf-8"?>
+<style xmlns="http://purl.org/net/xbiblio/csl" class="in-text" version="1.0">
+  <info><title>APA</title></info>
+  <macro name="editor">
+    <names variable="editor">
+      <name/>
+      <label form="short" prefix=" (" suffix=")"/>
+    </names>
+  </macro>
+  <citation><layout><text macro="editor"/></layout></citation>
+  <bibliography><layout><text macro="editor"/></layout></bibliography>
+</style>"#;
+
+        let style = parse_csl(apa_csl).unwrap();
+        let config = OptionsExtractor::extract(&style);
+        assert_eq!(
+            config.contributors.unwrap().editor_label_format,
+            Some(EditorLabelFormat::ShortSuffix)
+        );
     }
 }

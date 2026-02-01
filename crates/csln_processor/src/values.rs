@@ -11,7 +11,8 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 use crate::reference::{DateVariable, Name, Reference};
 use csln_core::locale::{Locale, TermForm};
 use csln_core::options::{
-    AndOptions, Config, DemoteNonDroppingParticle, DisplayAsSort, ShortenListOptions, SubstituteKey,
+    AndOptions, Config, DemoteNonDroppingParticle, DisplayAsSort, EditorLabelFormat,
+    ShortenListOptions, SubstituteKey,
 };
 use csln_core::template::{
     ContributorForm, ContributorRole, DateForm, DateVariable as TemplateDateVar,
@@ -251,26 +252,63 @@ impl ComponentValues for TemplateContributor {
         // - Verb forms: add verb term as PREFIX (e.g., "edited by Name1, Name2")
         // - Long forms for specific roles: add label as SUFFIX (e.g., "Name (Ed.)")
         // - Other forms: no automatic term addition
-        let (role_prefix, role_suffix) = match (&self.form, &self.contributor) {
-            // Verb forms: use verb term as prefix
-            (ContributorForm::Verb | ContributorForm::VerbShort, role) => {
+        let editor_format = options
+            .config
+            .contributors
+            .as_ref()
+            .and_then(|c| c.editor_label_format);
+
+        let (role_prefix, role_suffix) = if let Some(format) = editor_format {
+            if matches!(
+                self.contributor,
+                ContributorRole::Editor | ContributorRole::Translator
+            ) {
                 let plural = names.len() > 1;
-                let term_form = match self.form {
-                    ContributorForm::VerbShort => TermForm::VerbShort,
-                    _ => TermForm::Verb,
-                };
-                let term = options.locale.role_term(role, plural, term_form);
-                (term.map(|t| format!("{} ", t)), None)
+                match format {
+                    EditorLabelFormat::VerbPrefix => {
+                        let term = options
+                            .locale
+                            .role_term(&self.contributor, plural, TermForm::Verb);
+                        (term.map(|t| format!("{} ", t)), None)
+                    }
+                    EditorLabelFormat::ShortSuffix => {
+                        let term = options
+                            .locale
+                            .role_term(&self.contributor, plural, TermForm::Short);
+                        (None, term.map(|t| format!(" ({})", t)))
+                    }
+                    EditorLabelFormat::LongSuffix => {
+                        let term = options
+                            .locale
+                            .role_term(&self.contributor, plural, TermForm::Long);
+                        (None, term.map(|t| format!(", {}", t)))
+                    }
+                }
+            } else {
+                (None, None)
             }
-            // Long form for editors/translators: add label suffix for APA-style formatting
-            (ContributorForm::Long, ContributorRole::Editor | ContributorRole::Translator) => {
-                let plural = names.len() > 1;
-                let term = options
-                    .locale
-                    .role_term(&self.contributor, plural, TermForm::Short);
-                (None, term.map(|t| format!(" ({})", t)))
+        } else {
+            match (&self.form, &self.contributor) {
+                // Verb forms: use verb term as prefix
+                (ContributorForm::Verb | ContributorForm::VerbShort, role) => {
+                    let plural = names.len() > 1;
+                    let term_form = match self.form {
+                        ContributorForm::VerbShort => TermForm::VerbShort,
+                        _ => TermForm::Verb,
+                    };
+                    let term = options.locale.role_term(role, plural, term_form);
+                    (term.map(|t| format!("{} ", t)), None)
+                }
+                // Long form for editors/translators: add label suffix for APA-style formatting
+                (ContributorForm::Long, ContributorRole::Editor | ContributorRole::Translator) => {
+                    let plural = names.len() > 1;
+                    let term = options
+                        .locale
+                        .role_term(&self.contributor, plural, TermForm::Short);
+                    (None, term.map(|t| format!(" ({})", t)))
+                }
+                _ => (None, None),
             }
-            _ => (None, None),
         };
 
         Some(ProcValues {
@@ -1689,5 +1727,70 @@ mod tests {
         let values = component.values(&reference, &hints, &options).unwrap();
         assert_eq!(values.value, "MIT Press");
         assert_eq!(values.url, Some("https://doi.org/10.1234/pub".to_string()));
+    }
+
+    #[test]
+    fn test_editor_label_format() {
+        let mut config = make_config();
+        let locale = make_locale();
+        let hints = ProcHints::default();
+
+        let reference = Reference {
+            id: "editor-test".to_string(),
+            ref_type: "book".to_string(),
+            editor: Some(vec![Name::new("Doe", "John")]),
+            ..Default::default()
+        };
+
+        let component = TemplateContributor {
+            contributor: ContributorRole::Editor,
+            form: ContributorForm::Long,
+            ..Default::default()
+        };
+
+        // Test VerbPrefix
+        if let Some(ref mut contributors) = config.contributors {
+            contributors.editor_label_format = Some(EditorLabelFormat::VerbPrefix);
+        }
+        {
+            let options = RenderOptions {
+                config: &config,
+                locale: &locale,
+                context: RenderContext::Bibliography,
+            };
+            let values = component.values(&reference, &hints, &options).unwrap();
+            // Assuming locale for "editor" verb is "edited by"
+            assert_eq!(values.prefix, Some("edited by ".to_string()));
+        }
+
+        // Test ShortSuffix
+        if let Some(ref mut contributors) = config.contributors {
+            contributors.editor_label_format = Some(EditorLabelFormat::ShortSuffix);
+        }
+        {
+            let options = RenderOptions {
+                config: &config,
+                locale: &locale,
+                context: RenderContext::Bibliography,
+            };
+            let values = component.values(&reference, &hints, &options).unwrap();
+            // Assuming locale for "editor" short is "Ed."
+            assert_eq!(values.suffix, Some(" (Ed.)".to_string()));
+        }
+
+        // Test LongSuffix
+        if let Some(ref mut contributors) = config.contributors {
+            contributors.editor_label_format = Some(EditorLabelFormat::LongSuffix);
+        }
+        {
+            let options = RenderOptions {
+                config: &config,
+                locale: &locale,
+                context: RenderContext::Bibliography,
+            };
+            let values = component.values(&reference, &hints, &options).unwrap();
+            // Assuming locale for "editor" long is "editor"
+            assert_eq!(values.suffix, Some(", editor".to_string()));
+        }
     }
 }
