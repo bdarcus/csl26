@@ -10,7 +10,6 @@ use csln_processor::{
     reference::{DateVariable, Name, Reference},
     Processor,
 };
-use std::collections::HashMap;
 
 fn make_style_with_substitute(substitute: Option<String>) -> Style {
     Style {
@@ -61,7 +60,7 @@ fn make_style_with_substitute(substitute: Option<String>) -> Style {
 fn test_subsequent_author_substitute() {
     let style = make_style_with_substitute(Some("———".to_string()));
 
-    let mut bib = HashMap::new();
+    let mut bib = indexmap::IndexMap::new();
     bib.insert(
         "ref1".to_string(),
         Reference {
@@ -96,7 +95,7 @@ fn test_subsequent_author_substitute() {
 fn test_no_substitute_if_different() {
     let style = make_style_with_substitute(Some("———".to_string()));
 
-    let mut bib = HashMap::new();
+    let mut bib = indexmap::IndexMap::new();
     bib.insert(
         "ref1".to_string(),
         Reference {

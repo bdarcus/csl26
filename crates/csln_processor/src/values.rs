@@ -222,26 +222,36 @@ impl ComponentValues for TemplateContributor {
             hints,
         );
 
-        // Add role label suffix for verb forms (e.g., "Name (Ed.)")
-        let suffix = match (&self.form, &self.contributor) {
+        // Add role term based on form:
+        // - Verb forms: add verb term as PREFIX (e.g., "edited by Name1, Name2")
+        // - Long forms for specific roles: add label as SUFFIX (e.g., "Name (Ed.)")
+        // - Other forms: no automatic term addition
+        let (role_prefix, role_suffix) = match (&self.form, &self.contributor) {
+            // Verb forms: use verb term as prefix
             (ContributorForm::Verb | ContributorForm::VerbShort, role) => {
                 let plural = names.len() > 1;
-                let form = match self.form {
-                    ContributorForm::VerbShort => TermForm::Short,
-                    _ => TermForm::Short, // Use short for label: (Ed.) not (editor)
+                let term_form = match self.form {
+                    ContributorForm::VerbShort => TermForm::VerbShort,
+                    _ => TermForm::Verb,
                 };
-                options
-                    .locale
-                    .role_term(role, plural, form)
-                    .map(|t| format!(" ({})", t))
+                let term = options.locale.role_term(role, plural, term_form);
+                (term.map(|t| format!("{} ", t)), None)
             }
-            _ => None,
+            // Long form for editors/translators: add label suffix for APA-style formatting
+            (ContributorForm::Long, ContributorRole::Editor | ContributorRole::Translator) => {
+                let plural = names.len() > 1;
+                let term = options
+                    .locale
+                    .role_term(&self.contributor, plural, TermForm::Short);
+                (None, term.map(|t| format!(" ({})", t)))
+            }
+            _ => (None, None),
         };
 
         Some(ProcValues {
             value: formatted,
-            prefix: None,
-            suffix,
+            prefix: role_prefix,
+            suffix: role_suffix,
             url: None,
         })
     }
@@ -992,8 +1002,8 @@ impl ComponentValues for TemplateList {
 
         Some(ProcValues {
             value: values.join(delimiter),
-            prefix: None,
-            suffix: None,
+            prefix: self.rendering.prefix.clone(),
+            suffix: self.rendering.suffix.clone(),
             url: None,
         })
     }

@@ -5,16 +5,17 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 
 //! Reference types for the CSLN processor.
 //!
-//! This module re-exports the CSL-JSON reference model from `csl_legacy`
-//! for backward compatibility with existing CSL-JSON data.
+//! This module re-exports types from csln_core (for citations) and csl_legacy
+//! (for CSL-JSON bibliography data) for backward compatibility.
 //!
 //! For new data, prefer using `csln_core::reference::InputReference` which
 //! provides a more type-safe model with EDTF date support.
 
-// Re-export CSL-JSON types from csl_legacy for backward compatibility
-pub use csl_legacy::csl_json::{
-    Bibliography, Citation, CitationItem, DateVariable, Name, Reference, StringOrNumber,
-};
+// Re-export citation types from csln_core
+pub use csln_core::citation::{Citation, CitationItem, CitationMode, LocatorType};
+
+// Re-export CSL-JSON reference types from csl_legacy for backward compatibility
+pub use csl_legacy::csl_json::{Bibliography, DateVariable, Name, Reference, StringOrNumber};
 
 #[cfg(test)]
 mod tests {

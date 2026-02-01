@@ -125,8 +125,14 @@ impl Processor {
         let substitute = bib_config.and_then(|c| c.subsequent_author_substitute.as_ref());
 
         for (index, reference) in sorted_refs.iter().enumerate() {
-            // Bibliography entry number is 1-based position in sorted list
-            let entry_number = index + 1;
+            // For numeric styles, use the citation number assigned when first cited.
+            // For other styles, use position in sorted bibliography.
+            let entry_number = self
+                .citation_numbers
+                .borrow()
+                .get(&reference.id)
+                .copied()
+                .unwrap_or(index + 1);
             if let Some(mut proc) = self.process_bibliography_entry(reference, entry_number) {
                 // Apply subsequent author substitution if enabled
                 if let Some(sub_string) = substitute {
@@ -838,7 +844,7 @@ mod tests {
     }
 
     fn make_bibliography() -> Bibliography {
-        let mut bib = HashMap::new();
+        let mut bib = indexmap::IndexMap::new();
 
         bib.insert(
             "kuhn1962".to_string(),
@@ -868,6 +874,7 @@ mod tests {
                 id: "kuhn1962".to_string(),
                 ..Default::default()
             }],
+            ..Default::default()
         };
 
         let result = processor.process_citation(&citation).unwrap();
@@ -954,7 +961,7 @@ mod tests {
             ..Default::default()
         });
 
-        let mut bib = HashMap::new();
+        let mut bib = indexmap::IndexMap::new();
         bib.insert(
             "smith2020a".to_string(),
             Reference {
@@ -993,6 +1000,7 @@ mod tests {
                     id: "smith2020a".to_string(),
                     ..Default::default()
                 }],
+                ..Default::default()
             })
             .unwrap();
 
@@ -1003,6 +1011,7 @@ mod tests {
                     id: "smith2020b".to_string(),
                     ..Default::default()
                 }],
+                ..Default::default()
             })
             .unwrap();
 
@@ -1054,7 +1063,7 @@ mod tests {
             ..Default::default()
         });
 
-        let mut bib = HashMap::new();
+        let mut bib = indexmap::IndexMap::new();
         // Two works by Smith & Jones and Smith & Brown
         // Both would be "Smith et al. (2020)"
         bib.insert(
@@ -1104,6 +1113,7 @@ mod tests {
                     id: "ref1".to_string(),
                     ..Default::default()
                 }],
+                ..Default::default()
             })
             .unwrap();
 
@@ -1114,6 +1124,7 @@ mod tests {
                     id: "ref2".to_string(),
                     ..Default::default()
                 }],
+                ..Default::default()
             })
             .unwrap();
 
@@ -1173,7 +1184,7 @@ mod tests {
             ..Default::default()
         });
 
-        let mut bib = HashMap::new();
+        let mut bib = indexmap::IndexMap::new();
         bib.insert(
             "ref1".to_string(),
             Reference {
@@ -1205,6 +1216,7 @@ mod tests {
                     id: "ref1".to_string(),
                     ..Default::default()
                 }],
+                ..Default::default()
             })
             .unwrap();
 
@@ -1215,6 +1227,7 @@ mod tests {
                     id: "ref2".to_string(),
                     ..Default::default()
                 }],
+                ..Default::default()
             })
             .unwrap();
 
@@ -1344,5 +1357,92 @@ mod tests {
             "Chapter container title should have 'In ' prefix: {}",
             res
         );
+    }
+
+    #[test]
+    fn test_numeric_citation_numbers_with_repeated_refs() {
+        // Citation numbers should be assigned by first occurrence, not by position.
+        // Citing ref1, ref2, ref1 again should give numbers 1, 2, 1.
+        use csln_core::options::{Config, Processing};
+        use csln_core::template::{NumberVariable, TemplateNumber};
+        use csln_core::CitationSpec;
+
+        let style = Style {
+            citation: Some(CitationSpec {
+                wrap: Some(csln_core::template::WrapPunctuation::Brackets),
+                template: Some(vec![TemplateComponent::Number(TemplateNumber {
+                    number: NumberVariable::CitationNumber,
+                    ..Default::default()
+                })]),
+                ..Default::default()
+            }),
+            options: Some(Config {
+                processing: Some(Processing::Numeric),
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+
+        let mut bib = Bibliography::new();
+        bib.insert(
+            "ref1".to_string(),
+            Reference {
+                id: "ref1".to_string(),
+                ref_type: "book".to_string(),
+                title: Some("First Book".to_string()),
+                ..Default::default()
+            },
+        );
+        bib.insert(
+            "ref2".to_string(),
+            Reference {
+                id: "ref2".to_string(),
+                ref_type: "book".to_string(),
+                title: Some("Second Book".to_string()),
+                ..Default::default()
+            },
+        );
+
+        let processor = Processor::new(style, bib);
+
+        // Cite ref1 first
+        let cit1 = processor
+            .process_citation(&Citation {
+                id: Some("c1".to_string()),
+                items: vec![crate::reference::CitationItem {
+                    id: "ref1".to_string(),
+                    ..Default::default()
+                }],
+                ..Default::default()
+            })
+            .unwrap();
+
+        // Cite ref2 second
+        let cit2 = processor
+            .process_citation(&Citation {
+                id: Some("c2".to_string()),
+                items: vec![crate::reference::CitationItem {
+                    id: "ref2".to_string(),
+                    ..Default::default()
+                }],
+                ..Default::default()
+            })
+            .unwrap();
+
+        // Cite ref1 again - should get the SAME number as before
+        let cit3 = processor
+            .process_citation(&Citation {
+                id: Some("c3".to_string()),
+                items: vec![crate::reference::CitationItem {
+                    id: "ref1".to_string(),
+                    ..Default::default()
+                }],
+                ..Default::default()
+            })
+            .unwrap();
+
+        assert_eq!(cit1, "[1]", "First citation of ref1 should be [1]");
+        assert_eq!(cit2, "[2]", "First citation of ref2 should be [2]");
+        assert_eq!(cit3, "[1]", "Second citation of ref1 should still be [1]");
     }
 }

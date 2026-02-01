@@ -42,7 +42,7 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 //! let style: Style = serde_yaml::from_str(style_yaml).unwrap();
 //!
 //! // Create a bibliography
-//! let mut bib = HashMap::new();
+//! let mut bib = indexmap::IndexMap::new();
 //! bib.insert("kuhn1962".to_string(), Reference {
 //!     id: "kuhn1962".to_string(),
 //!     ref_type: "book".to_string(),
@@ -57,6 +57,7 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 //! let citation = Citation {
 //!     id: Some("c1".to_string()),
 //!     items: vec![CitationItem { id: "kuhn1962".to_string(), ..Default::default() }],
+//!     ..Default::default()
 //! };
 //! let result = processor.process_citation(&citation).unwrap();
 //! assert_eq!(result, "(Kuhn, 1962)");
