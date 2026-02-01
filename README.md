@@ -193,10 +193,10 @@ Features implemented:
 ✓ disambiguate-add-names (1,241 styles) - et-al expansion
 ✓ subsequent-author-substitute (314 styles) - "———" replacement
 ✓ type-specific overrides - publisher suppression, page formatting
+✓ page label extraction - "pp." from CSL Label nodes (#69)
 
 Known gaps (in progress):
 ○ Group delimiter extraction (colon vs period between components)
-○ Page label extraction ("pp." from CSL Label nodes)
 ○ Volume-pages delimiter varies by style (comma vs colon)
 ○ DOI suppression for styles that don't output DOI
 ```

@@ -42,6 +42,10 @@ Currently, only APA achieves 5/5 oracle match for both citations and bibliograph
 21. `650bf75` refactor: move citation model from csl_legacy to csln_core
 22. `5c78211` feat(core): add bibliography separator configuration
 23. `20af195` fix(ci): resolve clippy warnings
+24. `064caa4` feat(locale): expose locator terms for page labels (#69)
+25. `de0934e` feat(migrate): infer month format from CSL date-parts (#67)
+26. `d6ecfbc` feat(reference): support parent reference by ID (#64)
+27. `96d1224` feat(migrate): support type-conditional substitution extraction (#66)
 
 ---
 
