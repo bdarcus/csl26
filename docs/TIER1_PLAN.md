@@ -1,0 +1,137 @@
+# Implementation Plan: Tier 1 Rendering Fidelity & Preset Expansion
+
+## Problem Statement
+
+Currently, only APA achieves 5/5 oracle match for both citations and bibliography. The goal is to achieve high-fidelity rendering for all **Tier 1 parent styles**, which cover **60% of the CSL corpus** (~4,800 dependent styles).
+
+### Current State (Updated)
+
+| Style | Citations | Bibliography | Key Issues |
+|-------|-----------|--------------|------------|
+| apa | 5/5 ✅ | 5/5 ✅ | Complete |
+| chicago-author-date | 5/5 ✅ | 0/5 | Shows publisher-place when shouldn't |
+| elsevier-harvard | 5/5 ✅ | 3/5 | Chapter format ("In" vs "in:"), page position |
+| springer-basic-author-date | 5/5 ✅ | 0/5 | Template ordering |
+| ieee | 5/5 ✅ | 0/5 | Year position, place:publisher format |
+| elsevier-vancouver | 5/5 ✅ | 0/5 | Numeric style template |
+
+**All 6 tested styles now have 5/5 citations!**
+
+### Commits So Far
+
+1. `768f13c` docs: add tier 1 rendering fidelity implementation plan
+2. `7ce5773` fix(migrate): extract bracket wrapping from citation groups
+3. `d7630f1` fix(migrate): extract author-date group delimiter correctly
+4. `c2cbb1c` fix(migrate): move DOI and URL to end of bibliography
+5. `0ebf8fb` fix(render): clean up dangling punctuation from empty components
+6. `a791742` docs: update tier 1 plan with progress
+7. `3ed676b` fix(migrate): show publisher-place for book types
+8. `a0f432a` docs: update tier 1 plan with current progress
+9. `65415b7` fix(migrate): deduplicate titles in nested lists
+10. `f1b6d98` fix(migrate): preserve author suffix from macro call
+11. `5902549` docs: update tier 1 plan with latest progress
+12. `03e36d5` fix(render): skip separator when component has space prefix
+13. `cee9a81` docs: update tier 1 plan with latest progress
+14. `fbe8a59` fix(render): no separator after closing bracket for numeric styles
+15. `683e12f` fix(migrate): propagate type-specific overrides correctly
+16. `89d1e12` fix(processor): preserve bibliography order for numeric styles
+17. `840372f` docs: update tier 1 plan with latest progress
+18. `96b1cdf` fix(migrate): negate base formatting in type-specific overrides
+19. `8bc8fc0` fix(processor): use citation numbers for bibliography entries
+20. `9e1bdbf` feat(core): enhance citation model with mode and locator types
+21. `650bf75` refactor: move citation model from csl_legacy to csln_core
+22. `5c78211` feat(core): add bibliography separator configuration
+23. `20af195` fix(ci): resolve clippy warnings
+
+---
+
+## Root Causes Identified
+
+1. ✅ **Citation delimiter extraction** - Fixed: finds author-date group correctly
+2. ✅ **Numeric citation wrapping** - Fixed: extracts from group prefix/suffix
+3. ✅ **DOI/URL ordering** - Fixed: moves access components to end
+4. ✅ **Dangling punctuation** - Fixed: cleanup function in render.rs
+5. ✅ **Title deduplication** - Fixed: removes duplicates from Lists
+6. ✅ **Author suffix** - Fixed: preserves comma suffix from macro call
+7. ✅ **List prefix/suffix** - Fixed: values.rs now returns List rendering
+8. ✅ **Space prefix separator** - Fixed: skip period separator for space prefix
+9. ✅ **Journal title suffix** - Fixed: based on volume List prefix detection
+10. ✅ **Type-specific overrides** - Fixed: propagate overrides from merged conditionals
+11. ✅ **Numeric style ordering** - Fixed: use IndexMap, detect numeric by citation sort
+12. ✅ **Quote/emph negation** - Fixed: override negates base formatting explicitly
+13. 🔄 **Bibliography separator** - Partial: infrastructure added, extraction limited by CSL encoding
+14. 🔄 **Publisher-place visibility** - Style-specific (Chicago: suppress for books, Elsevier: show)
+15. 🔄 **Editor verb form** - Chicago: "edited by", APA: "(Ed.)"
+
+---
+
+## Remaining Work
+
+### Phase 5: Bibliography Separator (Partial)
+
+**Status:** 🔄 Infrastructure complete, extraction limited
+
+**Problem:** Elsevier uses comma-space between components, Chicago/APA use period-space.
+
+**Implemented:**
+- ✅ Added `separator` field to `BibliographyConfig` in `csln_core/src/options.rs`
+- ✅ Updated renderer to use configurable separator (defaults to ". ")
+- ✅ Added extraction logic for top-level group delimiters
+
+**Limitations:**
+- Most CSL 1.0 styles encode separators via element prefixes/suffixes, not group delimiters
+- Current extraction only works for styles with explicit top-level group delimiter
+- Fallback needed: manual configuration or heuristic-based detection
+
+**Next Steps:**
+- Add heuristic detection based on style family (Elsevier → ", ", others → ". ")
+- Or manually configure separator for specific style presets
+
+### Phase 6: Editor Verb Form
+
+**Problem:** Different styles use different patterns for chapter editors:
+- Chicago: "edited by First Last"
+- APA: "In F. Last (Ed.),"
+- Elsevier: "In: Last, F. (Eds.),"
+
+**Options:**
+1. Add `editor_verb_form` option to contributor options
+2. Extract from CSL editor/translator labels
+
+**Files:**
+- `crates/csln_core/src/options.rs` - Add EditorVerbForm enum
+- `crates/csln_processor/src/processor.rs` - Apply verb form
+
+### Phase 7: Publisher-Place Visibility
+
+**Problem:** Style-specific rules for when to show location:
+- Chicago: Only for periodicals with place, not books
+- Elsevier: Publisher, Place format for all
+- APA: Publisher (Location) for some types
+
+**Note:** This requires extracting conditionals from CSL during migration, which is complex. May defer to future work.
+
+### Phase 8: Container Title Deduplication
+
+**Problem:** Elsevier bibliography shows container title twice for chapters.
+
+**Files:**
+- `crates/csln_migrate/src/template_compiler.rs` - Prevent duplicate parent-monograph
+
+---
+
+## Success Criteria
+
+**Citation Target:** ✅ ACHIEVED - 6/6 styles at 5/5
+
+**Bibliography Target:**
+| Style | Current | Target |
+|-------|---------|--------|
+| apa | 5/5 ✅ | 5/5 |
+| chicago-author-date | 0/5 | 3/5 |
+| elsevier-harvard | 0/5 | 3/5 |
+| springer-basic-author-date | 0/5 | 3/5 |
+| ieee | 0/5 | 3/5 |
+| elsevier-vancouver | 0/5 | 3/5 |
+
+**Total Impact:** 60% of dependent styles with high citation fidelity (already achieved)
