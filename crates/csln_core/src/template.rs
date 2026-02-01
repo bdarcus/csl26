@@ -112,6 +112,7 @@ impl Rendering {
 pub enum WrapPunctuation {
     Parentheses,
     Brackets,
+    Quotes,
     #[default]
     None,
 }
