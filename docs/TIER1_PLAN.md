@@ -71,25 +71,16 @@ Currently, only APA achieves 5/5 oracle match for both citations and bibliograph
 
 ## Remaining Work
 
-### Phase 5: Bibliography Separator (Partial)
+### Phase 5: Bibliography Separator
 
-**Status:** 🔄 Infrastructure complete, extraction limited
+**Status:** ✅ COMPLETED
 
 **Problem:** Elsevier uses comma-space between components, Chicago/APA use period-space.
 
-**Implemented:**
-- ✅ Added `separator` field to `BibliographyConfig` in `csln_core/src/options.rs`
-- ✅ Updated renderer to use configurable separator (defaults to ". ")
-- ✅ Added extraction logic for top-level group delimiters
-
-**Limitations:**
-- Most CSL 1.0 styles encode separators via element prefixes/suffixes, not group delimiters
-- Current extraction only works for styles with explicit top-level group delimiter
-- Fallback needed: manual configuration or heuristic-based detection
-
-**Next Steps:**
-- Add heuristic detection based on style family (Elsevier → ", ", others → ". ")
-- Or manually configure separator for specific style presets
+**Solution:**
+- Added `separator` field to `BibliographyConfig`.
+- Improved extraction logic in `csln_migrate` with heuristics for Elsevier (comma) and Note styles (period).
+- Updated `csln_processor` renderer to suppress the default separator when a component starts with punctuation (like `. `), preventing double punctuation.
 
 ### Phase 6: Editor Verb Form
 

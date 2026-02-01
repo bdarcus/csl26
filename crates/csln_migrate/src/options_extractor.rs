@@ -270,7 +270,9 @@ impl OptionsExtractor {
 
         // Extract bibliography component separator from top-level group delimiter.
         // Chicago/APA typically use ". " while Elsevier uses ", ".
-        if let Some(separator) = Self::extract_bibliography_separator_from_layout(&bib.layout) {
+        if let Some(separator) =
+            Self::extract_bibliography_separator_from_layout(&bib.layout, style)
+        {
             config.separator = Some(separator);
             has_config = true;
         }
@@ -375,7 +377,12 @@ impl OptionsExtractor {
     /// The bibliography separator is the delimiter between bibliography components.
     /// In CSL 1.0, this is typically the delimiter on the top-level group in the
     /// bibliography layout.
-    fn extract_bibliography_separator_from_layout(layout: &Layout) -> Option<String> {
+    ///
+    /// If no explicit delimiter is found, uses heuristics based on style ID/class.
+    fn extract_bibliography_separator_from_layout(
+        layout: &Layout,
+        style: &Style,
+    ) -> Option<String> {
         // Check if the layout children start with a top-level group
         for node in &layout.children {
             if let CslNode::Group(group) = node {
@@ -384,6 +391,11 @@ impl OptionsExtractor {
                     return Some(delimiter.to_string());
                 }
             }
+        }
+
+        // Heuristics for styles without explicit top-level delimiter
+        if style.class == "note" {
+            return Some(". ".to_string());
         }
 
         // No delimiter found - return None (processor will use default ". ")
@@ -1462,6 +1474,42 @@ mod tests {
         assert_eq!(
             config.contributors.unwrap().editor_label_format,
             Some(EditorLabelFormat::ShortSuffix)
+        );
+    }
+
+    #[test]
+    fn test_extract_bibliography_separator_heuristic() {
+        // Test Elsevier heuristic
+        let elsevier_csl = r#"<?xml version="1.0" encoding="utf-8"?>
+<style xmlns="http://purl.org/net/xbiblio/csl" class="in-text" version="1.0">
+  <info>
+    <title>Elsevier Harvard</title>
+    <id>http://www.zotero.org/styles/elsevier-harvard</id>
+  </info>
+  <citation><layout><text variable="title"/></layout></citation>
+  <bibliography><layout><text variable="title"/></layout></bibliography>
+</style>"#;
+
+        let style = parse_csl(elsevier_csl).unwrap();
+        let config = OptionsExtractor::extract(&style);
+
+        // We removed the elsevier heuristic, so it should be None (defaults to ". " in renderer)
+        assert!(config.bibliography.as_ref().map_or(true, |b| b.separator.is_none()));
+
+        // Test Note style heuristic
+        let note_csl = r#"<?xml version="1.0" encoding="utf-8"?>
+<style xmlns="http://purl.org/net/xbiblio/csl" class="note" version="1.0">
+  <info><title>Chicago Note</title></info>
+  <citation><layout><text variable="title"/></layout></citation>
+  <bibliography><layout><text variable="title"/></layout></bibliography>
+</style>"#;
+
+        let style = parse_csl(note_csl).unwrap();
+        let config = OptionsExtractor::extract(&style);
+
+        assert_eq!(
+            config.bibliography.unwrap().separator,
+            Some(". ".to_string())
         );
     }
 }
