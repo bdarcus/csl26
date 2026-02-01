@@ -589,6 +589,7 @@ impl Processor {
         let config = self.get_config();
         let processing = config.processing.as_ref().cloned().unwrap_or_default();
         let proc_config = processing.config();
+        let locale = &self.locale;
 
         if let Some(sort_config) = &proc_config.sort {
             // Build a composite sort that handles all keys together
@@ -599,6 +600,7 @@ impl Processor {
                         SortKey::Author => {
                             // Get author for sorting, with fallback chain per CSL spec:
                             // author → editor → title (for anonymous works)
+                            // Strip leading articles from title when used as fallback
                             let a_sort_key = a
                                 .author
                                 .as_ref()
@@ -610,7 +612,11 @@ impl Processor {
                                         .and_then(|names| names.first())
                                         .map(|n| n.family_or_literal().to_lowercase())
                                 })
-                                .or_else(|| a.title.as_ref().map(|t| t.to_lowercase()))
+                                .or_else(|| {
+                                    a.title
+                                        .as_ref()
+                                        .map(|t| locale.strip_sort_articles(t).to_lowercase())
+                                })
                                 .unwrap_or_default();
                             let b_sort_key = b
                                 .author
@@ -623,7 +629,11 @@ impl Processor {
                                         .and_then(|names| names.first())
                                         .map(|n| n.family_or_literal().to_lowercase())
                                 })
-                                .or_else(|| b.title.as_ref().map(|t| t.to_lowercase()))
+                                .or_else(|| {
+                                    b.title
+                                        .as_ref()
+                                        .map(|t| locale.strip_sort_articles(t).to_lowercase())
+                                })
                                 .unwrap_or_default();
 
                             if sort.ascending {
@@ -645,8 +655,13 @@ impl Processor {
                             }
                         }
                         SortKey::Title => {
-                            let a_title = a.title.as_deref().unwrap_or("").to_lowercase();
-                            let b_title = b.title.as_deref().unwrap_or("").to_lowercase();
+                            // Strip leading articles using locale-specific rules
+                            let a_title = locale
+                                .strip_sort_articles(a.title.as_deref().unwrap_or(""))
+                                .to_lowercase();
+                            let b_title = locale
+                                .strip_sort_articles(b.title.as_deref().unwrap_or(""))
+                                .to_lowercase();
 
                             if sort.ascending {
                                 a_title.cmp(&b_title)
@@ -1814,6 +1829,70 @@ mod tests {
         assert!(
             result.contains("; "),
             "Different authors should be separated by semicolon. Got: {}",
+            result
+        );
+    }
+
+    #[test]
+    fn test_sort_anonymous_work_by_title() {
+        // Anonymous works (no author) should sort by title, with leading articles stripped
+        let style = make_style();
+        let mut bib = indexmap::IndexMap::new();
+
+        // Add references in wrong alphabetical order to test sorting
+        bib.insert(
+            "smith".to_string(),
+            Reference {
+                id: "smith".to_string(),
+                ref_type: "book".to_string(),
+                author: Some(vec![Name::new("Smith", "John")]),
+                title: Some("A Book".to_string()),
+                issued: Some(DateVariable::year(2020)),
+                ..Default::default()
+            },
+        );
+
+        // Anonymous work - should sort by "Role" (stripping "The")
+        bib.insert(
+            "anon".to_string(),
+            Reference {
+                id: "anon".to_string(),
+                ref_type: "article-journal".to_string(),
+                author: None, // No author!
+                title: Some("The Role of Theory".to_string()),
+                issued: Some(DateVariable::year(2018)),
+                ..Default::default()
+            },
+        );
+
+        bib.insert(
+            "jones".to_string(),
+            Reference {
+                id: "jones".to_string(),
+                ref_type: "book".to_string(),
+                author: Some(vec![Name::new("Jones", "Alice")]),
+                title: Some("Another Book".to_string()),
+                issued: Some(DateVariable::year(2019)),
+                ..Default::default()
+            },
+        );
+
+        let processor = Processor::new(style, bib);
+        let result = processor.render_bibliography();
+
+        // Order should be: Jones (J), anon/Role (R), Smith (S)
+        let jones_pos = result.find("Jones").expect("Jones not found");
+        let role_pos = result.find("Role of Theory").expect("Role not found");
+        let smith_pos = result.find("Smith").expect("Smith not found");
+
+        assert!(
+            jones_pos < role_pos,
+            "Jones should come before Role. Got:\n{}",
+            result
+        );
+        assert!(
+            role_pos < smith_pos,
+            "Role should come before Smith. Got:\n{}",
             result
         );
     }
