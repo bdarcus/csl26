@@ -3,8 +3,10 @@ use crate::{
 };
 use std::collections::HashMap;
 
-/// A mock citation item with metadata.
-pub struct CitationItem {
+/// A mock reference item with metadata for rendering.
+/// This is an internal type used by the legacy Renderer, distinct from
+/// the input `CitationItem` in `crate::citation`.
+pub struct RenderItem {
     pub item_type: ItemType,
     pub variables: HashMap<Variable, String>,
 }
@@ -12,7 +14,7 @@ pub struct CitationItem {
 pub struct Renderer;
 
 impl Renderer {
-    pub fn render_citation(&self, nodes: &[CslnNode], item: &CitationItem) -> String {
+    pub fn render_citation(&self, nodes: &[CslnNode], item: &RenderItem) -> String {
         let mut output = String::new();
         for node in nodes {
             output.push_str(&self.render_node(node, item));
@@ -20,7 +22,7 @@ impl Renderer {
         output
     }
 
-    fn render_node(&self, node: &CslnNode, item: &CitationItem) -> String {
+    fn render_node(&self, node: &CslnNode, item: &RenderItem) -> String {
         match node {
             CslnNode::Text { value } => value.clone(),
             CslnNode::Variable(var_block) => self.render_variable(var_block, item),
@@ -31,7 +33,7 @@ impl Renderer {
         }
     }
 
-    fn render_variable(&self, block: &VariableBlock, item: &CitationItem) -> String {
+    fn render_variable(&self, block: &VariableBlock, item: &RenderItem) -> String {
         if let Some(val) = item.variables.get(&block.variable) {
             let mut text = val.clone();
 
@@ -52,7 +54,7 @@ impl Renderer {
         }
     }
 
-    fn render_date(&self, block: &DateBlock, item: &CitationItem) -> String {
+    fn render_date(&self, block: &DateBlock, item: &RenderItem) -> String {
         if let Some(val) = item.variables.get(&block.variable) {
             self.apply_formatting(val, &block.formatting)
         } else {
@@ -60,7 +62,7 @@ impl Renderer {
         }
     }
 
-    fn render_names(&self, block: &NamesBlock, item: &CitationItem) -> String {
+    fn render_names(&self, block: &NamesBlock, item: &RenderItem) -> String {
         let active_val = if let Some(val) = item.variables.get(&block.variable) {
             Some(val.clone())
         } else {
@@ -88,7 +90,7 @@ impl Renderer {
         }
     }
 
-    fn render_group(&self, block: &GroupBlock, item: &CitationItem) -> String {
+    fn render_group(&self, block: &GroupBlock, item: &RenderItem) -> String {
         let mut parts = Vec::new();
         for child in &block.children {
             let rendered = self.render_node(child, item);
@@ -107,7 +109,7 @@ impl Renderer {
         self.apply_formatting(&content, &block.formatting)
     }
 
-    fn render_condition(&self, block: &ConditionBlock, item: &CitationItem) -> String {
+    fn render_condition(&self, block: &ConditionBlock, item: &RenderItem) -> String {
         // Check if the main if-branch matches
         let type_match =
             block.if_item_type.is_empty() || block.if_item_type.contains(&item.item_type);
