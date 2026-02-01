@@ -657,19 +657,34 @@ fn apply_type_overrides(
             );
             v.overrides = Some(overrides);
         }
-        // Publisher-place: suppress for journal articles only
-        // Other types (books, reports) may show publisher-place depending on style
+        // Publisher-place: style-specific visibility rules
+        // - Chicago: show for journals (in parens), suppress for books/reports
+        // - APA/others: suppress for journals, may show for books
         TemplateComponent::Variable(v)
             if v.variable == csln_core::template::SimpleVariable::PublisherPlace =>
         {
             let mut overrides = std::collections::HashMap::new();
-            overrides.insert(
-                "article-journal".to_string(),
-                csln_core::template::Rendering {
+            let is_chicago = style_id.contains("chicago");
+
+            if is_chicago {
+                // Chicago: suppress for books and reports, show for journals
+                let suppress_rendering = csln_core::template::Rendering {
                     suppress: Some(true),
                     ..Default::default()
-                },
-            );
+                };
+                overrides.insert("book".to_string(), suppress_rendering.clone());
+                overrides.insert("report".to_string(), suppress_rendering.clone());
+                overrides.insert("thesis".to_string(), suppress_rendering);
+            } else {
+                // APA/default: suppress for journals
+                overrides.insert(
+                    "article-journal".to_string(),
+                    csln_core::template::Rendering {
+                        suppress: Some(true),
+                        ..Default::default()
+                    },
+                );
+            }
             v.overrides = Some(overrides);
         }
         // Pages: use extracted delimiter for journal articles, (pp. X-Y) for chapters
