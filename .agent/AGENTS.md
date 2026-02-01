@@ -155,6 +155,11 @@ Run `cargo run --bin csln_analyze -- styles/` to regenerate these statistics.
 ### High Priority (Not Yet Implemented)
 | Feature | Usage | Notes |
 |---------|-------|-------|
+| Group delimiters | - | Colon vs period between components |
+| Page labels | - | "pp." extraction from CSL Label nodes |
+| Volume-pages delimiter | - | Varies by style (comma vs colon) |
+| DOI suppression | - | Some styles don't output DOI |
+| Editor name-order | - | given-first vs family-first varies by style |
 
 ### Medium Priority (Note Styles)
 | Feature | Usage | Notes |
