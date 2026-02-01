@@ -49,6 +49,13 @@ impl Upsampler {
                         }));
                     }
                 }
+                if let Some(term) = &t.term {
+                    let prefix = t.prefix.as_deref().unwrap_or("");
+                    let suffix = t.suffix.as_deref().unwrap_or("");
+                    return Some(csln::CslnNode::Text {
+                        value: format!("{}{}{}", prefix, term, suffix),
+                    });
+                }
                 if let Some(val) = &t.value {
                     return Some(csln::CslnNode::Text { value: val.clone() });
                 }
@@ -69,12 +76,24 @@ impl Upsampler {
     }
 
     fn map_names(&self, n: &legacy::Names) -> Option<csln::CslnNode> {
-        let variable = self.map_variable(&n.variable)?;
+        let vars: Vec<&str> = n.variable.split_whitespace().collect();
+        if vars.is_empty() {
+            return None;
+        }
+
+        let variable = self.map_variable(vars[0])?;
 
         let mut options = csln::NamesOptions {
             delimiter: n.delimiter.clone(),
             ..Default::default()
         };
+
+        // If multiple variables were provided, add the others to substitute
+        for v in vars.iter().skip(1) {
+            if let Some(var) = self.map_variable(v) {
+                options.substitute.push(var);
+            }
+        }
 
         // Extract et-al defaults from Names node
         let mut et_al_min = n.et_al_min;

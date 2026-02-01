@@ -179,110 +179,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
 
-        // Add editor and parent-monograph (container) for chapters
-        // Pattern: "In K. A. Ericsson... (Eds.), The Cambridge Handbook..."
-        let has_editor = new_bib.iter().any(|c| {
-            matches!(c, TemplateComponent::Contributor(tc) if tc.contributor == csln_core::template::ContributorRole::Editor)
-        });
-        let has_container = new_bib.iter().any(|c| {
-            matches!(c, TemplateComponent::Title(tt) if tt.title == csln_core::template::TitleType::ParentMonograph)
-        });
-
-        // If we don't have ParentMonograph, check if ParentSerial exists
-        // (some styles use container-title for both)
-        let has_serial = new_bib.iter().any(|c| {
-            matches!(c, TemplateComponent::Title(tt) if tt.title == csln_core::template::TitleType::ParentSerial)
-        });
-
-        // Add ParentMonograph if missing - for chapters, container-title is the book title
-        if !has_container {
-            // Find position after primary title
-            let title_pos = new_bib.iter().position(|c| {
-                matches!(c, TemplateComponent::Title(tt) if tt.title == csln_core::template::TitleType::Primary)
-            });
-            if let Some(pos) = title_pos {
-                // Insert after primary title, or after ParentSerial if it exists
-                let insert_pos = if has_serial {
-                    new_bib
-                        .iter()
-                        .position(|c| {
-                            matches!(c, TemplateComponent::Title(tt) if tt.title == csln_core::template::TitleType::ParentSerial)
-                        })
-                        .map(|p| p + 1)
-                        .unwrap_or(pos + 1)
-                } else {
-                    pos + 1
-                };
-                new_bib.insert(
-                    insert_pos,
-                    TemplateComponent::Title(csln_core::template::TemplateTitle {
-                        title: csln_core::template::TitleType::ParentMonograph,
-                        form: None,
-                        rendering: csln_core::template::Rendering {
-                            emph: Some(true), // Book titles are typically italic
-                            ..Default::default()
-                        },
-                        overrides: None,
-                        ..Default::default()
-                    }),
-                );
-            }
-        }
-
-        // Now add editor before ParentMonograph if missing
-        if !has_editor {
-            // Find the container position (now guaranteed to exist)
-            let container_pos = new_bib.iter().position(|c| {
-                matches!(c, TemplateComponent::Title(tt) if tt.title == csln_core::template::TitleType::ParentMonograph)
-            });
-            if let Some(pos) = container_pos {
-                // Style-specific editor formatting patterns:
-                // - Elsevier: ", in: Name (Eds.)," (prefix, Long form with label)
-                // - APA: "In Name (Ed.)," (prefix, Long form with label)
-                // - Chicago: "edited by Name" (no prefix, Verb form)
-                let is_elsevier = legacy_style.info.id.contains("elsevier");
-                let is_chicago = legacy_style.info.id.contains("chicago");
-
-                let (editor_form, editor_prefix, editor_suffix) = if is_elsevier {
-                    (
-                        csln_core::template::ContributorForm::Long,
-                        Some(", in: ".to_string()),
-                        Some(", ".to_string()),
-                    )
-                } else if is_chicago {
-                    // Chicago uses verb form "edited by" with no prefix
-                    (
-                        csln_core::template::ContributorForm::Verb,
-                        None,
-                        Some(", ".to_string()),
-                    )
-                } else {
-                    // Default (APA): Long form with "In" prefix and label suffix
-                    (
-                        csln_core::template::ContributorForm::Long,
-                        Some("In ".to_string()),
-                        Some(", ".to_string()),
-                    )
-                };
-
-                new_bib.insert(
-                    pos,
-                    TemplateComponent::Contributor(csln_core::template::TemplateContributor {
-                        contributor: csln_core::template::ContributorRole::Editor,
-                        form: editor_form,
-                        name_order: None, // Use global config
-                        delimiter: None,
-                        rendering: csln_core::template::Rendering {
-                            prefix: editor_prefix,
-                            suffix: editor_suffix,
-                            ..Default::default()
-                        },
-                        ..Default::default()
-                    }),
-                );
-            }
-        }
-
         // Combine volume and issue into a List component: volume(issue)
         let vol_pos = new_bib.iter().position(|c| {
             matches!(c, TemplateComponent::Number(n) if n.number == csln_core::template::NumberVariable::Volume)
@@ -374,6 +270,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         // CSL styles typically have access macros at the end, but during macro
         // expansion they can end up in the middle due to conditional processing.
         move_access_components_to_end(&mut new_bib);
+
+        // Ensure publisher and publisher-place are unsuppressed for chapters
+        unsuppress_for_type(&mut new_bib, "chapter");
+        unsuppress_for_type(&mut new_bib, "paper-conference");
 
         // Remove duplicate titles from Lists that already appear at top level.
         // This happens when container-title appears in multiple CSL macros.
@@ -643,31 +543,44 @@ fn apply_type_overrides(
         TemplateComponent::Title(t) if t.title == csln_core::template::TitleType::ParentSerial => {
             let is_chicago = style_id.contains("chicago");
             if !volume_list_has_space_prefix {
-                let mut overrides = std::collections::HashMap::new();
+                let mut new_ovr = std::collections::HashMap::new();
                 let suffix = if is_chicago { " " } else { "," };
-                overrides.insert(
+                new_ovr.insert(
                     "article-journal".to_string(),
                     csln_core::template::Rendering {
                         suffix: Some(suffix.to_string()),
+                        suppress: Some(false),
                         ..Default::default()
                     },
                 );
-                t.overrides = Some(overrides);
+                // Merge instead of overwrite
+                let overrides = t
+                    .overrides
+                    .get_or_insert_with(std::collections::HashMap::new);
+                for (k, v) in new_ovr {
+                    overrides.insert(k, v);
+                }
             }
         }
         // Publisher: suppress for journal articles (journals don't have publishers in bib)
         TemplateComponent::Variable(v)
             if v.variable == csln_core::template::SimpleVariable::Publisher =>
         {
-            let mut overrides = std::collections::HashMap::new();
-            overrides.insert(
+            let mut new_ovr = std::collections::HashMap::new();
+            new_ovr.insert(
                 "article-journal".to_string(),
                 csln_core::template::Rendering {
                     suppress: Some(true),
                     ..Default::default()
                 },
             );
-            v.overrides = Some(overrides);
+            // Merge instead of overwrite
+            let overrides = v
+                .overrides
+                .get_or_insert_with(std::collections::HashMap::new);
+            for (k, v) in new_ovr {
+                overrides.insert(k, v);
+            }
         }
         // Publisher-place: style-specific visibility rules
         // - Chicago: show for journals (in parens), suppress for books/reports
@@ -675,7 +588,7 @@ fn apply_type_overrides(
         TemplateComponent::Variable(v)
             if v.variable == csln_core::template::SimpleVariable::PublisherPlace =>
         {
-            let mut overrides = std::collections::HashMap::new();
+            let mut new_ovr = std::collections::HashMap::new();
             let is_chicago = style_id.contains("chicago");
 
             if is_chicago {
@@ -684,12 +597,19 @@ fn apply_type_overrides(
                     suppress: Some(true),
                     ..Default::default()
                 };
-                overrides.insert("book".to_string(), suppress_rendering.clone());
-                overrides.insert("report".to_string(), suppress_rendering.clone());
-                overrides.insert("thesis".to_string(), suppress_rendering);
+                new_ovr.insert("book".to_string(), suppress_rendering.clone());
+                new_ovr.insert("report".to_string(), suppress_rendering.clone());
+                new_ovr.insert("thesis".to_string(), suppress_rendering.clone());
+                new_ovr.insert(
+                    "article-journal".to_string(),
+                    csln_core::template::Rendering {
+                        suppress: Some(false),
+                        ..Default::default()
+                    },
+                );
             } else {
                 // APA/default: suppress for journals
-                overrides.insert(
+                new_ovr.insert(
                     "article-journal".to_string(),
                     csln_core::template::Rendering {
                         suppress: Some(true),
@@ -697,19 +617,26 @@ fn apply_type_overrides(
                     },
                 );
             }
-            v.overrides = Some(overrides);
+            // Merge instead of overwrite
+            let overrides = v
+                .overrides
+                .get_or_insert_with(std::collections::HashMap::new);
+            for (k, v) in new_ovr {
+                overrides.insert(k, v);
+            }
         }
         // Pages: use extracted delimiter for journal articles, (pp. X-Y) for chapters
         TemplateComponent::Number(n) if n.number == csln_core::template::NumberVariable::Pages => {
-            let mut overrides = std::collections::HashMap::new();
+            let mut new_ovr = std::collections::HashMap::new();
             // Use extracted delimiter or default to comma
             let delim = volume_pages_delimiter
                 .unwrap_or(csln_core::template::DelimiterPunctuation::Comma)
                 .to_string_with_space();
-            overrides.insert(
+            new_ovr.insert(
                 "article-journal".to_string(),
                 csln_core::template::Rendering {
                     prefix: Some(delim.to_string()),
+                    suppress: Some(false),
                     ..Default::default()
                 },
             );
@@ -732,11 +659,18 @@ fn apply_type_overrides(
                 csln_core::template::Rendering {
                     prefix: Some("pp. ".to_string()),
                     wrap: chapter_wrap,
+                    suppress: Some(false),
                     ..Default::default()
                 }
             };
-            overrides.insert("chapter".to_string(), chapter_rendering);
-            n.overrides = Some(overrides);
+            new_ovr.insert("chapter".to_string(), chapter_rendering);
+            // Merge instead of overwrite
+            let overrides = n
+                .overrides
+                .get_or_insert_with(std::collections::HashMap::new);
+            for (k, v) in new_ovr {
+                overrides.insert(k, v);
+            }
         }
         // Recursively process Lists
         TemplateComponent::List(list) => {
@@ -973,6 +907,37 @@ fn reorder_chapters_for_chicago(components: &mut Vec<TemplateComponent>, style_i
             // Re-insert in new order: parent-monograph, then editor
             components.insert(editor_pos, pm_with_prefix);
             components.insert(editor_pos + 1, editor_with_suffix);
+        }
+    }
+}
+
+/// Recursively ensure specific variables are un-suppressed for a given type.
+fn unsuppress_for_type(components: &mut [TemplateComponent], item_type: &str) {
+    use csln_core::template::SimpleVariable;
+
+    for component in components {
+        match component {
+            TemplateComponent::Variable(v)
+                if matches!(
+                    v.variable,
+                    SimpleVariable::Publisher | SimpleVariable::PublisherPlace
+                ) =>
+            {
+                let overrides = v
+                    .overrides
+                    .get_or_insert_with(std::collections::HashMap::new);
+                overrides.insert(
+                    item_type.to_string(),
+                    csln_core::template::Rendering {
+                        suppress: Some(false),
+                        ..Default::default()
+                    },
+                );
+            }
+            TemplateComponent::List(list) => {
+                unsuppress_for_type(&mut list.items, item_type);
+            }
+            _ => {}
         }
     }
 }
