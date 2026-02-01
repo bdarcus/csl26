@@ -863,21 +863,14 @@ impl OptionsExtractor {
                     }
                 }
             }
-            CslNode::Choose(c) => {
-                // Recurse into choose branches
-                for child in &c.if_branch.children {
-                    Self::extract_substitute_keys(child, template);
-                }
-                for branch in &c.else_if_branches {
-                    for child in &branch.children {
-                        Self::extract_substitute_keys(child, template);
-                    }
-                }
-                if let Some(else_children) = &c.else_branch {
-                    for child in else_children {
-                        Self::extract_substitute_keys(child, template);
-                    }
-                }
+            CslNode::Choose(_c) => {
+                // Skip conditional branches - only extract unconditional substitute keys.
+                // CSL 1.0 supports type-conditional substitution (e.g., use title for
+                // "classic" types but editor for regular books), but CSLN doesn't yet
+                // support this. Extracting keys from conditionals creates incorrect
+                // substitute templates (e.g., adding "title" before "editor" when only
+                // specific types should use title).
+                // TODO: Support type-conditional substitution in CSLN
             }
             CslNode::Group(g) => {
                 for child in &g.children {

@@ -82,6 +82,28 @@ const testItems = {
         "issued": { "date-parts": [[2023]] },
         "publisher": "World Bank Group",
         "publisher-place": "Washington, DC"
+    },
+    "ITEM-14": {
+        "id": "ITEM-14",
+        "type": "book",
+        "title": "Handbook of Research Methods in Social Psychology",
+        "editor": [
+            { "family": "Reis", "given": "Harry T." },
+            { "family": "Judd", "given": "Charles M." }
+        ],
+        "issued": { "date-parts": [[2000]] },
+        "publisher": "Cambridge University Press",
+        "publisher-place": "Cambridge"
+    },
+    "ITEM-15": {
+        "id": "ITEM-15",
+        "type": "article-journal",
+        "title": "The Role of Theory in Research",
+        "issued": { "date-parts": [[2018]] },
+        "container-title": "Journal of Theoretical Psychology",
+        "volume": "28",
+        "issue": "3",
+        "page": "201-215"
     }
 };
 
