@@ -562,12 +562,14 @@ impl OptionsExtractor {
             }
         }
 
-        // Collect macros that are transitively called from bibliography layout
+        // Collect macros from both citation and bibliography layouts
         let bib_macros = Self::collect_bibliography_macros(style);
+        let cite_macros = Self::collect_citation_macros(style);
 
-        // Only extract name options from macros used in bibliography context
+        // Extract name options from macros used in both contexts
+        // Bibliography macros take precedence (checked last, so they override)
         for macro_def in &style.macros {
-            if bib_macros.contains(&macro_def.name) {
+            if cite_macros.contains(&macro_def.name) || bib_macros.contains(&macro_def.name) {
                 Self::extract_name_options_from_nodes(
                     &macro_def.children,
                     &mut config,
@@ -591,6 +593,35 @@ impl OptionsExtractor {
         if let Some(bib) = &style.bibliography {
             Self::collect_macro_refs_from_nodes(&bib.layout.children, &mut macros);
         }
+
+        // Transitively expand: for each macro in the set, add macros it calls
+        let macro_map: std::collections::HashMap<&str, &Macro> =
+            style.macros.iter().map(|m| (m.name.as_str(), m)).collect();
+
+        let mut changed = true;
+        while changed {
+            changed = false;
+            let current: Vec<String> = macros.iter().cloned().collect();
+            for name in current {
+                if let Some(macro_def) = macro_map.get(name.as_str()) {
+                    let before = macros.len();
+                    Self::collect_macro_refs_from_nodes(&macro_def.children, &mut macros);
+                    if macros.len() > before {
+                        changed = true;
+                    }
+                }
+            }
+        }
+
+        macros
+    }
+
+    /// Collect all macro names that are transitively called from citation layout.
+    fn collect_citation_macros(style: &Style) -> std::collections::HashSet<String> {
+        let mut macros = std::collections::HashSet::new();
+
+        // Start with macros called directly from citation layout
+        Self::collect_macro_refs_from_nodes(&style.citation.layout.children, &mut macros);
 
         // Transitively expand: for each macro in the set, add macros it calls
         let macro_map: std::collections::HashMap<&str, &Macro> =
@@ -708,22 +739,19 @@ impl OptionsExtractor {
                     *has_config = true;
                 }
 
-                // Extract 'and' preferring from name elements with name-as-sort-order
-                // (typically bibliography formatting). This avoids picking up citation-only
-                // settings that shouldn't apply to bibliography.
-                if config.and.is_none() {
-                    if let Some(and) = &name.and {
-                        // Only extract if this name has name-as-sort-order (bibliography indicator)
-                        // or if no better option found (will be overwritten by better match)
-                        let is_bib_context = name.name_as_sort_order.is_some();
-                        if is_bib_context {
-                            config.and = Some(match and.as_str() {
-                                "symbol" => AndOptions::Symbol,
-                                "text" => AndOptions::Text,
-                                _ => AndOptions::None,
-                            });
-                            *has_config = true;
-                        }
+                // Extract 'and' from name elements
+                // Prefer bibliography context (name-as-sort-order present) but also extract
+                // from citation context if not yet found
+                if let Some(and) = &name.and {
+                    let is_bib_context = name.name_as_sort_order.is_some();
+                    // Extract if: not yet set, OR this is bib context (override citation setting)
+                    if config.and.is_none() || is_bib_context {
+                        config.and = Some(match and.as_str() {
+                            "symbol" => AndOptions::Symbol,
+                            "text" => AndOptions::Text,
+                            _ => AndOptions::None,
+                        });
+                        *has_config = true;
                     }
                 }
 
