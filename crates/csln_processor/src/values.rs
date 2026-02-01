@@ -174,10 +174,16 @@ impl ComponentValues for TemplateContributor {
                     }
                     SubstituteKey::Title => {
                         if let Some(title) = &reference.title {
-                            // When title is used as citation key (substitute for author),
-                            // it should be quoted per CSL conventions
+                            // When title substitutes for author:
+                            // - In CITATIONS: quote the title per CSL conventions
+                            // - In BIBLIOGRAPHY: use title as-is (it will be styled normally)
+                            let value = if options.context == RenderContext::Citation {
+                                format!("\u{201C}{}\u{201D}", title) // Curly quotes
+                            } else {
+                                title.clone()
+                            };
                             return Some(ProcValues {
-                                value: format!("\u{201C}{}\u{201D}", title), // U+201C (") and U+201D (")
+                                value,
                                 prefix: None,
                                 suffix: None,
                                 url: None,

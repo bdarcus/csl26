@@ -35,6 +35,10 @@ pub struct Locale {
     /// true = American style ("text."), false = British style ("text".)
     #[serde(default)]
     pub punctuation_in_quote: bool,
+    /// Articles to strip from titles when sorting (e.g., "the", "a", "an" for English).
+    /// These should be lowercase and will be matched case-insensitively.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub sort_articles: Vec<String>,
 }
 
 impl Locale {
@@ -102,6 +106,90 @@ impl Locale {
             roles,
             terms: Terms::en_us(),
             punctuation_in_quote: true, // American English convention
+            sort_articles: vec!["the".into(), "a".into(), "an".into()],
+        }
+    }
+
+    /// Strip leading articles from a string for sorting.
+    ///
+    /// Uses locale-specific articles (e.g., "the", "a", "an" for English;
+    /// "der", "die", "das" for German). Falls back to English articles
+    /// if no locale-specific articles are defined.
+    pub fn strip_sort_articles<'a>(&self, s: &'a str) -> &'a str {
+        let s = s.trim();
+
+        // Default English articles
+        const DEFAULT_ARTICLES: &[&str] = &["the", "a", "an"];
+
+        if self.sort_articles.is_empty() {
+            // Use default English articles
+            for article in DEFAULT_ARTICLES {
+                let prefix = format!("{} ", article);
+                if s.to_lowercase().starts_with(&prefix) {
+                    return &s[prefix.len()..];
+                }
+            }
+        } else {
+            // Use locale-specific articles
+            for article in &self.sort_articles {
+                let prefix = format!("{} ", article);
+                if s.to_lowercase().starts_with(&prefix) {
+                    return &s[prefix.len()..];
+                }
+            }
+        }
+        s
+    }
+
+    /// Get default articles for a locale based on language code.
+    fn default_articles_for_locale(locale_id: &str) -> Vec<String> {
+        // Extract language code (first 2 chars)
+        let lang = &locale_id[..2.min(locale_id.len())];
+        match lang {
+            "en" => vec!["the".into(), "a".into(), "an".into()],
+            "de" => vec![
+                "der".into(),
+                "die".into(),
+                "das".into(),
+                "ein".into(),
+                "eine".into(),
+            ],
+            "fr" => vec![
+                "le".into(),
+                "la".into(),
+                "les".into(),
+                "l'".into(),
+                "un".into(),
+                "une".into(),
+            ],
+            "es" => vec![
+                "el".into(),
+                "la".into(),
+                "los".into(),
+                "las".into(),
+                "un".into(),
+                "una".into(),
+            ],
+            "it" => vec![
+                "il".into(),
+                "lo".into(),
+                "la".into(),
+                "i".into(),
+                "gli".into(),
+                "le".into(),
+                "un".into(),
+                "una".into(),
+            ],
+            "pt" => vec![
+                "o".into(),
+                "a".into(),
+                "os".into(),
+                "as".into(),
+                "um".into(),
+                "uma".into(),
+            ],
+            "nl" => vec!["de".into(), "het".into(), "een".into()],
+            _ => vec![], // Fall back to English defaults in strip_sort_articles
         }
     }
 
@@ -456,7 +544,7 @@ impl Locale {
             || (raw.locale.starts_with("en") && !raw.locale.starts_with("en-GB"));
 
         let mut locale = Locale {
-            locale: raw.locale,
+            locale: raw.locale.clone(),
             dates: DateTerms {
                 months: MonthNames {
                     long: raw.dates.months.long,
@@ -467,6 +555,8 @@ impl Locale {
             roles: HashMap::new(),
             terms: Terms::default(),
             punctuation_in_quote,
+            // Set locale-specific articles based on language
+            sort_articles: Self::default_articles_for_locale(&raw.locale),
         };
 
         // Map raw terms to structured terms
