@@ -267,6 +267,7 @@ impl SubstitutePreset {
                     SubstituteKey::Title,
                     SubstituteKey::Translator,
                 ],
+                overrides: HashMap::new(),
             },
             SubstitutePreset::EditorFirst => Substitute {
                 contributor_role_form: None,
@@ -275,6 +276,7 @@ impl SubstitutePreset {
                     SubstituteKey::Translator,
                     SubstituteKey::Title,
                 ],
+                overrides: HashMap::new(),
             },
             SubstitutePreset::TitleFirst => Substitute {
                 contributor_role_form: None,
@@ -283,6 +285,7 @@ impl SubstitutePreset {
                     SubstituteKey::Editor,
                     SubstituteKey::Translator,
                 ],
+                overrides: HashMap::new(),
             },
         }
     }
