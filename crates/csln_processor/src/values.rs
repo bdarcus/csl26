@@ -30,6 +30,9 @@ pub struct ProcValues {
     pub suffix: Option<String>,
     /// Optional URL for hyperlinking.
     pub url: Option<String>,
+    /// Variable key that was substituted (e.g., "title:Primary" when title replaces author).
+    /// Used to prevent duplicate rendering per CSL variable-once rule.
+    pub substituted_key: Option<String>,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -164,6 +167,7 @@ impl ComponentValues for TemplateContributor {
                                     prefix: None,
                                     suffix,
                                     url: None,
+                                    substituted_key: None,
                                 });
                             }
                         }
@@ -177,6 +181,7 @@ impl ComponentValues for TemplateContributor {
                                 prefix: None,
                                 suffix: None,
                                 url: None,
+                                substituted_key: Some("title:Primary".to_string()),
                             });
                         }
                     }
@@ -196,6 +201,7 @@ impl ComponentValues for TemplateContributor {
                                     prefix: None,
                                     suffix: Some(" (Trans.)".to_string()),
                                     url: None,
+                                    substituted_key: None,
                                 });
                             }
                         }
@@ -266,6 +272,7 @@ impl ComponentValues for TemplateContributor {
             prefix: role_prefix,
             suffix: role_suffix,
             url: None,
+            substituted_key: None,
         })
     }
 }
@@ -729,6 +736,7 @@ impl ComponentValues for TemplateDate {
             prefix: None,
             suffix,
             url: None,
+            substituted_key: None,
         })
     }
 }
@@ -796,6 +804,7 @@ impl ComponentValues for TemplateTitle {
                 prefix: None,
                 suffix: None,
                 url,
+                substituted_key: None,
             }
         })
     }
@@ -825,6 +834,7 @@ impl ComponentValues for TemplateNumber {
             prefix: None,
             suffix: None,
             url: None,
+            substituted_key: None,
         })
     }
 }
@@ -962,6 +972,7 @@ impl ComponentValues for TemplateVariable {
                 prefix: None,
                 suffix: None,
                 url,
+                substituted_key: None,
             }
         })
     }
@@ -1026,6 +1037,7 @@ impl ComponentValues for TemplateList {
             prefix: self.rendering.prefix.clone(),
             suffix: self.rendering.suffix.clone(),
             url: None,
+            substituted_key: None,
         })
     }
 }

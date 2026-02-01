@@ -325,6 +325,10 @@ impl Processor {
                 if let Some(key) = var_key {
                     rendered_vars.insert(key);
                 }
+                // Also mark substituted variable (e.g., title when it replaces author)
+                if let Some(sub_key) = &values.substituted_key {
+                    rendered_vars.insert(sub_key.clone());
+                }
 
                 Some(ProcTemplateComponent {
                     template_component: component.clone(),
