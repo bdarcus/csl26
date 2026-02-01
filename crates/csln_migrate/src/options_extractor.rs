@@ -9,7 +9,7 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 //! intent from CSL 1.0's procedural template structure and encoding it as
 //! declarative options in CSLN.
 
-use csl_legacy::model::{CslNode, Macro, Names, Sort as LegacySort, Style, Substitute};
+use csl_legacy::model::{CslNode, Layout, Macro, Names, Sort as LegacySort, Style, Substitute};
 use csln_core::options::{
     AndOptions, BibliographyConfig, Config, ContributorConfig, DateConfig, DelimiterPrecedesLast,
     DemoteNonDroppingParticle, Disambiguation, DisplayAsSort, Group, PageRangeFormat, Processing,
@@ -267,11 +267,38 @@ impl OptionsExtractor {
             has_config = true;
         }
 
+        // Extract bibliography component separator from top-level group delimiter.
+        // Chicago/APA typically use ". " while Elsevier uses ", ".
+        if let Some(separator) = Self::extract_bibliography_separator_from_layout(&bib.layout) {
+            config.separator = Some(separator);
+            has_config = true;
+        }
+
         if has_config {
             Some(config)
         } else {
             None
         }
+    }
+
+    /// Extract bibliography component separator from CSL layout.
+    ///
+    /// The bibliography separator is the delimiter between bibliography components.
+    /// In CSL 1.0, this is typically the delimiter on the top-level group in the
+    /// bibliography layout.
+    fn extract_bibliography_separator_from_layout(layout: &Layout) -> Option<String> {
+        // Check if the layout children start with a top-level group
+        for node in &layout.children {
+            if let CslNode::Group(group) = node {
+                // If this group has a delimiter, use it as the bibliography separator
+                if let Some(ref delimiter) = group.delimiter {
+                    return Some(delimiter.to_string());
+                }
+            }
+        }
+
+        // No delimiter found - return None (processor will use default ". ")
+        None
     }
 
     /// Extract sort configuration from CSL 1.0 bibliography.
@@ -329,6 +356,20 @@ impl OptionsExtractor {
 
     /// Detect the processing mode (author-date, numeric, note) from citation attributes.
     fn detect_processing_mode(style: &Style) -> Option<Processing> {
+        // Check if this is a numeric style by looking at citation sort
+        // Numeric styles typically sort citations by citation-number
+        let is_numeric_citation = style.citation.sort.as_ref().is_some_and(|s| {
+            s.keys.iter().any(|k| {
+                k.variable.as_deref() == Some("citation-number")
+                    || k.macro_name.as_deref() == Some("citation-number")
+            })
+        });
+
+        if is_numeric_citation {
+            // Numeric styles: preserve citation order (no sort needed - use insertion order)
+            return Some(Processing::Numeric);
+        }
+
         // First, extract sort configuration from bibliography if available
         let bib_sort = style
             .bibliography

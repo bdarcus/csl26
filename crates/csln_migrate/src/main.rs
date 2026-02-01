@@ -67,6 +67,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         options.contributors = Some(contributors);
     }
 
+    // Extract author suffix before macro inlining (will be lost during inlining)
+    let author_suffix = if let Some(ref bib) = legacy_style.bibliography {
+        extract_author_suffix(&bib.layout)
+    } else {
+        None
+    };
+
     // 1. Deconstruction
     let inliner = MacroInliner::new(&legacy_style);
     let flattened_bib = inliner
@@ -89,6 +96,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let (mut new_bib, type_templates) =
         template_compiler.compile_bibliography_with_types(&csln_bib);
     let mut new_cit = template_compiler.compile_citation(&csln_cit);
+
+    // Apply author suffix extracted from original CSL (lost during macro inlining)
+    apply_author_suffix(&mut new_bib, author_suffix);
 
     // For author-date styles with in-text class, apply standard formatting.
     // Note styles (class="note") should NOT have these transformations applied.
@@ -226,16 +236,45 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 matches!(c, TemplateComponent::Title(tt) if tt.title == csln_core::template::TitleType::ParentMonograph)
             });
             if let Some(pos) = container_pos {
+                // Style-specific editor formatting patterns:
+                // - Elsevier: ", in: Name (Eds.)," (prefix, Long form with label)
+                // - APA: "In Name (Ed.)," (prefix, Long form with label)
+                // - Chicago: "edited by Name" (no prefix, Verb form)
+                let is_elsevier = legacy_style.info.id.contains("elsevier");
+                let is_chicago = legacy_style.info.id.contains("chicago");
+
+                let (editor_form, editor_prefix, editor_suffix) = if is_elsevier {
+                    (
+                        csln_core::template::ContributorForm::Long,
+                        Some(", in: ".to_string()),
+                        Some(", ".to_string()),
+                    )
+                } else if is_chicago {
+                    // Chicago uses verb form "edited by" with no prefix
+                    (
+                        csln_core::template::ContributorForm::Verb,
+                        None,
+                        Some(", ".to_string()),
+                    )
+                } else {
+                    // Default (APA): Long form with "In" prefix and label suffix
+                    (
+                        csln_core::template::ContributorForm::Long,
+                        Some("In ".to_string()),
+                        Some(", ".to_string()),
+                    )
+                };
+
                 new_bib.insert(
                     pos,
                     TemplateComponent::Contributor(csln_core::template::TemplateContributor {
                         contributor: csln_core::template::ContributorRole::Editor,
-                        form: csln_core::template::ContributorForm::Verb,
+                        form: editor_form,
                         name_order: None, // Use global config
                         delimiter: None,
                         rendering: csln_core::template::Rendering {
-                            prefix: Some("In ".to_string()),
-                            suffix: Some(", ".to_string()),
+                            prefix: editor_prefix,
+                            suffix: editor_suffix,
                             ..Default::default()
                         },
                         ..Default::default()
@@ -303,12 +342,36 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             new_bib.insert(min_idx, vol_issue_list);
         }
 
+        // Check if the volume List has a space prefix (Elsevier-style)
+        // vs no prefix (APA-style). This determines whether to add suffix to journal title.
+        let volume_list_has_space_prefix = new_bib.iter().any(|c| {
+            if let TemplateComponent::List(list) = c {
+                let has_volume = list.items.iter().any(|item| {
+                    matches!(item, TemplateComponent::Number(n) if n.number == csln_core::template::NumberVariable::Volume)
+                });
+                if has_volume {
+                    // Check if the List has a space-only prefix
+                    return list.rendering.prefix.as_deref() == Some(" ");
+                }
+            }
+            false
+        });
+
         // Add type-specific overrides (recursively to handle nested Lists)
         // Pass the extracted volume-pages delimiter for journal article pages
         let vol_pages_delim = options.volume_pages_delimiter;
         for component in &mut new_bib {
-            apply_type_overrides(component, vol_pages_delim);
+            apply_type_overrides(component, vol_pages_delim, volume_list_has_space_prefix);
         }
+
+        // Move DOI/URL to the end of the bibliography template.
+        // CSL styles typically have access macros at the end, but during macro
+        // expansion they can end up in the middle due to conditional processing.
+        move_access_components_to_end(&mut new_bib);
+
+        // Remove duplicate titles from Lists that already appear at top level.
+        // This happens when container-title appears in multiple CSL macros.
+        deduplicate_titles_in_lists(&mut new_bib);
     }
 
     // 5. Build Style in correct format for csln_processor
@@ -322,10 +385,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         templates: None,
         options: Some(options.clone()),
         citation: Some({
-            let (wrap, prefix, suffix) = infer_citation_wrapping(
-                &legacy_style.citation.layout.prefix,
-                &legacy_style.citation.layout.suffix,
-            );
+            let (wrap, prefix, suffix) = infer_citation_wrapping(&legacy_style.citation.layout);
             CitationSpec {
                 options: None,
                 use_preset: None,
@@ -363,22 +423,65 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-/// Infer citation wrapping from CSL prefix/suffix.
+/// Infer citation wrapping from CSL layout.
+///
+/// Checks both layout-level prefix/suffix AND group-level wrapping.
+/// Numeric styles like IEEE use `<group prefix="[" suffix="]">` inside the layout,
+/// while author-date styles use `<layout prefix="(" suffix=")">`.
+///
 /// Returns (wrap, prefix, suffix) - uses wrap when possible, falls back to affixes.
 fn infer_citation_wrapping(
-    prefix: &Option<String>,
-    suffix: &Option<String>,
+    layout: &csl_legacy::model::Layout,
 ) -> (Option<WrapPunctuation>, Option<String>, Option<String>) {
-    match (prefix.as_deref(), suffix.as_deref()) {
-        // Clean cases -> use wrap
-        (Some("("), Some(")")) => (Some(WrapPunctuation::Parentheses), None, None),
-        (Some("["), Some("]")) => (Some(WrapPunctuation::Brackets), None, None),
-        // No affixes
+    use csl_legacy::model::CslNode;
+
+    // First check layout-level prefix/suffix
+    let layout_wrap = match (layout.prefix.as_deref(), layout.suffix.as_deref()) {
+        (Some("("), Some(")")) => Some((Some(WrapPunctuation::Parentheses), None, None)),
+        (Some("["), Some("]")) => Some((Some(WrapPunctuation::Brackets), None, None)),
+        _ => None,
+    };
+
+    if let Some(wrap) = layout_wrap {
+        return wrap;
+    }
+
+    // Check for group-level wrapping (common in numeric styles like IEEE)
+    // Pattern: <layout><group prefix="[" suffix="]">...</group></layout>
+    fn find_group_wrapping(
+        nodes: &[CslNode],
+    ) -> Option<(Option<WrapPunctuation>, Option<String>, Option<String>)> {
+        for node in nodes {
+            if let CslNode::Group(g) = node {
+                match (g.prefix.as_deref(), g.suffix.as_deref()) {
+                    (Some("("), Some(")")) => {
+                        return Some((Some(WrapPunctuation::Parentheses), None, None))
+                    }
+                    (Some("["), Some("]")) => {
+                        return Some((Some(WrapPunctuation::Brackets), None, None))
+                    }
+                    _ => {
+                        // Recurse into nested groups
+                        if let Some(wrap) = find_group_wrapping(&g.children) {
+                            return Some(wrap);
+                        }
+                    }
+                }
+            }
+        }
+        None
+    }
+
+    if let Some(wrap) = find_group_wrapping(&layout.children) {
+        return wrap;
+    }
+
+    // Fall back to layout prefix/suffix if set (edge cases)
+    match (layout.prefix.as_deref(), layout.suffix.as_deref()) {
         (None, None) | (Some(""), Some("")) | (Some(""), None) | (None, Some("")) => {
             (None, None, None)
         }
-        // Edge cases -> use prefix/suffix
-        _ => (None, prefix.clone(), suffix.clone()),
+        _ => (None, layout.prefix.clone(), layout.suffix.clone()),
     }
 }
 
@@ -396,47 +499,67 @@ fn infer_citation_wrapping(
 ///    <text macro="author-short"/>
 ///    <text macro="year-date" prefix=" "/>
 ///
-/// We prefer the innermost group delimiter, but fall back to date prefix.
+/// We want the OUTERMOST group that contains both author and date macros,
+/// not nested groups for locators or other elements.
 fn extract_citation_delimiter(layout: &csl_legacy::model::Layout) -> Option<String> {
     use csl_legacy::model::CslNode;
 
-    /// Find the innermost group that directly contains text/names elements.
-    /// Uses depth-first search: prefer children's delimiters over current group's.
-    fn find_innermost_text_group_delimiter(nodes: &[CslNode]) -> Option<String> {
+    /// Check if a node references an author-related macro.
+    fn is_author_macro(node: &CslNode) -> bool {
+        match node {
+            CslNode::Text(t) => t
+                .macro_name
+                .as_ref()
+                .is_some_and(|m| m.to_lowercase().contains("author")),
+            CslNode::Names(n) => n.variable.contains("author"),
+            _ => false,
+        }
+    }
+
+    /// Check if a node references a date-related macro.
+    fn is_date_macro(node: &CslNode) -> bool {
+        match node {
+            CslNode::Text(t) => t.macro_name.as_ref().is_some_and(|m| {
+                let lower = m.to_lowercase();
+                lower.contains("date") || lower.contains("year") || lower.contains("issued")
+            }),
+            CslNode::Date(_) => true,
+            _ => false,
+        }
+    }
+
+    /// Find the outermost group that directly contains author and date macros.
+    /// This is the group whose delimiter separates author from year.
+    fn find_author_date_group_delimiter(nodes: &[CslNode]) -> Option<String> {
         for node in nodes {
             match node {
                 CslNode::Group(group) => {
-                    // FIRST: recurse into children to find deeper groups
-                    // This ensures we prefer innermost groups over outer wrappers
-                    if let Some(d) = find_innermost_text_group_delimiter(&group.children) {
-                        return Some(d);
+                    // Check if THIS group directly contains author AND date macros
+                    let has_author = group.children.iter().any(is_author_macro);
+                    let has_date = group.children.iter().any(is_date_macro);
+
+                    if has_author && has_date && group.delimiter.is_some() {
+                        // This is the author-date group!
+                        return group.delimiter.clone();
                     }
 
-                    // THEN: if no children have a delimiter, check this group
-                    // Only return this group's delimiter if it directly contains text/names
-                    let has_text_or_names = group
-                        .children
-                        .iter()
-                        .any(|c| matches!(c, CslNode::Text(_) | CslNode::Names(_)));
-
-                    if has_text_or_names && group.delimiter.is_some() {
-                        return group.delimiter.clone();
+                    // Otherwise recurse into children
+                    if let Some(d) = find_author_date_group_delimiter(&group.children) {
+                        return Some(d);
                     }
                 }
                 CslNode::Choose(choose) => {
-                    // Search inside choose if-branch first (most common case for author-date)
-                    if let Some(d) = find_innermost_text_group_delimiter(&choose.if_branch.children)
-                    {
+                    // Search inside choose branches
+                    if let Some(d) = find_author_date_group_delimiter(&choose.if_branch.children) {
                         return Some(d);
                     }
-                    // Also check else-if and else branches
                     for else_if in &choose.else_if_branches {
-                        if let Some(d) = find_innermost_text_group_delimiter(&else_if.children) {
+                        if let Some(d) = find_author_date_group_delimiter(&else_if.children) {
                             return Some(d);
                         }
                     }
                     if let Some(ref else_children) = choose.else_branch {
-                        if let Some(d) = find_innermost_text_group_delimiter(else_children) {
+                        if let Some(d) = find_author_date_group_delimiter(else_children) {
                             return Some(d);
                         }
                     }
@@ -473,8 +596,8 @@ fn extract_citation_delimiter(layout: &csl_legacy::model::Layout) -> Option<Stri
         None
     }
 
-    // First try to find a group delimiter
-    if let Some(delim) = find_innermost_text_group_delimiter(&layout.children) {
+    // First try to find the author-date group delimiter
+    if let Some(delim) = find_author_date_group_delimiter(&layout.children) {
         return Some(delim);
     }
 
@@ -489,34 +612,30 @@ fn extract_citation_delimiter(layout: &csl_legacy::model::Layout) -> Option<Stri
 
 /// Recursively apply type-specific overrides to components, including nested Lists.
 /// The `volume_pages_delimiter` is extracted from the CSL style's group structure.
+/// The `volume_list_has_space_prefix` flag indicates whether the volume List has a space
+/// prefix (Elsevier-style, don't add suffix to journal) vs no prefix (APA-style, add comma).
 fn apply_type_overrides(
     component: &mut TemplateComponent,
     volume_pages_delimiter: Option<csln_core::template::DelimiterPunctuation>,
+    volume_list_has_space_prefix: bool,
 ) {
     match component {
-        // Container-title (parent-serial): use suffix based on extracted delimiter
+        // Container-title (parent-serial): add comma suffix for APA-style (no space prefix on volume)
+        // Skip if volume List has space prefix (Elsevier-style handles spacing in List)
         TemplateComponent::Title(t) if t.title == csln_core::template::TitleType::ParentSerial => {
-            let mut overrides = std::collections::HashMap::new();
-            // Determine suffix based on volume-pages delimiter:
-            // - Comma delimiter (APA): use comma suffix
-            // - Colon/other delimiter (Chicago): use space suffix to prevent period separator
-            let suffix = if volume_pages_delimiter
-                .is_some_and(|d| matches!(d, csln_core::template::DelimiterPunctuation::Comma))
-            {
-                ","
-            } else {
-                " " // Space prevents default period separator
-            };
-            overrides.insert(
-                "article-journal".to_string(),
-                csln_core::template::Rendering {
-                    suffix: Some(suffix.to_string()),
-                    ..Default::default()
-                },
-            );
-            t.overrides = Some(overrides);
+            if !volume_list_has_space_prefix {
+                let mut overrides = std::collections::HashMap::new();
+                overrides.insert(
+                    "article-journal".to_string(),
+                    csln_core::template::Rendering {
+                        suffix: Some(",".to_string()),
+                        ..Default::default()
+                    },
+                );
+                t.overrides = Some(overrides);
+            }
         }
-        // Publisher: suppress for journal articles
+        // Publisher: suppress for journal articles (journals don't have publishers in bib)
         TemplateComponent::Variable(v)
             if v.variable == csln_core::template::SimpleVariable::Publisher =>
         {
@@ -530,20 +649,19 @@ fn apply_type_overrides(
             );
             v.overrides = Some(overrides);
         }
-        // Publisher-place: suppress for most types
-        // Chicago doesn't typically show publisher-place for books, reports, journals
+        // Publisher-place: suppress for journal articles only
+        // Other types (books, reports) may show publisher-place depending on style
         TemplateComponent::Variable(v)
             if v.variable == csln_core::template::SimpleVariable::PublisherPlace =>
         {
             let mut overrides = std::collections::HashMap::new();
-            let suppress_rendering = csln_core::template::Rendering {
-                suppress: Some(true),
-                ..Default::default()
-            };
-            overrides.insert("article-journal".to_string(), suppress_rendering.clone());
-            overrides.insert("book".to_string(), suppress_rendering.clone());
-            overrides.insert("report".to_string(), suppress_rendering.clone());
-            overrides.insert("thesis".to_string(), suppress_rendering.clone());
+            overrides.insert(
+                "article-journal".to_string(),
+                csln_core::template::Rendering {
+                    suppress: Some(true),
+                    ..Default::default()
+                },
+            );
             v.overrides = Some(overrides);
         }
         // Pages: use extracted delimiter for journal articles, (pp. X-Y) for chapters
@@ -560,11 +678,18 @@ fn apply_type_overrides(
                     ..Default::default()
                 },
             );
+            // Chapter pages: Elsevier uses "pp. X-Y" (no wrap), APA uses "(pp. X-Y)"
+            // Elsevier has space prefix on volume List, APA doesn't
+            let chapter_wrap = if volume_list_has_space_prefix {
+                None // Elsevier: no wrap
+            } else {
+                Some(WrapPunctuation::Parentheses) // APA: wrap in parentheses
+            };
             overrides.insert(
                 "chapter".to_string(),
                 csln_core::template::Rendering {
                     prefix: Some("pp. ".to_string()),
-                    wrap: Some(WrapPunctuation::Parentheses),
+                    wrap: chapter_wrap,
                     ..Default::default()
                 },
             );
@@ -573,9 +698,135 @@ fn apply_type_overrides(
         // Recursively process Lists
         TemplateComponent::List(list) => {
             for item in &mut list.items {
-                apply_type_overrides(item, volume_pages_delimiter);
+                apply_type_overrides(item, volume_pages_delimiter, volume_list_has_space_prefix);
             }
         }
         _ => {}
+    }
+}
+
+/// Move DOI and URL components to the end of the bibliography template.
+///
+/// CSL styles typically place access macros (DOI, URL) at the end of entries,
+/// but during macro expansion they can end up in the middle due to how
+/// conditionals are processed. This function moves them to the correct position.
+fn move_access_components_to_end(components: &mut Vec<TemplateComponent>) {
+    use csln_core::template::SimpleVariable;
+
+    // Find indices of access components (DOI, URL)
+    let mut access_indices: Vec<usize> = Vec::new();
+    for (i, c) in components.iter().enumerate() {
+        if let TemplateComponent::Variable(v) = c {
+            if matches!(v.variable, SimpleVariable::Doi | SimpleVariable::Url) {
+                access_indices.push(i);
+            }
+        }
+        // Also check for List items containing accessed date (URL + accessed date pattern)
+        if let TemplateComponent::List(list) = c {
+            let has_access = list.items.iter().any(|item| {
+                matches!(item, TemplateComponent::Variable(v) if v.variable == SimpleVariable::Url)
+                    || matches!(item, TemplateComponent::Date(d) if d.date == csln_core::template::DateVariable::Accessed)
+            });
+            if has_access {
+                access_indices.push(i);
+            }
+        }
+    }
+
+    // Extract access components in reverse order (to preserve indices)
+    let mut access_components: Vec<TemplateComponent> = Vec::new();
+    for idx in access_indices.into_iter().rev() {
+        access_components.push(components.remove(idx));
+    }
+    access_components.reverse();
+
+    // Append access components at the end
+    components.extend(access_components);
+}
+
+/// Remove duplicate title components from Lists that already appear at the top level.
+///
+/// CSL styles often have the same container-title variable in multiple macros
+/// (e.g., once for the container and once in the locators group). This causes
+/// the same title to render twice. This function removes duplicates from Lists.
+fn deduplicate_titles_in_lists(components: &mut Vec<TemplateComponent>) {
+    use csln_core::template::TitleType;
+
+    // Collect title types that appear at top level
+    let top_level_titles: Vec<TitleType> = components
+        .iter()
+        .filter_map(|c| {
+            if let TemplateComponent::Title(t) = c {
+                Some(t.title.clone())
+            } else {
+                None
+            }
+        })
+        .collect();
+
+    // Remove duplicates from Lists
+    for component in components.iter_mut() {
+        if let TemplateComponent::List(list) = component {
+            list.items.retain(|item| {
+                if let TemplateComponent::Title(t) = item {
+                    !top_level_titles.contains(&t.title)
+                } else {
+                    true
+                }
+            });
+        }
+    }
+
+    // Remove empty Lists
+    components.retain(|c| {
+        if let TemplateComponent::List(list) = c {
+            !list.items.is_empty()
+        } else {
+            true
+        }
+    });
+}
+
+/// Extract the suffix on the author macro call from the bibliography layout.
+///
+/// CSL styles like Elsevier use `<text macro="author" suffix=","/>` to add a comma
+/// between author and date. This function extracts that suffix so it can be applied
+/// to the author component in the migrated template.
+fn extract_author_suffix(layout: &csl_legacy::model::Layout) -> Option<String> {
+    use csl_legacy::model::CslNode;
+
+    for node in &layout.children {
+        // Check for group containing author macro call
+        if let CslNode::Group(g) = node {
+            for child in &g.children {
+                if let CslNode::Text(t) = child {
+                    if t.macro_name.as_deref() == Some("author") {
+                        // Found the author macro call - return its suffix
+                        return t.suffix.clone();
+                    }
+                }
+            }
+        }
+        // Check for direct author macro call at top level
+        if let CslNode::Text(t) = node {
+            if t.macro_name.as_deref() == Some("author") {
+                return t.suffix.clone();
+            }
+        }
+    }
+    None
+}
+
+/// Apply the extracted author suffix to the author component in the template.
+fn apply_author_suffix(components: &mut [TemplateComponent], suffix: Option<String>) {
+    if let Some(suffix) = suffix {
+        for component in components {
+            if let TemplateComponent::Contributor(c) = component {
+                if c.contributor == csln_core::template::ContributorRole::Author {
+                    // Set or update the suffix
+                    c.rendering.suffix = Some(suffix.clone());
+                }
+            }
+        }
     }
 }

@@ -172,17 +172,30 @@ impl TemplateCompiler {
                 }
             } else {
                 // Found a variable in a type-specific branch. Add to overrides.
-                let rendering = self.get_component_rendering(&new_component);
+                // Use type-specific override from new component if it exists,
+                // otherwise fall back to base rendering.
+                let base_rendering = self.get_component_rendering(&new_component);
+                let new_overrides = self.get_component_overrides(&new_component);
+
                 for item_type in current_types {
                     let type_str = self.item_type_to_string(item_type);
-                    self.add_override_to_component(
-                        &mut components[idx],
-                        type_str,
-                        rendering.clone(),
-                    );
+                    // Check if new component has a specific override for this type
+                    let rendering = new_overrides
+                        .as_ref()
+                        .and_then(|ovr| ovr.get(&type_str))
+                        .cloned()
+                        .unwrap_or_else(|| base_rendering.clone());
+                    self.add_override_to_component(&mut components[idx], type_str, rendering);
                 }
             }
         } else {
+            if let TemplateComponent::Title(t) = &new_component {
+                if let Some(ref ovr) = t.overrides {
+                    for (k, v) in ovr {
+                        eprintln!("  {} -> emph={:?} quote={:?}", k, v.emph, v.quote);
+                    }
+                }
+            }
             components.push(new_component);
         }
     }
@@ -297,6 +310,21 @@ impl TemplateCompiler {
 
         // Deduplicate and flatten to remove redundant nesting from branch processing
         default_template = self.deduplicate_and_flatten(default_template);
+
+        // DEBUG: Check titles after deduplicate
+        for c in &default_template {
+            if let TemplateComponent::Title(t) = c {
+                if t.title == csln_core::template::TitleType::Primary {
+                    if let Some(ref ovr) = t.overrides {
+                        for (k, v) in ovr {
+                            eprintln!("  {} -> emph={:?} quote={:?}", k, v.emph, v.quote);
+                        }
+                    } else {
+                        eprintln!("  (no overrides)");
+                    }
+                }
+            }
+        }
 
         self.sort_bibliography_components(&mut default_template);
 
@@ -765,32 +793,68 @@ impl TemplateCompiler {
 
         // Check if it's a title
         if let Some(title_type) = self.map_variable_to_title(&var.variable) {
+            // Convert overrides from FormattingOptions to Rendering
+            let overrides = if var.overrides.is_empty() {
+                None
+            } else {
+                for (t, fmt) in &var.overrides {
+                    eprintln!("  {:?} -> {:?}", t, fmt);
+                }
+                Some(
+                    var.overrides
+                        .iter()
+                        .map(|(t, fmt)| (self.item_type_to_string(t), self.convert_formatting(fmt)))
+                        .collect(),
+                )
+            };
             return Some(TemplateComponent::Title(TemplateTitle {
                 title: title_type,
                 form: None,
                 rendering: self.convert_formatting(&var.formatting),
-                overrides: None,
+                overrides,
                 ..Default::default()
             }));
         }
 
         // Check if it's a number
         if let Some(num_var) = self.map_variable_to_number(&var.variable) {
+            // Convert overrides from FormattingOptions to Rendering
+            let overrides = if var.overrides.is_empty() {
+                None
+            } else {
+                Some(
+                    var.overrides
+                        .iter()
+                        .map(|(t, fmt)| (self.item_type_to_string(t), self.convert_formatting(fmt)))
+                        .collect(),
+                )
+            };
             return Some(TemplateComponent::Number(TemplateNumber {
                 number: num_var,
                 form: None,
                 rendering: self.convert_formatting(&var.formatting),
-                overrides: None,
+                overrides,
                 ..Default::default()
             }));
         }
 
         // Check if it's a simple variable
         if let Some(simple_var) = self.map_variable_to_simple(&var.variable) {
+            // Convert overrides from FormattingOptions to Rendering
+            let overrides = if var.overrides.is_empty() {
+                None
+            } else {
+                Some(
+                    var.overrides
+                        .iter()
+                        .map(|(t, fmt)| (self.item_type_to_string(t), self.convert_formatting(fmt)))
+                        .collect(),
+                )
+            };
             return Some(TemplateComponent::Variable(TemplateVariable {
                 variable: simple_var,
                 rendering: self.convert_formatting(&var.formatting),
-                overrides: None,
+                overrides,
                 ..Default::default()
             }));
         }
@@ -1021,6 +1085,21 @@ impl TemplateCompiler {
             TemplateComponent::Variable(v) => v.rendering.clone(),
             TemplateComponent::List(l) => l.rendering.clone(),
             _ => Rendering::default(),
+        }
+    }
+
+    /// Get type-specific overrides from a component.
+    fn get_component_overrides(
+        &self,
+        component: &TemplateComponent,
+    ) -> Option<HashMap<String, Rendering>> {
+        match component {
+            TemplateComponent::Contributor(c) => c.overrides.clone(),
+            TemplateComponent::Date(d) => d.overrides.clone(),
+            TemplateComponent::Number(n) => n.overrides.clone(),
+            TemplateComponent::Title(t) => t.overrides.clone(),
+            TemplateComponent::Variable(v) => v.overrides.clone(),
+            _ => None,
         }
     }
 

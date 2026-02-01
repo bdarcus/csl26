@@ -1,4 +1,5 @@
-use csln_core::{CitationItem, CslnStyle, ItemType, Renderer, Variable};
+use csln_core::renderer::RenderItem;
+use csln_core::{CslnStyle, ItemType, Renderer, Variable};
 use std::collections::HashMap;
 use std::fs;
 
@@ -10,14 +11,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("Loaded Style: {}", style.info.title);
 
-    // 2. Create a Mock Citation Item (Book)
+    // 2. Create a Mock Reference Item (Book)
     let mut variables = HashMap::new();
     variables.insert(Variable::Author, "Doe, John".to_string());
     variables.insert(Variable::Issued, "2020".to_string());
     variables.insert(Variable::Title, "The Rust Programming Language".to_string());
     variables.insert(Variable::Publisher, "No Starch Press".to_string());
 
-    let item = CitationItem {
+    let item = RenderItem {
         item_type: ItemType::Book,
         variables,
     };

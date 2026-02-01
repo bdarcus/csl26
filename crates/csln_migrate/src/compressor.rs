@@ -79,9 +79,25 @@ impl Compressor {
                 if v1.variable == v2.variable {
                     // MERGE!
                     let mut merged = v2.clone(); // Start with base (else) defaults
-                                                 // Add override for the 'if' condition
+
+                    // For each type in the IF branch, create an override that:
+                    // 1. Applies the IF formatting
+                    // 2. Explicitly negates any base formatting that's not in the override
                     for t in if_types {
-                        merged.overrides.insert(t.clone(), v1.formatting.clone());
+                        let mut override_fmt = v1.formatting.clone();
+
+                        // If base has quotes=true but override has quotes=None,
+                        // explicitly set quotes=false
+                        if v2.formatting.quotes == Some(true) && override_fmt.quotes.is_none() {
+                            override_fmt.quotes = Some(false);
+                        }
+
+                        // If base has font_style but override doesn't, clear it
+                        if v2.formatting.font_style.is_some() && override_fmt.font_style.is_none() {
+                            override_fmt.font_style = Some(csln_core::FontStyle::Normal);
+                        }
+
+                        merged.overrides.insert(t.clone(), override_fmt);
                     }
                     return Some(CslnNode::Variable(merged));
                 }
