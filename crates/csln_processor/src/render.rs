@@ -168,17 +168,7 @@ pub fn refs_to_string(proc_templates: Vec<ProcTemplate>) -> String {
                     .iter()
                     .rev()
                     .find(|c| !render_component(c).is_empty())
-                    .is_some_and(|c| {
-                        matches!(
-                            &c.template_component,
-                            TemplateComponent::Variable(v)
-                                if matches!(
-                                    v.variable,
-                                    csln_core::template::SimpleVariable::Doi
-                                        | csln_core::template::SimpleVariable::Url
-                                )
-                        )
-                    });
+                    .is_some_and(|c| is_link_component(&c.template_component));
                 if !output.ends_with('.') && !last_is_link {
                     if punctuation_in_quote
                         && (output.ends_with('"') || output.ends_with('\u{201D}'))
@@ -200,6 +190,32 @@ pub fn refs_to_string(proc_templates: Vec<ProcTemplate>) -> String {
     cleanup_dangling_punctuation(&mut output);
 
     output
+}
+
+/// Check if a template component is or contains a link (DOI/URL).
+///
+/// This recursively checks inside List components to handle cases like:
+/// ```yaml
+/// - items:
+///     - variable: url
+/// ```
+fn is_link_component(component: &TemplateComponent) -> bool {
+    match component {
+        TemplateComponent::Variable(v) => {
+            matches!(
+                v.variable,
+                csln_core::template::SimpleVariable::Doi | csln_core::template::SimpleVariable::Url
+            )
+        }
+        TemplateComponent::List(list) => {
+            // Check if the last item in the list is a link
+            list.items
+                .last()
+                .map(|item| is_link_component(item))
+                .unwrap_or(false)
+        }
+        _ => false,
+    }
 }
 
 /// Remove dangling punctuation patterns caused by empty components.
