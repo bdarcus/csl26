@@ -566,14 +566,22 @@ impl OptionsExtractor {
         let bib_macros = Self::collect_bibliography_macros(style);
         let cite_macros = Self::collect_citation_macros(style);
 
-        // Extract name options from macros used in both contexts
-        // Bibliography macros take precedence (checked last, so they override)
+        // Extract name options from macros used in either context.
+        // For initialize-with specifically, only extract from bibliography-only macros
+        // to avoid picking up citation-specific initials (e.g., Chicago uses initials
+        // in citations but full names in bibliography).
+        // Other options like 'and' should be extracted from both contexts.
         for macro_def in &style.macros {
-            if cite_macros.contains(&macro_def.name) || bib_macros.contains(&macro_def.name) {
+            let in_bib = bib_macros.contains(&macro_def.name);
+            let in_cite = cite_macros.contains(&macro_def.name);
+            if in_bib || in_cite {
+                // Only extract initialize-with from bibliography-only macros
+                let extract_initialize = in_bib && !in_cite;
                 Self::extract_name_options_from_nodes(
                     &macro_def.children,
                     &mut config,
                     &mut has_config,
+                    extract_initialize,
                 );
             }
         }
@@ -678,30 +686,52 @@ impl OptionsExtractor {
     }
 
     /// Recursively search nodes for <name> elements and extract their options.
+    ///
+    /// `extract_initialize` controls whether to extract `initialize-with` from this context.
+    /// Should be true only for bibliography-only macros to avoid picking up citation-specific
+    /// initials that shouldn't apply to bibliography output (e.g., Chicago uses initials
+    /// in citations but full names in bibliography).
     fn extract_name_options_from_nodes(
         nodes: &[CslNode],
         config: &mut ContributorConfig,
         has_config: &mut bool,
+        extract_initialize: bool,
     ) {
         for node in nodes {
             match node {
                 CslNode::Names(names) => {
-                    Self::extract_from_names(names, config, has_config);
+                    Self::extract_from_names(names, config, has_config, extract_initialize);
                 }
                 CslNode::Group(g) => {
-                    Self::extract_name_options_from_nodes(&g.children, config, has_config);
+                    Self::extract_name_options_from_nodes(
+                        &g.children,
+                        config,
+                        has_config,
+                        extract_initialize,
+                    );
                 }
                 CslNode::Choose(c) => {
                     Self::extract_name_options_from_nodes(
                         &c.if_branch.children,
                         config,
                         has_config,
+                        extract_initialize,
                     );
                     for branch in &c.else_if_branches {
-                        Self::extract_name_options_from_nodes(&branch.children, config, has_config);
+                        Self::extract_name_options_from_nodes(
+                            &branch.children,
+                            config,
+                            has_config,
+                            extract_initialize,
+                        );
                     }
                     if let Some(else_children) = &c.else_branch {
-                        Self::extract_name_options_from_nodes(else_children, config, has_config);
+                        Self::extract_name_options_from_nodes(
+                            else_children,
+                            config,
+                            has_config,
+                            extract_initialize,
+                        );
                     }
                 }
                 _ => {}
@@ -710,23 +740,36 @@ impl OptionsExtractor {
     }
 
     /// Extract options from a <names> element.
-    fn extract_from_names(names: &Names, config: &mut ContributorConfig, has_config: &mut bool) {
+    ///
+    /// `extract_initialize` controls whether to extract `initialize-with` from this context.
+    /// Should be true only for bibliography-only macros to avoid applying citation-specific
+    /// initials to bibliography output.
+    fn extract_from_names(
+        names: &Names,
+        config: &mut ContributorConfig,
+        has_config: &mut bool,
+        extract_initialize: bool,
+    ) {
         // Check children for <name> element
         for child in &names.children {
             if let CslNode::Name(name) = child {
                 // initialize-with (controls whether names are initialized to initials)
-                // Only set if not already set, to prefer first/most common value
-                if config.initialize_with.is_none() {
+                // Only extract from bibliography-only macros to avoid picking up
+                // citation-specific initials (e.g., Chicago uses initials in citations
+                // but full given names in bibliography).
+                if extract_initialize && config.initialize_with.is_none() {
                     if let Some(init_with) = &name.initialize_with {
                         config.initialize_with = Some(init_with.clone());
                         *has_config = true;
                     }
                 }
 
-                // initialize-with-hyphen
-                if let Some(hyphen) = name.initialize_with_hyphen {
-                    config.initialize_with_hyphen = Some(hyphen);
-                    *has_config = true;
+                // initialize-with-hyphen (also only from bibliography context)
+                if extract_initialize {
+                    if let Some(hyphen) = name.initialize_with_hyphen {
+                        config.initialize_with_hyphen = Some(hyphen);
+                        *has_config = true;
+                    }
                 }
 
                 // name-as-sort-order
