@@ -357,33 +357,48 @@ impl Processor {
         let proc_config = processing.config();
 
         if let Some(sort_config) = &proc_config.sort {
-            // Apply sorts in reverse order (last sort is most significant)
-            for sort in sort_config.template.iter().rev() {
-                match sort.key {
-                    SortKey::Author => {
-                        refs.sort_by(|a, b| {
-                            let a_author = a
+            // Build a composite sort that handles all keys together
+            // For author-date styles: sort by author (with title fallback), then by year
+            refs.sort_by(|a, b| {
+                for sort in &sort_config.template {
+                    let cmp = match sort.key {
+                        SortKey::Author => {
+                            // Get author for sorting, with fallback chain per CSL spec:
+                            // author → editor → title (for anonymous works)
+                            let a_sort_key = a
                                 .author
                                 .as_ref()
                                 .and_then(|names| names.first())
                                 .map(|n| n.family_or_literal().to_lowercase())
+                                .or_else(|| {
+                                    a.editor
+                                        .as_ref()
+                                        .and_then(|names| names.first())
+                                        .map(|n| n.family_or_literal().to_lowercase())
+                                })
+                                .or_else(|| a.title.as_ref().map(|t| t.to_lowercase()))
                                 .unwrap_or_default();
-                            let b_author = b
+                            let b_sort_key = b
                                 .author
                                 .as_ref()
                                 .and_then(|names| names.first())
                                 .map(|n| n.family_or_literal().to_lowercase())
+                                .or_else(|| {
+                                    b.editor
+                                        .as_ref()
+                                        .and_then(|names| names.first())
+                                        .map(|n| n.family_or_literal().to_lowercase())
+                                })
+                                .or_else(|| b.title.as_ref().map(|t| t.to_lowercase()))
                                 .unwrap_or_default();
 
                             if sort.ascending {
-                                a_author.cmp(&b_author)
+                                a_sort_key.cmp(&b_sort_key)
                             } else {
-                                b_author.cmp(&a_author)
+                                b_sort_key.cmp(&a_sort_key)
                             }
-                        });
-                    }
-                    SortKey::Year => {
-                        refs.sort_by(|a, b| {
+                        }
+                        SortKey::Year => {
                             let a_year =
                                 a.issued.as_ref().and_then(|d| d.year_value()).unwrap_or(0);
                             let b_year =
@@ -394,10 +409,8 @@ impl Processor {
                             } else {
                                 b_year.cmp(&a_year)
                             }
-                        });
-                    }
-                    SortKey::Title => {
-                        refs.sort_by(|a, b| {
+                        }
+                        SortKey::Title => {
                             let a_title = a.title.as_deref().unwrap_or("").to_lowercase();
                             let b_title = b.title.as_deref().unwrap_or("").to_lowercase();
 
@@ -406,17 +419,24 @@ impl Processor {
                             } else {
                                 b_title.cmp(&a_title)
                             }
-                        });
+                        }
+                        SortKey::CitationNumber => {
+                            // For citation-number sorting, we need to use the citation order
+                            // This is typically set during citation processing
+                            std::cmp::Ordering::Equal
+                        }
+                        // Handle future SortKey variants (non_exhaustive)
+                        _ => std::cmp::Ordering::Equal,
+                    };
+
+                    // If this key produces a non-equal comparison, use it
+                    // Otherwise, continue to the next key
+                    if cmp != std::cmp::Ordering::Equal {
+                        return cmp;
                     }
-                    SortKey::CitationNumber => {
-                        // For citation-number sorting, we need to use the citation order
-                        // This is typically set during citation processing
-                        // For now, keep original order (first cited = first in bib)
-                    }
-                    // Handle future SortKey variants (non_exhaustive)
-                    _ => {}
                 }
-            }
+                std::cmp::Ordering::Equal
+            });
         }
 
         refs
