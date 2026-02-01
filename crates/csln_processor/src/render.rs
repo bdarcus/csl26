@@ -254,7 +254,39 @@ pub fn citation_to_string(
     }
 
     let delim = delimiter.unwrap_or(", ");
-    let content = parts.join(delim);
+
+    // Join parts with delimiter, but move delimiter inside quotes for substituted titles.
+    // APA convention: ("Title", 2020) not ("Title," 2020)
+    let content = if parts.len() > 1 {
+        let mut result = String::new();
+        for (i, part) in parts.iter().enumerate() {
+            if i > 0 {
+                // Check if previous part ended with a closing quote
+                let prev = &parts[i - 1];
+                if prev.ends_with('\u{201D}') || prev.ends_with('"') {
+                    // Move delimiter inside the quote (APA/CSL convention)
+                    // For "Title" with delimiter ", " → "Title," not "Title, "
+                    result.pop(); // Remove the closing quote we just added
+                    let delim_trimmed = delim.trim(); // Remove spaces from delimiter
+                    if prev.ends_with('\u{201D}') {
+                        result.push_str(delim_trimmed);
+                        result.push('\u{201D}');
+                        result.push(' ');
+                    } else {
+                        result.push_str(delim_trimmed);
+                        result.push('"');
+                        result.push(' ');
+                    }
+                } else {
+                    result.push_str(delim);
+                }
+            }
+            result.push_str(part);
+        }
+        result
+    } else {
+        parts.join(delim)
+    };
 
     // wrap takes precedence over prefix/suffix
     let (open, close) = match wrap {

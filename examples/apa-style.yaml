@@ -21,6 +21,7 @@ options:
       min: 3
       use-first: 1
 citation:
+  wrap: parentheses
   template:
     - contributor: author
       form: short

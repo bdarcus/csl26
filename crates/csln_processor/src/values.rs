@@ -112,78 +112,91 @@ impl ComponentValues for TemplateContributor {
         if names.map(|n| n.is_empty()).unwrap_or(true)
             && matches!(self.contributor, ContributorRole::Author)
         {
-            if let Some(substitute) = &options.config.substitute {
-                for key in &substitute.template {
-                    match key {
-                        SubstituteKey::Editor => {
-                            if let Some(editors) = &reference.editor {
-                                if !editors.is_empty() {
-                                    // Substituted editors use the contributor's name_order and and
-                                    let effective_name_order =
-                                        self.name_order.as_ref().or_else(|| {
-                                            options
-                                                .config
-                                                .contributors
-                                                .as_ref()?
-                                                .role
-                                                .as_ref()?
-                                                .roles
-                                                .as_ref()?
-                                                .get(self.contributor.as_str())?
-                                                .name_order
-                                                .as_ref()
-                                        });
+            // Use explicit substitute config, or fall back to default (editor → title → translator)
+            use csln_core::options::Substitute;
+            let default_substitute = Substitute::default();
+            let substitute = options
+                .config
+                .substitute
+                .as_ref()
+                .unwrap_or(&default_substitute);
 
-                                    let formatted = format_names(
-                                        editors,
-                                        &self.form,
-                                        options,
-                                        effective_name_order,
-                                        self.and.as_ref(),
-                                        hints,
-                                    );
-                                    // Add role suffix if configured
-                                    let suffix = substitute
+            for key in &substitute.template {
+                match key {
+                    SubstituteKey::Editor => {
+                        if let Some(editors) = &reference.editor {
+                            if !editors.is_empty() {
+                                // Substituted editors use the contributor's name_order and and
+                                let effective_name_order = self.name_order.as_ref().or_else(|| {
+                                    options
+                                        .config
+                                        .contributors
+                                        .as_ref()?
+                                        .role
+                                        .as_ref()?
+                                        .roles
+                                        .as_ref()?
+                                        .get(self.contributor.as_str())?
+                                        .name_order
+                                        .as_ref()
+                                });
+
+                                let formatted = format_names(
+                                    editors,
+                                    &self.form,
+                                    options,
+                                    effective_name_order,
+                                    self.and.as_ref(),
+                                    hints,
+                                );
+                                // Add role suffix if configured, but ONLY in bibliography context.
+                                // In citations, substituted editors should look identical to authors.
+                                let suffix = if options.context == RenderContext::Bibliography {
+                                    substitute
                                         .contributor_role_form
                                         .as_ref()
-                                        .map(|_| " (Ed.)".to_string());
-                                    return Some(ProcValues {
-                                        value: formatted,
-                                        prefix: None,
-                                        suffix,
-                                        url: None,
-                                    });
-                                }
-                            }
-                        }
-                        SubstituteKey::Title => {
-                            if let Some(title) = &reference.title {
+                                        .map(|_| " (Ed.)".to_string())
+                                } else {
+                                    None
+                                };
                                 return Some(ProcValues {
-                                    value: title.clone(),
+                                    value: formatted,
                                     prefix: None,
-                                    suffix: None,
+                                    suffix,
                                     url: None,
                                 });
                             }
                         }
-                        SubstituteKey::Translator => {
-                            if let Some(translators) = &reference.translator {
-                                if !translators.is_empty() {
-                                    let formatted = format_names(
-                                        translators,
-                                        &self.form,
-                                        options,
-                                        self.name_order.as_ref(),
-                                        self.and.as_ref(),
-                                        hints,
-                                    );
-                                    return Some(ProcValues {
-                                        value: formatted,
-                                        prefix: None,
-                                        suffix: Some(" (Trans.)".to_string()),
-                                        url: None,
-                                    });
-                                }
+                    }
+                    SubstituteKey::Title => {
+                        if let Some(title) = &reference.title {
+                            // When title is used as citation key (substitute for author),
+                            // it should be quoted per CSL conventions
+                            return Some(ProcValues {
+                                value: format!("\u{201C}{}\u{201D}", title), // U+201C (") and U+201D (")
+                                prefix: None,
+                                suffix: None,
+                                url: None,
+                            });
+                        }
+                    }
+                    SubstituteKey::Translator => {
+                        if let Some(translators) = &reference.translator {
+                            if !translators.is_empty() {
+                                let formatted = format_names(
+                                    translators,
+                                    &self.form,
+                                    options,
+                                    self.name_order.as_ref(),
+                                    self.and.as_ref(),
+                                    hints,
+                                );
+                                return Some(ProcValues {
+                                    value: formatted,
+                                    prefix: None,
+                                    suffix: Some(" (Trans.)".to_string()),
+                                    url: None,
+                                });
                             }
                         }
                     }
@@ -380,23 +393,9 @@ fn format_names(
         formatted_first.join(delimiter)
     } else if formatted_first.len() == 2 {
         let and_str = and_str.unwrap();
-        // For two names, check delimiter_precedes_last setting
-        let use_delimiter = match delimiter_precedes_last {
-            Some(DelimiterPrecedesLast::Always) => true,
-            Some(DelimiterPrecedesLast::Never) => false,
-            Some(DelimiterPrecedesLast::Contextual) | None => false, // Default: no comma for 2 names
-            Some(DelimiterPrecedesLast::AfterInvertedName) => display_as_sort
-                .as_ref()
-                .is_some_and(|das| matches!(das, DisplayAsSort::All | DisplayAsSort::First)),
-        };
-        if use_delimiter {
-            format!(
-                "{}{}{} {}",
-                formatted_first[0], delimiter, and_str, formatted_first[1]
-            )
-        } else {
-            format!("{} {} {}", formatted_first[0], and_str, formatted_first[1])
-        }
+        // For two names, never use delimiter before conjunction in citations.
+        // The delimiter-precedes-last option only applies to 3+ names.
+        format!("{} {} {}", formatted_first[0], and_str, formatted_first[1])
     } else {
         let and_str = and_str.unwrap();
         let last = formatted_first.last().unwrap();
