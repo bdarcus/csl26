@@ -58,6 +58,7 @@ pub struct Macro {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Citation {
     pub layout: Layout,
+    pub sort: Option<Sort>,
     // Attributes
     pub et_al_min: Option<usize>,
     pub et_al_use_first: Option<usize>,

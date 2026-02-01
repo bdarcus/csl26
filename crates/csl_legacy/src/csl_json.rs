@@ -241,37 +241,8 @@ impl std::fmt::Display for StringOrNumber {
 }
 
 /// A bibliography is a collection of references keyed by ID.
-pub type Bibliography = HashMap<String, Reference>;
-
-/// Input citations for processing.
-#[derive(Debug, Clone, Default, Deserialize, Serialize)]
-pub struct Citation {
-    /// The citation ID (optional).
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub id: Option<String>,
-    /// The citation items.
-    pub items: Vec<CitationItem>,
-}
-
-/// A single citation item referencing a bibliography entry.
-#[derive(Debug, Clone, Default, Deserialize, Serialize)]
-#[serde(rename_all = "kebab-case")]
-pub struct CitationItem {
-    /// The reference ID (citekey).
-    pub id: String,
-    /// Locator type (page, chapter, etc.)
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub label: Option<String>,
-    /// Locator value
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub locator: Option<String>,
-    /// Prefix text
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub prefix: Option<String>,
-    /// Suffix text
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub suffix: Option<String>,
-}
+/// Uses IndexMap to preserve insertion order for numeric citation styles.
+pub type Bibliography = indexmap::IndexMap<String, Reference>;
 
 #[cfg(test)]
 mod tests {

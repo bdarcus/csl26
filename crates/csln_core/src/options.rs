@@ -492,6 +492,11 @@ pub struct BibliographyConfig {
     /// If None, a trailing period is added by default unless entry ends with DOI/URL.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub entry_suffix: Option<String>,
+    /// Separator between bibliography components (e.g., ". " for Chicago/APA, ", " for Elsevier).
+    /// Extracted from CSL 1.0 group delimiter attribute.
+    /// Defaults to ". " if not specified.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub separator: Option<String>,
     /// Unknown fields captured for forward compatibility.
     #[serde(flatten)]
     pub _extra: HashMap<String, serde_json::Value>,

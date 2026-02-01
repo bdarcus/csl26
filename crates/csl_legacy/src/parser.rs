@@ -37,6 +37,7 @@ pub fn parse_style(node: Node) -> Result<Style, String> {
             suffix: None,
             delimiter: None,
         },
+        sort: None,
         et_al_min: None,
         et_al_use_first: None,
         disambiguate_add_year_suffix: None,
@@ -166,6 +167,7 @@ fn parse_citation(node: Node) -> Result<Citation, String> {
         suffix: None,
         delimiter: None,
     };
+    let mut sort = None;
     let et_al_min = node.attribute("et-al-min").and_then(|s| s.parse().ok());
     let et_al_use_first = node
         .attribute("et-al-use-first")
@@ -184,12 +186,15 @@ fn parse_citation(node: Node) -> Result<Citation, String> {
         if !child.is_element() {
             continue;
         }
-        if child.tag_name().name() == "layout" {
-            layout = parse_layout(child)?;
+        match child.tag_name().name() {
+            "layout" => layout = parse_layout(child)?,
+            "sort" => sort = Some(parse_sort(child)?),
+            _ => {}
         }
     }
     Ok(Citation {
         layout,
+        sort,
         et_al_min,
         et_al_use_first,
         disambiguate_add_year_suffix,
