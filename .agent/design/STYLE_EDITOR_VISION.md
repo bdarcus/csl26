@@ -56,7 +56,7 @@ GET  /examples/:field       # Field-specific references
 - YAML ↔ struct roundtrip with serde
 
 ### 🔍 Needs Enhancement
-- Add `discipline` field to `StyleInfo`
+- Add `discipline` and/or `category` fields to `StyleInfo`
 - Create example reference datasets per field
 - Validate streaming/incremental preview
 
