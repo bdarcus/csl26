@@ -837,6 +837,8 @@ impl ComponentValues for TemplateNumber {
         hints: &ProcHints,
         options: &RenderOptions<'_>,
     ) -> Option<ProcValues> {
+        use csln_core::template::LabelForm;
+
         let value = match self.number {
             NumberVariable::Volume => reference.volume.as_ref().map(|v| v.to_string()),
             NumberVariable::Issue => reference.issue.as_ref().map(|v| v.to_string()),
@@ -849,14 +851,58 @@ impl ComponentValues for TemplateNumber {
             _ => None,
         };
 
-        value.filter(|s| !s.is_empty()).map(|value| ProcValues {
-            value,
-            prefix: None,
-            suffix: None,
-            url: None,
-            substituted_key: None,
+        value.filter(|s| !s.is_empty()).map(|value| {
+            // Handle label if label_form is specified
+            let prefix = if let Some(label_form) = &self.label_form {
+                if let Some(locator_type) = number_var_to_locator_type(&self.number) {
+                    // Check pluralization
+                    let plural = check_plural(&value, &locator_type);
+
+                    let term_form = match label_form {
+                        LabelForm::Long => TermForm::Long,
+                        LabelForm::Short => TermForm::Short,
+                        LabelForm::Symbol => TermForm::Symbol,
+                    };
+
+                    options
+                        .locale
+                        .locator_term(&locator_type, plural, term_form)
+                        .map(|t| format!("{} ", t))
+                } else {
+                    None
+                }
+            } else {
+                None
+            };
+
+            ProcValues {
+                value,
+                prefix,
+                suffix: None,
+                url: None,
+                substituted_key: None,
+            }
         })
     }
+}
+
+fn number_var_to_locator_type(var: &NumberVariable) -> Option<csln_core::citation::LocatorType> {
+    use csln_core::citation::LocatorType;
+    match var {
+        NumberVariable::Volume => Some(LocatorType::Volume),
+        NumberVariable::Pages => Some(LocatorType::Page),
+        NumberVariable::ChapterNumber => Some(LocatorType::Chapter),
+        NumberVariable::NumberOfPages => Some(LocatorType::Page),
+        NumberVariable::NumberOfVolumes => Some(LocatorType::Volume),
+        NumberVariable::Issue => Some(LocatorType::Issue),
+        _ => None,
+    }
+}
+
+fn check_plural(value: &str, _locator_type: &csln_core::citation::LocatorType) -> bool {
+    // Simple heuristic: if contains ranges or separators, it's plural.
+    // "1-10", "1, 3", "1 & 3"
+    value.contains('–') || value.contains('-') || value.contains(',') || value.contains('&')
 }
 
 /// Format a page range according to the specified format.

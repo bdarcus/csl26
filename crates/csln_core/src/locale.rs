@@ -8,6 +8,7 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 //! Locales provide language-specific terms, date formats, and punctuation rules
 //! for citation formatting.
 
+use crate::citation::LocatorType;
 use crate::template::ContributorRole;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -28,6 +29,9 @@ pub struct Locale {
     /// Contributor role terms (editor, translator, etc.).
     #[serde(default)]
     pub roles: HashMap<ContributorRole, ContributorTerm>,
+    /// Locator terms (page, chapter, etc.).
+    #[serde(default)]
+    pub locators: HashMap<LocatorType, LocatorTerm>,
     /// General terms (and, et al., etc.).
     #[serde(default)]
     pub terms: Terms,
@@ -104,6 +108,7 @@ impl Locale {
             locale: "en-US".into(),
             dates: DateTerms::en_us(),
             roles,
+            locators: HashMap::new(), // Populated in from_raw usually
             terms: Terms::en_us(),
             punctuation_in_quote: true, // American English convention
             sort_articles: vec!["the".into(), "a".into(), "an".into()],
@@ -202,7 +207,30 @@ impl Locale {
             TermForm::Short => &simple.short,
             TermForm::Verb => &term.verb.long,
             TermForm::VerbShort => &term.verb.short,
+            _ => &simple.long, // Fallback
         })
+    }
+
+    /// Get a locator term.
+    pub fn locator_term(
+        &self,
+        locator: &LocatorType,
+        plural: bool,
+        form: TermForm,
+    ) -> Option<&str> {
+        let term = self.locators.get(locator)?;
+        let form_term = match form {
+            TermForm::Long => &term.long,
+            TermForm::Short => &term.short,
+            TermForm::Symbol => &term.symbol,
+            _ => &term.short, // Fallback
+        };
+
+        if let Some(ft) = form_term {
+            Some(if plural { &ft.plural } else { &ft.singular })
+        } else {
+            None
+        }
     }
 
     /// Get the "and" term based on style preference.
@@ -247,6 +275,7 @@ pub enum TermForm {
     Short,
     Verb,
     VerbShort,
+    Symbol,
 }
 
 /// General terms used in citations and bibliographies.
@@ -334,6 +363,29 @@ pub struct ContributorTerm {
     pub plural: SimpleTerm,
     /// Verb form (edited by, translated by).
     pub verb: SimpleTerm,
+}
+
+/// Terms for locators (page, chapter, etc.).
+#[derive(Debug, Default, Deserialize, Serialize, Clone, JsonSchema)]
+pub struct LocatorTerm {
+    /// Long form (e.g., page/pages).
+    #[serde(default)]
+    pub long: Option<SingularPlural>,
+    /// Short form (e.g., p./pp.).
+    #[serde(default)]
+    pub short: Option<SingularPlural>,
+    /// Symbol form (e.g., §/§§).
+    #[serde(default)]
+    pub symbol: Option<SingularPlural>,
+}
+
+/// A term with singular and plural forms.
+#[derive(Debug, Default, Deserialize, Serialize, Clone, JsonSchema)]
+pub struct SingularPlural {
+    /// Singular form.
+    pub singular: String,
+    /// Plural form.
+    pub plural: String,
 }
 
 /// Date-related terms.
@@ -553,14 +605,28 @@ impl Locale {
                 seasons: raw.dates.seasons,
             },
             roles: HashMap::new(),
+            locators: HashMap::new(),
             terms: Terms::default(),
             punctuation_in_quote,
             // Set locale-specific articles based on language
             sort_articles: Self::default_articles_for_locale(&raw.locale),
         };
 
-        // Map raw terms to structured terms
+        // Map raw terms to structured terms and locators
         for (key, value) in &raw.terms {
+            // First try to parse as a locator
+            if let Some(locator_type) = Self::parse_locator_type(key) {
+                if let Some(forms) = Self::get_forms(value) {
+                    let locator_term = LocatorTerm {
+                        long: Self::extract_singular_plural(&forms.get("long")),
+                        short: Self::extract_singular_plural(&forms.get("short")),
+                        symbol: Self::extract_singular_plural(&forms.get("symbol")),
+                    };
+                    locale.locators.insert(locator_type, locator_term);
+                }
+                continue;
+            }
+
             match key.as_str() {
                 "and" => {
                     if let Some(forms) = Self::get_forms(value) {
@@ -635,6 +701,29 @@ impl Locale {
         }
     }
 
+    fn parse_locator_type(name: &str) -> Option<LocatorType> {
+        match name {
+            "book" => Some(LocatorType::Book),
+            "chapter" => Some(LocatorType::Chapter),
+            "column" => Some(LocatorType::Column),
+            "figure" => Some(LocatorType::Figure),
+            "folio" => Some(LocatorType::Folio),
+            "line" => Some(LocatorType::Line),
+            "note" => Some(LocatorType::Note),
+            "number" => Some(LocatorType::Number),
+            "opus" => Some(LocatorType::Opus),
+            "page" => Some(LocatorType::Page),
+            "paragraph" => Some(LocatorType::Paragraph),
+            "part" => Some(LocatorType::Part),
+            "section" => Some(LocatorType::Section),
+            "sub_verbo" | "sub-verbo" => Some(LocatorType::SubVerbo),
+            "verse" => Some(LocatorType::Verse),
+            "volume" => Some(LocatorType::Volume),
+            "issue" => Some(LocatorType::Issue),
+            _ => None,
+        }
+    }
+
     fn parse_role_name(name: &str) -> Option<ContributorRole> {
         match name {
             "author" => Some(ContributorRole::Author),
@@ -651,6 +740,20 @@ impl Locale {
             "recipient" => Some(ContributorRole::Recipient),
             "reviewed-author" => Some(ContributorRole::ReviewedAuthor),
             "composer" => Some(ContributorRole::Composer),
+            _ => None,
+        }
+    }
+
+    fn extract_singular_plural(value: &Option<&RawTermValue>) -> Option<SingularPlural> {
+        match value {
+            Some(RawTermValue::SingularPlural { singular, plural }) => Some(SingularPlural {
+                singular: singular.clone(),
+                plural: plural.clone(),
+            }),
+            Some(RawTermValue::Simple(s)) => Some(SingularPlural {
+                singular: s.clone(),
+                plural: s.clone(), // Fallback if only one form provided
+            }),
             _ => None,
         }
     }
