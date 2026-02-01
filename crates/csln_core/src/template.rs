@@ -353,6 +353,8 @@ pub struct TemplateNumber {
     pub number: NumberVariable,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub form: Option<NumberForm>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub label_form: Option<LabelForm>,
     #[serde(flatten)]
     pub rendering: Rendering,
     /// Type-specific rendering overrides.
@@ -388,6 +390,16 @@ pub enum NumberForm {
     Numeric,
     Ordinal,
     Roman,
+}
+
+/// Label rendering forms.
+#[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub enum LabelForm {
+    Long,
+    #[default]
+    Short,
+    Symbol,
 }
 
 /// A simple variable component (DOI, ISBN, URL, etc.).

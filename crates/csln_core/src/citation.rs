@@ -61,7 +61,7 @@ fn is_default_mode(mode: &CitationMode) -> bool {
 }
 
 /// Locator types for pinpoint citations.
-#[derive(Debug, Clone, Default, Deserialize, Serialize, PartialEq, JsonSchema)]
+#[derive(Debug, Clone, Default, Deserialize, Serialize, PartialEq, Eq, Hash, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub enum LocatorType {
     Book,
@@ -81,6 +81,7 @@ pub enum LocatorType {
     SubVerbo,
     Verse,
     Volume,
+    Issue,
 }
 
 /// A single citation item referencing a bibliography entry.
