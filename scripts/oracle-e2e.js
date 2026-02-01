@@ -31,73 +31,12 @@ function loadLocale(lang) {
     throw new Error(`Locale not found: ${lang}`);
 }
 
-// Test items - same as used in csln_processor
-const testItems = {
-  "ITEM-1": {
-    "id": "ITEM-1",
-    "type": "article-journal",
-    "title": "The Structure of Scientific Revolutions",
-    "author": [{ "family": "Kuhn", "given": "Thomas S." }],
-    "issued": { "date-parts": [[1962]] },
-    "container-title": "International Encyclopedia of Unified Science",
-    "volume": "2",
-    "issue": "2",
-    "publisher": "University of Chicago Press",
-    "publisher-place": "Chicago",
-    "DOI": "10.1234/example"
-  },
-  "ITEM-2": {
-    "id": "ITEM-2",
-    "type": "book",
-    "title": "A Brief History of Time",
-    "author": [{ "family": "Hawking", "given": "Stephen" }],
-    "issued": { "date-parts": [[1988]] },
-    "publisher": "Bantam Dell Publishing Group",
-    "publisher-place": "New York"
-  },
-  "ITEM-3": {
-    "id": "ITEM-3",
-    "type": "article-journal",
-    "title": "Deep Learning",
-    "author": [
-      { "family": "LeCun", "given": "Yann" },
-      { "family": "Bengio", "given": "Yoshua" },
-      { "family": "Hinton", "given": "Geoffrey" }
-    ],
-    "issued": { "date-parts": [[2015]] },
-    "container-title": "Nature",
-    "volume": "521",
-    "page": "436-444",
-    "DOI": "10.1038/nature14539"
-  },
-  "ITEM-4": {
-    "id": "ITEM-4",
-    "type": "chapter",
-    "title": "The Role of Deliberate Practice",
-    "author": [
-      { "family": "Ericsson", "given": "K. Anders" }
-    ],
-    "editor": [
-      { "family": "Ericsson", "given": "K. Anders" },
-      { "family": "Charness", "given": "Neil" },
-      { "family": "Feltovich", "given": "Paul J." },
-      { "family": "Hoffman", "given": "Robert R." }
-    ],
-    "issued": { "date-parts": [[2006]] },
-    "container-title": "The Cambridge Handbook of Expertise and Expert Performance",
-    "publisher": "Cambridge University Press",
-    "page": "683-703"
-  },
-  "ITEM-5": {
-    "id": "ITEM-5",
-    "type": "report",
-    "title": "World Development Report 2023",
-    "author": [{ "literal": "World Bank" }],
-    "issued": { "date-parts": [[2023]] },
-    "publisher": "World Bank Group",
-    "publisher-place": "Washington, DC"
-  }
-};
+// Load test items from JSON fixture
+const fixturesPath = path.join(__dirname, '..', 'tests', 'fixtures', 'references-expanded.json');
+const fixturesData = JSON.parse(fs.readFileSync(fixturesPath, 'utf8'));
+const testItems = Object.fromEntries(
+  Object.entries(fixturesData).filter(([key]) => key !== 'comment')
+);
 
 function renderWithCiteprocJs(stylePath) {
   const styleXml = fs.readFileSync(stylePath, 'utf8');
@@ -192,9 +131,18 @@ function normalizeText(text) {
 }
 
 function compare(oracle, csln, label) {
+  if (!oracle) {
+    console.log(`  ⚠️  ${label} - Oracle returned undefined`);
+    return false;
+  }
+  if (!csln) {
+    console.log(`  ⚠️  ${label} - CSLN returned undefined`);
+    return false;
+  }
+
   const oracleNorm = normalizeText(oracle);
   const cslnNorm = normalizeText(csln);
-  
+
   if (oracleNorm === cslnNorm) {
     console.log(`  ✅ ${label}`);
     return true;
@@ -236,8 +184,8 @@ Object.keys(testItems).forEach(id => {
 console.log('\n--- BIBLIOGRAPHY ---');
 let bibMatch = 0;
 // Sort both by first author for comparison
-const oracleBibNorm = oracle.bibliography.map(b => normalizeText(b)).sort();
-const cslnBibNorm = csln.bibliography.map(b => normalizeText(b)).sort();
+const oracleBibNorm = oracle.bibliography.filter(b => b).map(b => normalizeText(b)).sort();
+const cslnBibNorm = csln.bibliography.filter(b => b).map(b => normalizeText(b)).sort();
 const bibTotal = Math.max(oracleBibNorm.length, cslnBibNorm.length);
 
 for (let i = 0; i < bibTotal; i++) {

@@ -197,13 +197,205 @@ fn create_test_bibliography() -> Bibliography {
         },
     );
 
+    // ITEM-6: Two-author book
+    bib.insert(
+        "ITEM-6".to_string(),
+        Reference {
+            id: "ITEM-6".to_string(),
+            ref_type: "book".to_string(),
+            author: Some(vec![
+                Name::new("Weinberg", "Gerald M."),
+                Name::new("Freedman", "Daniel P."),
+            ]),
+            title: Some("The Psychology of Computer Programming".to_string()),
+            issued: Some(DateVariable::year(1971)),
+            publisher: Some("Van Nostrand Reinhold".to_string()),
+            publisher_place: Some("New York".to_string()),
+            edition: Some(StringOrNumber::String("Silver Anniversary Edition".to_string())),
+            ..Default::default()
+        },
+    );
+
+    // ITEM-7: 8-author article (tests et-al)
+    bib.insert(
+        "ITEM-7".to_string(),
+        Reference {
+            id: "ITEM-7".to_string(),
+            ref_type: "article-journal".to_string(),
+            author: Some(vec![
+                Name::new("Vaswani", "Ashish"),
+                Name::new("Shazeer", "Noam"),
+                Name::new("Parmar", "Niki"),
+                Name::new("Uszkoreit", "Jakob"),
+                Name::new("Jones", "Llion"),
+                Name::new("Gomez", "Aidan N."),
+                Name::new("Kaiser", "Lukasz"),
+                Name::new("Polosukhin", "Illia"),
+            ]),
+            title: Some("Attention Is All You Need".to_string()),
+            container_title: Some("Advances in Neural Information Processing Systems".to_string()),
+            issued: Some(DateVariable::year(2017)),
+            volume: Some(StringOrNumber::String("30".to_string())),
+            page: Some("5998-6008".to_string()),
+            ..Default::default()
+        },
+    );
+
+    // ITEM-8: Kuhn 1970 (tests disambiguation with ITEM-1)
+    bib.insert(
+        "ITEM-8".to_string(),
+        Reference {
+            id: "ITEM-8".to_string(),
+            ref_type: "article-journal".to_string(),
+            author: Some(vec![Name::new("Kuhn", "Thomas S.")]),
+            title: Some("Scientific Paradigms and Normal Science".to_string()),
+            container_title: Some("Philosophy of Science".to_string()),
+            issued: Some(DateVariable::year(1970)),
+            volume: Some(StringOrNumber::String("37".to_string())),
+            issue: Some(StringOrNumber::String("1".to_string())),
+            page: Some("1-13".to_string()),
+            doi: Some("10.1086/288273".to_string()),
+            ..Default::default()
+        },
+    );
+
+    // ITEM-9: Smith, John (tests disambiguation with ITEM-10)
+    bib.insert(
+        "ITEM-9".to_string(),
+        Reference {
+            id: "ITEM-9".to_string(),
+            ref_type: "article-journal".to_string(),
+            author: Some(vec![
+                Name::new("Smith", "John"),
+                Name::new("Anderson", "Mary"),
+            ]),
+            title: Some("Climate Change and Extreme Weather Events".to_string()),
+            container_title: Some("Nature Climate Change".to_string()),
+            issued: Some(DateVariable::year(2020)),
+            volume: Some(StringOrNumber::String("10".to_string())),
+            page: Some("850-855".to_string()),
+            doi: Some("10.1038/s41558-020-0871-4".to_string()),
+            ..Default::default()
+        },
+    );
+
+    // ITEM-10: Smith, Jane (tests disambiguation with ITEM-9)
+    bib.insert(
+        "ITEM-10".to_string(),
+        Reference {
+            id: "ITEM-10".to_string(),
+            ref_type: "article-journal".to_string(),
+            author: Some(vec![
+                Name::new("Smith", "Jane"),
+                Name::new("Williams", "Robert"),
+            ]),
+            title: Some("Machine Learning for Climate Prediction".to_string()),
+            container_title: Some("Environmental Research Letters".to_string()),
+            issued: Some(DateVariable::year(2020)),
+            volume: Some(StringOrNumber::String("15".to_string())),
+            issue: Some(StringOrNumber::String("11".to_string())),
+            page: Some("114042".to_string()),
+            doi: Some("10.1088/1748-9326/abc123".to_string()),
+            ..Default::default()
+        },
+    );
+
+    // ITEM-11: Thesis
+    bib.insert(
+        "ITEM-11".to_string(),
+        Reference {
+            id: "ITEM-11".to_string(),
+            ref_type: "thesis".to_string(),
+            author: Some(vec![Name::new("Chen", "Wei")]),
+            title: Some("Neural Networks for Natural Language Understanding".to_string()),
+            issued: Some(DateVariable::year(2019)),
+            publisher: Some("Stanford University".to_string()),
+            genre: Some("PhD thesis".to_string()),
+            ..Default::default()
+        },
+    );
+
+    // ITEM-12: Conference paper
+    bib.insert(
+        "ITEM-12".to_string(),
+        Reference {
+            id: "ITEM-12".to_string(),
+            ref_type: "paper-conference".to_string(),
+            author: Some(vec![
+                Name::new("Mikolov", "Tomas"),
+                Name::new("Sutskever", "Ilya"),
+                Name::new("Chen", "Kai"),
+                Name::new("Corrado", "Greg"),
+                Name::new("Dean", "Jeff"),
+            ]),
+            title: Some("Distributed Representations of Words and Phrases".to_string()),
+            container_title: Some("Proceedings of NIPS 2013".to_string()),
+            issued: Some(DateVariable::year(2013)),
+            page: Some("3111-3119".to_string()),
+            ..Default::default()
+        },
+    );
+
+    // ITEM-13: Webpage
+    bib.insert(
+        "ITEM-13".to_string(),
+        Reference {
+            id: "ITEM-13".to_string(),
+            ref_type: "webpage".to_string(),
+            author: Some(vec![Name::literal("State of JS Team")]),
+            title: Some("The State of JavaScript 2023".to_string()),
+            issued: Some(DateVariable::year(2023)),
+            url: Some("https://stateofjs.com/2023".to_string()),
+            ..Default::default()
+        },
+    );
+
+    // ITEM-14: Edited book
+    bib.insert(
+        "ITEM-14".to_string(),
+        Reference {
+            id: "ITEM-14".to_string(),
+            ref_type: "book".to_string(),
+            editor: Some(vec![
+                Name::new("Reis", "Harry T."),
+                Name::new("Judd", "Charles M."),
+            ]),
+            title: Some("Handbook of Research Methods in Social Psychology".to_string()),
+            issued: Some(DateVariable::year(2000)),
+            publisher: Some("Cambridge University Press".to_string()),
+            publisher_place: Some("Cambridge".to_string()),
+            ..Default::default()
+        },
+    );
+
+    // ITEM-15: No author (edge case)
+    bib.insert(
+        "ITEM-15".to_string(),
+        Reference {
+            id: "ITEM-15".to_string(),
+            ref_type: "article-journal".to_string(),
+            author: None,
+            title: Some("The Role of Theory in Research".to_string()),
+            container_title: Some("Journal of Theoretical Psychology".to_string()),
+            issued: Some(DateVariable::year(2018)),
+            volume: Some(StringOrNumber::String("28".to_string())),
+            issue: Some(StringOrNumber::String("3".to_string())),
+            page: Some("201-215".to_string()),
+            ..Default::default()
+        },
+    );
+
     bib
 }
 
 fn print_human(processor: &Processor, style_name: &str, show_cite: bool, show_bib: bool) {
     println!("\n=== {} ===\n", style_name);
 
-    let item_ids = ["ITEM-1", "ITEM-2", "ITEM-3", "ITEM-4", "ITEM-5"];
+    let item_ids = [
+        "ITEM-1", "ITEM-2", "ITEM-3", "ITEM-4", "ITEM-5",
+        "ITEM-6", "ITEM-7", "ITEM-8", "ITEM-9", "ITEM-10",
+        "ITEM-11", "ITEM-12", "ITEM-13", "ITEM-14", "ITEM-15",
+    ];
 
     if show_cite {
         println!("CITATIONS:");
