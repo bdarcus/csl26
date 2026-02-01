@@ -274,11 +274,99 @@ impl OptionsExtractor {
             has_config = true;
         }
 
+        // Detect if style wants to suppress period after URLs.
+        // APA 7th and Bluebook omit the period after DOI/URL to avoid breaking links.
+        // Heuristic: check if DOI/URL appears at the end of bibliography macros
+        // without a suffix that adds a period.
+        if Self::should_suppress_period_after_url(style, &bib.layout) {
+            config.suppress_period_after_url = true;
+            has_config = true;
+        }
+
         if has_config {
             Some(config)
         } else {
             None
         }
+    }
+
+    /// Detect if a bibliography layout should suppress the period after URLs.
+    ///
+    /// Returns true if:
+    /// 1. The layout has no suffix or an empty suffix, AND
+    /// 2. DOI or URL appears in the style without a period suffix
+    ///
+    /// This matches APA 7th behavior where DOI/URL ends the entry without a period.
+    fn should_suppress_period_after_url(style: &Style, layout: &Layout) -> bool {
+        // If layout has an explicit period suffix, don't suppress
+        if let Some(suffix) = &layout.suffix {
+            if suffix.contains('.') {
+                return false;
+            }
+        }
+
+        // Check if DOI/URL appears in macros without period suffix.
+        // This catches APA-style where DOI is rendered via macro.
+        Self::style_has_doi_without_period(style)
+    }
+
+    /// Check if style has DOI/URL text nodes without a period suffix.
+    /// This indicates APA-style behavior where DOI ends without trailing period.
+    fn style_has_doi_without_period(style: &Style) -> bool {
+        for macro_def in &style.macros {
+            if Self::macro_has_doi_without_period(macro_def) {
+                return true;
+            }
+        }
+        false
+    }
+
+    /// Check if a macro contains DOI/URL without a period suffix.
+    fn macro_has_doi_without_period(macro_def: &Macro) -> bool {
+        Self::nodes_have_doi_without_period(&macro_def.children)
+    }
+
+    /// Recursively check nodes for DOI/URL without period suffix.
+    fn nodes_have_doi_without_period(nodes: &[CslNode]) -> bool {
+        for node in nodes {
+            match node {
+                CslNode::Text(text) => {
+                    if let Some(var) = &text.variable {
+                        let var_lower = var.to_lowercase();
+                        if var_lower == "doi" || var_lower == "url" {
+                            // Check if suffix contains period
+                            let has_period_suffix =
+                                text.suffix.as_ref().is_some_and(|s| s.contains('.'));
+                            if !has_period_suffix {
+                                return true;
+                            }
+                        }
+                    }
+                }
+                CslNode::Group(group) => {
+                    if Self::nodes_have_doi_without_period(&group.children) {
+                        return true;
+                    }
+                }
+                CslNode::Choose(choose) => {
+                    if Self::nodes_have_doi_without_period(&choose.if_branch.children) {
+                        return true;
+                    }
+                    for else_if in &choose.else_if_branches {
+                        if Self::nodes_have_doi_without_period(&else_if.children) {
+                            return true;
+                        }
+                    }
+                    if let Some(else_children) = &choose.else_branch {
+                        if Self::nodes_have_doi_without_period(else_children) {
+                            return true;
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+        false
     }
 
     /// Extract bibliography component separator from CSL layout.

@@ -163,12 +163,24 @@ pub fn refs_to_string(proc_templates: Vec<ProcTemplate>) -> String {
                 // Empty suffix explicitly set - no entry-terminating punctuation
             }
             None => {
-                // No explicit suffix - use legacy heuristic: add period unless DOI/URL
-                let last_is_link = proc_template
-                    .iter()
-                    .rev()
-                    .find(|c| !render_component(c).is_empty())
-                    .is_some_and(|c| is_link_component(&c.template_component));
+                // No explicit suffix - add period unless entry ends with URL/DOI
+                // and style has suppress_period_after_url set.
+                //
+                // Default: add period (Chicago, MLA style).
+                // APA/Bluebook styles should set suppress_period_after_url: true.
+                let suppress_period_after_url = proc_template
+                    .first()
+                    .and_then(|c| c.config.as_ref())
+                    .and_then(|cfg| cfg.bibliography.as_ref())
+                    .is_some_and(|bib| bib.suppress_period_after_url);
+
+                let last_is_link = suppress_period_after_url
+                    && proc_template
+                        .iter()
+                        .rev()
+                        .find(|c| !render_component(c).is_empty())
+                        .is_some_and(|c| is_link_component(&c.template_component));
+
                 if !output.ends_with('.') && !last_is_link {
                     if punctuation_in_quote
                         && (output.ends_with('"') || output.ends_with('\u{201D}'))
@@ -194,11 +206,15 @@ pub fn refs_to_string(proc_templates: Vec<ProcTemplate>) -> String {
 
 /// Check if a template component is or contains a link (DOI/URL).
 ///
-/// This recursively checks inside List components to handle cases like:
-/// ```yaml
-/// - items:
-///     - variable: url
-/// ```
+/// Used to determine whether to suppress the trailing period on bibliography
+/// entries. APA 7th and Bluebook say NO period after URLs; Chicago and MLA
+/// say YES period. This helper identifies URL/DOI components so the caller
+/// can apply the appropriate rule.
+///
+/// Recursively checks inside List components to handle nested structures like:
+///   - items:
+///       - date: accessed
+///       - variable: url
 fn is_link_component(component: &TemplateComponent) -> bool {
     match component {
         TemplateComponent::Variable(v) => {
@@ -209,10 +225,7 @@ fn is_link_component(component: &TemplateComponent) -> bool {
         }
         TemplateComponent::List(list) => {
             // Check if the last item in the list is a link
-            list.items
-                .last()
-                .map(|item| is_link_component(item))
-                .unwrap_or(false)
+            list.items.last().map(is_link_component).unwrap_or(false)
         }
         _ => false,
     }

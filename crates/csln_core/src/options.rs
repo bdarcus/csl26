@@ -497,6 +497,11 @@ pub struct BibliographyConfig {
     /// Defaults to ". " if not specified.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub separator: Option<String>,
+    /// Whether to suppress the trailing period after URLs/DOIs.
+    /// Default behavior is to add a period (Chicago, MLA style).
+    /// Set to true to suppress the period (APA 7th, Bluebook style).
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub suppress_period_after_url: bool,
     /// Unknown fields captured for forward compatibility.
     #[serde(flatten)]
     pub _extra: HashMap<String, serde_json::Value>,
