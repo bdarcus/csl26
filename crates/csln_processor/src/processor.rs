@@ -209,6 +209,7 @@ impl Processor {
         let (open, close) = match wrap {
             Some(WrapPunctuation::Parentheses) => ("(", ")"),
             Some(WrapPunctuation::Brackets) => ("[", "]"),
+            Some(WrapPunctuation::Quotes) => ("\u{201C}", "\u{201D}"), // U+201C (") and U+201D (")
             _ => (prefix.unwrap_or(""), suffix.unwrap_or("")),
         };
 

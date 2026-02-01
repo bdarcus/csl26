@@ -105,11 +105,17 @@ pub fn refs_to_string(proc_templates: Vec<ProcTemplate>) -> String {
                     // Note: ']' is excluded for numeric citations where [1] directly precedes author
                     // Locale option: place periods inside quotation marks (American style)
                     if punctuation_in_quote
-                        && last_char == '"'
+                        && (last_char == '"' || last_char == '\u{201D}')
                         && default_separator.starts_with('.')
                     {
                         output.pop(); // Remove closing quote
-                        output.push_str(".\" "); // Add period inside, then quote + space
+                                      // Use matching quote style
+                        let quote_str = if last_char == '\u{201D}' {
+                            ".\u{201D} "
+                        } else {
+                            ".\" "
+                        };
+                        output.push_str(quote_str);
                     } else {
                         output.push_str(default_separator);
                     }
@@ -141,9 +147,13 @@ pub fn refs_to_string(proc_templates: Vec<ProcTemplate>) -> String {
                 // Don't double-add if entry already ends with this punctuation
                 if !output.ends_with(suffix.chars().next().unwrap_or('.')) {
                     // Handle punctuation-in-quote for period suffix
-                    if suffix == "." && punctuation_in_quote && output.ends_with('"') {
+                    if suffix == "."
+                        && punctuation_in_quote
+                        && (output.ends_with('"') || output.ends_with('\u{201D}'))
+                    {
+                        let is_curly = output.ends_with('\u{201D}');
                         output.pop();
-                        output.push_str(".\"");
+                        output.push_str(if is_curly { ".\u{201D}" } else { ".\"" });
                     } else {
                         output.push_str(suffix);
                     }
@@ -170,9 +180,12 @@ pub fn refs_to_string(proc_templates: Vec<ProcTemplate>) -> String {
                         )
                     });
                 if !output.ends_with('.') && !last_is_link {
-                    if punctuation_in_quote && output.ends_with('"') {
+                    if punctuation_in_quote
+                        && (output.ends_with('"') || output.ends_with('\u{201D}'))
+                    {
+                        let is_curly = output.ends_with('\u{201D}');
                         output.pop();
-                        output.push_str(".\"");
+                        output.push_str(if is_curly { ".\u{201D}" } else { ".\"" });
                     } else {
                         output.push('.');
                     }
@@ -247,6 +260,7 @@ pub fn citation_to_string(
     let (open, close) = match wrap {
         Some(WrapPunctuation::Parentheses) => ("(", ")"),
         Some(WrapPunctuation::Brackets) => ("[", "]"),
+        Some(WrapPunctuation::Quotes) => ("\u{201C}", "\u{201D}"), // U+201C (") and U+201D (")
         _ => (prefix.unwrap_or(""), suffix.unwrap_or("")),
     };
 
@@ -271,6 +285,7 @@ pub fn render_component(component: &ProcTemplateComponent) -> String {
         WrapPunctuation::None => ("", ""),
         WrapPunctuation::Parentheses => ("(", ")"),
         WrapPunctuation::Brackets => ("[", "]"),
+        WrapPunctuation::Quotes => ("\u{201C}", "\u{201D}"), // U+201C (") and U+201D (")
     };
 
     // Apply emphasis/strong/quote
@@ -282,7 +297,7 @@ pub fn render_component(component: &ProcTemplateComponent) -> String {
         text = format!("**{}**", text);
     }
     if rendering.quote == Some(true) {
-        text = format!("\"{}\"", text);
+        text = format!("\u{201C}{}\u{201D}", text); // U+201C (") and U+201D (")
     }
     if rendering.small_caps == Some(true) {
         text = format!("<span style=\"font-variant:small-caps\">{}</span>", text);

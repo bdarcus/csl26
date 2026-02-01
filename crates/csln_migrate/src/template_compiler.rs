@@ -903,7 +903,12 @@ impl TemplateCompiler {
     /// Convert FormattingOptions to Rendering.
     fn convert_formatting(&self, fmt: &FormattingOptions) -> Rendering {
         // Infer wrap from prefix/suffix patterns
-        let (wrap, prefix, suffix) = Self::infer_wrap_from_affixes(&fmt.prefix, &fmt.suffix);
+        let (mut wrap, prefix, suffix) = Self::infer_wrap_from_affixes(&fmt.prefix, &fmt.suffix);
+
+        // quotes="true" in CSL maps to wrap: quotes in CSLN
+        if fmt.quotes == Some(true) {
+            wrap = Some(csln_core::template::WrapPunctuation::Quotes);
+        }
 
         Rendering {
             emph: fmt
