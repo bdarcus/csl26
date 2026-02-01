@@ -20,7 +20,7 @@ use std::collections::HashMap;
 pub struct Config {
     /// Substitution rules for missing data.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub substitute: Option<Substitute>,
+    pub substitute: Option<SubstituteConfig>,
     /// Processing mode (author-date, numeric, etc.).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub processing: Option<Processing>,
@@ -523,6 +523,44 @@ pub enum SubsequentAuthorSubstituteRule {
 }
 
 /// Substitution rules for missing author data.
+///
+/// Can be specified as a preset name or an explicit configuration:
+/// ```yaml
+/// # Using a preset:
+/// substitute: standard
+///
+/// # Using explicit config:
+/// substitute:
+///   template:
+///     - editor
+///     - title
+/// ```
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(untagged)]
+pub enum SubstituteConfig {
+    /// A named preset (e.g., "standard", "editor-first", "title-first").
+    Preset(crate::presets::SubstitutePreset),
+    /// Explicit substitution configuration.
+    Explicit(Substitute),
+}
+
+impl Default for SubstituteConfig {
+    fn default() -> Self {
+        SubstituteConfig::Explicit(Substitute::default())
+    }
+}
+
+impl SubstituteConfig {
+    /// Resolve this config to a concrete `Substitute`.
+    pub fn resolve(&self) -> Substitute {
+        match self {
+            SubstituteConfig::Preset(preset) => preset.config(),
+            SubstituteConfig::Explicit(config) => config.clone(),
+        }
+    }
+}
+
+/// Explicit substitution configuration.
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct Substitute {
@@ -530,6 +568,7 @@ pub struct Substitute {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub contributor_role_form: Option<String>,
     /// Ordered list of fields to try as substitutes.
+    #[serde(default)]
     pub template: Vec<SubstituteKey>,
 }
 
@@ -639,5 +678,31 @@ contributors:
             config.contributors.as_ref().unwrap().and,
             Some(AndOptions::Symbol)
         );
+    }
+
+    #[test]
+    fn test_substitute_config_preset() {
+        // Test that a preset name parses correctly
+        let yaml = r#"substitute: standard"#;
+        let config: Config = serde_yaml::from_str(yaml).unwrap();
+        assert!(config.substitute.is_some());
+        let resolved = config.substitute.unwrap().resolve();
+        assert_eq!(resolved.template.len(), 3);
+        assert_eq!(resolved.template[0], SubstituteKey::Editor);
+    }
+
+    #[test]
+    fn test_substitute_config_explicit() {
+        // Test that explicit config still works
+        let yaml = r#"
+substitute:
+  template:
+    - title
+    - editor
+"#;
+        let config: Config = serde_yaml::from_str(yaml).unwrap();
+        let resolved = config.substitute.unwrap().resolve();
+        assert_eq!(resolved.template[0], SubstituteKey::Title);
+        assert_eq!(resolved.template[1], SubstituteKey::Editor);
     }
 }

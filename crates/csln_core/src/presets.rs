@@ -29,7 +29,7 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 
 use crate::options::{
     AndOptions, ContributorConfig, DateConfig, DelimiterPrecedesLast, DisplayAsSort, MonthFormat,
-    ShortenListOptions, TitleRendering, TitlesConfig,
+    ShortenListOptions, Substitute, SubstituteKey, TitleRendering, TitlesConfig,
 };
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -236,6 +236,58 @@ impl TitlePreset {
     }
 }
 
+/// Substitute presets for author substitution fallback logic.
+///
+/// These presets define the order in which fields are tried when the primary
+/// author is missing. Most styles follow the standard order, but some have
+/// variations.
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
+#[serde(rename_all = "kebab-case")]
+#[non_exhaustive]
+pub enum SubstitutePreset {
+    /// Standard substitution order: Editor → Title → Translator.
+    /// Used by most citation styles (APA, Chicago, etc.).
+    Standard,
+    /// Editor-first: Editor → Translator → Title.
+    /// Prioritizes contributors over title.
+    EditorFirst,
+    /// Title-first: Title → Editor → Translator.
+    /// Used when anonymous works should show title prominently.
+    TitleFirst,
+}
+
+impl SubstitutePreset {
+    /// Convert this preset to a concrete `Substitute`.
+    pub fn config(&self) -> Substitute {
+        match self {
+            SubstitutePreset::Standard => Substitute {
+                contributor_role_form: None,
+                template: vec![
+                    SubstituteKey::Editor,
+                    SubstituteKey::Title,
+                    SubstituteKey::Translator,
+                ],
+            },
+            SubstitutePreset::EditorFirst => Substitute {
+                contributor_role_form: None,
+                template: vec![
+                    SubstituteKey::Editor,
+                    SubstituteKey::Translator,
+                    SubstituteKey::Title,
+                ],
+            },
+            SubstitutePreset::TitleFirst => Substitute {
+                contributor_role_form: None,
+                template: vec![
+                    SubstituteKey::Title,
+                    SubstituteKey::Editor,
+                    SubstituteKey::Translator,
+                ],
+            },
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -344,5 +396,34 @@ mod tests {
             let yaml = serde_yaml::to_string(&preset).unwrap();
             let _: TitlePreset = serde_yaml::from_str(&yaml).unwrap();
         }
+
+        let substitute_presets = vec![
+            SubstitutePreset::Standard,
+            SubstitutePreset::EditorFirst,
+            SubstitutePreset::TitleFirst,
+        ];
+        for preset in substitute_presets {
+            let yaml = serde_yaml::to_string(&preset).unwrap();
+            let _: SubstitutePreset = serde_yaml::from_str(&yaml).unwrap();
+        }
+    }
+
+    #[test]
+    fn test_substitute_preset_standard() {
+        let config = SubstitutePreset::Standard.config();
+        assert_eq!(
+            config.template,
+            vec![
+                SubstituteKey::Editor,
+                SubstituteKey::Title,
+                SubstituteKey::Translator,
+            ]
+        );
+    }
+
+    #[test]
+    fn test_substitute_preset_title_first() {
+        let config = SubstitutePreset::TitleFirst.config();
+        assert_eq!(config.template[0], SubstituteKey::Title);
     }
 }

@@ -14,7 +14,7 @@ use csln_core::options::{
     AndOptions, BibliographyConfig, Config, ContributorConfig, DateConfig, DelimiterPrecedesLast,
     DemoteNonDroppingParticle, Disambiguation, DisplayAsSort, Group, PageRangeFormat, Processing,
     ProcessingCustom, ShortenListOptions, Sort, SortKey, SortSpec, SubsequentAuthorSubstituteRule,
-    Substitute as CslnSubstitute, SubstituteKey, TitlesConfig,
+    Substitute as CslnSubstitute, SubstituteConfig, SubstituteKey, TitlesConfig,
 };
 use csln_core::template::DelimiterPunctuation;
 
@@ -32,7 +32,7 @@ impl OptionsExtractor {
             contributors: Self::extract_contributor_config(style),
 
             // 3. Extract substitute patterns from the first <names> block with <substitute>
-            substitute: Self::extract_substitute_pattern(style),
+            substitute: Self::extract_substitute_pattern(style).map(SubstituteConfig::Explicit),
 
             // 4. Extract date configuration
             dates: Self::extract_date_config(style),
@@ -1213,7 +1213,7 @@ mod tests {
         let config = OptionsExtractor::extract(&style);
 
         assert!(config.substitute.is_some());
-        let sub = config.substitute.unwrap();
+        let sub = config.substitute.unwrap().resolve();
         assert_eq!(sub.template.len(), 2);
         assert_eq!(sub.template[0], SubstituteKey::Editor);
         assert_eq!(sub.template[1], SubstituteKey::Title);

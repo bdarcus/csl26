@@ -116,13 +116,13 @@ impl ComponentValues for TemplateContributor {
             && matches!(self.contributor, ContributorRole::Author)
         {
             // Use explicit substitute config, or fall back to default (editor → title → translator)
-            use csln_core::options::Substitute;
-            let default_substitute = Substitute::default();
-            let substitute = options
+            let default_substitute = csln_core::options::SubstituteConfig::default();
+            let substitute_config = options
                 .config
                 .substitute
                 .as_ref()
                 .unwrap_or(&default_substitute);
+            let substitute = substitute_config.resolve();
 
             for key in &substitute.template {
                 match key {

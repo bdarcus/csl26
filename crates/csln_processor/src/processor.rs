@@ -25,7 +25,7 @@ use crate::reference::{Bibliography, Citation, Name, Reference};
 use crate::render::{citation_to_string, refs_to_string, ProcTemplate, ProcTemplateComponent};
 use crate::values::{ComponentValues, ProcHints, RenderContext, RenderOptions};
 use csln_core::locale::Locale;
-use csln_core::options::{Config, SortKey};
+use csln_core::options::{Config, SortKey, Substitute, SubstituteKey};
 use csln_core::template::{TemplateComponent, WrapPunctuation};
 use csln_core::Style;
 use std::collections::HashMap;
@@ -962,13 +962,11 @@ impl Processor {
     }
 
     /// Check if primary contributors (authors/editors) match between two references.
+    /// Uses the style's substitution logic to determine the primary contributor.
     fn contributors_match(&self, prev: &Reference, current: &Reference) -> bool {
-        // TODO: This should ideally check the *primary* contributor variables as defined
-        // by the style's substitution logic (e.g., Author -> Editor -> Title).
-        // For now, we'll just check names for simplification.
-
-        let prev_contributors = self.get_primary_contributors(prev);
-        let curr_contributors = self.get_primary_contributors(current);
+        let substitute = self.get_substitute_config();
+        let prev_contributors = self.get_primary_contributors(prev, &substitute);
+        let curr_contributors = self.get_primary_contributors(current, &substitute);
 
         match (prev_contributors, curr_contributors) {
             (Some(p), Some(c)) => p == c,
@@ -976,14 +974,42 @@ impl Processor {
         }
     }
 
-    /// Get the primary contributors for a reference (currently just Author).
-    fn get_primary_contributors<'a>(&self, reference: &'a Reference) -> Option<&'a Vec<Name>> {
-        // Simple fallback logic: Author -> Editor -> Translator
-        reference
-            .author
+    /// Get the substitute configuration from the style or use defaults.
+    fn get_substitute_config(&self) -> Substitute {
+        self.style
+            .options
             .as_ref()
-            .or(reference.editor.as_ref())
-            .or(reference.translator.as_ref())
+            .and_then(|o| o.substitute.as_ref())
+            .map(|s| s.resolve())
+            .or_else(|| self.default_config.substitute.as_ref().map(|s| s.resolve()))
+            .unwrap_or_default()
+    }
+
+    /// Get the primary contributors for a reference based on the style's substitution order.
+    /// Follows the substitute template: Author is always first, then the configured fallbacks.
+    fn get_primary_contributors<'a>(
+        &self,
+        reference: &'a Reference,
+        substitute: &Substitute,
+    ) -> Option<&'a Vec<Name>> {
+        // Author is always the primary contributor
+        if reference.author.is_some() {
+            return reference.author.as_ref();
+        }
+
+        // Fall back through the substitute template order
+        for key in &substitute.template {
+            let contributor = match key {
+                SubstituteKey::Editor => reference.editor.as_ref(),
+                SubstituteKey::Translator => reference.translator.as_ref(),
+                SubstituteKey::Title => None, // Title is not a contributor
+            };
+            if contributor.is_some() {
+                return contributor;
+            }
+        }
+
+        None
     }
 
     /// Apply the substitution string to the primary contributor component.

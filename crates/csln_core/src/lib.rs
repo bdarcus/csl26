@@ -19,7 +19,7 @@ pub mod embedded;
 pub use citation::{Citation, CitationItem, CitationMode, Citations, LocatorType};
 pub use locale::Locale;
 pub use options::Config;
-pub use presets::{ContributorPreset, DatePreset, TitlePreset};
+pub use presets::{ContributorPreset, DatePreset, SubstitutePreset, TitlePreset};
 pub use template::TemplateComponent;
 
 /// A named template (reusable sequence of components).
