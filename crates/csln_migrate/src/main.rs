@@ -629,17 +629,18 @@ fn apply_type_overrides(
 ) {
     match component {
         // Container-title (parent-serial): style-specific suffix
-        // - APA: add comma suffix
-        // - Chicago: no suffix (uses space as volume delimiter)
+        // - APA: comma suffix
+        // - Chicago: space suffix (prevents default period separator)
         // - Elsevier: handled by List space prefix
         TemplateComponent::Title(t) if t.title == csln_core::template::TitleType::ParentSerial => {
             let is_chicago = style_id.contains("chicago");
-            if !volume_list_has_space_prefix && !is_chicago {
+            if !volume_list_has_space_prefix {
                 let mut overrides = std::collections::HashMap::new();
+                let suffix = if is_chicago { " " } else { "," };
                 overrides.insert(
                     "article-journal".to_string(),
                     csln_core::template::Rendering {
-                        suffix: Some(",".to_string()),
+                        suffix: Some(suffix.to_string()),
                         ..Default::default()
                     },
                 );
