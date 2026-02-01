@@ -378,6 +378,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         // Remove duplicate titles from Lists that already appear at top level.
         // This happens when container-title appears in multiple CSL macros.
         deduplicate_titles_in_lists(&mut new_bib);
+
+        // Reorder publisher-place for Chicago journal articles.
+        // Chicago requires publisher-place to appear immediately after the journal
+        // title, before the volume.
+        reorder_publisher_place_for_chicago(&mut new_bib, style_id);
     }
 
     // 5. Build Style in correct format for csln_processor
@@ -825,6 +830,63 @@ fn deduplicate_titles_in_lists(components: &mut Vec<TemplateComponent>) {
             true
         }
     });
+}
+
+/// Reorder publisher-place for Chicago journal articles.
+///
+/// Chicago style requires publisher-place to appear immediately after the
+/// journal title (parent-serial), before the volume. During CSL macro expansion,
+/// the `source-serial-name` macro (which groups container-title + publisher-place)
+/// gets separated, with publisher-place ending up much later in the template.
+///
+/// This function moves the publisher-place List to the correct position for
+/// Chicago styles.
+fn reorder_publisher_place_for_chicago(components: &mut Vec<TemplateComponent>, style_id: &str) {
+    use csln_core::template::{SimpleVariable, TitleType};
+
+    // Only apply to Chicago styles
+    if !style_id.contains("chicago") {
+        return;
+    }
+
+    // Find the publisher-place component (it's in a List with wrap: parentheses)
+    let publisher_place_pos = components.iter().position(|c| {
+        if let TemplateComponent::List(list) = c {
+            list.items.iter().any(|item| {
+                matches!(
+                    item,
+                    TemplateComponent::Variable(v)
+                    if v.variable == SimpleVariable::PublisherPlace
+                )
+            })
+        } else {
+            false
+        }
+    });
+
+    // Find the parent-serial title position
+    let parent_serial_pos = components.iter().position(|c| {
+        matches!(
+            c,
+            TemplateComponent::Title(t) if t.title == TitleType::ParentSerial
+        )
+    });
+
+    // If we found both, move publisher-place to right after parent-serial
+    if let (Some(pp_pos), Some(ps_pos)) = (publisher_place_pos, parent_serial_pos) {
+        if pp_pos > ps_pos {
+            // Remove the publisher-place List
+            let mut publisher_place_component = components.remove(pp_pos);
+
+            // Add space suffix to prevent default period separator
+            if let TemplateComponent::List(ref mut list) = publisher_place_component {
+                list.rendering.suffix = Some(" ".to_string());
+            }
+
+            // Insert it right after parent-serial
+            components.insert(ps_pos + 1, publisher_place_component);
+        }
+    }
 }
 
 /// Extract the suffix on the author macro call from the bibliography layout.
