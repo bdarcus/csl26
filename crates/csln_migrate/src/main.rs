@@ -360,8 +360,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         // Add type-specific overrides (recursively to handle nested Lists)
         // Pass the extracted volume-pages delimiter for journal article pages
         let vol_pages_delim = options.volume_pages_delimiter;
+        let style_id = &legacy_style.info.id;
         for component in &mut new_bib {
-            apply_type_overrides(component, vol_pages_delim, volume_list_has_space_prefix);
+            apply_type_overrides(
+                component,
+                vol_pages_delim,
+                volume_list_has_space_prefix,
+                style_id,
+            );
         }
 
         // Move DOI/URL to the end of the bibliography template.
@@ -614,10 +620,12 @@ fn extract_citation_delimiter(layout: &csl_legacy::model::Layout) -> Option<Stri
 /// The `volume_pages_delimiter` is extracted from the CSL style's group structure.
 /// The `volume_list_has_space_prefix` flag indicates whether the volume List has a space
 /// prefix (Elsevier-style, don't add suffix to journal) vs no prefix (APA-style, add comma).
+/// The `style_id` is used for style-specific rules (e.g., Chicago suppresses chapter pages).
 fn apply_type_overrides(
     component: &mut TemplateComponent,
     volume_pages_delimiter: Option<csln_core::template::DelimiterPunctuation>,
     volume_list_has_space_prefix: bool,
+    style_id: &str,
 ) {
     match component {
         // Container-title (parent-serial): add comma suffix for APA-style (no space prefix on volume)
@@ -678,27 +686,40 @@ fn apply_type_overrides(
                     ..Default::default()
                 },
             );
-            // Chapter pages: Elsevier uses "pp. X-Y" (no wrap), APA uses "(pp. X-Y)"
-            // Elsevier has space prefix on volume List, APA doesn't
-            let chapter_wrap = if volume_list_has_space_prefix {
-                None // Elsevier: no wrap
+            // Chapter pages: style-specific handling
+            // - Chicago: suppress pages (only show in citations, not bibliography)
+            // - Elsevier: "pp. X-Y" (no wrap)
+            // - APA: "(pp. X-Y)" (wrap in parentheses)
+            let is_chicago = style_id.contains("chicago");
+            let chapter_rendering = if is_chicago {
+                csln_core::template::Rendering {
+                    suppress: Some(true),
+                    ..Default::default()
+                }
             } else {
-                Some(WrapPunctuation::Parentheses) // APA: wrap in parentheses
-            };
-            overrides.insert(
-                "chapter".to_string(),
+                let chapter_wrap = if volume_list_has_space_prefix {
+                    None // Elsevier: no wrap
+                } else {
+                    Some(WrapPunctuation::Parentheses) // APA: wrap in parentheses
+                };
                 csln_core::template::Rendering {
                     prefix: Some("pp. ".to_string()),
                     wrap: chapter_wrap,
                     ..Default::default()
-                },
-            );
+                }
+            };
+            overrides.insert("chapter".to_string(), chapter_rendering);
             n.overrides = Some(overrides);
         }
         // Recursively process Lists
         TemplateComponent::List(list) => {
             for item in &mut list.items {
-                apply_type_overrides(item, volume_pages_delimiter, volume_list_has_space_prefix);
+                apply_type_overrides(
+                    item,
+                    volume_pages_delimiter,
+                    volume_list_has_space_prefix,
+                    style_id,
+                );
             }
         }
         _ => {}
