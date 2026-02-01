@@ -84,7 +84,10 @@ impl InputReference {
     pub fn editor(&self) -> Option<Contributor> {
         match self {
             InputReference::Collection(r) => r.editor.clone(),
-            InputReference::CollectionComponent(r) => r.parent.editor.clone(),
+            InputReference::CollectionComponent(r) => match &r.parent {
+                Parent::Embedded(p) => p.editor.clone(),
+                Parent::Id(_) => None,
+            },
             _ => None,
         }
     }
@@ -105,7 +108,10 @@ impl InputReference {
     pub fn publisher(&self) -> Option<Contributor> {
         match self {
             InputReference::Monograph(r) => r.publisher.clone(),
-            InputReference::CollectionComponent(r) => r.parent.publisher.clone(),
+            InputReference::CollectionComponent(r) => match &r.parent {
+                Parent::Embedded(p) => p.publisher.clone(),
+                Parent::Id(_) => None,
+            },
             InputReference::Collection(r) => r.publisher.clone(),
             _ => None,
         }
@@ -222,7 +228,7 @@ pub struct SerialComponent {
     pub translator: Option<Contributor>,
     pub issued: EdtfString,
     /// The parent work, such as a magazine or journal.
-    pub parent: Serial,
+    pub parent: Parent<Serial>,
     pub url: Option<Url>,
     pub accessed: Option<EdtfString>,
     pub note: Option<String>,
@@ -230,6 +236,14 @@ pub struct SerialComponent {
     pub pages: Option<String>,
     pub volume: Option<NumOrStr>,
     pub issue: Option<NumOrStr>,
+}
+
+/// A parent reference (either embedded or by ID).
+#[derive(Debug, Deserialize, Serialize, Clone, JsonSchema, PartialEq)]
+#[serde(untagged)]
+pub enum Parent<T> {
+    Embedded(T),
+    Id(RefID),
 }
 
 /// A parent reference (either Monograph or Serial).
@@ -308,7 +322,7 @@ pub struct CollectionComponent {
     pub translator: Option<Contributor>,
     pub issued: EdtfString,
     /// The parent work, as either a Monograph.
-    pub parent: Collection,
+    pub parent: Parent<Collection>,
     pub pages: Option<NumOrStr>,
     pub url: Option<Url>,
     pub accessed: Option<EdtfString>,
