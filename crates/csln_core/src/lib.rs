@@ -3,9 +3,10 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 pub mod renderer; // Expose the renderer
-pub use renderer::{CitationItem, Renderer};
+pub use renderer::Renderer;
 
 // New CSLN schema modules
+pub mod citation;
 pub mod locale;
 pub mod options;
 pub mod presets;
@@ -15,6 +16,7 @@ pub mod template;
 // Embedded templates for priority styles (APA, Chicago, Vancouver, IEEE, Harvard)
 pub mod embedded;
 
+pub use citation::{Citation, CitationItem, CitationMode, Citations, LocatorType};
 pub use locale::Locale;
 pub use options::Config;
 pub use presets::{ContributorPreset, DatePreset, TitlePreset};
