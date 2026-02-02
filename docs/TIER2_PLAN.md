@@ -113,21 +113,33 @@ Volume is first compiled from `label-volume` macro (for non-serial types), then 
 
 ### Phase 2: Bibliography "and" Configuration
 
-**Status:** ⏳ PENDING
+**Status:** ✅ COMPLETED
 
-- [ ] Extract bibliography-specific `and` setting (can differ from citation)
-- [ ] Add `and: Option<AndTerm>` to `BibliographyContributorConfig`
-- [ ] Support `None` (no conjunction), `Text`, `Symbol`
-- [ ] Test against Elsevier Harvard
+- [x] Extract bibliography-specific `and` setting (can differ from citation)
+- [x] Set `and: none` on bibliography contributor when no 'and' attribute
+- [x] Support `None` (no conjunction), `Text`, `Symbol`
+- [x] Test against Elsevier Harvard
+
+**Progress:**
+- Added `extract_bibliography_and()` to search author macro (not author-short)
+- Added `apply_bibliography_and()` to set component-level and override
+- Elsevier: 2/15 → 7/15 bibliography match (15/15 citations maintained)
 
 ### Phase 3: Edited Volume Author Labels
 
-**Status:** ⏳ PENDING
+**Status:** ✅ COMPLETED
 
-- [ ] Detect when editors are in author position (edited volume without author)
-- [ ] Apply `(Ed.)` / `(Eds.)` suffix based on contributor count
-- [ ] Respect style-specific label form (short vs long)
-- [ ] Test against APA, Elsevier Harvard
+- [x] Detect when editors are in author position (edited volume without author)
+- [x] Apply `(Ed.)` / `(Eds.)` suffix based on contributor count
+- [x] Respect style-specific label form (short vs long)
+- [x] Test against APA, Elsevier Harvard
+
+**Progress:**
+- Extracted `contributor_role_form` from CSL `<label>` in parent `<names>` block
+- Updated processor to use locale term lookup with proper pluralization
+- Added `substituted_key: "contributor:Editor"` to prevent duplicate rendering
+- APA: 11/15 → 12/15 bibliography match
+- Elsevier: 7/15 → 8/15 bibliography match (target achieved)
 
 ### Phase 4: Conference Paper Template
 
@@ -168,6 +180,12 @@ Volume is first compiled from `label-volume` macro (for non-serial types), then 
 | `db28601` | fix(migrate): group volume and issue correctly in nested lists |
 | `5f15b6c` | fix(migrate): add type-specific overrides for url and container-title |
 | `1198d2c` | fix(migrate): add genre bracket wrap for thesis types |
+| `8787c15` | docs: update tier 2 plan with 11/15 progress |
+| `16ebe5d` | fix(migrate): extract bibliography-specific and config |
+| `49f6670` | fix(processor): add edited volume label support |
+| `304d7d0` | docs: update tier 2 plan with phase 3 completion |
+| `8ed2fcf` | fix(processor): handle empty author/editor arrays in sorting |
+| `76028f8` | fix(migrate): wrap edition in parentheses for APA book types |
 
 ---
 
@@ -177,8 +195,8 @@ Volume is first compiled from `label-volume` macro (for non-serial types), then 
 
 | Style | Start | Current | Target |
 |-------|-------|---------|--------|
-| apa | 2/15 | **11/15** ✅ | 8/15 |
-| elsevier-harvard | 2/15 | 2/15 | 8/15 |
+| apa | 2/15 | **13/15** ✅ | 8/15 |
+| elsevier-harvard | 2/15 | **8/15** ✅ | 8/15 |
 | chicago-author-date | 1/15 | 4/15 | 5/15 |
 
 ---
@@ -187,8 +205,6 @@ Volume is first compiled from `label-volume` macro (for non-serial types), then 
 
 1. **Entry 1 (thesis)**: Genre bracket attached to title without separator
 2. **Entry 2 (chapter)**: "In [editors]" should come before book title
-3. **Entry 8 (edited volume)**: Editors as authors need "(Eds.)" suffix after name
-4. **Entry 14 (book)**: Edition should be in parentheses
 
 ## Dependencies
 

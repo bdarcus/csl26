@@ -604,12 +604,24 @@ impl Processor {
                             let a_sort_key = a
                                 .author
                                 .as_ref()
-                                .and_then(|names| names.first())
+                                .and_then(|names| {
+                                    if names.is_empty() {
+                                        None
+                                    } else {
+                                        names.first()
+                                    }
+                                })
                                 .map(|n| n.family_or_literal().to_lowercase())
                                 .or_else(|| {
                                     a.editor
                                         .as_ref()
-                                        .and_then(|names| names.first())
+                                        .and_then(|names| {
+                                            if names.is_empty() {
+                                                None
+                                            } else {
+                                                names.first()
+                                            }
+                                        })
                                         .map(|n| n.family_or_literal().to_lowercase())
                                 })
                                 .or_else(|| {
@@ -621,12 +633,24 @@ impl Processor {
                             let b_sort_key = b
                                 .author
                                 .as_ref()
-                                .and_then(|names| names.first())
+                                .and_then(|names| {
+                                    if names.is_empty() {
+                                        None
+                                    } else {
+                                        names.first()
+                                    }
+                                })
                                 .map(|n| n.family_or_literal().to_lowercase())
                                 .or_else(|| {
                                     b.editor
                                         .as_ref()
-                                        .and_then(|names| names.first())
+                                        .and_then(|names| {
+                                            if names.is_empty() {
+                                                None
+                                            } else {
+                                                names.first()
+                                            }
+                                        })
                                         .map(|n| n.family_or_literal().to_lowercase())
                                 })
                                 .or_else(|| {

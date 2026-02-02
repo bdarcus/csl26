@@ -156,10 +156,20 @@ impl ComponentValues for TemplateContributor {
                                 // Add role suffix if configured, but ONLY in bibliography context.
                                 // In citations, substituted editors should look identical to authors.
                                 let suffix = if options.context == RenderContext::Bibliography {
-                                    substitute
-                                        .contributor_role_form
-                                        .as_ref()
-                                        .map(|_| " (Ed.)".to_string())
+                                    substitute.contributor_role_form.as_ref().and_then(|form| {
+                                        let plural = editors.len() > 1;
+                                        let term_form = match form.as_str() {
+                                            "short" => TermForm::Short,
+                                            "verb" => TermForm::Verb,
+                                            "verb-short" => TermForm::VerbShort,
+                                            _ => TermForm::Short, // Default to short
+                                        };
+                                        // Look up editor term from locale
+                                        options
+                                            .locale
+                                            .role_term(&ContributorRole::Editor, plural, term_form)
+                                            .map(|term| format!(" ({})", term))
+                                    })
                                 } else {
                                     None
                                 };
@@ -168,7 +178,9 @@ impl ComponentValues for TemplateContributor {
                                     prefix: None,
                                     suffix,
                                     url: None,
-                                    substituted_key: None,
+                                    // Mark editor as rendered to suppress explicit editor component
+                                    // Use the same key format as get_variable_key() for consistency
+                                    substituted_key: Some("contributor:Editor".to_string()),
                                 });
                             }
                         }

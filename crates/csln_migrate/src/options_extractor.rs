@@ -884,12 +884,11 @@ impl OptionsExtractor {
                 }
 
                 // Extract 'and' from name elements
-                // Prefer bibliography context (name-as-sort-order present) but also extract
-                // from citation context if not yet found
+                // Prefer citation context for global setting (used in citations)
+                // Bibliography-specific 'and' will be set on the contributor component
                 if let Some(and) = &name.and {
-                    let is_bib_context = name.name_as_sort_order.is_some();
-                    // Extract if: not yet set, OR this is bib context (override citation setting)
-                    if config.and.is_none() || is_bib_context {
+                    // Only set global if not yet set (citation form usually processed first)
+                    if config.and.is_none() {
                         config.and = Some(match and.as_str() {
                             "symbol" => AndOptions::Symbol,
                             "text" => AndOptions::Text,
@@ -995,13 +994,23 @@ impl OptionsExtractor {
     }
 
     /// Recursively find a <substitute> element and convert it.
+    /// Also extracts the <label> form from the parent <names> block.
     fn find_substitute_in_nodes(nodes: &[CslNode]) -> Option<CslnSubstitute> {
         for node in nodes {
             match node {
                 CslNode::Names(names) => {
+                    // First, check if there's a <label> sibling to extract form
+                    let label_form = names.children.iter().find_map(|child| {
+                        if let CslNode::Label(label) = child {
+                            label.form.clone()
+                        } else {
+                            None
+                        }
+                    });
+
                     for child in &names.children {
                         if let CslNode::Substitute(sub) = child {
-                            return Some(Self::convert_substitute(sub));
+                            return Some(Self::convert_substitute(sub, label_form.as_deref()));
                         }
                     }
                 }
@@ -1032,7 +1041,8 @@ impl OptionsExtractor {
     }
 
     /// Convert a CSL 1.0 <substitute> to CSLN Substitute.
-    fn convert_substitute(sub: &Substitute) -> CslnSubstitute {
+    /// The `label_form` is extracted from a <label> sibling in the parent <names> block.
+    fn convert_substitute(sub: &Substitute, label_form: Option<&str>) -> CslnSubstitute {
         let mut template = Vec::new();
         let mut overrides = std::collections::HashMap::new();
 
@@ -1041,7 +1051,7 @@ impl OptionsExtractor {
         }
 
         CslnSubstitute {
-            contributor_role_form: None, // Could be inferred from label forms
+            contributor_role_form: label_form.map(|s| s.to_string()),
             template,
             overrides,
         }
