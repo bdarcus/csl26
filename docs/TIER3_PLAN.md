@@ -141,7 +141,91 @@ Ordering: Placed after container-title by reorder_serial_components()
 
 ---
 
+## Key Insight from Tooling: Year Position is Root Cause
+
+Running the batch oracle on 10 priority styles revealed a **systemic pattern**:
+
+```
+TOP COMPONENT ISSUES:
+  year:extra: 19 occurrences      ← #1 issue
+  issue:missing: 14 occurrences
+  containerTitle:missing: 10 occurrences
+  pages:missing: 5 occurrences
+  volume:missing: 5 occurrences
+```
+
+**The "year:extra" issue is the root cause of most ordering failures.**
+
+### The Pattern
+
+For numeric styles (IEEE, Nature, Elsevier Vancouver), CSLN produces:
+```
+contributors → year → title → containerTitle
+```
+
+But the oracle expects:
+```
+contributors → title → containerTitle → volume → year
+```
+
+**Year should be at the END for numeric styles, not after contributors.**
+
+This is fundamentally different from author-date styles where year comes early (in parentheses after author).
+
+### Root Cause Analysis
+
+The migration currently:
+1. Detects `issued` date in the bibliography template
+2. Places it after contributors (author-date pattern)
+3. Does NOT detect that numeric styles want year at end
+
+### Proposed Fix: Style-Class-Aware Year Positioning
+
+```rust
+// In template compilation
+if style_class == "numeric" {
+    // Move year component to end of template
+    move_component_to_end(&mut template, "date:issued");
+}
+```
+
+This single fix should resolve:
+- **19 year:extra issues** → year moves to correct position
+- **59 ordering issues** → most are caused by year being early
+- **Cascade effect** → other components will naturally align
+
+### Revised Priority Order
+
+Based on tooling data, the **highest-impact fixes** are:
+
+1. **Year positioning for numeric styles** (19 occurrences, 59 ordering issues)
+2. **Issue suppression** (14 occurrences) - some styles don't show issue
+3. **Container title extraction** (10 occurrences) - missing for some types
+4. **Superscript citations** (Nature/Cell) - affects 2 styles
+
+---
+
 ## Phase 1: Numeric Style Foundations
+
+### Issue 1.0: Year Position for Numeric Styles (NEW - HIGHEST PRIORITY)
+
+**Problem:** Year appears after contributors, but numeric styles want year at end.
+
+**Current behavior:**
+```
+Oracle: [1]T. S. Kuhn, "The Structure...", International Encyclopedia..., vol. 2, no. 2, 1962
+CSLN:   [1]T. S. Kuhn, 1962. "The Structure..."
+         ↑ year in wrong position
+```
+
+**Evidence:** 19 `year:extra` occurrences, 59 ordering issues across 10 styles.
+
+**Root cause:** Migration uses author-date year positioning for all styles.
+
+**Fix:**
+- [ ] Detect numeric style class from CSL `<citation>` element
+- [ ] For numeric styles, move `date:issued` component to end of template
+- [ ] Preserve year position for author-date styles
 
 ### Issue 1.1: Superscript/Bracket Citation Format
 
@@ -280,9 +364,9 @@ in:Ericsson, KA, ... (Eds.). Cambridge University Press, (pp. 683–703).
 
 - [x] **Implement structured diff oracle** (Tool 1) ✅
 - [x] **Implement batch oracle aggregation** (Tool 2) ✅
+- [ ] **Fix year positioning for numeric styles** (Issue 1.0) ← NEW PRIORITY
 - [ ] Fix Nature/Cell superscript citations (Issue 1.1)
 - [ ] Fix Springer citation regression (Issue 2.1)
-- [ ] Test IEEE bibliography improvements
 
 ### Short-term (Tier 3.2)
 
