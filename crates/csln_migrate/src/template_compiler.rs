@@ -229,17 +229,25 @@ impl TemplateCompiler {
         } else {
             // ... same NEW component logic ...
             let mut component_to_add = new_component;
-            if !current_types.is_empty() && !matches!(&component_to_add, TemplateComponent::List(_))
-            {
-                let mut base = self.get_component_rendering(&component_to_add);
-                base.suppress = Some(true);
-                self.set_component_rendering(&mut component_to_add, base.clone());
+            if !current_types.is_empty() {
+                if let TemplateComponent::List(ref mut list) = component_to_add {
+                    // For Lists, propagate type-specific overrides to each item
+                    self.add_type_overrides_to_list_items(&mut list.items, current_types);
+                } else {
+                    let mut base = self.get_component_rendering(&component_to_add);
+                    base.suppress = Some(true);
+                    self.set_component_rendering(&mut component_to_add, base.clone());
 
-                for item_type in current_types {
-                    let type_str = self.item_type_to_string(item_type);
-                    let mut unsuppressed = base.clone();
-                    unsuppressed.suppress = Some(false);
-                    self.add_override_to_component(&mut component_to_add, type_str, unsuppressed);
+                    for item_type in current_types {
+                        let type_str = self.item_type_to_string(item_type);
+                        let mut unsuppressed = base.clone();
+                        unsuppressed.suppress = Some(false);
+                        self.add_override_to_component(
+                            &mut component_to_add,
+                            type_str,
+                            unsuppressed,
+                        );
+                    }
                 }
             }
             components.push(component_to_add);
@@ -264,6 +272,37 @@ impl TemplateCompiler {
         false
     }
 
+    /// Add type-specific overrides to all items within a List.
+    /// This ensures that when a List is created inside a type-specific branch,
+    /// all its items get the appropriate suppress=true with type-specific unsuppress.
+    fn add_type_overrides_to_list_items(
+        &self,
+        items: &mut [TemplateComponent],
+        current_types: &[ItemType],
+    ) {
+        for item in items.iter_mut() {
+            match item {
+                TemplateComponent::List(ref mut nested_list) => {
+                    // Recursively process nested lists
+                    self.add_type_overrides_to_list_items(&mut nested_list.items, current_types);
+                }
+                _ => {
+                    // Add suppress=true to base, with type-specific unsuppress overrides
+                    let mut base = self.get_component_rendering(item);
+                    base.suppress = Some(true);
+                    self.set_component_rendering(item, base.clone());
+
+                    for item_type in current_types {
+                        let type_str = self.item_type_to_string(item_type);
+                        let mut unsuppressed = base.clone();
+                        unsuppressed.suppress = Some(false);
+                        self.add_override_to_component(item, type_str, unsuppressed);
+                    }
+                }
+            }
+        }
+    }
+
     fn add_overrides_recursive(
         &self,
         component: &mut TemplateComponent,
@@ -278,6 +317,20 @@ impl TemplateCompiler {
             for item in &mut list.items {
                 self.add_overrides_recursive(item, new_comp, current_types);
             }
+        }
+    }
+
+    /// Get a debug name for a component
+    #[allow(dead_code)]
+    fn get_component_name(&self, comp: &TemplateComponent) -> String {
+        match comp {
+            TemplateComponent::Contributor(c) => format!("contributor:{:?}", c.contributor),
+            TemplateComponent::Date(d) => format!("date:{:?}", d.date),
+            TemplateComponent::Title(t) => format!("title:{:?}", t.title),
+            TemplateComponent::Number(n) => format!("number:{:?}", n.number),
+            TemplateComponent::Variable(v) => format!("variable:{:?}", v.variable),
+            TemplateComponent::List(_) => "List".to_string(),
+            _ => "unknown".to_string(),
         }
     }
 

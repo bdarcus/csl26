@@ -179,65 +179,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
 
-        // Combine volume and issue into a List component: volume(issue)
-        let vol_pos = new_bib.iter().position(|c| {
-            matches!(c, TemplateComponent::Number(n) if n.number == csln_core::template::NumberVariable::Volume)
-        });
-        let issue_pos = new_bib.iter().position(|c| {
-            matches!(c, TemplateComponent::Number(n) if n.number == csln_core::template::NumberVariable::Issue)
-        });
-
-        if let (Some(vol_idx), Some(issue_idx)) = (vol_pos, issue_pos) {
-            // Remove both and insert a List at the earlier position
-            let min_idx = vol_idx.min(issue_idx);
-            let max_idx = vol_idx.max(issue_idx);
-
-            // Remove from end first to preserve indices
-            new_bib.remove(max_idx);
-            new_bib.remove(min_idx);
-
-            // Create volume(issue) list
-            // Volume-issue spacing varies by style:
-            // - APA (comma delimiter): no space, e.g., "2(2)"
-            // - Chicago (colon delimiter): space, e.g., "2 (2)"
-            let vol_issue_delimiter = if options
-                .volume_pages_delimiter
-                .as_ref()
-                .is_some_and(|d| matches!(d, csln_core::template::DelimiterPunctuation::Comma))
-            {
-                csln_core::template::DelimiterPunctuation::None
-            } else {
-                csln_core::template::DelimiterPunctuation::Space
-            };
-            let vol_issue_list = TemplateComponent::List(csln_core::template::TemplateList {
-                items: vec![
-                    TemplateComponent::Number(csln_core::template::TemplateNumber {
-                        number: csln_core::template::NumberVariable::Volume,
-                        form: None,
-                        rendering: csln_core::template::Rendering::default(),
-                        overrides: None,
-                        ..Default::default()
-                    }),
-                    TemplateComponent::Number(csln_core::template::TemplateNumber {
-                        number: csln_core::template::NumberVariable::Issue,
-                        form: None,
-                        rendering: csln_core::template::Rendering {
-                            wrap: Some(csln_core::template::WrapPunctuation::Parentheses),
-                            ..Default::default()
-                        },
-                        overrides: None,
-                        ..Default::default()
-                    }),
-                ],
-                delimiter: Some(vol_issue_delimiter),
-                rendering: csln_core::template::Rendering::default(),
-                overrides: None,
-                ..Default::default()
-            });
-
-            new_bib.insert(min_idx, vol_issue_list);
-        }
-
         // Check if the volume List has a space prefix (Elsevier-style)
         // vs no prefix (APA-style). This determines whether to add suffix to journal title.
         let volume_list_has_space_prefix = new_bib.iter().any(|c| {
@@ -278,6 +219,22 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         // Remove duplicate titles from Lists that already appear at top level.
         // This happens when container-title appears in multiple CSL macros.
         deduplicate_titles_in_lists(&mut new_bib);
+
+        // Propagate type-specific overrides within Lists.
+        // Ensures sibling components (like volume and container-title) have the same
+        // type overrides when they're from the same CSL macro.
+        propagate_list_overrides(&mut new_bib);
+
+        // Reorder serial components: container-title before volume.
+        // Due to CSL macro processing, volume often ends up before container-title.
+        reorder_serial_components(&mut new_bib);
+
+        // Combine volume and issue into a grouped structure: volume(issue)
+        // MUST run after reorder_serial_components to ensure volume is in correct position first.
+        group_volume_and_issue(&mut new_bib, &options);
+
+        // Move pages to after the container-title/volume List for serial types.
+        reorder_pages_for_serials(&mut new_bib);
 
         // Reorder publisher-place for Chicago journal articles.
         // Chicago requires publisher-place to appear immediately after the journal
@@ -542,8 +499,9 @@ fn apply_type_overrides(
         // - Elsevier: handled by List space prefix
         TemplateComponent::Title(t) if t.title == csln_core::template::TitleType::ParentSerial => {
             let is_chicago = style_id.contains("chicago");
+            let mut new_ovr = std::collections::HashMap::new();
+
             if !volume_list_has_space_prefix {
-                let mut new_ovr = std::collections::HashMap::new();
                 let suffix = if is_chicago { " " } else { "," };
                 new_ovr.insert(
                     "article-journal".to_string(),
@@ -553,13 +511,24 @@ fn apply_type_overrides(
                         ..Default::default()
                     },
                 );
-                // Merge instead of overwrite
-                let overrides = t
-                    .overrides
-                    .get_or_insert_with(std::collections::HashMap::new);
-                for (k, v) in new_ovr {
-                    overrides.insert(k, v);
-                }
+            }
+
+            // Ensure paper-conference shows container title (proceedings name)
+            new_ovr.insert(
+                "paper-conference".to_string(),
+                csln_core::template::Rendering {
+                    suffix: Some(",".to_string()),
+                    suppress: Some(false),
+                    ..Default::default()
+                },
+            );
+
+            // Merge instead of overwrite
+            let overrides = t
+                .overrides
+                .get_or_insert_with(std::collections::HashMap::new);
+            for (k, v) in new_ovr {
+                overrides.insert(k, v);
             }
         }
         // Publisher: suppress for journal articles (journals don't have publishers in bib)
@@ -639,17 +608,60 @@ fn apply_type_overrides(
                 overrides.insert(k, v);
             }
         }
-        // Genre: ensure visible for thesis/reports
+        // Genre: ensure visible for thesis/reports, with bracket wrap for thesis in APA
         TemplateComponent::Variable(v)
             if v.variable == csln_core::template::SimpleVariable::Genre =>
+        {
+            let is_apa = style_id.contains("apa");
+            let mut new_ovr = std::collections::HashMap::new();
+
+            // Thesis: wrap in brackets for APA style
+            // The period after closing bracket comes from component separator
+            if is_apa {
+                new_ovr.insert(
+                    "thesis".to_string(),
+                    csln_core::template::Rendering {
+                        wrap: Some(WrapPunctuation::Brackets),
+                        suppress: Some(false),
+                        ..Default::default()
+                    },
+                );
+            } else {
+                new_ovr.insert(
+                    "thesis".to_string(),
+                    csln_core::template::Rendering {
+                        suppress: Some(false),
+                        ..Default::default()
+                    },
+                );
+            }
+            new_ovr.insert(
+                "report".to_string(),
+                csln_core::template::Rendering {
+                    suppress: Some(false),
+                    ..Default::default()
+                },
+            );
+
+            let overrides = v
+                .overrides
+                .get_or_insert_with(std::collections::HashMap::new);
+            for (k, v) in new_ovr {
+                overrides.insert(k, v);
+            }
+        }
+        // URL: unsuppress for webpage and post types (typically show URL when no DOI)
+        TemplateComponent::Variable(v)
+            if v.variable == csln_core::template::SimpleVariable::Url =>
         {
             let mut new_ovr = std::collections::HashMap::new();
             let unsuppress = csln_core::template::Rendering {
                 suppress: Some(false),
                 ..Default::default()
             };
-            new_ovr.insert("thesis".to_string(), unsuppress.clone());
-            new_ovr.insert("report".to_string(), unsuppress);
+            new_ovr.insert("webpage".to_string(), unsuppress.clone());
+            new_ovr.insert("post".to_string(), unsuppress.clone());
+            new_ovr.insert("post-weblog".to_string(), unsuppress);
 
             let overrides = v
                 .overrides
@@ -718,6 +730,217 @@ fn apply_type_overrides(
         }
         _ => {}
     }
+}
+
+/// Combine volume and issue into a grouped structure: volume(issue).
+///
+/// CSL styles typically have volume and issue together in the source-serial macro
+/// with issue wrapped in parentheses. However, during migration:
+/// - Issue may come from a separate label-issue macro (for legal types)
+/// - Volume may end up inside a nested List (from source-serial grouping)
+///
+/// This function handles both cases:
+/// 1. If both are at top level, creates a new volume(issue) List
+/// 2. If volume is inside a List, adds issue to that List after volume
+fn group_volume_and_issue(
+    components: &mut Vec<TemplateComponent>,
+    options: &csln_core::options::Config,
+) {
+    use csln_core::template::{
+        DelimiterPunctuation, NumberVariable, Rendering, TemplateList, TemplateNumber,
+        WrapPunctuation,
+    };
+
+    // Volume-issue spacing varies by style:
+    // - APA (comma delimiter): no space, e.g., "2(2)"
+    // - Chicago (colon delimiter): space, e.g., "2 (2)"
+    let vol_issue_delimiter = if options
+        .volume_pages_delimiter
+        .as_ref()
+        .is_some_and(|d| matches!(d, DelimiterPunctuation::Comma))
+    {
+        DelimiterPunctuation::None
+    } else {
+        DelimiterPunctuation::Space
+    };
+
+    // Check for issue at top level
+    let issue_pos = components.iter().position(
+        |c| matches!(c, TemplateComponent::Number(n) if n.number == NumberVariable::Issue),
+    );
+
+    // Check for volume at top level
+    let vol_pos = components.iter().position(
+        |c| matches!(c, TemplateComponent::Number(n) if n.number == NumberVariable::Volume),
+    );
+
+    // Case 1: Both at top level - combine into a List
+    if let (Some(vol_idx), Some(issue_idx)) = (vol_pos, issue_pos) {
+        let min_idx = vol_idx.min(issue_idx);
+        let max_idx = vol_idx.max(issue_idx);
+
+        // Remove from end first to preserve indices
+        components.remove(max_idx);
+        components.remove(min_idx);
+
+        let vol_issue_list = TemplateComponent::List(TemplateList {
+            items: vec![
+                TemplateComponent::Number(TemplateNumber {
+                    number: NumberVariable::Volume,
+                    form: None,
+                    rendering: Rendering::default(),
+                    overrides: None,
+                    ..Default::default()
+                }),
+                TemplateComponent::Number(TemplateNumber {
+                    number: NumberVariable::Issue,
+                    form: None,
+                    rendering: Rendering {
+                        wrap: Some(WrapPunctuation::Parentheses),
+                        ..Default::default()
+                    },
+                    overrides: None,
+                    ..Default::default()
+                }),
+            ],
+            delimiter: Some(vol_issue_delimiter),
+            rendering: Rendering::default(),
+            overrides: None,
+            ..Default::default()
+        });
+
+        components.insert(min_idx, vol_issue_list);
+        return;
+    }
+
+    // Case 2: Issue at top level, volume inside a nested List
+    // Find the List containing volume and add issue to it
+    if let Some(issue_idx) = issue_pos {
+        // First, find which List index contains volume (immutable borrow)
+        let list_idx = components.iter().enumerate().find_map(|(idx, c)| {
+            if let TemplateComponent::List(list) = c {
+                if find_volume_in_list(list).is_some() {
+                    return Some(idx);
+                }
+            }
+            None
+        });
+
+        if let Some(list_idx) = list_idx {
+            // Extract the issue's overrides before removing it
+            let issue_overrides =
+                if let Some(TemplateComponent::Number(n)) = components.get(issue_idx) {
+                    n.overrides.clone()
+                } else {
+                    None
+                };
+
+            // Remove issue from top level (adjusting for index shift if needed)
+            components.remove(issue_idx);
+
+            // Adjust list_idx if issue was before it
+            let adjusted_list_idx = if issue_idx < list_idx {
+                list_idx - 1
+            } else {
+                list_idx
+            };
+
+            // Create issue component with parentheses wrap
+            let issue_with_parens = TemplateComponent::Number(TemplateNumber {
+                number: NumberVariable::Issue,
+                form: None,
+                rendering: Rendering {
+                    wrap: Some(WrapPunctuation::Parentheses),
+                    ..Default::default()
+                },
+                overrides: issue_overrides,
+                ..Default::default()
+            });
+
+            // Now mutably access the list and add issue after volume
+            if let Some(TemplateComponent::List(list)) = components.get_mut(adjusted_list_idx) {
+                // Try to insert issue after volume - recursively searching nested lists
+                if insert_issue_after_volume(
+                    &mut list.items,
+                    issue_with_parens,
+                    vol_issue_delimiter,
+                ) {
+                    // Successfully inserted, update top-level list delimiter if needed
+                    list.delimiter = Some(DelimiterPunctuation::Comma);
+                }
+            }
+        }
+    }
+}
+
+/// Insert issue component after volume, handling nested lists.
+/// Returns true if successfully inserted.
+fn insert_issue_after_volume(
+    items: &mut Vec<TemplateComponent>,
+    issue: TemplateComponent,
+    delimiter: csln_core::template::DelimiterPunctuation,
+) -> bool {
+    use csln_core::template::{NumberVariable, Rendering, TemplateList};
+
+    // First, check if volume is directly in this list
+    if let Some(vol_pos) = items.iter().position(
+        |c| matches!(c, TemplateComponent::Number(n) if n.number == NumberVariable::Volume),
+    ) {
+        // Remove volume from the list
+        let volume = items.remove(vol_pos);
+
+        // Create a new List containing [volume, issue] with no delimiter
+        // This preserves the outer list's delimiter for other items
+        let vol_issue_group = TemplateComponent::List(TemplateList {
+            items: vec![volume, issue],
+            delimiter: Some(delimiter), // No space between volume and issue
+            rendering: Rendering::default(),
+            overrides: None,
+            ..Default::default()
+        });
+
+        // Insert the new group where volume was
+        items.insert(vol_pos, vol_issue_group);
+        return true;
+    }
+
+    // Otherwise, recurse into nested lists
+    for item in items.iter_mut() {
+        if let TemplateComponent::List(inner_list) = item {
+            if insert_issue_after_volume(&mut inner_list.items, issue.clone(), delimiter) {
+                return true;
+            }
+        }
+    }
+
+    false
+}
+
+/// Find the position of volume variable in a list of components.
+fn find_volume_position_in_list(items: &[TemplateComponent]) -> Option<usize> {
+    items.iter().position(|c| {
+        matches!(c, TemplateComponent::Number(n) if n.number == csln_core::template::NumberVariable::Volume)
+    })
+}
+
+/// Check if a List contains a volume variable (recursively).
+fn find_volume_in_list(list: &csln_core::template::TemplateList) -> Option<()> {
+    for item in &list.items {
+        match item {
+            TemplateComponent::Number(n)
+                if n.number == csln_core::template::NumberVariable::Volume =>
+            {
+                return Some(());
+            }
+            TemplateComponent::List(inner) => {
+                if find_volume_in_list(inner).is_some() {
+                    return Some(());
+                }
+            }
+            _ => {}
+        }
+    }
+    None
 }
 
 /// Move DOI and URL components to the end of the bibliography template.
@@ -800,6 +1023,262 @@ fn deduplicate_titles_in_lists(components: &mut Vec<TemplateComponent>) {
             true
         }
     });
+}
+
+/// Propagate type-specific overrides within Lists.
+///
+/// When components are compiled from different CSL macro branches, they may end
+/// up in the same List but with different type overrides. This function ensures
+/// that if any component in a List has a type override, all siblings in the same
+/// List also get that override (with suppress: false).
+///
+/// This fixes the issue where volume and container-title are in the same source-serial
+/// macro but only container-title gets the article-journal override.
+fn propagate_list_overrides(components: &mut Vec<TemplateComponent>) {
+    use csln_core::template::Rendering;
+    use std::collections::HashSet;
+
+    for component in components.iter_mut() {
+        if let TemplateComponent::List(list) = component {
+            propagate_overrides_in_list(&mut list.items);
+
+            // Recursively process nested lists
+            for item in &mut list.items {
+                if let TemplateComponent::List(inner_list) = item {
+                    propagate_overrides_in_list(&mut inner_list.items);
+                }
+            }
+        }
+    }
+
+    fn propagate_overrides_in_list(items: &mut [TemplateComponent]) {
+        // Collect all type keys that have overrides in any item
+        let mut all_override_types: HashSet<String> = HashSet::new();
+
+        for item in items.iter() {
+            if let Some(overrides) = get_component_overrides(item) {
+                for key in overrides.keys() {
+                    all_override_types.insert(key.clone());
+                }
+            }
+        }
+
+        // For each type that exists in any item, ensure all items have it
+        for type_key in &all_override_types {
+            for item in items.iter_mut() {
+                if let Some(overrides) = get_component_overrides_mut(item) {
+                    if !overrides.contains_key(type_key) {
+                        // Add the override with suppress: false
+                        overrides.insert(
+                            type_key.clone(),
+                            Rendering {
+                                suppress: Some(false),
+                                ..Default::default()
+                            },
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    fn get_component_overrides(
+        comp: &TemplateComponent,
+    ) -> Option<&std::collections::HashMap<String, Rendering>> {
+        match comp {
+            TemplateComponent::Contributor(c) => c.overrides.as_ref(),
+            TemplateComponent::Date(d) => d.overrides.as_ref(),
+            TemplateComponent::Title(t) => t.overrides.as_ref(),
+            TemplateComponent::Number(n) => n.overrides.as_ref(),
+            TemplateComponent::Variable(v) => v.overrides.as_ref(),
+            _ => None,
+        }
+    }
+
+    fn get_component_overrides_mut(
+        comp: &mut TemplateComponent,
+    ) -> Option<&mut std::collections::HashMap<String, Rendering>> {
+        match comp {
+            TemplateComponent::Contributor(c) => {
+                if c.overrides.is_none() {
+                    c.overrides = Some(std::collections::HashMap::new());
+                }
+                c.overrides.as_mut()
+            }
+            TemplateComponent::Date(d) => {
+                if d.overrides.is_none() {
+                    d.overrides = Some(std::collections::HashMap::new());
+                }
+                d.overrides.as_mut()
+            }
+            TemplateComponent::Title(t) => {
+                if t.overrides.is_none() {
+                    t.overrides = Some(std::collections::HashMap::new());
+                }
+                t.overrides.as_mut()
+            }
+            TemplateComponent::Number(n) => {
+                if n.overrides.is_none() {
+                    n.overrides = Some(std::collections::HashMap::new());
+                }
+                n.overrides.as_mut()
+            }
+            TemplateComponent::Variable(v) => {
+                if v.overrides.is_none() {
+                    v.overrides = Some(std::collections::HashMap::new());
+                }
+                v.overrides.as_mut()
+            }
+            _ => None,
+        }
+    }
+}
+
+/// Reorder components within Lists for serial types.
+///
+/// For journal articles, the correct order is:
+/// 1. container-title (parent-serial)
+/// 2. volume(issue)
+/// 3. pages
+///
+/// But due to how CSL macros are processed, volume often ends up before
+/// container-title. This function reorders the items within Lists to match
+/// the expected output.
+fn reorder_serial_components(components: &mut Vec<TemplateComponent>) {
+    use csln_core::template::{NumberVariable, TitleType};
+
+    for component in components.iter_mut() {
+        if let TemplateComponent::List(list) = component {
+            // Check if this list contains both volume and parent-serial
+            let has_volume = list.items.iter().any(|item| {
+                matches!(
+                    item,
+                    TemplateComponent::Number(n) if n.number == NumberVariable::Volume
+                )
+            });
+            let has_parent_serial = list.items.iter().any(|item| {
+                matches!(
+                    item,
+                    TemplateComponent::Title(t) if t.title == TitleType::ParentSerial
+                )
+            });
+
+            if has_volume && has_parent_serial {
+                // Find positions
+                let volume_pos = list.items.iter().position(|item| {
+                    matches!(
+                        item,
+                        TemplateComponent::Number(n) if n.number == NumberVariable::Volume
+                    )
+                });
+                let parent_serial_pos = list.items.iter().position(|item| {
+                    matches!(
+                        item,
+                        TemplateComponent::Title(t) if t.title == TitleType::ParentSerial
+                    )
+                });
+
+                // If volume is before parent-serial, swap them
+                if let (Some(vol_pos), Some(ps_pos)) = (volume_pos, parent_serial_pos) {
+                    if vol_pos < ps_pos {
+                        list.items.swap(vol_pos, ps_pos);
+                    }
+                }
+            }
+
+            // Recursively process nested lists
+            for item in &mut list.items {
+                if let TemplateComponent::List(inner_list) = item {
+                    reorder_serial_components_in_list(inner_list);
+                }
+            }
+        }
+    }
+}
+
+/// Helper to reorder components in a single list.
+fn reorder_serial_components_in_list(list: &mut csln_core::template::TemplateList) {
+    use csln_core::template::{NumberVariable, TitleType};
+
+    // Check if this list contains both volume and parent-serial
+    let has_volume = list.items.iter().any(|item| {
+        matches!(
+            item,
+            TemplateComponent::Number(n) if n.number == NumberVariable::Volume
+        )
+    });
+    let has_parent_serial = list.items.iter().any(|item| {
+        matches!(
+            item,
+            TemplateComponent::Title(t) if t.title == TitleType::ParentSerial
+        )
+    });
+
+    if has_volume && has_parent_serial {
+        // Find positions
+        let volume_pos = list.items.iter().position(|item| {
+            matches!(
+                item,
+                TemplateComponent::Number(n) if n.number == NumberVariable::Volume
+            )
+        });
+        let parent_serial_pos = list.items.iter().position(|item| {
+            matches!(
+                item,
+                TemplateComponent::Title(t) if t.title == TitleType::ParentSerial
+            )
+        });
+
+        // If volume is before parent-serial, swap them
+        if let (Some(vol_pos), Some(ps_pos)) = (volume_pos, parent_serial_pos) {
+            if vol_pos < ps_pos {
+                list.items.swap(vol_pos, ps_pos);
+            }
+        }
+    }
+}
+
+/// Move pages component to appear after the container-title/volume List.
+///
+/// For serial types (journals, magazines), pages should appear AFTER the
+/// container-title and volume, not before. The template has pages at top level
+/// but it needs to come after the List containing parent-serial.
+fn reorder_pages_for_serials(components: &mut Vec<TemplateComponent>) {
+    use csln_core::template::{NumberVariable, TitleType};
+
+    // Find the pages component position
+    let pages_pos = components.iter().position(|c| {
+        matches!(
+            c,
+            TemplateComponent::Number(n) if n.number == NumberVariable::Pages
+        )
+    });
+
+    // Find the List containing parent-serial (container-title for journals)
+    // Need to search recursively since parent-serial may be in a nested List
+    let serial_list_pos = components
+        .iter()
+        .position(|c| contains_parent_serial_recursive(c));
+
+    // If pages is BEFORE the serial list, move it to right after
+    if let (Some(p_pos), Some(s_pos)) = (pages_pos, serial_list_pos) {
+        if p_pos < s_pos {
+            let pages_component = components.remove(p_pos);
+            // After removal, indices shift - insert at s_pos (which is now s_pos - 1 + 1 = s_pos)
+            components.insert(s_pos, pages_component);
+        }
+    }
+
+    fn contains_parent_serial_recursive(component: &TemplateComponent) -> bool {
+        match component {
+            TemplateComponent::Title(t) if t.title == TitleType::ParentSerial => true,
+            TemplateComponent::List(list) => list
+                .items
+                .iter()
+                .any(|item| contains_parent_serial_recursive(item)),
+            _ => false,
+        }
+    }
 }
 
 /// Reorder publisher-place for Chicago journal articles.
