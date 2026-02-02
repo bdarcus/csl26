@@ -574,6 +574,16 @@ fn apply_type_overrides(
                     ..Default::default()
                 },
             );
+            // Ensure visible for common monographic types
+            let unsuppress = csln_core::template::Rendering {
+                suppress: Some(false),
+                ..Default::default()
+            };
+            new_ovr.insert("book".to_string(), unsuppress.clone());
+            new_ovr.insert("chapter".to_string(), unsuppress.clone());
+            new_ovr.insert("report".to_string(), unsuppress.clone());
+            new_ovr.insert("thesis".to_string(), unsuppress);
+
             // Merge instead of overwrite
             let overrides = v
                 .overrides
@@ -584,12 +594,13 @@ fn apply_type_overrides(
         }
         // Publisher-place: style-specific visibility rules
         // - Chicago: show for journals (in parens), suppress for books/reports
-        // - APA/others: suppress for journals, may show for books
+        // - APA: suppress for everything (APA 7th)
         TemplateComponent::Variable(v)
             if v.variable == csln_core::template::SimpleVariable::PublisherPlace =>
         {
             let mut new_ovr = std::collections::HashMap::new();
             let is_chicago = style_id.contains("chicago");
+            let is_apa = style_id.contains("apa");
 
             if is_chicago {
                 // Chicago: suppress for books and reports, show for journals
@@ -599,7 +610,7 @@ fn apply_type_overrides(
                 };
                 new_ovr.insert("book".to_string(), suppress_rendering.clone());
                 new_ovr.insert("report".to_string(), suppress_rendering.clone());
-                new_ovr.insert("thesis".to_string(), suppress_rendering.clone());
+                new_ovr.insert("thesis".to_string(), suppress_rendering);
                 new_ovr.insert(
                     "article-journal".to_string(),
                     csln_core::template::Rendering {
@@ -607,8 +618,11 @@ fn apply_type_overrides(
                         ..Default::default()
                     },
                 );
+            } else if is_apa {
+                // APA 7th: suppress for everything
+                v.rendering.suppress = Some(true);
             } else {
-                // APA/default: suppress for journals
+                // Default: suppress for journals
                 new_ovr.insert(
                     "article-journal".to_string(),
                     csln_core::template::Rendering {
@@ -618,6 +632,25 @@ fn apply_type_overrides(
                 );
             }
             // Merge instead of overwrite
+            let overrides = v
+                .overrides
+                .get_or_insert_with(std::collections::HashMap::new);
+            for (k, v) in new_ovr {
+                overrides.insert(k, v);
+            }
+        }
+        // Genre: ensure visible for thesis/reports
+        TemplateComponent::Variable(v)
+            if v.variable == csln_core::template::SimpleVariable::Genre =>
+        {
+            let mut new_ovr = std::collections::HashMap::new();
+            let unsuppress = csln_core::template::Rendering {
+                suppress: Some(false),
+                ..Default::default()
+            };
+            new_ovr.insert("thesis".to_string(), unsuppress.clone());
+            new_ovr.insert("report".to_string(), unsuppress);
+
             let overrides = v
                 .overrides
                 .get_or_insert_with(std::collections::HashMap::new);

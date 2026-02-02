@@ -64,7 +64,7 @@ Currently, only APA achieves 5/5 oracle match for both citations and bibliograph
 11. ✅ **Numeric style ordering** - Fixed: use IndexMap, detect numeric by citation sort
 12. ✅ **Quote/emph negation** - Fixed: override negates base formatting explicitly
 13. 🔄 **Bibliography separator** - Partial: infrastructure added, extraction limited by CSL encoding
-14. 🔄 **Publisher-place visibility** - Style-specific (Chicago: suppress for books, Elsevier: show)
+14. ✅ **Publisher-place visibility** - Style-specific (Chicago: suppress for books, Elsevier: show)
 15. ✅ **Editor verb form** - Fixed: extracted from label position/form in names
 16. ✅ **Container title duplication** - Fixed: recursive variable discovery and type-specific suppression
 
@@ -99,12 +99,19 @@ Currently, only APA achieves 5/5 oracle match for both citations and bibliograph
 
 ### Phase 7: Publisher-Place Visibility
 
+**Status:** ✅ COMPLETED
+
 **Problem:** Style-specific rules for when to show location:
 - Chicago: Only for periodicals with place, not books
 - Elsevier: Publisher, Place format for all
 - APA: Publisher (Location) for some types
 
-**Note:** This requires extracting conditionals from CSL during migration, which is complex. May defer to future work.
+**Solution:**
+- Implemented style-aware visibility rules in `main.rs`'s `apply_type_overrides`.
+- Chicago: Suppress location for `book`, `report`, `thesis`; show for `article-journal`.
+- APA: Suppress location for all types (per APA 7th edition).
+- Elsevier: Show location for all types (default behavior).
+- Fixed regressions in `publisher` and `genre` visibility by ensuring explicit `suppress: false` in overrides for intended types.
 
 ### Phase 8: Container Title Deduplication
 
