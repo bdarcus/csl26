@@ -143,6 +143,8 @@ Ordering: Placed after container-title by reorder_serial_components()
 
 ## Key Insight from Tooling: Year Position is Root Cause
 
+### Sample Analysis (10 Priority Styles)
+
 Running the batch oracle on 10 priority styles revealed a **systemic pattern**:
 
 ```
@@ -154,7 +156,31 @@ TOP COMPONENT ISSUES:
   volume:missing: 5 occurrences
 ```
 
-**The "year:extra" issue is the root cause of most ordering failures.**
+### Full Corpus Analysis (2,844 Parent Styles)
+
+Running the parallel batch oracle on the **entire CSL corpus** confirms and amplifies these findings:
+
+```
+Duration: ~18 minutes (4 workers)
+Citations 100%: 348/2844 (12%)
+Bibliography 100%: 26/2844 (1%)
+
+TOP COMPONENT ISSUES:
+  year:missing: 7,116 occurrences    ← #1 issue
+  year:extra: 3,762 occurrences      ← #2 issue
+  issue:missing: 2,556 occurrences
+  doi:extra: 2,381 occurrences
+  containerTitle:missing: 2,230 occurrences
+  volume:missing: 2,203 occurrences
+  editors:extra: 2,044 occurrences
+  contributors:missing: 2,014 occurrences
+  title:missing: 1,846 occurrences
+  pages:extra: 1,799 occurrences
+
+ORDERING ISSUES: 18,219 total
+```
+
+**Year positioning issues (missing + extra = 10,878) are the #1 problem across the entire corpus.**
 
 ### The Pattern
 
@@ -190,8 +216,8 @@ if style_class == "numeric" {
 ```
 
 This single fix should resolve:
-- **19 year:extra issues** → year moves to correct position
-- **59 ordering issues** → most are caused by year being early
+- **10,878 year issues** → year moves to correct position
+- **18,219 ordering issues** → most are caused by year being early
 - **Cascade effect** → other components will naturally align
 
 ### Revised Priority Order
