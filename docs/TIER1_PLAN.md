@@ -135,8 +135,8 @@ Currently, only APA achieves 5/5 oracle match for both citations and bibliograph
 | Style | Current | Target |
 |-------|---------|--------|
 | apa | 5/5 ✅ | 5/5 |
-| chicago-author-date | 0/5 | 3/5 |
-| elsevier-harvard | 0/5 | 3/5 |
+| chicago-author-date | 1/5 | 3/5 |
+| elsevier-harvard | 2/5 | 3/5 |
 | springer-basic-author-date | 0/5 | 3/5 |
 | ieee | 0/5 | 3/5 |
 | elsevier-vancouver | 0/5 | 3/5 |
