@@ -195,7 +195,7 @@ Volume is first compiled from `label-volume` macro (for non-serial types), then 
 
 | Style | Start | Current | Target |
 |-------|-------|---------|--------|
-| apa | 2/15 | **13/15** ✅ | 8/15 |
+| apa | 2/15 | **14/15** ✅ | 8/15 |
 | elsevier-harvard | 2/15 | **8/15** ✅ | 8/15 |
 | chicago-author-date | 1/15 | 4/15 | 5/15 |
 
@@ -203,8 +203,15 @@ Volume is first compiled from `label-volume` macro (for non-serial types), then 
 
 ## Remaining Issues (APA)
 
-1. **Entry 1 (thesis)**: Genre bracket attached to title without separator
-2. **Entry 2 (chapter)**: "In [editors]" should come before book title
+1. **Entry 1 (thesis)**: ✅ FIXED - Added prefix_inside_wrap field for flexible prefix/suffix ordering
+2. **Entry 2 (chapter)**: "In [editors]" should come before book title - requires type-specific component reordering
+
+## Latest Commits
+
+| Hash | Description |
+|------|-------------|
+| `18f6637` | fix(render): correct prefix/suffix order with wrap |
+| `58dfb0e` | feat(core): add prefix_inside_wrap field for flexible prefix ordering |
 
 ## Dependencies
 
