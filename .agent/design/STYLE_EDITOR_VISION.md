@@ -1,29 +1,48 @@
-# Style Editor Vision
+# Citation Style Platform Vision
 
-> A user story for a web-based citation style editor built on CSLN.
+> A user story for a web-based citation style platform built on CSLN.
 
 ## Overview
 
-This document captures the vision for a **MakeCSL**-style web editor that allows users to create citation styles through guided, progressive refinement—without needing to understand YAML schemas or citation formatting internals.
+This document captures the vision for a comprehensive **Citation Style Platform**. The primary goal is to **solve the user's citation formatting problem with the least amount of friction**.
+
+This represents a shift from just an "editor" to a platform where the hierarchy of needs is:
+1.  **Find** an existing style (Discovery).
+2.  **Tweak** a close match (Modification).
+3.  **Build** from scratch (Creation).
 
 **Goal**: Validate that the CSLN model supports this vision and document API requirements.
 
 ## Core User Stories
 
-### 1. Style Discovery
-Search existing styles by name, field, or citation pattern with autocomplete across ~10,000 migrated styles.
+### 1. Style Discovery & Usage (The "App Store" for Styles)
+*Primary workflow for 90% of users.*
 
-### 2. Guided Creation
-Wizard-driven flow:
-1. Select type (author-date, numeric, footnote)
-2. Enter metadata (title, discipline)
-3. **Progressive refinement**: system shows ~5 example citations → user picks closest → system refines → repeat
-4. Same process for bibliography
+- **Search**: By name ("Nature"), field ("Neuroscience"), or generic type ("Author-Date").
+- **Search by Example**: User pastes a formatted citation (e.g., "Doe, J. (2020)..."), system finds styles that match this output.
+- **One-Click Use**: "Copy CSL JSON", "Download CSL", or "Get ID" for use in Zotero, Mendeley, Pandoc, etc.
 
-### 3. Field-Specific Examples
-Example data sets per academic discipline (law, sciences, humanities) with diverse reference types and edge cases.
+### 2. Smart Modification ("Like X but...")
+*Secondary workflow for minor adjustments.*
 
-### 4. Style Persistence
+- User starts with a discovered style (e.g., "APA").
+- "I want APA but with square brackets."
+- "Use Harvard but force et-al after 3 authors."
+- System creates a style using relevant presets or configuration override rather than a full independent style fork where possible.
+
+### 3. Guided Creation (The Wizard)
+*Fallback workflow for completely new requirements.*
+
+- Wizard-driven flow:
+    1. Select type (author-date, numeric, footnote)
+    2. Enter metadata (title, discipline)
+    3. **Progressive refinement**: system shows ~5 example citations → user picks closest → system refines → repeat
+    4. Same process for bibliography
+
+### 4. Field-Specific Examples
+Example data sets per academic discipline (law, sciences, humanities) with diverse reference types and edge cases to validate styles during discovery and editing.
+
+### 5. Style Persistence
 Export to YAML or JSON; share links. *(User account persistence feasibility TBD)*
 
 ## Architecture Decision
@@ -34,12 +53,13 @@ Export to YAML or JSON; share links. *(User account persistence feasibility TBD)
 | WASM only | 🤔 Viable but limited |
 | **Separate repo + published crates** | ✅ Clean separation |
 
-**Core crates** (`csln_core`, `csln_processor`) stay here.  
+**Core crates** (`csln_core`, `csln_processor`) stay here.
 **Web server** lives in separate deployment-focused repo.
 
 ## API Surface Required
 
 ```
+POST /search/match          # Search styles by example citation input
 POST /preview/citation      # Render with style + refs
 POST /preview/bibliography
 POST /validate/style        # Validate YAML
@@ -59,6 +79,7 @@ GET  /examples/:field       # Field-specific references
 - Add `discipline` and/or `category` fields to `StyleInfo`
 - Create example reference datasets per field
 - Validate streaming/incremental preview
+- **Implement "Reverse Match" logic for example search**
 
 ### ⏳ Future Work
 - Note-bibliography mode (processor support)
