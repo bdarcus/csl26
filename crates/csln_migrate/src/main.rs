@@ -231,6 +231,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         // type overrides when they're from the same CSL macro.
         propagate_list_overrides(&mut new_bib);
 
+        // Remove duplicate nested Lists that have identical contents.
+        // This happens when CSL conditions have similar then/else branches.
+        deduplicate_nested_lists(&mut new_bib);
+
         // Reorder serial components: container-title before volume.
         // Due to CSL macro processing, volume often ends up before container-title.
         reorder_serial_components(&mut new_bib);
@@ -249,6 +253,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         // Reorder chapters for Chicago: "In" prefix + book title before editors
         reorder_chapters_for_chicago(&mut new_bib, style_id);
+
+        // Fix Chicago issue placement: suppress issue in parent-monograph lists for journals
+        // Chicago puts issue after volume (handled by group_volume_and_issue) but the CSL
+        // also has issue in parent-monograph groups which creates duplicates
+        suppress_duplicate_issue_for_journals(&mut new_bib, style_id);
     }
 
     // 5. Build Style in correct format for csln_processor
@@ -917,6 +926,69 @@ fn group_volume_and_issue(
             }
         }
     }
+
+    // Case 3: Neither at top level - issue is in a nested list somewhere
+    // Find issue anywhere in nested lists and try to move it to volume's list
+    if issue_pos.is_none() && vol_pos.is_none() {
+        // Find the issue in any nested list and create a new one after volume
+        let issue_exists_nested = find_issue_in_components(components);
+        let volume_exists_nested = components.iter().any(|c| {
+            if let TemplateComponent::List(list) = c {
+                find_volume_in_list(list).is_some()
+            } else {
+                false
+            }
+        });
+
+        if issue_exists_nested && volume_exists_nested {
+            // Create issue component with parentheses wrap
+            let issue_with_parens = TemplateComponent::Number(TemplateNumber {
+                number: NumberVariable::Issue,
+                form: None,
+                rendering: Rendering {
+                    wrap: Some(WrapPunctuation::Parentheses),
+                    ..Default::default()
+                },
+                overrides: None,
+                ..Default::default()
+            });
+
+            // Find the list containing volume and add issue to it
+            for component in components.iter_mut() {
+                if let TemplateComponent::List(list) = component {
+                    if find_volume_in_list(list).is_some()
+                        && insert_issue_after_volume(
+                            &mut list.items,
+                            issue_with_parens.clone(),
+                            vol_issue_delimiter,
+                        )
+                    {
+                        break;
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// Check if issue exists anywhere in nested components.
+fn find_issue_in_components(components: &[TemplateComponent]) -> bool {
+    use csln_core::template::NumberVariable;
+
+    for component in components {
+        match component {
+            TemplateComponent::Number(n) if n.number == NumberVariable::Issue => {
+                return true;
+            }
+            TemplateComponent::List(list) => {
+                if find_issue_in_components(&list.items) {
+                    return true;
+                }
+            }
+            _ => {}
+        }
+    }
+    false
 }
 
 /// Insert issue component after volume, handling nested lists.
@@ -960,13 +1032,6 @@ fn insert_issue_after_volume(
     }
 
     false
-}
-
-/// Find the position of volume variable in a list of components.
-fn find_volume_position_in_list(items: &[TemplateComponent]) -> Option<usize> {
-    items.iter().position(|c| {
-        matches!(c, TemplateComponent::Number(n) if n.number == csln_core::template::NumberVariable::Volume)
-    })
 }
 
 /// Check if a List contains a volume variable (recursively).
@@ -1080,7 +1145,7 @@ fn deduplicate_titles_in_lists(components: &mut Vec<TemplateComponent>) {
 ///
 /// This fixes the issue where volume and container-title are in the same source-serial
 /// macro but only container-title gets the article-journal override.
-fn propagate_list_overrides(components: &mut Vec<TemplateComponent>) {
+fn propagate_list_overrides(components: &mut [TemplateComponent]) {
     use csln_core::template::Rendering;
     use std::collections::HashSet;
 
@@ -1180,6 +1245,69 @@ fn propagate_list_overrides(components: &mut Vec<TemplateComponent>) {
     }
 }
 
+/// Remove duplicate nested Lists within parent Lists.
+///
+/// When CSL conditions have similar then/else branches (both containing the same
+/// components like parent-monograph + issue), the migration creates multiple
+/// identical nested Lists. This deduplicates them.
+fn deduplicate_nested_lists(components: &mut [TemplateComponent]) {
+    for component in components.iter_mut() {
+        if let TemplateComponent::List(list) = component {
+            deduplicate_lists_in_items(&mut list.items);
+        }
+    }
+}
+
+/// Helper to deduplicate nested Lists within a list of items.
+fn deduplicate_lists_in_items(items: &mut Vec<TemplateComponent>) {
+    use std::collections::HashSet;
+
+    // Build a set of "signatures" for Lists we've seen
+    let mut seen_signatures: HashSet<String> = HashSet::new();
+    let mut indices_to_remove: Vec<usize> = Vec::new();
+
+    for (i, item) in items.iter().enumerate() {
+        if let TemplateComponent::List(inner_list) = item {
+            let sig = list_signature(inner_list);
+            if seen_signatures.contains(&sig) {
+                indices_to_remove.push(i);
+            } else {
+                seen_signatures.insert(sig);
+            }
+        }
+    }
+
+    // Remove duplicates in reverse order to preserve indices
+    for i in indices_to_remove.into_iter().rev() {
+        items.remove(i);
+    }
+
+    // Recursively deduplicate nested lists
+    for item in items.iter_mut() {
+        if let TemplateComponent::List(inner_list) = item {
+            deduplicate_lists_in_items(&mut inner_list.items);
+        }
+    }
+}
+
+/// Create a signature string for a List based on its component types.
+/// Two Lists with the same components (by type) get the same signature.
+fn list_signature(list: &csln_core::template::TemplateList) -> String {
+    list.items
+        .iter()
+        .map(|item| match item {
+            TemplateComponent::Contributor(c) => format!("contrib:{:?}", c.contributor),
+            TemplateComponent::Date(d) => format!("date:{:?}", d.date),
+            TemplateComponent::Title(t) => format!("title:{:?}", t.title),
+            TemplateComponent::Number(n) => format!("num:{:?}", n.number),
+            TemplateComponent::Variable(v) => format!("var:{:?}", v.variable),
+            TemplateComponent::List(_) => "list".to_string(),
+            _ => "unknown".to_string(),
+        })
+        .collect::<Vec<_>>()
+        .join(",")
+}
+
 /// Reorder components within Lists for serial types.
 ///
 /// For journal articles, the correct order is:
@@ -1190,7 +1318,7 @@ fn propagate_list_overrides(components: &mut Vec<TemplateComponent>) {
 /// But due to how CSL macros are processed, volume often ends up before
 /// container-title. This function reorders the items within Lists to match
 /// the expected output.
-fn reorder_serial_components(components: &mut Vec<TemplateComponent>) {
+fn reorder_serial_components(components: &mut [TemplateComponent]) {
     use csln_core::template::{NumberVariable, TitleType};
 
     for component in components.iter_mut() {
@@ -1302,9 +1430,7 @@ fn reorder_pages_for_serials(components: &mut Vec<TemplateComponent>) {
 
     // Find the List containing parent-serial (container-title for journals)
     // Need to search recursively since parent-serial may be in a nested List
-    let serial_list_pos = components
-        .iter()
-        .position(|c| contains_parent_serial_recursive(c));
+    let serial_list_pos = components.iter().position(contains_parent_serial_recursive);
 
     // If pages is BEFORE the serial list, move it to right after
     if let (Some(p_pos), Some(s_pos)) = (pages_pos, serial_list_pos) {
@@ -1318,10 +1444,9 @@ fn reorder_pages_for_serials(components: &mut Vec<TemplateComponent>) {
     fn contains_parent_serial_recursive(component: &TemplateComponent) -> bool {
         match component {
             TemplateComponent::Title(t) if t.title == TitleType::ParentSerial => true,
-            TemplateComponent::List(list) => list
-                .items
-                .iter()
-                .any(|item| contains_parent_serial_recursive(item)),
+            TemplateComponent::List(list) => {
+                list.items.iter().any(contains_parent_serial_recursive)
+            }
             _ => false,
         }
     }
@@ -1469,6 +1594,77 @@ fn reorder_chapters_for_chicago(components: &mut Vec<TemplateComponent>, style_i
     }
 }
 
+/// Suppress duplicate issue in parent-monograph lists for article-journal types.
+///
+/// Chicago CSL has issue in multiple places:
+/// 1. With volume in the source-serial macro (for journal articles)
+/// 2. With parent-monograph in the source-monographic macro (for chapters)
+///
+/// Our group_volume_and_issue function creates the volume(issue) grouping for journals,
+/// but the issue also appears in parent-monograph lists. This creates duplicates.
+/// This function suppresses issue for article-journal in those lists.
+fn suppress_duplicate_issue_for_journals(components: &mut [TemplateComponent], style_id: &str) {
+    // Only apply to Chicago styles
+    if !style_id.contains("chicago") {
+        return;
+    }
+
+    for component in components.iter_mut() {
+        if let TemplateComponent::List(list) = component {
+            suppress_issue_in_parent_monograph_list(&mut list.items);
+        }
+    }
+}
+
+/// Helper to find and suppress issue in lists containing parent-monograph.
+fn suppress_issue_in_parent_monograph_list(items: &mut [TemplateComponent]) {
+    use csln_core::template::{NumberVariable, TitleType};
+
+    // Check if this list has parent-monograph (indicating it's the monographic source list)
+    let has_parent_monograph = items.iter().any(|item| {
+        matches!(
+            item,
+            TemplateComponent::Title(t) if t.title == TitleType::ParentMonograph
+        ) || matches!(item, TemplateComponent::List(inner_list)
+            if inner_list.items.iter().any(|i| matches!(i, TemplateComponent::Title(t) if t.title == TitleType::ParentMonograph)))
+    });
+
+    if has_parent_monograph {
+        // Suppress issue for article-journal in this list
+        for item in items.iter_mut() {
+            if let TemplateComponent::Number(n) = item {
+                if n.number == NumberVariable::Issue {
+                    let overrides = n
+                        .overrides
+                        .get_or_insert_with(std::collections::HashMap::new);
+                    if let Some(rendering) = overrides.get_mut("article-journal") {
+                        rendering.suppress = Some(true);
+                    } else {
+                        overrides.insert(
+                            "article-journal".to_string(),
+                            csln_core::template::Rendering {
+                                suppress: Some(true),
+                                ..Default::default()
+                            },
+                        );
+                    }
+                }
+            }
+            // Recursively check nested lists
+            if let TemplateComponent::List(inner_list) = item {
+                suppress_issue_in_parent_monograph_list(&mut inner_list.items);
+            }
+        }
+    }
+
+    // Recursively process all nested lists
+    for item in items.iter_mut() {
+        if let TemplateComponent::List(inner_list) = item {
+            suppress_issue_in_parent_monograph_list(&mut inner_list.items);
+        }
+    }
+}
+
 /// Recursively ensure specific variables are un-suppressed for a given type.
 fn unsuppress_for_type(components: &mut [TemplateComponent], item_type: &str) {
     use csln_core::template::SimpleVariable;
@@ -1553,8 +1749,6 @@ fn apply_author_suffix(components: &mut [TemplateComponent], suffix: Option<Stri
 fn extract_bibliography_and(
     style: &csl_legacy::model::Style,
 ) -> Option<csln_core::options::AndOptions> {
-    use csl_legacy::model::CslNode;
-
     // First, look for the "author" macro which is used in bibliography
     // The "author-short" macro is used in citations and may have different 'and' settings
     for macro_def in &style.macros {
