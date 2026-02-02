@@ -96,8 +96,25 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // 4. Template Compilation
     let template_compiler = TemplateCompiler;
+
+    // Detect if this is a numeric style
+    let is_numeric = match &options.processing {
+        Some(csln_core::options::Processing::Numeric) => true,
+        Some(csln_core::options::Processing::Custom(custom)) => {
+            // Check if sort key is CitationNumber
+            if let Some(sort) = &custom.sort {
+                sort.template
+                    .first()
+                    .is_some_and(|s| s.key == csln_core::options::SortKey::CitationNumber)
+            } else {
+                false
+            }
+        }
+        _ => false,
+    };
+
     let (mut new_bib, type_templates) =
-        template_compiler.compile_bibliography_with_types(&csln_bib);
+        template_compiler.compile_bibliography_with_types(&csln_bib, is_numeric);
     let mut new_cit = template_compiler.compile_citation(&csln_cit);
 
     // Apply author suffix extracted from original CSL (lost during macro inlining)

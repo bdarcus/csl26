@@ -249,9 +249,9 @@ CSLN:   [1]T. S. Kuhn, 1962. "The Structure..."
 **Root cause:** Migration uses author-date year positioning for all styles.
 
 **Fix:**
-- [ ] Detect numeric style class from CSL `<citation>` element
-- [ ] For numeric styles, move `date:issued` component to end of template
-- [ ] Preserve year position for author-date styles
+- [x] Detect numeric style class from CSL `<citation>` element
+- [x] For numeric styles, move `date:issued` component to end of template
+- [x] Preserve year position for author-date styles
 
 ### Issue 1.1: Superscript/Bracket Citation Format
 

@@ -442,9 +442,13 @@ impl TemplateCompiler {
     }
 
     /// Compile and sort for bibliography output.
-    pub fn compile_bibliography(&self, nodes: &[CslnNode]) -> Vec<TemplateComponent> {
+    pub fn compile_bibliography(
+        &self,
+        nodes: &[CslnNode],
+        is_numeric: bool,
+    ) -> Vec<TemplateComponent> {
         let mut components = self.compile(nodes);
-        self.sort_bibliography_components(&mut components);
+        self.sort_bibliography_components(&mut components, is_numeric);
         components
     }
 
@@ -460,6 +464,7 @@ impl TemplateCompiler {
     pub fn compile_bibliography_with_types(
         &self,
         nodes: &[CslnNode],
+        is_numeric: bool,
     ) -> (
         Vec<TemplateComponent>,
         HashMap<String, Vec<TemplateComponent>>,
@@ -485,7 +490,7 @@ impl TemplateCompiler {
             }
         }
 
-        self.sort_bibliography_components(&mut default_template);
+        self.sort_bibliography_components(&mut default_template, is_numeric);
 
         // Type-specific template generation is disabled for now.
         // The compile_for_type approach produces malformed templates.
@@ -815,12 +820,18 @@ impl TemplateCompiler {
 
     /// Sort components for bibliography: citation-number first (for numeric styles),
     /// then author, date, title, then rest.
-    fn sort_bibliography_components(&self, components: &mut [TemplateComponent]) {
+    fn sort_bibliography_components(&self, components: &mut [TemplateComponent], is_numeric: bool) {
         components.sort_by_key(|c| match c {
             // Citation number goes first for numeric bibliography styles
             TemplateComponent::Number(n) if n.number == NumberVariable::CitationNumber => 0,
             TemplateComponent::Contributor(c) if c.contributor == ContributorRole::Author => 1,
-            TemplateComponent::Date(d) if d.date == DateVariable::Issued => 2,
+            TemplateComponent::Date(d) if d.date == DateVariable::Issued => {
+                if is_numeric {
+                    20
+                } else {
+                    2
+                }
+            }
             TemplateComponent::Title(t) if t.title == TitleType::Primary => 3,
             TemplateComponent::Title(t) if t.title == TitleType::ParentSerial => 4,
             TemplateComponent::Title(t) if t.title == TitleType::ParentMonograph => 5,
