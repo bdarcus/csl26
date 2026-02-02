@@ -41,60 +41,76 @@ Tiers 1 and 2 achieved **100% citation match** for author-date styles and signif
 
 ---
 
-## Proposed Tooling Improvements
+## Tooling Improvements
 
-### Tool 1: Structured Diff Oracle
+### Tool 1: Structured Diff Oracle ✅ IMPLEMENTED
 
-**Goal:** Show component-level diffs, not just string diffs.
+**Location:** `scripts/oracle-structured.js`
 
-**Design:**
+**Usage:**
 ```bash
-# Current output (hard to parse)
-Oracle: Smith, J., & Anderson, M. (2020). Nature Climate Change, 10, 850–855.
-CSLN:   Smith, J., and Anderson, M. (2020). Nature Climate Change,. , 850–855 10:
-
-# Proposed output (structured)
-Entry 1/15: MISMATCH
-  contributors: ✓ (order correct, but "and" vs "&")
-  date: ✓
-  title: ✓
-  container-title: ✓
-  volume: ✗ (expected "10" after container, got before pages)
-  pages: ✗ (missing comma separator)
-  issue: EXTRA (should be suppressed for this type)
+node scripts/oracle-structured.js styles/apa.csl           # Human-readable
+node scripts/oracle-structured.js styles/apa.csl --verbose # With detailed failures
+node scripts/oracle-structured.js styles/apa.csl --json    # Machine-readable
 ```
 
-**Implementation:**
-- Parse both outputs into structural components (contributor, date, title, etc.)
-- Compare each component independently
-- Report which component types are failing across the test corpus
+**Features:**
+- Parses bibliography entries into structural components (contributors, year, title, volume, etc.)
+- Compares components independently between oracle and CSLN
+- Detects ordering differences (e.g., year before title vs after)
+- Aggregates component issues across entries
+- Identifies missing/extra components
 
-### Tool 2: Batch Oracle with Aggregation
+**Example output:**
+```
+--- COMPONENT ISSUES ---
+  containerTitle:missing: 1 entries
+  year:extra: 5 entries
 
-**Goal:** Run oracle against many styles, aggregate failures by pattern.
+--- ORDERING ISSUES: 10 entries ---
 
-**Design:**
-```bash
-csln_analyze --oracle-batch styles/ --top 50
-
-# Output:
-Tested: 50 styles
-Citations: 47/50 at 15/15 (94%)
-Bibliography: 12/50 at 8/15+ (24%)
-
-Top failure patterns:
-  1. volume/issue ordering (38 styles) - volume appears before container-title
-  2. superscript citations (12 styles) - rendering as (Author Year) not superscript
-  3. "pp." label missing (28 styles) - pages render without label
-  4. "and" conjunction (15 styles) - wrong conjunction for style
+--- DETAILED FAILURES ---
+Entry 1:
+  Order Oracle: contributors → title → containerTitle → volume → year
+  Order CSLN:   contributors → year → title → containerTitle
+  Issue: ordering: Component order differs
 ```
 
-**Implementation:**
-- Run `oracle-e2e.js` for each style, capture JSON output
-- Aggregate failures, cluster by pattern using string similarity
-- Report top N failure patterns across corpus
+### Tool 2: Batch Oracle Aggregator ✅ IMPLEMENTED
 
-### Tool 3: Migration Debugger
+**Location:** `scripts/oracle-batch-aggregate.js`
+
+**Usage:**
+```bash
+node scripts/oracle-batch-aggregate.js styles/ --top 10     # Top 10 priority styles
+node scripts/oracle-batch-aggregate.js styles/ --top 20     # Top 20 priority styles
+node scripts/oracle-batch-aggregate.js styles/ --styles apa,ieee,nature  # Specific styles
+node scripts/oracle-batch-aggregate.js styles/ --json       # Machine-readable
+```
+
+**Features:**
+- Tests multiple styles from STYLE_PRIORITY.md
+- Aggregates component issues across all styles
+- Shows which issues affect the most entries
+- Ranks styles by bibliography success (worst first)
+
+**Results from 10 priority styles:**
+```
+Styles tested: 10
+Citations 100%: 9/10 (90%)
+Bibliography 100%: 0/10 (0%)
+
+--- TOP COMPONENT ISSUES ---
+  year:extra: 19 occurrences
+  issue:missing: 14 occurrences
+  containerTitle:missing: 10 occurrences
+  pages:missing: 5 occurrences
+  volume:missing: 5 occurrences
+
+--- ORDERING ISSUES: 59 total ---
+```
+
+### Tool 3: Migration Debugger (PENDING)
 
 **Goal:** Trace how CSL nodes become YAML template components.
 
@@ -262,14 +278,14 @@ in:Ericsson, KA, ... (Eds.). Cambridge University Press, (pp. 683–703).
 
 ### Immediate (Tier 3.1)
 
-- [ ] **Implement structured diff oracle** (Tool 1)
+- [x] **Implement structured diff oracle** (Tool 1) ✅
+- [x] **Implement batch oracle aggregation** (Tool 2) ✅
 - [ ] Fix Nature/Cell superscript citations (Issue 1.1)
 - [ ] Fix Springer citation regression (Issue 2.1)
 - [ ] Test IEEE bibliography improvements
 
 ### Short-term (Tier 3.2)
 
-- [ ] **Implement batch oracle aggregation** (Tool 2)
 - [ ] Fix volume/issue ordering for numeric styles (Issue 1.3)
 - [ ] Fix name formatting (initials, delimiters) (Issues 2.2, 2.3)
 - [ ] Test Nature bibliography
@@ -287,8 +303,8 @@ in:Ericsson, KA, ... (Eds.). Cambridge University Press, (pp. 683–703).
 
 ### Tooling
 
-- [ ] Structured diff oracle identifies specific component failures
-- [ ] Batch oracle can test 50+ styles and cluster failures
+- [x] Structured diff oracle identifies specific component failures ✅
+- [x] Batch oracle can test 50+ styles and cluster failures ✅
 - [ ] Migration debugger traces variable provenance
 
 ### Rendering
