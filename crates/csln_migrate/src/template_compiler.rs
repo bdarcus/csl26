@@ -1086,6 +1086,7 @@ impl TemplateCompiler {
             prefix,
             suffix,
             wrap,
+            prefix_inside_wrap: None,
             suppress: None,
         }
     }

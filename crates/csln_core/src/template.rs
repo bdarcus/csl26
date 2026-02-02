@@ -70,6 +70,12 @@ pub struct Rendering {
     /// Punctuation to wrap the value in (e.g., parentheses).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub wrap: Option<WrapPunctuation>,
+    /// If true, prefix goes inside wrap (default). If false, prefix goes outside wrap.
+    /// Example: `prefix: "pp. ", wrap: parentheses`
+    /// - `prefix_inside_wrap: true` → "(pp. 1-10)"
+    /// - `prefix_inside_wrap: false` → "pp. (1-10)"
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub prefix_inside_wrap: Option<bool>,
     /// If true, suppress this component entirely (render as empty string).
     /// Useful for type-specific overrides like suppressing publisher for journals.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -99,6 +105,9 @@ impl Rendering {
         }
         if other.wrap.is_some() {
             self.wrap = other.wrap.clone();
+        }
+        if other.prefix_inside_wrap.is_some() {
+            self.prefix_inside_wrap = other.prefix_inside_wrap;
         }
         if other.suppress.is_some() {
             self.suppress = other.suppress;

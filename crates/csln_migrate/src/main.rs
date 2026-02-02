@@ -630,12 +630,18 @@ fn apply_type_overrides(
             let mut new_ovr = std::collections::HashMap::new();
 
             // Thesis: wrap in brackets for APA style
-            // The period after closing bracket comes from component separator
+            // Add space prefix OUTSIDE wrap to suppress the default period separator
+            // Add period suffix AFTER the closing bracket
+            // Set prefix_inside_wrap: false so the space appears before the bracket
+            // The genre renders as " [PhD thesis]." which attaches directly to title
             if is_apa {
                 new_ovr.insert(
                     "thesis".to_string(),
                     csln_core::template::Rendering {
                         wrap: Some(WrapPunctuation::Brackets),
+                        prefix: Some(" ".to_string()), // Space prefix before bracket
+                        suffix: Some(".".to_string()), // Period after closing bracket
+                        prefix_inside_wrap: Some(false), // Put prefix OUTSIDE the brackets
                         suppress: Some(false),
                         ..Default::default()
                     },
