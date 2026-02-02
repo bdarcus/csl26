@@ -74,6 +74,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         None
     };
 
+    // Extract bibliography-specific 'and' setting (may differ from citation)
+    let bib_and = extract_bibliography_and(&legacy_style);
+
     // 1. Deconstruction
     let inliner = MacroInliner::new(&legacy_style);
     let flattened_bib = inliner
@@ -99,6 +102,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Apply author suffix extracted from original CSL (lost during macro inlining)
     apply_author_suffix(&mut new_bib, author_suffix);
+
+    // Apply bibliography-specific 'and' setting (may differ from citation)
+    apply_bibliography_and(&mut new_bib, bib_and);
 
     // For author-date styles with in-text class, apply standard formatting.
     // Note styles (class="note") should NOT have these transformations applied.
@@ -493,25 +499,33 @@ fn apply_type_overrides(
     style_id: &str,
 ) {
     match component {
-        // Container-title (parent-serial): style-specific suffix
-        // - APA: comma suffix
+        // Container-title (parent-serial): style-specific suffix and unsuppression
+        // - APA: comma suffix, no prefix
         // - Chicago: space suffix (prevents default period separator)
-        // - Elsevier: handled by List space prefix
+        // - Elsevier: space prefix (handled by List), no suffix needed
         TemplateComponent::Title(t) if t.title == csln_core::template::TitleType::ParentSerial => {
             let is_chicago = style_id.contains("chicago");
             let mut new_ovr = std::collections::HashMap::new();
 
-            if !volume_list_has_space_prefix {
-                let suffix = if is_chicago { " " } else { "," };
-                new_ovr.insert(
-                    "article-journal".to_string(),
-                    csln_core::template::Rendering {
-                        suffix: Some(suffix.to_string()),
-                        suppress: Some(false),
-                        ..Default::default()
-                    },
-                );
-            }
+            // Always unsuppress article-journal (journal title must show)
+            let suffix = if volume_list_has_space_prefix {
+                // Elsevier: no suffix, spacing handled by List prefix
+                None
+            } else if is_chicago {
+                Some(" ".to_string())
+            } else {
+                // APA: comma suffix
+                Some(",".to_string())
+            };
+
+            new_ovr.insert(
+                "article-journal".to_string(),
+                csln_core::template::Rendering {
+                    suffix,
+                    suppress: Some(false),
+                    ..Default::default()
+                },
+            );
 
             // Ensure paper-conference shows container title (proceedings name)
             new_ovr.insert(
@@ -715,6 +729,32 @@ fn apply_type_overrides(
                 .get_or_insert_with(std::collections::HashMap::new);
             for (k, v) in new_ovr {
                 overrides.insert(k, v);
+            }
+        }
+        // Edition: wrap in parentheses for book types in APA
+        // APA puts edition (and other identifiers) in parentheses after the title
+        TemplateComponent::Number(n)
+            if n.number == csln_core::template::NumberVariable::Edition =>
+        {
+            let is_apa = style_id.contains("apa");
+            if is_apa {
+                let mut new_ovr = std::collections::HashMap::new();
+                let wrap_rendering = csln_core::template::Rendering {
+                    wrap: Some(WrapPunctuation::Parentheses),
+                    suppress: Some(false),
+                    ..Default::default()
+                };
+                // Book types get edition in parentheses
+                new_ovr.insert("book".to_string(), wrap_rendering.clone());
+                new_ovr.insert("edited-book".to_string(), wrap_rendering.clone());
+                new_ovr.insert("report".to_string(), wrap_rendering);
+
+                let overrides = n
+                    .overrides
+                    .get_or_insert_with(std::collections::HashMap::new);
+                for (k, v) in new_ovr {
+                    overrides.insert(k, v);
+                }
             }
         }
         // Recursively process Lists
@@ -1492,6 +1532,113 @@ fn apply_author_suffix(components: &mut [TemplateComponent], suffix: Option<Stri
                 if c.contributor == csln_core::template::ContributorRole::Author {
                     // Set or update the suffix
                     c.rendering.suffix = Some(suffix.clone());
+                }
+            }
+        }
+    }
+}
+
+/// Check if the bibliography name element has an 'and' attribute.
+///
+/// CSL styles can have different 'and' settings for citations vs bibliography.
+/// For example, Elsevier uses `and="text"` in citation but no `and` in bibliography.
+/// Returns `Some(AndOptions)` if found, or `None` if no bibliography name element
+/// or the name element has no `and` attribute (meaning no conjunction).
+fn extract_bibliography_and(
+    style: &csl_legacy::model::Style,
+) -> Option<csln_core::options::AndOptions> {
+    use csl_legacy::model::CslNode;
+
+    // First, look for the "author" macro which is used in bibliography
+    // The "author-short" macro is used in citations and may have different 'and' settings
+    for macro_def in &style.macros {
+        if macro_def.name == "author" {
+            // Search for Name nodes in this macro
+            if let Some(result) = find_name_and(&macro_def.children) {
+                return Some(result);
+            }
+        }
+    }
+
+    // Fallback: search the bibliography layout directly
+    if let Some(bib) = &style.bibliography {
+        if let Some(result) = find_name_and(&bib.layout.children) {
+            return Some(result);
+        }
+    }
+
+    None
+}
+
+// Helper function to find 'and' setting in Name nodes
+fn find_name_and(nodes: &[csl_legacy::model::CslNode]) -> Option<csln_core::options::AndOptions> {
+    use csl_legacy::model::CslNode;
+
+    for node in nodes {
+        match node {
+            CslNode::Name(name) => {
+                // Found a name element - check its 'and' attribute
+                if let Some(and) = &name.and {
+                    return Some(match and.as_str() {
+                        "text" => csln_core::options::AndOptions::Text,
+                        "symbol" => csln_core::options::AndOptions::Symbol,
+                        _ => csln_core::options::AndOptions::None,
+                    });
+                }
+                // Name exists but has no 'and' - explicitly return None (no conjunction)
+                return Some(csln_core::options::AndOptions::None);
+            }
+            CslNode::Names(names) => {
+                // Check within Names (which may contain Name)
+                if let Some(result) = find_name_and(&names.children) {
+                    return Some(result);
+                }
+            }
+            CslNode::Group(g) => {
+                if let Some(result) = find_name_and(&g.children) {
+                    return Some(result);
+                }
+            }
+            CslNode::Choose(c) => {
+                if let Some(result) = find_name_and(&c.if_branch.children) {
+                    return Some(result);
+                }
+                for branch in &c.else_if_branches {
+                    if let Some(result) = find_name_and(&branch.children) {
+                        return Some(result);
+                    }
+                }
+                if let Some(else_branch) = &c.else_branch {
+                    if let Some(result) = find_name_and(else_branch) {
+                        return Some(result);
+                    }
+                }
+            }
+            CslNode::Substitute(s) => {
+                if let Some(result) = find_name_and(&s.children) {
+                    return Some(result);
+                }
+            }
+            _ => {}
+        }
+    }
+    None
+}
+
+/// Apply the bibliography 'and' setting to author components in the template.
+///
+/// If the bibliography name element has no 'and' attribute (or explicitly sets it to none),
+/// set `and: none` on the author contributor component to override the global setting.
+fn apply_bibliography_and(
+    components: &mut [TemplateComponent],
+    bib_and: Option<csln_core::options::AndOptions>,
+) {
+    if let Some(bib_and) = bib_and {
+        for component in components {
+            if let TemplateComponent::Contributor(c) = component {
+                if c.contributor == csln_core::template::ContributorRole::Author {
+                    // Set the 'and' option on the contributor component
+                    c.and = Some(bib_and.clone());
                 }
             }
         }
