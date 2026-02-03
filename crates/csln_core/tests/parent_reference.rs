@@ -46,6 +46,7 @@ fn test_collection_component_with_parent_id() {
         accessed: None,
         note: None,
         doi: None,
+        genre: None,
         keywords: None,
     };
 

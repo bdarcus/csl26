@@ -238,6 +238,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         // Ensure publisher and publisher-place are unsuppressed for chapters
         unsuppress_for_type(&mut new_bib, "chapter");
         unsuppress_for_type(&mut new_bib, "paper-conference");
+        unsuppress_for_type(&mut new_bib, "thesis");
+        unsuppress_for_type(&mut new_bib, "document");
 
         // Remove duplicate titles from Lists that already appear at top level.
         // This happens when container-title appears in multiple CSL macros.
@@ -258,7 +260,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         // Combine volume and issue into a grouped structure: volume(issue)
         // MUST run after reorder_serial_components to ensure volume is in correct position first.
-        group_volume_and_issue(&mut new_bib, &options);
+        group_volume_and_issue(&mut new_bib, &options, style_id);
 
         // Move pages to after the container-title/volume List for serial types.
         reorder_pages_for_serials(&mut new_bib);
@@ -267,6 +269,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         // Chicago requires publisher-place to appear immediately after the journal
         // title, before the volume.
         reorder_publisher_place_for_chicago(&mut new_bib, style_id);
+
+        // Reorder chapters for APA: "In " prefix + editors before book title
+        reorder_chapters_for_apa(&mut new_bib, style_id);
 
         // Reorder chapters for Chicago: "In" prefix + book title before editors
         reorder_chapters_for_chicago(&mut new_bib, style_id);
@@ -525,6 +530,50 @@ fn apply_type_overrides(
     style_id: &str,
 ) {
     match component {
+        // Primary title: style-specific suffix for articles
+        TemplateComponent::Title(t) if t.title == csln_core::template::TitleType::Primary => {
+            let is_apa = style_id.contains("apa");
+            if is_apa {
+                let mut new_ovr = std::collections::HashMap::new();
+                new_ovr.insert(
+                    "article-journal".to_string(),
+                    csln_core::template::Rendering {
+                        suffix: Some(". ".to_string()),
+                        ..Default::default()
+                    },
+                );
+                // Merge instead of overwrite
+                let overrides = t
+                    .overrides
+                    .get_or_insert_with(std::collections::HashMap::new);
+                for (k, v) in new_ovr {
+                    overrides.insert(k, v);
+                }
+            }
+        }
+        // Container-title (parent-monograph): style-specific unsuppression
+        TemplateComponent::Title(t)
+            if t.title == csln_core::template::TitleType::ParentMonograph =>
+        {
+            let is_apa = style_id.contains("apa");
+            if is_apa {
+                let mut new_ovr = std::collections::HashMap::new();
+                new_ovr.insert(
+                    "paper-conference".to_string(),
+                    csln_core::template::Rendering {
+                        suppress: Some(true),
+                        ..Default::default()
+                    },
+                );
+                // Merge instead of overwrite
+                let overrides = t
+                    .overrides
+                    .get_or_insert_with(std::collections::HashMap::new);
+                for (k, v) in new_ovr {
+                    overrides.insert(k, v);
+                }
+            }
+        }
         // Container-title (parent-serial): style-specific suffix and unsuppression
         // - APA: comma suffix, no prefix
         // - Chicago: space suffix (prevents default period separator)
@@ -817,6 +866,7 @@ fn apply_type_overrides(
 fn group_volume_and_issue(
     components: &mut Vec<TemplateComponent>,
     options: &csln_core::options::Config,
+    style_id: &str,
 ) {
     use csln_core::template::{
         DelimiterPunctuation, NumberVariable, Rendering, TemplateList, TemplateNumber,
@@ -937,8 +987,11 @@ fn group_volume_and_issue(
                     issue_with_parens,
                     vol_issue_delimiter,
                 ) {
-                    // Successfully inserted, update top-level list delimiter if needed
-                    list.delimiter = Some(DelimiterPunctuation::Comma);
+                    // Only update outer list delimiter if it's a serial source list
+                    // (avoid changing delimiters for lists containing titles)
+                    if style_id.contains("apa") && !list_contains_title(list) {
+                        list.delimiter = Some(DelimiterPunctuation::Comma);
+                    }
                 }
             }
         }
@@ -1069,6 +1122,15 @@ fn find_volume_in_list(list: &csln_core::template::TemplateList) -> Option<()> {
         }
     }
     None
+}
+
+/// Check if a List contains any title variable.
+fn list_contains_title(list: &csln_core::template::TemplateList) -> bool {
+    list.items.iter().any(|item| match item {
+        TemplateComponent::Title(_) => true,
+        TemplateComponent::List(inner) => list_contains_title(inner),
+        _ => false,
+    })
 }
 
 /// Move DOI and URL components to the end of the bibliography template.
@@ -1522,6 +1584,76 @@ fn reorder_publisher_place_for_chicago(components: &mut Vec<TemplateComponent>, 
 
             // Insert it right after parent-serial
             components.insert(ps_pos + 1, publisher_place_component);
+        }
+    }
+}
+
+/// Reorder chapter components for APA style.
+///
+/// APA chapters require: "Chapter Title." In E. E. Editor (Ed.), Book Title (pp. xx–xx).
+///
+/// This function:
+/// 1. Finds the editor and parent-monograph positions
+/// 2. Swaps them so editor comes first
+/// 3. Adds "In " prefix to editor (or parent-monograph if no editor)
+/// 4. Adjusts editor name order to given-first
+fn reorder_chapters_for_apa(components: &mut Vec<TemplateComponent>, style_id: &str) {
+    use csln_core::template::{ContributorRole, TitleType};
+
+    // Only apply to APA styles
+    if !style_id.contains("apa") {
+        return;
+    }
+
+    // Find the editor contributor
+    let editor_pos = components.iter().position(|c| {
+        matches!(
+            c,
+            TemplateComponent::Contributor(contrib)
+            if contrib.contributor == ContributorRole::Editor
+        )
+    });
+
+    // Find the parent-monograph title
+    let parent_monograph_pos = components.iter().position(|c| {
+        matches!(
+            c,
+            TemplateComponent::Title(t) if t.title == TitleType::ParentMonograph
+        )
+    });
+
+    if let (Some(ed_pos), Some(pm_pos)) = (editor_pos, parent_monograph_pos) {
+        if ed_pos > pm_pos {
+            // Swap them: move editor before parent-monograph
+            let editor_comp = components.remove(ed_pos);
+            components.insert(pm_pos, editor_comp);
+
+            // Re-calculate positions after move
+            let ed_pos = pm_pos;
+
+            // Apply APA chapter formatting
+            if let Some(TemplateComponent::Contributor(ref mut ed)) = components.get_mut(ed_pos) {
+                ed.name_order = Some(csln_core::template::NameOrder::GivenFirst);
+                let overrides = ed
+                    .overrides
+                    .get_or_insert_with(std::collections::HashMap::new);
+                overrides.insert(
+                    "chapter".to_string(),
+                    csln_core::template::Rendering {
+                        prefix: Some("In ".to_string()),
+                        suffix: Some(", ".to_string()),
+                        ..Default::default()
+                    },
+                );
+                overrides.insert(
+                    "paper-conference".to_string(),
+                    csln_core::template::Rendering {
+                        prefix: Some("In ".to_string()),
+                        suffix: Some(", ".to_string()),
+                        ..Default::default()
+                    },
+                );
+            }
         }
     }
 }

@@ -1,17 +1,16 @@
 {
   "phase": "chapter_formatting_infrastructure",
-  "status": "feat/chapter-formatting branch - delimiter extraction improved",
+  "status": "Infrastructure improved, APA bibliography 15/15",
   "repo": "https://github.com/bdarcus/csl26",
-  "last_updated": "2026-01-30",
-  "current_branch": "feat/chapter-formatting",
-  "citation_status": "APA/Chicago/Harvard 5/5 match, British Journal 4/5",
-  "bibliography_status": "APA 4/5 (chapter ordering issue), corpus needs re-test",
+  "last_updated": "2026-02-03",
+  "current_branch": "main",
+  "citation_status": "APA/Chicago/Harvard 15/15 match",
+  "bibliography_status": "APA 15/15, Chicago needs work",
   "recent_work": {
-    "delimiter_fix": "Citation delimiter extraction now prefers innermost group, falls back to date prefix",
-    "style_class_check": "Author-date transformations only applied to class=in-text styles",
-    "overrides_support": "Added overrides field to TemplateContributor and TemplateDate",
-    "else_if_branches": "ConditionBlock now preserves all CSL else-if branches",
-    "type_templates": "BibliographySpec supports type-specific templates (infrastructure only)"
+    "delimiter_fix": "List component now filters empty rendered strings to prevent extra delimiters",
+    "type_support": "Added Thesis, Webpage, and Post types to core reference model",
+    "apa_chapters": "Implemented specific reordering and prefixing for APA chapters",
+    "migration_fixes": "Improved ref_type detection and unsuppression for monographic components"
   },
   "structure": {
     ".agent/": "LLM agent instructions and state",
@@ -20,14 +19,13 @@
     "styles/": "2,844 CSL 1.0 styles (submodule)"
   },
   "next_steps": [
-    "Re-run batch test to verify citation pass rate improvement",
-    "Fix bibliography formatting differences",
-    "Consider style-specific chapter detection (not blanket author-date)"
+    "Improve Chicago bibliography pass rate",
+    "Make reordering functions in csln_migrate recursive/robust",
+    "Implement more CSL 1.0 types in core model"
   ],
   "lessons_learned": [
-    "CSL encodes author-year separator in two ways: group delimiter or date prefix",
-    "Must check style class (in-text vs note) before applying transformations",
-    "Cannot apply single chapter format to all author-date styles",
-    "Different styles have incompatible formats (APA vs others)"
+    "List components must filter empty rendered strings to avoid delimiter artifacts",
+    "Type-specific overrides fail if ref_type mapping is not precise enough",
+    "APA and Chicago have fundamentally different chapter component orders"
   ]
 }

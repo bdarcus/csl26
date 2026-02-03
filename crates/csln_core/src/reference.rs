@@ -197,7 +197,11 @@ impl InputReference {
 
     /// Return the genre/type as string.
     pub fn genre(&self) -> Option<String> {
-        Some(self.ref_type())
+        match self {
+            InputReference::Monograph(r) => r.genre.clone(),
+            InputReference::CollectionComponent(r) => r.genre.clone(),
+            _ => None,
+        }
     }
 
     /// Return the abstract.
@@ -321,15 +325,24 @@ impl InputReference {
             InputReference::Monograph(r) => match r.r#type {
                 MonographType::Book => "book".to_string(),
                 MonographType::Report => "report".to_string(),
+                MonographType::Thesis => "thesis".to_string(),
+                MonographType::Webpage => "webpage".to_string(),
+                MonographType::Post => "post".to_string(),
                 MonographType::Document => "document".to_string(),
             },
             InputReference::CollectionComponent(r) => match r.r#type {
                 MonographComponentType::Chapter => "chapter".to_string(),
+                MonographComponentType::Document => "paper-conference".to_string(),
                 _ => "chapter".to_string(),
             },
-            InputReference::SerialComponent(r) => match r.r#type {
-                SerialComponentType::Article => "article-journal".to_string(),
-                _ => "article".to_string(),
+            InputReference::SerialComponent(r) => match r.parent {
+                Parent::Embedded(ref s) => match s.r#type {
+                    SerialType::AcademicJournal => "article-journal".to_string(),
+                    SerialType::Magazine => "article-magazine".to_string(),
+                    SerialType::Newspaper => "article-newspaper".to_string(),
+                    _ => "article-journal".to_string(),
+                },
+                Parent::Id(_) => "article-journal".to_string(),
             },
             InputReference::Collection(r) => match r.r#type {
                 CollectionType::EditedBook => "book".to_string(),
@@ -358,9 +371,16 @@ impl From<csl_legacy::csl_json::Reference> for InputReference {
         let edition = legacy.edition.map(|e| e.to_string());
 
         match legacy.ref_type.as_str() {
-            "book" | "report" => {
+            "book" | "report" | "thesis" | "webpage" | "post" | "post-weblog" | "software"
+            | "dataset" => {
                 let r#type = if legacy.ref_type == "report" {
                     MonographType::Report
+                } else if legacy.ref_type == "thesis" {
+                    MonographType::Thesis
+                } else if legacy.ref_type == "webpage" {
+                    MonographType::Webpage
+                } else if legacy.ref_type.contains("post") {
+                    MonographType::Post
                 } else {
                     MonographType::Book
                 };
@@ -384,19 +404,24 @@ impl From<csl_legacy::csl_json::Reference> for InputReference {
                     isbn,
                     doi,
                     edition,
+                    genre: legacy.genre,
                     keywords: None,
                     original_date: None,
                     original_title: None,
                 }))
             }
-            "chapter" => {
+            "chapter" | "paper-conference" => {
                 let parent_title = legacy
                     .container_title
                     .map(Title::Single)
                     .unwrap_or(Title::Single(String::new()));
                 InputReference::CollectionComponent(Box::new(CollectionComponent {
                     id,
-                    r#type: MonographComponentType::Chapter,
+                    r#type: if legacy.ref_type == "paper-conference" {
+                        MonographComponentType::Document
+                    } else {
+                        MonographComponentType::Chapter
+                    },
                     title: Some(title),
                     author: legacy.author.map(Contributor::from),
                     translator: legacy.translator.map(Contributor::from),
@@ -425,6 +450,7 @@ impl From<csl_legacy::csl_json::Reference> for InputReference {
                     accessed,
                     note,
                     doi,
+                    genre: legacy.genre,
                     keywords: None,
                 }))
             }
@@ -489,6 +515,7 @@ impl From<csl_legacy::csl_json::Reference> for InputReference {
                     isbn,
                     doi,
                     edition,
+                    genre: legacy.genre,
                     keywords: None,
                     original_date: None,
                     original_title: None,
@@ -603,6 +630,7 @@ impl InputReference {
                     isbn: field_str("isbn"),
                     doi: field_str("doi"),
                     edition: field_str("edition"),
+                    genre: field_str("type"), // Map biblatex 'type' to 'genre'
                     keywords: None,
                     original_date: None,
                     original_title: None,
@@ -638,6 +666,7 @@ impl InputReference {
                     accessed: field_str("urldate").map(EdtfString),
                     note: field_str("note"),
                     doi: field_str("doi"),
+                    genre: field_str("type"),
                     keywords: None,
                 }))
             }
@@ -683,6 +712,7 @@ impl InputReference {
                 isbn: field_str("isbn"),
                 doi: field_str("doi"),
                 edition: field_str("edition"),
+                genre: field_str("type"),
                 keywords: None,
                 original_date: None,
                 original_title: None,
@@ -754,6 +784,7 @@ pub struct Monograph {
     pub isbn: Option<String>,
     pub doi: Option<String>,
     pub edition: Option<String>,
+    pub genre: Option<String>,
     pub keywords: Option<Vec<String>>,
     pub original_date: Option<EdtfString>,
     pub original_title: Option<Title>,
@@ -882,6 +913,9 @@ pub enum MonographType {
     /// A standalone generic item.
     Document,
     Report,
+    Thesis,
+    Webpage,
+    Post,
 }
 
 /// A component of a larger Monograph, such as a chapter in a book.
@@ -902,6 +936,7 @@ pub struct CollectionComponent {
     pub accessed: Option<EdtfString>,
     pub note: Option<String>,
     pub doi: Option<String>,
+    pub genre: Option<String>,
     pub keywords: Option<Vec<String>>,
 }
 
