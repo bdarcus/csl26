@@ -1,0 +1,221 @@
+# Comprehensive CSLN Examples
+# Covers Humanities, Social Sciences, Hard Sciences, Law, and Edge Cases
+# Strictly adhering to crates/csln_core/src/reference.rs schema
+
+# --- Humanities ---
+
+# Translated Book
+foucault_discipline:
+  type: book
+  keywords: [humanities, philosophy, translation]
+  title:
+    main: Discipline and Punish
+    sub: The Birth of the Prison
+  original-title: Surveiller et punir
+  author:
+    family: Foucault
+    given: Michel
+  translator:
+    family: Sheridan
+    given: Alan
+  issued: "1977"
+  original-date: "1975"
+  publisher:
+    name: Pantheon Books
+    location: New York
+
+# Classic Work (Standard Book)
+austen_pride:
+  type: book
+  keywords: [humanities, literature]
+  title: Pride and Prejudice
+  author:
+    family: Austen
+    given: Jane
+  issued: "1813"
+  publisher:
+    name: T. Egerton
+    location: London
+  edition: "1st"
+
+# Art History (Edited Book / Catalog)
+met_catalog_2020:
+  type: edited-book
+  keywords: [humanities, art-history]
+  title:
+    main: "Making The Met"
+    sub: "1870–2020"
+  editor:
+    family: Bayer
+    given: Andrea
+  publisher:
+    name: The Metropolitan Museum of Art
+    location: New York
+  issued: "2020"
+  isbn: "9781588397096"
+
+# --- Social Sciences ---
+
+# Co-authored Book
+berger_luckmann:
+  type: book
+  keywords: [social-sciences, sociology]
+  title: The Social Construction of Reality
+  author:
+    - family: Berger
+      given: Peter
+      suffix: L.
+    - family: Luckmann
+      given: Thomas
+  issued: "1966"
+  publisher:
+    name: Anchor Books
+    location: New York
+
+# Report
+pew_social_media:
+  type: report
+  keywords: [social-sciences, internet]
+  title: Social Media Use in 2021
+  author:
+    - family: Auxier
+      given: Brooke
+    - family: Anderson
+      given: Monica
+  publisher:
+    name: Pew Research Center
+  issued: "2021-04-07"
+  url: "https://www.pewresearch.org/internet/2021/04/07/social-media-use-in-2021/"
+
+# --- Hard Sciences ---
+
+# Journal Article (Single Author)
+einstein_relativity:
+  type: article
+  keywords: [hard-sciences, physics]
+  title: Zur Elektrodynamik bewegter Körper
+  author:
+    family: Einstein
+    given: Albert
+  issued: "1905"
+  parent:
+    type: academic-journal
+    title: Annalen der Physik
+  volume: 322
+  issue: 10
+  pages: "891-921"
+  doi: "10.1002/andp.19053221004"
+
+# Journal Article (Massive Author List)
+aad_atlas_higgs:
+  type: article
+  keywords: [hard-sciences, physics, massive-author-list]
+  title: Observation of a new particle in the search for the Standard Model Higgs boson with the ATLAS detector at the LHC
+  author:
+    - family: Aad
+      given: G.
+    - family: Abajyan
+      given: T.
+    - family: Abbott
+      given: B.
+    - family: Abdallah
+      given: J.
+    - family: Abdel Khalek
+      given: S.
+    - family: Abdelalim
+      given: A. A.
+    - family: Abdinov
+      given: O.
+    - family: Aben
+      given: R.
+    - family: Abi
+      given: B.
+    - name: "The ATLAS Collaboration"
+  issued: "2012"
+  parent:
+    type: academic-journal
+    title: Physics Letters B
+  volume: 716
+  issue: 1
+  pages: "1-29"
+  doi: "10.1016/j.physletb.2012.08.020"
+
+# --- Conference Proceedings ---
+
+# Paper in Proceedings
+vaswani_attention:
+  type: chapter
+  keywords: [hard-sciences, computer-science, ai]
+  title: Attention Is All You Need
+  author:
+    - family: Vaswani
+      given: Ashish
+    - family: Shazeer
+      given: Noam
+    - family: Parmar
+      given: Niki
+    - family: Uszkoreit
+      given: Jakob
+    - family: Jones
+      given: Llion
+    - family: Gomez
+      given: Aidan
+      suffix: N.
+    - family: Kaiser
+      given: Łukasz
+    - family: Polosukhin
+      given: Illia
+  issued: "2017"
+  parent:
+    type: proceedings
+    title: Advances in Neural Information Processing Systems 30
+    issued: "2017"
+    editor:
+      - family: Guyon
+        given: I.
+      - family: Luxburg
+        given: U.
+        non-dropping-particle: von
+      - family: Bengio
+        given: S.
+    publisher:
+      name: Curran Associates, Inc.
+  pages: "5998-6008"
+
+# --- Law ---
+
+brown_v_board:
+  type: article
+  keywords: [law]
+  title: Brown v. Board of Education of Topeka
+  issued: "1954"
+  parent:
+    type: academic-journal
+    title: United States Reports
+  volume: 347
+  pages: "483"
+  note: "347 U.S. 483 (1954)"
+
+# --- Edge Cases ---
+
+who_report:
+  type: report
+  keywords: [medicine, global-health]
+  author:
+    name: World Health Organization
+    location: Geneva
+  title: 
+    main: World Health Statistics 2023
+    sub: Monitoring Health for the SDGs
+  issued: "2023"
+  isbn: "978-92-4-007432-3"
+  url: "https://www.who.int/publications/i/item/9789240074323"
+
+economist_editorial:
+  type: article
+  keywords: [news, anonymous]
+  title: The global economy
+  issued: "2023-10-01"
+  parent:
+    type: magazine
+    title: The Economist
