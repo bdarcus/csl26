@@ -844,7 +844,11 @@ impl ComponentValues for TemplateTitle {
             TitleType::ParentSerial => {
                 if matches!(
                     binding.as_str(),
-                    "article-journal" | "article-magazine" | "article-newspaper"
+                    "article-journal"
+                        | "article-magazine"
+                        | "article-newspaper"
+                        | "article"
+                        | "paper-conference"
                 ) {
                     reference.container_title().map(|t| t.to_string())
                 } else {
@@ -852,7 +856,14 @@ impl ComponentValues for TemplateTitle {
                 }
             }
             TitleType::ParentMonograph => {
-                if binding.as_str() == "chapter" {
+                if matches!(
+                    binding.as_str(),
+                    "chapter"
+                        | "paper-conference"
+                        | "entry"
+                        | "entry-dictionary"
+                        | "entry-encyclopedia"
+                ) {
                     reference.container_title().map(|t| t.to_string())
                 } else {
                     None
@@ -1123,7 +1134,12 @@ impl ComponentValues for TemplateList {
                     config: Some(options.config.clone()),
                 };
 
-                Some(crate::render::render_component(&proc_item))
+                let rendered = crate::render::render_component(&proc_item);
+                if rendered.is_empty() {
+                    None
+                } else {
+                    Some(rendered)
+                }
             })
             .collect();
 

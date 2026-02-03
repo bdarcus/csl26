@@ -101,6 +101,18 @@ pub fn apa_bibliography() -> Vec<TemplateComponent> {
             },
             ..Default::default()
         }),
+        // Container title (book) - italicized, with "In " prefix
+        TemplateComponent::Title(TemplateTitle {
+            title: TitleType::ParentMonograph,
+            form: None,
+            rendering: Rendering {
+                prefix: Some("In ".to_string()),
+                emph: Some(true),
+                suffix: Some(", ".to_string()),
+                ..Default::default()
+            },
+            ..Default::default()
+        }),
         // Volume - italicized
         TemplateComponent::Number(TemplateNumber {
             number: NumberVariable::Volume,
@@ -126,6 +138,15 @@ pub fn apa_bibliography() -> Vec<TemplateComponent> {
         TemplateComponent::Number(TemplateNumber {
             number: NumberVariable::Pages,
             form: None,
+            rendering: Rendering {
+                suffix: Some(". ".to_string()),
+                ..Default::default()
+            },
+            ..Default::default()
+        }),
+        // Publisher
+        TemplateComponent::Variable(TemplateVariable {
+            variable: SimpleVariable::Publisher,
             rendering: Rendering {
                 suffix: Some(". ".to_string()),
                 ..Default::default()
