@@ -32,6 +32,7 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 
 use crate::locale::MonthList;
 use crate::options::{AndOptions, AndOtherOptions, Config, DisplayAsSort};
+use biblatex::{Chunk, Entry, Person};
 use edtf::level_1::Edtf;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -79,12 +80,11 @@ impl InputReference {
         }
     }
 
-    /// Return the editor.
-    /// If the reference does not have an editor, return None.
     pub fn editor(&self) -> Option<Contributor> {
         match self {
+            InputReference::Monograph(r) => r.editor.clone(),
             InputReference::Collection(r) => r.editor.clone(),
-            InputReference::CollectionComponent(r) => match &r.parent {
+            InputReference::CollectionComponent(r) => match &(**r).parent {
                 Parent::Embedded(p) => p.editor.clone(),
                 Parent::Id(_) => None,
             },
@@ -108,10 +108,13 @@ impl InputReference {
     pub fn publisher(&self) -> Option<Contributor> {
         match self {
             InputReference::Monograph(r) => r.publisher.clone(),
-            InputReference::CollectionComponent(r) => match &r.parent {
-                Parent::Embedded(p) => p.publisher.clone(),
-                Parent::Id(_) => None,
-            },
+            InputReference::CollectionComponent(r) => {
+                let r = r.as_ref();
+                match &r.parent {
+                    Parent::Embedded(p) => p.publisher.clone(),
+                    Parent::Id(_) => None,
+                }
+            }
             InputReference::Collection(r) => r.publisher.clone(),
             _ => None,
         }
@@ -139,6 +142,132 @@ impl InputReference {
         }
     }
 
+    /// Return the DOI.
+    pub fn doi(&self) -> Option<String> {
+        match self {
+            InputReference::Monograph(r) => r.doi.clone(),
+            InputReference::CollectionComponent(r) => r.doi.clone(),
+            InputReference::SerialComponent(r) => r.doi.clone(),
+            InputReference::Collection(_) => None,
+        }
+    }
+
+    /// Return the URL.
+    pub fn url(&self) -> Option<Url> {
+        match self {
+            InputReference::Monograph(r) => r.url.clone(),
+            InputReference::CollectionComponent(r) => r.url.clone(),
+            InputReference::SerialComponent(r) => r.url.clone(),
+            InputReference::Collection(r) => r.url.clone(),
+        }
+    }
+
+    /// Return the container title.
+    /// Return the publisher place.
+    pub fn publisher_place(&self) -> Option<String> {
+        match self {
+            InputReference::Monograph(r) => r.publisher.as_ref().and_then(|c| c.location()),
+            InputReference::CollectionComponent(r) => {
+                // Use publisher from parent
+                match &r.parent {
+                    Parent::Embedded(p) => p.publisher.as_ref().and_then(|c| c.location()),
+                    _ => None,
+                }
+            }
+            InputReference::SerialComponent(_) => None,
+            InputReference::Collection(r) => r.publisher.as_ref().and_then(|c| c.location()),
+        }
+    }
+
+    /// Return the publisher as a string.
+    pub fn publisher_str(&self) -> Option<String> {
+        match self {
+            InputReference::Monograph(r) => r.publisher.as_ref().and_then(|c| c.name()),
+            InputReference::CollectionComponent(r) => {
+                // Use publisher from parent
+                match &r.parent {
+                    Parent::Embedded(p) => p.publisher.as_ref().and_then(|c| c.name()),
+                    _ => None,
+                }
+            }
+            InputReference::SerialComponent(_) => None,
+            InputReference::Collection(r) => r.publisher.as_ref().and_then(|c| c.name()),
+        }
+    }
+
+    /// Return the genre/type as string.
+    pub fn genre(&self) -> Option<String> {
+        Some(self.ref_type())
+    }
+
+    /// Return the abstract.
+    pub fn abstract_text(&self) -> Option<String> {
+        None // Not currently supported in structs
+    }
+
+    pub fn container_title(&self) -> Option<Title> {
+        match self {
+            InputReference::CollectionComponent(r) => {
+                let r = r.as_ref();
+                match &r.parent {
+                    Parent::Embedded(p) => p.title.clone(),
+                    Parent::Id(_) => None,
+                }
+            }
+            InputReference::SerialComponent(r) => {
+                let r = r.as_ref();
+                match &r.parent {
+                    Parent::Embedded(p) => Some(p.title.clone()),
+                    Parent::Id(_) => None,
+                }
+            }
+            _ => None,
+        }
+    }
+
+    /// Return the volume.
+    pub fn volume(&self) -> Option<NumOrStr> {
+        match self {
+            InputReference::SerialComponent(r) => r.volume.clone(),
+            _ => None,
+        }
+    }
+
+    /// Return the issue.
+    pub fn issue(&self) -> Option<NumOrStr> {
+        match self {
+            InputReference::SerialComponent(r) => r.issue.clone(),
+            _ => None,
+        }
+    }
+
+    /// Return the pages.
+    pub fn pages(&self) -> Option<NumOrStr> {
+        match self {
+            InputReference::CollectionComponent(r) => r.pages.clone(),
+            InputReference::SerialComponent(r) => r.pages.clone().map(NumOrStr::Str),
+            _ => None,
+        }
+    }
+
+    /// Return the edition.
+    pub fn edition(&self) -> Option<String> {
+        match self {
+            InputReference::Monograph(r) => r.edition.clone(),
+            _ => None,
+        }
+    }
+
+    /// Return the accessed date.
+    pub fn accessed(&self) -> Option<EdtfString> {
+        match self {
+            InputReference::Monograph(r) => r.accessed.clone(),
+            InputReference::CollectionComponent(r) => r.accessed.clone(),
+            InputReference::SerialComponent(r) => r.accessed.clone(),
+            InputReference::Collection(r) => r.accessed.clone(),
+        }
+    }
+
     /// Return the original publication date.
     pub fn original_date(&self) -> Option<EdtfString> {
         match self {
@@ -147,7 +276,26 @@ impl InputReference {
         }
     }
 
-    /// Return the keywords for categorization.
+    /// Return the ISBN.
+    pub fn isbn(&self) -> Option<String> {
+        match self {
+            InputReference::Monograph(r) => r.isbn.clone(),
+            _ => None,
+        }
+    }
+
+    /// Return the ISSN.
+    pub fn issn(&self) -> Option<String> {
+        match self {
+            InputReference::SerialComponent(r) => match &r.parent {
+                Parent::Embedded(s) => s.issn.clone(),
+                Parent::Id(_) => None,
+            },
+            _ => None,
+        }
+    }
+
+    /// Return the Keywords.
     pub fn keywords(&self) -> Option<Vec<String>> {
         match self {
             InputReference::Monograph(r) => r.keywords.clone(),
@@ -165,6 +313,407 @@ impl InputReference {
             InputReference::SerialComponent(component) => component.id = Some(id),
             InputReference::Collection(collection) => collection.id = Some(id),
         }
+    }
+
+    /// Return the reference type as a string (CSL-compatible).
+    pub fn ref_type(&self) -> String {
+        match self {
+            InputReference::Monograph(r) => match (**r).r#type {
+                MonographType::Book => "book".to_string(),
+                MonographType::Report => "report".to_string(),
+                MonographType::Document => "document".to_string(),
+            },
+            InputReference::CollectionComponent(r) => match (**r).r#type {
+                MonographComponentType::Chapter => "chapter".to_string(),
+                _ => "chapter".to_string(),
+            },
+            InputReference::SerialComponent(r) => match (**r).r#type {
+                SerialComponentType::Article => "article-journal".to_string(),
+                _ => "article".to_string(),
+            },
+            InputReference::Collection(r) => match (**r).r#type {
+                CollectionType::EditedBook => "book".to_string(),
+                _ => "collection".to_string(),
+            },
+        }
+    }
+}
+
+impl From<csl_legacy::csl_json::Reference> for InputReference {
+    fn from(legacy: csl_legacy::csl_json::Reference) -> Self {
+        let id = Some(legacy.id);
+        let title = legacy
+            .title
+            .map(Title::Single)
+            .unwrap_or(Title::Single(String::new()));
+        let issued = legacy
+            .issued
+            .map(EdtfString::from)
+            .unwrap_or(EdtfString(String::new()));
+        let url = legacy.url.and_then(|u| Url::parse(&u).ok());
+        let accessed = legacy.accessed.map(EdtfString::from);
+        let note = legacy.note;
+        let doi = legacy.doi;
+        let isbn = legacy.isbn;
+        let edition = legacy.edition.map(|e| e.to_string());
+
+        match legacy.ref_type.as_str() {
+            "book" | "report" => {
+                let r#type = if legacy.ref_type == "report" {
+                    MonographType::Report
+                } else {
+                    MonographType::Book
+                };
+                InputReference::Monograph(Box::new(Monograph {
+                    id,
+                    r#type,
+                    title,
+                    author: legacy.author.map(Contributor::from),
+                    editor: legacy.editor.map(Contributor::from),
+                    translator: legacy.translator.map(Contributor::from),
+                    issued,
+                    publisher: legacy.publisher.map(|n| {
+                        Contributor::SimpleName(SimpleName {
+                            name: n,
+                            location: legacy.publisher_place,
+                        })
+                    }),
+                    url,
+                    accessed,
+                    note,
+                    isbn,
+                    doi,
+                    edition,
+                    keywords: None,
+                    original_date: None,
+                    original_title: None,
+                }))
+            }
+            "chapter" => {
+                let parent_title = legacy
+                    .container_title
+                    .map(Title::Single)
+                    .unwrap_or(Title::Single(String::new()));
+                InputReference::CollectionComponent(Box::new(CollectionComponent {
+                    id,
+                    r#type: MonographComponentType::Chapter,
+                    title: Some(title),
+                    author: legacy.author.map(Contributor::from),
+                    translator: legacy.translator.map(Contributor::from),
+                    issued,
+                    parent: Parent::Embedded(Collection {
+                        id: None,
+                        r#type: CollectionType::EditedBook,
+                        title: Some(parent_title),
+                        editor: legacy.editor.map(Contributor::from),
+                        translator: None,
+                        issued: EdtfString(String::new()),
+                        publisher: legacy.publisher.map(|n| {
+                            Contributor::SimpleName(SimpleName {
+                                name: n,
+                                location: legacy.publisher_place,
+                            })
+                        }),
+                        url: None,
+                        accessed: None,
+                        note: None,
+                        isbn: None,
+                        keywords: None,
+                    }),
+                    pages: legacy.page.map(NumOrStr::Str),
+                    url,
+                    accessed,
+                    note,
+                    doi,
+                    keywords: None,
+                }))
+            }
+            "article-journal" | "article" | "article-magazine" | "article-newspaper" => {
+                let serial_type = match legacy.ref_type.as_str() {
+                    "article-journal" => SerialType::AcademicJournal,
+                    "article-magazine" => SerialType::Magazine,
+                    "article-newspaper" => SerialType::Newspaper,
+                    _ => SerialType::AcademicJournal,
+                };
+                let parent_title = legacy
+                    .container_title
+                    .map(Title::Single)
+                    .unwrap_or(Title::Single(String::new()));
+                InputReference::SerialComponent(Box::new(SerialComponent {
+                    id,
+                    r#type: SerialComponentType::Article,
+                    title: Some(title),
+                    author: legacy.author.map(Contributor::from),
+                    translator: legacy.translator.map(Contributor::from),
+                    issued,
+                    parent: Parent::Embedded(Serial {
+                        r#type: serial_type,
+                        title: parent_title,
+                        issn: legacy.issn,
+                    }),
+                    url,
+                    accessed,
+                    note,
+                    doi,
+                    pages: legacy.page,
+                    volume: legacy.volume.map(|v| match v {
+                        csl_legacy::csl_json::StringOrNumber::String(s) => NumOrStr::Str(s),
+                        csl_legacy::csl_json::StringOrNumber::Number(n) => NumOrStr::Number(n),
+                    }),
+                    issue: legacy.issue.map(|v| match v {
+                        csl_legacy::csl_json::StringOrNumber::String(s) => NumOrStr::Str(s),
+                        csl_legacy::csl_json::StringOrNumber::Number(n) => NumOrStr::Number(n),
+                    }),
+                    keywords: None,
+                }))
+            }
+            _ => {
+                // Fallback to Monograph for unknown types
+                InputReference::Monograph(Box::new(Monograph {
+                    id,
+                    r#type: MonographType::Document,
+                    title,
+                    author: legacy.author.map(Contributor::from),
+                    editor: legacy.editor.map(Contributor::from),
+                    translator: legacy.translator.map(Contributor::from),
+                    issued,
+                    publisher: legacy.publisher.map(|n| {
+                        Contributor::SimpleName(SimpleName {
+                            name: n,
+                            location: legacy.publisher_place,
+                        })
+                    }),
+                    url,
+                    accessed,
+                    note,
+                    isbn,
+                    doi,
+                    edition,
+                    keywords: None,
+                    original_date: None,
+                    original_title: None,
+                }))
+            }
+        }
+    }
+}
+
+impl From<csl_legacy::csl_json::DateVariable> for EdtfString {
+    fn from(date: csl_legacy::csl_json::DateVariable) -> Self {
+        if let Some(literal) = date.literal {
+            return EdtfString(literal);
+        }
+        if let Some(parts) = date.date_parts {
+            if let Some(first) = parts.first() {
+                let year = first
+                    .first()
+                    .map(|y| format!("{:04}", y))
+                    .unwrap_or_default();
+                let month = first
+                    .get(1)
+                    .map(|m| format!("-{:02}", m))
+                    .unwrap_or_default();
+                let day = first
+                    .get(2)
+                    .map(|d| format!("-{:02}", d))
+                    .unwrap_or_default();
+                return EdtfString(format!("{}{}{}", year, month, day));
+            }
+        }
+        EdtfString(String::new())
+    }
+}
+
+impl From<Vec<csl_legacy::csl_json::Name>> for Contributor {
+    fn from(names: Vec<csl_legacy::csl_json::Name>) -> Self {
+        let contributors: Vec<Contributor> = names
+            .into_iter()
+            .map(|n| {
+                if let Some(literal) = n.literal {
+                    Contributor::SimpleName(SimpleName {
+                        name: literal,
+                        location: None,
+                    })
+                } else {
+                    Contributor::StructuredName(StructuredName {
+                        given: n.given.unwrap_or_default(),
+                        family: n.family.unwrap_or_default(),
+                        suffix: n.suffix,
+                        dropping_particle: n.dropping_particle,
+                        non_dropping_particle: n.non_dropping_particle,
+                    })
+                }
+            })
+            .collect();
+        Contributor::ContributorList(ContributorList(contributors))
+    }
+}
+
+impl InputReference {
+    /// Create an InputReference from a biblatex Entry.
+    pub fn from_biblatex(entry: &Entry) -> Self {
+        let id = Some(entry.key.clone());
+        let field_str = |key: &str| {
+            entry.fields.get(key).map(|f| {
+                f.iter()
+                    .map(|c| match &c.v {
+                        Chunk::Normal(s) | Chunk::Verbatim(s) => s.as_str(),
+                        _ => "",
+                    })
+                    .collect::<String>()
+            })
+        };
+
+        let title = field_str("title")
+            .map(Title::Single)
+            .unwrap_or(Title::Single(String::new()));
+        let issued = field_str("date")
+            .map(EdtfString)
+            .unwrap_or(EdtfString(String::new()));
+        let publisher = field_str("publisher").map(|p| {
+            Contributor::SimpleName(SimpleName {
+                name: p,
+                location: field_str("location"),
+            })
+        });
+
+        let author = entry
+            .author()
+            .ok()
+            .map(|p| Contributor::from_biblatex_persons(&p));
+        let editor = entry.editors().ok().map(|e| {
+            let all_persons: Vec<Person> = e.into_iter().flat_map(|(persons, _)| persons).collect();
+            Contributor::from_biblatex_persons(&all_persons)
+        });
+
+        match entry.entry_type.to_string().to_lowercase().as_str() {
+            "book" | "mvbook" | "collection" | "mvcollection" => {
+                InputReference::Monograph(Box::new(Monograph {
+                    id,
+                    r#type: MonographType::Book,
+                    title,
+                    author,
+                    editor,
+                    translator: None,
+                    issued,
+                    publisher,
+                    url: field_str("url").and_then(|u| Url::parse(&u).ok()),
+                    accessed: None,
+                    note: field_str("note"),
+                    isbn: field_str("isbn"),
+                    doi: field_str("doi"),
+                    edition: field_str("edition"),
+                    keywords: None,
+                    original_date: None,
+                    original_title: None,
+                }))
+            }
+            "inbook" | "incollection" | "inproceedings" => {
+                let parent_title = field_str("booktitle")
+                    .map(Title::Single)
+                    .unwrap_or(Title::Single(String::new()));
+                InputReference::CollectionComponent(Box::new(CollectionComponent {
+                    id,
+                    r#type: MonographComponentType::Chapter,
+                    title: Some(title),
+                    author,
+                    translator: None,
+                    issued,
+                    parent: Parent::Embedded(Collection {
+                        id: None,
+                        r#type: CollectionType::EditedBook,
+                        title: Some(parent_title),
+                        editor,
+                        translator: None,
+                        issued: EdtfString(String::new()),
+                        publisher,
+                        url: None,
+                        accessed: None,
+                        note: None,
+                        isbn: None,
+                        keywords: None,
+                    }),
+                    pages: field_str("pages").map(NumOrStr::Str),
+                    url: field_str("url").and_then(|u| Url::parse(&u).ok()),
+                    accessed: field_str("urldate").map(EdtfString),
+                    note: field_str("note"),
+                    doi: field_str("doi"),
+                    keywords: None,
+                }))
+            }
+            "article" => {
+                let parent_title = field_str("journaltitle")
+                    .or_else(|| field_str("journal"))
+                    .map(Title::Single)
+                    .unwrap_or(Title::Single(String::new()));
+                InputReference::SerialComponent(Box::new(SerialComponent {
+                    id,
+                    r#type: SerialComponentType::Article,
+                    title: Some(title),
+                    author,
+                    translator: None,
+                    issued,
+                    parent: Parent::Embedded(Serial {
+                        r#type: SerialType::AcademicJournal, // Default
+                        title: parent_title,
+                        issn: field_str("issn"),
+                    }),
+                    url: field_str("url").and_then(|u| Url::parse(&u).ok()),
+                    accessed: field_str("urldate").map(EdtfString),
+                    note: field_str("note"),
+                    doi: field_str("doi"),
+                    pages: field_str("pages"),
+                    volume: field_str("volume").map(NumOrStr::Str),
+                    issue: field_str("number").map(NumOrStr::Str),
+                    keywords: None,
+                }))
+            }
+            _ => InputReference::Monograph(Box::new(Monograph {
+                id,
+                r#type: MonographType::Document,
+                title,
+                author,
+                editor,
+                translator: None,
+                issued,
+                publisher,
+                url: field_str("url").and_then(|u| Url::parse(&u).ok()),
+                accessed: field_str("urldate").map(EdtfString),
+                note: field_str("note"),
+                isbn: field_str("isbn"),
+                doi: field_str("doi"),
+                edition: field_str("edition"),
+                keywords: None,
+                original_date: None,
+                original_title: None,
+            })),
+        }
+    }
+}
+
+impl Contributor {
+    fn from_biblatex_persons(persons: &[biblatex::Person]) -> Self {
+        let contributors: Vec<Contributor> = persons
+            .iter()
+            .map(|p| {
+                Contributor::StructuredName(StructuredName {
+                    given: p.given_name.clone(),
+                    family: p.name.clone(),
+                    suffix: if p.suffix.is_empty() {
+                        None
+                    } else {
+                        Some(p.suffix.clone())
+                    },
+                    dropping_particle: None,
+                    non_dropping_particle: if p.prefix.is_empty() {
+                        None
+                    } else {
+                        Some(p.prefix.clone())
+                    },
+                })
+            })
+            .collect();
+        Contributor::ContributorList(ContributorList(contributors))
     }
 }
 
@@ -195,6 +744,7 @@ pub struct Monograph {
     pub r#type: MonographType,
     pub title: Title,
     pub author: Option<Contributor>,
+    pub editor: Option<Contributor>,
     pub translator: Option<Contributor>,
     pub issued: EdtfString,
     pub publisher: Option<Contributor>,
@@ -292,6 +842,7 @@ pub enum SerialComponentType {
 pub struct Serial {
     pub r#type: SerialType,
     pub title: Title,
+    pub issn: Option<String>,
 }
 
 /// Types of serial publications.
@@ -455,7 +1006,7 @@ impl EdtfString {
         }
     }
 
-    fn month_to_string(month: u32, months: MonthList) -> String {
+    fn month_to_string(month: u32, months: &[String]) -> String {
         if month > 0 {
             let index = month - 1;
             if index < months.len() as u32 {
@@ -469,7 +1020,7 @@ impl EdtfString {
     }
 
     /// Extract the month from the date.
-    pub fn month(&self, months: MonthList) -> String {
+    pub fn month(&self, months: &[String]) -> String {
         let parsed_date = self.parse();
         let month: Option<u32> = match parsed_date {
             RefDate::Edtf(edtf) => match edtf {
@@ -489,8 +1040,8 @@ impl EdtfString {
     }
 
     /// Format as "Month Year".
-    pub fn year_month(&self, months: MonthList) -> String {
-        let month = self.month(months);
+    pub fn year_month(&self, months: &MonthList) -> String {
+        let month = self.month(&months);
         let year = self.year();
         if month.is_empty() || year.is_empty() {
             String::new()
@@ -517,7 +1068,7 @@ impl EdtfString {
     }
 
     /// Format as "Month Day".
-    pub fn month_day(&self, months: MonthList) -> String {
+    pub fn month_day(&self, months: &MonthList) -> String {
         let month = self.month(months);
         let day = self.day();
         match day {
@@ -575,6 +1126,25 @@ pub enum Contributor {
     ContributorList(ContributorList),
 }
 
+impl Contributor {
+    /// Return the name of the contributor.
+    pub fn name(&self) -> Option<String> {
+        match self {
+            Contributor::SimpleName(n) => Some(n.name.clone()),
+            Contributor::StructuredName(n) => Some(format!("{} {}", n.given, n.family)), // Fallback simple formatting
+            Contributor::ContributorList(_) => None, // List doesn't have a single name
+        }
+    }
+
+    /// Return the location of the contributor (mainly for organizations).
+    pub fn location(&self) -> Option<String> {
+        match self {
+            Contributor::SimpleName(n) => n.location.clone(),
+            _ => None,
+        }
+    }
+}
+
 /// A simple (literal) name, typically for organizations.
 #[derive(Debug, Default, Deserialize, Serialize, Clone, JsonSchema, PartialEq)]
 #[serde(rename_all = "kebab-case")]
@@ -604,6 +1174,26 @@ pub struct StructuredName {
     pub non_dropping_particle: Option<String>,
 }
 
+/// A flat name structure for processing.
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct FlatName {
+    pub family: Option<String>,
+    pub given: Option<String>,
+    pub literal: Option<String>,
+    pub suffix: Option<String>,
+    pub dropping_particle: Option<String>,
+    pub non_dropping_particle: Option<String>,
+}
+
+impl FlatName {
+    pub fn family_or_literal(&self) -> &str {
+        self.family
+            .as_deref()
+            .or(self.literal.as_deref())
+            .unwrap_or("")
+    }
+}
+
 impl fmt::Display for Contributor {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -630,6 +1220,29 @@ impl StructuredName {
             .join(&with)
             + &with;
         initials_string
+    }
+}
+
+impl Contributor {
+    /// Flatten the contributor into a list of names.
+    pub fn to_names_vec(&self) -> Vec<FlatName> {
+        match self {
+            Contributor::SimpleName(c) => vec![FlatName {
+                literal: Some(c.name.clone()),
+                ..Default::default()
+            }],
+            Contributor::StructuredName(c) => vec![FlatName {
+                family: Some(c.family.clone()),
+                given: Some(c.given.clone()),
+                suffix: c.suffix.clone(),
+                dropping_particle: c.dropping_particle.clone(),
+                non_dropping_particle: c.non_dropping_particle.clone(),
+                ..Default::default()
+            }],
+            Contributor::ContributorList(list) => {
+                list.0.iter().flat_map(|c| c.to_names_vec()).collect()
+            }
+        }
     }
 }
 
@@ -830,7 +1443,7 @@ mod tests {
             "December".to_string(),
         ];
         let date = EdtfString("2020-01-01".to_string());
-        assert_eq!(date.year_month(months), "January 2020");
+        assert_eq!(date.year_month(&months), "January 2020");
     }
 
     #[test]
@@ -850,7 +1463,7 @@ mod tests {
             "December".to_string(),
         ];
         let date = EdtfString("2020-01-01".to_string());
-        assert_eq!(date.month(months), "January");
+        assert_eq!(date.month(&months), "January");
     }
 
     #[test]
@@ -891,15 +1504,15 @@ mod tests {
 
         // Full date: should format as "Month Day"
         let date = EdtfString("2020-03-15".to_string());
-        assert_eq!(date.month_day(months.clone()), "March 15");
+        assert_eq!(date.month_day(&months), "March 15");
 
         // Year-month only: returns empty (no day)
         let date_ym = EdtfString("2020-03".to_string());
-        assert_eq!(date_ym.month_day(months.clone()), "");
+        assert_eq!(date_ym.month_day(&months), "");
 
         // Year only: returns empty
         let date_y = EdtfString("2020".to_string());
-        assert_eq!(date_y.month_day(months), "");
+        assert_eq!(date_y.month_day(&months), "");
     }
 
     #[test]

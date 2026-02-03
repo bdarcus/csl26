@@ -1,3 +1,4 @@
+use csl_legacy::csl_json::{DateVariable, Name, Reference as LegacyReference};
 use csln_core::{
     options::{BibliographyConfig, Config, ContributorConfig, Processing},
     template::{
@@ -6,10 +7,8 @@ use csln_core::{
     },
     BibliographySpec, Style, StyleInfo,
 };
-use csln_processor::{
-    reference::{DateVariable, Name, Reference},
-    Processor,
-};
+use csln_processor::reference::Reference;
+use csln_processor::Processor;
 
 fn make_style_with_substitute(substitute: Option<String>) -> Style {
     Style {
@@ -63,23 +62,23 @@ fn test_subsequent_author_substitute() {
     let mut bib = indexmap::IndexMap::new();
     bib.insert(
         "ref1".to_string(),
-        Reference {
+        Reference::from(LegacyReference {
             id: "ref1".to_string(),
             ref_type: "book".to_string(),
             author: Some(vec![Name::new("Smith", "John")]),
             issued: Some(DateVariable::year(2020)),
             ..Default::default()
-        },
+        }),
     );
     bib.insert(
         "ref2".to_string(),
-        Reference {
+        Reference::from(LegacyReference {
             id: "ref2".to_string(),
             ref_type: "book".to_string(),
             author: Some(vec![Name::new("Smith", "John")]),
             issued: Some(DateVariable::year(2021)),
             ..Default::default()
-        },
+        }),
     );
 
     let processor = Processor::new(style, bib);
@@ -98,23 +97,23 @@ fn test_no_substitute_if_different() {
     let mut bib = indexmap::IndexMap::new();
     bib.insert(
         "ref1".to_string(),
-        Reference {
+        Reference::from(LegacyReference {
             id: "ref1".to_string(),
             ref_type: "book".to_string(),
             author: Some(vec![Name::new("Smith", "John")]),
             issued: Some(DateVariable::year(2020)),
             ..Default::default()
-        },
+        }),
     );
     bib.insert(
         "ref2".to_string(),
-        Reference {
+        Reference::from(LegacyReference {
             id: "ref2".to_string(),
             ref_type: "book".to_string(),
             author: Some(vec![Name::new("Doe", "Jane")]),
             issued: Some(DateVariable::year(2021)),
             ..Default::default()
-        },
+        }),
     );
 
     let processor = Processor::new(style, bib);

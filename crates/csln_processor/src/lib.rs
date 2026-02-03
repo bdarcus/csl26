@@ -15,7 +15,8 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 //! # Example
 //!
 //! ```rust
-//! use csln_processor::{Processor, Reference, Bibliography, Citation, CitationItem, Name, DateVariable};
+//! use csln_processor::{Processor, Reference, Citation, CitationItem};
+//! use csl_legacy::csl_json::{Reference as LegacyReference, Name, DateVariable};
 //! use csln_core::Style;
 //! use std::collections::HashMap;
 //!
@@ -43,14 +44,14 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 //!
 //! // Create a bibliography
 //! let mut bib = indexmap::IndexMap::new();
-//! bib.insert("kuhn1962".to_string(), Reference {
+//! bib.insert("kuhn1962".to_string(), Reference::from(LegacyReference {
 //!     id: "kuhn1962".to_string(),
 //!     ref_type: "book".to_string(),
 //!     author: Some(vec![Name::new("Kuhn", "Thomas")]),
 //!     title: Some("The Structure of Scientific Revolutions".to_string()),
 //!     issued: Some(DateVariable::year(1962)),
 //!     ..Default::default()
-//! });
+//! }));
 //!
 //! // Create processor and render
 //! let processor = Processor::new(style, bib);
@@ -71,9 +72,7 @@ pub mod values;
 
 pub use error::ProcessorError;
 pub use processor::{ProcessedReferences, Processor};
-pub use reference::{
-    Bibliography, Citation, CitationItem, DateVariable, Name, Reference, StringOrNumber,
-};
+pub use reference::{Bibliography, Citation, CitationItem, Reference};
 pub use render::{citation_to_string, refs_to_string, ProcTemplate, ProcTemplateComponent};
 pub use values::{ComponentValues, ProcHints, ProcValues, RenderContext, RenderOptions};
 

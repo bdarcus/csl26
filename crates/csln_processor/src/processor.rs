@@ -21,7 +21,7 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 //! This is tracked via `rendered_vars` in `process_template()`.
 
 use crate::error::ProcessorError;
-use crate::reference::{Bibliography, Citation, Name, Reference};
+use crate::reference::{Bibliography, Citation, Reference};
 use crate::render::{citation_to_string, refs_to_string, ProcTemplate, ProcTemplateComponent};
 use crate::values::{ComponentValues, ProcHints, RenderContext, RenderOptions};
 use csln_core::locale::Locale;
@@ -130,7 +130,7 @@ impl Processor {
             let entry_number = self
                 .citation_numbers
                 .borrow()
-                .get(&reference.id)
+                .get(&reference.id().unwrap_or_default())
                 .copied()
                 .unwrap_or(index + 1);
             if let Some(mut proc) = self.process_bibliography_entry(reference, entry_number) {
@@ -277,9 +277,10 @@ impl Processor {
         for item in items {
             let reference = self.bibliography.get(&item.id);
             let author_key = reference
-                .and_then(|r| r.author.as_ref())
+                .and_then(|r| r.author())
                 .map(|authors| {
                     authors
+                        .to_names_vec()
                         .iter()
                         .map(|a| a.family_or_literal().to_lowercase())
                         .collect::<Vec<_>>()
@@ -292,9 +293,10 @@ impl Processor {
                 if let Some(last_item) = last_group.last() {
                     let last_ref = self.bibliography.get(&last_item.id);
                     let last_key = last_ref
-                        .and_then(|r| r.author.as_ref())
+                        .and_then(|r| r.author())
                         .map(|authors| {
                             authors
+                                .to_names_vec()
                                 .iter()
                                 .map(|a| a.family_or_literal().to_lowercase())
                                 .collect::<Vec<_>>()
@@ -406,8 +408,8 @@ impl Processor {
         };
 
         // Use short form for citations
-        if let Some(authors) = &reference.author {
-            crate::values::format_contributors_short(authors, &options)
+        if let Some(authors) = reference.author() {
+            crate::values::format_contributors_short(&authors.to_names_vec(), &options)
         } else {
             String::new()
         }
@@ -415,37 +417,40 @@ impl Processor {
 
     /// Render just the year part (with suffix) for citation grouping.
     fn render_year_for_grouping(&self, reference: &Reference) -> String {
-        let hints = self.hints.get(&reference.id).cloned().unwrap_or_default();
+        let hints = self
+            .hints
+            .get(&reference.id().unwrap_or_default())
+            .cloned()
+            .unwrap_or_default();
         let config = self.get_config();
 
         // Format year with disambiguation suffix
-        if let Some(issued) = &reference.issued {
-            if let Some(year) = issued.year_value() {
-                let suffix = if hints.disamb_condition && hints.group_index > 0 {
-                    // Check if year suffix is enabled
-                    let use_suffix = config
-                        .processing
-                        .as_ref()
-                        .map(|p| {
-                            p.config()
-                                .disambiguate
-                                .as_ref()
-                                .map(|d| d.year_suffix)
-                                .unwrap_or(false)
-                        })
-                        .unwrap_or(false);
+        if let Some(issued) = reference.issued() {
+            let year = issued.year();
+            let suffix = if hints.disamb_condition && hints.group_index > 0 {
+                // Check if year suffix is enabled
+                let use_suffix = config
+                    .processing
+                    .as_ref()
+                    .map(|p| {
+                        p.config()
+                            .disambiguate
+                            .as_ref()
+                            .map(|d| d.year_suffix)
+                            .unwrap_or(false)
+                    })
+                    .unwrap_or(false);
 
-                    if use_suffix {
-                        crate::values::int_to_letter((hints.group_index % 26) as u32)
-                            .unwrap_or_default()
-                    } else {
-                        String::new()
-                    }
+                if use_suffix {
+                    crate::values::int_to_letter((hints.group_index % 26) as u32)
+                        .unwrap_or_default()
                 } else {
                     String::new()
-                };
-                return format!("{}{}", year, suffix);
-            }
+                }
+            } else {
+                String::new()
+            };
+            return format!("{}{}", year, suffix);
         }
         String::new()
     }
@@ -475,7 +480,7 @@ impl Processor {
         // Determine effective template (override or default)
         let template = if let Some(type_templates) = &bib_spec.type_templates {
             type_templates
-                .get(&reference.ref_type)
+                .get(&reference.ref_type())
                 .cloned()
                 .unwrap_or(default_template)
         } else {
@@ -520,7 +525,10 @@ impl Processor {
             context,
         };
         let default_hint = ProcHints::default();
-        let base_hint = self.hints.get(&reference.id).unwrap_or(&default_hint);
+        let base_hint = self
+            .hints
+            .get(&reference.id().unwrap_or_default())
+            .unwrap_or(&default_hint);
 
         // Create a hint with citation number
         let hint = ProcHints {
@@ -570,7 +578,7 @@ impl Processor {
                     prefix: values.prefix,
                     suffix: values.suffix,
                     url: values.url,
-                    ref_type: Some(reference.ref_type.clone()),
+                    ref_type: Some(reference.ref_type().to_string()),
                     config: Some(options.config.clone()),
                 })
             })
@@ -598,65 +606,34 @@ impl Processor {
                 for sort in &sort_config.template {
                     let cmp = match sort.key {
                         SortKey::Author => {
-                            // Get author for sorting, with fallback chain per CSL spec:
-                            // author → editor → title (for anonymous works)
-                            // Strip leading articles from title when used as fallback
                             let a_sort_key = a
-                                .author
-                                .as_ref()
-                                .and_then(|names| {
-                                    if names.is_empty() {
-                                        None
-                                    } else {
-                                        names.first()
-                                    }
-                                })
+                                .author()
+                                .and_then(|c| c.to_names_vec().first().cloned())
                                 .map(|n| n.family_or_literal().to_lowercase())
                                 .or_else(|| {
-                                    a.editor
-                                        .as_ref()
-                                        .and_then(|names| {
-                                            if names.is_empty() {
-                                                None
-                                            } else {
-                                                names.first()
-                                            }
-                                        })
+                                    a.editor()
+                                        .and_then(|c| c.to_names_vec().first().cloned())
                                         .map(|n| n.family_or_literal().to_lowercase())
                                 })
                                 .or_else(|| {
-                                    a.title
-                                        .as_ref()
-                                        .map(|t| locale.strip_sort_articles(t).to_lowercase())
+                                    a.title().map(|t| {
+                                        locale.strip_sort_articles(&t.to_string()).to_lowercase()
+                                    })
                                 })
                                 .unwrap_or_default();
                             let b_sort_key = b
-                                .author
-                                .as_ref()
-                                .and_then(|names| {
-                                    if names.is_empty() {
-                                        None
-                                    } else {
-                                        names.first()
-                                    }
-                                })
+                                .author()
+                                .and_then(|c| c.to_names_vec().first().cloned())
                                 .map(|n| n.family_or_literal().to_lowercase())
                                 .or_else(|| {
-                                    b.editor
-                                        .as_ref()
-                                        .and_then(|names| {
-                                            if names.is_empty() {
-                                                None
-                                            } else {
-                                                names.first()
-                                            }
-                                        })
+                                    b.editor()
+                                        .and_then(|c| c.to_names_vec().first().cloned())
                                         .map(|n| n.family_or_literal().to_lowercase())
                                 })
                                 .or_else(|| {
-                                    b.title
-                                        .as_ref()
-                                        .map(|t| locale.strip_sort_articles(t).to_lowercase())
+                                    b.title().map(|t| {
+                                        locale.strip_sort_articles(&t.to_string()).to_lowercase()
+                                    })
                                 })
                                 .unwrap_or_default();
 
@@ -667,10 +644,14 @@ impl Processor {
                             }
                         }
                         SortKey::Year => {
-                            let a_year =
-                                a.issued.as_ref().and_then(|d| d.year_value()).unwrap_or(0);
-                            let b_year =
-                                b.issued.as_ref().and_then(|d| d.year_value()).unwrap_or(0);
+                            let a_year = a
+                                .issued()
+                                .and_then(|d| d.year().parse::<i32>().ok())
+                                .unwrap_or(0);
+                            let b_year = b
+                                .issued()
+                                .and_then(|d| d.year().parse::<i32>().ok())
+                                .unwrap_or(0);
 
                             if sort.ascending {
                                 a_year.cmp(&b_year)
@@ -679,12 +660,15 @@ impl Processor {
                             }
                         }
                         SortKey::Title => {
-                            // Strip leading articles using locale-specific rules
                             let a_title = locale
-                                .strip_sort_articles(a.title.as_deref().unwrap_or(""))
+                                .strip_sort_articles(
+                                    &a.title().map(|t| t.to_string()).unwrap_or_default(),
+                                )
                                 .to_lowercase();
                             let b_title = locale
-                                .strip_sort_articles(b.title.as_deref().unwrap_or(""))
+                                .strip_sort_articles(
+                                    &b.title().map(|t| t.to_string()).unwrap_or_default(),
+                                )
                                 .to_lowercase();
 
                             if sort.ascending {
@@ -693,11 +677,7 @@ impl Processor {
                                 b_title.cmp(&a_title)
                             }
                         }
-                        SortKey::CitationNumber => {
-                            // For citation-number sorting, we need to use the citation order
-                            // This is typically set during citation processing
-                            std::cmp::Ordering::Equal
-                        }
+                        SortKey::CitationNumber => std::cmp::Ordering::Equal,
                         // Handle future SortKey variants (non_exhaustive)
                         _ => std::cmp::Ordering::Equal,
                     };
@@ -747,7 +727,7 @@ impl Processor {
                     if let Some(n) = self.check_names_resolution(&group) {
                         for (i, reference) in group.iter().enumerate() {
                             hints.insert(
-                                reference.id.clone(),
+                                reference.id().unwrap_or_default(),
                                 ProcHints {
                                     disamb_condition: false,
                                     group_index: i + 1,
@@ -767,7 +747,7 @@ impl Processor {
                 if !resolved && add_givenname && self.check_givenname_resolution(&group, None) {
                     for (i, reference) in group.iter().enumerate() {
                         hints.insert(
-                            reference.id.clone(),
+                            reference.id().unwrap_or_default(),
                             ProcHints {
                                 disamb_condition: false,
                                 group_index: i + 1,
@@ -787,7 +767,7 @@ impl Processor {
                     // Find if there's an N such that expanding both names and given names works
                     let max_authors = group
                         .iter()
-                        .map(|r| r.author.as_ref().map(|a| a.len()).unwrap_or(0))
+                        .map(|r| r.author().map(|a| a.to_names_vec().len()).unwrap_or(0))
                         .max()
                         .unwrap_or(0);
 
@@ -795,7 +775,7 @@ impl Processor {
                         if self.check_givenname_resolution(&group, Some(n)) {
                             for (idx, reference) in group.iter().enumerate() {
                                 hints.insert(
-                                    reference.id.clone(),
+                                    reference.id().unwrap_or_default(),
                                     ProcHints {
                                         disamb_condition: false,
                                         group_index: idx + 1,
@@ -819,7 +799,7 @@ impl Processor {
                 }
             } else {
                 // No collision
-                hints.insert(group[0].id.clone(), ProcHints::default());
+                hints.insert(group[0].id().unwrap_or_default(), ProcHints::default());
             }
         }
 
@@ -838,14 +818,22 @@ impl Processor {
         // This matches citeproc-js behavior where suffixes are alphabetical by title
         let mut sorted_group: Vec<&Reference> = group.to_vec();
         sorted_group.sort_by(|a, b| {
-            let a_title = a.title.as_deref().unwrap_or("").to_lowercase();
-            let b_title = b.title.as_deref().unwrap_or("").to_lowercase();
+            let a_title = a
+                .title()
+                .map(|t| t.to_string())
+                .unwrap_or_default()
+                .to_lowercase();
+            let b_title = b
+                .title()
+                .map(|t| t.to_string())
+                .unwrap_or_default()
+                .to_lowercase();
             a_title.cmp(&b_title)
         });
 
         for (i, reference) in sorted_group.iter().enumerate() {
             hints.insert(
-                reference.id.clone(),
+                reference.id().unwrap_or_default(),
                 ProcHints {
                     disamb_condition: true,
                     group_index: i + 1,
@@ -863,7 +851,7 @@ impl Processor {
     fn check_names_resolution(&self, group: &[&Reference]) -> Option<usize> {
         let max_authors = group
             .iter()
-            .map(|r| r.author.as_ref().map(|a| a.len()).unwrap_or(0))
+            .map(|r| r.author().map(|a| a.to_names_vec().len()).unwrap_or(0))
             .max()
             .unwrap_or(0);
 
@@ -871,9 +859,9 @@ impl Processor {
             let mut seen = std::collections::HashSet::new();
             let mut collision = false;
             for reference in group {
-                let authors = reference.author.as_ref();
-                let key = if let Some(a) = authors {
-                    a.iter()
+                let key = if let Some(a) = reference.author() {
+                    a.to_names_vec()
+                        .iter()
                         .take(n)
                         .map(|name| name.family_or_literal().to_lowercase())
                         .collect::<Vec<_>>()
@@ -898,10 +886,11 @@ impl Processor {
     fn check_givenname_resolution(&self, group: &[&Reference], min_names: Option<usize>) -> bool {
         let mut seen = std::collections::HashSet::new();
         for reference in group {
-            if let Some(authors) = &reference.author {
+            if let Some(authors) = reference.author() {
                 let n = min_names.unwrap_or(1);
                 // Create a key for the first n authors with full names
                 let key = authors
+                    .to_names_vec()
                     .iter()
                     .take(n)
                     .map(|n| {
@@ -946,11 +935,12 @@ impl Processor {
             .as_ref()
             .and_then(|c| c.shorten.as_ref());
 
-        let author_key = if let Some(authors) = &reference.author {
+        let author_key = if let Some(authors) = reference.author() {
+            let names_vec = authors.to_names_vec();
             if let Some(opts) = shorten {
-                if authors.len() >= opts.min as usize {
+                if names_vec.len() >= opts.min as usize {
                     // Show 'use_first' names in the base citation
-                    authors
+                    names_vec
                         .iter()
                         .take(opts.use_first as usize)
                         .map(|n| n.family_or_literal().to_lowercase())
@@ -958,14 +948,14 @@ impl Processor {
                         .join(",")
                         + ",et-al"
                 } else {
-                    authors
+                    names_vec
                         .iter()
                         .map(|n| n.family_or_literal().to_lowercase())
                         .collect::<Vec<_>>()
                         .join(",")
                 }
             } else {
-                authors
+                names_vec
                     .iter()
                     .map(|n| n.family_or_literal().to_lowercase())
                     .collect::<Vec<_>>()
@@ -976,9 +966,8 @@ impl Processor {
         };
 
         let year = reference
-            .issued
-            .as_ref()
-            .and_then(|d| d.year_value())
+            .issued()
+            .and_then(|d| d.year().parse::<i32>().ok())
             .map(|y| y.to_string())
             .unwrap_or_default();
 
@@ -1011,21 +1000,21 @@ impl Processor {
 
     /// Get the primary contributors for a reference based on the style's substitution order.
     /// Follows the substitute template: Author is always first, then the configured fallbacks.
-    fn get_primary_contributors<'a>(
+    fn get_primary_contributors(
         &self,
-        reference: &'a Reference,
+        reference: &Reference,
         substitute: &Substitute,
-    ) -> Option<&'a Vec<Name>> {
+    ) -> Option<crate::reference::Contributor> {
         // Author is always the primary contributor
-        if reference.author.is_some() {
-            return reference.author.as_ref();
+        if let Some(author) = reference.author() {
+            return Some(author);
         }
 
         // Fall back through the substitute template order
         for key in &substitute.template {
             let contributor = match key {
-                SubstituteKey::Editor => reference.editor.as_ref(),
-                SubstituteKey::Translator => reference.translator.as_ref(),
+                SubstituteKey::Editor => reference.editor(),
+                SubstituteKey::Translator => reference.translator(),
                 SubstituteKey::Title => None, // Title is not a contributor
             };
             if contributor.is_some() {
@@ -1085,7 +1074,7 @@ fn get_variable_key(component: &TemplateComponent) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::reference::{DateVariable, Name};
+    use csl_legacy::csl_json::{DateVariable, Name, Reference as LegacyReference, StringOrNumber};
     use csln_core::options::{
         AndOptions, ContributorConfig, DisplayAsSort, Processing, ShortenListOptions,
     };
@@ -1162,6 +1151,7 @@ mod tests {
                         title: TitleType::Primary,
                         form: None,
                         rendering: Rendering {
+                            prefix: Some(". ".to_string()),
                             emph: Some(true),
                             ..Default::default()
                         },
@@ -1181,7 +1171,7 @@ mod tests {
 
         bib.insert(
             "kuhn1962".to_string(),
-            Reference {
+            Reference::from(LegacyReference {
                 id: "kuhn1962".to_string(),
                 ref_type: "book".to_string(),
                 author: Some(vec![Name::new("Kuhn", "Thomas S.")]),
@@ -1189,7 +1179,7 @@ mod tests {
                 issued: Some(DateVariable::year(1962)),
                 publisher: Some("University of Chicago Press".to_string()),
                 ..Default::default()
-            },
+            }),
         );
 
         bib
@@ -1236,14 +1226,14 @@ mod tests {
         // Add another Kuhn 1962 reference to trigger disambiguation
         bib.insert(
             "kuhn1962b".to_string(),
-            Reference {
+            Reference::from(LegacyReference {
                 id: "kuhn1962b".to_string(),
                 ref_type: "article-journal".to_string(),
                 author: Some(vec![Name::new("Kuhn", "Thomas S.")]),
                 title: Some("The Function of Measurement in Modern Physical Science".to_string()),
                 issued: Some(DateVariable::year(1962)),
                 ..Default::default()
-            },
+            }),
         );
 
         let processor = Processor::new(style, bib);
@@ -1297,23 +1287,23 @@ mod tests {
         let mut bib = indexmap::IndexMap::new();
         bib.insert(
             "smith2020a".to_string(),
-            Reference {
+            Reference::from(LegacyReference {
                 id: "smith2020a".to_string(),
                 ref_type: "book".to_string(),
                 author: Some(vec![Name::new("Smith", "John")]),
                 issued: Some(DateVariable::year(2020)),
                 ..Default::default()
-            },
+            }),
         );
         bib.insert(
             "smith2020b".to_string(),
-            Reference {
+            Reference::from(LegacyReference {
                 id: "smith2020b".to_string(),
                 ref_type: "book".to_string(),
                 author: Some(vec![Name::new("Smith", "Alice")]),
                 issued: Some(DateVariable::year(2020)),
                 ..Default::default()
-            },
+            }),
         );
 
         let processor = Processor::new(style, bib);
@@ -1401,7 +1391,7 @@ mod tests {
         // Both would be "Smith et al. (2020)"
         bib.insert(
             "ref1".to_string(),
-            Reference {
+            Reference::from(LegacyReference {
                 id: "ref1".to_string(),
                 ref_type: "book".to_string(),
                 author: Some(vec![
@@ -1410,11 +1400,11 @@ mod tests {
                 ]),
                 issued: Some(DateVariable::year(2020)),
                 ..Default::default()
-            },
+            }),
         );
         bib.insert(
             "ref2".to_string(),
-            Reference {
+            Reference::from(LegacyReference {
                 id: "ref2".to_string(),
                 ref_type: "book".to_string(),
                 author: Some(vec![
@@ -1423,7 +1413,7 @@ mod tests {
                 ]),
                 issued: Some(DateVariable::year(2020)),
                 ..Default::default()
-            },
+            }),
         );
 
         let processor = Processor::new(style, bib);
@@ -1520,23 +1510,23 @@ mod tests {
         let mut bib = indexmap::IndexMap::new();
         bib.insert(
             "ref1".to_string(),
-            Reference {
+            Reference::from(LegacyReference {
                 id: "ref1".to_string(),
                 ref_type: "book".to_string(),
                 author: Some(vec![Name::new("Smith", "Sam"), Name::new("Smith", "Julie")]),
                 issued: Some(DateVariable::year(2020)),
                 ..Default::default()
-            },
+            }),
         );
         bib.insert(
             "ref2".to_string(),
-            Reference {
+            Reference::from(LegacyReference {
                 id: "ref2".to_string(),
                 ref_type: "book".to_string(),
                 author: Some(vec![Name::new("Smith", "Sam"), Name::new("Smith", "Bob")]),
                 issued: Some(DateVariable::year(2020)),
                 ..Default::default()
-            },
+            }),
         );
 
         let processor = Processor::new(style, bib);
@@ -1631,31 +1621,34 @@ mod tests {
         };
 
         let references = vec![
-            Reference {
+            Reference::from(LegacyReference {
                 id: "art1".to_string(),
                 ref_type: "article-journal".to_string(),
                 title: Some("A Title".to_string()),
                 container_title: Some("Nature".to_string()),
                 ..Default::default()
-            },
-            Reference {
+            }),
+            Reference::from(LegacyReference {
                 id: "ch1".to_string(),
                 ref_type: "chapter".to_string(),
                 title: Some("A Chapter".to_string()),
                 container_title: Some("A Book".to_string()),
                 ..Default::default()
-            },
-            Reference {
+            }),
+            Reference::from(LegacyReference {
                 id: "bk1".to_string(),
                 ref_type: "book".to_string(),
                 title: Some("A Global Book".to_string()),
                 ..Default::default()
-            },
+            }),
         ];
 
         let processor = Processor::new(
             style,
-            references.into_iter().map(|r| (r.id.clone(), r)).collect(),
+            references
+                .into_iter()
+                .map(|r| (r.id().unwrap().to_string(), r))
+                .collect(),
         );
 
         let res = processor.render_bibliography();
@@ -1719,21 +1712,21 @@ mod tests {
         let mut bib = Bibliography::new();
         bib.insert(
             "ref1".to_string(),
-            Reference {
+            Reference::from(LegacyReference {
                 id: "ref1".to_string(),
                 ref_type: "book".to_string(),
                 title: Some("First Book".to_string()),
                 ..Default::default()
-            },
+            }),
         );
         bib.insert(
             "ref2".to_string(),
-            Reference {
+            Reference::from(LegacyReference {
                 id: "ref2".to_string(),
                 ref_type: "book".to_string(),
                 title: Some("Second Book".to_string()),
                 ..Default::default()
-            },
+            }),
         );
 
         let processor = Processor::new(style, bib);
@@ -1789,14 +1782,14 @@ mod tests {
         // Add second Kuhn 1962 with different title (triggers year-suffix)
         bib.insert(
             "kuhn1962b".to_string(),
-            Reference {
+            Reference::from(LegacyReference {
                 id: "kuhn1962b".to_string(),
                 ref_type: "article-journal".to_string(),
                 author: Some(vec![Name::new("Kuhn", "Thomas S.")]),
                 title: Some("The Function of Measurement in Modern Physical Science".to_string()),
                 issued: Some(DateVariable::year(1962)),
                 ..Default::default()
-            },
+            }),
         );
 
         let processor = Processor::new(style, bib);
@@ -1841,14 +1834,14 @@ mod tests {
 
         bib.insert(
             "smith2020".to_string(),
-            Reference {
+            Reference::from(LegacyReference {
                 id: "smith2020".to_string(),
                 ref_type: "book".to_string(),
                 author: Some(vec![Name::new("Smith", "John")]),
                 title: Some("Another Book".to_string()),
                 issued: Some(DateVariable::year(2020)),
                 ..Default::default()
-            },
+            }),
         );
 
         let processor = Processor::new(style, bib);
@@ -1892,39 +1885,39 @@ mod tests {
         // Add references in wrong alphabetical order to test sorting
         bib.insert(
             "smith".to_string(),
-            Reference {
+            Reference::from(LegacyReference {
                 id: "smith".to_string(),
                 ref_type: "book".to_string(),
                 author: Some(vec![Name::new("Smith", "John")]),
                 title: Some("A Book".to_string()),
                 issued: Some(DateVariable::year(2020)),
                 ..Default::default()
-            },
+            }),
         );
 
         // Anonymous work - should sort by "Role" (stripping "The")
         bib.insert(
             "anon".to_string(),
-            Reference {
+            Reference::from(LegacyReference {
                 id: "anon".to_string(),
                 ref_type: "article-journal".to_string(),
                 author: None, // No author!
                 title: Some("The Role of Theory".to_string()),
                 issued: Some(DateVariable::year(2018)),
                 ..Default::default()
-            },
+            }),
         );
 
         bib.insert(
             "jones".to_string(),
-            Reference {
+            Reference::from(LegacyReference {
                 id: "jones".to_string(),
                 ref_type: "book".to_string(),
                 author: Some(vec![Name::new("Jones", "Alice")]),
                 title: Some("Another Book".to_string()),
                 issued: Some(DateVariable::year(2019)),
                 ..Default::default()
-            },
+            }),
         );
 
         let processor = Processor::new(style, bib);

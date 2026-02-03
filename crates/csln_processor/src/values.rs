@@ -8,7 +8,7 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 //! This module provides the logic to extract formatted values from references
 //! based on template component specifications.
 
-use crate::reference::{DateVariable, Name, Reference};
+use crate::reference::{EdtfString, Reference};
 use csln_core::locale::{Locale, TermForm};
 use csln_core::options::{
     AndOptions, Config, DemoteNonDroppingParticle, DisplayAsSort, EditorLabelFormat,
@@ -106,16 +106,14 @@ impl ComponentValues for TemplateContributor {
         options: &RenderOptions<'_>,
     ) -> Option<ProcValues> {
         let names = match self.contributor {
-            ContributorRole::Author => reference.author.as_ref(),
-            ContributorRole::Editor => reference.editor.as_ref(),
-            ContributorRole::Translator => reference.translator.as_ref(),
+            ContributorRole::Author => reference.author(),
+            ContributorRole::Editor => reference.editor(),
+            ContributorRole::Translator => reference.translator(),
             _ => None,
         };
 
         // Handle substitution if author is empty
-        if names.map(|n| n.is_empty()).unwrap_or(true)
-            && matches!(self.contributor, ContributorRole::Author)
-        {
+        if names.is_none() && matches!(self.contributor, ContributorRole::Author) {
             // Use explicit substitute config, or fall back to default (editor → title → translator)
             let default_substitute = csln_core::options::SubstituteConfig::default();
             let substitute_config = options
@@ -128,8 +126,9 @@ impl ComponentValues for TemplateContributor {
             for key in &substitute.template {
                 match key {
                     SubstituteKey::Editor => {
-                        if let Some(editors) = &reference.editor {
-                            if !editors.is_empty() {
+                        if let Some(editors) = reference.editor() {
+                            let names_vec = editors.to_names_vec();
+                            if !names_vec.is_empty() {
                                 // Substituted editors use the contributor's name_order and and
                                 let effective_name_order = self.name_order.as_ref().or_else(|| {
                                     options
@@ -146,7 +145,7 @@ impl ComponentValues for TemplateContributor {
                                 });
 
                                 let formatted = format_names(
-                                    editors,
+                                    &names_vec,
                                     &self.form,
                                     options,
                                     effective_name_order,
@@ -157,7 +156,7 @@ impl ComponentValues for TemplateContributor {
                                 // In citations, substituted editors should look identical to authors.
                                 let suffix = if options.context == RenderContext::Bibliography {
                                     substitute.contributor_role_form.as_ref().and_then(|form| {
-                                        let plural = editors.len() > 1;
+                                        let plural = names_vec.len() > 1;
                                         let term_form = match form.as_str() {
                                             "short" => TermForm::Short,
                                             "verb" => TermForm::Verb,
@@ -186,14 +185,15 @@ impl ComponentValues for TemplateContributor {
                         }
                     }
                     SubstituteKey::Title => {
-                        if let Some(title) = &reference.title {
+                        if let Some(title) = reference.title() {
+                            let title_str = title.to_string();
                             // When title substitutes for author:
                             // - In CITATIONS: quote the title per CSL conventions
                             // - In BIBLIOGRAPHY: use title as-is (it will be styled normally)
                             let value = if options.context == RenderContext::Citation {
-                                format!("\u{201C}{}\u{201D}", title) // Curly quotes
+                                format!("\u{201C}{}\u{201D}", title_str) // Curly quotes
                             } else {
-                                title.clone()
+                                title_str
                             };
                             return Some(ProcValues {
                                 value,
@@ -205,10 +205,11 @@ impl ComponentValues for TemplateContributor {
                         }
                     }
                     SubstituteKey::Translator => {
-                        if let Some(translators) = &reference.translator {
-                            if !translators.is_empty() {
+                        if let Some(translators) = reference.translator() {
+                            let names_vec = translators.to_names_vec();
+                            if !names_vec.is_empty() {
                                 let formatted = format_names(
-                                    translators,
+                                    &names_vec,
                                     &self.form,
                                     options,
                                     self.name_order.as_ref(),
@@ -231,7 +232,8 @@ impl ComponentValues for TemplateContributor {
         }
 
         let names = names?;
-        if names.is_empty() {
+        let names_vec = names.to_names_vec();
+        if names_vec.is_empty() {
             return None;
         }
 
@@ -252,7 +254,7 @@ impl ComponentValues for TemplateContributor {
         });
 
         let formatted = format_names(
-            names,
+            &names_vec,
             &self.form,
             options,
             effective_name_order,
@@ -261,9 +263,6 @@ impl ComponentValues for TemplateContributor {
         );
 
         // Add role term based on form:
-        // - Verb forms: add verb term as PREFIX (e.g., "edited by Name1, Name2")
-        // - Long forms for specific roles: add label as SUFFIX (e.g., "Name (Ed.)")
-        // - Other forms: no automatic term addition
         let editor_format = options
             .config
             .contributors
@@ -275,7 +274,7 @@ impl ComponentValues for TemplateContributor {
                 self.contributor,
                 ContributorRole::Editor | ContributorRole::Translator
             ) {
-                let plural = names.len() > 1;
+                let plural = names_vec.len() > 1;
                 match format {
                     EditorLabelFormat::VerbPrefix => {
                         let term =
@@ -304,9 +303,8 @@ impl ComponentValues for TemplateContributor {
             }
         } else {
             match (&self.form, &self.contributor) {
-                // Verb forms: use verb term as prefix
                 (ContributorForm::Verb | ContributorForm::VerbShort, role) => {
-                    let plural = names.len() > 1;
+                    let plural = names_vec.len() > 1;
                     let term_form = match self.form {
                         ContributorForm::VerbShort => TermForm::VerbShort,
                         _ => TermForm::Verb,
@@ -314,9 +312,8 @@ impl ComponentValues for TemplateContributor {
                     let term = options.locale.role_term(role, plural, term_form);
                     (term.map(|t| format!("{} ", t)), None)
                 }
-                // Long form for editors/translators: add label suffix for APA-style formatting
                 (ContributorForm::Long, ContributorRole::Editor | ContributorRole::Translator) => {
-                    let plural = names.len() > 1;
+                    let plural = names_vec.len() > 1;
                     let term = options
                         .locale
                         .role_term(&self.contributor, plural, TermForm::Short);
@@ -326,27 +323,19 @@ impl ComponentValues for TemplateContributor {
             }
         };
 
-        Some(ProcValues {
+        return Some(ProcValues {
             value: formatted,
             prefix: role_prefix,
             suffix: role_suffix,
             url: None,
             substituted_key: None,
-        })
+        });
     }
 }
 
 /// Format a list of names according to style options.
-///
-/// The `name_order` parameter overrides the global `display-as-sort` setting
-/// for this specific rendering. Used when editors need "Given Family" format
-/// even when the global setting is "Family, Given".
-///
-/// The `and_override` parameter allows per-component override of the conjunction
-/// between the last two names. Use `Some(AndOptions::None)` to suppress the
-/// "and" when the global setting would add it.
 fn format_names(
-    names: &[Name],
+    names: &[crate::reference::FlatName],
     form: &ContributorForm,
     options: &RenderOptions<'_>,
     name_order: Option<&csln_core::template::NameOrder>,
@@ -374,8 +363,9 @@ fn format_names(
             if use_first >= names.len() {
                 (names.iter().collect::<Vec<_>>(), false, Vec::new())
             } else {
-                let first: Vec<&Name> = names.iter().take(use_first).collect();
-                let last: Vec<&Name> = if let Some(ul) = opts.use_last {
+                let first: Vec<&crate::reference::FlatName> =
+                    names.iter().take(use_first).collect();
+                let last: Vec<&crate::reference::FlatName> = if let Some(ul) = opts.use_last {
                     // Show ul last names. Ensure no overlap with first names.
                     let take_last = ul as usize;
                     let skip = std::cmp::max(use_first, names.len().saturating_sub(take_last));
@@ -546,7 +536,7 @@ fn format_names(
 /// Format a single name.
 #[allow(clippy::too_many_arguments)]
 fn format_single_name(
-    name: &Name,
+    name: &crate::reference::FlatName,
     form: &ContributorForm,
     index: usize,
     display_as_sort: &Option<DisplayAsSort>,
@@ -717,48 +707,60 @@ impl ComponentValues for TemplateDate {
         hints: &ProcHints,
         options: &RenderOptions<'_>,
     ) -> Option<ProcValues> {
-        let date: &DateVariable = match self.date {
-            TemplateDateVar::Issued => reference.issued.as_ref()?,
-            TemplateDateVar::Accessed => reference.accessed.as_ref()?,
+        let date: EdtfString = match self.date {
+            TemplateDateVar::Issued => reference.issued()?,
+            TemplateDateVar::Accessed => reference.accessed().unwrap_or(EdtfString(String::new())), // accessed might be None
             _ => return None,
         };
+        if date.0.is_empty() {
+            return None;
+        }
 
         let locale = options.locale;
 
         let formatted = match self.form {
-            DateForm::Year => date.year_value().map(|y| y.to_string()),
+            DateForm::Year => {
+                let year = date.year();
+                if year.is_empty() {
+                    None
+                } else {
+                    Some(year)
+                }
+            }
             DateForm::YearMonth => {
-                let year = date.year_value()?;
-                let month = date.month_value();
-                match month {
-                    Some(m) => Some(format!("{} {}", locale.month_name(m as u8, false), year)),
-                    None => Some(year.to_string()),
+                let year = date.year();
+                if year.is_empty() {
+                    return None;
+                }
+                let month = date.month(&locale.dates.months.long);
+                if month.is_empty() {
+                    Some(year)
+                } else {
+                    Some(format!("{} {}", month, year))
                 }
             }
             DateForm::MonthDay => {
-                // Only output month-day if present; return None if only year
-                let month = date.month_value()?;
-                let day = date.day_value();
+                let month = date.month(&locale.dates.months.long);
+                if month.is_empty() {
+                    return None;
+                }
+                let day = date.day();
                 match day {
-                    Some(d) => Some(format!("{} {}", locale.month_name(month as u8, false), d)),
-                    None => Some(locale.month_name(month as u8, false).to_string()),
+                    Some(d) => Some(format!("{} {}", month, d)),
+                    None => Some(month),
                 }
             }
             DateForm::Full => {
-                let year = date.year_value()?;
-                let month = date.month_value();
-                let day = date.day_value();
-                match (month, day) {
-                    (Some(m), Some(d)) => Some(format!(
-                        "{} {}, {}",
-                        locale.month_name(m as u8, false),
-                        d,
-                        year
-                    )),
-                    (Some(m), None) => {
-                        Some(format!("{} {}", locale.month_name(m as u8, false), year))
-                    }
-                    _ => Some(year.to_string()),
+                let year = date.year();
+                if year.is_empty() {
+                    return None;
+                }
+                let month = date.month(&locale.dates.months.long);
+                let day = date.day();
+                match (month.is_empty(), day) {
+                    (true, _) => Some(year),
+                    (false, None) => Some(format!("{} {}", month, year)),
+                    (false, Some(d)) => Some(format!("{} {}, {}", month, d, year)),
                 }
             }
         };
@@ -810,7 +812,13 @@ pub fn int_to_letter(n: u32) -> Option<String> {
 /// Format contributors in short form for citation grouping.
 ///
 /// Used when collapsing same-author citations to render "Author" part separately.
-pub fn format_contributors_short(names: &[Name], options: &RenderOptions<'_>) -> String {
+/// Format a list of names for citations (short form).
+///
+/// Used when collapsing same-author citations to render "Author" part separately.
+pub fn format_contributors_short(
+    names: &[crate::reference::FlatName],
+    options: &RenderOptions<'_>,
+) -> String {
     format_names(
         names,
         &ContributorForm::Short,
@@ -828,48 +836,39 @@ impl ComponentValues for TemplateTitle {
         _hints: &ProcHints,
         _options: &RenderOptions<'_>,
     ) -> Option<ProcValues> {
-        let ref_type = reference.ref_type.as_str();
+        let binding = reference.ref_type();
+        let _ref_type = binding.as_str();
 
         let value = match self.title {
-            TitleType::Primary => reference.title.clone(),
+            TitleType::Primary => reference.title().map(|t| t.to_string()),
             TitleType::ParentSerial => {
-                // For chapters/entries, the container is a book (not a serial).
-                // Suppress ParentSerial to avoid duplication with ParentMonograph.
                 if matches!(
-                    ref_type,
-                    "chapter" | "entry" | "entry-dictionary" | "entry-encyclopedia"
+                    binding.as_str(),
+                    "article-journal" | "article-magazine" | "article-newspaper"
                 ) {
-                    None
+                    reference.container_title().map(|t| t.to_string())
                 } else {
-                    reference.container_title.clone()
+                    None
                 }
             }
             TitleType::ParentMonograph => {
-                // For chapters/entries, the containing book uses container_title.
-                // For books in a series, use collection_title.
-                if matches!(
-                    ref_type,
-                    "chapter" | "entry" | "entry-dictionary" | "entry-encyclopedia"
-                ) {
-                    reference.container_title.clone()
+                if binding.as_str() == "chapter" {
+                    reference.container_title().map(|t| t.to_string())
                 } else {
-                    reference.collection_title.clone()
+                    None
                 }
             }
-            _ => None, // Handle future non-exhaustive variants
+            _ => None,
         };
 
         value.filter(|s| !s.is_empty()).map(|value| {
             let mut url = None;
             if let Some(links) = &self.links {
                 if links.doi == Some(true) {
-                    url = reference
-                        .doi
-                        .as_ref()
-                        .map(|d| format!("https://doi.org/{}", d));
+                    url = reference.doi().map(|d| format!("https://doi.org/{}", d));
                 }
                 if url.is_none() && links.url == Some(true) {
-                    url = reference.url.clone();
+                    url = reference.url().map(|u| u.to_string());
                 }
             }
             ProcValues {
@@ -893,13 +892,12 @@ impl ComponentValues for TemplateNumber {
         use csln_core::template::LabelForm;
 
         let value = match self.number {
-            NumberVariable::Volume => reference.volume.as_ref().map(|v| v.to_string()),
-            NumberVariable::Issue => reference.issue.as_ref().map(|v| v.to_string()),
-            NumberVariable::Pages => reference
-                .page
-                .clone()
-                .map(|p| format_page_range(&p, options.config.page_range_format.as_ref())),
-            NumberVariable::Edition => reference.edition.as_ref().map(|v| v.to_string()),
+            NumberVariable::Volume => reference.volume().map(|v| v.to_string()),
+            NumberVariable::Issue => reference.issue().map(|v| v.to_string()),
+            NumberVariable::Pages => reference.pages().map(|p| {
+                format_page_range(&p.to_string(), options.config.page_range_format.as_ref())
+            }),
+            NumberVariable::Edition => reference.edition(),
             NumberVariable::CitationNumber => hints.citation_number.map(|n| n.to_string()),
             _ => None,
         };
@@ -1062,28 +1060,28 @@ impl ComponentValues for TemplateVariable {
         _options: &RenderOptions<'_>,
     ) -> Option<ProcValues> {
         let value = match self.variable {
-            SimpleVariable::Doi => reference.doi.clone(),
-            SimpleVariable::Url => reference.url.clone(),
-            SimpleVariable::Isbn => reference.isbn.clone(),
-            SimpleVariable::Issn => reference.issn.clone(),
-            SimpleVariable::Publisher => reference.publisher.clone(),
-            SimpleVariable::PublisherPlace => reference.publisher_place.clone(),
-            SimpleVariable::Genre => reference.genre.clone(),
-            SimpleVariable::Abstract => reference.abstract_text.clone(),
+            SimpleVariable::Doi => reference.doi(),
+            SimpleVariable::Url => reference.url().map(|u| u.to_string()),
+            SimpleVariable::Isbn => reference.isbn(),
+            SimpleVariable::Issn => reference.issn(),
+            SimpleVariable::Publisher => reference.publisher_str(),
+            SimpleVariable::PublisherPlace => reference.publisher_place(),
+            SimpleVariable::Genre => reference.genre(),
+            SimpleVariable::Abstract => reference.abstract_text(),
             _ => None,
         };
 
-        value.filter(|s| !s.is_empty()).map(|value| {
+        value.filter(|s: &String| !s.is_empty()).map(|value| {
             let mut url = None;
             if let Some(links) = &self.links {
                 if links.doi == Some(true) {
                     url = reference
-                        .doi
+                        .doi()
                         .as_ref()
                         .map(|d| format!("https://doi.org/{}", d));
                 }
                 if url.is_none() && links.url == Some(true) {
-                    url = reference.url.clone();
+                    url = reference.url().map(|u| u.to_string());
                 }
             }
             ProcValues {
@@ -1121,7 +1119,7 @@ impl ComponentValues for TemplateList {
                     prefix: v.prefix,
                     suffix: v.suffix,
                     url: v.url,
-                    ref_type: Some(reference.ref_type.clone()),
+                    ref_type: Some(reference.ref_type()),
                     config: Some(options.config.clone()),
                 };
 
@@ -1164,7 +1162,9 @@ impl ComponentValues for TemplateList {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use csl_legacy::csl_json::{DateVariable, Name, Reference as LegacyReference, StringOrNumber};
     use csln_core::locale::Locale;
+    use csln_core::reference::FlatName;
 
     fn make_config() -> Config {
         Config {
@@ -1188,7 +1188,7 @@ mod tests {
     }
 
     fn make_reference() -> Reference {
-        Reference {
+        Reference::from(LegacyReference {
             id: "kuhn1962".to_string(),
             ref_type: "book".to_string(),
             author: Some(vec![Name::new("Kuhn", "Thomas S.")]),
@@ -1196,7 +1196,7 @@ mod tests {
             issued: Some(DateVariable::year(1962)),
             publisher: Some("University of Chicago Press".to_string()),
             ..Default::default()
-        }
+        })
     }
 
     #[test]
@@ -1261,7 +1261,7 @@ mod tests {
         };
         let hints = ProcHints::default();
 
-        let reference = Reference {
+        let reference = Reference::from(LegacyReference {
             id: "multi".to_string(),
             ref_type: "article-journal".to_string(),
             author: Some(vec![
@@ -1270,7 +1270,7 @@ mod tests {
                 Name::new("Hinton", "Geoffrey"),
             ]),
             ..Default::default()
-        };
+        });
 
         let component = TemplateContributor {
             contributor: ContributorRole::Author,
@@ -1378,12 +1378,12 @@ mod tests {
         };
         let hints = ProcHints::default();
 
-        let reference = Reference {
+        let reference = Reference::from(LegacyReference {
             id: "multi".to_string(),
             ref_type: "article-journal".to_string(),
             author: Some(vec![Name::new("Smith", "John"), Name::new("Jones", "Jane")]),
             ..Default::default()
-        };
+        });
 
         let component = TemplateContributor {
             contributor: ContributorRole::Author,
@@ -1423,12 +1423,12 @@ mod tests {
         };
         let hints = ProcHints::default();
 
-        let reference = Reference {
+        let reference = Reference::from(LegacyReference {
             id: "multi".to_string(),
             ref_type: "article-journal".to_string(),
             author: Some(vec![Name::new("Smith", "John"), Name::new("Jones", "Jane")]),
             ..Default::default()
-        };
+        });
 
         let component = TemplateContributor {
             contributor: ContributorRole::Author,
@@ -1451,7 +1451,7 @@ mod tests {
         use csln_core::options::DemoteNonDroppingParticle;
 
         // Name: Ludwig van Beethoven
-        let name = Name {
+        let name = FlatName {
             family: Some("Beethoven".to_string()),
             given: Some("Ludwig".to_string()),
             non_dropping_particle: Some("van".to_string()),
@@ -1528,10 +1528,10 @@ mod tests {
             locale: &locale,
             context: RenderContext::Citation,
         };
-        let reference = Reference {
-            id: "empty".to_string(),
+        let reference = Reference::from(LegacyReference {
+            id: "multi".to_string(),
             ..Default::default()
-        };
+        });
         let hints = ProcHints::default();
 
         let component = TemplateList {
@@ -1573,7 +1573,7 @@ mod tests {
         };
         let hints = ProcHints::default();
 
-        let reference = Reference {
+        let reference = Reference::from(LegacyReference {
             id: "multi".to_string(),
             ref_type: "article-journal".to_string(),
             author: Some(vec![
@@ -1582,7 +1582,7 @@ mod tests {
                 Name::new("Hinton", "Geoffrey"),
             ]),
             ..Default::default()
-        };
+        });
 
         let component = TemplateContributor {
             contributor: ContributorRole::Author,
@@ -1616,7 +1616,7 @@ mod tests {
         };
         let hints = ProcHints::default();
 
-        let reference = Reference {
+        let reference = Reference::from(LegacyReference {
             id: "overlap".to_string(),
             ref_type: "article-journal".to_string(),
             author: Some(vec![
@@ -1625,7 +1625,7 @@ mod tests {
                 Name::new("Gamma", "C."),
             ]),
             ..Default::default()
-        };
+        });
 
         let component = TemplateContributor {
             contributor: ContributorRole::Author,
@@ -1652,12 +1652,12 @@ mod tests {
         };
         let hints = ProcHints::default();
 
-        let reference = Reference {
+        let reference = Reference::from(LegacyReference {
             id: "kuhn1962".to_string(),
             title: Some("The Structure of Scientific Revolutions".to_string()),
             doi: Some("10.1001/example".to_string()),
             ..Default::default()
-        };
+        });
 
         let component = TemplateTitle {
             title: TitleType::Primary,
@@ -1689,12 +1689,12 @@ mod tests {
         let hints = ProcHints::default();
 
         // Reference with URL but no DOI
-        let reference = Reference {
+        let reference = Reference::from(LegacyReference {
             id: "web2024".to_string(),
             title: Some("A Web Resource".to_string()),
             url: Some("https://example.com/resource".to_string()),
             ..Default::default()
-        };
+        });
 
         let component = TemplateTitle {
             title: TitleType::Primary,
@@ -1723,12 +1723,12 @@ mod tests {
         };
         let hints = ProcHints::default();
 
-        let reference = Reference {
+        let reference = Reference::from(LegacyReference {
             id: "pub2024".to_string(),
             publisher: Some("MIT Press".to_string()),
             doi: Some("10.1234/pub".to_string()),
             ..Default::default()
-        };
+        });
 
         let component = TemplateVariable {
             variable: SimpleVariable::Publisher,
@@ -1750,12 +1750,12 @@ mod tests {
         let locale = make_locale();
         let hints = ProcHints::default();
 
-        let reference = Reference {
+        let reference = Reference::from(LegacyReference {
             id: "editor-test".to_string(),
             ref_type: "book".to_string(),
             editor: Some(vec![Name::new("Doe", "John")]),
             ..Default::default()
-        };
+        });
 
         let component = TemplateContributor {
             contributor: ContributorRole::Editor,
