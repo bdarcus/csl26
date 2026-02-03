@@ -21,6 +21,7 @@ fn test_serial_component_with_parent_id() {
         pages: None,
         volume: None,
         issue: None,
+        keywords: None,
     };
 
     match component.parent {
@@ -45,6 +46,7 @@ fn test_collection_component_with_parent_id() {
         accessed: None,
         note: None,
         doi: None,
+        keywords: None,
     };
 
     match component.parent {

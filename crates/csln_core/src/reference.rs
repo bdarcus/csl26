@@ -139,6 +139,24 @@ impl InputReference {
         }
     }
 
+    /// Return the original publication date.
+    pub fn original_date(&self) -> Option<EdtfString> {
+        match self {
+            InputReference::Monograph(r) => r.original_date.clone(),
+            _ => None,
+        }
+    }
+
+    /// Return the keywords for categorization.
+    pub fn keywords(&self) -> Option<Vec<String>> {
+        match self {
+            InputReference::Monograph(r) => r.keywords.clone(),
+            InputReference::CollectionComponent(r) => r.keywords.clone(),
+            InputReference::SerialComponent(r) => r.keywords.clone(),
+            InputReference::Collection(r) => r.keywords.clone(),
+        }
+    }
+
     /// Set the reference ID.
     pub fn set_id(&mut self, id: String) {
         match self {
@@ -186,6 +204,9 @@ pub struct Monograph {
     pub isbn: Option<String>,
     pub doi: Option<String>,
     pub edition: Option<String>,
+    pub keywords: Option<Vec<String>>,
+    pub original_date: Option<EdtfString>,
+    pub original_title: Option<Title>,
 }
 
 /// A collection of works, such as an anthology or proceedings.
@@ -203,6 +224,7 @@ pub struct Collection {
     pub accessed: Option<EdtfString>,
     pub note: Option<String>,
     pub isbn: Option<String>,
+    pub keywords: Option<Vec<String>>,
 }
 
 /// Types of collections.
@@ -236,6 +258,7 @@ pub struct SerialComponent {
     pub pages: Option<String>,
     pub volume: Option<NumOrStr>,
     pub issue: Option<NumOrStr>,
+    pub keywords: Option<Vec<String>>,
 }
 
 /// A parent reference (either embedded or by ID).
@@ -328,6 +351,7 @@ pub struct CollectionComponent {
     pub accessed: Option<EdtfString>,
     pub note: Option<String>,
     pub doi: Option<String>,
+    pub keywords: Option<Vec<String>>,
 }
 
 /// A reference ID (citekey).
