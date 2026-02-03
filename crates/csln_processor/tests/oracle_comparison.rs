@@ -5,6 +5,7 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 
 //! Integration test comparing CSLN processor output with citeproc-js.
 
+use csl_legacy::csl_json::{DateVariable, Name, Reference as LegacyReference, StringOrNumber};
 use csln_core::options::{
     AndOptions, ContributorConfig, DisplayAsSort, Processing, ShortenListOptions,
 };
@@ -14,7 +15,7 @@ use csln_core::template::{
     WrapPunctuation,
 };
 use csln_core::{BibliographySpec, CitationSpec, Style, StyleInfo};
-use csln_processor::{Citation, CitationItem, DateVariable, Name, Processor, Reference};
+use csln_processor::{Citation, CitationItem, Processor, Reference};
 
 fn make_apa_style() -> Style {
     Style {
@@ -103,7 +104,7 @@ fn make_test_bibliography() -> indexmap::IndexMap<String, Reference> {
     // Kuhn 1962
     bib.insert(
         "kuhn1962".to_string(),
-        Reference {
+        Reference::from(LegacyReference {
             id: "kuhn1962".to_string(),
             ref_type: "book".to_string(),
             author: Some(vec![Name::new("Kuhn", "Thomas S.")]),
@@ -112,13 +113,13 @@ fn make_test_bibliography() -> indexmap::IndexMap<String, Reference> {
             publisher: Some("University of Chicago Press".to_string()),
             publisher_place: Some("Chicago".to_string()),
             ..Default::default()
-        },
+        }),
     );
 
     // Multi-author article (triggers et al.)
     bib.insert(
         "lecun2015".to_string(),
-        Reference {
+        Reference::from(LegacyReference {
             id: "lecun2015".to_string(),
             ref_type: "article-journal".to_string(),
             author: Some(vec![
@@ -129,10 +130,10 @@ fn make_test_bibliography() -> indexmap::IndexMap<String, Reference> {
             title: Some("Deep learning".to_string()),
             container_title: Some("Nature".to_string()),
             issued: Some(DateVariable::year(2015)),
-            volume: Some(csln_processor::StringOrNumber::Number(521)),
+            volume: Some(StringOrNumber::Number(521)),
             page: Some("436-444".to_string()),
             ..Default::default()
-        },
+        }),
     );
 
     bib

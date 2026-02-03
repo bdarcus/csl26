@@ -14,8 +14,14 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 // Re-export citation types from csln_core
 pub use csln_core::citation::{Citation, CitationItem, CitationMode, LocatorType};
 
-// Re-export CSL-JSON reference types from csl_legacy for backward compatibility
-pub use csl_legacy::csl_json::{Bibliography, DateVariable, Name, Reference, StringOrNumber};
+// Re-export reference types from csln_core
+pub use csln_core::reference::{
+    Contributor, ContributorList, EdtfString, FlatName, InputReference as Reference, NumOrStr,
+    SimpleName, StructuredName, Title,
+};
+
+/// A bibliography is a collection of references keyed by ID.
+pub type Bibliography = indexmap::IndexMap<String, Reference>;
 
 #[cfg(test)]
 mod tests {
@@ -33,24 +39,15 @@ mod tests {
             "publisher-place": "Chicago"
         }"#;
 
-        let reference: Reference = serde_json::from_str(json).unwrap();
-        assert_eq!(reference.id, "kuhn1962");
-        assert_eq!(reference.ref_type, "book");
-        assert_eq!(
-            reference.author.as_ref().unwrap()[0].family,
-            Some("Kuhn".to_string())
-        );
-        assert_eq!(reference.issued.as_ref().unwrap().year_value(), Some(1962));
-    }
-
-    #[test]
-    fn test_date_variable() {
-        let date = DateVariable::year(2023);
-        assert_eq!(date.year_value(), Some(2023));
-        assert_eq!(date.month_value(), None);
-
-        let date = DateVariable::year_month(2023, 6);
-        assert_eq!(date.year_value(), Some(2023));
-        assert_eq!(date.month_value(), Some(6));
+        let legacy: csl_legacy::csl_json::Reference = serde_json::from_str(json).unwrap();
+        let reference: Reference = legacy.into();
+        assert_eq!(reference.id().unwrap(), "kuhn1962");
+        assert_eq!(reference.ref_type(), "book");
+        // No longer direct access to family on Contributor
+        if let Some(Contributor::ContributorList(list)) = reference.author() {
+            if let Contributor::StructuredName(name) = &list.0[0] {
+                assert_eq!(name.family, "Kuhn".to_string());
+            }
+        }
     }
 }

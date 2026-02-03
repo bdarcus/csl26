@@ -9,10 +9,9 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 //!
 //! Usage: csln_processor <style.yaml> [--bib] [--cite]
 
+use csl_legacy::csl_json::{DateVariable, Name, Reference as LegacyReference, StringOrNumber};
 use csln_core::{Locale, Style};
-use csln_processor::{
-    Bibliography, Citation, CitationItem, DateVariable, Name, Processor, Reference, StringOrNumber,
-};
+use csln_processor::{Bibliography, Citation, CitationItem, Processor, Reference};
 use std::env;
 use std::fs;
 use std::path::Path;
@@ -105,7 +104,7 @@ fn create_test_bibliography() -> Bibliography {
     // ITEM-1: Kuhn journal article
     bib.insert(
         "ITEM-1".to_string(),
-        Reference {
+        Reference::from(LegacyReference {
             id: "ITEM-1".to_string(),
             ref_type: "article-journal".to_string(),
             author: Some(vec![Name::new("Kuhn", "Thomas S.")]),
@@ -118,13 +117,13 @@ fn create_test_bibliography() -> Bibliography {
             publisher_place: Some("Chicago".to_string()),
             doi: Some("10.1234/example".to_string()),
             ..Default::default()
-        },
+        }),
     );
 
     // ITEM-2: Hawking book
     bib.insert(
         "ITEM-2".to_string(),
-        Reference {
+        Reference::from(LegacyReference {
             id: "ITEM-2".to_string(),
             ref_type: "book".to_string(),
             author: Some(vec![Name::new("Hawking", "Stephen")]),
@@ -133,13 +132,13 @@ fn create_test_bibliography() -> Bibliography {
             publisher: Some("Bantam Dell Publishing Group".to_string()),
             publisher_place: Some("New York".to_string()),
             ..Default::default()
-        },
+        }),
     );
 
     // ITEM-3: LeCun et al. article (3 authors - triggers et al.)
     bib.insert(
         "ITEM-3".to_string(),
-        Reference {
+        Reference::from(LegacyReference {
             id: "ITEM-3".to_string(),
             ref_type: "article-journal".to_string(),
             author: Some(vec![
@@ -154,13 +153,13 @@ fn create_test_bibliography() -> Bibliography {
             page: Some("436-444".to_string()),
             doi: Some("10.1038/nature14539".to_string()),
             ..Default::default()
-        },
+        }),
     );
 
     // ITEM-4: Ericsson chapter
     bib.insert(
         "ITEM-4".to_string(),
-        Reference {
+        Reference::from(LegacyReference {
             id: "ITEM-4".to_string(),
             ref_type: "chapter".to_string(),
             author: Some(vec![Name::new("Ericsson", "K. Anders")]),
@@ -179,13 +178,13 @@ fn create_test_bibliography() -> Bibliography {
             publisher: Some("Cambridge University Press".to_string()),
             page: Some("683-703".to_string()),
             ..Default::default()
-        },
+        }),
     );
 
     // ITEM-5: World Bank report (corporate author)
     bib.insert(
         "ITEM-5".to_string(),
-        Reference {
+        Reference::from(LegacyReference {
             id: "ITEM-5".to_string(),
             ref_type: "report".to_string(),
             author: Some(vec![Name::literal("World Bank")]),
@@ -194,13 +193,13 @@ fn create_test_bibliography() -> Bibliography {
             publisher: Some("World Bank Group".to_string()),
             publisher_place: Some("Washington, DC".to_string()),
             ..Default::default()
-        },
+        }),
     );
 
     // ITEM-6: Two-author book
     bib.insert(
         "ITEM-6".to_string(),
-        Reference {
+        Reference::from(LegacyReference {
             id: "ITEM-6".to_string(),
             ref_type: "book".to_string(),
             author: Some(vec![
@@ -215,13 +214,13 @@ fn create_test_bibliography() -> Bibliography {
                 "Silver Anniversary Edition".to_string(),
             )),
             ..Default::default()
-        },
+        }),
     );
 
     // ITEM-7: 8-author article (tests et-al)
     bib.insert(
         "ITEM-7".to_string(),
-        Reference {
+        Reference::from(LegacyReference {
             id: "ITEM-7".to_string(),
             ref_type: "article-journal".to_string(),
             author: Some(vec![
@@ -240,13 +239,13 @@ fn create_test_bibliography() -> Bibliography {
             volume: Some(StringOrNumber::String("30".to_string())),
             page: Some("5998-6008".to_string()),
             ..Default::default()
-        },
+        }),
     );
 
     // ITEM-8: Kuhn 1970 (tests disambiguation with ITEM-1)
     bib.insert(
         "ITEM-8".to_string(),
-        Reference {
+        Reference::from(LegacyReference {
             id: "ITEM-8".to_string(),
             ref_type: "article-journal".to_string(),
             author: Some(vec![Name::new("Kuhn", "Thomas S.")]),
@@ -258,13 +257,13 @@ fn create_test_bibliography() -> Bibliography {
             page: Some("1-13".to_string()),
             doi: Some("10.1086/288273".to_string()),
             ..Default::default()
-        },
+        }),
     );
 
     // ITEM-9: Smith, John (tests disambiguation with ITEM-10)
     bib.insert(
         "ITEM-9".to_string(),
-        Reference {
+        Reference::from(LegacyReference {
             id: "ITEM-9".to_string(),
             ref_type: "article-journal".to_string(),
             author: Some(vec![
@@ -278,13 +277,13 @@ fn create_test_bibliography() -> Bibliography {
             page: Some("850-855".to_string()),
             doi: Some("10.1038/s41558-020-0871-4".to_string()),
             ..Default::default()
-        },
+        }),
     );
 
     // ITEM-10: Smith, Jane (tests disambiguation with ITEM-9)
     bib.insert(
         "ITEM-10".to_string(),
-        Reference {
+        Reference::from(LegacyReference {
             id: "ITEM-10".to_string(),
             ref_type: "article-journal".to_string(),
             author: Some(vec![
@@ -299,13 +298,13 @@ fn create_test_bibliography() -> Bibliography {
             page: Some("114042".to_string()),
             doi: Some("10.1088/1748-9326/abc123".to_string()),
             ..Default::default()
-        },
+        }),
     );
 
     // ITEM-11: Thesis
     bib.insert(
         "ITEM-11".to_string(),
-        Reference {
+        Reference::from(LegacyReference {
             id: "ITEM-11".to_string(),
             ref_type: "thesis".to_string(),
             author: Some(vec![Name::new("Chen", "Wei")]),
@@ -314,13 +313,13 @@ fn create_test_bibliography() -> Bibliography {
             publisher: Some("Stanford University".to_string()),
             genre: Some("PhD thesis".to_string()),
             ..Default::default()
-        },
+        }),
     );
 
     // ITEM-12: Conference paper
     bib.insert(
         "ITEM-12".to_string(),
-        Reference {
+        Reference::from(LegacyReference {
             id: "ITEM-12".to_string(),
             ref_type: "paper-conference".to_string(),
             author: Some(vec![
@@ -335,13 +334,13 @@ fn create_test_bibliography() -> Bibliography {
             issued: Some(DateVariable::year(2013)),
             page: Some("3111-3119".to_string()),
             ..Default::default()
-        },
+        }),
     );
 
     // ITEM-13: Webpage
     bib.insert(
         "ITEM-13".to_string(),
-        Reference {
+        Reference::from(LegacyReference {
             id: "ITEM-13".to_string(),
             ref_type: "webpage".to_string(),
             author: Some(vec![Name::literal("State of JS Team")]),
@@ -349,13 +348,13 @@ fn create_test_bibliography() -> Bibliography {
             issued: Some(DateVariable::year(2023)),
             url: Some("https://stateofjs.com/2023".to_string()),
             ..Default::default()
-        },
+        }),
     );
 
     // ITEM-14: Edited book
     bib.insert(
         "ITEM-14".to_string(),
-        Reference {
+        Reference::from(LegacyReference {
             id: "ITEM-14".to_string(),
             ref_type: "book".to_string(),
             editor: Some(vec![
@@ -367,13 +366,13 @@ fn create_test_bibliography() -> Bibliography {
             publisher: Some("Cambridge University Press".to_string()),
             publisher_place: Some("Cambridge".to_string()),
             ..Default::default()
-        },
+        }),
     );
 
     // ITEM-15: No author (edge case)
     bib.insert(
         "ITEM-15".to_string(),
-        Reference {
+        Reference::from(LegacyReference {
             id: "ITEM-15".to_string(),
             ref_type: "article-journal".to_string(),
             author: None,
@@ -384,7 +383,7 @@ fn create_test_bibliography() -> Bibliography {
             issue: Some(StringOrNumber::String("3".to_string())),
             page: Some("201-215".to_string()),
             ..Default::default()
-        },
+        }),
     );
 
     bib
