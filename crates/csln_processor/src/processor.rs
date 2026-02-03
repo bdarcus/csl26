@@ -1074,7 +1074,7 @@ fn get_variable_key(component: &TemplateComponent) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use csl_legacy::csl_json::{DateVariable, Name, Reference as LegacyReference, StringOrNumber};
+    use csl_legacy::csl_json::{DateVariable, Name, Reference as LegacyReference};
     use csln_core::options::{
         AndOptions, ContributorConfig, DisplayAsSort, Processing, ShortenListOptions,
     };

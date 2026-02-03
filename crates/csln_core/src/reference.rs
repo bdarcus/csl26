@@ -84,7 +84,7 @@ impl InputReference {
         match self {
             InputReference::Monograph(r) => r.editor.clone(),
             InputReference::Collection(r) => r.editor.clone(),
-            InputReference::CollectionComponent(r) => match &(**r).parent {
+            InputReference::CollectionComponent(r) => match &r.parent {
                 Parent::Embedded(p) => p.editor.clone(),
                 Parent::Id(_) => None,
             },
@@ -318,20 +318,20 @@ impl InputReference {
     /// Return the reference type as a string (CSL-compatible).
     pub fn ref_type(&self) -> String {
         match self {
-            InputReference::Monograph(r) => match (**r).r#type {
+            InputReference::Monograph(r) => match r.r#type {
                 MonographType::Book => "book".to_string(),
                 MonographType::Report => "report".to_string(),
                 MonographType::Document => "document".to_string(),
             },
-            InputReference::CollectionComponent(r) => match (**r).r#type {
+            InputReference::CollectionComponent(r) => match r.r#type {
                 MonographComponentType::Chapter => "chapter".to_string(),
                 _ => "chapter".to_string(),
             },
-            InputReference::SerialComponent(r) => match (**r).r#type {
+            InputReference::SerialComponent(r) => match r.r#type {
                 SerialComponentType::Article => "article-journal".to_string(),
                 _ => "article".to_string(),
             },
-            InputReference::Collection(r) => match (**r).r#type {
+            InputReference::Collection(r) => match r.r#type {
                 CollectionType::EditedBook => "book".to_string(),
                 _ => "collection".to_string(),
             },
@@ -1041,7 +1041,7 @@ impl EdtfString {
 
     /// Format as "Month Year".
     pub fn year_month(&self, months: &MonthList) -> String {
-        let month = self.month(&months);
+        let month = self.month(months);
         let year = self.year();
         if month.is_empty() || year.is_empty() {
             String::new()

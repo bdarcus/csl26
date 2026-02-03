@@ -323,13 +323,13 @@ impl ComponentValues for TemplateContributor {
             }
         };
 
-        return Some(ProcValues {
+        Some(ProcValues {
             value: formatted,
             prefix: role_prefix,
             suffix: role_suffix,
             url: None,
             substituted_key: None,
-        });
+        })
     }
 }
 
@@ -1162,7 +1162,7 @@ impl ComponentValues for TemplateList {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use csl_legacy::csl_json::{DateVariable, Name, Reference as LegacyReference, StringOrNumber};
+    use csl_legacy::csl_json::{DateVariable, Name, Reference as LegacyReference};
     use csln_core::locale::Locale;
     use csln_core::reference::FlatName;
 
