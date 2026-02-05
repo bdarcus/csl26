@@ -1,8 +1,10 @@
 use csl_legacy::model::{CslNode, Style};
 use std::collections::HashMap;
 
+pub mod analysis;
 pub mod compressor;
 pub mod options_extractor;
+pub mod passes;
 pub mod preset_detector;
 pub mod template_compiler;
 pub mod upsampler;
