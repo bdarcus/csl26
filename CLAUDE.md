@@ -351,6 +351,17 @@ All changes must be made on feature branches. The user will handle merging via G
 
 4. **Stop here.** Do NOT attempt to merge. The user will review and merge when ready.
 
+## Pull Request Convention
+
+**Draft vs Ready PRs:**
+- **Draft PR** = Work in progress, more commits expected
+- **Regular PR** = Complete and ready for immediate merge
+
+When opening a PR:
+- Use **draft** if you plan to add more commits to the same branch
+- Use **regular** (non-draft) only when all work is complete and tested
+- The user will merge regular PRs without waiting for confirmation
+
 Branch naming conventions:
 - `feat/` - New features
 - `fix/` - Bug fixes
