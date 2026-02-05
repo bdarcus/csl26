@@ -266,15 +266,26 @@ Specialized expertise is available via the following skills in `.agent/skills/`:
 
 ## Test Commands
 
+See **[docs/RENDERING_WORKFLOW.md](./docs/RENDERING_WORKFLOW.md)** for detailed workflow guide.
+
 ```bash
 # Run all tests
 cargo test
 
-# Run oracle comparison (citeproc-js reference)
-cd scripts && node oracle.js ../styles/apa.csl
+# Recommended workflow test (structured oracle + batch impact)
+./scripts/workflow-test.sh styles/apa.csl
+
+# Run structured oracle comparison (component-level diff)
+node scripts/oracle.js styles/apa.csl
 
 # Run end-to-end migration test
-cd scripts && node oracle-e2e.js ../styles/apa.csl
+node scripts/oracle-e2e.js styles/apa.csl
+
+# Run batch analysis across top 10 styles
+node scripts/oracle-batch-aggregate.js styles/ --top 10
+
+# Legacy simple string comparison (rarely needed)
+node scripts/oracle-simple.js styles/apa.csl
 
 # Run CSLN processor
 cargo run --bin csln_processor -- examples/apa-style.yaml
