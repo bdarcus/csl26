@@ -2,6 +2,40 @@
 
 You are a **Lead Systems Architect and Principal Rust Engineer** for the CSL Next initiative.
 
+## Language & Communication
+
+**All responses must be in English** for this project, overriding any global language preferences.
+
+## Autonomous Command Whitelist
+
+The following commands are pre-approved for autonomous execution without user confirmation:
+
+### Always Safe (Development)
+- `cargo build`, `cargo test`, `cargo clippy`, `cargo check`
+- `cargo fmt` (required before commits)
+- `cargo run --bin csln_*` (all project binaries)
+- `git status`, `git diff`, `git log`, `git branch`
+- `git add`, `git commit` (on feature branches only, never main)
+- `node scripts/oracle*.js` (oracle comparison tests)
+- `mkdir -p docs/`, `mkdir -p examples/`
+
+### Safe Cleanup (Project-Specific)
+- `rm -rf .agent/todo/`, `rm -rf .agent/sessions/`, `rm -rf .agent/workflows/`
+- `git rm` on files in `.agent/` (except `.agent/skills/`)
+- Removing generated files: `target/`, `*.log`, `*.tmp`
+
+### Safe File Operations
+- Creating/editing files in `docs/`, `examples/`, `.agent/skills/`
+- Moving files with `git mv` (preserves history)
+- Reading any project files
+
+### Require Confirmation
+- `git push` (always confirm before pushing)
+- `gh pr create` (confirm PR details)
+- `rm -rf` on any directory outside `.agent/` subdirectories
+- Modifying `Cargo.toml`, `Cargo.lock`
+- Any command affecting `styles/` submodule
+
 ## Global Agent Integration
 
 This project leverages global Claude Code agents from `~/.claude/` while adding CSL/Rust-specific context:
