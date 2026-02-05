@@ -207,26 +207,34 @@ Known gaps (in progress):
 crates/
 ├── csl_legacy/      # CSL 1.0 XML parser (read-only)
 ├── csln_analyze/    # Corpus-wide analysis and batch testing
+│   ├── src/
+│   │   ├── analyzer.rs  # Style feature statistics
+│   │   ├── ranker.rs    # Parent style ranking logic
+│   │   └── main.rs      # CLI entry point
 ├── csln_cli/        # CLI tools (schema generation, etc.)
 ├── csln_core/       # CSLN schema and core types
 │   ├── src/
-│   │   ├── options.rs   # Style configuration
-│   │   ├── presets.rs   # Named configuration bundles (APA, Chicago, etc.)
+│   │   ├── citation.rs  # Citation model
+│   │   ├── embedded/    # Style presets (APA, Chicago, etc.)
+│   │   ├── legacy.rs    # CSL 1.0 legacy type bridge
+│   │   ├── locale/      # Localization (terms, dates, raw mapping)
+│   │   ├── options/     # Style configuration groups
+│   │   ├── presets.rs   # Named configuration bundles
 │   │   ├── renderer.rs  # Rendering orchestration
 │   │   ├── template.rs  # Template components
-│   │   ├── locale.rs    # Localization (terms, dates)
-│   │   └── reference/   # Internal reference model (types, dates, names)
+│   │   └── reference/   # Internal reference model
 ├── csln_migrate/    # CSL 1.0 → CSLN converter
 │   ├── src/
 │   │   ├── options_extractor/ # Extracts config from XML
 │   │   ├── template_compiler/ # Compiles XML macros to CSLN templates
+│   │   ├── upsampler.rs       # XML to CSLN Node mapping
 │   │   ├── analysis/          # Style-specific feature detection
-│   │   └── passes/            # Transformation passes (deduplication, etc.)
+│   │   └── passes/            # Transformation passes
 └── csln_processor/  # Citation/bibliography renderer
     ├── src/
     │   ├── processor/   # Core logic (disambiguation, matching, sorting)
     │   ├── values/      # Field-level extraction and formatting
-    │   └── render.rs    # Low-level string rendering
+    │   └── render/      # String rendering (mod, component)
 
 .agent/              # LLM agent instructions and design documents
 locales/             # CSLN YAML locale files (en-US, de-DE, etc.)

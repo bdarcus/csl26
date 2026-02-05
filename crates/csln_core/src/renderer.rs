@@ -75,7 +75,7 @@ impl Renderer {
 
         if let Some(mut formatted) = active_val {
             if let Some(init) = &block.options.initialize_with {
-                if !formatted.contains(init) {
+                if !formatted.as_str().contains(init.as_str()) {
                     formatted = format!("{} [Init: {}]", formatted, init);
                 }
             }
