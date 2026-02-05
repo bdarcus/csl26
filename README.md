@@ -206,26 +206,31 @@ Known gaps (in progress):
 ```
 crates/
 ├── csl_legacy/      # CSL 1.0 XML parser (read-only)
+├── csln_analyze/    # Corpus-wide analysis and batch testing
 ├── csln_cli/        # CLI tools (schema generation, etc.)
-├── csln_core/       # CSLN schema and types
-│   ├── options.rs   # Style configuration
-│   ├── presets.rs   # Named configuration bundles (APA, Chicago, etc.)
-│   ├── embedded.rs  # Pre-built templates for priority styles
-│   ├── template.rs  # Template components
-│   └── locale.rs    # Localization (terms, dates)
+├── csln_core/       # CSLN schema and core types
+│   ├── src/
+│   │   ├── options.rs   # Style configuration
+│   │   ├── presets.rs   # Named configuration bundles (APA, Chicago, etc.)
+│   │   ├── renderer.rs  # Rendering orchestration
+│   │   ├── template.rs  # Template components
+│   │   ├── locale.rs    # Localization (terms, dates)
+│   │   └── reference/   # Internal reference model (types, dates, names)
 ├── csln_migrate/    # CSL 1.0 → CSLN converter
-│   ├── options_extractor.rs
-│   └── template_compiler.rs
+│   ├── src/
+│   │   ├── options_extractor/ # Extracts config from XML
+│   │   ├── template_compiler/ # Compiles XML macros to CSLN templates
+│   │   ├── analysis/          # Style-specific feature detection
+│   │   └── passes/            # Transformation passes (deduplication, etc.)
 └── csln_processor/  # Citation/bibliography renderer
-    ├── processor.rs # Core processing logic
-    ├── values.rs    # Value extraction
-    ├── render.rs    # String formatting
-    └── main.rs      # CLI tool
+    ├── src/
+    │   ├── processor/   # Core logic (disambiguation, matching, sorting)
+    │   ├── values/      # Field-level extraction and formatting
+    │   └── render.rs    # Low-level string rendering
 
-.agent/              # LLM agent instructions
-.agent/design/       # Design documents (see STYLE_ALIASING.md for presets architecture)
-locales/             # CSLN YAML locale files (en-US, de-DE, fr-FR, tr-TR)
-scripts/             # Oracle verification and locale conversion
+.agent/              # LLM agent instructions and design documents
+locales/             # CSLN YAML locale files (en-US, de-DE, etc.)
+scripts/             # Oracle verification (citeproc-js) and automation
 styles/              # 2,844 CSL 1.0 styles (submodule)
 ```
 
