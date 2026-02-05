@@ -8,11 +8,16 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 //! Locales provide language-specific terms, date formats, and punctuation rules
 //! for citation formatting.
 
+pub mod raw;
+pub mod types;
+
 use crate::citation::LocatorType;
 use crate::template::ContributorRole;
+pub use raw::{RawLocale, RawTermValue};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+pub use types::*;
 
 /// A list of month names (12 elements for Jan-Dec).
 pub type MonthList = Vec<String>;
@@ -268,278 +273,10 @@ impl Locale {
     }
 }
 
-/// Form for term lookup.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, JsonSchema)]
-pub enum TermForm {
-    Long,
-    Short,
-    Verb,
-    VerbShort,
-    Symbol,
-}
-
-/// General terms used in citations and bibliographies.
-#[derive(Debug, Default, Deserialize, Serialize, Clone, JsonSchema)]
-#[serde(rename_all = "kebab-case")]
-pub struct Terms {
-    /// The word "and" (e.g., "Smith and Jones").
-    pub and: Option<String>,
-    /// Symbol form of "and" (e.g., "&").
-    pub and_symbol: Option<String>,
-    /// "and others" for generic use.
-    pub and_others: Option<String>,
-    /// Anonymous author term.
-    #[serde(default)]
-    pub anonymous: SimpleTerm,
-    /// "at" preposition.
-    pub at: Option<String>,
-    /// "accessed" for URLs.
-    pub accessed: Option<String>,
-    /// "available at" for URLs.
-    pub available_at: Option<String>,
-    /// "by" preposition.
-    pub by: Option<String>,
-    /// "circa" for approximate dates.
-    #[serde(default)]
-    pub circa: SimpleTerm,
-    /// "et al." abbreviation.
-    pub et_al: Option<String>,
-    /// "from" preposition.
-    pub from: Option<String>,
-    /// "ibid." for repeated citations.
-    pub ibid: Option<String>,
-    /// "in" preposition.
-    pub in_: Option<String>,
-    /// "no date" for missing dates.
-    pub no_date: Option<String>,
-    /// "retrieved" for access dates.
-    pub retrieved: Option<String>,
-}
-
-impl Terms {
-    /// Create English (US) terms.
-    pub fn en_us() -> Self {
-        Self {
-            and: Some("and".into()),
-            and_symbol: Some("&".into()),
-            and_others: Some("and others".into()),
-            anonymous: SimpleTerm {
-                long: "anonymous".into(),
-                short: "anon.".into(),
-            },
-            at: Some("at".into()),
-            accessed: Some("accessed".into()),
-            available_at: Some("available at".into()),
-            by: Some("by".into()),
-            circa: SimpleTerm {
-                long: "circa".into(),
-                short: "c.".into(),
-            },
-            et_al: Some("et al.".into()),
-            from: Some("from".into()),
-            ibid: Some("ibid.".into()),
-            in_: Some("in".into()),
-            no_date: Some("n.d.".into()),
-            retrieved: Some("retrieved".into()),
-        }
-    }
-}
-
-/// A simple term with long and short forms.
-#[derive(Debug, Default, Deserialize, Serialize, Clone, JsonSchema)]
-pub struct SimpleTerm {
-    /// The long form of the term.
-    pub long: String,
-    /// The short form of the term.
-    pub short: String,
-}
-
-/// Terms for contributor roles.
-#[derive(Debug, Default, Deserialize, Serialize, Clone, JsonSchema)]
-pub struct ContributorTerm {
-    /// Singular form (editor, translator).
-    pub singular: SimpleTerm,
-    /// Plural form (editors, translators).
-    pub plural: SimpleTerm,
-    /// Verb form (edited by, translated by).
-    pub verb: SimpleTerm,
-}
-
-/// Terms for locators (page, chapter, etc.).
-#[derive(Debug, Default, Deserialize, Serialize, Clone, JsonSchema)]
-pub struct LocatorTerm {
-    /// Long form (e.g., page/pages).
-    #[serde(default)]
-    pub long: Option<SingularPlural>,
-    /// Short form (e.g., p./pp.).
-    #[serde(default)]
-    pub short: Option<SingularPlural>,
-    /// Symbol form (e.g., §/§§).
-    #[serde(default)]
-    pub symbol: Option<SingularPlural>,
-}
-
-/// A term with singular and plural forms.
-#[derive(Debug, Default, Deserialize, Serialize, Clone, JsonSchema)]
-pub struct SingularPlural {
-    /// Singular form.
-    pub singular: String,
-    /// Plural form.
-    pub plural: String,
-}
-
-/// Date-related terms.
-#[derive(Debug, Default, Deserialize, Serialize, Clone, JsonSchema)]
-pub struct DateTerms {
-    /// Month names.
-    #[serde(default)]
-    pub months: MonthNames,
-    /// Season names (Spring, Summer, Autumn, Winter).
-    #[serde(default)]
-    pub seasons: Vec<String>,
-}
-
-impl DateTerms {
-    /// Create English (US) date terms.
-    pub fn en_us() -> Self {
-        Self {
-            months: MonthNames::en_us(),
-            seasons: vec![
-                "Spring".into(),
-                "Summer".into(),
-                "Autumn".into(),
-                "Winter".into(),
-            ],
-        }
-    }
-}
-
-/// Month name lists.
-#[derive(Debug, Default, Deserialize, Serialize, Clone, JsonSchema)]
-pub struct MonthNames {
-    /// Full month names.
-    pub long: Vec<String>,
-    /// Abbreviated month names.
-    pub short: Vec<String>,
-}
-
-impl MonthNames {
-    /// Create English month names.
-    pub fn en_us() -> Self {
-        Self {
-            long: vec![
-                "January".into(),
-                "February".into(),
-                "March".into(),
-                "April".into(),
-                "May".into(),
-                "June".into(),
-                "July".into(),
-                "August".into(),
-                "September".into(),
-                "October".into(),
-                "November".into(),
-                "December".into(),
-            ],
-            short: vec![
-                "Jan.".into(),
-                "Feb.".into(),
-                "Mar.".into(),
-                "Apr.".into(),
-                "May".into(),
-                "June".into(),
-                "July".into(),
-                "Aug.".into(),
-                "Sept.".into(),
-                "Oct.".into(),
-                "Nov.".into(),
-                "Dec.".into(),
-            ],
-        }
-    }
-}
-
-/// Raw locale format for YAML parsing.
-/// This is a simpler format that uses string keys for terms.
-#[derive(Debug, Default, Deserialize, Serialize, Clone)]
-#[serde(rename_all = "kebab-case")]
-pub struct RawLocale {
-    /// The locale identifier (e.g., "en-US", "de-DE").
-    pub locale: String,
-    /// Date-related terms.
-    #[serde(default)]
-    pub dates: RawDateTerms,
-    /// Role terms keyed by role name.
-    #[serde(default)]
-    pub roles: HashMap<String, RawRoleTerm>,
-    /// General terms keyed by term name.
-    #[serde(default)]
-    pub terms: HashMap<String, RawTermValue>,
-}
-
-/// Raw date terms for YAML parsing.
-#[derive(Debug, Default, Deserialize, Serialize, Clone)]
-pub struct RawDateTerms {
-    #[serde(default)]
-    pub months: RawMonthNames,
-    #[serde(default)]
-    pub seasons: Vec<String>,
-}
-
-/// Raw month names for YAML parsing.
-#[derive(Debug, Default, Deserialize, Serialize, Clone)]
-pub struct RawMonthNames {
-    #[serde(default)]
-    pub long: Vec<String>,
-    #[serde(default)]
-    pub short: Vec<String>,
-}
-
-/// Raw role term with form-keyed values.
-#[derive(Debug, Default, Deserialize, Serialize, Clone)]
-pub struct RawRoleTerm {
-    #[serde(default)]
-    pub long: Option<RawTermValue>,
-    #[serde(default)]
-    pub short: Option<RawTermValue>,
-    #[serde(default)]
-    pub verb: Option<RawTermValue>,
-    #[serde(default, rename = "verb-short")]
-    pub verb_short: Option<RawTermValue>,
-}
-
-/// A term value that can be a simple string or have singular/plural forms.
-#[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(untagged)]
-pub enum RawTermValue {
-    /// Simple string value.
-    Simple(String),
-    /// Form-keyed value (for terms with long/short forms).
-    Forms(HashMap<String, RawTermValue>),
-    /// Singular/plural forms.
-    SingularPlural { singular: String, plural: String },
-}
-
-impl Default for RawTermValue {
-    fn default() -> Self {
-        RawTermValue::Simple(String::new())
-    }
-}
-
-impl RawTermValue {
-    /// Get the simple string value.
-    pub fn as_string(&self) -> Option<&str> {
-        match self {
-            RawTermValue::Simple(s) => Some(s),
-            _ => None,
-        }
-    }
-}
-
 impl Locale {
     /// Load a locale from a YAML string.
     pub fn from_yaml_str(yaml: &str) -> Result<Self, String> {
-        let raw: RawLocale = serde_yaml::from_str(yaml)
+        let raw: raw::RawLocale = serde_yaml::from_str(yaml)
             .map_err(|e| format!("Failed to parse locale YAML: {}", e))?;
 
         Ok(Self::from_raw(raw))
@@ -589,7 +326,7 @@ impl Locale {
     }
 
     /// Convert a RawLocale to a Locale.
-    fn from_raw(raw: RawLocale) -> Self {
+    fn from_raw(raw: raw::RawLocale) -> Self {
         // Determine punctuation-in-quote from locale ID
         // en-US uses American style (inside), en-GB and others use outside
         let punctuation_in_quote = raw.locale.starts_with("en-US")
@@ -694,9 +431,9 @@ impl Locale {
         locale
     }
 
-    fn get_forms(value: &RawTermValue) -> Option<&HashMap<String, RawTermValue>> {
+    fn get_forms(value: &raw::RawTermValue) -> Option<&HashMap<String, raw::RawTermValue>> {
         match value {
-            RawTermValue::Forms(forms) => Some(forms),
+            raw::RawTermValue::Forms(forms) => Some(forms),
             _ => None,
         }
     }
@@ -744,13 +481,13 @@ impl Locale {
         }
     }
 
-    fn extract_singular_plural(value: &Option<&RawTermValue>) -> Option<SingularPlural> {
+    fn extract_singular_plural(value: &Option<&raw::RawTermValue>) -> Option<SingularPlural> {
         match value {
-            Some(RawTermValue::SingularPlural { singular, plural }) => Some(SingularPlural {
+            Some(raw::RawTermValue::SingularPlural { singular, plural }) => Some(SingularPlural {
                 singular: singular.clone(),
                 plural: plural.clone(),
             }),
-            Some(RawTermValue::Simple(s)) => Some(SingularPlural {
+            Some(raw::RawTermValue::Simple(s)) => Some(SingularPlural {
                 singular: s.clone(),
                 plural: s.clone(), // Fallback if only one form provided
             }),
@@ -759,15 +496,15 @@ impl Locale {
     }
 
     fn extract_simple_term(
-        long: &Option<RawTermValue>,
-        short: &Option<RawTermValue>,
+        long: &Option<raw::RawTermValue>,
+        short: &Option<raw::RawTermValue>,
         plural: bool,
     ) -> SimpleTerm {
         let long_str = long
             .as_ref()
             .and_then(|v| match v {
-                RawTermValue::Simple(s) => Some(s.clone()),
-                RawTermValue::SingularPlural {
+                raw::RawTermValue::Simple(s) => Some(s.clone()),
+                raw::RawTermValue::SingularPlural {
                     singular,
                     plural: p,
                 } => Some(if plural { p.clone() } else { singular.clone() }),
@@ -778,8 +515,8 @@ impl Locale {
         let short_str = short
             .as_ref()
             .and_then(|v| match v {
-                RawTermValue::Simple(s) => Some(s.clone()),
-                RawTermValue::SingularPlural {
+                raw::RawTermValue::Simple(s) => Some(s.clone()),
+                raw::RawTermValue::SingularPlural {
                     singular,
                     plural: p,
                 } => Some(if plural { p.clone() } else { singular.clone() }),
@@ -794,8 +531,8 @@ impl Locale {
     }
 
     fn extract_verb_term(
-        verb: &Option<RawTermValue>,
-        verb_short: &Option<RawTermValue>,
+        verb: &Option<raw::RawTermValue>,
+        verb_short: &Option<raw::RawTermValue>,
     ) -> SimpleTerm {
         let long_str = verb
             .as_ref()

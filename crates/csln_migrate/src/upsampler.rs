@@ -152,6 +152,7 @@ impl Upsampler {
                 }
                 LNode::Label(label) => {
                     options.label = Some(csln::LabelOptions {
+                        variable: variable.clone(),
                         form: self.map_label_form(&label.form),
                         pluralize: true,
                         formatting: self.map_formatting(
@@ -213,8 +214,9 @@ impl Upsampler {
         if let Some(var_str) = &l.variable {
             if let Some(var) = self.map_variable(var_str) {
                 return Some(csln::CslnNode::Variable(csln::VariableBlock {
-                    variable: var,
+                    variable: var.clone(),
                     label: Some(csln::LabelOptions {
+                        variable: var,
                         form: self.map_label_form(&l.form),
                         pluralize: true,
                         formatting: self.map_formatting(&l.formatting, &l.prefix, &l.suffix, None),
@@ -418,8 +420,9 @@ impl Upsampler {
                     if l_var == t_var {
                         if let Some(var) = self.map_variable(t_var) {
                             return Some(csln::CslnNode::Variable(csln::VariableBlock {
-                                variable: var,
+                                variable: var.clone(),
                                 label: Some(csln::LabelOptions {
+                                    variable: var,
                                     form: self.map_label_form(&l.form),
                                     pluralize: true,
                                     formatting: self.map_formatting(
