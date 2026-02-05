@@ -237,7 +237,7 @@ Features:
 - Open ranges: `1990/..` (ongoing)
 - Precision levels: year, month, day
 
-**CSLN**: Already prioritized in AGENTS.md. Continue this approach.
+**CSLN**: Already prioritized in CLAUDE.md. Continue this approach.
 
 ---
 
@@ -349,7 +349,7 @@ CSL-M's deprecated `alt-*` extensions (`alt-title`, `alt-container-title`) were 
 
 ### Batch vs Interactive Processing
 
-CSLN needs to support both modes (per AGENTS.md "Hybrid Processing Architecture"):
+CSLN needs to support both modes (per CLAUDE.md "Hybrid Processing Architecture"):
 
 | Mode | Use Case | Characteristics |
 |------|----------|-----------------|
