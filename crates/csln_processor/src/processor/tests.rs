@@ -1,0 +1,867 @@
+use super::*;
+use csl_legacy::csl_json::{DateVariable, Name, Reference as LegacyReference};
+use csln_core::options::{
+    AndOptions, ContributorConfig, DisplayAsSort, Processing, ShortenListOptions,
+};
+use csln_core::template::{
+    ContributorForm, ContributorRole, DateForm, DateVariable as TDateVar, Rendering,
+    TemplateComponent, TemplateContributor, TemplateDate, TemplateTitle, TitleType,
+    WrapPunctuation,
+};
+use csln_core::{BibliographySpec, CitationSpec, StyleInfo};
+
+fn make_style() -> Style {
+    Style {
+        info: StyleInfo {
+            title: Some("APA".to_string()),
+            id: Some("apa".to_string()),
+            ..Default::default()
+        },
+        options: Some(Config {
+            processing: Some(Processing::AuthorDate),
+            contributors: Some(ContributorConfig {
+                shorten: Some(ShortenListOptions {
+                    min: 3,
+                    use_first: 1,
+                    ..Default::default()
+                }),
+                and: Some(AndOptions::Symbol),
+                display_as_sort: Some(DisplayAsSort::First),
+                ..Default::default()
+            }),
+            ..Default::default()
+        }),
+        citation: Some(CitationSpec {
+            options: None,
+            template: Some(vec![
+                TemplateComponent::Contributor(TemplateContributor {
+                    contributor: ContributorRole::Author,
+                    form: ContributorForm::Short,
+                    name_order: None,
+                    delimiter: None,
+                    rendering: Rendering::default(),
+                    ..Default::default()
+                }),
+                TemplateComponent::Date(TemplateDate {
+                    date: TDateVar::Issued,
+                    form: DateForm::Year,
+                    rendering: Rendering::default(),
+                    ..Default::default()
+                }),
+            ]),
+            wrap: Some(WrapPunctuation::Parentheses),
+            ..Default::default()
+        }),
+        bibliography: Some(BibliographySpec {
+            options: None,
+            template: Some(vec![
+                TemplateComponent::Contributor(TemplateContributor {
+                    contributor: ContributorRole::Author,
+                    form: ContributorForm::Long,
+                    name_order: None,
+                    delimiter: None,
+                    and: None,
+                    rendering: Default::default(),
+                    ..Default::default()
+                }),
+                TemplateComponent::Date(TemplateDate {
+                    date: TDateVar::Issued,
+                    form: DateForm::Year,
+                    rendering: Rendering {
+                        wrap: Some(WrapPunctuation::Parentheses),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                }),
+                TemplateComponent::Title(TemplateTitle {
+                    title: TitleType::Primary,
+                    form: None,
+                    rendering: Rendering {
+                        prefix: Some(". ".to_string()),
+                        emph: Some(true),
+                        ..Default::default()
+                    },
+                    overrides: None,
+                    ..Default::default()
+                }),
+            ]),
+            ..Default::default()
+        }),
+        templates: None,
+        ..Default::default()
+    }
+}
+
+fn make_bibliography() -> Bibliography {
+    let mut bib = Bibliography::new();
+    bib.insert(
+        "kuhn1962".to_string(),
+        Reference::from(LegacyReference {
+            id: "kuhn1962".to_string(),
+            ref_type: "book".to_string(),
+            author: Some(vec![Name::new("Kuhn", "Thomas S.")]),
+            title: Some("The Structure of Scientific Revolutions".to_string()),
+            issued: Some(DateVariable::year(1962)),
+            ..Default::default()
+        }),
+    );
+
+    bib
+}
+
+#[test]
+fn test_process_citation() {
+    let style = make_style();
+    let bib = make_bibliography();
+    let processor = Processor::new(style, bib);
+
+    let citation = Citation {
+        id: Some("c1".to_string()),
+        items: vec![crate::reference::CitationItem {
+            id: "kuhn1962".to_string(),
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+
+    let result = processor.process_citation(&citation).unwrap();
+    assert_eq!(result, "(Kuhn, 1962)");
+}
+
+#[test]
+fn test_render_bibliography() {
+    let style = make_style();
+    let bib = make_bibliography();
+    let processor = Processor::new(style, bib);
+
+    let result = processor.render_bibliography();
+
+    // Check it contains the key parts
+    assert!(result.contains("Kuhn"));
+    assert!(result.contains("(1962)"));
+    assert!(result.contains("_The Structure of Scientific Revolutions_"));
+}
+
+#[test]
+fn test_disambiguation_hints() {
+    let style = make_style();
+    let mut bib = make_bibliography();
+
+    // Add another Kuhn 1962 reference to trigger disambiguation
+    bib.insert(
+        "kuhn1962b".to_string(),
+        Reference::from(LegacyReference {
+            id: "kuhn1962b".to_string(),
+            ref_type: "article-journal".to_string(),
+            author: Some(vec![Name::new("Kuhn", "Thomas S.")]),
+            title: Some("The Function of Measurement in Modern Physical Science".to_string()),
+            issued: Some(DateVariable::year(1962)),
+            ..Default::default()
+        }),
+    );
+
+    let processor = Processor::new(style, bib);
+    let hints = &processor.hints;
+
+    // Both should have disambiguation condition true
+    assert!(hints.get("kuhn1962").unwrap().disamb_condition);
+    assert!(hints.get("kuhn1962b").unwrap().disamb_condition);
+}
+
+#[test]
+fn test_disambiguation_givenname() {
+    use csln_core::options::{
+        Disambiguation, Group, Processing, ProcessingCustom, Sort, SortKey, SortSpec,
+    };
+
+    // Style with add-givenname enabled
+    let mut style = make_style();
+    style.options = Some(Config {
+        processing: Some(Processing::Custom(ProcessingCustom {
+            sort: Some(Sort {
+                shorten_names: false,
+                render_substitutions: false,
+                template: vec![
+                    SortSpec {
+                        key: SortKey::Author,
+                        ascending: true,
+                    },
+                    SortSpec {
+                        key: SortKey::Year,
+                        ascending: true,
+                    },
+                ],
+            }),
+            group: Some(Group {
+                template: vec![SortKey::Author, SortKey::Year],
+            }),
+            disambiguate: Some(Disambiguation {
+                names: true,
+                add_givenname: true,
+                year_suffix: true,
+            }),
+        })),
+        contributors: Some(ContributorConfig {
+            initialize_with: Some(". ".to_string()),
+            ..Default::default()
+        }),
+        ..Default::default()
+    });
+
+    let mut bib = indexmap::IndexMap::new();
+    bib.insert(
+        "smith2020a".to_string(),
+        Reference::from(LegacyReference {
+            id: "smith2020a".to_string(),
+            ref_type: "book".to_string(),
+            author: Some(vec![Name::new("Smith", "John")]),
+            issued: Some(DateVariable::year(2020)),
+            ..Default::default()
+        }),
+    );
+    bib.insert(
+        "smith2020b".to_string(),
+        Reference::from(LegacyReference {
+            id: "smith2020b".to_string(),
+            ref_type: "book".to_string(),
+            author: Some(vec![Name::new("Smith", "Alice")]),
+            issued: Some(DateVariable::year(2020)),
+            ..Default::default()
+        }),
+    );
+
+    let processor = Processor::new(style, bib);
+
+    let hints = &processor.hints;
+
+    // Verify hints
+    assert!(hints.get("smith2020a").unwrap().expand_given_names);
+    assert!(hints.get("smith2020b").unwrap().expand_given_names);
+    assert!(!hints.get("smith2020a").unwrap().disamb_condition); // No year suffix
+
+    // Verify output
+    let cit_a = processor
+        .process_citation(&Citation {
+            id: Some("c1".to_string()),
+            items: vec![crate::reference::CitationItem {
+                id: "smith2020a".to_string(),
+                ..Default::default()
+            }],
+            ..Default::default()
+        })
+        .unwrap();
+
+    let cit_b = processor
+        .process_citation(&Citation {
+            id: Some("c2".to_string()),
+            items: vec![crate::reference::CitationItem {
+                id: "smith2020b".to_string(),
+                ..Default::default()
+            }],
+            ..Default::default()
+        })
+        .unwrap();
+
+    // Should expand to "J. Smith" and "A. Smith" (because initialized)
+    assert!(cit_a.contains("J. Smith"));
+    assert!(cit_b.contains("A. Smith"));
+}
+
+#[test]
+fn test_disambiguation_add_names() {
+    use csln_core::options::{
+        Disambiguation, Group, Processing, ProcessingCustom, Sort, SortKey, SortSpec,
+    };
+
+    let mut style = make_style();
+    style.options = Some(Config {
+        processing: Some(Processing::Custom(ProcessingCustom {
+            sort: Some(Sort {
+                shorten_names: false,
+                render_substitutions: false,
+                template: vec![
+                    SortSpec {
+                        key: SortKey::Author,
+                        ascending: true,
+                    },
+                    SortSpec {
+                        key: SortKey::Year,
+                        ascending: true,
+                    },
+                ],
+            }),
+            group: Some(Group {
+                template: vec![SortKey::Author, SortKey::Year],
+            }),
+            disambiguate: Some(Disambiguation {
+                names: true, // disambiguate-add-names
+                add_givenname: false,
+                year_suffix: true,
+            }),
+        })),
+        contributors: Some(ContributorConfig {
+            shorten: Some(ShortenListOptions {
+                min: 2,
+                use_first: 1,
+                ..Default::default()
+            }),
+            ..Default::default()
+        }),
+        ..Default::default()
+    });
+
+    let mut bib = indexmap::IndexMap::new();
+    // Two works by Smith & Jones and Smith & Brown
+    // Both would be "Smith et al. (2020)"
+    bib.insert(
+        "ref1".to_string(),
+        Reference::from(LegacyReference {
+            id: "ref1".to_string(),
+            ref_type: "book".to_string(),
+            author: Some(vec![
+                Name::new("Smith", "John"),
+                Name::new("Jones", "Peter"),
+            ]),
+            issued: Some(DateVariable::year(2020)),
+            ..Default::default()
+        }),
+    );
+    bib.insert(
+        "ref2".to_string(),
+        Reference::from(LegacyReference {
+            id: "ref2".to_string(),
+            ref_type: "book".to_string(),
+            author: Some(vec![
+                Name::new("Smith", "John"),
+                Name::new("Brown", "Alice"),
+            ]),
+            issued: Some(DateVariable::year(2020)),
+            ..Default::default()
+        }),
+    );
+
+    let processor = Processor::new(style, bib);
+
+    // Verify hints
+    assert_eq!(
+        processor.hints.get("ref1").unwrap().min_names_to_show,
+        Some(2)
+    );
+    assert_eq!(
+        processor.hints.get("ref2").unwrap().min_names_to_show,
+        Some(2)
+    );
+
+    // Verify output
+    let cit_1 = processor
+        .process_citation(&Citation {
+            id: Some("c1".to_string()),
+            items: vec![crate::reference::CitationItem {
+                id: "ref1".to_string(),
+                ..Default::default()
+            }],
+            ..Default::default()
+        })
+        .unwrap();
+
+    let cit_2 = processor
+        .process_citation(&Citation {
+            id: Some("c2".to_string()),
+            items: vec![crate::reference::CitationItem {
+                id: "ref2".to_string(),
+                ..Default::default()
+            }],
+            ..Default::default()
+        })
+        .unwrap();
+
+    // Should expand to "Smith, Jones" and "Smith, Brown" (no et al. because only 2 names)
+    assert!(cit_1.contains("Smith") && cit_1.contains("Jones"));
+    assert!(cit_2.contains("Smith") && cit_2.contains("Brown"));
+}
+
+#[test]
+fn test_disambiguation_combined_expansion() {
+    use csln_core::options::{
+        Disambiguation, Group, Processing, ProcessingCustom, Sort, SortKey, SortSpec,
+    };
+
+    // This test simulates the "Sam Smith & Julie Smith" scenario but with
+    // two items that remain ambiguous after name expansion alone.
+    // Item 1: [Sam Smith, Julie Smith] 2020 -> "Smith & Smith" (base)
+    // Item 2: [Sam Smith, Bob Smith] 2020   -> "Smith & Smith" (base)
+    // Both would be "Smith et al." if min=3, but here they collide even as "Smith & Smith".
+    // They need both expanded names AND expanded given names.
+
+    let mut style = make_style();
+    style.options = Some(Config {
+        processing: Some(Processing::Custom(ProcessingCustom {
+            sort: Some(Sort {
+                shorten_names: false,
+                render_substitutions: false,
+                template: vec![
+                    SortSpec {
+                        key: SortKey::Author,
+                        ascending: true,
+                    },
+                    SortSpec {
+                        key: SortKey::Year,
+                        ascending: true,
+                    },
+                ],
+            }),
+            group: Some(Group {
+                template: vec![SortKey::Author, SortKey::Year],
+            }),
+            disambiguate: Some(Disambiguation {
+                names: true,
+                add_givenname: true,
+                year_suffix: true,
+            }),
+        })),
+        contributors: Some(ContributorConfig {
+            shorten: Some(ShortenListOptions {
+                min: 2,
+                use_first: 1,
+                ..Default::default()
+            }),
+            initialize_with: Some(". ".to_string()),
+            ..Default::default()
+        }),
+        ..Default::default()
+    });
+
+    let mut bib = indexmap::IndexMap::new();
+    bib.insert(
+        "ref1".to_string(),
+        Reference::from(LegacyReference {
+            id: "ref1".to_string(),
+            ref_type: "book".to_string(),
+            author: Some(vec![Name::new("Smith", "Sam"), Name::new("Smith", "Julie")]),
+            issued: Some(DateVariable::year(2020)),
+            ..Default::default()
+        }),
+    );
+    bib.insert(
+        "ref2".to_string(),
+        Reference::from(LegacyReference {
+            id: "ref2".to_string(),
+            ref_type: "book".to_string(),
+            author: Some(vec![Name::new("Smith", "Sam"), Name::new("Smith", "Bob")]),
+            issued: Some(DateVariable::year(2020)),
+            ..Default::default()
+        }),
+    );
+
+    let processor = Processor::new(style, bib);
+
+    // Verify output
+    let cit_1 = processor
+        .process_citation(&Citation {
+            id: Some("c1".to_string()),
+            items: vec![crate::reference::CitationItem {
+                id: "ref1".to_string(),
+                ..Default::default()
+            }],
+            ..Default::default()
+        })
+        .unwrap();
+
+    let cit_2 = processor
+        .process_citation(&Citation {
+            id: Some("c2".to_string()),
+            items: vec![crate::reference::CitationItem {
+                id: "ref2".to_string(),
+                ..Default::default()
+            }],
+            ..Default::default()
+        })
+        .unwrap();
+
+    // Should expand to "S. Smith & J. Smith" and "S. Smith & B. Smith"
+    assert!(
+        cit_1.contains("S. Smith") && cit_1.contains("J. Smith"),
+        "Output was: {}",
+        cit_1
+    );
+    assert!(
+        cit_2.contains("S. Smith") && cit_2.contains("B. Smith"),
+        "Output was: {}",
+        cit_2
+    );
+}
+
+#[test]
+fn test_apa_titles_config() {
+    use crate::reference::Reference;
+    use csln_core::options::{Config, TitleRendering, TitlesConfig};
+    use csln_core::template::{Rendering, TemplateTitle, TitleType};
+
+    let config = Config {
+        titles: Some(TitlesConfig {
+            periodical: Some(TitleRendering {
+                emph: Some(true),
+                ..Default::default()
+            }),
+            monograph: Some(TitleRendering {
+                emph: Some(true),
+                ..Default::default()
+            }),
+            container_monograph: Some(TitleRendering {
+                emph: Some(true),
+                prefix: Some("In ".to_string()),
+                ..Default::default()
+            }),
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
+
+    let bib_template = vec![
+        TemplateComponent::Title(TemplateTitle {
+            title: TitleType::Primary,
+            rendering: Rendering::default(),
+            ..Default::default()
+        }),
+        TemplateComponent::Title(TemplateTitle {
+            title: TitleType::ParentSerial,
+            rendering: Rendering::default(),
+            ..Default::default()
+        }),
+        TemplateComponent::Title(TemplateTitle {
+            title: TitleType::ParentMonograph,
+            rendering: Rendering::default(),
+            ..Default::default()
+        }),
+    ];
+
+    let style = Style {
+        options: Some(config),
+        bibliography: Some(csln_core::BibliographySpec {
+            template: Some(bib_template),
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
+
+    let references = vec![
+        Reference::from(LegacyReference {
+            id: "art1".to_string(),
+            ref_type: "article-journal".to_string(),
+            title: Some("A Title".to_string()),
+            container_title: Some("Nature".to_string()),
+            ..Default::default()
+        }),
+        Reference::from(LegacyReference {
+            id: "ch1".to_string(),
+            ref_type: "chapter".to_string(),
+            title: Some("A Chapter".to_string()),
+            container_title: Some("A Book".to_string()),
+            ..Default::default()
+        }),
+        Reference::from(LegacyReference {
+            id: "bk1".to_string(),
+            ref_type: "book".to_string(),
+            title: Some("A Global Book".to_string()),
+            ..Default::default()
+        }),
+    ];
+
+    let processor = Processor::new(
+        style,
+        references
+            .into_iter()
+            .map(|r| (r.id().unwrap().to_string(), r))
+            .collect(),
+    );
+
+    let res = processor.render_bibliography();
+
+    // Book Case: Primary title -> monograph category -> Italic, No "In "
+    assert!(
+        res.contains("_A Global Book_"),
+        "Book title should be italicized: {}",
+        res
+    );
+    assert!(
+        !res.contains("In _A Global Book_"),
+        "Book title should NOT have 'In ' prefix: {}",
+        res
+    );
+
+    // Journal Article Case: ParentSerial -> periodical category -> Italic, No "In "
+    assert!(
+        res.contains("_Nature_"),
+        "Journal title should be italicized: {}",
+        res
+    );
+    assert!(
+        !res.contains("In _Nature_"),
+        "Journal title should NOT have 'In ' prefix: {}",
+        res
+    );
+
+    // Chapter Case: ParentMonograph -> container_monograph category -> Italic, WITH "In "
+    assert!(
+        res.contains("In _A Book_"),
+        "Chapter container title should have 'In ' prefix: {}",
+        res
+    );
+}
+
+#[test]
+fn test_numeric_citation_numbers_with_repeated_refs() {
+    // Citation numbers should be assigned by first occurrence, not by position.
+    // Citing ref1, ref2, ref1 again should give numbers 1, 2, 1.
+    use csln_core::options::{Config, Processing};
+    use csln_core::template::{NumberVariable, TemplateNumber};
+    use csln_core::CitationSpec;
+
+    let style = Style {
+        citation: Some(CitationSpec {
+            wrap: Some(csln_core::template::WrapPunctuation::Brackets),
+            template: Some(vec![TemplateComponent::Number(TemplateNumber {
+                number: NumberVariable::CitationNumber,
+                ..Default::default()
+            })]),
+            ..Default::default()
+        }),
+        options: Some(Config {
+            processing: Some(Processing::Numeric),
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
+
+    let mut bib = Bibliography::new();
+    bib.insert(
+        "ref1".to_string(),
+        Reference::from(LegacyReference {
+            id: "ref1".to_string(),
+            ref_type: "book".to_string(),
+            title: Some("First Book".to_string()),
+            ..Default::default()
+        }),
+    );
+    bib.insert(
+        "ref2".to_string(),
+        Reference::from(LegacyReference {
+            id: "ref2".to_string(),
+            ref_type: "book".to_string(),
+            title: Some("Second Book".to_string()),
+            ..Default::default()
+        }),
+    );
+
+    let processor = Processor::new(style, bib);
+
+    // Cite ref1 first
+    let cit1 = processor
+        .process_citation(&Citation {
+            id: Some("c1".to_string()),
+            items: vec![crate::reference::CitationItem {
+                id: "ref1".to_string(),
+                ..Default::default()
+            }],
+            ..Default::default()
+        })
+        .unwrap();
+
+    // Cite ref2 second
+    let cit2 = processor
+        .process_citation(&Citation {
+            id: Some("c2".to_string()),
+            items: vec![crate::reference::CitationItem {
+                id: "ref2".to_string(),
+                ..Default::default()
+            }],
+            ..Default::default()
+        })
+        .unwrap();
+
+    // Cite ref1 again - should get the SAME number as before
+    let cit3 = processor
+        .process_citation(&Citation {
+            id: Some("c3".to_string()),
+            items: vec![crate::reference::CitationItem {
+                id: "ref1".to_string(),
+                ..Default::default()
+            }],
+            ..Default::default()
+        })
+        .unwrap();
+
+    assert_eq!(cit1, "[1]", "First citation of ref1 should be [1]");
+    assert_eq!(cit2, "[2]", "First citation of ref2 should be [2]");
+    assert_eq!(cit3, "[1]", "Second citation of ref1 should still be [1]");
+}
+
+#[test]
+fn test_citation_grouping_same_author() {
+    // Test that adjacent citations by the same author are collapsed:
+    // (Kuhn 1962a, 1962b) instead of (Kuhn 1962a; Kuhn 1962b)
+    let style = make_style();
+    let mut bib = make_bibliography();
+
+    // Add second Kuhn 1962 with different title (triggers year-suffix)
+    bib.insert(
+        "kuhn1962b".to_string(),
+        Reference::from(LegacyReference {
+            id: "kuhn1962b".to_string(),
+            ref_type: "article-journal".to_string(),
+            author: Some(vec![Name::new("Kuhn", "Thomas S.")]),
+            title: Some("The Function of Measurement in Modern Physical Science".to_string()),
+            issued: Some(DateVariable::year(1962)),
+            ..Default::default()
+        }),
+    );
+
+    let processor = Processor::new(style, bib);
+
+    // Cite both Kuhn works in one citation - should group
+    let result = processor
+        .process_citation(&Citation {
+            id: Some("c1".to_string()),
+            items: vec![
+                crate::reference::CitationItem {
+                    id: "kuhn1962b".to_string(), // "Function..." comes first alphabetically -> a
+                    ..Default::default()
+                },
+                crate::reference::CitationItem {
+                    id: "kuhn1962".to_string(), // "Structure..." comes second -> b
+                    ..Default::default()
+                },
+            ],
+            ..Default::default()
+        })
+        .unwrap();
+
+    // Should be grouped: "Kuhn, 1962a, 1962b" not "Kuhn, 1962a; Kuhn, 1962b"
+    // Year suffix assigned by title order: "Function..." < "Structure..."
+    assert!(
+        result.contains("Kuhn, 1962a, 1962b") || result.contains("Kuhn, 1962b, 1962a"),
+        "Same-author citations should be grouped. Got: {}",
+        result
+    );
+    assert!(
+        !result.contains("; Kuhn"),
+        "Should not have semicolon between same-author citations. Got: {}",
+        result
+    );
+}
+
+#[test]
+fn test_citation_grouping_different_authors() {
+    // Different authors should NOT be grouped
+    let style = make_style();
+    let mut bib = make_bibliography();
+
+    bib.insert(
+        "smith2020".to_string(),
+        Reference::from(LegacyReference {
+            id: "smith2020".to_string(),
+            ref_type: "book".to_string(),
+            author: Some(vec![Name::new("Smith", "John")]),
+            title: Some("Another Book".to_string()),
+            issued: Some(DateVariable::year(2020)),
+            ..Default::default()
+        }),
+    );
+
+    let processor = Processor::new(style, bib);
+
+    let result = processor
+        .process_citation(&Citation {
+            id: Some("c1".to_string()),
+            items: vec![
+                crate::reference::CitationItem {
+                    id: "kuhn1962".to_string(),
+                    ..Default::default()
+                },
+                crate::reference::CitationItem {
+                    id: "smith2020".to_string(),
+                    ..Default::default()
+                },
+            ],
+            ..Default::default()
+        })
+        .unwrap();
+
+    // Should have semicolon between different authors
+    assert!(
+        result.contains("Kuhn") && result.contains("Smith"),
+        "Should contain both authors. Got: {}",
+        result
+    );
+    assert!(
+        result.contains("; "),
+        "Different authors should be separated by semicolon. Got: {}",
+        result
+    );
+}
+
+#[test]
+fn test_sort_anonymous_work_by_title() {
+    // Anonymous works (no author) should sort by title, with leading articles stripped
+    let style = make_style();
+    let mut bib = indexmap::IndexMap::new();
+
+    // Add references in wrong alphabetical order to test sorting
+    bib.insert(
+        "smith".to_string(),
+        Reference::from(LegacyReference {
+            id: "smith".to_string(),
+            ref_type: "book".to_string(),
+            author: Some(vec![Name::new("Smith", "John")]),
+            title: Some("A Book".to_string()),
+            issued: Some(DateVariable::year(2020)),
+            ..Default::default()
+        }),
+    );
+
+    // Anonymous work - should sort by "Role" (stripping "The")
+    bib.insert(
+        "anon".to_string(),
+        Reference::from(LegacyReference {
+            id: "anon".to_string(),
+            ref_type: "article-journal".to_string(),
+            author: None, // No author!
+            title: Some("The Role of Theory".to_string()),
+            issued: Some(DateVariable::year(2018)),
+            ..Default::default()
+        }),
+    );
+
+    bib.insert(
+        "jones".to_string(),
+        Reference::from(LegacyReference {
+            id: "jones".to_string(),
+            ref_type: "book".to_string(),
+            author: Some(vec![Name::new("Jones", "Alice")]),
+            title: Some("Another Book".to_string()),
+            issued: Some(DateVariable::year(2019)),
+            ..Default::default()
+        }),
+    );
+
+    let processor = Processor::new(style, bib);
+    let result = processor.render_bibliography();
+
+    // Order should be: Jones (J), anon/Role (R), Smith (S)
+    let jones_pos = result.find("Jones").expect("Jones not found");
+    let role_pos = result.find("Role of Theory").expect("Role not found");
+    let smith_pos = result.find("Smith").expect("Smith not found");
+
+    assert!(
+        jones_pos < role_pos,
+        "Jones should come before Role. Got:
+{}",
+        result
+    );
+    assert!(
+        role_pos < smith_pos,
+        "Role should come before Smith. Got:
+{}",
+        result
+    );
+}
