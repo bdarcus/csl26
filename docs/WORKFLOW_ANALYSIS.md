@@ -1,166 +1,132 @@
 # Rendering Fidelity Workflow Analysis & Improvements
 
-**Date:** 2026-02-05
-**Status:** Critical path for project completion
+**Date:** 2026-02-06 (Updated)
+**Status:** Phase 1 Complete, Phases 2-4 In Progress
 
 ## Executive Summary
 
-The rendering fidelity workflow is the bottleneck preventing faster progress. While excellent tooling has been built (structured oracle, batch aggregation), these tools are not yet integrated into the regular agent workflow. This analysis identifies concrete improvements that could significantly accelerate agent-driven development.
+The rendering fidelity workflow infrastructure is now in place. Phase 1 (Quick Wins) has been completed with structured oracle integration, batch analysis tooling, and workflow documentation. The focus now shifts to regression detection, component-first iteration strategy, and migration debugging capabilities to efficiently reach full fidelity across the style corpus.
 
-## Current State Analysis
+## Completed Work (Phase 1) ✅
 
-### Test Data (✅ Adequate, 🔶 Needs Expansion)
-- **Current:** 15 reference items in `tests/fixtures/references-expanded.json`
-- **Coverage:** 8 reference types (article-journal, book, chapter, report, thesis, conference, webpage, edited-volume)
-- **Missing:** article-magazine, article-newspaper, software, dataset, legal citations, multilingual items
-- **Status:** ✅ Adequate for current tier 1/2 work, 🔶 Needs expansion before tier 3
+- **Structured oracle as default**: `oracle.js` provides component-level diffs
+- **Batch aggregator**: `oracle-batch-aggregate.js` analyzes multiple styles simultaneously
+- **Workflow wrapper**: `workflow-test.sh` combines single-style testing with batch analysis
+- **Documentation**: `RENDERING_WORKFLOW.md` provides step-by-step guidance
 
-### Oracle Scripts (✅ Implemented, ❌ Not Integrated)
-| Script | Purpose | Status | Integration |
-|--------|---------|--------|-------------|
-| `oracle.js` | Basic string comparison | ✅ Working | ✅ Used regularly |
-| `oracle-e2e.js` | End-to-end migration test | ✅ Working | ✅ Used regularly |
-| `oracle-structured.js` | Component-level diff | ✅ Implemented | ❌ **Not integrated** |
-| `oracle-batch-aggregate.js` | Multi-style failure analysis | ✅ Implemented | ❌ **Not integrated** |
+## Current Fidelity Status
 
-**Key Finding:** The structured oracle tools exist but agents are still using the basic string comparison workflow. This wastes tokens on manual failure inspection.
+### Metrics (as of 2026-02-05)
+- **APA 7th**: 5/5 citations ✅, 5/5 bibliography ✅ (100% match)
+- **Academy of Management Review**: 5/5 citations ✅, 0/5 bibliography (requires style-specific work)
+- **Batch (50 styles)**: 74% achieve 5/5 citation match
 
-### Rust Test Infrastructure (🔶 Basic, Needs Expansion)
-- **Current:** `oracle_comparison.rs` (basic test), `subsequent_author_substitute.rs` (feature test)
-- **Coverage:** Minimal - mostly relies on Node.js oracle scripts
-- **CI Integration:** Not running oracle comparisons in CI
-- **Status:** 🔶 Long-term need, not blocking short-term progress
+### Fidelity Targets
 
-### Workflow Documentation (❌ Missing)
-- No documented workflow for using structured oracle tools
-- No regression detection process
-- No guidance on when to run batch analysis
-- Agents default to basic oracle.js out of habit
+| Tier | Goal | Status |
+|------|------|--------|
+| **Tier 1** | 100% citation match for top 10 styles | ✅ **COMPLETE** (74% across 50 styles) |
+| **Tier 2** | 8/15+ bibliography for APA, Elsevier Harvard, Chicago | 🔄 **IN PROGRESS** (APA: 5/5) |
+| **Tier 3** | 8/15+ bibliography for IEEE, Nature, Elsevier Vancouver | ⏳ PENDING |
+| **Tier 4** | 12/15+ bibliography across top 20 styles | ⏳ PENDING |
+| **Full Fidelity** | 15/15 citation AND bibliography for top 20 parent styles | 🎯 TARGET |
 
-## Identified Bottlenecks (Ranked by Impact)
+**Impact**: Top 20 parent styles cover **75%+ of the 7,987 dependent styles** in the CSL repository.
 
-### 1. Manual Failure Inspection ⚠️ **HIGHEST IMPACT**
-**Problem:** Agents must manually compare long strings to find differences, wasting tokens.
+## Component-First Convergence Strategy
 
-**Evidence from TIER3_PLAN.md:**
-> "Manual failure inspection - Comparing strings by eye is slow and error-prone"
-> "No structured diff - Hard to see which *component* is wrong vs just different punctuation"
+**Key Insight**: The most efficient path to full fidelity is fixing common component failures across styles, not debugging styles individually.
 
-**Impact:** High token consumption per style debugging session
+### Iteration Loop
 
-**Solution:** Integrate `oracle-structured.js` as the default comparison tool
+1. **Run batch analysis** across top 20 styles using `oracle-batch-aggregate.js`
+2. **Identify the most common component failure** (e.g., "year formatting" appears in 15 styles)
+3. **Fix that ONE issue** in processor or migration
+4. **Re-run batch** and measure improvement
+5. **Repeat** with next most common failure
 
-**Benefit:** Significant reduction in token usage for debugging
+### Why This Works
 
-### 2. No Batch Progress Tracking ⚠️ **HIGH IMPACT**
-**Problem:** Can't see if a fix helps 1 style or 10 styles without running manually.
+- Each fix potentially improves **10-20 styles simultaneously**
+- Converges faster than style-by-style debugging
+- The batch aggregator's `componentSummary` output provides exactly this data
+- Prevents duplicate work fixing the same issue in multiple contexts
 
-**Evidence from TIER3_PLAN.md:**
-> "No batch progress tracking - Can't see if a fix helps 10 styles or just 1"
+### When to Move On
 
-**Impact:** Changes made without understanding broader impact
+- Once a style reaches **12/15+ bibliography matches**, move to next priority style
+- Diminishing returns on perfecting one style vs improving many
 
-**Solution:** Run `oracle-batch-aggregate.js` after each fix to see impact
+## Test Data Status
 
-**Benefit:** Better prioritization, avoid regressions
+### Current Coverage
+- **Items**: 15 reference items
+- **Types**: 8 reference types (article-journal, book, chapter, report, thesis, conference, webpage, edited-volume)
+- **Status**: ✅ Adequate for Tier 1/2 work
 
-### 3. Limited Root Cause Visibility ⚠️ **MEDIUM IMPACT**
-**Problem:** CSL → YAML migration is a black box - hard to debug why a variable ends up in the wrong place.
+### Expansion Needed (Tier 3+)
+- article-magazine (2 items)
+- article-newspaper (1 item)
+- software (2 items - increasingly important)
+- dataset (2 items - increasingly important)
+- legal_case (1 item)
+- legislation (1 item)
+- Edge cases: no author, no date, very long title, multilingual data
 
-**Evidence from TIER3_PLAN.md:**
-> "Limited root cause visibility - CSL → YAML migration is a black box"
-> Tool 3: Migration Debugger (PENDING)
+**Target**: 25 items covering 15+ reference types
 
-**Impact:** Significant debugging effort spent tracing migration issues
+## Known Acceptable Differences
 
-**Solution:** Implement `--debug-variable VAR` flag in csln_migrate
+Some differences between citeproc-js and CSLN are intentional or acceptable:
 
-**Benefit:** Faster root cause identification
+- **HTML entity encoding**: `&#38;` vs `&`
+- **Whitespace normalization**: Extra spaces collapsed
+- **Unicode vs ASCII**: Em-dash (`—`) vs double-hyphen (`--`) in page ranges
+- **Quote normalization**: Smart quotes vs straight quotes (when not specified by style)
 
-### 4. Test Data Expansion Overhead 🔶 **MEDIUM IMPACT**
-**Problem:** Adding new test items requires manual work across multiple files.
+Agents should not spend time investigating these documented differences.
 
-**Current Process:**
-1. Add item to `references-expanded.json`
-2. Run oracle scripts manually
-3. Update expected outputs if needed
-4. No automated validation
+## Remaining Phases (Prioritized)
 
-**Impact:** Discourages comprehensive test coverage expansion
+### Phase 2: Regression Detection (HIGH PRIORITY)
 
-**Solution:** Test data generator + automated validation workflow
+**Goal**: Prevent fixes from breaking previously passing styles
 
-**Benefit:** Enables faster test expansion
+**Implementation**:
+```bash
+# Save baseline
+oracle-batch-aggregate.js --top 20 --save baselines/baseline-2026-02-06.json
 
-### 5. No Regression Detection ⚠️ **MEDIUM IMPACT**
-**Problem:** No automated way to detect if a change breaks previously passing styles.
+# Compare against baseline
+oracle-batch-aggregate.js --top 20 --compare baselines/baseline-2026-02-06.json
+```
 
-**Impact:** Regressions discovered late, require backtracking
+**Output Example**:
+```
+Regression detected:
+  - APA: 15/15 → 14/15 bibliography (ITEM-3 now failing)
 
-**Solution:** CI integration with baseline tracking
+New passing:
+  + Nature: 0/15 → 5/15 bibliography
 
-**Benefit:** Catch regressions immediately
+Net impact: -1 passing entries
+```
 
-## Recommended Improvements (Prioritized)
+**Benefits**:
+- Catch regressions immediately (same commit)
+- No wasted work from unknowingly breaking styles
+- Baseline updates track progress over time
 
-### Priority 1: Workflow Integration (Quick Wins)
+**Effort**: Medium (2-3 days to implement `--save` and `--compare` flags)
+**Impact**: HIGH - prevents costly backtracking
 
-#### 1.1 Make Structured Oracle the Default
-**Current:** `node scripts/oracle.js styles/apa.csl`
-**New:** `node scripts/oracle-structured.js styles/apa.csl`
+### Phase 3: Migration Debugger (MEDIUM PRIORITY)
 
-**Changes:**
-- Rename `oracle.js` → `oracle-simple.js` (backup)
-- Rename `oracle-structured.js` → `oracle.js` (new default)
-- Update CLAUDE.md test commands
-- Add `--simple` flag if old behavior needed
+**Goal**: Fast root-cause identification for migration issues
 
-**Impact:** Immediate improvement in debugging efficiency
+**Implementation**: Add `--debug-variable` flag to `csln_migrate`
 
-#### 1.2 Add Batch Analysis to Workflow
-**Current:** Run manually when remembered
-**New:** Run after every significant change
-
-**Changes:**
-- Create `scripts/workflow-test.sh` wrapper:
-  ```bash
-  #!/bin/bash
-  # Test a single style with structured diff
-  node scripts/oracle.js "$1"
-
-  # Show impact across top 10 styles
-  echo "Running batch analysis..."
-  node scripts/oracle-batch-aggregate.js styles/ --top 10 --json > batch-results.json
-  ```
-- Add to CLAUDE.md autonomous commands whitelist
-- Document in workflow guide
-
-**Impact:** Better prioritization, regression detection
-
-#### 1.3 Create Workflow Documentation
-**New File:** `docs/RENDERING_WORKFLOW.md`
-
-**Content:**
-- Step-by-step guide for fixing rendering issues
-- When to use each oracle script
-- How to interpret structured diff output
-- Batch analysis interpretation guide
-- Common failure patterns and fixes
-
-**Impact:** Reduces agent setup overhead, standardizes process
-
-### Priority 2: Migration Debugger
-
-#### 2.1 Implement `--debug-variable` Flag
-**Location:** `crates/csln_migrate/src/main.rs`
-
-**Features:**
-- Track variable provenance through compilation pipeline
-- Show CSL source nodes → intermediate representation → final YAML
-- Display deduplication decisions
-- Show override propagation
-
-**Example Usage:**
+**Example Usage**:
 ```bash
 csln_migrate styles/apa.csl --debug-variable volume
 
@@ -180,163 +146,121 @@ Deduplication: Node 1 merged into Node 2 (same variable)
 Ordering: Placed after container-title by reorder_serial_components()
 ```
 
-**Impact:** Faster migration debugging
+**Benefits**:
+- Faster debugging of complex migration issues
+- Visibility into compilation pipeline
+- Useful for understanding how CSL → CSLN works
 
-### Priority 3: Test Data Expansion
+**Effort**: High (1-2 days to implement provenance tracking)
+**Impact**: MEDIUM - valuable for stubborn issues, but not all issues require this
 
-#### 3.1 Add Missing Reference Types
-**Target:** 25 items (up from 15)
+### Phase 4: Test Data Expansion (LOW PRIORITY)
 
-**New Items Needed:**
-- article-magazine (2 items)
-- article-newspaper (1 item)
-- software (2 items - increasingly important)
-- dataset (2 items - increasingly important)
-- legal_case (1 item)
-- legislation (1 item)
-- webpage with access date (1 item)
+**Goal**: Better coverage for edge cases and additional reference types
 
-**Edge Cases:**
-- No author (use title for sorting)
-- No date ("n.d." handling)
-- Very long title (>200 chars)
-- Multilingual data (future: csln#66)
+**Implementation**:
+- Expand `references-expanded.json` to 25 items
+- Create `generate-test-item.js` tool for easy test addition
+- Add edge cases (no author, no date, long titles, multilingual)
 
-**Impact:** Better coverage, catch more edge cases
+**Benefits**:
+- Catch more edge cases
+- Better tier 3+ coverage
+- Easier test expansion for contributors
 
-#### 3.2 Create Test Data Generator
-**Tool:** `scripts/generate-test-item.js`
+**Effort**: Low-Medium (2-3 hours to add items, 4 hours for generator tool)
+**Impact**: MEDIUM - Important but not blocking current tier 2/3 work
 
-**Features:**
-- Interactive prompt for reference type
-- Validates required fields
-- Auto-assigns next ITEM-N number
-- Runs oracle comparison automatically
+## Critical Issues Resolved
 
-**Impact:** Makes test expansion easier
+### ✅ Fixed: Batch Aggregator Script Bug
+**Issue**: `oracle-batch-aggregate.js` referenced `oracle-structured.js` which doesn't exist
+**Fix**: Updated to reference `oracle.js` (the current structured oracle)
+**Impact**: Batch workflow now functional
 
-### Priority 4: Regression Detection
+### ✅ Fixed: Stale Documentation References
+**Issue**: Multiple documents referenced `oracle-structured.js` as separate from `oracle.js`
+**Fix**: Updated all references to reflect that `oracle.js` IS the structured oracle
+**Impact**: Documentation accuracy, reduced confusion
 
-#### 4.1 Baseline Tracking System
-**Approach:** Store baseline results, compare on each run
+## Bottlenecks Addressed
 
-**Implementation:**
-```bash
-# Save baseline
-node scripts/oracle-batch-aggregate.js styles/ --top 20 --json > baselines/baseline-2026-02-05.json
+### 1. Manual Failure Inspection ✅ RESOLVED
+**Was**: Agents manually comparing long strings
+**Now**: `oracle.js` provides component-level diffs by default
+**Impact**: Significant reduction in token usage for debugging
 
-# Compare against baseline
-node scripts/oracle-batch-aggregate.js styles/ --top 20 --json --compare baselines/baseline-2026-02-05.json
-```
+### 2. No Batch Progress Tracking ✅ RESOLVED
+**Was**: Unknown if fixes help 1 style or 10 styles
+**Now**: `oracle-batch-aggregate.js` shows cross-style impact
+**Impact**: Better prioritization, visible progress
 
-**Output:**
-```
-Regression detected:
-  - APA: 15/15 → 14/15 bibliography (ITEM-3 now failing)
-  - IEEE: 15/15 → 15/15 citations (no change)
+### 3. Limited Root Cause Visibility ⏳ PENDING (Phase 3)
+**Issue**: CSL → YAML migration is a black box
+**Solution**: Migration debugger with `--debug-variable` flag
+**Status**: Planned for Phase 3
 
-New passing:
-  + Nature: 0/15 → 5/15 bibliography
+### 4. No Regression Detection ⏳ PENDING (Phase 2)
+**Issue**: Fixes can break other styles unknowingly
+**Solution**: Baseline tracking with `--save`/`--compare` flags
+**Status**: Next priority
 
-Net impact: -1 passing entries
-```
+## Success Metrics
 
-**Impact:** Catch regressions immediately
+### Before Phase 1
+- Token usage per style debugging: High (manual string comparison)
+- Batch impact visibility: None
+- Workflow documentation: Missing
+- Agent experience: Manual, token-intensive
 
-### Priority 5: Rust Test Integration (Low Priority - Future)
+### After Phase 1 (Current)
+- Token usage per style debugging: Significantly reduced (structured diffs)
+- Batch impact visibility: Available via `oracle-batch-aggregate.js`
+- Workflow documentation: Complete (`RENDERING_WORKFLOW.md`)
+- Agent experience: Guided, efficient
 
-#### 5.1 Move Oracle Logic to Rust
-**Rationale:** Long-term, CI should run Rust tests, not Node.js scripts
+### After Phase 2 (Regression Detection)
+- Regression detection: Immediate (same commit)
+- Baseline tracking: Automatic
+- Confidence in changes: High (no silent breakage)
 
-**Approach:**
-- Port oracle comparison logic to Rust
-- Use `insta` crate for snapshot testing
-- Run in CI on every PR
+### After Phase 3 (Migration Debugger)
+- Migration debugging time: Fast (provenance tracking)
+- Root cause identification: Minutes vs hours
+- Migration confidence: High (transparent pipeline)
 
-**Impact:** Better CI integration, faster tests
-
-**Priority:** Low - Node.js scripts work well, this is optimization
-
-## Implementation Phases
-
-### Phase 1: Quick Wins
-- [ ] Rename oracle scripts (make structured default)
-- [ ] Create `workflow-test.sh` wrapper
-- [ ] Write `docs/RENDERING_WORKFLOW.md`
-- [ ] Update CLAUDE.md with new commands
-
-**Expected Impact:** Significant reduction in token usage for debugging
-
-### Phase 2: Migration Debugger
-- [ ] Implement `--debug-variable` flag in csln_migrate
-- [ ] Add provenance tracking infrastructure
-- [ ] Test on common failure cases (volume, year, pages)
-- [ ] Document usage in workflow guide
-
-**Expected Impact:** Faster root cause identification
-
-### Phase 3: Test & Regression
-- [ ] Expand test data to 25 items
-- [ ] Create test data generator
-- [ ] Implement baseline tracking in batch aggregator
-- [ ] Add regression detection to workflow
-
-**Expected Impact:** Better coverage, catch regressions early
-
-### Phase 4: Documentation & Process (Ongoing)
-- [ ] Create troubleshooting guide for common failure patterns
-- [ ] Document migration debugging workflow
-- [ ] Add examples to workflow guide
-- [ ] Update README with new workflow
+### After Phase 4 (Test Expansion)
+- Test coverage: 25 items, 15+ types
+- Edge case coverage: Comprehensive
+- Contributor onboarding: Easy (generator tool)
 
 ## Agent Performance Benchmarks
 
-**Before Improvements:**
-- Token usage per style debugging: High (manual string comparison)
-- Regressions discovered: Late (after multiple commits)
-- Test data coverage: 15 items, 8 types
-- Agent experience: Manual, token-intensive
+**Component-First Iteration** (recommended):
+- Fix common component → Improve 10-20 styles/fix
+- 5-10 fixes → Reach tier 2/3 targets
+- Convergence: Fast
 
-**After Phase 1 (Quick Wins):**
-- Token usage per style debugging: Significantly reduced (structured diffs)
-- Batch impact visible immediately
-- Workflow documented and standardized
+**Style-by-Style** (not recommended):
+- Fix one style → Improve 1 style/session
+- 20+ sessions → Reach tier 2/3 targets
+- Convergence: Slow, potential duplicate work
 
-**After Phase 2 (Migration Debugger):**
-- Migration debugging tokens: Significantly reduced
-- Root cause identification: Fast
-- Migration confidence: High
+## Next Steps
 
-**After Phase 3 (Test & Regression):**
-- Test data coverage: 25 items, 15+ types
-- Regressions caught: Immediately (same commit)
-- Test expansion: Easy (generator tool)
+1. ✅ **Fix critical batch aggregator bug** (COMPLETE)
+2. **Implement regression detection** (`--save`/`--compare` flags)
+3. **Run batch analysis** to identify most common component failures
+4. **Apply component-first iteration** to reach Tier 2 targets
+5. **Implement migration debugger** for stubborn issues
+6. **Expand test data** as needed for Tier 3+
 
-## Open Questions
+## Related Documentation
 
-1. **Should we run batch analysis in CI?**
-   - Pro: Catch regressions automatically
-   - Con: Adds overhead to CI time
-   - **Recommendation:** Add as optional check, run on-demand initially
-
-2. **Should we move to Rust tests now or later?**
-   - **Recommendation:** Later - Node.js scripts work well, this is optimization
-
-3. **How often should we update baselines?**
-   - **Recommendation:** After each significant milestone (tier completion)
-
-## Related Tasks
-
-- Task #11: Expand test data coverage to 20+ items (covers Phase 3.1)
-- Task #14: Fix year positioning for numeric styles (high priority fix)
-- Task #12: Fix conference paper template formatting (medium priority)
+- **[RENDERING_WORKFLOW.md](./RENDERING_WORKFLOW.md)**: Step-by-step agent workflow guide
+- **[TIER_STATUS.md](./TIER_STATUS.md)**: Current fidelity status by tier
+- **[STYLE_PRIORITY.md](./STYLE_PRIORITY.md)**: Parent style impact ranking
 
 ## Conclusion
 
-The rendering fidelity workflow can be significantly improved with **quick, targeted changes**:
-
-1. **Phase 1:** Make structured oracle the default → More efficient debugging
-2. **Phase 2:** Add migration debugger → Fast root cause identification
-3. **Phase 3:** Expand tests + regression detection → Catch issues early
-
-The highest ROI improvements are **workflow integration** (Priority 1) which can be implemented with immediate impact.
+Phase 1 workflow improvements are complete and functional. The infrastructure now supports efficient iterative development. The next high-priority improvement is regression detection to prevent fixes from breaking other styles. With component-first iteration strategy and baseline tracking, the path to full fidelity is clear and measurable.

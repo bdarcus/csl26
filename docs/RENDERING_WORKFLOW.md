@@ -18,6 +18,33 @@ node scripts/oracle-batch-aggregate.js styles/ --top 10
 node scripts/oracle-simple.js styles/apa.csl
 ```
 
+## Fidelity Targets
+
+Know when you've reached "good enough" for a style:
+
+| Target | Criterion | Action |
+|--------|-----------|--------|
+| **Minimum Viable** | 5/5 citations, 8/15 bibliography | Move to next priority style |
+| **High Quality** | 5/5 citations, 12/15 bibliography | Style ready for production use |
+| **Perfect** | 15/15 citations AND bibliography | Diminishing returns - revisit later |
+
+**When to Move On**: Once a style reaches 12/15+ bibliography matches, move to the next priority style. Perfecting one style has lower ROI than improving many styles to "good enough."
+
+## Component-First Strategy
+
+**Key Principle**: Fix common failures across styles, not individual styles in isolation.
+
+**Why**: Each component fix can improve 10-20 styles simultaneously, converging much faster than style-by-style debugging.
+
+**Recommended Iteration Loop**:
+1. Run batch analysis across top 20 styles
+2. Identify most common component failure (e.g., "year formatting" in 15 styles)
+3. Fix that ONE component issue in processor/migration
+4. Re-run batch and measure improvement
+5. Repeat with next most common failure
+
+See [WORKFLOW_ANALYSIS.md](./WORKFLOW_ANALYSIS.md) for detailed strategy.
+
 ## The Standard Workflow
 
 When fixing rendering issues, follow this process:
@@ -66,7 +93,11 @@ Top 10 Priority Styles Analysis:
   IEEE (176 deps): 2/5 citations (year issue), 5/5 bibliography ✓
 ```
 
-**Key insight:** If multiple styles show the same component failure (e.g., "year issue"), fix the root cause in the processor, not style-specific logic.
+**CRITICAL INSIGHT - Component-First Approach:**
+
+If multiple styles show the same component failure (e.g., "year issue" in both APA and IEEE), **this is your highest priority fix**. Fixing one common component improves 10-20 styles simultaneously.
+
+**Action**: Focus on the most frequent component failures across the batch, not individual style debugging. Use the `componentSummary` from batch output to identify common issues.
 
 ### Step 3: Locate the Fix
 
@@ -85,7 +116,7 @@ Based on scope, determine where to make changes:
 #### Migration Issues (CSL → YAML conversion wrong)
 → Fix in `crates/csln_migrate/`
 - Example: Variable ends up in wrong template section
-- Future: Use `csln_migrate --debug-variable VAR` (Task #24)
+- **Migration Debugger** (planned): `csln_migrate --debug-variable VAR` will show provenance tracking through compilation pipeline
 
 ### Step 4: Make the Fix
 
@@ -123,12 +154,17 @@ Check that:
 
 ### Step 6: Track Progress
 
-After significant fixes, update the baseline (Task #25, not yet implemented):
+After significant fixes, update the baseline (regression detection planned):
 
 ```bash
-# Future: Save baseline after milestone
-node scripts/oracle-batch-aggregate.js styles/ --top 20 --json > baselines/baseline-$(date +%F).json
+# Planned: Save baseline after milestone
+node scripts/oracle-batch-aggregate.js styles/ --top 20 --save baselines/baseline-$(date +%F).json
+
+# Planned: Compare against baseline to detect regressions
+node scripts/oracle-batch-aggregate.js styles/ --top 20 --compare baselines/baseline-2026-02-06.json
 ```
+
+This will catch regressions immediately (e.g., "APA: 15/15 → 14/15 - ITEM-3 now failing").
 
 ## Oracle Scripts Reference
 
@@ -281,6 +317,32 @@ Bibliography: 3/5 passing
   form: long
   initialize-with: "."
 ```
+
+## Known Acceptable Differences
+
+Some differences between citeproc-js and CSLN are intentional or acceptable. **Do not spend time investigating these**:
+
+### HTML Entity Encoding
+**Example**: `&#38;` vs `&`, `&lt;` vs `<`
+**Why**: Different HTML encoding strategies are both valid
+**Action**: Ignore these differences
+
+### Whitespace Normalization
+**Example**: `"Nature  521"` vs `"Nature 521"` (extra space)
+**Why**: Whitespace collapsing is cosmetic
+**Action**: Ignore unless it affects readability
+
+### Unicode vs ASCII
+**Example**: Em-dash `—` vs double-hyphen `--` in page ranges
+**Why**: Both are acceptable representations
+**Action**: Prefer Unicode in CSLN, but ASCII is not wrong
+
+### Quote Normalization
+**Example**: Smart quotes `"` vs straight quotes `"`
+**Why**: Depends on style specification and output format
+**Action**: Match style requirements, otherwise prefer smart quotes
+
+If the structured oracle flags one of these differences, note it but continue working on substantive component mismatches (author, year, title, etc.).
 
 ## Interpreting Structured Diff Output
 
