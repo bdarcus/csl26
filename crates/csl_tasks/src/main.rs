@@ -41,52 +41,70 @@ async fn main() -> Result<()> {
                 }
                 OutputFormat::Table => {
                     use colored::Colorize;
+                    use tabled::{Table, Tabled, settings::Style};
 
-                    println!(
-                        "{:<4} {:<40} {:<12} {:<10} {:<10}",
-                        "ID".bold().cyan(),
-                        "Subject".bold().cyan(),
-                        "Priority".bold().cyan(),
-                        "Status".bold().cyan(),
-                        "Blocked".bold().cyan()
-                    );
-                    println!("{}", "─".repeat(80).bright_black());
-                    for task in filtered {
-                        let priority = task
-                            .metadata
-                            .get("priority")
-                            .and_then(|v| v.as_str())
-                            .unwrap_or("none");
-
-                        let priority_colored = match priority {
-                            "highest" | "high" => priority.red().bold(),
-                            "medium" => priority.yellow(),
-                            "low" => priority.bright_black(),
-                            _ => priority.normal(),
-                        };
-
-                        let status_colored = match task.status {
-                            task::TaskStatus::Pending => "pending".bright_blue(),
-                            task::TaskStatus::InProgress => "in-progress".bright_green().bold(),
-                            task::TaskStatus::Completed => "completed".bright_black(),
-                            task::TaskStatus::Deleted => "deleted".bright_black().strikethrough(),
-                        };
-
-                        let blocked_str = if task.blocked_by.is_empty() {
-                            "No".bright_black()
-                        } else {
-                            format!("Yes ({})", task.blocked_by.len()).red()
-                        };
-
-                        println!(
-                            "{:<4} {:<40} {:<12} {:<12} {:<10}",
-                            task.id.to_string().white(),
-                            truncate(&task.subject, 38),
-                            priority_colored,
-                            status_colored,
-                            blocked_str
-                        );
+                    #[derive(Tabled)]
+                    struct TaskRow {
+                        #[tabled(rename = "ID")]
+                        id: String,
+                        #[tabled(rename = "Subject")]
+                        subject: String,
+                        #[tabled(rename = "Priority")]
+                        priority: String,
+                        #[tabled(rename = "Status")]
+                        status: String,
+                        #[tabled(rename = "Blocked")]
+                        blocked: String,
                     }
+
+                    let rows: Vec<TaskRow> = filtered
+                        .iter()
+                        .map(|task| {
+                            let priority = task
+                                .metadata
+                                .get("priority")
+                                .and_then(|v| v.as_str())
+                                .unwrap_or("none");
+
+                            let priority_colored = match priority {
+                                "highest" | "high" => priority.red().bold().to_string(),
+                                "medium" => priority.yellow().to_string(),
+                                "low" => priority.bright_black().to_string(),
+                                _ => priority.to_string(),
+                            };
+
+                            let status_colored = match task.status {
+                                task::TaskStatus::Pending => "pending".bright_blue().to_string(),
+                                task::TaskStatus::InProgress => {
+                                    "in-progress".bright_green().bold().to_string()
+                                }
+                                task::TaskStatus::Completed => {
+                                    "completed".bright_black().to_string()
+                                }
+                                task::TaskStatus::Deleted => {
+                                    "deleted".bright_black().strikethrough().to_string()
+                                }
+                            };
+
+                            let blocked_str = if task.blocked_by.is_empty() {
+                                "No".bright_black().to_string()
+                            } else {
+                                format!("Yes ({})", task.blocked_by.len()).red().to_string()
+                            };
+
+                            TaskRow {
+                                id: task.id.to_string().white().to_string(),
+                                subject: truncate(&task.subject, 45),
+                                priority: priority_colored,
+                                status: status_colored,
+                                blocked: blocked_str,
+                            }
+                        })
+                        .collect();
+
+                    let mut table = Table::new(rows);
+                    table.with(Style::modern());
+                    println!("{}", table);
                 }
                 _ => unreachable!(),
             }
