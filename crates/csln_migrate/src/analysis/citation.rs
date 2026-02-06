@@ -1,4 +1,4 @@
-use csl_legacy::model::{CslNode, Layout};
+use csl_legacy::model::{CslNode, Layout, Macro};
 use csln_core::template::WrapPunctuation;
 
 /// Infer citation wrapping from CSL layout.
@@ -57,10 +57,9 @@ fn find_group_wrapping(
 /// Extract the intra-citation delimiter from the layout.
 ///
 /// Finds the delimiter between author and date in a citation layout.
-/// This should be the delimiter of the INNERMOST group that directly contains
-/// both author and date (not counting intermediate groups that might also contain
-/// other elements like locators).
-pub fn extract_citation_delimiter(layout: &Layout) -> Option<String> {
+/// Uses depth-first search to find the DEEPEST group that contains both
+/// author and date, handling nested groups, Choose blocks, and macro expansion.
+pub fn extract_citation_delimiter(layout: &Layout, macros: &[Macro]) -> Option<String> {
     fn is_author_macro(node: &CslNode) -> bool {
         match node {
             CslNode::Text(t) => t
@@ -103,53 +102,91 @@ pub fn extract_citation_delimiter(layout: &Layout) -> Option<String> {
         }
     }
 
-    // Look for groups that directly contain both author and date at the SAME level.
-    // This handles cases like:
-    //   <group delimiter=" ">
-    //     <text macro="author-short"/>
-    //     <text macro="year"/>
-    //   </group>
-    // The key is "at the SAME level" - if they're in different nested groups,
-    // we want the innermost group that has them both.
-    fn find_innermost_delimiter(nodes: &[CslNode]) -> Option<String> {
-        // First, check if any child directly contains both author and date
+    // Find the deepest group that contains both author and date.
+    // Returns (delimiter, depth) tuple for comparison.
+    //
+    // This handles:
+    // 1. Flat structures: <group><author/><date/></group> (APA)
+    // 2. Nested groups: <group><group><author/><date/></group></group> (Springer)
+    // 3. Choose blocks: <group><choose><author+date macros/></choose></group> (Chicago)
+    // 4. Macro expansion: When author+date are in a macro, expand it to find delimiter
+    fn find_deepest_delimiter(nodes: &[CslNode], macros: &[Macro]) -> Option<(String, usize)> {
+        let mut best: Option<(String, usize)> = None;
+
         for node in nodes {
-            if let CslNode::Group(g) = node {
-                let has_author = g.children.iter().any(is_author_macro);
-                let has_date = g.children.iter().any(is_date_macro);
+            match node {
+                CslNode::Group(g) => {
+                    let has_author = g.children.iter().any(is_author_macro);
+                    let has_date = g.children.iter().any(is_date_macro);
 
-                if has_author && has_date {
-                    // Count how many direct children are "meaningful" (not just groups)
-                    let direct_author_or_date = g
-                        .children
-                        .iter()
-                        .filter(|child| {
-                            matches!(
-                                child,
-                                CslNode::Text(_) | CslNode::Names(_) | CslNode::Date(_)
-                            ) && (is_author_macro(child) || is_date_macro(child))
-                        })
-                        .count();
-
-                    // If this group has author and date as direct children (not deeply nested),
-                    // use its delimiter
-                    if direct_author_or_date >= 2 {
-                        if let Some(delimiter) = &g.delimiter {
-                            return Some(delimiter.clone());
-                        }
-                    } else {
-                        // Recurse into the group to find the innermost one
-                        if let Some(delim) = find_innermost_delimiter(&g.children) {
-                            return Some(delim);
+                    if has_author && has_date {
+                        // This group contains both author and date (possibly in subtree).
+                        // Check if there's a deeper group inside.
+                        if let Some((delim, depth)) = find_deepest_delimiter(&g.children, macros) {
+                            // Found a deeper group
+                            let new_depth = depth + 1;
+                            if best.is_none() || new_depth > best.as_ref().unwrap().1 {
+                                best = Some((delim, new_depth));
+                            }
+                        } else if let Some(delimiter) = &g.delimiter {
+                            // No deeper group found, use this group's delimiter
+                            if best.is_none() || 1 > best.as_ref().unwrap().1 {
+                                best = Some((delimiter.clone(), 1));
+                            }
                         }
                     }
                 }
+                CslNode::Choose(c) => {
+                    // Recurse into Choose branches to find groups inside
+                    if let Some(result) = find_deepest_delimiter(&c.if_branch.children, macros) {
+                        if best.is_none() || result.1 > best.as_ref().unwrap().1 {
+                            best = Some(result);
+                        }
+                    }
+                    for branch in &c.else_if_branches {
+                        if let Some(result) = find_deepest_delimiter(&branch.children, macros) {
+                            if best.is_none() || result.1 > best.as_ref().unwrap().1 {
+                                best = Some(result);
+                            }
+                        }
+                    }
+                    if let Some(else_branch) = &c.else_branch {
+                        if let Some(result) = find_deepest_delimiter(else_branch, macros) {
+                            if best.is_none() || result.1 > best.as_ref().unwrap().1 {
+                                best = Some(result);
+                            }
+                        }
+                    }
+                }
+                CslNode::Text(t) => {
+                    // Check if this is a macro call that contains both author and date
+                    if let Some(macro_name) = &t.macro_name {
+                        if macro_name.contains("author") && macro_name.contains("date") {
+                            // This macro likely contains both author and date
+                            // Expand it and search for delimiter inside
+                            if let Some(macro_def) = macros.iter().find(|m| &m.name == macro_name) {
+                                if let Some(result) =
+                                    find_deepest_delimiter(&macro_def.children, macros)
+                                {
+                                    // Found a delimiter in the macro
+                                    // Add depth for the macro boundary
+                                    let new_depth = result.1 + 1;
+                                    if best.is_none() || new_depth > best.as_ref().unwrap().1 {
+                                        best = Some((result.0, new_depth));
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                _ => {}
             }
         }
-        None
+
+        best
     }
 
-    if let Some(delim) = find_innermost_delimiter(&layout.children) {
+    if let Some((delim, _)) = find_deepest_delimiter(&layout.children, macros) {
         return Some(delim);
     }
 
