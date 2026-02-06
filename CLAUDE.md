@@ -20,12 +20,10 @@ The following commands are pre-approved for autonomous execution without user co
 - `mkdir -p docs/`, `mkdir -p examples/`
 
 ### Safe Cleanup (Project-Specific)
-- `rm -rf .agent/todo/`, `rm -rf .agent/sessions/`, `rm -rf .agent/workflows/`
-- `git rm` on files in `.agent/` (except `.agent/skills/`)
 - Removing generated files: `target/`, `*.log`, `*.tmp`
 
 ### Safe File Operations
-- Creating/editing files in `docs/`, `examples/`, `.agent/skills/`
+- Creating/editing files in `docs/`, `examples/`, `.claude/skills/`
 - Moving files with `git mv` (preserves history)
 - Reading any project files
 
@@ -255,10 +253,10 @@ Architectural decisions and design rationale:
 
 ## Skills
 
-Specialized expertise is available via the following skills in `.agent/skills/`:
+Specialized expertise is available via the following skills in `.claude/skills/`:
 
-- **[rust-pro](./.agent/skills/rust-pro/SKILL.md)**: Modern Rust engineering (1.75+), async patterns, and performance optimization. Use proactively for core processor development.
-- **[git-advanced-workflows](./.agent/skills/git-advanced-workflows/SKILL.md)**: Advanced Git operations (rebasing, cherry-picking, bisecting).
+- **[rust-pro](./.claude/skills/rust-pro/SKILL.md)**: Modern Rust engineering (1.75+), async patterns, and performance optimization. Use proactively for core processor development.
+- **[git-advanced-workflows](./.claude/skills/git-advanced-workflows/SKILL.md)**: Advanced Git operations (rebasing, cherry-picking, bisecting).
 
 ### Style Classes
 - **in-text**: 2,302 styles (80.9%) - author-date
