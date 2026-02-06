@@ -2,9 +2,22 @@ use csl_legacy::model::{self as legacy, CslNode as LNode};
 use csln_core::{self as csln, FormattingOptions, ItemType, Variable};
 use std::collections::HashMap;
 
-pub struct Upsampler;
+#[derive(Default)]
+pub struct Upsampler {
+    provenance: Option<crate::ProvenanceTracker>,
+}
 
 impl Upsampler {
+    pub fn new() -> Self {
+        Self { provenance: None }
+    }
+
+    pub fn with_provenance(provenance: crate::ProvenanceTracker) -> Self {
+        Self {
+            provenance: Some(provenance),
+        }
+    }
+
     /// The entry point for converting a flattened legacy tree into CSLN nodes.
     pub fn upsample_nodes(&self, legacy_nodes: &[LNode]) -> Vec<csln::CslnNode> {
         let mut csln_nodes = Vec::new();
@@ -36,6 +49,10 @@ impl Upsampler {
             LNode::Text(t) => {
                 if let Some(var_str) = &t.variable {
                     if let Some(var) = self.map_variable(var_str) {
+                        if let Some(ref prov) = self.provenance {
+                            let var_name = format!("{:?}", var).to_lowercase();
+                            prov.record_upsampling(&var_name, "Text", "Variable");
+                        }
                         return Some(csln::CslnNode::Variable(csln::VariableBlock {
                             variable: var,
                             label: None,
