@@ -1,9 +1,16 @@
 # CSLN Task List
 
-**Status:** Active development tracking
-**Last Updated:** 2026-02-05
+> **⚠️ DEPRECATED:** This document is now a historical snapshot. All active task tracking has migrated to [GitHub Issues](https://github.com/bdarcus/csl26/issues).
+>
+> **For Contributors:** Create new issues using the templates in `.github/ISSUE_TEMPLATE/`
+>
+> **Migration:** Use `./scripts/tasks-to-issues.sh` to export remaining tasks from this file to GitHub Issues.
 
-This document mirrors the Claude Code native task list and is maintained in version control for contributor visibility. Tasks are organized by priority and category.
+**Status:** Historical snapshot (deprecated as primary tracker)
+**Last Updated:** 2026-02-05 (pre-GitHub Issues migration)
+**Migrated:** 2026-02-06
+
+This document was the primary task tracker during early development. Tasks have been migrated to GitHub Issues for better community visibility and collaboration. This file is preserved for historical reference and task organization patterns.
 
 ## Task Status Legend
 
