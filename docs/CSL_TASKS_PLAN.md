@@ -303,161 +303,52 @@ csl-tasks create \
   --metadata estimated_hours=8
 ```
 
-## 7. LLM and Tool Integration
+## 7. LLM Integration
 
-### Integration Strategies
+### Direct File Access (Primary Interface)
 
-The CLI tool can be integrated with any LLM through multiple approaches:
+LLMs access tasks by reading/writing Markdown files in `tasks/` directory:
 
-#### Option 1: Direct CLI Execution (Simplest)
-LLMs with shell/bash execution capabilities (Claude Code, Cursor, Aider) call the CLI directly:
+```markdown
+# LLM reads a task
+Read: tasks/31.md
 
+# LLM updates task status
+Edit: tasks/31.md (change status: pending -> in_progress)
+
+# LLM creates new task
+Write: tasks/42.md (with YAML frontmatter)
+
+# LLM finds next task
+Glob: tasks/*.md + filter by status=pending, blocked_by=[]
+```
+
+**Works with any LLM that has file system access** (Claude Code, Cursor, Aider, etc.)
+
+### CLI Tool (Secondary - for Sync & Validation)
+
+The `csl-tasks` CLI is primarily for:
+
+1. **GitHub Sync**: `csl-tasks sync`
+2. **Validation**: Detect circular dependencies, validate references
+3. **Convenience**: `csl-tasks next` (find unblocked work)
+4. **Conflict Resolution**: `csl-tasks resolve-drift`
+
+LLMs can call CLI for these operations if needed:
 ```bash
-# LLM uses Bash tool to execute
-csl-tasks list --format json
-csl-tasks next --format json
-csl-tasks claim 31
+csl-tasks sync --dry-run
+csl-tasks next  # Alternative to manual file scanning
 ```
 
-**Pros**: Zero integration code, works immediately
-**Cons**: Requires bash execution capability
+### Workflow Example
 
-#### Option 2: MCP Server (Recommended for Claude)
-Create a Model Context Protocol server that wraps the CLI:
-
-```typescript
-// MCP server provides tools like:
-server.addTool({
-  name: "tasks_list",
-  description: "List all tasks",
-  parameters: { status?: string },
-  execute: async (params) => {
-    const result = await exec(`csl-tasks list --status ${params.status} --format json`);
-    return JSON.parse(result.stdout);
-  }
-});
 ```
-
-**Pros**: Native Claude integration, typed interfaces, better UX
-**Cons**: Requires MCP server implementation (~200 lines)
-
-#### Option 3: Language-Specific SDKs
-Wrap CLI in Python/JavaScript/etc for programmatic access:
-
-```python
-# Python SDK
-from csl_tasks import Tasks
-
-tasks = Tasks()
-next_task = tasks.next()
-tasks.claim(next_task.id)
-```
-
-**Pros**: Ergonomic for scripting, no JSON parsing
-**Cons**: Maintenance overhead, multiple implementations
-
-#### Option 4: HTTP API Server (Future)
-Run `csl-tasks serve` as background daemon with REST API:
-
-```bash
-# Terminal 1: Start server
-csl-tasks serve --port 8080
-
-# Terminal 2: LLM makes HTTP requests
-curl http://localhost:8080/api/tasks/next
-```
-
-**Pros**: Language-agnostic, works with any LLM
-**Cons**: More complex, requires server management
-
-### Recommended Integrations
-
-**Claude Code**:
-```bash
-# Add to ~/.claude/skills/ or use directly via Bash tool
-csl-tasks list --format json | jq -r '.[] | select(.status == "pending" and (.blocked_by | length == 0))'
-```
-
-Or create MCP server in `~/.claude/mcp-servers/csl-tasks/`:
-```json
-{
-  "name": "csl-tasks",
-  "command": "node",
-  "args": ["./mcp-server.js"]
-}
-```
-
-**Cursor / GitHub Copilot**:
-```bash
-# Add to project scripts
-"scripts": {
-  "tasks:next": "csl-tasks next --format json",
-  "tasks:list": "csl-tasks list --format json"
-}
-```
-
-**Gemini / ChatGPT (with Code Interpreter)**:
-```python
-import subprocess
-import json
-
-def get_next_task():
-    result = subprocess.run(['csl-tasks', 'next', '--format', 'json'],
-                          capture_output=True, text=True)
-    return json.loads(result.stdout)
-```
-
-**Aider**:
-```bash
-# Aider can execute shell commands directly
-/run csl-tasks next --format json
-```
-
-### JSON Output Format
-
-All commands support `--format json` for machine-readable output:
-
-```bash
-csl-tasks list --format json
-# Output: [{"id": 31, "subject": "...", "status": "pending", ...}]
-
-csl-tasks get 31 --format json
-# Output: {"id": 31, "subject": "...", "description": "...", ...}
-
-csl-tasks next --format json
-# Output: {"id": 31, "subject": "...", "blocked_by": []}
-```
-
-### Human-Readable Output
-Default output is formatted for human readability:
-- Table format for `list`
-- Formatted text for `get`
-- Colored diff output for `sync-status`
-
-### Workflow Integration Examples
-```bash
-# LLM asks: "What should I work on next?"
-csl-tasks next --format json | jq '.subject'
-
-# LLM starts work
-csl-tasks claim 31
-
-# LLM completes work
-csl-tasks complete 31
-
-# Human reviews progress
-csl-tasks list --status completed
-```
-
-### Environment Variable Support
-```bash
-# Configure via environment
-export CSL_TASKS_DIR="./tasks"
-export CSL_TASKS_GITHUB_REPO="owner/repo"
-export CSL_TASKS_GITHUB_TOKEN="ghp_..."
-
-# All commands respect these settings
-csl-tasks sync
+1. LLM: Glob tasks/*.md, filter status=pending
+2. LLM: Read tasks/31.md
+3. LLM: Edit tasks/31.md (status: in_progress)
+4. LLM: Do the work...
+5. LLM: Edit tasks/31.md (status: completed)
+6. Human: csl-tasks sync (push to GitHub)
 ```
 
 ## 8. Error Handling
@@ -544,14 +435,6 @@ csl-tasks sync
 - [ ] User-friendly error messages
 - [ ] Shell completion scripts
 - [ ] CI/CD integration
-- [ ] Environment variable support
-
-### Phase 6: Advanced Integrations (Optional)
-- [ ] MCP server implementation for Claude Code
-- [ ] Python SDK wrapper
-- [ ] HTTP API server mode (`csl-tasks serve`)
-- [ ] VS Code extension
-- [ ] Language server protocol (LSP) support
 
 ## Dependencies
 
@@ -569,17 +452,6 @@ thiserror = "1.0"      # Custom error types
 gray_matter = "0.2"    # YAML frontmatter parsing (or similar)
 pulldown-cmark = "0.9" # Markdown parsing/rendering
 ```
-
-## Future Enhancements
-
-1. **Time Tracking**: Track hours spent per task
-2. **Task Templates**: Predefined task structures for common workflows
-3. **Burndown Charts**: Visualize progress over time
-4. **Slack/Discord Integration**: Notify on task status changes
-5. **Web UI**: Browser-based task dashboard
-6. **Export Formats**: Export to Markdown, CSV, Jira import format
-7. **Multi-Repo Support**: Manage tasks across multiple repositories
-8. **Smart Assignment**: Suggest next task based on skills/history
 
 ## References
 
