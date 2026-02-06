@@ -46,6 +46,47 @@ This project leverages global Claude Code agents from `~/.claude/` while adding 
 **Project-Specific Context Layers:**
 When invoking these agents, they automatically receive CSL domain knowledge and Rust expertise from this file. The global agents handle general development workflow while project-specific instructions guide CSL/citation processing decisions.
 
+## Task Management Workflow
+
+**Primary System:** GitHub Issues (https://github.com/bdarcus/csl26/issues)
+
+All permanent task tracking uses GitHub Issues for transparency and community collaboration. Tasks follow these conventions:
+
+### Issue Templates
+- **Bug Report** (`.github/ISSUE_TEMPLATE/bug_report.md`): Rendering defects, incorrect output
+- **Feature Request** (`.github/ISSUE_TEMPLATE/feature_request.md`): New features, enhancements
+- **Technical Debt** (`.github/ISSUE_TEMPLATE/technical_debt.md`): Refactoring, cleanup
+
+### Labels
+- **Priority**: `priority-high`, `priority-medium`, `priority-low`
+- **Type**: `bug`, `feature`, `tech-debt`, `refactor`
+- **Category**: `rendering`, `numeric-styles`, `i18n`, `dx`
+
+### When to Use Native Tasks vs GitHub Issues
+
+**Native Tasks (Ephemeral):**
+- Short-term planning within a single session
+- Breaking down a feature branch into subtasks
+- Tracking implementation steps for a PR
+- Temporary exploration or investigation
+
+**GitHub Issues (Permanent):**
+- Feature requests from community or domain experts
+- Bug reports for rendering defects
+- Technical debt that needs tracking
+- Long-term planning and milestones
+- Anything that requires contributor coordination
+
+### Migration from TASKS.md
+
+The `docs/TASKS.md` file is deprecated as the primary task tracker. It remains as a historical snapshot showing task organization at time of migration. New tasks should be created as GitHub Issues.
+
+To bulk-export remaining tasks from TASKS.md:
+```bash
+./scripts/tasks-to-issues.sh --dry-run  # Preview
+./scripts/tasks-to-issues.sh           # Create issues
+```
+
 ## Project Goal
 
 Transition the citation management ecosystem from CSL 1.0 (procedural XML) to CSLN (declarative, type-safe Rust/YAML). This involves:
