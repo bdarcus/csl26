@@ -40,8 +40,13 @@ async fn main() -> Result<()> {
                     println!("{}", serde_json::to_string_pretty(&filtered)?);
                 }
                 OutputFormat::Table => {
-                    use colored::Colorize;
-                    use tabled::{Table, Tabled, settings::Style};
+                    use tabled::{
+                        Table, Tabled,
+                        settings::{
+                            Color, Modify, Style,
+                            object::{Columns, Object, Rows},
+                        },
+                    };
 
                     #[derive(Tabled)]
                     struct TaskRow {
@@ -66,37 +71,24 @@ async fn main() -> Result<()> {
                                 .and_then(|v| v.as_str())
                                 .unwrap_or("none");
 
-                            let priority_colored = match priority {
-                                "highest" | "high" => priority.red().bold().to_string(),
-                                "medium" => priority.yellow().to_string(),
-                                "low" => priority.bright_black().to_string(),
-                                _ => priority.to_string(),
-                            };
-
-                            let status_colored = match task.status {
-                                task::TaskStatus::Pending => "pending".bright_blue().to_string(),
-                                task::TaskStatus::InProgress => {
-                                    "in-progress".bright_green().bold().to_string()
-                                }
-                                task::TaskStatus::Completed => {
-                                    "completed".bright_black().to_string()
-                                }
-                                task::TaskStatus::Deleted => {
-                                    "deleted".bright_black().strikethrough().to_string()
-                                }
+                            let status_str = match task.status {
+                                task::TaskStatus::Pending => "pending",
+                                task::TaskStatus::InProgress => "in-progress",
+                                task::TaskStatus::Completed => "completed",
+                                task::TaskStatus::Deleted => "deleted",
                             };
 
                             let blocked_str = if task.blocked_by.is_empty() {
-                                "No".bright_black().to_string()
+                                "No".to_string()
                             } else {
-                                format!("Yes ({})", task.blocked_by.len()).red().to_string()
+                                format!("Yes ({})", task.blocked_by.len())
                             };
 
                             TaskRow {
-                                id: task.id.to_string().white().to_string(),
+                                id: task.id.to_string(),
                                 subject: truncate(&task.subject, 45),
-                                priority: priority_colored,
-                                status: status_colored,
+                                priority: priority.to_string(),
+                                status: status_str.to_string(),
                                 blocked: blocked_str,
                             }
                         })
@@ -104,6 +96,52 @@ async fn main() -> Result<()> {
 
                     let mut table = Table::new(rows);
                     table.with(Style::modern());
+
+                    // Apply colors using tabled's Color modifier
+                    // Priority column (index 2): red for high/highest, yellow for medium, dim for low
+                    for (idx, task) in filtered.iter().enumerate() {
+                        let row = idx + 1; // +1 because row 0 is header
+                        let priority = task
+                            .metadata
+                            .get("priority")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("none");
+
+                        let priority_color = match priority {
+                            "highest" | "high" => Color::FG_RED,
+                            "medium" => Color::FG_YELLOW,
+                            "low" => Color::FG_BRIGHT_BLACK,
+                            _ => Color::FG_WHITE,
+                        };
+
+                        let status_color = match task.status {
+                            task::TaskStatus::Pending => Color::FG_BRIGHT_BLUE,
+                            task::TaskStatus::InProgress => Color::FG_BRIGHT_GREEN,
+                            task::TaskStatus::Completed => Color::FG_BRIGHT_BLACK,
+                            task::TaskStatus::Deleted => Color::FG_BRIGHT_BLACK,
+                        };
+
+                        let blocked_color = if task.blocked_by.is_empty() {
+                            Color::FG_BRIGHT_BLACK
+                        } else {
+                            Color::FG_RED
+                        };
+
+                        table
+                            .with(
+                                Modify::new(Rows::single(row).and(Columns::single(2)))
+                                    .with(priority_color),
+                            )
+                            .with(
+                                Modify::new(Rows::single(row).and(Columns::single(3)))
+                                    .with(status_color),
+                            )
+                            .with(
+                                Modify::new(Rows::single(row).and(Columns::single(4)))
+                                    .with(blocked_color),
+                            );
+                    }
+
                     println!("{}", table);
                 }
                 _ => unreachable!(),
