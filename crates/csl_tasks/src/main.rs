@@ -630,12 +630,12 @@ fn strip_emoji(s: &str) -> String {
         .filter(|c| {
             let c = *c as u32;
             // Filter out emoji ranges
-            !(c >= 0x1F300 && c <= 0x1F9FF) // Emoticons, symbols, pictographs
-                && !(c >= 0x2600 && c <= 0x26FF) // Miscellaneous symbols
-                && !(c >= 0x2700 && c <= 0x27BF) // Dingbats
-                && !(c >= 0xFE00 && c <= 0xFE0F) // Variation selectors
-                && !(c >= 0x1F000 && c <= 0x1F02F) // Mahjong tiles
-                && !(c >= 0x1F0A0 && c <= 0x1F0FF) // Playing cards
+            !((0x1F300..=0x1F9FF).contains(&c) // Emoticons, symbols, pictographs
+                || (0x2600..=0x26FF).contains(&c) // Miscellaneous symbols
+                || (0x2700..=0x27BF).contains(&c) // Dingbats
+                || (0xFE00..=0xFE0F).contains(&c) // Variation selectors
+                || (0x1F000..=0x1F02F).contains(&c) // Mahjong tiles
+                || (0x1F0A0..=0x1F0FF).contains(&c)) // Playing cards
         })
         .collect::<String>()
         .trim()
