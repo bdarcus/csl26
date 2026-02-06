@@ -120,6 +120,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         Some(csln_core::options::Processing::AuthorDate)
     );
 
+    // Apply to all in-text styles (both author-date and numeric)
+    if is_in_text_class {
+        // Add space prefix to volume when it follows parent-serial directly.
+        // This handles numeric styles where journal and volume are siblings, not in a List.
+        passes::reorder::add_volume_prefix_after_serial(&mut new_bib);
+    }
+
     if is_in_text_class && is_author_date_processing {
         // Detect if the style uses space prefix for volume (Elsevier pattern)
         let volume_list_has_space_prefix = new_bib.iter().any(|c| {
