@@ -321,6 +321,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 // Extract delimiter from first group in CSL layout (author-year separator)
                 delimiter: analysis::citation::extract_citation_delimiter(
                     &legacy_style.citation.layout,
+                    &legacy_style.macros,
                 ),
                 multi_cite_delimiter: legacy_style.citation.layout.delimiter.clone(),
                 ..Default::default()
