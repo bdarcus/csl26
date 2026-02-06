@@ -875,7 +875,39 @@ impl TemplateCompiler {
 
     /// Compile a Names block into a Contributor component.
     fn compile_names(&self, names: &csln_core::NamesBlock) -> Option<TemplateComponent> {
-        let role = self.map_variable_to_role(&names.variable)?;
+        // Try to map the primary variable to a role
+        let primary_role = self.map_variable_to_role(&names.variable);
+
+        // Check if we should use a substitute instead of the primary
+        // Rare contributor roles (composer, illustrator) often have author as first substitute
+        let role = if let Some(role) = primary_role {
+            // If primary is a rare role and we have substitutes, prefer the first common one
+            let rare_roles = [
+                ContributorRole::Composer,
+                ContributorRole::Illustrator,
+                ContributorRole::Interviewer,
+                ContributorRole::Inventor,
+                ContributorRole::Counsel,
+                ContributorRole::CollectionEditor,
+                ContributorRole::EditorialDirector,
+                ContributorRole::OriginalAuthor,
+                ContributorRole::ReviewedAuthor,
+            ];
+
+            if rare_roles.contains(&role) && !names.options.substitute.is_empty() {
+                // Try to find a common role in the substitute list
+                names
+                    .options
+                    .substitute
+                    .iter()
+                    .find_map(|var| self.map_variable_to_role(var))
+                    .unwrap_or(role) // Fallback to primary if no valid substitute
+            } else {
+                role
+            }
+        } else {
+            return None;
+        };
 
         let form = match names.options.mode {
             Some(csln_core::NameMode::Short) => ContributorForm::Short,
