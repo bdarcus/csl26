@@ -40,22 +40,51 @@ async fn main() -> Result<()> {
                     println!("{}", serde_json::to_string_pretty(&filtered)?);
                 }
                 OutputFormat::Table => {
+                    use colored::Colorize;
+
                     println!(
-                        "{:<4} {:<50} {:<12} {:<10}",
-                        "ID", "Subject", "Status", "Blocked"
+                        "{:<4} {:<40} {:<12} {:<10} {:<10}",
+                        "ID".bold().cyan(),
+                        "Subject".bold().cyan(),
+                        "Priority".bold().cyan(),
+                        "Status".bold().cyan(),
+                        "Blocked".bold().cyan()
                     );
-                    println!("{}", "-".repeat(80));
+                    println!("{}", "─".repeat(80).bright_black());
                     for task in filtered {
+                        let priority = task
+                            .metadata
+                            .get("priority")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("none");
+
+                        let priority_colored = match priority {
+                            "highest" | "high" => priority.red().bold(),
+                            "medium" => priority.yellow(),
+                            "low" => priority.bright_black(),
+                            _ => priority.normal(),
+                        };
+
+                        let status_colored = match task.status {
+                            task::TaskStatus::Pending => "pending".bright_blue(),
+                            task::TaskStatus::InProgress => "in-progress".bright_green().bold(),
+                            task::TaskStatus::Completed => "completed".bright_black(),
+                            task::TaskStatus::Deleted => "deleted".bright_black().strikethrough(),
+                        };
+
+                        let blocked_str = if task.blocked_by.is_empty() {
+                            "No".bright_black()
+                        } else {
+                            format!("Yes ({})", task.blocked_by.len()).red()
+                        };
+
                         println!(
-                            "{:<4} {:<50} {:<12} {:<10}",
-                            task.id,
-                            truncate(&task.subject, 48),
-                            status_str(&task.status),
-                            if task.blocked_by.is_empty() {
-                                "No".to_string()
-                            } else {
-                                format!("Yes ({})", task.blocked_by.len())
-                            }
+                            "{:<4} {:<40} {:<12} {:<12} {:<10}",
+                            task.id.to_string().white(),
+                            truncate(&task.subject, 38),
+                            priority_colored,
+                            status_colored,
+                            blocked_str
                         );
                     }
                 }
