@@ -37,8 +37,9 @@ pub fn extract_bibliography_config(style: &Style) -> Option<BibliographyConfig> 
         has_config = true;
     }
 
-    // Extract bibliography component separator from top-level group delimiter.
-    if let Some(separator) = extract_bibliography_separator_from_layout(&bib.layout, style) {
+    // Extract bibliography component separator from group delimiter.
+    if let Some(separator) = extract_bibliography_separator_from_layout(&bib.layout, &style.macros)
+    {
         config.separator = Some(separator.to_string_with_space().to_string());
         has_config = true;
     }
@@ -126,18 +127,130 @@ fn nodes_have_doi_without_period(nodes: &[CslNode]) -> bool {
     false
 }
 
+/// Extract the bibliography component separator from the layout.
+///
+/// Finds the delimiter that separates bibliography components (e.g., author,
+/// title, date, publisher). This should be the delimiter of the DEEPEST group
+/// that contains multiple variables, not just the first top-level group.
+///
+/// For nested structures like:
+/// ```xml
+/// <layout>
+///   <group>  <!-- No delimiter, just wrapping -->
+///     <group delimiter=", ">  <!-- This is what we want -->
+///       <text variable="title"/>
+///       <text variable="publisher"/>
+///     </group>
+///   </group>
+/// </layout>
+/// ```
+///
+/// The extraction should return the inner group's delimiter, not stop at the
+/// outer group without one. Also expands macro calls to find delimiters inside
+/// referenced macros.
 pub fn extract_bibliography_separator_from_layout(
     layout: &Layout,
-    _style: &Style,
+    macros: &[Macro],
 ) -> Option<DelimiterPunctuation> {
-    for node in &layout.children {
-        if let CslNode::Group(g) = node {
-            if let Some(delim) = &g.delimiter {
-                return Some(DelimiterPunctuation::from_csl_string(delim));
+    // Helper to count variable-bearing nodes in a group
+    fn has_multiple_variables(nodes: &[CslNode]) -> bool {
+        let var_count = nodes
+            .iter()
+            .filter(|node| match node {
+                CslNode::Text(t) => t.variable.is_some() || t.macro_name.is_some(),
+                CslNode::Names(_) | CslNode::Date(_) => true,
+                _ => false,
+            })
+            .count();
+        var_count >= 2
+    }
+
+    // Recursive search for the deepest group with delimiter and multiple variables.
+    // Returns (delimiter, depth) to prioritize deeper matches.
+    fn find_deepest_group_delimiter(
+        nodes: &[CslNode],
+        macros: &[Macro],
+    ) -> Option<(String, usize)> {
+        let mut best: Option<(String, usize)> = None;
+
+        for node in nodes {
+            match node {
+                CslNode::Group(g) => {
+                    // If this group has a delimiter and multiple variables, it's a candidate
+                    if g.delimiter.is_some()
+                        && has_multiple_variables(&g.children)
+                        && (best.is_none() || 1 > best.as_ref().unwrap().1)
+                    {
+                        best = Some((g.delimiter.clone().unwrap(), 1));
+                    }
+
+                    // Recurse into children to find even deeper delimiters
+                    if let Some((child_delim, depth)) =
+                        find_deepest_group_delimiter(&g.children, macros)
+                    {
+                        let new_depth = depth + 1;
+                        if best.is_none() || new_depth > best.as_ref().unwrap().1 {
+                            best = Some((child_delim, new_depth));
+                        }
+                    }
+                }
+                CslNode::Choose(c) => {
+                    // Search all branches of choose blocks
+                    if let Some(result) =
+                        find_deepest_group_delimiter(&c.if_branch.children, macros)
+                    {
+                        if best.is_none() || result.1 > best.as_ref().unwrap().1 {
+                            best = Some(result);
+                        }
+                    }
+                    for branch in &c.else_if_branches {
+                        if let Some(result) = find_deepest_group_delimiter(&branch.children, macros)
+                        {
+                            if best.is_none() || result.1 > best.as_ref().unwrap().1 {
+                                best = Some(result);
+                            }
+                        }
+                    }
+                    if let Some(else_branch) = &c.else_branch {
+                        if let Some(result) = find_deepest_group_delimiter(else_branch, macros) {
+                            if best.is_none() || result.1 > best.as_ref().unwrap().1 {
+                                best = Some(result);
+                            }
+                        }
+                    }
+                }
+                CslNode::Text(t) => {
+                    // Expand macro calls to find delimiters inside
+                    if let Some(macro_name) = &t.macro_name {
+                        if let Some(macro_def) = macros.iter().find(|m| &m.name == macro_name) {
+                            if let Some((delim, depth)) =
+                                find_deepest_group_delimiter(&macro_def.children, macros)
+                            {
+                                let new_depth = depth + 1;
+                                if best.is_none() || new_depth > best.as_ref().unwrap().1 {
+                                    best = Some((delim, new_depth));
+                                }
+                            }
+                        }
+                    }
+                }
+                _ => {}
             }
         }
+
+        best
     }
-    None
+
+    // First try recursive search with macro expansion
+    if let Some((delim, _)) = find_deepest_group_delimiter(&layout.children, macros) {
+        return Some(DelimiterPunctuation::from_csl_string(&delim));
+    }
+
+    // Fallback to layout-level delimiter
+    layout
+        .delimiter
+        .as_ref()
+        .map(|d| DelimiterPunctuation::from_csl_string(d))
 }
 
 pub fn extract_sort_from_bibliography(sort: &LegacySort) -> Option<Sort> {
