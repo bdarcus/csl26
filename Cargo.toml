@@ -6,7 +6,7 @@ members = [
     "crates/csln_processor",
     "crates/csln_analyze",
     "crates/csln_cli"
-]
+, "crates/csl_tasks"]
 resolver = "2"
 
 [workspace.lints.rust]

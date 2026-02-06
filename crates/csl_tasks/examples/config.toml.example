@@ -1,0 +1,29 @@
+# Example configuration for csl-tasks
+# Copy to .csl-tasks.toml or tasks/config.toml
+
+[github]
+# GitHub repository in format "owner/repo"
+repo = "owner/repo"
+
+# Label to identify synced issues
+label = "task"
+
+# Whether to sync custom metadata as YAML frontmatter
+sync_metadata = true
+
+[local]
+# Directory for task markdown files
+task_dir = "tasks"
+
+# Whether to automatically move completed tasks to archive/
+archive_completed = false
+
+[sync]
+# Whether to automatically sync on changes
+auto_sync = false
+
+# Strategy for conflict resolution: "prompt", "local", or "remote"
+conflict_strategy = "prompt"
+
+# Whether to preserve existing GitHub labels when syncing
+preserve_github_labels = true
