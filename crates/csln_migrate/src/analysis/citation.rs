@@ -55,6 +55,11 @@ fn find_group_wrapping(
 }
 
 /// Extract the intra-citation delimiter from the layout.
+///
+/// Finds the delimiter between author and date in a citation layout.
+/// This should be the delimiter of the INNERMOST group that directly contains
+/// both author and date (not counting intermediate groups that might also contain
+/// other elements like locators).
 pub fn extract_citation_delimiter(layout: &Layout) -> Option<String> {
     fn is_author_macro(node: &CslNode) -> bool {
         match node {
@@ -98,24 +103,70 @@ pub fn extract_citation_delimiter(layout: &Layout) -> Option<String> {
         }
     }
 
+    // Look for groups that directly contain both author and date at the SAME level.
+    // This handles cases like:
+    //   <group delimiter=" ">
+    //     <text macro="author-short"/>
+    //     <text macro="year"/>
+    //   </group>
+    // The key is "at the SAME level" - if they're in different nested groups,
+    // we want the innermost group that has them both.
+    fn find_innermost_delimiter(nodes: &[CslNode]) -> Option<String> {
+        // First, check if any child directly contains both author and date
+        for node in nodes {
+            if let CslNode::Group(g) = node {
+                let has_author = g.children.iter().any(is_author_macro);
+                let has_date = g.children.iter().any(is_date_macro);
+
+                if has_author && has_date {
+                    // Count how many direct children are "meaningful" (not just groups)
+                    let direct_author_or_date = g
+                        .children
+                        .iter()
+                        .filter(|child| {
+                            matches!(
+                                child,
+                                CslNode::Text(_) | CslNode::Names(_) | CslNode::Date(_)
+                            ) && (is_author_macro(child) || is_date_macro(child))
+                        })
+                        .count();
+
+                    // If this group has author and date as direct children (not deeply nested),
+                    // use its delimiter
+                    if direct_author_or_date >= 2 {
+                        if let Some(delimiter) = &g.delimiter {
+                            return Some(delimiter.clone());
+                        }
+                    } else {
+                        // Recurse into the group to find the innermost one
+                        if let Some(delim) = find_innermost_delimiter(&g.children) {
+                            return Some(delim);
+                        }
+                    }
+                }
+            }
+        }
+        None
+    }
+
+    if let Some(delim) = find_innermost_delimiter(&layout.children) {
+        return Some(delim);
+    }
+
+    // Fallback: check if date macro call has a prefix that acts as a delimiter
     for node in &layout.children {
         if let CslNode::Group(g) = node {
-            if g.children.iter().any(is_author_macro) && g.children.iter().any(is_date_macro) {
-                if let Some(delimiter) = &g.delimiter {
-                    return Some(delimiter.clone());
-                }
-                // Check if date macro call has a prefix that acts as a delimiter
-                for child in &g.children {
-                    if is_date_macro(child) {
-                        if let CslNode::Text(t) = child {
-                            if let Some(prefix) = &t.prefix {
-                                return Some(prefix.clone());
-                            }
+            for child in &g.children {
+                if is_date_macro(child) {
+                    if let CslNode::Text(t) = child {
+                        if let Some(prefix) = &t.prefix {
+                            return Some(prefix.clone());
                         }
                     }
                 }
             }
         }
     }
+
     None
 }
