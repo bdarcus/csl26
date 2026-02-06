@@ -2,7 +2,7 @@
 
 ## Overview
 
-A Rust CLI tool for managing CSL development tasks with GitHub Issues synchronization, drift detection, and flexible task lifecycle management.
+A general-purpose Rust CLI tool for managing project tasks with GitHub Issues synchronization, drift detection, and flexible task lifecycle management. Designed to work with any LLM or human workflow, not tied to specific AI assistants.
 
 ## 1. Core Architecture
 
@@ -30,13 +30,46 @@ pub enum TaskStatus {
 ```
 
 ### Storage Format
-- **Location**: `.claude/tasks/{session_id}/`
-- **Format**: Individual JSON files per task (`{id}.json`)
+- **Location**: `tasks/` directory in project root
+- **Format**: Individual Markdown files with YAML frontmatter per task (`{id}.md`)
 - **Benefits**:
-  - Git-friendly (merge conflicts only affect individual tasks)
-  - Easy to inspect/edit manually
-  - Parallel read/write capability
-  - Simple backup/restore
+  - Human-readable and editable (plain text Markdown)
+  - Git-friendly (merge conflicts only affect individual tasks, meaningful diffs)
+  - Matches GitHub Issues format (seamless sync)
+  - Self-documenting (task files are their own documentation)
+  - No serialization overhead (edit in any text editor)
+
+**Example Task File** (`tasks/31.md`):
+```markdown
+---
+id: 31
+subject: Update post-processing passes for new bibliography architecture
+status: pending
+blocks: []
+blocked_by: []
+priority: high
+impact: medium
+phase: 2
+parent_task: 30
+depends_on_pr: 117
+created: 2026-02-06T10:30:00Z
+content_hash: abc123def456...
+---
+
+Follow-up to PR #117: Post-processing passes in main.rs were written for the old architecture and are creating duplicate components or conflicts with the new occurrence-based compilation.
+
+## Problem Analysis
+
+- Post-processing in main.rs still expects old architecture
+- Creating extra volume/issue entries (duplicates)
+- May be interfering with correct component extraction
+
+## Expected Outcome
+
+- No duplicate component entries
+- Bibliography extraction matches template_compiler output
+- Simpler main.rs without obsolete processing
+```
 
 ### Content Hashing
 - **Purpose**: Detect changes to task definitions
@@ -71,20 +104,20 @@ csl-tasks graph [--format dot|ascii]  # Visualize task dependencies
 
 ### Configuration
 ```toml
-# .claude/tasks/config.toml
+# tasks/config.toml (or .csl-tasks.toml in project root)
 [github]
 repo = "owner/repo"
-label = "csl-task"  # Label to identify synced issues
+label = "task"  # Label to identify synced issues
 sync_metadata = true  # Sync custom metadata as YAML frontmatter
 
 [local]
-session_dir = ".claude/tasks/current"
-archive_completed = true  # Move completed to .claude/tasks/archive/
+task_dir = "tasks"  # Directory for task markdown files
+archive_completed = true  # Move completed to tasks/archive/
 
 [sync]
 auto_sync = false  # Prompt before sync
 conflict_strategy = "prompt"  # prompt|local|remote
-preserve_github_labels = true  # Don't remove non-csl-task labels
+preserve_github_labels = true  # Don't remove non-task labels
 ```
 
 ## 3. GitHub Synchronization
@@ -93,25 +126,41 @@ preserve_github_labels = true  # Don't remove non-csl-task labels
 **Bidirectional**: Local tasks ↔ GitHub Issues
 
 **Mapping**:
-- `Task.id` → Issue custom field or label (`csl-task-id:42`)
+- `Task.id` → Issue custom field or label (`task-id:42`)
 - `Task.subject` → Issue title
-- `Task.description` → Issue body (after frontmatter)
+- `Task.description` → Issue body (Markdown content after frontmatter)
 - `Task.status` → Issue state + labels
 - `Task.metadata` → YAML frontmatter in issue body
-- `Task.blocks` → Issue references ("Blocks: #123, #456")
+- `Task.blocks` → Footer references ("**Blocks**: #123, #456")
+- Local `tasks/31.md` ↔ GitHub Issue #142 (bidirectional sync)
 
-**Example Issue Body**:
+**Example Issue Body** (synced from `tasks/31.md`):
 ```markdown
 ---
-csl_task_id: 31
+task_id: 31
 priority: high
 impact: medium
 phase: 2
-content_hash: abc123...
+parent_task: 30
+depends_on_pr: 117
+content_hash: abc123def456...
 ---
 
-Follow-up to PR #117: Post-processing passes in main.rs were written for the old architecture...
+Follow-up to PR #117: Post-processing passes in main.rs were written for the old architecture and are creating duplicate components or conflicts with the new occurrence-based compilation.
 
+## Problem Analysis
+
+- Post-processing in main.rs still expects old architecture
+- Creating extra volume/issue entries (duplicates)
+- May be interfering with correct component extraction
+
+## Expected Outcome
+
+- No duplicate component entries
+- Bibliography extraction matches template_compiler output
+- Simpler main.rs without obsolete processing
+
+---
 **Blocks**: #124, #125
 **Blocked By**: None
 ```
@@ -254,27 +303,43 @@ csl-tasks create \
   --metadata estimated_hours=8
 ```
 
-## 7. Integration with Claude Code
+## 7. LLM and Tool Integration
 
-### Task Tool Compatibility
-The CLI tool should be callable from Claude Code's `Task*` tools:
+### JSON Output for Programmatic Access
+All commands support `--format json` for machine-readable output:
 
-```rust
-// TaskList → csl-tasks list --format json
-// TaskGet → csl-tasks get {id}
-// TaskCreate → csl-tasks create ...
-// TaskUpdate → csl-tasks update {id} ...
+```bash
+csl-tasks list --format json
+csl-tasks get 31 --format json
+csl-tasks next --format json
 ```
 
-### Session Management
-- Claude Code sessions map to `.claude/tasks/{session_id}/`
-- Each session maintains its own task set
-- Archive completed sessions to `.claude/tasks/archive/{date}-{session_id}/`
+This allows any LLM, IDE extension, or automation tool to:
+- Query task status and details
+- Find next available work (`next` command)
+- Update task lifecycle (`claim`, `complete` commands)
+- Parse structured task data
 
-### Agent Collaboration
-- Agents (builder, reviewer, planner) can query `csl-tasks next`
-- Agents update status: `csl-tasks update {id} --status in_progress`
-- Agents mark complete: `csl-tasks complete {id}`
+### Human-Readable Output
+Default output is formatted for human readability:
+- Table format for `list`
+- Formatted text for `get`
+- Colored diff output for `sync-status`
+
+### Workflow Integration Examples
+```bash
+# LLM asks: "What should I work on next?"
+csl-tasks next --format json | jq '.subject'
+
+# LLM starts work
+csl-tasks claim 31
+
+# LLM completes work
+csl-tasks complete 31
+
+# Human reviews progress
+csl-tasks list --status completed
+```
 
 ## 8. Error Handling
 
@@ -310,7 +375,7 @@ The CLI tool should be callable from Claude Code's `Task*` tools:
 - GitHub API mock (octocrab + wiremock)
 - Sync scenarios (create, update, conflict)
 - Drift detection accuracy
-- Multi-session isolation
+- Markdown parsing/serialization round-trips
 
 ### End-to-End Tests
 - Real GitHub repo (test organization)
@@ -327,7 +392,8 @@ The CLI tool should be callable from Claude Code's `Task*` tools:
 
 ### Phase 1: Core Task Management (Week 1)
 - [x] Define `Task` struct and `TaskStatus` enum
-- [ ] Implement JSON file storage/loading
+- [ ] Implement Markdown+YAML frontmatter parsing/serialization
+- [ ] File I/O for `tasks/*.md` files
 - [ ] CLI commands: `list`, `get`, `create`, `update`, `delete`
 - [ ] Dependency validation (circular detection)
 - [ ] Unit tests for core logic
@@ -369,10 +435,12 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_yaml = "0.9"
 tokio = { version = "1.0", features = ["full"] }
-octocrab = "0.38"  # GitHub API client
-sha2 = "0.10"      # Content hashing
-anyhow = "1.0"     # Error handling
-thiserror = "1.0"  # Custom error types
+octocrab = "0.38"      # GitHub API client
+sha2 = "0.10"          # Content hashing
+anyhow = "1.0"         # Error handling
+thiserror = "1.0"      # Custom error types
+gray_matter = "0.2"    # YAML frontmatter parsing (or similar)
+pulldown-cmark = "0.9" # Markdown parsing/rendering
 ```
 
 ## Future Enhancements
@@ -391,4 +459,4 @@ thiserror = "1.0"  # Custom error types
 - GitHub Issues API: https://docs.github.com/en/rest/issues
 - YAML Frontmatter: https://jekyllrb.com/docs/front-matter/
 - Task Management Best Practices: Todoist, Linear, Jira workflows
-- Claude Code Task System: Existing `Task*` tool implementations
+- Markdown + Frontmatter: Jekyll, Hugo, Obsidian patterns
