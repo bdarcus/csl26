@@ -5,7 +5,7 @@
 
 ## Executive Summary
 
-The rendering fidelity workflow is the bottleneck preventing faster progress. While excellent tooling has been built (structured oracle, batch aggregation), these tools are not yet integrated into the regular development workflow. This analysis identifies concrete improvements that could significantly accelerate development.
+The rendering fidelity workflow is the bottleneck preventing faster progress. While excellent tooling has been built (structured oracle, batch aggregation), these tools are not yet integrated into the regular agent workflow. This analysis identifies concrete improvements that could significantly accelerate agent-driven development.
 
 ## Current State Analysis
 
@@ -23,7 +23,7 @@ The rendering fidelity workflow is the bottleneck preventing faster progress. Wh
 | `oracle-structured.js` | Component-level diff | ✅ Implemented | ❌ **Not integrated** |
 | `oracle-batch-aggregate.js` | Multi-style failure analysis | ✅ Implemented | ❌ **Not integrated** |
 
-**Key Finding:** The structured oracle tools exist but developers are still using the basic string comparison workflow. This wastes time on manual failure inspection.
+**Key Finding:** The structured oracle tools exist but agents are still using the basic string comparison workflow. This wastes tokens on manual failure inspection.
 
 ### Rust Test Infrastructure (🔶 Basic, Needs Expansion)
 - **Current:** `oracle_comparison.rs` (basic test), `subsequent_author_substitute.rs` (feature test)
@@ -35,22 +35,22 @@ The rendering fidelity workflow is the bottleneck preventing faster progress. Wh
 - No documented workflow for using structured oracle tools
 - No regression detection process
 - No guidance on when to run batch analysis
-- Developers default to basic oracle.js out of habit
+- Agents default to basic oracle.js out of habit
 
 ## Identified Bottlenecks (Ranked by Impact)
 
 ### 1. Manual Failure Inspection ⚠️ **HIGHEST IMPACT**
-**Problem:** Developers manually compare long strings by eye to find differences.
+**Problem:** Agents must manually compare long strings to find differences, wasting tokens.
 
 **Evidence from TIER3_PLAN.md:**
 > "Manual failure inspection - Comparing strings by eye is slow and error-prone"
 > "No structured diff - Hard to see which *component* is wrong vs just different punctuation"
 
-**Impact:** ~30-60 minutes per style debugging session wasted
+**Impact:** High token consumption per style debugging session
 
 **Solution:** Integrate `oracle-structured.js` as the default comparison tool
 
-**Time Savings:** 50-80% reduction in debugging time per style
+**Benefit:** Significant reduction in token usage for debugging
 
 ### 2. No Batch Progress Tracking ⚠️ **HIGH IMPACT**
 **Problem:** Can't see if a fix helps 1 style or 10 styles without running manually.
@@ -58,11 +58,11 @@ The rendering fidelity workflow is the bottleneck preventing faster progress. Wh
 **Evidence from TIER3_PLAN.md:**
 > "No batch progress tracking - Can't see if a fix helps 10 styles or just 1"
 
-**Impact:** Developers make changes without understanding broader impact
+**Impact:** Changes made without understanding broader impact
 
 **Solution:** Run `oracle-batch-aggregate.js` after each fix to see impact
 
-**Time Savings:** Better prioritization, avoid regressions
+**Benefit:** Better prioritization, avoid regressions
 
 ### 3. Limited Root Cause Visibility ⚠️ **MEDIUM IMPACT**
 **Problem:** CSL → YAML migration is a black box - hard to debug why a variable ends up in the wrong place.
@@ -71,11 +71,11 @@ The rendering fidelity workflow is the bottleneck preventing faster progress. Wh
 > "Limited root cause visibility - CSL → YAML migration is a black box"
 > Tool 3: Migration Debugger (PENDING)
 
-**Impact:** 20-40% of debugging time spent tracing migration issues
+**Impact:** Significant debugging effort spent tracing migration issues
 
 **Solution:** Implement `--debug-variable VAR` flag in csln_migrate
 
-**Time Savings:** 50% reduction in migration debugging time
+**Benefit:** Faster root cause identification
 
 ### 4. Test Data Expansion Overhead 🔶 **MEDIUM IMPACT**
 **Problem:** Adding new test items requires manual work across multiple files.
@@ -90,7 +90,7 @@ The rendering fidelity workflow is the bottleneck preventing faster progress. Wh
 
 **Solution:** Test data generator + automated validation workflow
 
-**Time Savings:** Enables faster test expansion
+**Benefit:** Enables faster test expansion
 
 ### 5. No Regression Detection ⚠️ **MEDIUM IMPACT**
 **Problem:** No automated way to detect if a change breaks previously passing styles.
@@ -99,11 +99,11 @@ The rendering fidelity workflow is the bottleneck preventing faster progress. Wh
 
 **Solution:** CI integration with baseline tracking
 
-**Time Savings:** Catch regressions immediately
+**Benefit:** Catch regressions immediately
 
 ## Recommended Improvements (Prioritized)
 
-### Priority 1: Workflow Integration (Quick Wins - 1-2 days)
+### Priority 1: Workflow Integration (Quick Wins)
 
 #### 1.1 Make Structured Oracle the Default
 **Current:** `node scripts/oracle.js styles/apa.csl`
@@ -115,7 +115,6 @@ The rendering fidelity workflow is the bottleneck preventing faster progress. Wh
 - Update CLAUDE.md test commands
 - Add `--simple` flag if old behavior needed
 
-**Effort:** 1 hour
 **Impact:** Immediate improvement in debugging efficiency
 
 #### 1.2 Add Batch Analysis to Workflow
@@ -136,7 +135,6 @@ The rendering fidelity workflow is the bottleneck preventing faster progress. Wh
 - Add to CLAUDE.md autonomous commands whitelist
 - Document in workflow guide
 
-**Effort:** 2 hours
 **Impact:** Better prioritization, regression detection
 
 #### 1.3 Create Workflow Documentation
@@ -149,10 +147,9 @@ The rendering fidelity workflow is the bottleneck preventing faster progress. Wh
 - Batch analysis interpretation guide
 - Common failure patterns and fixes
 
-**Effort:** 4 hours
-**Impact:** Reduces onboarding time, standardizes process
+**Impact:** Reduces agent setup overhead, standardizes process
 
-### Priority 2: Migration Debugger (Medium Effort - 3-5 days)
+### Priority 2: Migration Debugger
 
 #### 2.1 Implement `--debug-variable` Flag
 **Location:** `crates/csln_migrate/src/main.rs`
@@ -183,10 +180,9 @@ Deduplication: Node 1 merged into Node 2 (same variable)
 Ordering: Placed after container-title by reorder_serial_components()
 ```
 
-**Effort:** 3-5 days
-**Impact:** 50% reduction in migration debugging time
+**Impact:** Faster migration debugging
 
-### Priority 3: Test Data Expansion (Medium Effort - 2-3 days)
+### Priority 3: Test Data Expansion
 
 #### 3.1 Add Missing Reference Types
 **Target:** 25 items (up from 15)
@@ -206,7 +202,6 @@ Ordering: Placed after container-title by reorder_serial_components()
 - Very long title (>200 chars)
 - Multilingual data (future: csln#66)
 
-**Effort:** 2-3 days
 **Impact:** Better coverage, catch more edge cases
 
 #### 3.2 Create Test Data Generator
@@ -218,10 +213,9 @@ Ordering: Placed after container-title by reorder_serial_components()
 - Auto-assigns next ITEM-N number
 - Runs oracle comparison automatically
 
-**Effort:** 4 hours
 **Impact:** Makes test expansion easier
 
-### Priority 4: Regression Detection (Medium Effort - 2-3 days)
+### Priority 4: Regression Detection
 
 #### 4.1 Baseline Tracking System
 **Approach:** Store baseline results, compare on each run
@@ -247,7 +241,6 @@ New passing:
 Net impact: -1 passing entries
 ```
 
-**Effort:** 2-3 days
 **Impact:** Catch regressions immediately
 
 ### Priority 5: Rust Test Integration (Low Priority - Future)
@@ -260,30 +253,29 @@ Net impact: -1 passing entries
 - Use `insta` crate for snapshot testing
 - Run in CI on every PR
 
-**Effort:** 1-2 weeks
 **Impact:** Better CI integration, faster tests
 
 **Priority:** Low - Node.js scripts work well, this is optimization
 
-## Implementation Plan
+## Implementation Phases
 
-### Phase 1: Quick Wins (Week 1)
+### Phase 1: Quick Wins
 - [ ] Rename oracle scripts (make structured default)
 - [ ] Create `workflow-test.sh` wrapper
 - [ ] Write `docs/RENDERING_WORKFLOW.md`
 - [ ] Update CLAUDE.md with new commands
 
-**Expected Impact:** 50% reduction in manual debugging time
+**Expected Impact:** Significant reduction in token usage for debugging
 
-### Phase 2: Migration Debugger (Week 2)
+### Phase 2: Migration Debugger
 - [ ] Implement `--debug-variable` flag in csln_migrate
 - [ ] Add provenance tracking infrastructure
 - [ ] Test on common failure cases (volume, year, pages)
 - [ ] Document usage in workflow guide
 
-**Expected Impact:** 50% reduction in migration debugging time
+**Expected Impact:** Faster root cause identification
 
-### Phase 3: Test & Regression (Week 3)
+### Phase 3: Test & Regression
 - [ ] Expand test data to 25 items
 - [ ] Create test data generator
 - [ ] Implement baseline tracking in batch aggregator
@@ -297,22 +289,22 @@ Net impact: -1 passing entries
 - [ ] Add examples to workflow guide
 - [ ] Update README with new workflow
 
-## Success Metrics
+## Agent Performance Benchmarks
 
 **Before Improvements:**
-- Time to debug one style: 60-90 minutes
+- Token usage per style debugging: High (manual string comparison)
 - Regressions discovered: Late (after multiple commits)
 - Test data coverage: 15 items, 8 types
-- Developer experience: Manual, error-prone
+- Agent experience: Manual, token-intensive
 
 **After Phase 1 (Quick Wins):**
-- Time to debug one style: 30-45 minutes (50% reduction)
+- Token usage per style debugging: Significantly reduced (structured diffs)
 - Batch impact visible immediately
 - Workflow documented and standardized
 
 **After Phase 2 (Migration Debugger):**
-- Migration debugging time: 50% reduction
-- Root cause identification: Minutes vs hours
+- Migration debugging tokens: Significantly reduced
+- Root cause identification: Fast
 - Migration confidence: High
 
 **After Phase 3 (Test & Regression):**
@@ -324,7 +316,7 @@ Net impact: -1 passing entries
 
 1. **Should we run batch analysis in CI?**
    - Pro: Catch regressions automatically
-   - Con: Adds ~10-15 minutes to CI time
+   - Con: Adds overhead to CI time
    - **Recommendation:** Add as optional check, run on-demand initially
 
 2. **Should we move to Rust tests now or later?**
@@ -343,11 +335,8 @@ Net impact: -1 passing entries
 
 The rendering fidelity workflow can be significantly improved with **quick, targeted changes**:
 
-1. **Week 1:** Make structured oracle the default → 50% faster debugging
-2. **Week 2:** Add migration debugger → Root cause identification in minutes
-3. **Week 3:** Expand tests + regression detection → Catch issues early
+1. **Phase 1:** Make structured oracle the default → More efficient debugging
+2. **Phase 2:** Add migration debugger → Fast root cause identification
+3. **Phase 3:** Expand tests + regression detection → Catch issues early
 
-**Total estimated time:** 3 weeks
-**Total expected impact:** 2-3x faster rendering fidelity development
-
-The highest ROI improvements are **workflow integration** (Priority 1) which can be done in 1-2 days with immediate impact.
+The highest ROI improvements are **workflow integration** (Priority 1) which can be implemented with immediate impact.
