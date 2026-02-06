@@ -123,6 +123,7 @@ $body
 # Parse TASKS.md and create issues
 parse_tasks() {
     local in_task=false
+    local in_completed_section=false
     local task_num=""
     local title=""
     local body=""
@@ -131,6 +132,17 @@ parse_tasks() {
     local blocked_by=""
 
     while IFS= read -r line; do
+        # Detect "Completed Tasks" section
+        if [[ "$line" =~ ^##[[:space:]]+Completed[[:space:]]Tasks ]]; then
+            in_completed_section=true
+            continue
+        fi
+
+        # Skip all tasks in completed section
+        if [[ "$in_completed_section" == true ]]; then
+            continue
+        fi
+
         # Detect task start
         if [[ "$line" =~ ^###[[:space:]]+#([0-9]+):[[:space:]]+(.+)$ ]]; then
             # Save previous task if exists
