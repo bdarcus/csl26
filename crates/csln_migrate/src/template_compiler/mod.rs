@@ -18,19 +18,39 @@ use csln_core::{
 };
 use std::collections::HashMap;
 
+/// Context for a conditional branch, distinguishing between type-specific
+/// and default branches. This is critical for correct suppress semantics.
+#[derive(Debug, Clone)]
+enum BranchContext {
+    /// Type-specific branch (THEN/ELSE_IF with type conditions).
+    /// Components here should be shown ONLY for these types.
+    TypeSpecific(Vec<ItemType>),
+    /// Default branch (ELSE or no condition).
+    /// Components here should be shown for ALL types except overridden.
+    Default,
+}
+
+/// Records a component's occurrence in a specific branch context.
+#[derive(Debug, Clone)]
+struct ComponentOccurrence {
+    component: TemplateComponent,
+    context: BranchContext,
+}
+
 /// Compiles CslnNode trees into TemplateComponents.
 pub struct TemplateCompiler;
 
 impl TemplateCompiler {
     /// Compile a list of CslnNodes into TemplateComponents.
     ///
-    /// Recursively processes Groups and Conditions to extract all components.
-    /// In the future, Condition logic should be handled by Options/overrides.
-    /// Compile a list of CslnNodes into TemplateComponents.
+    /// Uses occurrence-based compilation to properly handle mutually exclusive
+    /// conditional branches. Components are collected with their branch context,
+    /// then merged with correct suppress semantics.
     pub fn compile(&self, nodes: &[CslnNode]) -> Vec<TemplateComponent> {
-        // Use compile_with_wrap with no initial wrap and no current types
         let no_wrap = (None, None, None);
-        self.compile_with_wrap(nodes, &no_wrap, &[])
+        let mut occurrences = Vec::new();
+        self.collect_occurrences(nodes, &no_wrap, &BranchContext::Default, &mut occurrences);
+        self.merge_occurrences(occurrences)
     }
     /// Compile and sort for citation output (author first, then date).
     /// Uses simplified compile that skips else branches to avoid extra fields.
@@ -40,6 +60,255 @@ impl TemplateCompiler {
         components
     }
 
+    /// Collect component occurrences with their branch context.
+    /// This replaces the old compile_with_wrap approach.
+    fn collect_occurrences(
+        &self,
+        nodes: &[CslnNode],
+        inherited_wrap: &(
+            Option<csln_core::template::WrapPunctuation>,
+            Option<String>,
+            Option<String>,
+        ),
+        context: &BranchContext,
+        occurrences: &mut Vec<ComponentOccurrence>,
+    ) {
+        let mut i = 0;
+
+        while i < nodes.len() {
+            let node = &nodes[i];
+
+            // Lookahead merge for Text nodes
+            if let CslnNode::Text { value } = node {
+                if i + 1 < nodes.len() {
+                    if let Some(mut next_comp) = self.compile_node(&nodes[i + 1]) {
+                        // Merge text into prefix
+                        let mut rendering = self.get_component_rendering(&next_comp);
+                        let mut new_prefix = value.clone();
+                        if let Some(p) = rendering.prefix {
+                            new_prefix.push_str(&p);
+                        }
+                        rendering.prefix = Some(new_prefix);
+                        self.set_component_rendering(&mut next_comp, rendering);
+
+                        // Apply inherited wrap if applicable
+                        if inherited_wrap.0.is_some()
+                            && matches!(&next_comp, TemplateComponent::Date(_))
+                        {
+                            self.apply_wrap_to_component(&mut next_comp, inherited_wrap);
+                        }
+
+                        occurrences.push(ComponentOccurrence {
+                            component: next_comp,
+                            context: context.clone(),
+                        });
+                        i += 2;
+                        continue;
+                    }
+                }
+            }
+
+            if let Some(mut component) = self.compile_node(node) {
+                // Apply inherited wrap to date components
+                if inherited_wrap.0.is_some() && matches!(&component, TemplateComponent::Date(_)) {
+                    self.apply_wrap_to_component(&mut component, inherited_wrap);
+                }
+                occurrences.push(ComponentOccurrence {
+                    component,
+                    context: context.clone(),
+                });
+            } else {
+                match node {
+                    CslnNode::Group(g) => {
+                        // Check if this group has its own wrap
+                        let group_wrap = Self::infer_wrap_from_affixes(
+                            &g.formatting.prefix,
+                            &g.formatting.suffix,
+                        );
+                        let effective_wrap = if group_wrap.0.is_some() {
+                            group_wrap.clone()
+                        } else {
+                            inherited_wrap.clone()
+                        };
+
+                        // Collect group components into a temporary list
+                        let mut group_occurrences = Vec::new();
+                        self.collect_occurrences(
+                            &g.children,
+                            &effective_wrap,
+                            context,
+                            &mut group_occurrences,
+                        );
+
+                        // Extract components from occurrences for grouping logic
+                        let group_components: Vec<TemplateComponent> = group_occurrences
+                            .iter()
+                            .map(|o| o.component.clone())
+                            .collect();
+
+                        // Decide if this should be a List
+                        let meaningful_delimiter = g
+                            .delimiter
+                            .as_ref()
+                            .is_some_and(|d| matches!(d.as_str(), "" | "none" | ": " | " " | ", "));
+                        let is_small_structural_group =
+                            group_components.len() >= 2 && group_components.len() <= 3;
+                        let should_be_list = meaningful_delimiter
+                            && is_small_structural_group
+                            && group_wrap.0.is_none();
+
+                        if should_be_list && !group_components.is_empty() {
+                            let list = TemplateComponent::List(TemplateList {
+                                items: group_components,
+                                delimiter: self.map_delimiter(&g.delimiter),
+                                rendering: self.convert_formatting(&g.formatting),
+                                ..Default::default()
+                            });
+                            occurrences.push(ComponentOccurrence {
+                                component: list,
+                                context: context.clone(),
+                            });
+                        } else {
+                            // Flatten - add all group occurrences directly
+                            occurrences.extend(group_occurrences);
+                        }
+                    }
+                    CslnNode::Condition(c) => {
+                        // THEN branch: type-specific if types specified
+                        let then_context = if c.if_item_type.is_empty() {
+                            BranchContext::Default
+                        } else {
+                            BranchContext::TypeSpecific(c.if_item_type.clone())
+                        };
+                        self.collect_occurrences(
+                            &c.then_branch,
+                            inherited_wrap,
+                            &then_context,
+                            occurrences,
+                        );
+
+                        // ELSE_IF branches: each is type-specific
+                        for else_if in &c.else_if_branches {
+                            let else_if_context = if else_if.if_item_type.is_empty() {
+                                BranchContext::Default
+                            } else {
+                                BranchContext::TypeSpecific(else_if.if_item_type.clone())
+                            };
+                            self.collect_occurrences(
+                                &else_if.children,
+                                inherited_wrap,
+                                &else_if_context,
+                                occurrences,
+                            );
+                        }
+
+                        // ELSE branch: always default context
+                        if let Some(ref else_nodes) = c.else_branch {
+                            self.collect_occurrences(
+                                else_nodes,
+                                inherited_wrap,
+                                &BranchContext::Default,
+                                occurrences,
+                            );
+                        }
+                    }
+                    _ => {}
+                }
+            }
+            i += 1;
+        }
+    }
+
+    /// Merge component occurrences with smart suppress semantics.
+    ///
+    /// Key logic:
+    /// - If component appears in DEFAULT branch → base suppress: false (visible by default)
+    /// - If component ONLY in type-specific branches → base suppress: true + type overrides
+    /// - Collect all type-specific occurrences as overrides with suppress: false
+    fn merge_occurrences(&self, occurrences: Vec<ComponentOccurrence>) -> Vec<TemplateComponent> {
+        let mut result: Vec<TemplateComponent> = Vec::new();
+
+        // Group occurrences by variable key (including Lists)
+        let mut grouped: HashMap<String, Vec<ComponentOccurrence>> = HashMap::new();
+        let mut list_counter = 0;
+
+        for occurrence in occurrences {
+            let key = if let Some(var_key) = self.get_variable_key(&occurrence.component) {
+                var_key
+            } else if let TemplateComponent::List(ref list) = occurrence.component {
+                // Create a signature for the List based on its contents
+                let list_vars = self.extract_list_vars(list);
+                let mut signature = list_vars.clone();
+                signature.sort();
+                let list_key = format!("list:{}", signature.join("|"));
+                list_key
+            } else {
+                // Other non-variable components - give unique key
+                list_counter += 1;
+                format!("other:{}", list_counter)
+            };
+
+            grouped.entry(key).or_default().push(occurrence);
+        }
+
+        // Merge each group
+        for (_key, group) in grouped {
+            if group.is_empty() {
+                continue;
+            }
+
+            // Check if any occurrence is in Default context
+            let has_default = group
+                .iter()
+                .any(|occ| matches!(occ.context, BranchContext::Default));
+
+            // Start with the first component as the base
+            let mut merged = group[0].component.clone();
+
+            if has_default {
+                // Component appears in default branch → visible by default
+                let mut base_rendering = self.get_component_rendering(&merged);
+                base_rendering.suppress = Some(false);
+                self.set_component_rendering(&mut merged, base_rendering);
+
+                // Add type-specific overrides for any TypeSpecific contexts
+                for occurrence in &group {
+                    if let BranchContext::TypeSpecific(types) = &occurrence.context {
+                        for item_type in types {
+                            let type_str = self.item_type_to_string(item_type);
+                            let mut rendering = self.get_component_rendering(&occurrence.component);
+                            rendering.suppress = Some(false); // Explicitly visible for this type
+                            self.add_override_to_component(&mut merged, type_str, rendering);
+                        }
+                    }
+                }
+            } else {
+                // Component ONLY in type-specific branches → hidden by default
+                let mut base_rendering = self.get_component_rendering(&merged);
+                base_rendering.suppress = Some(true);
+                self.set_component_rendering(&mut merged, base_rendering.clone());
+
+                // Add overrides for each type-specific occurrence
+                for occurrence in &group {
+                    if let BranchContext::TypeSpecific(types) = &occurrence.context {
+                        for item_type in types {
+                            let type_str = self.item_type_to_string(item_type);
+                            let mut rendering = self.get_component_rendering(&occurrence.component);
+                            rendering.suppress = Some(false); // Show for this type
+                            self.add_override_to_component(&mut merged, type_str, rendering);
+                        }
+                    }
+                }
+            }
+
+            result.push(merged);
+        }
+
+        result
+    }
+
+    // Old compilation method kept for citation compilation (compile_simple)
+    #[allow(dead_code)]
     fn compile_with_wrap(
         &self,
         nodes: &[CslnNode],
@@ -180,6 +449,7 @@ impl TemplateCompiler {
         components
     }
 
+    #[allow(dead_code)]
     fn add_or_upgrade_component(
         &self,
         components: &mut Vec<TemplateComponent>,
@@ -275,6 +545,7 @@ impl TemplateCompiler {
     /// Add type-specific overrides to all items within a List.
     /// This ensures that when a List is created inside a type-specific branch,
     /// all its items get the appropriate suppress=true with type-specific unsuppress.
+    #[allow(dead_code)]
     fn add_type_overrides_to_list_items(
         &self,
         items: &mut [TemplateComponent],
@@ -303,6 +574,7 @@ impl TemplateCompiler {
         }
     }
 
+    #[allow(dead_code)]
     fn add_overrides_recursive(
         &self,
         component: &mut TemplateComponent,
@@ -344,6 +616,7 @@ impl TemplateCompiler {
         }
     }
 
+    #[allow(dead_code)]
     fn add_overrides_to_existing(
         &self,
         existing: &mut TemplateComponent,
@@ -464,13 +737,8 @@ impl TemplateCompiler {
 
     /// Compile bibliography with type-specific templates.
     ///
-    /// Returns the default template and a HashMap of type-specific templates.
-    /// Each type-specific template is COMPLETE - it includes all components,
-    /// not just the type-specific parts.
-    ///
-    /// Currently DISABLED - returns empty type_templates because the extraction
-    /// produces malformed templates with duplicates and missing components.
-    /// The infrastructure is in place for future enhancement.
+    /// Uses the new occurrence-based compilation approach which correctly handles
+    /// mutually exclusive conditional branches with proper suppress semantics.
     pub fn compile_bibliography_with_types(
         &self,
         nodes: &[CslnNode],
@@ -479,45 +747,22 @@ impl TemplateCompiler {
         Vec<TemplateComponent>,
         HashMap<String, Vec<TemplateComponent>>,
     ) {
-        // Compile the default template
+        // Compile using the new occurrence-based approach
+        // This handles suppress semantics correctly without needing deduplication
         let mut default_template = self.compile(nodes);
-
-        // Deduplicate and flatten to remove redundant nesting from branch processing
-        default_template = self.deduplicate_and_flatten(default_template);
-
-        // DEBUG: Check titles after deduplicate
-        for c in &default_template {
-            if let TemplateComponent::Title(t) = c {
-                if t.title == csln_core::template::TitleType::Primary {
-                    if let Some(ref ovr) = t.overrides {
-                        for (k, v) in ovr {
-                            eprintln!("  {} -> emph={:?} quote={:?}", k, v.emph, v.quote);
-                        }
-                    } else {
-                        eprintln!("  (no overrides)");
-                    }
-                }
-            }
-        }
 
         self.sort_bibliography_components(&mut default_template, is_numeric);
 
         // Type-specific template generation is disabled for now.
-        // The compile_for_type approach produces malformed templates.
         // Future work: properly merge common components with type-specific branches.
         let type_templates: HashMap<String, Vec<TemplateComponent>> = HashMap::new();
 
         (default_template, type_templates)
     }
 
-    /// Remove duplicate components and flatten unnecessary nesting.
-    ///
-    /// The compile_with_wrap function processes ALL branches of conditions,
-    /// which can result in duplicate components and deeply nested Lists.
-    /// This function cleans up the result by:
-    /// 1. First pass: add all non-List components (primary variables)
-    /// 2. Second pass: recursively clean Lists by removing items that are at top-level
-    /// 3. Skip Lists that become empty or only have one item after cleaning
+    /// Old deduplication method - no longer needed with occurrence-based compilation.
+    /// Kept for reference but not used in new code path.
+    #[allow(dead_code)]
     fn deduplicate_and_flatten(
         &self,
         components: Vec<TemplateComponent>,
@@ -585,8 +830,7 @@ impl TemplateCompiler {
         result
     }
 
-    /// Recursively clean a List by removing items that duplicate seen variables.
-    /// Returns None if the list becomes empty, unwraps single-item lists.
+    #[allow(dead_code)]
     fn clean_list_recursive(
         &self,
         list: &TemplateList,
@@ -645,7 +889,7 @@ impl TemplateCompiler {
         vars
     }
 
-    /// Merge overrides from source into target component.
+    #[allow(dead_code)]
     fn merge_overrides_into(&self, target: &mut TemplateComponent, source: &TemplateComponent) {
         if let Some(source_overrides) = self.get_component_overrides(source) {
             let target_overrides = match target {
@@ -1343,7 +1587,7 @@ impl TemplateCompiler {
         }
     }
 
-    /// Get type-specific overrides from a component.
+    #[allow(dead_code)]
     fn get_component_overrides(
         &self,
         component: &TemplateComponent,
