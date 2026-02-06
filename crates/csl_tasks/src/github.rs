@@ -174,6 +174,80 @@ impl GitHubSync {
                     .and_then(|body| extract_task_id_from_body(body))
             })
     }
+
+    pub async fn list_all_open_issues(&self) -> Result<Vec<octocrab::models::issues::Issue>> {
+        let mut issues = Vec::new();
+        let mut page = 1u32;
+
+        loop {
+            let page_issues = self
+                .octocrab
+                .issues(&self.owner, &self.repo)
+                .list()
+                .state(octocrab::params::State::Open)
+                .per_page(100)
+                .page(page)
+                .send()
+                .await
+                .context("failed to list GitHub issues")?;
+
+            let items = page_issues.items;
+            if items.is_empty() {
+                break;
+            }
+
+            issues.extend(items);
+            page += 1;
+        }
+
+        Ok(issues)
+    }
+
+    pub fn issue_to_task(
+        &self,
+        issue: &octocrab::models::issues::Issue,
+        next_id: u32,
+    ) -> Result<Task> {
+        let id = Self::extract_task_id(issue).unwrap_or(next_id);
+        let subject = issue.title.clone();
+        let description = issue.body.as_deref().unwrap_or("").to_string();
+
+        let status = if issue.state == octocrab::models::IssueState::Closed {
+            TaskStatus::Completed
+        } else {
+            TaskStatus::Pending
+        };
+
+        let mut metadata = HashMap::new();
+
+        // Extract priority from labels
+        for label in &issue.labels {
+            if label.name.starts_with("priority-") {
+                metadata.insert(
+                    "priority".to_string(),
+                    serde_json::json!(label.name.strip_prefix("priority-").unwrap()),
+                );
+            }
+        }
+
+        // Store GitHub issue number
+        let github_issue = Some(issue.number as u32);
+
+        let content_hash = Task::compute_hash(&subject, &description, &metadata);
+
+        Ok(Task {
+            id,
+            subject,
+            description,
+            active_form: None,
+            status,
+            blocks: Vec::new(),
+            blocked_by: Vec::new(),
+            metadata,
+            github_issue,
+            content_hash,
+        })
+    }
 }
 
 fn status_to_label(status: &TaskStatus) -> String {

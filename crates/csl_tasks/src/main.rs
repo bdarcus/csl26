@@ -279,7 +279,51 @@ async fn main() -> Result<()> {
                     }
                 }
                 SyncDirection::FromGh => {
-                    println!("Syncing from GitHub not yet implemented");
+                    println!("Syncing from GitHub...");
+                    let issues = github.list_all_open_issues().await?;
+                    println!("Found {} open issues", issues.len());
+
+                    if dry_run {
+                        for issue in &issues {
+                            println!(
+                                "  [DRY RUN] Would import issue #{}: {}",
+                                issue.number, issue.title
+                            );
+                        }
+                        println!("Dry run complete (no changes made)");
+                    } else {
+                        let existing_tasks = storage.load_all().unwrap_or_default();
+                        let mut next_id =
+                            existing_tasks.iter().map(|t| t.id).max().unwrap_or(0) + 1;
+
+                        let mut imported = 0;
+                        let mut skipped = 0;
+
+                        for issue in issues {
+                            // Check if we already have this issue
+                            if existing_tasks
+                                .iter()
+                                .any(|t| t.github_issue == Some(issue.number as u32))
+                            {
+                                skipped += 1;
+                                continue;
+                            }
+
+                            let task = github.issue_to_task(&issue, next_id)?;
+                            storage.save(&task)?;
+                            println!("  Imported issue #{} as task #{}", issue.number, task.id);
+
+                            if github::GitHubSync::extract_task_id(&issue).is_none() {
+                                next_id += 1;
+                            }
+
+                            imported += 1;
+                        }
+
+                        println!("\nSync complete!");
+                        println!("  Imported: {}", imported);
+                        println!("  Skipped (already exists): {}", skipped);
+                    }
                 }
                 SyncDirection::Both => {
                     println!("Bidirectional sync not yet implemented");
