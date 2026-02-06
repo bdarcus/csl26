@@ -16,7 +16,7 @@ A general-purpose Rust CLI tool for managing project tasks with GitHub Issues sy
 ## Installation
 
 ```bash
-cargo build --package csl_tasks --release
+cargo build --package csl-tasks --release
 ```
 
 ## Quick Start
