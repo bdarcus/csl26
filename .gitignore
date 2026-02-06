@@ -16,5 +16,7 @@ migrated_*.yaml
 debug_*.yaml
 oracle_comparison.rs
 styles_analysis.txt
-baselines/
+# Baseline JSON files (keep directory structure)
 baselines/*.json
+!baselines/README.md
+!baselines/.gitkeep
