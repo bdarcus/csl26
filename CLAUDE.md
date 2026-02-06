@@ -349,6 +349,43 @@ All changes must be made on feature branches. The user will handle merging via G
 
 4. **Stop here.** Do NOT attempt to merge. The user will review and merge when ready.
 
+## Pre-PR Checklist
+
+**CRITICAL: Before creating any pull request, you MUST complete this checklist:**
+
+1. **Format code** (REQUIRED)
+   ```bash
+   cargo fmt
+   ```
+   CI will fail without this. Run fmt immediately before commit.
+
+2. **Check for linting issues** (REQUIRED)
+   ```bash
+   cargo clippy --all-targets --all-features -- -D warnings
+   ```
+   Fix ALL clippy warnings. Zero tolerance policy.
+
+3. **Run tests** (REQUIRED)
+   ```bash
+   cargo test
+   ```
+   All tests must pass. Do not create PR with failing tests.
+
+4. **Verify changes**
+   ```bash
+   git diff --staged
+   ```
+   Review what you're committing. Ensure no unintended changes.
+
+**If ANY of these steps fail, DO NOT create the PR. Fix the issues first.**
+
+This checklist applies to:
+- Direct commits to feature branches
+- Code changes delegated to @builder agents
+- Any work that will become a PR
+
+**Enforcement:** Violation of this checklist wastes CI resources and user time. The pre-commit checks are not optional suggestions - they are mandatory requirements.
+
 ## Pull Request Convention
 
 **Draft vs Ready PRs:**
