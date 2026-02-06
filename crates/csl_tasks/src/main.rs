@@ -625,9 +625,27 @@ fn status_str(status: &TaskStatus) -> &str {
     }
 }
 
+fn strip_emoji(s: &str) -> String {
+    s.chars()
+        .filter(|c| {
+            let c = *c as u32;
+            // Filter out emoji ranges
+            !(c >= 0x1F300 && c <= 0x1F9FF) // Emoticons, symbols, pictographs
+                && !(c >= 0x2600 && c <= 0x26FF) // Miscellaneous symbols
+                && !(c >= 0x2700 && c <= 0x27BF) // Dingbats
+                && !(c >= 0xFE00 && c <= 0xFE0F) // Variation selectors
+                && !(c >= 0x1F000 && c <= 0x1F02F) // Mahjong tiles
+                && !(c >= 0x1F0A0 && c <= 0x1F0FF) // Playing cards
+        })
+        .collect::<String>()
+        .trim()
+        .to_string()
+}
+
 fn truncate(s: &str, max_len: usize) -> String {
+    let s = strip_emoji(s);
     if s.len() <= max_len {
-        s.to_string()
+        s
     } else {
         format!("{}...", &s[..max_len - 3])
     }
