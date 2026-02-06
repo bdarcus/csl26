@@ -6,14 +6,20 @@ pub fn detect_processing_mode(style: &Style) -> Option<Processing> {
     // Check if bibliography uses second-field-align (heuristic for numeric labels)
     // Actually, check if it's APA (not numeric) or check common markers
     // Since 'second_field_align' is missing in my model read, I'll use a safer heuristic.
-    let is_numeric = style.class == "in-text"
-        && style.citation.layout.children.iter().any(|node| {
-            use csl_legacy::model::CslNode;
-            match node {
-                CslNode::Number(n) => n.variable == "citation-number",
-                _ => false,
-            }
-        });
+
+    // Helper to recursively search for citation-number in layout nodes
+    fn has_citation_number(nodes: &[csl_legacy::model::CslNode]) -> bool {
+        use csl_legacy::model::CslNode;
+        nodes.iter().any(|node| match node {
+            CslNode::Number(n) => n.variable == "citation-number",
+            CslNode::Group(g) => has_citation_number(&g.children),
+            CslNode::Text(t) if t.variable.as_deref() == Some("citation-number") => true,
+            _ => false,
+        })
+    }
+
+    let is_numeric =
+        style.class == "in-text" && has_citation_number(&style.citation.layout.children);
 
     if is_numeric {
         return Some(Processing::Numeric);
