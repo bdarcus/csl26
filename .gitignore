@@ -16,3 +16,5 @@ migrated_*.yaml
 debug_*.yaml
 oracle_comparison.rs
 styles_analysis.txt
+baselines/
+baselines/*.json
