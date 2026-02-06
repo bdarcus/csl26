@@ -171,7 +171,6 @@ Code should be self-documenting with clear comments explaining:
 - **Key Features**: Variable-once rule, type-specific overrides, name_order control, initials formatting, volume(issue) grouping
 
 ### Known Gaps
-- Group delimiter extraction (colon vs period between components)
 - Page label extraction ("pp." from CSL Label nodes)
 - Volume-pages delimiter varies by style (comma vs colon)
 - DOI suppression for styles that don't output DOI
