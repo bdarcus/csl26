@@ -305,20 +305,128 @@ csl-tasks create \
 
 ## 7. LLM and Tool Integration
 
-### JSON Output for Programmatic Access
+### Integration Strategies
+
+The CLI tool can be integrated with any LLM through multiple approaches:
+
+#### Option 1: Direct CLI Execution (Simplest)
+LLMs with shell/bash execution capabilities (Claude Code, Cursor, Aider) call the CLI directly:
+
+```bash
+# LLM uses Bash tool to execute
+csl-tasks list --format json
+csl-tasks next --format json
+csl-tasks claim 31
+```
+
+**Pros**: Zero integration code, works immediately
+**Cons**: Requires bash execution capability
+
+#### Option 2: MCP Server (Recommended for Claude)
+Create a Model Context Protocol server that wraps the CLI:
+
+```typescript
+// MCP server provides tools like:
+server.addTool({
+  name: "tasks_list",
+  description: "List all tasks",
+  parameters: { status?: string },
+  execute: async (params) => {
+    const result = await exec(`csl-tasks list --status ${params.status} --format json`);
+    return JSON.parse(result.stdout);
+  }
+});
+```
+
+**Pros**: Native Claude integration, typed interfaces, better UX
+**Cons**: Requires MCP server implementation (~200 lines)
+
+#### Option 3: Language-Specific SDKs
+Wrap CLI in Python/JavaScript/etc for programmatic access:
+
+```python
+# Python SDK
+from csl_tasks import Tasks
+
+tasks = Tasks()
+next_task = tasks.next()
+tasks.claim(next_task.id)
+```
+
+**Pros**: Ergonomic for scripting, no JSON parsing
+**Cons**: Maintenance overhead, multiple implementations
+
+#### Option 4: HTTP API Server (Future)
+Run `csl-tasks serve` as background daemon with REST API:
+
+```bash
+# Terminal 1: Start server
+csl-tasks serve --port 8080
+
+# Terminal 2: LLM makes HTTP requests
+curl http://localhost:8080/api/tasks/next
+```
+
+**Pros**: Language-agnostic, works with any LLM
+**Cons**: More complex, requires server management
+
+### Recommended Integrations
+
+**Claude Code**:
+```bash
+# Add to ~/.claude/skills/ or use directly via Bash tool
+csl-tasks list --format json | jq -r '.[] | select(.status == "pending" and (.blocked_by | length == 0))'
+```
+
+Or create MCP server in `~/.claude/mcp-servers/csl-tasks/`:
+```json
+{
+  "name": "csl-tasks",
+  "command": "node",
+  "args": ["./mcp-server.js"]
+}
+```
+
+**Cursor / GitHub Copilot**:
+```bash
+# Add to project scripts
+"scripts": {
+  "tasks:next": "csl-tasks next --format json",
+  "tasks:list": "csl-tasks list --format json"
+}
+```
+
+**Gemini / ChatGPT (with Code Interpreter)**:
+```python
+import subprocess
+import json
+
+def get_next_task():
+    result = subprocess.run(['csl-tasks', 'next', '--format', 'json'],
+                          capture_output=True, text=True)
+    return json.loads(result.stdout)
+```
+
+**Aider**:
+```bash
+# Aider can execute shell commands directly
+/run csl-tasks next --format json
+```
+
+### JSON Output Format
+
 All commands support `--format json` for machine-readable output:
 
 ```bash
 csl-tasks list --format json
-csl-tasks get 31 --format json
-csl-tasks next --format json
-```
+# Output: [{"id": 31, "subject": "...", "status": "pending", ...}]
 
-This allows any LLM, IDE extension, or automation tool to:
-- Query task status and details
-- Find next available work (`next` command)
-- Update task lifecycle (`claim`, `complete` commands)
-- Parse structured task data
+csl-tasks get 31 --format json
+# Output: {"id": 31, "subject": "...", "description": "...", ...}
+
+csl-tasks next --format json
+# Output: {"id": 31, "subject": "...", "blocked_by": []}
+```
 
 ### Human-Readable Output
 Default output is formatted for human readability:
@@ -339,6 +447,17 @@ csl-tasks complete 31
 
 # Human reviews progress
 csl-tasks list --status completed
+```
+
+### Environment Variable Support
+```bash
+# Configure via environment
+export CSL_TASKS_DIR="./tasks"
+export CSL_TASKS_GITHUB_REPO="owner/repo"
+export CSL_TASKS_GITHUB_TOKEN="ghp_..."
+
+# All commands respect these settings
+csl-tasks sync
 ```
 
 ## 8. Error Handling
@@ -425,6 +544,14 @@ csl-tasks list --status completed
 - [ ] User-friendly error messages
 - [ ] Shell completion scripts
 - [ ] CI/CD integration
+- [ ] Environment variable support
+
+### Phase 6: Advanced Integrations (Optional)
+- [ ] MCP server implementation for Claude Code
+- [ ] Python SDK wrapper
+- [ ] HTTP API server mode (`csl-tasks serve`)
+- [ ] VS Code extension
+- [ ] Language server protocol (LSP) support
 
 ## Dependencies
 
