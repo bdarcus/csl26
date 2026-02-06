@@ -452,6 +452,31 @@ pub fn unsuppress_for_type(components: &mut [TemplateComponent], item_type: &str
     }
 }
 
+/// Add space prefix to volume when it directly follows parent-serial title.
+/// This handles numeric styles where journal and volume are siblings, not in a List.
+pub fn add_volume_prefix_after_serial(components: &mut [TemplateComponent]) {
+    use csln_core::template::{NumberVariable, TitleType};
+
+    for i in 1..components.len() {
+        let prev_is_serial = matches!(
+            components.get(i - 1),
+            Some(TemplateComponent::Title(t)) if t.title == TitleType::ParentSerial
+        );
+
+        if prev_is_serial {
+            if let Some(TemplateComponent::Number(ref mut num)) = components.get_mut(i) {
+                if num.number == NumberVariable::Volume {
+                    eprintln!("DEBUG: Adding space prefix to volume after parent-serial");
+                    // Add space prefix if not already present
+                    if num.rendering.prefix.is_none() {
+                        num.rendering.prefix = Some(" ".to_string());
+                    }
+                }
+            }
+        }
+    }
+}
+
 /// Move DOI and URL components to the end of the bibliography template.
 pub fn move_access_components_to_end(components: &mut Vec<TemplateComponent>) {
     use csln_core::template::SimpleVariable;
