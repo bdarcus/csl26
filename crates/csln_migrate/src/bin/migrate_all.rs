@@ -59,7 +59,7 @@ fn main() {
                 .unwrap_or_default();
             let flattened_cit = inliner.inline_citation(&legacy_style);
 
-            let upsampler = Upsampler;
+            let upsampler = Upsampler::new();
             let csln_bib = upsampler.upsample_nodes(&flattened_bib);
             let csln_cit = upsampler.upsample_nodes(&flattened_cit);
 

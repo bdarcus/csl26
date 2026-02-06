@@ -3,19 +3,24 @@ use std::collections::HashMap;
 
 pub mod analysis;
 pub mod compressor;
+pub mod debug_output;
 pub mod options_extractor;
 pub mod passes;
 pub mod preset_detector;
+pub mod provenance;
 pub mod template_compiler;
 pub mod upsampler;
 
 pub use compressor::Compressor;
+pub use debug_output::DebugOutputFormatter;
 pub use options_extractor::OptionsExtractor;
 pub use preset_detector::{detect_contributor_preset, detect_date_preset, detect_title_preset};
+pub use provenance::{ProvenanceTracker, SourceLocation};
 pub use template_compiler::TemplateCompiler;
 pub use upsampler::Upsampler;
 pub struct MacroInliner {
     macros: HashMap<String, Vec<CslNode>>,
+    provenance: Option<ProvenanceTracker>,
 }
 
 impl MacroInliner {
@@ -24,7 +29,25 @@ impl MacroInliner {
         for m in &style.macros {
             macros.insert(m.name.clone(), m.children.clone());
         }
-        Self { macros }
+        Self {
+            macros,
+            provenance: None,
+        }
+    }
+
+    pub fn with_provenance(style: &Style, provenance: ProvenanceTracker) -> Self {
+        let mut macros = HashMap::new();
+        for m in &style.macros {
+            macros.insert(m.name.clone(), m.children.clone());
+        }
+        Self {
+            macros,
+            provenance: Some(provenance),
+        }
+    }
+
+    pub fn provenance(&self) -> Option<&ProvenanceTracker> {
+        self.provenance.as_ref()
     }
 
     /// Recursively expands all macro calls in a list of nodes.

@@ -1,14 +1,44 @@
 use csl_legacy::parser::parse_style;
 use csln_core::{template::TemplateComponent, BibliographySpec, CitationSpec, Style, StyleInfo};
 use csln_migrate::{
-    analysis, passes, Compressor, MacroInliner, OptionsExtractor, TemplateCompiler, Upsampler,
+    analysis, debug_output::DebugOutputFormatter, passes, provenance::ProvenanceTracker,
+    Compressor, MacroInliner, OptionsExtractor, TemplateCompiler, Upsampler,
 };
 use roxmltree::Document;
 use std::fs;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = std::env::args().collect();
-    let path = args.get(1).map(|s| s.as_str()).unwrap_or("styles/apa.csl");
+
+    // Parse command-line arguments
+    let mut path = "styles/apa.csl";
+    let mut debug_variable: Option<String> = None;
+
+    let mut i = 1;
+    while i < args.len() {
+        match args[i].as_str() {
+            "--debug-variable" => {
+                if i + 1 < args.len() {
+                    debug_variable = Some(args[i + 1].clone());
+                    i += 2;
+                } else {
+                    eprintln!("Error: --debug-variable requires an argument");
+                    std::process::exit(1);
+                }
+            }
+            arg if !arg.starts_with("--") => {
+                path = &args[i];
+                i += 1;
+            }
+            _ => {
+                i += 1;
+            }
+        }
+    }
+
+    // Initialize provenance tracking if debug variable is specified
+    let enable_provenance = debug_variable.is_some();
+    let tracker = ProvenanceTracker::new(enable_provenance);
 
     eprintln!("Migrating {} to CSLN...", path);
 
@@ -77,14 +107,22 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let bib_and = analysis::bibliography::extract_bibliography_and(&legacy_style);
 
     // 1. Deconstruction
-    let inliner = MacroInliner::new(&legacy_style);
+    let inliner = if enable_provenance {
+        MacroInliner::with_provenance(&legacy_style, tracker.clone())
+    } else {
+        MacroInliner::new(&legacy_style)
+    };
     let flattened_bib = inliner
         .inline_bibliography(&legacy_style)
         .unwrap_or_default();
     let flattened_cit = inliner.inline_citation(&legacy_style);
 
     // 2. Semantic Upsampling
-    let upsampler = Upsampler;
+    let upsampler = if enable_provenance {
+        Upsampler::with_provenance(tracker.clone())
+    } else {
+        Upsampler::new()
+    };
     let raw_bib = upsampler.upsample_nodes(&flattened_bib);
     let raw_cit = upsampler.upsample_nodes(&flattened_cit);
 
@@ -105,6 +143,59 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let (mut new_bib, type_templates) =
         template_compiler.compile_bibliography_with_types(&csln_bib, is_numeric);
     let new_cit = template_compiler.compile_citation(&csln_cit);
+
+    // Record template placements if provenance tracking is enabled
+    if enable_provenance {
+        for (index, component) in new_bib.iter().enumerate() {
+            match component {
+                TemplateComponent::Variable(v) => {
+                    let var_name = format!("{:?}", v.variable).to_lowercase();
+                    tracker.record_template_placement(
+                        &var_name,
+                        index,
+                        "bibliography.template",
+                        "Variable",
+                    );
+                }
+                TemplateComponent::Number(n) => {
+                    let var_name = format!("{:?}", n.number).to_lowercase();
+                    tracker.record_template_placement(
+                        &var_name,
+                        index,
+                        "bibliography.template",
+                        "Number",
+                    );
+                }
+                TemplateComponent::Date(d) => {
+                    let var_name = format!("{:?}", d.date).to_lowercase();
+                    tracker.record_template_placement(
+                        &var_name,
+                        index,
+                        "bibliography.template",
+                        "Date",
+                    );
+                }
+                TemplateComponent::Title(t) => {
+                    let var_name = format!("{:?}", t.title).to_lowercase();
+                    tracker.record_template_placement(
+                        &var_name,
+                        index,
+                        "bibliography.template",
+                        "Title",
+                    );
+                }
+                TemplateComponent::Contributor(_) => {
+                    tracker.record_template_placement(
+                        "contributor",
+                        index,
+                        "bibliography.template",
+                        "Contributor",
+                    );
+                }
+                _ => {}
+            }
+        }
+    }
 
     // Apply author suffix extracted from original CSL (lost during macro inlining)
     analysis::bibliography::apply_author_suffix(&mut new_bib, author_suffix);
@@ -255,6 +346,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Output YAML to stdout
     let yaml = serde_yaml::to_string(&style)?;
     println!("{}", yaml);
+
+    // Output debug information if requested
+    if let Some(var_name) = debug_variable {
+        eprintln!("\n");
+        eprintln!("=== PROVENANCE DEBUG ===\n");
+        let debug_output = DebugOutputFormatter::format_variable(&tracker, &var_name);
+        eprint!("{}", debug_output);
+    }
 
     Ok(())
 }
