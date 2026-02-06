@@ -30,7 +30,7 @@ See task list for current work:
 
 ### Tooling
 
-- ✅ Structured diff oracle (`scripts/oracle-structured.js`)
+- ✅ Structured diff oracle (`scripts/oracle.js`)
 - ✅ Batch aggregator (`scripts/oracle-batch-aggregate.js`)
 - ⏳ Migration debugger (pending - #24)
 

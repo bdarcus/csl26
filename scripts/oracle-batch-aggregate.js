@@ -46,7 +46,7 @@ const PRIORITY_STYLES = [
  * Run oracle for a single style (synchronous).
  */
 function runStructuredOracle(stylePath) {
-  const scriptPath = path.join(__dirname, 'oracle-structured.js');
+  const scriptPath = path.join(__dirname, 'oracle.js');
   
   try {
     const output = execSync(
@@ -72,7 +72,7 @@ function runStructuredOracle(stylePath) {
  */
 function runStructuredOracleAsync(stylePath) {
   return new Promise((resolve) => {
-    const scriptPath = path.join(__dirname, 'oracle-structured.js');
+    const scriptPath = path.join(__dirname, 'oracle.js');
     const styleName = path.basename(stylePath, '.csl');
     
     const proc = spawn('node', [scriptPath, stylePath, '--json'], {
