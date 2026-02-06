@@ -310,7 +310,17 @@ impl TemplateCompiler {
         current_types: &[ItemType],
     ) {
         if self.same_variable(component, new_comp) {
-            self.add_overrides_to_existing(component, new_comp, current_types);
+            if current_types.is_empty() {
+                // Empty types means this is the default case - unsuppress the component
+                let mut rendering = self.get_component_rendering(component);
+                if rendering.suppress == Some(true) {
+                    rendering.suppress = Some(false);
+                    self.set_component_rendering(component, rendering);
+                }
+            } else {
+                // Add type-specific overrides
+                self.add_overrides_to_existing(component, new_comp, current_types);
+            }
             return;
         }
         if let TemplateComponent::List(ref mut list) = component {
@@ -517,10 +527,14 @@ impl TemplateCompiler {
         let mut result: Vec<TemplateComponent> = Vec::new();
 
         // First pass: add all non-List components and track their keys
+        // When encountering duplicates, merge their overrides
         for component in &components {
             if !matches!(component, TemplateComponent::List(_)) {
                 if let Some(key) = self.get_variable_key(component) {
-                    if !seen_vars.contains(&key) {
+                    if let Some(existing_idx) = seen_vars.iter().position(|k| k == &key) {
+                        // Duplicate found - merge overrides into existing component
+                        self.merge_overrides_into(&mut result[existing_idx], component);
+                    } else {
                         seen_vars.push(key);
                         result.push(component.clone());
                     }
@@ -629,6 +643,26 @@ impl TemplateCompiler {
             }
         }
         vars
+    }
+
+    /// Merge overrides from source into target component.
+    fn merge_overrides_into(&self, target: &mut TemplateComponent, source: &TemplateComponent) {
+        if let Some(source_overrides) = self.get_component_overrides(source) {
+            let target_overrides = match target {
+                TemplateComponent::Contributor(c) => &mut c.overrides,
+                TemplateComponent::Date(d) => &mut d.overrides,
+                TemplateComponent::Number(n) => &mut n.overrides,
+                TemplateComponent::Title(t) => &mut t.overrides,
+                TemplateComponent::Variable(v) => &mut v.overrides,
+                TemplateComponent::List(l) => &mut l.overrides,
+                _ => return,
+            };
+
+            let overrides_map = target_overrides.get_or_insert_with(HashMap::new);
+            for (k, v) in source_overrides {
+                overrides_map.entry(k).or_insert(v);
+            }
+        }
     }
 
     /// Get a unique key for a component for deduplication purposes.
