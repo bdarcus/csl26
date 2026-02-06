@@ -1,16 +1,21 @@
 #!/usr/bin/env node
 /**
  * Batch Oracle Aggregator
- * 
+ *
  * Runs structured oracle against multiple styles and aggregates
  * failure patterns to identify high-impact issues.
- * 
+ *
  * Usage:
  *   node oracle-batch-aggregate.js ../styles/ --top 20
  *   node oracle-batch-aggregate.js ../styles/ --top 50 --json
  *   node oracle-batch-aggregate.js ../styles/ --styles apa,ieee,nature
  *   node oracle-batch-aggregate.js ../styles/ --all --parallel 8
  *   node oracle-batch-aggregate.js ../styles/ --all --save corpus-results.json
+ *
+ * Regression Detection:
+ *   node oracle-batch-aggregate.js ../styles/ --top 20 --save baselines/baseline-2026-02-06.json
+ *   node oracle-batch-aggregate.js ../styles/ --top 20 --compare baselines/baseline-2026-02-06.json
+ *   node oracle-batch-aggregate.js ../styles/ --top 20 --compare baselines/baseline-2026-02-06.json --save new-results.json
  */
 
 const { execSync, spawn } = require('child_process');
@@ -187,6 +192,96 @@ function aggregateResults(results) {
   return summary;
 }
 
+/**
+ * Compare current results against baseline to detect regressions/improvements.
+ */
+function compareResults(baseline, current) {
+  const comparison = {
+    regressions: [],
+    improvements: [],
+    unchanged: [],
+    newStyles: [],
+    removedStyles: [],
+    netImpact: {
+      citationsDelta: 0,
+      bibliographyDelta: 0,
+    }
+  };
+
+  // Create lookup maps
+  const baselineMap = new Map();
+  for (const style of baseline.styleBreakdown) {
+    baselineMap.set(style.style, style);
+  }
+
+  const currentMap = new Map();
+  for (const style of current.styleBreakdown) {
+    currentMap.set(style.style, style);
+  }
+
+  // Compare styles
+  for (const [styleName, currentStyle] of currentMap.entries()) {
+    const baselineStyle = baselineMap.get(styleName);
+
+    if (!baselineStyle) {
+      comparison.newStyles.push(styleName);
+      continue;
+    }
+
+    const baselineCitations = parseInt(baselineStyle.citations.split('/')[0]);
+    const baselineBibliography = parseInt(baselineStyle.bibliography.split('/')[0]);
+    const currentCitations = parseInt(currentStyle.citations.split('/')[0]);
+    const currentBibliography = parseInt(currentStyle.bibliography.split('/')[0]);
+
+    const citationsDelta = currentCitations - baselineCitations;
+    const bibliographyDelta = currentBibliography - baselineBibliography;
+
+    comparison.netImpact.citationsDelta += citationsDelta;
+    comparison.netImpact.bibliographyDelta += bibliographyDelta;
+
+    if (citationsDelta < 0 || bibliographyDelta < 0) {
+      comparison.regressions.push({
+        style: styleName,
+        citations: {
+          before: baselineStyle.citations,
+          after: currentStyle.citations,
+          delta: citationsDelta
+        },
+        bibliography: {
+          before: baselineStyle.bibliography,
+          after: currentStyle.bibliography,
+          delta: bibliographyDelta
+        }
+      });
+    } else if (citationsDelta > 0 || bibliographyDelta > 0) {
+      comparison.improvements.push({
+        style: styleName,
+        citations: {
+          before: baselineStyle.citations,
+          after: currentStyle.citations,
+          delta: citationsDelta
+        },
+        bibliography: {
+          before: baselineStyle.bibliography,
+          after: currentStyle.bibliography,
+          delta: bibliographyDelta
+        }
+      });
+    } else {
+      comparison.unchanged.push(styleName);
+    }
+  }
+
+  // Check for removed styles
+  for (const [styleName] of baselineMap.entries()) {
+    if (!currentMap.has(styleName)) {
+      comparison.removedStyles.push(styleName);
+    }
+  }
+
+  return comparison;
+}
+
 // Parse arguments
 const args = process.argv.slice(2);
 const stylesDir = args.find(a => !a.startsWith('--')) || path.join(__dirname, '..', 'styles');
@@ -205,6 +300,13 @@ let savePath = null;
 const saveArg = args.findIndex(a => a === '--save');
 if (saveArg >= 0 && args[saveArg + 1]) {
   savePath = args[saveArg + 1];
+}
+
+// Get compare baseline path
+let compareBaseline = null;
+const compareArg = args.findIndex(a => a === '--compare');
+if (compareArg >= 0 && args[compareArg + 1]) {
+  compareBaseline = args[compareArg + 1];
 }
 
 // Get top N or specific styles
@@ -302,10 +404,28 @@ async function main() {
     duration: ((Date.now() - startTime) / 1000).toFixed(1) + 's',
     concurrency: runAll ? concurrency : 1,
   };
-  
+
+  // Compare against baseline if requested
+  let comparison = null;
+  if (compareBaseline) {
+    if (!fs.existsSync(compareBaseline)) {
+      console.error(`Error: Baseline file not found: ${compareBaseline}`);
+      process.exit(1);
+    }
+
+    const baseline = JSON.parse(fs.readFileSync(compareBaseline, 'utf8'));
+    comparison = compareResults(baseline, summary);
+
+    if (!jsonOutput) {
+      console.log(`\nComparing against baseline: ${compareBaseline}`);
+      console.log(`Baseline timestamp: ${baseline.metadata.timestamp}`);
+    }
+  }
+
   // Save to file if requested
   if (savePath) {
-    fs.writeFileSync(savePath, JSON.stringify(summary, null, 2));
+    const outputData = comparison ? { current: summary, comparison } : summary;
+    fs.writeFileSync(savePath, JSON.stringify(outputData, null, 2));
     if (!jsonOutput) {
       console.log(`Results saved to: ${savePath}`);
     }
@@ -313,8 +433,62 @@ async function main() {
 
   // Output
   if (jsonOutput) {
-    console.log(JSON.stringify(summary, null, 2));
+    const output = comparison ? { current: summary, comparison } : summary;
+    console.log(JSON.stringify(output, null, 2));
   } else {
+    // Show comparison first if available
+    if (comparison) {
+      console.log('\n=== REGRESSION ANALYSIS ===\n');
+
+      if (comparison.regressions.length > 0) {
+        console.log(`⚠️  REGRESSIONS DETECTED: ${comparison.regressions.length} styles`);
+        for (const reg of comparison.regressions) {
+          console.log(`  - ${reg.style}:`);
+          if (reg.citations.delta < 0) {
+            console.log(`      Citations: ${reg.citations.before} → ${reg.citations.after} (${reg.citations.delta})`);
+          }
+          if (reg.bibliography.delta < 0) {
+            console.log(`      Bibliography: ${reg.bibliography.before} → ${reg.bibliography.after} (${reg.bibliography.delta})`);
+          }
+        }
+        console.log();
+      } else {
+        console.log('✅ No regressions detected\n');
+      }
+
+      if (comparison.improvements.length > 0) {
+        console.log(`🎉 IMPROVEMENTS: ${comparison.improvements.length} styles`);
+        for (const imp of comparison.improvements) {
+          console.log(`  + ${imp.style}:`);
+          if (imp.citations.delta > 0) {
+            console.log(`      Citations: ${imp.citations.before} → ${imp.citations.after} (+${imp.citations.delta})`);
+          }
+          if (imp.bibliography.delta > 0) {
+            console.log(`      Bibliography: ${imp.bibliography.before} → ${imp.bibliography.after} (+${imp.bibliography.delta})`);
+          }
+        }
+        console.log();
+      }
+
+      console.log('NET IMPACT:');
+      console.log(`  Citations: ${comparison.netImpact.citationsDelta >= 0 ? '+' : ''}${comparison.netImpact.citationsDelta} passing entries`);
+      console.log(`  Bibliography: ${comparison.netImpact.bibliographyDelta >= 0 ? '+' : ''}${comparison.netImpact.bibliographyDelta} passing entries`);
+
+      if (comparison.unchanged.length > 0) {
+        console.log(`  Unchanged: ${comparison.unchanged.length} styles`);
+      }
+
+      if (comparison.newStyles.length > 0) {
+        console.log(`  New styles tested: ${comparison.newStyles.join(', ')}`);
+      }
+
+      if (comparison.removedStyles.length > 0) {
+        console.log(`  Removed from test: ${comparison.removedStyles.join(', ')}`);
+      }
+
+      console.log();
+    }
+
     console.log('\n=== SUMMARY ===\n');
     
     console.log(`Styles tested: ${summary.totalStyles}`);
