@@ -49,6 +49,10 @@ use std::collections::HashMap;
 #[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq, JsonSchema)]
 #[serde(rename_all = "kebab-case", default)]
 pub struct Rendering {
+    /// Sequential order from CSL 1.0 macro expansion (for template sorting).
+    /// Preserves the exact depth-first traversal order of components.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub source_order: Option<usize>,
     /// Render in italics/emphasis.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub emph: Option<bool>,
