@@ -77,8 +77,9 @@ impl Upsampler {
                 if let Some(term) = &t.term {
                     let prefix = t.prefix.as_deref().unwrap_or("");
                     let suffix = t.suffix.as_deref().unwrap_or("");
+                    let text_cased = self.apply_text_case(term, t.text_case.as_deref());
                     return Some(csln::CslnNode::Text {
-                        value: format!("{}{}{}", prefix, term, suffix),
+                        value: format!("{}{}{}", prefix, text_cased, suffix),
                     });
                 }
                 if let Some(val) = &t.value {
@@ -545,6 +546,34 @@ impl Upsampler {
             Some("short") => csln::LabelForm::Short,
             Some("symbol") => csln::LabelForm::Symbol,
             _ => csln::LabelForm::Long,
+        }
+    }
+
+    /// Apply text-case transformation to a string.
+    /// Handles CSL 1.0 text-case attribute values for term nodes.
+    fn apply_text_case(&self, text: &str, case: Option<&str>) -> String {
+        match case {
+            Some("capitalize-first") => {
+                let mut chars = text.chars();
+                match chars.next() {
+                    None => String::new(),
+                    Some(first) => first.to_uppercase().collect::<String>() + chars.as_str(),
+                }
+            }
+            Some("capitalize-all") => text
+                .split_whitespace()
+                .map(|word| {
+                    let mut chars = word.chars();
+                    match chars.next() {
+                        None => String::new(),
+                        Some(first) => first.to_uppercase().collect::<String>() + chars.as_str(),
+                    }
+                })
+                .collect::<Vec<_>>()
+                .join(" "),
+            Some("lowercase") => text.to_lowercase(),
+            Some("uppercase") => text.to_uppercase(),
+            _ => text.to_string(),
         }
     }
 

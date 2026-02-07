@@ -753,6 +753,9 @@ impl TemplateCompiler {
 
         self.sort_bibliography_components(&mut default_template, is_numeric);
 
+        // Deduplicate number components (edition, volume, issue) in nested lists
+        crate::passes::deduplicate::deduplicate_numbers_in_lists(&mut default_template);
+
         // Fix duplicate variables (e.g., date appearing both in List and standalone)
         self.fix_duplicate_variables(&mut default_template);
 

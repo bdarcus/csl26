@@ -9,6 +9,41 @@ pub fn deduplicate_titles_in_lists(components: &mut Vec<TemplateComponent>) {
     }
 }
 
+/// Deduplicate number components in nested lists.
+/// Removes duplicate edition, volume, issue, etc. within the same List.
+pub fn deduplicate_numbers_in_lists(components: &mut Vec<TemplateComponent>) {
+    for component in components {
+        if let TemplateComponent::List(list) = component {
+            deduplicate_numbers_in_list(list);
+        }
+    }
+}
+
+fn deduplicate_numbers_in_list(list: &mut csln_core::template::TemplateList) {
+    // Track seen number types in this list
+    let mut seen_types = Vec::new();
+    let mut i = 0;
+    while i < list.items.len() {
+        if let TemplateComponent::Number(n) = &list.items[i] {
+            if seen_types.contains(&n.number) {
+                // Remove duplicate number
+                list.items.remove(i);
+                continue;
+            } else {
+                seen_types.push(n.number.clone());
+            }
+        }
+        i += 1;
+    }
+
+    // Recursively process nested lists
+    for item in &mut list.items {
+        if let TemplateComponent::List(inner_list) = item {
+            deduplicate_numbers_in_list(inner_list);
+        }
+    }
+}
+
 fn deduplicate_titles_in_list(list: &mut csln_core::template::TemplateList) {
     // If list contains multiple titles of the same type, keep only the first
     // TitleType doesn't implement Hash/Eq in some versions, using Vec::contains instead
