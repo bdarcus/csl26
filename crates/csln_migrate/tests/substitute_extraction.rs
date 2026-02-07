@@ -33,6 +33,7 @@ fn test_extract_type_conditional_substitute() {
             text_case: None,
             strip_periods: None,
             plural: None,
+            macro_call_order: None,
             formatting: Formatting::default(),
         })],
         match_mode: None,
@@ -60,6 +61,7 @@ fn test_extract_type_conditional_substitute() {
         prefix: None,
         suffix: None,
         children: vec![],
+        macro_call_order: None,
         formatting: Formatting::default(),
     });
 
@@ -78,6 +80,7 @@ fn test_extract_type_conditional_substitute() {
         prefix: None,
         suffix: None,
         children: vec![CslNode::Substitute(substitute)],
+        macro_call_order: None,
         formatting: Formatting::default(),
     });
 

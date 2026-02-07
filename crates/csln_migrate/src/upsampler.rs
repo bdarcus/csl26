@@ -61,6 +61,10 @@ impl Upsampler {
                             let var_name = format!("{:?}", var).to_lowercase();
                             prov.record_upsampling(&var_name, "Text", "Variable");
                         }
+                        eprintln!(
+                            "Upsampler: Text({:?}) macro_call_order={:?}",
+                            var, t.macro_call_order
+                        );
                         return Some(csln::CslnNode::Variable(csln::VariableBlock {
                             variable: var,
                             label: None,
@@ -71,6 +75,7 @@ impl Upsampler {
                                 t.quotes,
                             ),
                             overrides: HashMap::new(),
+                            source_order: t.macro_call_order,
                         }));
                     }
                 }
@@ -91,6 +96,7 @@ impl Upsampler {
                 children: self.upsample_nodes(&g.children),
                 delimiter: g.delimiter.clone(),
                 formatting: self.map_formatting(&g.formatting, &g.prefix, &g.suffix, None),
+                source_order: g.macro_call_order,
             })),
             LNode::Date(d) => self.map_date(d),
             LNode::Names(n) => self.map_names(n),
@@ -219,10 +225,15 @@ impl Upsampler {
             });
         }
 
+        eprintln!(
+            "Upsampler: Names({:?}) macro_call_order={:?}",
+            variable, n.macro_call_order
+        );
         Some(csln::CslnNode::Names(csln::NamesBlock {
             variable,
             options,
             formatting: FormattingOptions::default(),
+            source_order: n.macro_call_order,
         }))
     }
 
@@ -233,6 +244,7 @@ impl Upsampler {
             label: None,
             formatting: self.map_formatting(&n.formatting, &n.prefix, &n.suffix, None),
             overrides: HashMap::new(),
+            source_order: n.macro_call_order,
         }))
     }
 
@@ -249,6 +261,7 @@ impl Upsampler {
                     }),
                     formatting: FormattingOptions::default(),
                     overrides: HashMap::new(),
+                    source_order: l.macro_call_order,
                 }));
             }
         }
@@ -403,6 +416,10 @@ impl Upsampler {
             }
         }
 
+        eprintln!(
+            "Upsampler: Date({:?}) macro_call_order={:?}",
+            variable, d.macro_call_order
+        );
         Some(csln::CslnNode::Date(csln::DateBlock {
             variable,
             options: csln::DateOptions {
@@ -422,6 +439,7 @@ impl Upsampler {
                 day_form,
             },
             formatting: self.map_formatting(&d.formatting, &d.prefix, &d.suffix, None),
+            source_order: d.macro_call_order,
         }))
     }
 
@@ -465,6 +483,7 @@ impl Upsampler {
                                     t.quotes,
                                 ),
                                 overrides: HashMap::new(),
+                                source_order: t.macro_call_order,
                             }));
                         }
                     }

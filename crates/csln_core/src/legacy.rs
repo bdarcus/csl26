@@ -171,6 +171,8 @@ pub struct VariableBlock {
     pub formatting: FormattingOptions,
     #[serde(skip_serializing_if = "HashMap::is_empty", default)]
     pub overrides: HashMap<ItemType, FormattingOptions>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub source_order: Option<usize>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
@@ -179,6 +181,8 @@ pub struct GroupBlock {
     pub delimiter: Option<String>,
     #[serde(flatten)]
     pub formatting: FormattingOptions,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub source_order: Option<usize>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
@@ -230,6 +234,8 @@ pub struct DateBlock {
     pub options: DateOptions,
     #[serde(flatten)]
     pub formatting: FormattingOptions,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub source_order: Option<usize>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
@@ -239,6 +245,8 @@ pub struct NamesBlock {
     pub options: NamesOptions,
     #[serde(flatten)]
     pub formatting: FormattingOptions,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub source_order: Option<usize>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, Default)]

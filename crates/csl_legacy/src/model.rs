@@ -127,6 +127,8 @@ pub struct Text {
     pub text_case: Option<String>,
     pub strip_periods: Option<bool>,
     pub plural: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub macro_call_order: Option<usize>,
     #[serde(flatten)]
     pub formatting: Formatting,
 }
@@ -182,6 +184,8 @@ pub struct Date {
     pub date_parts: Option<String>,
     pub text_case: Option<String>,
     pub parts: Vec<DatePart>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub macro_call_order: Option<usize>,
     #[serde(flatten)]
     pub formatting: Formatting,
 }
@@ -203,6 +207,8 @@ pub struct Label {
     pub text_case: Option<String>,
     pub strip_periods: Option<bool>,
     pub plural: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub macro_call_order: Option<usize>,
     #[serde(flatten)]
     pub formatting: Formatting,
 }
@@ -219,6 +225,8 @@ pub struct Names {
     pub prefix: Option<String>,
     pub suffix: Option<String>,
     pub children: Vec<CslNode>, // <name>, <label>, <substitute>, <et-al>
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub macro_call_order: Option<usize>,
     #[serde(flatten)]
     pub formatting: Formatting,
 }
@@ -229,6 +237,8 @@ pub struct Group {
     pub prefix: Option<String>,
     pub suffix: Option<String>,
     pub children: Vec<CslNode>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub macro_call_order: Option<usize>,
     #[serde(flatten)]
     pub formatting: Formatting,
 }
@@ -259,6 +269,8 @@ pub struct Number {
     pub prefix: Option<String>,
     pub suffix: Option<String>,
     pub text_case: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub macro_call_order: Option<usize>,
     #[serde(flatten)]
     pub formatting: Formatting,
 }

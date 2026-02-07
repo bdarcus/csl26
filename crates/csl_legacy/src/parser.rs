@@ -334,6 +334,7 @@ fn parse_text(node: Node) -> Result<Text, String> {
         text_case: node.attribute("text-case").map(|s| s.to_string()),
         strip_periods: node.attribute("strip-periods").map(|s| s == "true"),
         plural: node.attribute("plural").map(|s| s.to_string()),
+        macro_call_order: None,
         formatting,
     })
 }
@@ -372,6 +373,7 @@ fn parse_date(node: Node) -> Result<Date, String> {
         date_parts: node.attribute("date-parts").map(|s| s.to_string()),
         text_case: node.attribute("text-case").map(|s| s.to_string()),
         parts,
+        macro_call_order: None,
         formatting,
     })
 }
@@ -409,6 +411,7 @@ fn parse_label(node: Node) -> Result<Label, String> {
         text_case: node.attribute("text-case").map(|s| s.to_string()),
         strip_periods: node.attribute("strip-periods").map(|s| s == "true"),
         plural: node.attribute("plural").map(|s| s.to_string()),
+        macro_call_order: None,
         formatting,
     })
 }
@@ -439,6 +442,7 @@ fn parse_names(node: Node) -> Result<Names, String> {
         prefix: node.attribute("prefix").map(|s| s.to_string()),
         suffix: node.attribute("suffix").map(|s| s.to_string()),
         children,
+        macro_call_order: None,
         formatting,
     })
 }
@@ -469,6 +473,7 @@ fn parse_group(node: Node) -> Result<Group, String> {
         prefix: node.attribute("prefix").map(|s| s.to_string()),
         suffix: node.attribute("suffix").map(|s| s.to_string()),
         children,
+        macro_call_order: None,
         formatting,
     })
 }
@@ -533,6 +538,7 @@ fn parse_number(node: Node) -> Result<Number, String> {
         prefix: node.attribute("prefix").map(|s| s.to_string()),
         suffix: node.attribute("suffix").map(|s| s.to_string()),
         text_case: node.attribute("text-case").map(|s| s.to_string()),
+        macro_call_order: None,
         formatting,
     })
 }

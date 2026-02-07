@@ -36,6 +36,7 @@ enum BranchContext {
 struct ComponentOccurrence {
     component: TemplateComponent,
     context: BranchContext,
+    source_order: Option<usize>,
 }
 
 /// Compiles CslnNode trees into TemplateComponents.
@@ -99,9 +100,12 @@ impl TemplateCompiler {
                             self.apply_wrap_to_component(&mut next_comp, inherited_wrap);
                         }
 
+                        // Extract source_order from the next node
+                        let source_order = self.extract_source_order(&nodes[i + 1]);
                         occurrences.push(ComponentOccurrence {
                             component: next_comp,
                             context: context.clone(),
+                            source_order,
                         });
                         i += 2;
                         continue;
@@ -114,9 +118,11 @@ impl TemplateCompiler {
                 if inherited_wrap.0.is_some() && matches!(&component, TemplateComponent::Date(_)) {
                     self.apply_wrap_to_component(&mut component, inherited_wrap);
                 }
+                let source_order = self.extract_source_order(node);
                 occurrences.push(ComponentOccurrence {
                     component,
                     context: context.clone(),
+                    source_order,
                 });
             } else {
                 match node {
@@ -165,9 +171,11 @@ impl TemplateCompiler {
                                 rendering: self.convert_formatting(&g.formatting),
                                 ..Default::default()
                             });
+                            let source_order = g.source_order;
                             occurrences.push(ComponentOccurrence {
                                 component: list,
                                 context: context.clone(),
+                                source_order,
                             });
                         } else {
                             // Flatten - add all group occurrences directly
@@ -227,7 +235,7 @@ impl TemplateCompiler {
     /// - If component ONLY in type-specific branches → base suppress: true + type overrides
     /// - Collect all type-specific occurrences as overrides with suppress: false
     fn merge_occurrences(&self, occurrences: Vec<ComponentOccurrence>) -> Vec<TemplateComponent> {
-        let mut result: Vec<TemplateComponent> = Vec::new();
+        let mut result: Vec<(TemplateComponent, Option<usize>)> = Vec::new();
 
         // Group occurrences by variable key (including Lists)
         let mut grouped: IndexMap<String, Vec<ComponentOccurrence>> = IndexMap::new();
@@ -249,10 +257,15 @@ impl TemplateCompiler {
         }
 
         // Merge each group
-        for (_key, group) in grouped {
+        for (_key, mut group) in grouped {
             if group.is_empty() {
                 continue;
             }
+
+            // Sort by source_order to preserve macro call order from CSL 1.0.
+            // Components without source_order (usize::MAX) sort last.
+            // Stable sort preserves existing order for components with same source_order.
+            group.sort_by_key(|occ| occ.source_order.unwrap_or(usize::MAX));
 
             // Check if any occurrence is in Default context
             let has_default = group
@@ -307,10 +320,42 @@ impl TemplateCompiler {
                 }
             }
 
-            result.push(merged);
+            // Track minimum source_order for this merged component
+            let min_order = group.iter().filter_map(|occ| occ.source_order).min();
+            result.push((merged, min_order));
         }
 
-        result
+        // Debug: Print source orders before sorting
+        eprintln!("=== Component source orders before sorting ===");
+        for (comp, order) in &result {
+            let comp_type = match comp {
+                TemplateComponent::Contributor(c) => format!("Contributor({:?})", c.contributor),
+                TemplateComponent::Date(d) => format!("Date({:?})", d.date),
+                TemplateComponent::Title(t) => format!("Title({:?})", t.title),
+                TemplateComponent::Number(n) => format!("Number({:?})", n.number),
+                TemplateComponent::Variable(v) => format!("Variable({:?})", v.variable),
+                TemplateComponent::List(_) => "List".to_string(),
+                _ => "Other".to_string(),
+            };
+            eprintln!("  {} -> order: {:?}", comp_type, order);
+        }
+
+        // Sort result by source_order to preserve macro call order
+        result.sort_by_key(|(_, order)| order.unwrap_or(usize::MAX));
+
+        eprintln!("=== After sorting ===");
+        for (comp, order) in &result {
+            let comp_type = match comp {
+                TemplateComponent::Contributor(c) => format!("Contributor({:?})", c.contributor),
+                TemplateComponent::Date(d) => format!("Date({:?})", d.date),
+                TemplateComponent::Title(t) => format!("Title({:?})", t.title),
+                _ => "...".to_string(),
+            };
+            eprintln!("  {} -> order: {:?}", comp_type, order);
+        }
+
+        // Extract just the components (drop the ordering metadata)
+        result.into_iter().map(|(comp, _)| comp).collect()
     }
 
     // Old compilation method kept for citation compilation (compile_simple)
@@ -1837,6 +1882,31 @@ impl TemplateCompiler {
             _ => {} // Future variants
         }
     }
+
+    /// Extracts the source_order from a CslnNode, if present.
+    /// Returns the order value or usize::MAX if not set (sorts last).
+    fn extract_source_order(&self, node: &CslnNode) -> Option<usize> {
+        let order = match node {
+            CslnNode::Variable(v) => v.source_order,
+            CslnNode::Date(d) => d.source_order,
+            CslnNode::Names(n) => n.source_order,
+            CslnNode::Group(g) => g.source_order,
+            _ => None,
+        };
+        eprintln!(
+            "TemplateCompiler: extract_source_order({:?}) = {:?}",
+            match node {
+                CslnNode::Variable(v) => format!("Variable({:?})", v.variable),
+                CslnNode::Date(d) => format!("Date({:?})", d.variable),
+                CslnNode::Names(n) => format!("Names({:?})", n.variable),
+                CslnNode::Group(_) => "Group".to_string(),
+                CslnNode::Text { value } => format!("Text({})", value),
+                CslnNode::Condition(_) => "Condition".to_string(),
+            },
+            order
+        );
+        order
+    }
 }
 
 #[cfg(test)]
@@ -1852,6 +1922,7 @@ mod tests {
             variable: Variable::Author,
             options: NamesOptions::default(),
             formatting: FormattingOptions::default(),
+            source_order: None,
         });
 
         let result = compiler.compile(&[names]);
@@ -1875,6 +1946,7 @@ mod tests {
                 ..Default::default()
             },
             formatting: FormattingOptions::default(),
+            source_order: None,
         });
 
         let result = compiler.compile(&[date]);
@@ -1899,6 +1971,7 @@ mod tests {
                 ..Default::default()
             },
             overrides: HashMap::new(),
+            source_order: None,
         });
 
         let result = compiler.compile(&[var]);
@@ -1920,6 +1993,7 @@ mod tests {
             label: None,
             formatting: FormattingOptions::default(),
             overrides: HashMap::new(),
+            source_order: None,
         });
 
         let result = compiler.compile(&[var]);
@@ -1943,6 +2017,7 @@ mod tests {
             label: None,
             formatting: FormattingOptions::default(),
             overrides: HashMap::new(),
+            source_order: None,
         };
         let branch1 = CslnNode::Condition(ConditionBlock {
             if_item_type: vec![ItemType::Book],
@@ -1951,6 +2026,7 @@ mod tests {
                 children: vec![CslnNode::Variable(pub_var.clone())],
                 delimiter: None,
                 formatting: FormattingOptions::default(),
+                source_order: None,
             })],
             else_if_branches: Vec::new(),
             else_branch: None,
@@ -1964,6 +2040,7 @@ mod tests {
                 children: vec![CslnNode::Variable(pub_var.clone())],
                 delimiter: None,
                 formatting: FormattingOptions::default(),
+                source_order: None,
             })],
             else_if_branches: Vec::new(),
             else_branch: None,

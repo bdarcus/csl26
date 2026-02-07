@@ -19,6 +19,7 @@ fn make_style_with_date(form: Option<String>) -> Style {
         date_parts: None,
         text_case: None,
         parts: vec![date_part],
+        macro_call_order: None,
         formatting: Formatting::default(),
     });
 
