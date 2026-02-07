@@ -206,9 +206,10 @@ impl GitHubSync {
     pub fn issue_to_task(
         &self,
         issue: &octocrab::models::issues::Issue,
-        next_id: u32,
+        _next_id: u32,
     ) -> Result<Task> {
-        let id = Self::extract_task_id(issue).unwrap_or(next_id);
+        // Use GitHub issue number as task ID (GitHub-backed alignment)
+        let id = issue.number as u32;
         let subject = issue.title.clone();
         let description = issue.body.as_deref().unwrap_or("").to_string();
 

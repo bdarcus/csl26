@@ -80,6 +80,44 @@ All operations are local-first (instant queries on markdown files), with optiona
 /task graph --format dot            # Graphviz DOT format (for drawing tools)
 ```
 
+## ID Management
+
+### ID Strategy
+
+The csl-tasks system uses GitHub issue numbers as task IDs for proper cross-referencing:
+
+- **GitHub-backed tasks**: IDs 1-9999, matched to their GitHub issue number
+- **Local-only tasks**: IDs 10000+, for tasks not yet synced to GitHub
+- **Benefits**: Task references like "blocks task 14" now mean the same thing in local and GitHub contexts
+
+### Migration to GitHub-Aligned IDs
+
+When syncing with GitHub, task IDs should align with their issue numbers. Run migration once:
+
+```
+/task migrate-ids --dry-run         # Preview what would change
+/task migrate-ids                   # Apply the migration (creates backup)
+```
+
+The migration:
+1. Creates backup: `tasks-backup-YYYYMMDD-HHMMSS/`
+2. Renumbers files to match GitHub issue numbers
+3. Updates all blocker/blocks references atomically
+4. Idempotent: safe to run multiple times
+
+### Validation
+
+Check for ID conflicts and invalid references:
+
+```
+/task validate                      # Check all tasks for issues
+```
+
+Reports:
+- Duplicate task IDs
+- Dangling references (blockers that don't exist)
+- Corrupted state (mismatched ID/github_issue)
+
 ## Output Format
 
 ### List Output (Markdown Table)
