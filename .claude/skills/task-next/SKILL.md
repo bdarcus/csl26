@@ -1,10 +1,14 @@
-# Task Next Skill
+# Task Next Skill (Deprecated)
+
+**DEPRECATED:** Use `/task next` instead (newer `/task` skill with full CLI support).
 
 Fetch and present high-priority tasks from local task storage (instant).
 
 ## Description
 
 This skill queries the local `csl-tasks` database to find the most important tasks to work on next. Uses local markdown files for instant queries (no API calls).
+
+⚠️ **Deprecation Notice**: This skill is superseded by `/task` which provides comprehensive task management including create, update, sync, and graph visualization. Use `/task next` for the same functionality with better integration.
 
 ## Usage
 
