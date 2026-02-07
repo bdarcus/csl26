@@ -21,6 +21,9 @@ pub enum Command {
 
         #[arg(long, default_value = "table")]
         format: OutputFormat,
+
+        #[arg(long)]
+        with_drift: bool,
     },
 
     #[command(about = "Get details of a specific task")]
