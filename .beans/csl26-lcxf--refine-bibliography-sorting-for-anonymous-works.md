@@ -5,7 +5,8 @@ status: todo
 type: bug
 priority: normal
 created_at: 2026-02-07T06:53:16Z
-updated_at: 2026-02-07T06:53:16Z
+updated_at: 2026-02-07T12:11:39Z
+parent: csl26-u1in
 ---
 
 Chicago Author-Date shows entries out of order for anonymous works.

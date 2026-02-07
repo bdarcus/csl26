@@ -3,9 +3,10 @@
 title: Implement full document processing
 status: todo
 type: feature
-priority: low
+priority: normal
 created_at: 2026-02-07T06:53:47Z
-updated_at: 2026-02-07T06:53:47Z
+updated_at: 2026-02-07T12:12:34Z
+parent: csl26-ismq
 ---
 
 Once migration fidelity is better, implement formatting of full documents.

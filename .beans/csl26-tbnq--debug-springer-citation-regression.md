@@ -5,9 +5,10 @@ status: completed
 type: bug
 priority: critical
 created_at: 2026-02-07T06:44:18Z
-updated_at: 2026-02-07T08:27:36Z
+updated_at: 2026-02-07T12:11:41Z
 blocking:
     - csl26-l2hg
+    - csl26-u1in
 ---
 
 Springer style shows regression in citation rendering after recent changes.
