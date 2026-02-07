@@ -93,6 +93,12 @@ pub enum Command {
     #[command(about = "Validate all tasks")]
     Validate,
 
+    #[command(about = "Migrate task IDs to align with GitHub issue numbers")]
+    MigrateIds {
+        #[arg(long)]
+        dry_run: bool,
+    },
+
     #[command(about = "Sync tasks with GitHub Issues")]
     Sync {
         #[arg(long)]

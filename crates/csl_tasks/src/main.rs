@@ -5,6 +5,7 @@ mod drift;
 mod error;
 mod github;
 mod graph;
+mod migration;
 mod storage;
 mod task;
 mod validation;
@@ -14,7 +15,8 @@ use archive::Archiver;
 use clap::{CommandFactory, Parser};
 use clap_complete::generate;
 use cli::{Cli, Command, GraphFormat, OutputFormat};
-use storage::TaskStorage;
+use migration::Migration;
+use storage::{TaskStorage, ValidationIssue};
 use task::{Task, TaskStatus};
 use validation::validate_tasks;
 
@@ -353,7 +355,61 @@ async fn main() -> Result<()> {
         Command::Validate => {
             let tasks = storage.load_all()?;
             validate_tasks(&tasks)?;
+
+            let issues = storage.validate_all()?;
+            if !issues.is_empty() {
+                println!("Found {} validation issues:", issues.len());
+                for issue in &issues {
+                    match issue {
+                        ValidationIssue::DuplicateId { id, count } => {
+                            println!("  ERROR: Task ID {} appears {} times", id, count);
+                        }
+                        ValidationIssue::DanglingReference {
+                            task_id,
+                            referenced_id,
+                            reference_type,
+                        } => {
+                            println!(
+                                "  ERROR: Task {} {} references non-existent task {}",
+                                task_id, reference_type, referenced_id
+                            );
+                        }
+                        ValidationIssue::CorruptedState { task_id, reason } => {
+                            println!("  ERROR: Task {} corrupted: {}", task_id, reason);
+                        }
+                        ValidationIssue::MismatchedState { task_id, reason } => {
+                            println!("  WARNING: Task {}: {}", task_id, reason);
+                        }
+                    }
+                }
+                return Err(anyhow::anyhow!("validation failed"));
+            }
+
             println!("All tasks valid (no circular dependencies or invalid references)");
+        }
+
+        Command::MigrateIds { dry_run } => {
+            let migration = Migration::new(cli.task_dir.clone());
+            let changes = migration.preview_migration()?;
+
+            if changes.is_empty() {
+                println!("No changes needed - all task IDs are already aligned");
+            } else {
+                println!("Migration would apply {} changes:", changes.len());
+                for change in &changes {
+                    println!(
+                        "  {} -> {} ({})",
+                        change.old_id, change.new_id, change.reason
+                    );
+                }
+
+                if dry_run {
+                    println!("\nDry run complete (no changes applied)");
+                } else {
+                    println!("\nApplying migration...");
+                    migration.execute()?;
+                }
+            }
         }
 
         Command::Sync {

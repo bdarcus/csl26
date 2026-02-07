@@ -1,6 +1,12 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+/// ID range for local-only tasks (not synced to GitHub)
+pub const LOCAL_ONLY_ID_START: u32 = 10000;
+
+/// Maximum ID for GitHub-backed tasks
+pub const GITHUB_ID_MAX: u32 = 9999;
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum TaskStatus {
@@ -71,5 +77,17 @@ impl Task {
 
     pub fn is_available(&self) -> bool {
         self.status == TaskStatus::Pending && self.blocked_by.is_empty()
+    }
+
+    /// Returns true if this task is local-only (not synced to GitHub)
+    #[allow(dead_code)]
+    pub fn is_local_only(&self) -> bool {
+        self.id >= LOCAL_ONLY_ID_START
+    }
+
+    /// Returns true if this task is backed by a GitHub issue
+    #[allow(dead_code)]
+    pub fn is_github_backed(&self) -> bool {
+        self.github_issue.is_some()
     }
 }

@@ -1,8 +1,8 @@
-use crate::task::{Task, TaskStatus};
+use crate::task::{GITHUB_ID_MAX, LOCAL_ONLY_ID_START, Task, TaskStatus};
 use anyhow::{Context, Result};
 use gray_matter::Matter;
 use gray_matter::engine::YAML;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -190,4 +190,84 @@ impl TaskStorage {
         let tasks = self.load_all()?;
         Ok(tasks.iter().map(|t| t.id).max().unwrap_or(0) + 1)
     }
+
+    /// Validate all tasks for ID conflicts and reference integrity
+    pub fn validate_all(&self) -> Result<Vec<ValidationIssue>> {
+        let tasks = self.load_all()?;
+        let mut issues = Vec::new();
+
+        // Check for duplicate IDs
+        let mut id_counts: HashMap<u32, usize> = HashMap::new();
+        for task in &tasks {
+            *id_counts.entry(task.id).or_insert(0) += 1;
+        }
+
+        for (id, count) in id_counts {
+            if count > 1 {
+                issues.push(ValidationIssue::DuplicateId { id, count });
+            }
+        }
+
+        // Check for dangling references and corrupted state
+        let valid_ids: HashSet<u32> = tasks.iter().map(|t| t.id).collect();
+
+        for task in &tasks {
+            // Check blocker references
+            for &blocker_id in &task.blocked_by {
+                if !valid_ids.contains(&blocker_id) {
+                    issues.push(ValidationIssue::DanglingReference {
+                        task_id: task.id,
+                        referenced_id: blocker_id,
+                        reference_type: "blocked_by".to_string(),
+                    });
+                }
+            }
+
+            // Check blocks references
+            for &blocks_id in &task.blocks {
+                if !valid_ids.contains(&blocks_id) {
+                    issues.push(ValidationIssue::DanglingReference {
+                        task_id: task.id,
+                        referenced_id: blocks_id,
+                        reference_type: "blocks".to_string(),
+                    });
+                }
+            }
+
+            // Check for corrupted state: ID >= 10000 but has github_issue
+            if task.id >= LOCAL_ONLY_ID_START && task.github_issue.is_some() {
+                issues.push(ValidationIssue::CorruptedState {
+                    task_id: task.id,
+                    reason: "Local-only ID but has github_issue field set".to_string(),
+                });
+            }
+
+            // Check for mismatched state: ID < 10000 but no github_issue
+            if task.id <= GITHUB_ID_MAX && task.github_issue.is_none() {
+                issues.push(ValidationIssue::MismatchedState {
+                    task_id: task.id,
+                    reason: "GitHub-backed ID but no github_issue field".to_string(),
+                });
+            }
+        }
+
+        Ok(issues)
+    }
+}
+
+/// Validation issue found during audit
+#[derive(Debug, Clone)]
+pub enum ValidationIssue {
+    /// Duplicate task IDs found
+    DuplicateId { id: u32, count: usize },
+    /// A task references a non-existent task
+    DanglingReference {
+        task_id: u32,
+        referenced_id: u32,
+        reference_type: String,
+    },
+    /// Task has invalid ID/github_issue combination
+    CorruptedState { task_id: u32, reason: String },
+    /// Task ID doesn't match its type (should be GitHub-backed or local-only)
+    MismatchedState { task_id: u32, reason: String },
 }
