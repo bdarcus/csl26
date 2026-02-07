@@ -52,6 +52,19 @@ When invoking these agents, they automatically receive CSL domain knowledge and 
 
 All permanent task tracking uses GitHub Issues for transparency and community collaboration. Tasks follow these conventions:
 
+### Quick Commands (CLI Skill)
+
+Use `/task` skill for fast local task management:
+```
+/task list                    # Show all tasks
+/task next                    # Recommend best task to work on
+/task claim 18                # Mark task in progress
+/task complete 18             # Mark task done
+/task sync                    # Sync to GitHub Issues
+```
+
+See `.claude/skills/task/SKILL.md` for full command reference.
+
 ### Issue Templates
 - **Bug Report** (`.github/ISSUE_TEMPLATE/bug_report.md`): Rendering defects, incorrect output
 - **Feature Request** (`.github/ISSUE_TEMPLATE/feature_request.md`): New features, enhancements
@@ -69,6 +82,7 @@ All permanent task tracking uses GitHub Issues for transparency and community co
 - Breaking down a feature branch into subtasks
 - Tracking implementation steps for a PR
 - Temporary exploration or investigation
+- Local-first workflow: create tasks, work, then sync to GitHub
 
 **GitHub Issues (Permanent):**
 - Feature requests from community or domain experts
@@ -76,6 +90,20 @@ All permanent task tracking uses GitHub Issues for transparency and community co
 - Technical debt that needs tracking
 - Long-term planning and milestones
 - Anything that requires contributor coordination
+
+### Local-First Task Workflow
+
+```
+1. Create locally:  /task create --subject "..." --priority high
+2. List pending:    /task list --status pending
+3. Find next:       /task next
+4. Work on task:    /task claim 18
+5. Update progress: /task update 18 --description "..."
+6. Mark done:       /task complete 18
+7. Sync to GitHub:  /task sync --direction to-gh
+```
+
+All local queries are instant (markdown files). Sync with GitHub when ready.
 
 ### Migration from TASKS.md
 
