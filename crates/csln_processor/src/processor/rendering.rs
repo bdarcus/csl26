@@ -334,14 +334,9 @@ impl<'a> Renderer<'a> {
         // "Substituted variables are suppressed in the rest of the output")
         let mut rendered_vars: HashSet<String> = HashSet::new();
 
-        // Sort template components by source_order to preserve CSL 1.0 macro call order.
-        // Components without source_order (usize::MAX) sort last.
-        let mut sorted_template: Vec<&TemplateComponent> = template.iter().collect();
-        sorted_template.sort_by_key(|comp| comp.rendering().source_order.unwrap_or(usize::MAX));
-
-        let components: Vec<ProcTemplateComponent> = sorted_template
+        let components: Vec<ProcTemplateComponent> = template
             .iter()
-            .filter_map(|&component| {
+            .filter_map(|component| {
                 // Get unique key for this variable (e.g., "contributor:Author")
                 let var_key = get_variable_key(component);
 

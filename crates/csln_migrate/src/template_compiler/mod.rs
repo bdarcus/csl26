@@ -322,21 +322,39 @@ impl TemplateCompiler {
 
             // Track minimum source_order for this merged component
             let min_order = group.iter().filter_map(|occ| occ.source_order).min();
-
-            // Set source_order on the merged component's rendering
-            if let Some(order) = min_order {
-                let mut rendering = self.get_component_rendering(&merged);
-                rendering.source_order = Some(order);
-                self.set_component_rendering(&mut merged, rendering);
-            }
-
             result.push((merged, min_order));
+        }
+
+        // Debug: Print source orders before sorting
+        eprintln!("=== Component source orders before sorting ===");
+        for (comp, order) in &result {
+            let comp_type = match comp {
+                TemplateComponent::Contributor(c) => format!("Contributor({:?})", c.contributor),
+                TemplateComponent::Date(d) => format!("Date({:?})", d.date),
+                TemplateComponent::Title(t) => format!("Title({:?})", t.title),
+                TemplateComponent::Number(n) => format!("Number({:?})", n.number),
+                TemplateComponent::Variable(v) => format!("Variable({:?})", v.variable),
+                TemplateComponent::List(_) => "List".to_string(),
+                _ => "Other".to_string(),
+            };
+            eprintln!("  {} -> order: {:?}", comp_type, order);
         }
 
         // Sort result by source_order to preserve macro call order
         result.sort_by_key(|(_, order)| order.unwrap_or(usize::MAX));
 
-        // Extract just the components (source_order is now stored in rendering)
+        eprintln!("=== After sorting ===");
+        for (comp, order) in &result {
+            let comp_type = match comp {
+                TemplateComponent::Contributor(c) => format!("Contributor({:?})", c.contributor),
+                TemplateComponent::Date(d) => format!("Date({:?})", d.date),
+                TemplateComponent::Title(t) => format!("Title({:?})", t.title),
+                _ => "...".to_string(),
+            };
+            eprintln!("  {} -> order: {:?}", comp_type, order);
+        }
+
+        // Extract just the components (drop the ordering metadata)
         result.into_iter().map(|(comp, _)| comp).collect()
     }
 
@@ -1605,7 +1623,6 @@ impl TemplateCompiler {
         }
 
         Rendering {
-            source_order: None,
             emph: fmt
                 .font_style
                 .as_ref()
@@ -1869,13 +1886,26 @@ impl TemplateCompiler {
     /// Extracts the source_order from a CslnNode, if present.
     /// Returns the order value or usize::MAX if not set (sorts last).
     fn extract_source_order(&self, node: &CslnNode) -> Option<usize> {
-        match node {
+        let order = match node {
             CslnNode::Variable(v) => v.source_order,
             CslnNode::Date(d) => d.source_order,
             CslnNode::Names(n) => n.source_order,
             CslnNode::Group(g) => g.source_order,
             _ => None,
-        }
+        };
+        eprintln!(
+            "TemplateCompiler: extract_source_order({:?}) = {:?}",
+            match node {
+                CslnNode::Variable(v) => format!("Variable({:?})", v.variable),
+                CslnNode::Date(d) => format!("Date({:?})", d.variable),
+                CslnNode::Names(n) => format!("Names({:?})", n.variable),
+                CslnNode::Group(_) => "Group".to_string(),
+                CslnNode::Text { value } => format!("Text({})", value),
+                CslnNode::Condition(_) => "Condition".to_string(),
+            },
+            order
+        );
+        order
     }
 }
 
