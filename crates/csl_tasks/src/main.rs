@@ -445,42 +445,110 @@ async fn main() -> Result<()> {
 
                     if dry_run {
                         for task in &tasks {
-                            println!("  [DRY RUN] Would sync task #{}: {}", task.id, task.subject);
+                            if let Some(issue_num) = task.github_issue {
+                                println!(
+                                    "  [DRY RUN] Would update task #{}: issue #{}",
+                                    task.id, issue_num
+                                );
+                            } else {
+                                println!(
+                                    "  [DRY RUN] Would create issue for task #{}: {}",
+                                    task.id, task.subject
+                                );
+                            }
                         }
                         println!("Dry run complete (no changes made)");
                     } else {
-                        let mut handles = Vec::new();
+                        let mut summary = github::SyncSummary::new();
 
-                        for task in tasks.clone() {
-                            let github_clone = github.clone();
-                            let storage_clone = storage.clone();
-
-                            let handle = tokio::spawn(async move {
-                                if let Some(issue_num) = task.github_issue {
-                                    println!(
-                                        "  Updating issue #{} for task #{}",
-                                        issue_num, task.id
-                                    );
-                                    github_clone.update_issue(issue_num as u64, &task).await?;
-                                } else {
-                                    println!("  Creating issue for task #{}", task.id);
-                                    let issue_num = github_clone.create_issue(&task).await?;
-                                    let mut updated_task = task.clone();
-                                    updated_task.github_issue = Some(issue_num as u32);
-                                    storage_clone.save(&updated_task)?;
-                                    println!("    Created issue #{}", issue_num);
+                        for task in tasks {
+                            if let Some(issue_num) = task.github_issue {
+                                // Check if issue still exists before updating
+                                match github.issue_exists(issue_num).await {
+                                    Ok(true) => {
+                                        // Try to update the issue
+                                        match github.update_issue(issue_num as u64, &task).await {
+                                            Ok(_) => {
+                                                summary.add(github::SyncResult::Updated {
+                                                    task_id: task.id,
+                                                    issue_number: issue_num,
+                                                });
+                                            }
+                                            Err(e) if github::is_permission_or_access_error(&e) => {
+                                                summary.add(github::SyncResult::Skipped {
+                                                    task_id: task.id,
+                                                    reason: "No permission to update issue"
+                                                        .to_string(),
+                                                });
+                                            }
+                                            Err(e) => {
+                                                summary.add(github::SyncResult::Failed {
+                                                    task_id: task.id,
+                                                    error: e.to_string(),
+                                                });
+                                            }
+                                        }
+                                    }
+                                    Ok(false) => {
+                                        // Issue doesn't exist, skip it
+                                        summary.add(github::SyncResult::Skipped {
+                                            task_id: task.id,
+                                            reason: format!(
+                                                "GitHub issue #{} not found",
+                                                issue_num
+                                            ),
+                                        });
+                                    }
+                                    Err(e) => {
+                                        summary.add(github::SyncResult::Failed {
+                                            task_id: task.id,
+                                            error: format!("Failed to check issue: {}", e),
+                                        });
+                                    }
                                 }
-                                Ok::<_, anyhow::Error>(())
-                            });
-
-                            handles.push(handle);
+                            } else {
+                                // Create new issue
+                                match github.create_issue(&task).await {
+                                    Ok(issue_num) => {
+                                        let mut updated_task = task.clone();
+                                        updated_task.github_issue = Some(issue_num as u32);
+                                        if let Err(e) = storage.save(&updated_task) {
+                                            summary.add(github::SyncResult::Failed {
+                                                task_id: task.id,
+                                                error: format!(
+                                                    "Created issue #{} but failed to save task: {}",
+                                                    issue_num, e
+                                                ),
+                                            });
+                                        } else {
+                                            summary.add(github::SyncResult::Created {
+                                                task_id: task.id,
+                                                issue_number: issue_num as u32,
+                                            });
+                                        }
+                                    }
+                                    Err(e) if github::is_permission_or_access_error(&e) => {
+                                        summary.add(github::SyncResult::Skipped {
+                                            task_id: task.id,
+                                            reason: "No permission to create issue".to_string(),
+                                        });
+                                    }
+                                    Err(e) => {
+                                        summary.add(github::SyncResult::Failed {
+                                            task_id: task.id,
+                                            error: e.to_string(),
+                                        });
+                                    }
+                                }
+                            }
                         }
 
-                        for handle in handles {
-                            handle.await??;
-                        }
+                        summary.print_report();
 
-                        println!("Sync complete!");
+                        if summary.has_failures() {
+                            eprintln!("\nWarning: Some tasks failed to sync. See details above.");
+                            std::process::exit(1);
+                        }
                     }
                 }
                 SyncDirection::FromGh => {
@@ -501,8 +569,7 @@ async fn main() -> Result<()> {
                         let mut next_id =
                             existing_tasks.iter().map(|t| t.id).max().unwrap_or(0) + 1;
 
-                        let mut imported = 0;
-                        let mut skipped = 0;
+                        let mut summary = github::SyncSummary::new();
 
                         for issue in issues {
                             // Check if we already have this issue
@@ -510,24 +577,52 @@ async fn main() -> Result<()> {
                                 .iter()
                                 .any(|t| t.github_issue == Some(issue.number as u32))
                             {
-                                skipped += 1;
+                                summary.add(github::SyncResult::Skipped {
+                                    task_id: issue.number as u32,
+                                    reason: "Task already exists locally".to_string(),
+                                });
                                 continue;
                             }
 
-                            let task = github.issue_to_task(&issue, next_id)?;
-                            storage.save(&task)?;
-                            println!("  Imported issue #{} as task #{}", issue.number, task.id);
+                            match github.issue_to_task(&issue, next_id) {
+                                Ok(task) => {
+                                    let task_id = task.id;
+                                    match storage.save(&task) {
+                                        Ok(_) => {
+                                            summary.add(github::SyncResult::Created {
+                                                task_id,
+                                                issue_number: issue.number as u32,
+                                            });
+                                        }
+                                        Err(e) => {
+                                            summary.add(github::SyncResult::Failed {
+                                                task_id,
+                                                error: format!("Failed to save task: {}", e),
+                                            });
+                                        }
+                                    }
 
-                            if github::GitHubSync::extract_task_id(&issue).is_none() {
-                                next_id += 1;
+                                    if github::GitHubSync::extract_task_id(&issue).is_none() {
+                                        next_id += 1;
+                                    }
+                                }
+                                Err(e) => {
+                                    summary.add(github::SyncResult::Failed {
+                                        task_id: issue.number as u32,
+                                        error: format!("Failed to parse issue: {}", e),
+                                    });
+                                }
                             }
-
-                            imported += 1;
                         }
 
-                        println!("\nSync complete!");
-                        println!("  Imported: {}", imported);
-                        println!("  Skipped (already exists): {}", skipped);
+                        summary.print_report();
+
+                        if summary.has_failures() {
+                            eprintln!(
+                                "\nWarning: Some issues failed to import. See details above."
+                            );
+                            std::process::exit(1);
+                        }
                     }
                 }
                 SyncDirection::Both => {
