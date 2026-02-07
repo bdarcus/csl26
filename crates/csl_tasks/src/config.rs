@@ -44,11 +44,22 @@ pub struct SyncConfig {
     #[serde(default)]
     pub auto_sync: bool,
 
+    #[serde(default = "default_auto_sync_on_complete")]
+    pub auto_sync_on_complete: AutoSyncOnComplete,
+
     #[serde(default = "default_conflict_strategy")]
     pub conflict_strategy: String,
 
     #[serde(default = "default_true")]
     pub preserve_github_labels: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum AutoSyncOnComplete {
+    Prompt,
+    Always,
+    Never,
 }
 
 impl Default for GitHubConfig {
@@ -74,6 +85,7 @@ impl Default for SyncConfig {
     fn default() -> Self {
         Self {
             auto_sync: false,
+            auto_sync_on_complete: default_auto_sync_on_complete(),
             conflict_strategy: default_conflict_strategy(),
             preserve_github_labels: true,
         }
@@ -94,6 +106,10 @@ fn default_conflict_strategy() -> String {
 
 fn default_true() -> bool {
     true
+}
+
+fn default_auto_sync_on_complete() -> AutoSyncOnComplete {
+    AutoSyncOnComplete::Prompt
 }
 
 #[allow(dead_code)]

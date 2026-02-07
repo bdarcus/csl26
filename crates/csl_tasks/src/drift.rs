@@ -1,4 +1,5 @@
 use crate::task::{Task, TaskStatus};
+use serde::Serialize;
 use std::collections::HashMap;
 use thiserror::Error;
 
@@ -149,4 +150,74 @@ pub fn detect_drift(local_tasks: &[Task], remote_issues: &[(u64, Task, String)])
     }
 
     report
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct TaskDriftInfo {
+    pub has_drift: bool,
+    pub types: Vec<String>,
+}
+
+impl TaskDriftInfo {
+    pub fn no_drift() -> Self {
+        Self {
+            has_drift: false,
+            types: Vec::new(),
+        }
+    }
+
+    pub fn with_drift(types: Vec<String>) -> Self {
+        Self {
+            has_drift: !types.is_empty(),
+            types,
+        }
+    }
+}
+
+pub fn check_task_drift(task: &Task, remote_issues: &[(u64, Task, String)]) -> TaskDriftInfo {
+    if let Some(_issue_num) = task.github_issue {
+        let remote_opt =
+            remote_issues
+                .iter()
+                .find_map(|(remote_issue_num, remote_task, remote_hash)| {
+                    if task.id == remote_task.id {
+                        Some((remote_issue_num, remote_task, remote_hash))
+                    } else {
+                        None
+                    }
+                });
+
+        if let Some((_remote_issue_num, remote_task, remote_hash)) = remote_opt {
+            let mut drift_types = Vec::new();
+
+            if task.content_hash != **remote_hash {
+                drift_types.push("content".to_string());
+            }
+
+            if task.status != remote_task.status {
+                drift_types.push("status".to_string());
+            }
+
+            if task.blocks != remote_task.blocks {
+                drift_types.push("dependencies".to_string());
+            }
+
+            return TaskDriftInfo::with_drift(drift_types);
+        }
+    }
+
+    TaskDriftInfo::no_drift()
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct TaskWithDrift {
+    #[serde(flatten)]
+    pub task: Task,
+    pub drift: TaskDriftInfo,
+}
+
+impl TaskWithDrift {
+    pub fn new(task: Task, drift: TaskDriftInfo) -> Self {
+        Self { task, drift }
+    }
 }

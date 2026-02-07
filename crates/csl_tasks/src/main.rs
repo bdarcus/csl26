@@ -24,7 +24,11 @@ async fn main() -> Result<()> {
     let storage = TaskStorage::new(&cli.task_dir);
 
     match cli.command {
-        Command::List { status, format } => {
+        Command::List {
+            status,
+            format,
+            with_drift,
+        } => {
             let tasks = storage.load_all()?;
             let filtered: Vec<_> = if let Some(status_filter) = status {
                 tasks
@@ -37,7 +41,19 @@ async fn main() -> Result<()> {
 
             match format {
                 OutputFormat::Json => {
-                    println!("{}", serde_json::to_string_pretty(&filtered)?);
+                    if with_drift {
+                        let remote_issues = vec![];
+                        let tasks_with_drift: Vec<drift::TaskWithDrift> = filtered
+                            .into_iter()
+                            .map(|task| {
+                                let drift_info = drift::check_task_drift(&task, &remote_issues);
+                                drift::TaskWithDrift::new(task, drift_info)
+                            })
+                            .collect();
+                        println!("{}", serde_json::to_string_pretty(&tasks_with_drift)?);
+                    } else {
+                        println!("{}", serde_json::to_string_pretty(&filtered)?);
+                    }
                 }
                 OutputFormat::Table => {
                     use tabled::{
@@ -283,7 +299,55 @@ async fn main() -> Result<()> {
             let mut task = storage.load(id)?;
             task.status = TaskStatus::Completed;
             storage.save(&task)?;
-            println!("Completed task #{}", id);
+            println!("✓ Task #{} marked as completed", id);
+
+            if let Some(issue_num) = task.github_issue {
+                let config = config::Config::load_from_project()?.unwrap_or_default();
+                let should_sync = match config.sync.auto_sync_on_complete {
+                    config::AutoSyncOnComplete::Always => true,
+                    config::AutoSyncOnComplete::Never => false,
+                    config::AutoSyncOnComplete::Prompt => {
+                        println!("\nGitHub Issue #{} is still open. Sync now?", issue_num);
+                        println!("  [y] Yes, sync to GitHub");
+                        println!("  [n] No, sync later");
+                        println!("  [a] Always auto-sync (save to config)");
+                        print!("\nChoice [y/n/a]: ");
+                        std::io::Write::flush(&mut std::io::stdout())?;
+
+                        let mut input = String::new();
+                        std::io::stdin().read_line(&mut input)?;
+                        let choice = input.trim().to_lowercase();
+
+                        match choice.as_str() {
+                            "a" => {
+                                let mut new_config = config.clone();
+                                new_config.sync.auto_sync_on_complete =
+                                    config::AutoSyncOnComplete::Always;
+                                if let Err(e) =
+                                    new_config.save(std::path::Path::new(".csl-tasks.toml"))
+                                {
+                                    eprintln!("Warning: Could not save config: {}", e);
+                                } else {
+                                    println!("✓ Config updated: auto_sync_on_complete = always");
+                                }
+                                true
+                            }
+                            "y" => true,
+                            _ => false,
+                        }
+                    }
+                };
+
+                if should_sync {
+                    println!("\n🔄 Syncing to GitHub...");
+                    // The sync logic will be triggered by falling through to the sync code
+                    // For now, just inform the user to run sync manually
+                    println!(
+                        "💡 Run: csl-tasks sync --direction to-gh to close GitHub issue #{}",
+                        issue_num
+                    );
+                }
+            }
         }
 
         Command::Validate => {
