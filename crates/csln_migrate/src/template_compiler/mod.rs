@@ -725,15 +725,15 @@ impl TemplateCompiler {
         components
     }
 
-    /// Compile and sort for bibliography output.
+    /// Compile bibliography, preserving CSL 1.0 layout order.
     pub fn compile_bibliography(
         &self,
         nodes: &[CslnNode],
-        is_numeric: bool,
+        _is_numeric: bool,
     ) -> Vec<TemplateComponent> {
-        let mut components = self.compile(nodes);
-        self.sort_bibliography_components(&mut components, is_numeric);
-        components
+        // DISABLED: Sorting was needed to work around HashMap's random iteration order.
+        // Now that we use IndexMap, we preserve the CSL 1.0 layout order naturally.
+        self.compile(nodes)
     }
 
     /// Compile bibliography with type-specific templates.
@@ -743,7 +743,7 @@ impl TemplateCompiler {
     pub fn compile_bibliography_with_types(
         &self,
         nodes: &[CslnNode],
-        is_numeric: bool,
+        _is_numeric: bool,
     ) -> (
         Vec<TemplateComponent>,
         HashMap<String, Vec<TemplateComponent>>,
@@ -752,7 +752,9 @@ impl TemplateCompiler {
         // This handles suppress semantics correctly without needing deduplication
         let mut default_template = self.compile(nodes);
 
-        self.sort_bibliography_components(&mut default_template, is_numeric);
+        // DISABLED: Sorting was needed to work around HashMap's random iteration order.
+        // Now that we use IndexMap, we preserve the CSL 1.0 layout order naturally.
+        // self.sort_bibliography_components(&mut default_template, _is_numeric);
 
         // Deduplicate number components (edition, volume, issue) in nested lists
         crate::passes::deduplicate::deduplicate_numbers_in_lists(&mut default_template);
@@ -1199,6 +1201,7 @@ impl TemplateCompiler {
 
     /// Sort components for bibliography: citation-number first (for numeric styles),
     /// then author, date, title, then rest.
+    #[allow(dead_code)]
     fn sort_bibliography_components(&self, components: &mut [TemplateComponent], is_numeric: bool) {
         components.sort_by_key(|c| match c {
             // Citation number goes first for numeric bibliography styles
