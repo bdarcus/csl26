@@ -20,3 +20,7 @@ styles_analysis.txt
 baselines/*.json
 !baselines/README.md
 !baselines/.gitkeep
+
+# Task management (local working data, not version controlled)
+tasks/
+tasks-backup-*/
