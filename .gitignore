@@ -24,3 +24,7 @@ baselines/*.json
 # Task management (local working data, not version controlled)
 tasks/
 tasks-backup-*/
+
+# Project-specific symlinks (local configuration)
+.gemini/
+GEMINI.md
