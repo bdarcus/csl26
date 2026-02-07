@@ -753,11 +753,93 @@ impl TemplateCompiler {
 
         self.sort_bibliography_components(&mut default_template, is_numeric);
 
+        // Fix duplicate variables (e.g., date appearing both in List and standalone)
+        self.fix_duplicate_variables(&mut default_template);
+
         // Type-specific template generation is disabled for now.
         // Future work: properly merge common components with type-specific branches.
         let type_templates: HashMap<String, Vec<TemplateComponent>> = HashMap::new();
 
         (default_template, type_templates)
+    }
+
+    /// Fix duplicate variables that appear both in Lists and as standalone components.
+    ///
+    /// When a variable (like date:issued) appears:
+    /// 1. Inside a List for specific types (e.g., article-journal)
+    /// 2. As a standalone component for all types
+    ///
+    /// Both will render for those types, causing duplication. This method adds
+    /// suppress overrides to standalone components for types where the variable
+    /// already appears in a List.
+    fn fix_duplicate_variables(&self, components: &mut [TemplateComponent]) {
+        // Step 1: Collect which variables appear in Lists, and for which types
+        let mut list_vars: HashMap<String, Vec<String>> = HashMap::new();
+
+        for component in components.iter() {
+            if let TemplateComponent::List(list) = component {
+                // Get the types for which this List is visible
+                let visible_types = self.get_visible_types_for_component(component);
+
+                // Extract all variables from this List
+                let vars = self.extract_list_vars(list);
+
+                for var in vars {
+                    list_vars
+                        .entry(var)
+                        .or_default()
+                        .extend(visible_types.clone());
+                }
+            }
+        }
+
+        // Step 2: For each standalone component, add suppress overrides for types
+        // where it already appears in a List
+        for component in components.iter_mut() {
+            // Skip Lists - we only care about standalone components
+            if matches!(component, TemplateComponent::List(_)) {
+                continue;
+            }
+
+            // Get the variable key for this component
+            if let Some(var_key) = self.get_variable_key(component) {
+                // Check if this variable appears in any Lists
+                if let Some(types_in_lists) = list_vars.get(&var_key) {
+                    // Add suppress overrides for those types
+                    for type_str in types_in_lists {
+                        let mut suppressed = self.get_component_rendering(component);
+                        suppressed.suppress = Some(true);
+                        self.add_override_to_component(component, type_str.clone(), suppressed);
+                    }
+                }
+            }
+        }
+    }
+
+    /// Get the list of types for which a component is visible.
+    ///
+    /// Returns type names where suppress=false (either by default or via overrides).
+    fn get_visible_types_for_component(&self, component: &TemplateComponent) -> Vec<String> {
+        let base_rendering = self.get_component_rendering(component);
+        let overrides = self.get_component_overrides(component);
+
+        let mut visible_types = Vec::new();
+
+        // If component has suppress=true by default, only count types with suppress=false overrides
+        if base_rendering.suppress == Some(true) {
+            if let Some(ovr) = overrides {
+                for (type_str, rendering) in ovr {
+                    if rendering.suppress != Some(true) {
+                        visible_types.push(type_str);
+                    }
+                }
+            }
+        }
+        // If component is visible by default (suppress=false or None),
+        // we would need to list all types except those with suppress=true overrides.
+        // For now, we skip this case as it would require enumerating all possible types.
+
+        visible_types
     }
 
     /// Old deduplication method - no longer needed with occurrence-based compilation.
@@ -1598,6 +1680,7 @@ impl TemplateCompiler {
             TemplateComponent::Number(n) => n.overrides.clone(),
             TemplateComponent::Title(t) => t.overrides.clone(),
             TemplateComponent::Variable(v) => v.overrides.clone(),
+            TemplateComponent::List(l) => l.overrides.clone(),
             _ => None,
         }
     }
