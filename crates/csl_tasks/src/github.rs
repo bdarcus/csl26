@@ -323,6 +323,42 @@ impl GitHubSync {
         }
     }
 
+    /// Find an open issue by exact title match
+    pub async fn find_issue_by_title(&self, title: &str) -> Result<Option<u64>> {
+        // Search for open issues with matching title
+        // First try to list all open issues and filter by title (safer than using search API)
+        let mut page = 1u32;
+
+        loop {
+            let page_issues = self
+                .octocrab
+                .issues(&self.owner, &self.repo)
+                .list()
+                .state(octocrab::params::State::Open)
+                .per_page(100)
+                .page(page)
+                .send()
+                .await
+                .context("failed to list GitHub issues for duplicate detection")?;
+
+            let items = page_issues.items;
+            if items.is_empty() {
+                break;
+            }
+
+            // Check for exact title match
+            for issue in items {
+                if issue.title == title {
+                    return Ok(Some(issue.number));
+                }
+            }
+
+            page += 1;
+        }
+
+        Ok(None)
+    }
+
     pub fn issue_to_task(
         &self,
         issue: &octocrab::models::issues::Issue,
