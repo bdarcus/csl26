@@ -1473,9 +1473,14 @@ impl TemplateCompiler {
                         .collect(),
                 )
             };
+
+            // Extract label form if present
+            let label_form = var.label.as_ref().map(|l| self.map_label_form(&l.form));
+
             return Some(TemplateComponent::Number(TemplateNumber {
                 number: num_var,
                 form: None,
+                label_form,
                 rendering: self.convert_formatting(&var.formatting),
                 overrides,
                 ..Default::default()
@@ -1541,6 +1546,19 @@ impl TemplateCompiler {
             Variable::PublisherPlace => Some(SimpleVariable::PublisherPlace),
             Variable::Genre => Some(SimpleVariable::Genre),
             _ => None,
+        }
+    }
+
+    /// Map LabelForm from legacy intermediate representation to template type.
+    fn map_label_form(&self, form: &csln_core::LabelForm) -> csln_core::template::LabelForm {
+        match form {
+            csln_core::LabelForm::Long => csln_core::template::LabelForm::Long,
+            csln_core::LabelForm::Short => csln_core::template::LabelForm::Short,
+            csln_core::LabelForm::Symbol => csln_core::template::LabelForm::Symbol,
+            // Verb and VerbShort don't exist in template::LabelForm, map to Long
+            csln_core::LabelForm::Verb | csln_core::LabelForm::VerbShort => {
+                csln_core::template::LabelForm::Long
+            }
         }
     }
 

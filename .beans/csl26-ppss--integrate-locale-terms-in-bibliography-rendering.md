@@ -1,11 +1,11 @@
 ---
 # csl26-ppss
 title: Integrate locale terms in bibliography rendering
-status: todo
+status: in-progress
 type: bug
 priority: normal
 created_at: 2026-02-07T18:20:21Z
-updated_at: 2026-02-07T18:20:42Z
+updated_at: 2026-02-07T19:02:19Z
 parent: csl26-ifiw
 ---
 

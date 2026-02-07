@@ -109,11 +109,28 @@ impl Locale {
             },
         );
 
+        // Populate basic locator terms
+        let mut locators = HashMap::new();
+        locators.insert(
+            LocatorType::Page,
+            LocatorTerm {
+                long: Some(SingularPlural {
+                    singular: "page".into(),
+                    plural: "pages".into(),
+                }),
+                short: Some(SingularPlural {
+                    singular: "p.".into(),
+                    plural: "pp.".into(),
+                }),
+                symbol: None,
+            },
+        );
+
         Self {
             locale: "en-US".into(),
             dates: DateTerms::en_us(),
             roles,
-            locators: HashMap::new(), // Populated in from_raw usually
+            locators,
             terms: Terms::en_us(),
             punctuation_in_quote: true, // American English convention
             sort_articles: vec!["the".into(), "a".into(), "an".into()],
