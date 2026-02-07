@@ -1,6 +1,18 @@
 {
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "defaultMode": "acceptEdits",
   "permissions": {
     "allow": [
+      "Read(*)",
+      "Search(*)",
+      "Edit(*)",
+      "Write(*)",
+      
+      "Bash(beans *)",
+      "Bash(.beans)",
+      "Bash(node *)",
+      "Bash(bun *)",
+      "Bash(deno *)",
       "Bash(git status)",
       "Bash(git checkout *)",
       "Bash(git add *)",
@@ -12,15 +24,18 @@
       "Bash(git show *)",
       "Bash(git mv *)",
       "Bash(git branch *)",
-      "Bash(cargo build *)",
-      "Bash(cargo test *)",
-      "Bash(cargo run *)",
-      "Bash(cargo fmt)",
-      "Bash(cargo clippy *)",
+      "Bash(cargo *)",
       "Bash(gh pr *)",
       "Bash(gh api *)",
       "Bash(mkdir *)",
       "Bash(ls *)"
+    ],
+  "deny": [
+      "Bash(rm -rf /*)",
+      "Bash(sudo *)",
+      "Bash(curl *)",
+      "Bash(wget *)",
+      "Bash(ssh *)"
     ]
   }
 }
