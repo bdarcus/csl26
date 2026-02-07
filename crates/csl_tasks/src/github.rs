@@ -2,6 +2,110 @@ use crate::task::{Task, TaskStatus};
 use anyhow::{Context, Result};
 use octocrab::Octocrab;
 use std::collections::HashMap;
+use std::fmt;
+
+/// Represents the outcome of a single task sync operation
+#[derive(Debug, Clone)]
+pub enum SyncResult {
+    Created { task_id: u32, issue_number: u32 },
+    Updated { task_id: u32, issue_number: u32 },
+    Skipped { task_id: u32, reason: String },
+    Failed { task_id: u32, error: String },
+}
+
+impl fmt::Display for SyncResult {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            SyncResult::Created {
+                task_id,
+                issue_number,
+            } => {
+                write!(f, "Task #{}: Created issue #{}", task_id, issue_number)
+            }
+            SyncResult::Updated {
+                task_id,
+                issue_number,
+            } => {
+                write!(f, "Task #{}: Updated issue #{}", task_id, issue_number)
+            }
+            SyncResult::Skipped { task_id, reason } => {
+                write!(f, "Task #{}: Skipped ({})", task_id, reason)
+            }
+            SyncResult::Failed { task_id, error } => {
+                write!(f, "Task #{}: Failed ({})", task_id, error)
+            }
+        }
+    }
+}
+
+/// Summary of all sync operations
+#[derive(Debug, Default)]
+pub struct SyncSummary {
+    pub created: Vec<SyncResult>,
+    pub updated: Vec<SyncResult>,
+    pub skipped: Vec<SyncResult>,
+    pub failed: Vec<SyncResult>,
+}
+
+impl SyncSummary {
+    /// Create a new empty summary
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Add a sync result to the appropriate category
+    pub fn add(&mut self, result: SyncResult) {
+        match &result {
+            SyncResult::Created { .. } => self.created.push(result),
+            SyncResult::Updated { .. } => self.updated.push(result),
+            SyncResult::Skipped { .. } => self.skipped.push(result),
+            SyncResult::Failed { .. } => self.failed.push(result),
+        }
+    }
+
+    /// Check if any tasks failed to sync
+    pub fn has_failures(&self) -> bool {
+        !self.failed.is_empty()
+    }
+
+    /// Get total number of synced tasks
+    #[allow(dead_code)]
+    pub fn total_synced(&self) -> usize {
+        self.created.len() + self.updated.len()
+    }
+
+    /// Print a formatted report of sync results
+    pub fn print_report(&self) {
+        println!("\nSync Summary:");
+        println!("  Created: {}", self.created.len());
+        if !self.created.is_empty() {
+            for result in &self.created {
+                println!("    {}", result);
+            }
+        }
+
+        println!("  Updated: {}", self.updated.len());
+        if !self.updated.is_empty() {
+            for result in &self.updated {
+                println!("    {}", result);
+            }
+        }
+
+        println!("  Skipped: {}", self.skipped.len());
+        if !self.skipped.is_empty() {
+            for result in &self.skipped {
+                println!("    {}", result);
+            }
+        }
+
+        println!("  Failed: {}", self.failed.len());
+        if !self.failed.is_empty() {
+            for result in &self.failed {
+                println!("    {}", result);
+            }
+        }
+    }
+}
 
 #[derive(Clone)]
 pub struct GitHubSync {
@@ -203,6 +307,22 @@ impl GitHubSync {
         Ok(issues)
     }
 
+    /// Check if a GitHub issue exists
+    pub async fn issue_exists(&self, issue_number: u32) -> Result<bool> {
+        match self
+            .octocrab
+            .issues(&self.owner, &self.repo)
+            .get(issue_number as u64)
+            .await
+        {
+            Ok(_) => Ok(true),
+            Err(octocrab::Error::GitHub { source, .. }) if source.message.contains("Not Found") => {
+                Ok(false)
+            }
+            Err(e) => Err(anyhow::Error::from(e)),
+        }
+    }
+
     pub fn issue_to_task(
         &self,
         issue: &octocrab::models::issues::Issue,
@@ -270,4 +390,14 @@ fn extract_task_id_from_body(body: &str) -> Option<u32> {
         .and_then(|d| d.deserialize::<HashMap<String, serde_json::Value>>().ok())
         .and_then(|fm| fm.get("task_id")?.as_u64())
         .map(|v| v as u32)
+}
+
+/// Detect if an error is due to permission issues or missing resources
+pub fn is_permission_or_access_error(error: &anyhow::Error) -> bool {
+    let msg = error.to_string();
+    msg.contains("Resource not accessible")
+        || msg.contains("Not Found")
+        || msg.contains("permission")
+        || msg.contains("401")
+        || msg.contains("403")
 }

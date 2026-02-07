@@ -229,6 +229,28 @@ The skill recommends local-first workflow:
 3. Mark done: `/task complete`
 4. Sync to GitHub when ready: `/task sync --direction to-gh`
 
+### Sync Error Handling
+The sync command now gracefully handles errors:
+- **Created**: New GitHub issues created successfully for tasks without github_issue
+- **Updated**: Existing GitHub issues updated successfully
+- **Skipped**: Tasks skipped due to:
+  - Missing GitHub issues (deleted or inaccessible)
+  - Permission errors (insufficient token permissions)
+  - Deleted tasks that can't be synced
+- **Failed**: Tasks that encountered unexpected errors (details shown in report)
+
+Use `--dry-run` to preview what will be synced without making changes:
+```
+/task sync --direction to-gh --dry-run
+/task sync --direction from-gh --dry-run
+```
+
+The sync command will:
+1. Continue processing all tasks even if some fail
+2. Print a summary report showing created/updated/skipped/failed tasks
+3. Exit with status 1 if any tasks failed (to alert CI/automation)
+4. Show clear reasons for skipped or failed tasks
+
 ### Dependencies
 Tasks can block each other:
 - `/task update 18 --add-blocks 17` (task 18 blocks task 17)
