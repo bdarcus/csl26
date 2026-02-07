@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 csl_legacy = { path = "../csl_legacy" }
 csln_core = { path = "../csln_core" }
+indexmap = "2.13.0"
 roxmltree = "0.20"
 serde_json = "1.0"
 serde_yaml = "0.9"

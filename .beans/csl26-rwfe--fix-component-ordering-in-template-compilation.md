@@ -1,11 +1,11 @@
 ---
 # csl26-rwfe
 title: Fix component ordering in template compilation
-status: todo
+status: in-progress
 type: bug
 priority: high
 created_at: 2026-02-07T18:20:01Z
-updated_at: 2026-02-07T18:20:32Z
+updated_at: 2026-02-07T18:24:57Z
 parent: csl26-ifiw
 ---
 

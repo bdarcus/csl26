@@ -16,6 +16,7 @@ use csln_core::{
     },
     CslnNode, FormattingOptions, ItemType, Variable,
 };
+use indexmap::IndexMap;
 use std::collections::HashMap;
 
 /// Context for a conditional branch, distinguishing between type-specific
@@ -229,7 +230,7 @@ impl TemplateCompiler {
         let mut result: Vec<TemplateComponent> = Vec::new();
 
         // Group occurrences by variable key (including Lists)
-        let mut grouped: HashMap<String, Vec<ComponentOccurrence>> = HashMap::new();
+        let mut grouped: IndexMap<String, Vec<ComponentOccurrence>> = IndexMap::new();
         let mut list_counter = 0;
 
         for occurrence in occurrences {

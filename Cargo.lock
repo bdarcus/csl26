@@ -192,6 +192,7 @@ version = "0.1.0"
 dependencies = [
  "csl_legacy",
  "csln_core",
+ "indexmap",
  "roxmltree",
  "serde",
  "serde_json",
