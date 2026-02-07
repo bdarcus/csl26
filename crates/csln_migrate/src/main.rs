@@ -245,12 +245,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         // Add type-specific overrides (recursively to handle nested Lists)
         // Pass the extracted volume-pages delimiter for journal article pages
-        let vol_pages_delim = options.volume_pages_delimiter;
+        let vol_pages_delim = options.volume_pages_delimiter.clone();
         let style_id = &legacy_style.info.id;
         for component in &mut new_bib {
             apply_type_overrides(
                 component,
-                vol_pages_delim,
+                vol_pages_delim.clone(),
                 volume_list_has_space_prefix,
                 style_id,
             );
@@ -535,7 +535,7 @@ fn apply_type_overrides(
             for item in &mut list.items {
                 apply_type_overrides(
                     item,
-                    volume_pages_delimiter,
+                    volume_pages_delimiter.clone(),
                     volume_list_has_space_prefix,
                     style_id,
                 );

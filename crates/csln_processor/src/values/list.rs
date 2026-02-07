@@ -44,25 +44,14 @@ impl ComponentValues for TemplateList {
         }
 
         // Join with delimiter
-        let delimiter = match self
+        let delimiter = self
             .delimiter
             .as_ref()
             .unwrap_or(&DelimiterPunctuation::Comma)
-        {
-            DelimiterPunctuation::Comma => ", ",
-            DelimiterPunctuation::Semicolon => "; ",
-            DelimiterPunctuation::Period => ". ",
-            DelimiterPunctuation::Colon => ": ",
-            DelimiterPunctuation::Ampersand => " & ",
-            DelimiterPunctuation::VerticalLine => " | ",
-            DelimiterPunctuation::Slash => "/",
-            DelimiterPunctuation::Hyphen => "-",
-            DelimiterPunctuation::Space => " ",
-            DelimiterPunctuation::None => "",
-        };
+            .to_string_with_space();
 
         Some(ProcValues {
-            value: values.join(delimiter),
+            value: values.join(&delimiter),
             prefix: self.rendering.prefix.clone(),
             suffix: self.rendering.suffix.clone(),
             url: None,

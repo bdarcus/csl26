@@ -483,7 +483,7 @@ pub struct TemplateList {
 }
 
 /// Delimiter punctuation options.
-#[derive(Debug, Default, Deserialize, Serialize, Clone, Copy, PartialEq, JsonSchema)]
+#[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub enum DelimiterPunctuation {
     #[default]
@@ -497,28 +497,31 @@ pub enum DelimiterPunctuation {
     Hyphen,
     Space,
     None,
+    Custom(String),
 }
 
 impl DelimiterPunctuation {
     /// Convert to string with trailing space (for most delimiters).
     /// Returns the punctuation followed by a space, except for Space and None.
-    pub fn to_string_with_space(&self) -> &'static str {
+    pub fn to_string_with_space(&self) -> String {
         match self {
-            Self::Comma => ", ",
-            Self::Semicolon => "; ",
-            Self::Period => ". ",
-            Self::Colon => ": ",
-            Self::Ampersand => " & ",
-            Self::VerticalLine => " | ",
-            Self::Slash => "/",
-            Self::Hyphen => "-",
-            Self::Space => " ",
-            Self::None => "",
+            Self::Comma => ", ".to_string(),
+            Self::Semicolon => "; ".to_string(),
+            Self::Period => ". ".to_string(),
+            Self::Colon => ": ".to_string(),
+            Self::Ampersand => " & ".to_string(),
+            Self::VerticalLine => " | ".to_string(),
+            Self::Slash => "/".to_string(),
+            Self::Hyphen => "-".to_string(),
+            Self::Space => " ".to_string(),
+            Self::None => "".to_string(),
+            Self::Custom(s) => s.clone(),
         }
     }
 
     /// Parse from a CSL delimiter string.
     /// Handles common patterns like ", ", ": ", etc.
+    /// Returns Custom variant for unrecognized delimiters.
     pub fn from_csl_string(s: &str) -> Self {
         match s {
             "," | ", " => Self::Comma,
@@ -543,7 +546,7 @@ impl DelimiterPunctuation {
                     "/" => Self::Slash,
                     "-" => Self::Hyphen,
                     "" => Self::None,
-                    _ => Self::Comma, // Default fallback
+                    _ => Self::Custom(s.to_string()),
                 }
             }
         }

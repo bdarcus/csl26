@@ -40,7 +40,7 @@ pub fn extract_bibliography_config(style: &Style) -> Option<BibliographyConfig> 
     // Extract bibliography component separator from group delimiter.
     if let Some(separator) = extract_bibliography_separator_from_layout(&bib.layout, &style.macros)
     {
-        config.separator = Some(separator.to_string_with_space().to_string());
+        config.separator = Some(separator.to_string_with_space());
         has_config = true;
     }
 

@@ -120,7 +120,7 @@ pub fn group_volume_and_issue(
                 if insert_issue_after_volume(
                     &mut list.items,
                     issue_with_parens,
-                    vol_issue_delimiter,
+                    vol_issue_delimiter.clone(),
                 ) {
                     // Only update outer list delimiter if it's a serial source list
                     // (avoid changing delimiters for lists containing titles)
@@ -165,7 +165,7 @@ pub fn group_volume_and_issue(
                         && insert_issue_after_volume(
                             &mut list.items,
                             issue_with_parens.clone(),
-                            vol_issue_delimiter,
+                            vol_issue_delimiter.clone(),
                         )
                     {
                         break;
@@ -226,7 +226,7 @@ pub fn insert_issue_after_volume(
     // Otherwise, recurse into nested lists
     for item in items.iter_mut() {
         if let TemplateComponent::List(inner_list) = item {
-            if insert_issue_after_volume(&mut inner_list.items, issue.clone(), delimiter) {
+            if insert_issue_after_volume(&mut inner_list.items, issue.clone(), delimiter.clone()) {
                 return true;
             }
         }

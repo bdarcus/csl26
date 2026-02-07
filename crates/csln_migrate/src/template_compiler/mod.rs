@@ -970,7 +970,7 @@ impl TemplateCompiler {
 
         Some(TemplateComponent::List(TemplateList {
             items: cleaned_items,
-            delimiter: list.delimiter,
+            delimiter: list.delimiter.clone(),
             rendering: list.rendering.clone(),
             ..Default::default()
         }))
@@ -1701,6 +1701,7 @@ impl TemplateCompiler {
         }
     }
     /// Map a String delimiter to DelimiterPunctuation.
+    /// Preserves custom delimiters that don't match standard patterns.
     fn map_delimiter(&self, delimiter: &Option<String>) -> Option<DelimiterPunctuation> {
         let d = delimiter.as_ref()?;
         match d.as_str() {
@@ -1714,7 +1715,7 @@ impl TemplateCompiler {
             " - " | "-" => Some(DelimiterPunctuation::Hyphen),
             " " => Some(DelimiterPunctuation::Space),
             "" => Some(DelimiterPunctuation::None),
-            _ => None,
+            _ => Some(DelimiterPunctuation::Custom(d.clone())),
         }
     }
 
