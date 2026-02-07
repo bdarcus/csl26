@@ -507,36 +507,74 @@ async fn main() -> Result<()> {
                                     }
                                 }
                             } else {
-                                // Create new issue
-                                match github.create_issue(&task).await {
-                                    Ok(issue_num) => {
+                                // Check for existing issue with same title before creating
+                                match github.find_issue_by_title(&task.subject).await {
+                                    Ok(Some(existing_issue_num)) => {
+                                        // Found existing issue - link to it instead of creating
                                         let mut updated_task = task.clone();
-                                        updated_task.github_issue = Some(issue_num as u32);
+                                        updated_task.github_issue = Some(existing_issue_num as u32);
                                         if let Err(e) = storage.save(&updated_task) {
                                             summary.add(github::SyncResult::Failed {
                                                 task_id: task.id,
                                                 error: format!(
-                                                    "Created issue #{} but failed to save task: {}",
-                                                    issue_num, e
+                                                    "Found existing issue #{} but failed to save task: {}",
+                                                    existing_issue_num, e
                                                 ),
                                             });
                                         } else {
-                                            summary.add(github::SyncResult::Created {
+                                            eprintln!(
+                                                "Linked task #{} to existing issue #{} (matched by title)",
+                                                task.id, existing_issue_num
+                                            );
+                                            summary.add(github::SyncResult::Updated {
                                                 task_id: task.id,
-                                                issue_number: issue_num as u32,
+                                                issue_number: existing_issue_num as u32,
                                             });
                                         }
                                     }
-                                    Err(e) if github::is_permission_or_access_error(&e) => {
-                                        summary.add(github::SyncResult::Skipped {
-                                            task_id: task.id,
-                                            reason: "No permission to create issue".to_string(),
-                                        });
+                                    Ok(None) => {
+                                        // No existing issue - create new one
+                                        match github.create_issue(&task).await {
+                                            Ok(issue_num) => {
+                                                let mut updated_task = task.clone();
+                                                updated_task.github_issue = Some(issue_num as u32);
+                                                if let Err(e) = storage.save(&updated_task) {
+                                                    summary.add(github::SyncResult::Failed {
+                                                        task_id: task.id,
+                                                        error: format!(
+                                                            "Created issue #{} but failed to save task: {}",
+                                                            issue_num, e
+                                                        ),
+                                                    });
+                                                } else {
+                                                    summary.add(github::SyncResult::Created {
+                                                        task_id: task.id,
+                                                        issue_number: issue_num as u32,
+                                                    });
+                                                }
+                                            }
+                                            Err(e) if github::is_permission_or_access_error(&e) => {
+                                                summary.add(github::SyncResult::Skipped {
+                                                    task_id: task.id,
+                                                    reason: "No permission to create issue"
+                                                        .to_string(),
+                                                });
+                                            }
+                                            Err(e) => {
+                                                summary.add(github::SyncResult::Failed {
+                                                    task_id: task.id,
+                                                    error: e.to_string(),
+                                                });
+                                            }
+                                        }
                                     }
                                     Err(e) => {
                                         summary.add(github::SyncResult::Failed {
                                             task_id: task.id,
-                                            error: e.to_string(),
+                                            error: format!(
+                                                "Failed to check for duplicate issue: {}",
+                                                e
+                                            ),
                                         });
                                     }
                                 }
