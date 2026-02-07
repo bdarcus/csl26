@@ -19,6 +19,16 @@ pub fn deduplicate_numbers_in_lists(components: &mut Vec<TemplateComponent>) {
     }
 }
 
+/// Deduplicate date components in nested lists.
+/// Removes duplicate issued, accessed, etc. within the same List.
+pub fn deduplicate_dates_in_lists(components: &mut Vec<TemplateComponent>) {
+    for component in components {
+        if let TemplateComponent::List(list) = component {
+            deduplicate_dates_in_list(list);
+        }
+    }
+}
+
 fn deduplicate_numbers_in_list(list: &mut csln_core::template::TemplateList) {
     // Track seen number types in this list
     let mut seen_types = Vec::new();
@@ -40,6 +50,31 @@ fn deduplicate_numbers_in_list(list: &mut csln_core::template::TemplateList) {
     for item in &mut list.items {
         if let TemplateComponent::List(inner_list) = item {
             deduplicate_numbers_in_list(inner_list);
+        }
+    }
+}
+
+fn deduplicate_dates_in_list(list: &mut csln_core::template::TemplateList) {
+    // Track seen date types in this list
+    let mut seen_types = Vec::new();
+    let mut i = 0;
+    while i < list.items.len() {
+        if let TemplateComponent::Date(d) = &list.items[i] {
+            if seen_types.contains(&d.date) {
+                // Remove duplicate date
+                list.items.remove(i);
+                continue;
+            } else {
+                seen_types.push(d.date.clone());
+            }
+        }
+        i += 1;
+    }
+
+    // Recursively process nested lists
+    for item in &mut list.items {
+        if let TemplateComponent::List(inner_list) = item {
+            deduplicate_dates_in_list(inner_list);
         }
     }
 }

@@ -1,11 +1,11 @@
 ---
 # csl26-o248
 title: Remove duplicate and inappropriate components
-status: todo
+status: in-progress
 type: bug
 priority: high
 created_at: 2026-02-07T18:20:06Z
-updated_at: 2026-02-07T18:20:36Z
+updated_at: 2026-02-07T18:37:28Z
 parent: csl26-ifiw
 ---
 

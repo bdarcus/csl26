@@ -759,6 +759,9 @@ impl TemplateCompiler {
         // Deduplicate number components (edition, volume, issue) in nested lists
         crate::passes::deduplicate::deduplicate_numbers_in_lists(&mut default_template);
 
+        // Deduplicate date components (issued, accessed) in nested lists
+        crate::passes::deduplicate::deduplicate_dates_in_lists(&mut default_template);
+
         // Fix duplicate variables (e.g., date appearing both in List and standalone)
         self.fix_duplicate_variables(&mut default_template);
 
