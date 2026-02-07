@@ -1,28 +1,26 @@
 ---
 # csl26-rh2u
 title: Preserve macro call order from CSL 1.0 during parsing
-status: in-progress
+status: todo
 type: bug
 priority: high
 created_at: 2026-02-07T19:52:56Z
-updated_at: 2026-02-07T21:57:49Z
+updated_at: 2026-02-07T23:35:01Z
 blocking:
     - csl26-ifiw
 ---
 
-The template compiler loses component order during tree traversal of conditionals. Components appear in the order they are first encountered, not the order macros are called in CSL 1.0 bibliography layout.
+Problem: CSLN renders components in wrong order compared to CSL 1.0. Oracle shows contributors → year → title but CSLN renders title → contributors → year.
 
-**Problem:**
-- Oracle (CSL 1.0 APA): contributors → year → title
-- CSLN output: title → contributors → year
+Root cause: Not preserving the layout order of macro calls. CSL 1.0 (designed with XSLT) processes nodes in document order, substituting macro expansions inline. If bibliography layout has:
+  <text macro="author"/>
+  <text macro="issued"/>
+  <text macro="title"/>
 
-**Root Cause:**
-collect_occurrences traverses then_branch, else_if, else_branch sequentially. The first occurrence of each variable determines its position in the output. This doesn't match CSL 1.0 macro call order.
+Then rendering order should be: author, issued, title.
 
-**Proposed Solution:**
-1. During CSL 1.0 parsing/upsampling, track macro call order in bibliography layout
-2. Pass this order through to template compilation
-3. Use the tracked order to arrange final components
+Failed approach: Built source_order infrastructure that tracked depth-first traversal order, but assigned wrong orders (title=0 when it should be last). Reverted in commit 1c9ad45.
 
-**Alternative:**
-Infer order from the DEFAULT branch components (else_branch or no-condition path) since that represents the common case.
+Correct approach: During macro expansion, preserve the sequential order that macro calls appear in the layout. When <text macro="foo"/> appears before <text macro="bar"/>, all components from foo should render before all components from bar.
+
+This requires fixing the MacroInliner.expand_nodes logic to assign order based on WHEN the macro is called in the parent layout, not based on depth-first traversal of macro contents.
