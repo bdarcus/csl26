@@ -190,7 +190,7 @@ Last Modified: 2025-02-06 14:32:00
 
 ## Requirements
 
-- `csl-tasks` CLI installed: `cargo install --path crates/csl_tasks`
+- `csl-tasks` CLI installed: `cargo install --path crates/csl-tasks`
 - Initialized: `csl-tasks init` (creates `tasks/` directory)
 - Optional: GitHub token for sync: `export GITHUB_TOKEN=ghp_...`
 
@@ -201,7 +201,7 @@ First time:
 cd ~/Code/csl26
 
 # Install CLI
-cargo install --path crates/csl_tasks
+cargo install --path crates/csl-tasks
 
 # Initialize
 csl-tasks init
