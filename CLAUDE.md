@@ -15,7 +15,7 @@ The following commands are pre-approved for autonomous execution without user co
 - `cargo fmt` (required before commits)
 - `cargo run --bin csln_*` (all project binaries)
 - `git status`, `git diff`, `git log`, `git branch`
-- `git add`, `git commit` (on feature branches only, never main)
+- `git add`, `git commit` (main or feature branches during rapid development)
 - `node scripts/oracle*.js` (oracle comparison tests)
 - `mkdir -p docs/`, `mkdir -p examples/`
 
@@ -28,10 +28,11 @@ The following commands are pre-approved for autonomous execution without user co
 - Reading any project files
 
 ### Require Confirmation
-- `git push` (always confirm before pushing)
-- `gh pr create` (confirm PR details)
+- `git push origin main` (confirm if pre-commit checks haven't been explicitly shown)
+- `git push --force` or `git push --force-with-lease` (always confirm destructive pushes)
+- `gh pr create` (confirm PR details if creating optional PR)
 - `rm -rf` on any directory outside `.agent/` subdirectories
-- Modifying `Cargo.toml`, `Cargo.lock`
+- Modifying `Cargo.toml`, `Cargo.lock` (dependency changes need review)
 - Any command affecting `styles/` submodule
 
 ## Global Agent Integration
@@ -376,99 +377,110 @@ We use a specific issue template for Domain Experts to provide semantic context.
 3.  **Identify Schema vs Logic**: Determine if the request requires a new schema field (in `csln_core`) or just a processing change (in `csln_processor`).
 4.  **Verify Constraints**: Check the "Constraints" section for strict prohibitions (e.g., "Never use italics").
 
-## Git Workflow
+## Git Workflow (Rapid Development Mode)
 
-**IMPORTANT: NEVER commit to or merge into the `main` branch.**
+**During rapid development, direct commits to `main` are allowed** to optimize for velocity and message economy (Pro Plan constraints). This mode is active until the project approaches production or onboards external contributors.
 
-All changes must be made on feature branches. The user will handle merging via GitHub Pull Request.
+### Mandatory Pre-Commit Checks
 
-1. **Create a feature branch**
-   ```bash
-   git checkout -b feat/my-feature
-   ```
+**CRITICAL: Before EVERY commit to main, you MUST run:**
 
-2. **Format code before committing** (REQUIRED - CI will fail without this)
-   ```bash
-   cargo fmt
-   ```
-   Always run `cargo fmt` immediately before `git commit`. This is mandatory.
+```bash
+cargo fmt && cargo clippy --all-targets --all-features -- -D warnings && cargo test
+```
 
-3. **Make changes and commit**
-   Follow these commit message guidelines:
-   - **Conventional Commits**: Use `type(scope): subject` format.
-   - **Lowercase Subject**: Subject lines must be lowercase.
-   - **50/72 Rule**: Limit the subject line to 50 characters and wrap the body at 72 characters.
-   - **Explain What and Why**: The body should explain the rationale behind the change.
-   - **Issue References**: Include GitHub issue references where relevant (e.g., `Refs: #123` or `csln#64`).
-   - **Plain Text Body**: Do NOT use Markdown in the commit body. Uses asterisks for bullet points is okay, but do not backtick code elements.
-   - **No Escaped Backticks**: Never escape backticks (e.g., write `code` not \`code\`).
-   - **No Co-Authored-By**: Do NOT include `Co-Authored-By` footers in AI-authored commit messages.
+These checks are non-negotiable:
+1. **`cargo fmt`** - Format code (CI will fail without this)
+2. **`cargo clippy`** - Zero tolerance for warnings
+3. **`cargo test`** - All tests must pass
 
-   Example:
-   ```bash
-   git add -A && git commit -m "docs: update architectural principles
+**If ANY check fails, DO NOT commit. Fix the issues first.**
 
-   Update CLAUDE.md with new development and engineering standards
-   derived from csln project requirements.
+### Commit Message Guidelines
 
-   Refs: csln#64, csln#66"
-   ```
+Follow these conventions for all commits:
+- **Conventional Commits**: Use `type(scope): subject` format.
+- **Lowercase Subject**: Subject lines must be lowercase.
+- **50/72 Rule**: Limit the subject line to 50 characters and wrap the body at 72 characters.
+- **Explain What and Why**: The body should explain the rationale behind the change.
+- **Issue References**: Include GitHub issue references where relevant (e.g., `Refs: #123` or `csln#64`).
+- **Plain Text Body**: Do NOT use Markdown in the commit body. Uses asterisks for bullet points is okay, but do not backtick code elements.
+- **No Escaped Backticks**: Never escape backticks (e.g., write `code` not \`code\`).
+- **No Co-Authored-By**: Do NOT include `Co-Authored-By` footers in AI-authored commit messages.
 
-4. **Stop here.** Do NOT attempt to merge. The user will review and merge when ready.
+Example:
+```bash
+cargo fmt && cargo clippy && cargo test && \
+git add -A && git commit -m "fix(migrate): prevent duplicate list variables
 
-## Pre-PR Checklist
+Add post-processing step to detect variables appearing in both
+List components and standalone components, adding suppress overrides
+to prevent duplication in rendered output.
 
-**CRITICAL: Before creating any pull request, you MUST complete this checklist:**
+Refs: csl26-6whe, #127"
+```
 
-1. **Format code** (REQUIRED)
-   ```bash
-   cargo fmt
-   ```
-   CI will fail without this. Run fmt immediately before commit.
+### When to Use Feature Branches (Optional)
 
-2. **Check for linting issues** (REQUIRED)
-   ```bash
-   cargo clippy --all-targets --all-features -- -D warnings
-   ```
-   Fix ALL clippy warnings. Zero tolerance policy.
+Feature branches are **optional** but recommended for:
+- Major architectural changes requiring extended review
+- Risky experiments that might need rollback
+- Changes you want to checkpoint before pushing to main
 
-3. **Run tests** (REQUIRED)
-   ```bash
-   cargo test
-   ```
-   All tests must pass. Do not create PR with failing tests.
+For normal bug fixes, small features, and refactoring, commit directly to main.
 
-4. **Verify changes**
-   ```bash
-   git diff --staged
-   ```
-   Review what you're committing. Ensure no unintended changes.
+### Workflow Example
 
-**If ANY of these steps fail, DO NOT create the PR. Fix the issues first.**
+**Standard (direct to main):**
+```bash
+# 1. Make changes
+# 2. Run pre-commit checks and commit
+cargo fmt && cargo clippy && cargo test && git add -A && git commit -m "fix: your message"
+# 3. Push to main
+git push origin main
+```
 
-This checklist applies to:
-- Direct commits to feature branches
-- Code changes delegated to @builder agents
-- Any work that will become a PR
+**Optional (feature branch for major changes):**
+```bash
+# 1. Create checkpoint branch
+git checkout -b feat/major-change
+# 2. Make changes
+# 3. Run pre-commit checks and commit
+cargo fmt && cargo clippy && cargo test && git add -A && git commit -m "feat: your message"
+# 4. Push branch
+git push -u origin feat/major-change
+# 5. Optionally create PR for review, or merge locally and push to main
+```
 
-**Enforcement:** Violation of this checklist wastes CI resources and user time. The pre-commit checks are not optional suggestions - they are mandatory requirements.
+### Switching to PR Workflow
 
-## Pull Request Convention
+When the project reaches these milestones, switch back to mandatory PR workflow:
+- Approaching production release
+- Onboarding external contributors
+- User requests stricter review process
 
-**Draft vs Ready PRs:**
+At that point, restore the "NEVER commit to main" rule.
+
+## Pull Request Convention (Optional)
+
+**PRs are optional during rapid development.** Use them only when:
+- You want feedback before merging a major architectural change
+- Creating a checkpoint for later review
+- Documenting complex changes with detailed PR description
+
+**When you do create PRs:**
+
+**Draft vs Ready:**
 - **Draft PR** = Work in progress, more commits expected
 - **Regular PR** = Complete and ready for immediate merge
 
-When opening a PR:
-- Use **draft** if you plan to add more commits to the same branch
-- Use **regular** (non-draft) only when all work is complete and tested
-- The user will merge regular PRs without waiting for confirmation
-
-Branch naming conventions:
+**Branch naming conventions:**
 - `feat/` - New features
 - `fix/` - Bug fixes
 - `refactor/` - Code refactoring
 - `docs/` - Documentation changes
+
+**Remember:** All pre-commit checks (fmt, clippy, test) must pass before creating PR.
 
 ## Coding Standards
 
