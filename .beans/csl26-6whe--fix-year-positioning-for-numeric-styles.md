@@ -5,7 +5,9 @@ status: completed
 type: bug
 priority: critical
 created_at: 2026-02-07T06:52:59Z
-updated_at: 2026-02-07T07:26:30Z
+updated_at: 2026-02-07T07:40:14Z
+blocking:
+    - csl26-l2hg
 ---
 
 Year appears after contributors in numeric styles, but should appear at end.

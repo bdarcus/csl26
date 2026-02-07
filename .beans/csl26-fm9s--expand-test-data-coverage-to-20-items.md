@@ -5,9 +5,10 @@ status: todo
 type: task
 priority: normal
 created_at: 2026-02-07T06:53:29Z
-updated_at: 2026-02-07T06:53:59Z
+updated_at: 2026-02-07T07:40:14Z
 blocking:
     - csl26-e6v4
+    - csl26-r6fn
 ---
 
 Current oracle tests use only 15 reference items. Expand to 25+ items covering more diverse reference types and edge cases.

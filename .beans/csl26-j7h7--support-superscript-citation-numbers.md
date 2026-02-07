@@ -5,9 +5,10 @@ status: todo
 type: feature
 priority: high
 created_at: 2026-02-07T06:53:04Z
-updated_at: 2026-02-07T06:53:58Z
+updated_at: 2026-02-07T07:40:14Z
 blocking:
     - csl26-6whe
+    - csl26-l2hg
 ---
 
 Nature and Cell styles use superscript numbers, not [1] or (Author Year).
