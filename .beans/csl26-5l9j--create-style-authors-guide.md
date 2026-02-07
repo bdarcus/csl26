@@ -5,7 +5,9 @@ status: todo
 type: task
 priority: normal
 created_at: 2026-02-07T06:53:44Z
-updated_at: 2026-02-07T06:53:44Z
+updated_at: 2026-02-07T07:40:14Z
+blocking:
+    - csl26-c7rf
 ---
 
 Create documentation for the style author persona explaining how to use the new style model.

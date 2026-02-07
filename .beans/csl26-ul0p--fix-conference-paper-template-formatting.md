@@ -5,7 +5,9 @@ status: todo
 type: bug
 priority: high
 created_at: 2026-02-07T06:53:12Z
-updated_at: 2026-02-07T06:53:12Z
+updated_at: 2026-02-07T07:40:14Z
+blocking:
+    - csl26-l2hg
 ---
 
 Conference papers need special formatting with 'in:', 'Presented at', and 'pp.' for page ranges.

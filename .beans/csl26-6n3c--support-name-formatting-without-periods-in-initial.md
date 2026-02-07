@@ -5,7 +5,9 @@ status: todo
 type: feature
 priority: high
 created_at: 2026-02-07T06:53:07Z
-updated_at: 2026-02-07T06:53:07Z
+updated_at: 2026-02-07T07:40:14Z
+blocking:
+    - csl26-1p1o
 ---
 
 Some styles want initials without periods.

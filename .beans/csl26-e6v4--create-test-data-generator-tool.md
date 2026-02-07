@@ -5,7 +5,9 @@ status: todo
 type: feature
 priority: normal
 created_at: 2026-02-07T06:53:23Z
-updated_at: 2026-02-07T06:53:23Z
+updated_at: 2026-02-07T07:40:14Z
+blocking:
+    - csl26-r6fn
 ---
 
 Create scripts/generate-test-item.js interactive tool to make test data expansion 3-4x faster.
