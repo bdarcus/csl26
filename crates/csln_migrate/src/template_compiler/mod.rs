@@ -237,12 +237,8 @@ impl TemplateCompiler {
             let key = if let Some(var_key) = self.get_variable_key(&occurrence.component) {
                 var_key
             } else if let TemplateComponent::List(ref list) = occurrence.component {
-                // Create a signature for the List based on its contents
-                let list_vars = self.extract_list_vars(list);
-                let mut signature = list_vars.clone();
-                signature.sort();
-                let list_key = format!("list:{}", signature.join("|"));
-                list_key
+                // Use consistent signature with deduplicate pass
+                format!("list:{}", crate::passes::deduplicate::list_signature(list))
             } else {
                 // Other non-variable components - give unique key
                 list_counter += 1;
@@ -265,6 +261,15 @@ impl TemplateCompiler {
 
             // Start with the first component as the base
             let mut merged = group[0].component.clone();
+
+            // For Lists, propagate type overrides to each item from all branches
+            if let TemplateComponent::List(ref mut list) = merged {
+                for occurrence in &group {
+                    if let BranchContext::TypeSpecific(types) = &occurrence.context {
+                        self.add_type_overrides_to_list_items(&mut list.items, types);
+                    }
+                }
+            }
 
             if has_default {
                 // Component appears in default branch → visible by default
@@ -752,8 +757,8 @@ impl TemplateCompiler {
         // This handles suppress semantics correctly without needing deduplication
         let mut default_template = self.compile(nodes);
 
-        // DISABLED: Sorting was needed to work around HashMap's random iteration order.
-        // Now that we use IndexMap, we preserve the CSL 1.0 layout order naturally.
+        // DISABLED: Hardcoded sorting doesn't work for all styles (e.g., numeric styles have different order).
+        // A general solution requires preserving macro call order from CSL 1.0 during parsing.
         // self.sort_bibliography_components(&mut default_template, _is_numeric);
 
         // Deduplicate number components (edition, volume, issue) in nested lists
