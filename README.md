@@ -422,6 +422,31 @@ If you want to contribute code directly, focus on:
 - **Schema Design**: Ensuring `csln_core` remains robust and extensible.
 - **Agent Tooling**: Developing new "skills" or scripts that enhance the autonomy and capabilities of the AI agents.
 
+## Task Management
+
+Active development uses [beans](https://github.com/jdx/beans) for local task tracking (see `.beans/` directory). GitHub Issues remain open for:
+
+- **Community bug reports**: Submit issues when you find rendering defects or incorrect output
+- **Feature requests**: Propose new capabilities or improvements
+- **Public discussion**: Comment on planned work and provide domain expertise
+
+### For Contributors
+
+Current development tasks are tracked locally as beans. If you see a GitHub issue marked with a migration note, the work is actively being tracked in the `.beans/` directory. The issue will be closed when the work is completed.
+
+### For Maintainers
+
+Use the `/bean` skill (see `.claude/skills/bean/SKILL.md`) for local task management:
+
+```bash
+/bean list              # Show all tasks
+/bean next              # Get recommended task
+/bean show BEAN_ID      # View details
+/bean update BEAN_ID --status completed
+```
+
+All beans are git-tracked markdown files with dependency relationships and priority levels.
+
 ## License
 
 MPL-2.0 - see [LICENSE](LICENSE) for details.
