@@ -22,6 +22,7 @@ fn make_style_with_substitute(substitute: Option<String>) -> Style {
             processing: Some(Processing::AuthorDate),
             bibliography: Some(BibliographyConfig {
                 subsequent_author_substitute: substitute,
+                entry_suffix: Some(".".to_string()),
                 ..Default::default()
             }),
             contributors: Some(ContributorConfig {
@@ -39,8 +40,12 @@ fn make_style_with_substitute(substitute: Option<String>) -> Style {
                     form: ContributorForm::Long,
                     name_order: None,
                     delimiter: None,
+                    sort_separator: None,
+                    shorten: None,
+                    and: None,
                     rendering: Rendering::default(),
-                    ..Default::default()
+                    overrides: None,
+                    _extra: Default::default(),
                 }),
                 TemplateComponent::Date(TemplateDate {
                     date: TDateVar::Issued,

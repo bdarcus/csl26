@@ -100,33 +100,7 @@ pub fn refs_to_string(proc_templates: Vec<ProcTemplate>) -> String {
                     }
                 }
             }
-            Some(_) => {}
-            None => {
-                let suppress_period_after_url = proc_template
-                    .first()
-                    .and_then(|c| c.config.as_ref())
-                    .and_then(|cfg| cfg.bibliography.as_ref())
-                    .is_some_and(|bib| bib.suppress_period_after_url);
-
-                let last_is_link = suppress_period_after_url
-                    && proc_template
-                        .iter()
-                        .rev()
-                        .find(|c| !render_component(c).is_empty())
-                        .is_some_and(|c| is_link_component(&c.template_component));
-
-                if !output.ends_with('.') && !last_is_link {
-                    if punctuation_in_quote
-                        && (output.ends_with('"') || output.ends_with('\u{201D}'))
-                    {
-                        let is_curly = output.ends_with('\u{201D}');
-                        output.pop();
-                        output.push_str(if is_curly { ".\u{201D}" } else { ".\"" });
-                    } else {
-                        output.push('.');
-                    }
-                }
-            }
+            _ => {}
         }
     }
 
@@ -134,6 +108,7 @@ pub fn refs_to_string(proc_templates: Vec<ProcTemplate>) -> String {
     output
 }
 
+#[allow(dead_code)]
 fn is_link_component(component: &TemplateComponent) -> bool {
     match component {
         TemplateComponent::Variable(v) => {

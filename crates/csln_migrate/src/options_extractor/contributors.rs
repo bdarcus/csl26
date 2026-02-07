@@ -53,9 +53,30 @@ pub fn extract_contributor_config(style: &Style) -> Option<ContributorConfig> {
         if let Some(bib_opts) =
             extract_name_options_from_nodes(&bib.layout.children, style, &bib_macros)
         {
-            config.shorten = bib_opts.shorten;
-            config.display_as_sort = bib_opts.display_as_sort;
-            config.delimiter = bib_opts.delimiter;
+            if bib_opts.shorten.is_some() {
+                config.shorten = bib_opts.shorten;
+            }
+            if bib_opts.display_as_sort.is_some() {
+                config.display_as_sort = bib_opts.display_as_sort;
+            }
+            if bib_opts.delimiter.is_some() {
+                config.delimiter = bib_opts.delimiter;
+            }
+            if bib_opts.sort_separator.is_some() {
+                config.sort_separator = bib_opts.sort_separator;
+            }
+            if bib_opts.initialize_with.is_some() {
+                config.initialize_with = bib_opts.initialize_with;
+            }
+            if bib_opts.initialize_with_hyphen.is_some() {
+                config.initialize_with_hyphen = bib_opts.initialize_with_hyphen;
+            }
+            if bib_opts.delimiter_precedes_last.is_some() {
+                config.delimiter_precedes_last = bib_opts.delimiter_precedes_last;
+            }
+            if bib_opts.delimiter_precedes_et_al.is_some() {
+                config.delimiter_precedes_et_al = bib_opts.delimiter_precedes_et_al;
+            }
             has_config = true;
         }
     }
@@ -66,11 +87,27 @@ pub fn extract_contributor_config(style: &Style) -> Option<ContributorConfig> {
         if cit_opts.shorten.is_some() {
             config.shorten = cit_opts.shorten;
         }
-        if config.display_as_sort.is_none() {
+        if config.display_as_sort.is_none() && cit_opts.display_as_sort.is_some() {
             config.display_as_sort = cit_opts.display_as_sort;
         }
-        if config.delimiter.is_none() {
+        if config.delimiter.is_none() && cit_opts.delimiter.is_some() {
             config.delimiter = cit_opts.delimiter;
+        }
+        if config.sort_separator.is_none() && cit_opts.sort_separator.is_some() {
+            config.sort_separator = cit_opts.sort_separator;
+        }
+        if config.initialize_with.is_none() && cit_opts.initialize_with.is_some() {
+            config.initialize_with = cit_opts.initialize_with;
+        }
+        if config.initialize_with_hyphen.is_none() && cit_opts.initialize_with_hyphen.is_some() {
+            config.initialize_with_hyphen = cit_opts.initialize_with_hyphen;
+        }
+        if config.delimiter_precedes_last.is_none() && cit_opts.delimiter_precedes_last.is_some() {
+            config.delimiter_precedes_last = cit_opts.delimiter_precedes_last;
+        }
+        if config.delimiter_precedes_et_al.is_none() && cit_opts.delimiter_precedes_et_al.is_some()
+        {
+            config.delimiter_precedes_et_al = cit_opts.delimiter_precedes_et_al;
         }
         has_config = true;
     }
@@ -195,6 +232,17 @@ fn extract_from_names(names: &Names) -> Option<ContributorConfig> {
         has_config = true;
     }
 
+    if let Some(delim) = &names.delimiter_precedes_et_al {
+        config.delimiter_precedes_et_al = Some(match delim.as_str() {
+            "always" => DelimiterPrecedesLast::Always,
+            "never" => DelimiterPrecedesLast::Never,
+            "contextual" => DelimiterPrecedesLast::Contextual,
+            "after-inverted-name" => DelimiterPrecedesLast::AfterInvertedName,
+            _ => DelimiterPrecedesLast::Contextual,
+        });
+        has_config = true;
+    }
+
     // Scan children for <name> element options
     for child in &names.children {
         if let CslNode::Name(n) = child {
@@ -210,6 +258,38 @@ fn extract_from_names(names: &Names) -> Option<ContributorConfig> {
                 config.delimiter = Some(delim.clone());
                 has_config = true;
             }
+            if let Some(sep) = &n.sort_separator {
+                config.sort_separator = Some(sep.clone());
+                has_config = true;
+            }
+            if let Some(init) = &n.initialize_with {
+                config.initialize_with = Some(init.clone());
+                has_config = true;
+            }
+            if let Some(init_hyphen) = n.initialize_with_hyphen {
+                config.initialize_with_hyphen = Some(init_hyphen);
+                has_config = true;
+            }
+            if let Some(dpl) = &n.delimiter_precedes_last {
+                config.delimiter_precedes_last = Some(match dpl.as_str() {
+                    "always" => DelimiterPrecedesLast::Always,
+                    "never" => DelimiterPrecedesLast::Never,
+                    "contextual" => DelimiterPrecedesLast::Contextual,
+                    "after-inverted-name" => DelimiterPrecedesLast::AfterInvertedName,
+                    _ => DelimiterPrecedesLast::Contextual,
+                });
+                has_config = true;
+            }
+            if let Some(dpea) = &n.delimiter_precedes_et_al {
+                config.delimiter_precedes_et_al = Some(match dpea.as_str() {
+                    "always" => DelimiterPrecedesLast::Always,
+                    "never" => DelimiterPrecedesLast::Never,
+                    "contextual" => DelimiterPrecedesLast::Contextual,
+                    "after-inverted-name" => DelimiterPrecedesLast::AfterInvertedName,
+                    _ => DelimiterPrecedesLast::Contextual,
+                });
+                has_config = true;
+            }
         }
     }
 
@@ -221,16 +301,23 @@ fn extract_from_names(names: &Names) -> Option<ContributorConfig> {
 }
 
 pub fn extract_substitute_pattern(style: &Style) -> Option<CslnSubstitute> {
+    let bib_macros = collect_bibliography_macros(style);
+    let cit_macros = collect_citation_macros(style);
+
     // Search bibliography first, then citation
     if let Some(bib) = &style.bibliography {
-        if let Some(sub) = find_substitute_in_nodes(&bib.layout.children) {
+        if let Some(sub) = find_substitute_in_nodes(&bib.layout.children, style, &bib_macros) {
             return Some(sub);
         }
     }
-    find_substitute_in_nodes(&style.citation.layout.children)
+    find_substitute_in_nodes(&style.citation.layout.children, style, &cit_macros)
 }
 
-fn find_substitute_in_nodes(nodes: &[CslNode]) -> Option<CslnSubstitute> {
+fn find_substitute_in_nodes(
+    nodes: &[CslNode],
+    style: &Style,
+    target_macros: &HashSet<String>,
+) -> Option<CslnSubstitute> {
     for node in nodes {
         match node {
             CslNode::Names(n) => {
@@ -248,22 +335,39 @@ fn find_substitute_in_nodes(nodes: &[CslNode]) -> Option<CslnSubstitute> {
                     }
                 }
             }
+            CslNode::Text(t) => {
+                if let Some(macro_name) = &t.macro_name {
+                    if target_macros.contains(macro_name) {
+                        if let Some(m) = style.macros.iter().find(|m| &m.name == macro_name) {
+                            if let Some(sub) =
+                                find_substitute_in_nodes(&m.children, style, target_macros)
+                            {
+                                return Some(sub);
+                            }
+                        }
+                    }
+                }
+            }
             CslNode::Group(g) => {
-                if let Some(sub) = find_substitute_in_nodes(&g.children) {
+                if let Some(sub) = find_substitute_in_nodes(&g.children, style, target_macros) {
                     return Some(sub);
                 }
             }
             CslNode::Choose(c) => {
-                if let Some(sub) = find_substitute_in_nodes(&c.if_branch.children) {
+                if let Some(sub) =
+                    find_substitute_in_nodes(&c.if_branch.children, style, target_macros)
+                {
                     return Some(sub);
                 }
                 for branch in &c.else_if_branches {
-                    if let Some(sub) = find_substitute_in_nodes(&branch.children) {
+                    if let Some(sub) =
+                        find_substitute_in_nodes(&branch.children, style, target_macros)
+                    {
                         return Some(sub);
                     }
                 }
                 if let Some(else_branch) = &c.else_branch {
-                    if let Some(sub) = find_substitute_in_nodes(else_branch) {
+                    if let Some(sub) = find_substitute_in_nodes(else_branch, style, target_macros) {
                         return Some(sub);
                     }
                 }

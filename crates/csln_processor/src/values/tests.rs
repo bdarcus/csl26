@@ -57,6 +57,8 @@ fn test_contributor_values() {
         form: ContributorForm::Short,
         name_order: None,
         delimiter: None,
+        sort_separator: None,
+        shorten: None,
         and: None,
         rendering: Default::default(),
         overrides: None,
@@ -118,6 +120,8 @@ fn test_et_al() {
         form: ContributorForm::Short,
         name_order: None,
         delimiter: None,
+        sort_separator: None,
+        shorten: None,
         and: None,
         rendering: Default::default(),
         overrides: None,
@@ -231,6 +235,8 @@ fn test_et_al_delimiter_never() {
         form: ContributorForm::Short,
         name_order: None,
         delimiter: None,
+        sort_separator: None,
+        shorten: None,
         and: None,
         rendering: Default::default(),
         overrides: None,
@@ -276,6 +282,8 @@ fn test_et_al_delimiter_always() {
         form: ContributorForm::Short,
         name_order: None,
         delimiter: None,
+        sort_separator: None,
+        shorten: None,
         and: None,
         rendering: Default::default(),
         overrides: None,
@@ -310,6 +318,7 @@ fn test_demote_non_dropping_particle() {
         None,
         None, // initialize_with_hyphen
         Some(&DemoteNonDroppingParticle::Never),
+        None, // sort_separator
         false,
     );
     assert_eq!(res_never, "van Beethoven, Ludwig");
@@ -325,6 +334,7 @@ fn test_demote_non_dropping_particle() {
         None,
         None, // initialize_with_hyphen
         Some(&DemoteNonDroppingParticle::DisplayAndSort),
+        None, // sort_separator
         false,
     );
     assert_eq!(res_demote, "Beethoven, Ludwig van");
@@ -340,6 +350,7 @@ fn test_demote_non_dropping_particle() {
         None,
         None, // initialize_with_hyphen
         Some(&DemoteNonDroppingParticle::SortOnly),
+        None, // sort_separator
         false,
     );
     assert_eq!(res_sort_only, "van Beethoven, Ludwig");
@@ -355,6 +366,7 @@ fn test_demote_non_dropping_particle() {
         None,
         None, // initialize_with_hyphen
         Some(&DemoteNonDroppingParticle::DisplayAndSort),
+        None, // sort_separator
         false,
     );
     assert_eq!(res_straight, "Ludwig van Beethoven");

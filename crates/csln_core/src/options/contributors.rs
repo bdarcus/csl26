@@ -45,6 +45,9 @@ pub struct ContributorConfig {
     /// Handling of non-dropping particles (e.g., "van" in "van Gogh").
     #[serde(skip_serializing_if = "Option::is_none")]
     pub demote_non_dropping_particle: Option<DemoteNonDroppingParticle>,
+    /// Delimiter between family and given name when inverted (default: ", ").
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sort_separator: Option<String>,
     /// Unknown fields captured for forward compatibility.
     #[serde(flatten)]
     pub _extra: HashMap<String, serde_json::Value>,

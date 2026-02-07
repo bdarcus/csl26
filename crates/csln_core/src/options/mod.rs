@@ -14,8 +14,9 @@ pub mod substitute;
 
 pub use bibliography::{BibliographyConfig, SubsequentAuthorSubstituteRule};
 pub use contributors::{
-    AndOptions, ContributorConfig, DelimiterPrecedesLast, DemoteNonDroppingParticle, DisplayAsSort,
-    EditorLabelFormat, RoleOptions, RoleRendering, ShortenListOptions,
+    AndOptions, AndOtherOptions, ContributorConfig, DelimiterPrecedesLast,
+    DemoteNonDroppingParticle, DisplayAsSort, EditorLabelFormat, RoleOptions, RoleRendering,
+    ShortenListOptions,
 };
 pub use dates::DateConfig;
 pub use localization::{Localize, MonthFormat, Scope};

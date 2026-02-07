@@ -775,20 +775,31 @@ impl TemplateCompiler {
     fn fix_duplicate_variables(&self, components: &mut [TemplateComponent]) {
         // Step 1: Collect which variables appear in Lists, and for which types
         let mut list_vars: HashMap<String, Vec<String>> = HashMap::new();
+        let mut default_list_vars: Vec<String> = Vec::new();
 
         for component in components.iter() {
             if let TemplateComponent::List(list) = component {
-                // Get the types for which this List is visible
-                let visible_types = self.get_visible_types_for_component(component);
+                // Check if this List is visible by default
+                let base_rendering = self.get_component_rendering(component);
+                let is_default_visible = base_rendering.suppress != Some(true);
 
                 // Extract all variables from this List
                 let vars = self.extract_list_vars(list);
 
-                for var in vars {
-                    list_vars
-                        .entry(var)
-                        .or_default()
-                        .extend(visible_types.clone());
+                if is_default_visible {
+                    for var in &vars {
+                        if !default_list_vars.contains(var) {
+                            default_list_vars.push(var.clone());
+                        }
+                    }
+                } else {
+                    let visible_types = self.get_visible_types_for_component(component);
+                    for var in vars {
+                        list_vars
+                            .entry(var)
+                            .or_default()
+                            .extend(visible_types.clone());
+                    }
                 }
             }
         }
@@ -803,8 +814,12 @@ impl TemplateCompiler {
 
             // Get the variable key for this component
             if let Some(var_key) = self.get_variable_key(component) {
-                // Check if this variable appears in any Lists
-                if let Some(types_in_lists) = list_vars.get(&var_key) {
+                // If it appears in a default-visible List, suppress it by default
+                if default_list_vars.contains(&var_key) {
+                    let mut rendering = self.get_component_rendering(component);
+                    rendering.suppress = Some(true);
+                    self.set_component_rendering(component, rendering);
+                } else if let Some(types_in_lists) = list_vars.get(&var_key) {
                     // Add suppress overrides for those types
                     for type_str in types_in_lists {
                         let mut suppressed = self.get_component_rendering(component);
@@ -1200,7 +1215,35 @@ impl TemplateCompiler {
             TemplateComponent::Contributor(_) => 8,
             TemplateComponent::Date(_) => 9,
             TemplateComponent::Title(_) => 10,
-            TemplateComponent::List(_) => 11,
+            TemplateComponent::List(l) => {
+                if self.has_variable_recursive(
+                    &l.items,
+                    &TemplateComponent::Title(TemplateTitle {
+                        title: TitleType::Primary,
+                        ..Default::default()
+                    }),
+                ) {
+                    3
+                } else if self.has_variable_recursive(
+                    &l.items,
+                    &TemplateComponent::Title(TemplateTitle {
+                        title: TitleType::ParentSerial,
+                        ..Default::default()
+                    }),
+                ) {
+                    4
+                } else if self.has_variable_recursive(
+                    &l.items,
+                    &TemplateComponent::Title(TemplateTitle {
+                        title: TitleType::ParentMonograph,
+                        ..Default::default()
+                    }),
+                ) {
+                    5
+                } else {
+                    11
+                }
+            }
             _ => 99,
         });
     }
@@ -1275,11 +1318,40 @@ impl TemplateCompiler {
             _ => ContributorForm::Long,
         };
 
+        let and = names.options.and.as_ref().map(|a| match a {
+            csln_core::AndTerm::Text => csln_core::options::AndOptions::Text,
+            csln_core::AndTerm::Symbol => csln_core::options::AndOptions::Symbol,
+        });
+
+        let shorten = names.options.et_al.as_ref().map(|et| {
+            csln_core::options::ShortenListOptions {
+                min: et.min,
+                use_first: et.use_first,
+                use_last: None, // Legacy CSL 1.0 et-al doesn't have use_last
+                and_others: csln_core::options::AndOtherOptions::EtAl,
+                delimiter_precedes_last: match names.options.delimiter_precedes_last {
+                    Some(csln_core::DelimiterPrecedes::Always) => {
+                        csln_core::options::DelimiterPrecedesLast::Always
+                    }
+                    Some(csln_core::DelimiterPrecedes::Never) => {
+                        csln_core::options::DelimiterPrecedesLast::Never
+                    }
+                    Some(csln_core::DelimiterPrecedes::AfterInvertedName) => {
+                        csln_core::options::DelimiterPrecedesLast::AfterInvertedName
+                    }
+                    _ => csln_core::options::DelimiterPrecedesLast::Contextual,
+                },
+            }
+        });
+
         Some(TemplateComponent::Contributor(TemplateContributor {
             contributor: role,
             form,
             name_order: None, // Use global setting by default
             delimiter: names.options.delimiter.clone(),
+            sort_separator: names.options.sort_separator.clone(),
+            shorten,
+            and,
             rendering: self.convert_formatting(&names.formatting),
             ..Default::default()
         }))

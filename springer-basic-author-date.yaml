@@ -1,0 +1,192 @@
+version: ''
+info:
+  title: Springer - Basic (author-date)
+  id: http://www.zotero.org/styles/springer-basic-author-date
+  default-locale: en-US
+options:
+  substitute:
+    contributor-role-form: short
+    template:
+    - editor
+    - translator
+  contributors:
+    display-as-sort: all
+    initialize-with: ''
+    delimiter: ', '
+    delimiter-precedes-last: always
+    demote-non-dropping-particle: never
+    sort-separator: ' '
+  dates:
+    month: short
+  bibliography:
+    hanging-indent: true
+    separator: ' '
+  punctuation-in-quote: true
+citation:
+  template:
+  - contributor: author
+    form: short
+    shorten:
+      min: 3
+      use-first: 1
+      and-others: et-al
+      delimiter-precedes-last: contextual
+    and: text
+  - date: issued
+    form: year
+  wrap: parentheses
+  delimiter: ' '
+  multi-cite-delimiter: '; '
+bibliography:
+  template:
+  - contributor: author
+    form: long
+    sort-separator: ' '
+    shorten:
+      min: 5
+      use-first: 3
+      and-others: et-al
+      delimiter-precedes-last: always
+    and: none
+    suppress: false
+  - date: issued
+    form: year
+    wrap: parentheses
+    suppress: false
+  - items:
+    - title: primary
+    - number: edition
+    - number: edition
+    delimiter: comma
+    suppress: true
+    overrides:
+      book:
+        suppress: false
+  - title: primary
+    suppress: false
+    overrides:
+      book:
+        suppress: true
+  - items:
+    - contributor: editor
+      form: long
+      sort-separator: ' '
+      shorten:
+        min: 5
+        use-first: 3
+        and-others: et-al
+        delimiter-precedes-last: always
+      prefix: 'in:'
+    - items:
+      - title: parent-serial
+      - number: edition
+      - number: edition
+      delimiter: comma
+    delimiter: space
+    prefix: '. '
+    suppress: true
+    overrides:
+      paper-conference:
+        prefix: '. '
+        suppress: false
+      chapter:
+        prefix: '. '
+        suppress: false
+  - items:
+    - title: parent-serial
+    - number: volume
+      suffix: ':'
+    - number: pages
+    delimiter: space
+    suppress: false
+  - title: parent-serial
+    suppress: true
+    overrides:
+      post:
+        prefix: 'In: '
+        suppress: false
+      webpage:
+        prefix: 'In: '
+        suppress: false
+      post-weblog:
+        prefix: 'In: '
+        suppress: false
+  - variable: doi
+    prefix: https://doi.org/
+    suppress: false
+  - variable: url
+    prefix: 'URL '
+    suppress: false
+    overrides:
+      post:
+        suppress: false
+      webpage:
+        suppress: false
+      post-weblog:
+        suppress: false
+  - date: accessed
+    form: year
+    suppress: true
+    overrides:
+      post-weblog:
+        suppress: false
+      post:
+        suppress: false
+      webpage:
+        suppress: false
+  - items:
+    - variable: genre
+    - variable: publisher
+    delimiter: comma
+    prefix: '. '
+    suppress: true
+    overrides:
+      thesis:
+        prefix: '. '
+        suppress: false
+  - items:
+    - variable: publisher
+    - variable: publisher-place
+    delimiter: comma
+    prefix: '. '
+    suppress: true
+    overrides:
+      song:
+        prefix: '. '
+        suppress: false
+      legal_case:
+        prefix: '. '
+        suppress: false
+      graphic:
+        prefix: '. '
+        suppress: false
+      bill:
+        prefix: '. '
+        suppress: false
+      report:
+        prefix: '. '
+        suppress: false
+      book:
+        prefix: '. '
+        suppress: false
+      legislation:
+        prefix: '. '
+        suppress: false
+      motion_picture:
+        prefix: '. '
+        suppress: false
+  - items:
+    - variable: publisher
+    - variable: publisher-place
+    - number: pages
+    delimiter: comma
+    prefix: '. '
+    suppress: true
+    overrides:
+      paper-conference:
+        prefix: '. '
+        suppress: false
+      chapter:
+        prefix: '. '
+        suppress: false
+

@@ -58,6 +58,8 @@ impl ComponentValues for TemplateContributor {
                                     &self.form,
                                     options,
                                     effective_name_order,
+                                    self.sort_separator.as_ref(),
+                                    self.shorten.as_ref(),
                                     self.and.as_ref(),
                                     hints,
                                 );
@@ -122,6 +124,8 @@ impl ComponentValues for TemplateContributor {
                                     &self.form,
                                     options,
                                     self.name_order.as_ref(),
+                                    self.sort_separator.as_ref(),
+                                    self.shorten.as_ref(),
                                     self.and.as_ref(),
                                     hints,
                                 );
@@ -167,6 +171,8 @@ impl ComponentValues for TemplateContributor {
             &self.form,
             options,
             effective_name_order,
+            self.sort_separator.as_ref(),
+            self.shorten.as_ref(),
             self.and.as_ref(),
             hints,
         );
@@ -243,11 +249,14 @@ impl ComponentValues for TemplateContributor {
 }
 
 /// Format a list of names according to style options.
+#[allow(clippy::too_many_arguments)]
 pub fn format_names(
     names: &[crate::reference::FlatName],
     form: &ContributorForm,
     options: &RenderOptions<'_>,
     name_order: Option<&csln_core::template::NameOrder>,
+    sort_separator_override: Option<&String>,
+    shorten_override: Option<&ShortenListOptions>,
     and_override: Option<&AndOptions>,
     hints: &ProcHints,
 ) -> String {
@@ -258,12 +267,18 @@ pub fn format_names(
     let config = options.config.contributors.as_ref();
     let locale = options.locale;
 
-    // Only apply et al. truncation in citations, not bibliographies
-    let shorten: Option<&ShortenListOptions> = if options.context == RenderContext::Citation {
-        config.and_then(|c| c.shorten.as_ref())
-    } else {
-        None
-    };
+    // Determine shortening options:
+    // 1. Use explicit override from template (e.g. bibliography et-al)
+    // 2. Else if context is Citation, use global config
+    // 3. Else don't shorten (default for bibliography unless explicit)
+    let shorten = shorten_override.or_else(|| {
+        if options.context == RenderContext::Citation {
+            config.and_then(|c| c.shorten.as_ref())
+        } else {
+            None
+        }
+    });
+
     let (first_names, use_et_al, last_names) = if let Some(opts) = shorten {
         let use_first = hints.min_names_to_show.unwrap_or(opts.use_first as usize);
         if names.len() >= opts.min as usize
@@ -297,6 +312,8 @@ pub fn format_names(
     let initialize_with = config.and_then(|c| c.initialize_with.as_ref());
     let initialize_with_hyphen = config.and_then(|c| c.initialize_with_hyphen);
     let demote_ndp = config.and_then(|c| c.demote_non_dropping_particle.as_ref());
+    let sort_separator =
+        sort_separator_override.or_else(|| config.and_then(|c| c.sort_separator.as_ref()));
     let delimiter = config.and_then(|c| c.delimiter.as_deref()).unwrap_or(", ");
 
     let formatted_first: Vec<String> = first_names
@@ -312,6 +329,7 @@ pub fn format_names(
                 initialize_with,
                 initialize_with_hyphen,
                 demote_ndp,
+                sort_separator,
                 hints.expand_given_names,
             )
         })
@@ -331,6 +349,7 @@ pub fn format_names(
                 initialize_with,
                 initialize_with_hyphen,
                 demote_ndp,
+                sort_separator,
                 hints.expand_given_names,
             )
         })
@@ -453,6 +472,7 @@ pub fn format_single_name(
     initialize_with: Option<&String>,
     initialize_with_hyphen: Option<bool>,
     demote_ndp: Option<&DemoteNonDroppingParticle>,
+    sort_separator: Option<&String>,
     expand_given_names: bool,
 ) -> String {
     use csln_core::template::NameOrder;
@@ -563,7 +583,8 @@ pub fn format_single_name(
 
             if inverted {
                 // "Family, Given" format
-                // Family Part + "," + Given Part + Particle Part + Suffix
+                // Family Part + sort_separator + Given Part + Particle Part + Suffix
+                let sep = sort_separator.map(|s| s.as_str()).unwrap_or(", ");
                 let mut suffix_part = String::new();
                 if !given_part.is_empty() {
                     suffix_part.push_str(&given_part);
@@ -582,7 +603,7 @@ pub fn format_single_name(
                 }
 
                 if !suffix_part.is_empty() {
-                    format!("{}, {}", family_part, suffix_part)
+                    format!("{}{}{}", family_part, sep, suffix_part)
                 } else {
                     family_part
                 }
@@ -618,6 +639,8 @@ pub fn format_contributors_short(
         names,
         &ContributorForm::Short,
         options,
+        None,
+        None,
         None,
         None,
         &ProcHints::default(),

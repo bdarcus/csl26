@@ -5,16 +5,24 @@ use std::collections::HashMap;
 #[derive(Default)]
 pub struct Upsampler {
     provenance: Option<crate::ProvenanceTracker>,
+    pub et_al_min: Option<usize>,
+    pub et_al_use_first: Option<usize>,
 }
 
 impl Upsampler {
     pub fn new() -> Self {
-        Self { provenance: None }
+        Self {
+            provenance: None,
+            et_al_min: None,
+            et_al_use_first: None,
+        }
     }
 
     pub fn with_provenance(provenance: crate::ProvenanceTracker) -> Self {
         Self {
             provenance: Some(provenance),
+            et_al_min: None,
+            et_al_use_first: None,
         }
     }
 
@@ -112,9 +120,9 @@ impl Upsampler {
             }
         }
 
-        // Extract et-al defaults from Names node
-        let mut et_al_min = n.et_al_min;
-        let mut et_al_use_first = n.et_al_use_first;
+        // Extract et-al defaults from Names node, falling back to upsampler defaults
+        let mut et_al_min = n.et_al_min.or(self.et_al_min);
+        let mut et_al_use_first = n.et_al_use_first.or(self.et_al_use_first);
         let et_al_subsequent =
             if n.et_al_subsequent_min.is_some() || n.et_al_subsequent_use_first.is_some() {
                 Some(Box::new(csln::EtAlSubsequent {

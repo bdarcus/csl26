@@ -152,6 +152,21 @@ pub fn extract_bibliography_separator_from_layout(
     layout: &Layout,
     macros: &[Macro],
 ) -> Option<DelimiterPunctuation> {
+    // 1. First priority: the top-level layout delimiter if it exists
+    if let Some(delim) = &layout.delimiter {
+        return Some(DelimiterPunctuation::from_csl_string(delim));
+    }
+
+    // 2. Second priority: the delimiter of the FIRST group in the layout
+    // (Many styles wrap everything in a top-level group with a delimiter)
+    for node in &layout.children {
+        if let CslNode::Group(g) = node {
+            if let Some(delim) = &g.delimiter {
+                return Some(DelimiterPunctuation::from_csl_string(delim));
+            }
+        }
+    }
+
     // Helper to count variable-bearing nodes in a group
     fn has_multiple_variables(nodes: &[CslNode]) -> bool {
         let var_count = nodes
@@ -165,7 +180,7 @@ pub fn extract_bibliography_separator_from_layout(
         var_count >= 2
     }
 
-    // Recursive search for the deepest group with delimiter and multiple variables.
+    // 3. Fallback: recursive search for the deepest group with delimiter and multiple variables.
     // Returns (delimiter, depth) to prioritize deeper matches.
     fn find_deepest_group_delimiter(
         nodes: &[CslNode],
@@ -241,16 +256,8 @@ pub fn extract_bibliography_separator_from_layout(
         best
     }
 
-    // First try recursive search with macro expansion
-    if let Some((delim, _)) = find_deepest_group_delimiter(&layout.children, macros) {
-        return Some(DelimiterPunctuation::from_csl_string(&delim));
-    }
-
-    // Fallback to layout-level delimiter
-    layout
-        .delimiter
-        .as_ref()
-        .map(|d| DelimiterPunctuation::from_csl_string(d))
+    find_deepest_group_delimiter(&layout.children, macros)
+        .map(|(d, _)| DelimiterPunctuation::from_csl_string(&d))
 }
 
 pub fn extract_sort_from_bibliography(sort: &LegacySort) -> Option<Sort> {

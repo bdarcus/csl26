@@ -118,13 +118,23 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let flattened_cit = inliner.inline_citation(&legacy_style);
 
     // 2. Semantic Upsampling
-    let upsampler = if enable_provenance {
+    let mut upsampler = if enable_provenance {
         Upsampler::with_provenance(tracker.clone())
     } else {
         Upsampler::new()
     };
-    let raw_bib = upsampler.upsample_nodes(&flattened_bib);
+
+    // Set citation-specific thresholds for citation upsampling
+    upsampler.et_al_min = legacy_style.citation.et_al_min;
+    upsampler.et_al_use_first = legacy_style.citation.et_al_use_first;
     let raw_cit = upsampler.upsample_nodes(&flattened_cit);
+
+    // Set bibliography-specific thresholds for bibliography upsampling
+    if let Some(ref bib) = legacy_style.bibliography {
+        upsampler.et_al_min = bib.et_al_min;
+        upsampler.et_al_use_first = bib.et_al_use_first;
+    }
+    let raw_bib = upsampler.upsample_nodes(&flattened_bib);
 
     // 3. Compression (Pattern Recognition)
     let compressor = Compressor;

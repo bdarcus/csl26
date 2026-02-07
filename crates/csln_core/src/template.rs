@@ -188,6 +188,12 @@ pub struct TemplateContributor {
     /// Custom delimiter between names (overrides global setting).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub delimiter: Option<String>,
+    /// Delimiter between family and given name when inverted (overrides global setting).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sort_separator: Option<String>,
+    /// Shorten the list of names (et al. configuration).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub shorten: Option<crate::options::ShortenListOptions>,
     /// Override the conjunction between the last two names.
     /// Use `none` for bibliography when citation uses `text` or `symbol`.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -514,8 +520,7 @@ impl DelimiterPunctuation {
     /// Parse from a CSL delimiter string.
     /// Handles common patterns like ", ", ": ", etc.
     pub fn from_csl_string(s: &str) -> Self {
-        let trimmed = s.trim();
-        match trimmed {
+        match s {
             "," | ", " => Self::Comma,
             ";" | "; " => Self::Semicolon,
             "." | ". " => Self::Period,
@@ -526,7 +531,21 @@ impl DelimiterPunctuation {
             "-" => Self::Hyphen,
             " " => Self::Space,
             "" => Self::None,
-            _ => Self::Comma, // Default fallback
+            _ => {
+                let trimmed = s.trim();
+                match trimmed {
+                    "," => Self::Comma,
+                    ";" => Self::Semicolon,
+                    "." => Self::Period,
+                    ":" => Self::Colon,
+                    "&" => Self::Ampersand,
+                    "|" => Self::VerticalLine,
+                    "/" => Self::Slash,
+                    "-" => Self::Hyphen,
+                    "" => Self::None,
+                    _ => Self::Comma, // Default fallback
+                }
+            }
         }
     }
 }
