@@ -48,22 +48,22 @@ When invoking these agents, they automatically receive CSL domain knowledge and 
 
 ## Task Management Workflow
 
-**Primary System:** GitHub Issues (https://github.com/bdarcus/csl26/issues)
+**Primary System:** Local beans + GitHub Issues (for community)
 
-All permanent task tracking uses GitHub Issues for transparency and community collaboration. Tasks follow these conventions:
+For rapid development, use beans for local task management. GitHub Issues remain available for community contributions and long-term planning, but local beans tasks avoid sync overhead during active development.
 
-### Quick Commands (CLI Skill)
+### Quick Commands (Bean Skill)
 
-Use `/task` skill for fast local task management:
+Use `/bean` skill for fast local task management:
 ```
-/task list                    # Show all tasks
-/task next                    # Recommend best task to work on
-/task claim 18                # Mark task in progress
-/task complete 18             # Mark task done
-/task sync                    # Sync to GitHub Issues
+/bean list                           # Show all tasks
+/bean next                           # Recommend best task to work on
+/bean update BEAN_ID --status in-progress   # Mark task started
+/bean update BEAN_ID --status completed     # Mark task done
+/bean create "Title" --type bug --priority high
 ```
 
-See `.claude/skills/task/SKILL.md` for full command reference.
+See `.claude/skills/bean/SKILL.md` for full command reference.
 
 ### Issue Templates
 - **Bug Report** (`.github/ISSUE_TEMPLATE/bug_report.md`): Rendering defects, incorrect output
@@ -75,45 +75,44 @@ See `.claude/skills/task/SKILL.md` for full command reference.
 - **Type**: `bug`, `feature`, `tech-debt`, `refactor`
 - **Category**: `rendering`, `numeric-styles`, `i18n`, `dx`
 
-### When to Use Native Tasks vs GitHub Issues
+### When to Use Beans vs GitHub Issues
 
-**Native Tasks (Ephemeral):**
-- Short-term planning within a single session
-- Breaking down a feature branch into subtasks
-- Tracking implementation steps for a PR
-- Temporary exploration or investigation
-- Local-first workflow: create tasks, work, then sync to GitHub
+**Beans (Local Development):**
+- Active development tasks and bug fixes
+- Short-term planning and implementation tracking
+- Breaking down feature branches into subtasks
+- Dependency tracking with blocking relationships
+- Fast iteration without network overhead
+- Tasks tied to specific development sessions
 
-**GitHub Issues (Permanent):**
+**GitHub Issues (Community & Long-term):**
 - Feature requests from community or domain experts
-- Bug reports for rendering defects
-- Technical debt that needs tracking
-- Long-term planning and milestones
-- Anything that requires contributor coordination
+- Bug reports from external users
+- Public roadmap and milestone tracking
+- Coordination with contributors
+- Long-term architectural planning
+- Issues requiring public discussion
 
-### Local-First Task Workflow
+### Beans Workflow
 
 ```
-1. Create locally:  /task create --subject "..." --priority high
-2. List pending:    /task list --status pending
-3. Find next:       /task next
-4. Work on task:    /task claim 18
-5. Update progress: /task update 18 --description "..."
-6. Mark done:       /task complete 18
-7. Sync to GitHub:  /task sync --direction to-gh
+1. Create task:     /bean create "Fix parser bug" --type bug --priority high
+2. List pending:    /bean list --status todo
+3. Find next:       /bean next
+4. Start work:      /bean update BEAN_ID --status in-progress
+5. View details:    /bean show BEAN_ID
+6. Mark done:       /bean update BEAN_ID --status completed
+7. Find next:       /bean next
 ```
 
-All local queries are instant (markdown files). Sync with GitHub when ready.
+All queries are instant (local markdown files, no API calls).
 
-### Migration from TASKS.md
+### Beans Storage
 
-The `docs/TASKS.md` file is deprecated as the primary task tracker. It remains as a historical snapshot showing task organization at time of migration. New tasks should be created as GitHub Issues.
-
-To bulk-export remaining tasks from TASKS.md:
-```bash
-./scripts/tasks-to-issues.sh --dry-run  # Preview
-./scripts/tasks-to-issues.sh           # Create issues
-```
+Tasks are stored in `.beans/` as markdown files with YAML frontmatter:
+- `.beans.yml` - Configuration (prefix: csl26-, ID length: 4)
+- `.beans/*.md` - Individual task files
+- Git-friendly format for easy diff/review
 
 ## Project Goal
 

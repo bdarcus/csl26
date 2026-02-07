@@ -1,0 +1,171 @@
+#!/usr/bin/env bash
+# Bean skill wrapper for CSLN project
+# Provides a simplified interface to beans CLI for Claude Code agents
+
+set -euo pipefail
+
+BEANS_BIN="beans"
+BEANS_PATH=".beans"
+
+# Ensure beans is installed
+if ! command -v "$BEANS_BIN" &> /dev/null; then
+    echo "Error: beans CLI not found. Install via: brew install beans" >&2
+    exit 1
+fi
+
+# Ensure beans is initialized
+if [[ ! -d "$BEANS_PATH" ]]; then
+    echo "Error: No .beans directory found. Run 'beans init' first." >&2
+    exit 1
+fi
+
+# Parse command
+CMD="${1:-help}"
+shift || true
+
+case "$CMD" in
+    list)
+        # List beans with optional filters
+        STATUS=""
+        PRIORITY=""
+        TYPE=""
+
+        while [[ $# -gt 0 ]]; do
+            case "$1" in
+                --status)
+                    STATUS="$2"
+                    shift 2
+                    ;;
+                --priority)
+                    PRIORITY="$2"
+                    shift 2
+                    ;;
+                --type)
+                    TYPE="$2"
+                    shift 2
+                    ;;
+                *)
+                    echo "Unknown option: $1" >&2
+                    exit 1
+                    ;;
+            esac
+        done
+
+        # Build filter query
+        QUERY=".[]"
+        [[ -n "$STATUS" ]] && QUERY="$QUERY | select(.status == \"$STATUS\")"
+        [[ -n "$PRIORITY" ]] && QUERY="$QUERY | select(.priority == \"$PRIORITY\")"
+        [[ -n "$TYPE" ]] && QUERY="$QUERY | select(.type == \"$TYPE\")"
+
+        beans list --json | jq -r "$QUERY | \"\(.id)\t\(.status)\t\(.priority)\t\(.title)\""
+        ;;
+
+    next)
+        # Recommend next task based on priority and blockers
+        echo "=== Recommended Next Task ==="
+
+        # First, check for critical in-progress tasks
+        CRITICAL=$(beans list --json | jq -r '.[] | select(.priority == "critical" and .status == "in-progress") | "\(.id)\t\(.title)"' | head -1)
+
+        if [[ -n "$CRITICAL" ]]; then
+            echo "Continue critical task:"
+            echo "$CRITICAL"
+            exit 0
+        fi
+
+        # Next, check for high priority todos
+        HIGH_TODO=$(beans list --json | jq -r '.[] | select(.priority == "high" and .status == "todo") | "\(.id)\t\(.title)"' | head -1)
+
+        if [[ -n "$HIGH_TODO" ]]; then
+            echo "Start high priority task:"
+            echo "$HIGH_TODO"
+            exit 0
+        fi
+
+        # Fall back to any todo
+        ANY_TODO=$(beans list --json | jq -r '.[] | select(.status == "todo") | "\(.id)\t\(.title)"' | head -1)
+
+        if [[ -n "$ANY_TODO" ]]; then
+            echo "Available task:"
+            echo "$ANY_TODO"
+        else
+            echo "No pending tasks found!"
+        fi
+        ;;
+
+    show)
+        BEAN_ID="${1:-}"
+        if [[ -z "$BEAN_ID" ]]; then
+            echo "Error: Bean ID required" >&2
+            exit 1
+        fi
+
+        beans show "$BEAN_ID"
+        ;;
+
+    create)
+        # Pass through to beans create
+        beans create "$@"
+        ;;
+
+    update)
+        # Pass through to beans update
+        beans update "$@"
+        ;;
+
+    delete)
+        BEAN_ID="${1:-}"
+        if [[ -z "$BEAN_ID" ]]; then
+            echo "Error: Bean ID required" >&2
+            exit 1
+        fi
+
+        beans delete "$BEAN_ID"
+        ;;
+
+    help|--help|-h)
+        cat << 'EOF'
+Bean Task Management - CSLN Project
+
+USAGE:
+    /bean COMMAND [OPTIONS]
+
+COMMANDS:
+    list [--status S] [--priority P] [--type T]
+        List all beans with optional filters
+
+    next
+        Recommend the next best task to work on
+
+    show BEAN_ID
+        Display full bean contents
+
+    create "Title" [--type T] [--priority P] [--status S] [--body TEXT]
+        Create a new bean
+
+    update BEAN_ID [--status S] [--priority P] [--blocking BLOCKER]
+        Update bean properties
+
+    delete BEAN_ID
+        Delete a bean permanently
+
+    help
+        Show this help message
+
+EXAMPLES:
+    /bean list --status todo
+    /bean next
+    /bean create "Fix parser bug" --type bug --priority critical
+    /bean update csl26-abc1 --status in-progress
+    /bean show csl26-abc1
+
+For full beans CLI documentation, see: beans help
+EOF
+        ;;
+
+    *)
+        echo "Unknown command: $CMD" >&2
+        echo "Run '/bean help' for usage information" >&2
+        exit 1
+        ;;
+esac
