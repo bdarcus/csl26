@@ -2,10 +2,10 @@
 # csl26-rh2u
 title: Preserve macro call order from CSL 1.0 during parsing
 status: todo
-type: feature
+type: bug
 priority: high
 created_at: 2026-02-07T19:52:56Z
-updated_at: 2026-02-07T19:52:56Z
+updated_at: 2026-02-07T20:00:49Z
 blocking:
     - csl26-ifiw
 ---
