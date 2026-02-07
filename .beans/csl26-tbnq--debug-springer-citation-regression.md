@@ -1,11 +1,11 @@
 ---
 # csl26-tbnq
 title: Debug Springer citation regression
-status: in-progress
+status: completed
 type: bug
 priority: critical
 created_at: 2026-02-07T06:44:18Z
-updated_at: 2026-02-07T12:18:55Z
+updated_at: 2026-02-07T19:17:55Z
 blocking:
     - csl26-l2hg
     - csl26-u1in
