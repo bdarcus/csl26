@@ -1641,6 +1641,7 @@ impl TemplateCompiler {
             wrap,
             prefix_inside_wrap: None,
             suppress: None,
+            initialize_with: None,
         }
     }
 

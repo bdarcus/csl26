@@ -14,6 +14,19 @@ impl ComponentValues for TemplateContributor {
         hints: &ProcHints,
         options: &RenderOptions<'_>,
     ) -> Option<ProcValues> {
+        // Resolve effective rendering options (base merged with type-specific override)
+        let mut effective_rendering = self.rendering.clone();
+        if let Some(overrides) = &self.overrides {
+            // Apply "all" wildcard override first
+            if let Some(all_override) = overrides.get("all") {
+                effective_rendering.merge(all_override);
+            }
+            // Then apply specific type override
+            if let Some(type_override) = overrides.get(&reference.ref_type()) {
+                effective_rendering.merge(type_override);
+            }
+        }
+
         let names = match self.contributor {
             ContributorRole::Author => reference.author(),
             ContributorRole::Editor => reference.editor(),
@@ -61,6 +74,7 @@ impl ComponentValues for TemplateContributor {
                                     self.sort_separator.as_ref(),
                                     self.shorten.as_ref(),
                                     self.and.as_ref(),
+                                    effective_rendering.initialize_with.as_ref(),
                                     hints,
                                 );
                                 // Add role suffix if configured, but ONLY in bibliography context.
@@ -127,6 +141,7 @@ impl ComponentValues for TemplateContributor {
                                     self.sort_separator.as_ref(),
                                     self.shorten.as_ref(),
                                     self.and.as_ref(),
+                                    effective_rendering.initialize_with.as_ref(),
                                     hints,
                                 );
                                 return Some(ProcValues {
@@ -166,6 +181,19 @@ impl ComponentValues for TemplateContributor {
                 .as_ref()
         });
 
+        // Resolve effective rendering options (base merged with type-specific override)
+        let mut effective_rendering = self.rendering.clone();
+        if let Some(overrides) = &self.overrides {
+            // Apply "all" wildcard override first
+            if let Some(all_override) = overrides.get("all") {
+                effective_rendering.merge(all_override);
+            }
+            // Then apply specific type override
+            if let Some(type_override) = overrides.get(&reference.ref_type()) {
+                effective_rendering.merge(type_override);
+            }
+        }
+
         let formatted = format_names(
             &names_vec,
             &self.form,
@@ -174,6 +202,7 @@ impl ComponentValues for TemplateContributor {
             self.sort_separator.as_ref(),
             self.shorten.as_ref(),
             self.and.as_ref(),
+            effective_rendering.initialize_with.as_ref(),
             hints,
         );
 
@@ -258,6 +287,7 @@ pub fn format_names(
     sort_separator_override: Option<&String>,
     shorten_override: Option<&ShortenListOptions>,
     and_override: Option<&AndOptions>,
+    initialize_with_override: Option<&String>,
     hints: &ProcHints,
 ) -> String {
     if names.is_empty() {
@@ -309,7 +339,8 @@ pub fn format_names(
     // Format each name
     // Use explicit name_order if provided, otherwise use global display_as_sort
     let display_as_sort = config.and_then(|c| c.display_as_sort.clone());
-    let initialize_with = config.and_then(|c| c.initialize_with.as_ref());
+    let initialize_with = initialize_with_override
+        .or_else(|| config.and_then(|c| c.initialize_with.as_ref()));
     let initialize_with_hyphen = config.and_then(|c| c.initialize_with_hyphen);
     let demote_ndp = config.and_then(|c| c.demote_non_dropping_particle.as_ref());
     let sort_separator =
@@ -658,6 +689,7 @@ pub fn format_contributors_short(
         names,
         &ContributorForm::Short,
         options,
+        None,
         None,
         None,
         None,

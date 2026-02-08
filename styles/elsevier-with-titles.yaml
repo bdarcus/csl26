@@ -5,6 +5,11 @@ info:
   link: http://www.zotero.org/styles/elsevier-with-titles
   license: http://creativecommons.org/licenses/by-sa/3.0/
 options:
+  substitute:
+    contributor-role-form: short
+    template:
+    - editor
+    - translator
   processing: numeric
   contributors:
     initialize-with: .
@@ -38,7 +43,7 @@ bibliography:
       paper-conference:
         suffix: ", "
       all:
-        initialize: true
+        initialize-with: "."
   - title: primary
   - items:
     - items:
@@ -52,7 +57,7 @@ bibliography:
           book:
             suppress: true
           all:
-            initialize: true
+            initialize-with: "."
       delimiter: " "
     - title: parent-monograph
       overrides:

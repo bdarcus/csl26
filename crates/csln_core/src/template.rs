@@ -80,6 +80,9 @@ pub struct Rendering {
     /// Useful for type-specific overrides like suppressing publisher for journals.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub suppress: Option<bool>,
+    /// Override name initialization (e.g., ". " or "").
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub initialize_with: Option<String>,
 }
 
 impl Rendering {
@@ -111,6 +114,9 @@ impl Rendering {
         }
         if other.suppress.is_some() {
             self.suppress = other.suppress;
+        }
+        if other.initialize_with.is_some() {
+            self.initialize_with = other.initialize_with.clone();
         }
     }
 }
