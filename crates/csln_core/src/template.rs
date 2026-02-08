@@ -61,21 +61,21 @@ pub struct Rendering {
     /// Render in small caps.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub small_caps: Option<bool>,
-    /// Text to prepend to the rendered value.
+    /// Text to prepend to the rendered value (outside any wrap).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub prefix: Option<String>,
-    /// Text to append to the rendered value.
+    /// Text to append to the rendered value (outside any wrap).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub suffix: Option<String>,
+    /// Text to prepend inside the wrap.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub inner_prefix: Option<String>,
+    /// Text to append inside the wrap.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub inner_suffix: Option<String>,
     /// Punctuation to wrap the value in (e.g., parentheses).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub wrap: Option<WrapPunctuation>,
-    /// If true, prefix goes inside wrap (default). If false, prefix goes outside wrap.
-    /// Example: `prefix: "pp. ", wrap: parentheses`
-    /// - `prefix_inside_wrap: true` → "(pp. 1-10)"
-    /// - `prefix_inside_wrap: false` → "pp. (1-10)"
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub prefix_inside_wrap: Option<bool>,
     /// If true, suppress this component entirely (render as empty string).
     /// Useful for type-specific overrides like suppressing publisher for journals.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -106,11 +106,14 @@ impl Rendering {
         if other.suffix.is_some() {
             self.suffix = other.suffix.clone();
         }
+        if other.inner_prefix.is_some() {
+            self.inner_prefix = other.inner_prefix.clone();
+        }
+        if other.inner_suffix.is_some() {
+            self.inner_suffix = other.inner_suffix.clone();
+        }
         if other.wrap.is_some() {
             self.wrap = other.wrap.clone();
-        }
-        if other.prefix_inside_wrap.is_some() {
-            self.prefix_inside_wrap = other.prefix_inside_wrap;
         }
         if other.suppress.is_some() {
             self.suppress = other.suppress;
