@@ -79,15 +79,20 @@ pub fn refs_to_string(proc_templates: Vec<ProcTemplate>) -> String {
         }
 
         // Apply entry suffix
-        let entry_suffix = proc_template
+        let bib_cfg = proc_template
             .first()
             .and_then(|c| c.config.as_ref())
-            .and_then(|cfg| cfg.bibliography.as_ref())
-            .and_then(|bib| bib.entry_suffix.as_deref());
-
+            .and_then(|cfg| cfg.bibliography.as_ref());
+        let entry_suffix = bib_cfg.and_then(|bib| bib.entry_suffix.as_deref());
         match entry_suffix {
             Some(suffix) if !suffix.is_empty() => {
-                if !output.ends_with(suffix.chars().next().unwrap_or('.')) {
+                // Always suppress trailing period after URLs/DOIs — virtually
+                // no style wants "https://doi.org/10.1234/example." with a
+                // trailing period. This mirrors citeproc-js suffix collapsing.
+                let ends_with_url = ends_with_url_or_doi(&output);
+                if ends_with_url {
+                    // Skip entry suffix for entries ending with URL/DOI
+                } else if !output.ends_with(suffix.chars().next().unwrap_or('.')) {
                     if suffix == "."
                         && punctuation_in_quote
                         && (output.ends_with('"') || output.ends_with('\u{201D}'))
@@ -119,6 +124,21 @@ fn is_link_component(component: &TemplateComponent) -> bool {
         }
         TemplateComponent::List(list) => list.items.last().map(is_link_component).unwrap_or(false),
         _ => false,
+    }
+}
+
+/// Check if the output ends with a URL or DOI (to suppress trailing period).
+fn ends_with_url_or_doi(output: &str) -> bool {
+    let trimmed = output.trim_end_matches('.');
+    let trimmed = trimmed.trim_end();
+    // Check if the last "word" looks like a URL or DOI
+    if let Some(last_segment) = trimmed.rsplit_once(' ') {
+        let last = last_segment.1;
+        last.starts_with("https://") || last.starts_with("http://") || last.starts_with("doi.org/")
+    } else {
+        trimmed.starts_with("https://")
+            || trimmed.starts_with("http://")
+            || trimmed.starts_with("doi.org/")
     }
 }
 

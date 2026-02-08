@@ -296,7 +296,7 @@ function findConsensusOrdering(entries, refByEntry) {
 /**
  * Find the most common delimiter between two component names.
  */
-function findDelimiterConsensus(entries, refByEntry, comp1, comp2) {
+function findDelimiterConsensus(entries, refByEntry, comp1, comp2, minFraction) {
   const delimiters = {};
 
   for (let idx = 0; idx < entries.length; idx++) {
@@ -312,11 +312,15 @@ function findDelimiterConsensus(entries, refByEntry, comp1, comp2) {
     }
   }
 
-  // Return most common delimiter, trimming stray quotes from formatting
+  // Return most common delimiter, trimming stray quotes from formatting.
+  // Require the pair to appear in at least minFraction of entries (default 0)
+  // to avoid letting rare type-specific pairs set prefixes.
   if (Object.keys(delimiters).length === 0) {
     return null;
   }
   const sorted = Object.entries(delimiters).sort((a, b) => b[1] - a[1]);
+  const minCount = Math.max(1, Math.floor(entries.length * (minFraction || 0)));
+  if (sorted[0][1] < minCount) return null;
   return sorted[0][0].replace(/["\u201c\u201d]+/g, '') || sorted[0][0];
 }
 
@@ -665,6 +669,7 @@ function generateYaml(template, delimiter) {
         if (item.wrap) yaml += `${indent}      wrap: ${item.wrap}\n`;
       }
       yaml += `${indent}  delimiter: none\n`;
+      if (component.prefix) yaml += `${indent}  prefix: "${component.prefix}"\n`;
       continue;
     }
 
@@ -918,23 +923,75 @@ function inferTemplate(stylePath, section = 'bibliography') {
   // Detect per-component delimiter prefixes that differ from section-level delimiter.
   // For each adjacent pair in the template, if their delimiter differs from the
   // section-level delimiter, set it as a prefix on the second component.
+  //
+  // Also check non-adjacent pairs that become adjacent when intervening components
+  // are suppressed (e.g., containerTitle → publisher → volume, where publisher is
+  // suppressed for journal articles, making containerTitle → volume adjacent).
+  const templateNames = template.map(c => c._componentName || (c.items ? 'volume' : null));
+
+  // Map split template names back to component-parser names used by detectDelimiters.
+  // The consensus ordering splits containerTitle into containerTitleSerial/Monograph,
+  // but the parser always uses "containerTitle".
+  const parserNameMap = {
+    containerTitleSerial: 'containerTitle',
+    containerTitleMonograph: 'containerTitle',
+  };
+
   for (let i = 1; i < template.length; i++) {
-    const prevComp = template[i - 1];
     const currComp = template[i];
+    const currName = templateNames[i];
+    if (!currName) continue;
+    if (currComp.prefix) continue; // Already has a prefix (from detectPrefix)
 
-    if (!prevComp._componentName || !currComp._componentName) continue;
-    if (currComp.items) continue; // Skip List components (volume+issue)
+    // Check predecessors: immediate first, then non-adjacent (for
+    // components suppressed for some types, e.g. containerTitle → volume).
+    //
+    // Frequency thresholds prevent rare type-specific pairs from setting
+    // incorrect prefixes.  For immediate predecessors that appear in < 20%
+    // of entries (e.g. editors only in chapters), require the pair itself
+    // to also meet a 20% threshold.  Common predecessors keep minFrac = 0
+    // to tolerate position-detection gaps (e.g. multi-author contributor).
+    const parserCurrName = parserNameMap[currName] || currName;
+    const totalEntries = rendered.entries.length;
 
-    const pairDelim = findDelimiterConsensus(
-      rendered.entries,
-      refByEntry,
-      prevComp._componentName,
-      currComp._componentName
-    );
+    for (let j = i - 1; j >= 0; j--) {
+      // For items groups, try both issue and volume as predecessor names,
+      // since not all entries have issue numbers.
+      let altCandidates;
+      if (template[j].items) {
+        altCandidates = ['issue', 'volume'];
+      } else {
+        const rawAlt = templateNames[j];
+        if (!rawAlt) continue;
+        altCandidates = [parserNameMap[rawAlt] || rawAlt];
+      }
 
-    if (pairDelim && pairDelim !== delimiterConsensus) {
-      // Set as prefix only if different from section delimiter
-      currComp.prefix = pairDelim;
+      // Determine frequency threshold: non-adjacent always gets 0.2;
+      // immediate predecessor gets 0.2 if rare, 0 if common.
+      let minFrac;
+      if (j !== i - 1) {
+        minFrac = 0.2;
+      } else {
+        const predName = templateNames[j] || (template[j].items ? 'volume' : null);
+        const predParserName = predName ? (parserNameMap[predName] || predName) : null;
+        const predFreq = predParserName ? (componentFrequency[predParserName] || 0) : 0;
+        minFrac = (predFreq / totalEntries >= 0.2) ? 0 : 0.2;
+      }
+
+      let found = false;
+      for (const altName of altCandidates) {
+        const pairDelim = findDelimiterConsensus(
+          rendered.entries, refByEntry, altName, parserCurrName, minFrac
+        );
+        if (pairDelim && pairDelim !== delimiterConsensus) {
+          currComp.prefix = pairDelim;
+          found = true;
+          break;
+        }
+      }
+      if (found) break;
+      // Stop after checking three levels back
+      if (j <= i - 4) break;
     }
   }
 
