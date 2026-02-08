@@ -191,5 +191,139 @@
     "issue": "3",
     "page": "201-215",
     "note": "Author unknown"
+  },
+  "ITEM-16": {
+    "id": "ITEM-16",
+    "type": "article-newspaper",
+    "title": "Major Breakthrough in Quantum Computing Announced",
+    "author": [{ "family": "Rodriguez", "given": "Maria" }],
+    "issued": { "date-parts": [[2024, 3, 15]] },
+    "container-title": "The New York Times",
+    "section": "Science"
+  },
+  "ITEM-17": {
+    "id": "ITEM-17",
+    "type": "article-magazine",
+    "title": "The Art of Minimalism in Modern Design",
+    "author": [{ "family": "Thompson", "given": "Alexander" }],
+    "issued": { "date-parts": [[2023, 6]] },
+    "container-title": "Wired",
+    "volume": "31",
+    "issue": "6",
+    "page": "42-49"
+  },
+  "ITEM-18": {
+    "id": "ITEM-18",
+    "type": "entry-encyclopedia",
+    "title": "Renaissance Art and Culture",
+    "author": [{ "family": "Vasari", "given": "Giorgio" }],
+    "issued": { "date-parts": [[2022]] },
+    "container-title": "Encyclopedia of World History",
+    "publisher": "Oxford University Press",
+    "volume": "5",
+    "page": "234-256"
+  },
+  "ITEM-19": {
+    "id": "ITEM-19",
+    "type": "dataset",
+    "title": "Global Temperature Anomalies 1880-2023",
+    "author": [{ "literal": "NASA Goddard Institute for Space Studies" }],
+    "issued": { "date-parts": [[2024]] },
+    "publisher": "NASA",
+    "URL": "https://data.giss.nasa.gov/gistemp/",
+    "accessed": { "date-parts": [[2024, 1, 20]] }
+  },
+  "ITEM-20": {
+    "id": "ITEM-20",
+    "type": "legal_case",
+    "title": "Brown v. Board of Education",
+    "issued": { "date-parts": [[1954, 5, 17]] },
+    "authority": "U.S. Supreme Court",
+    "page": "483",
+    "volume": "347",
+    "container-title": "U.S. Reports"
+  },
+  "ITEM-21": {
+    "id": "ITEM-21",
+    "type": "patent",
+    "title": "Method for Efficient Data Compression",
+    "author": [
+      { "family": "Johnson", "given": "David" },
+      { "family": "Lee", "given": "Sarah" }
+    ],
+    "issued": { "date-parts": [[2021, 7, 13]] },
+    "number": "US 11,043,211 B2",
+    "country": "US"
+  },
+  "ITEM-22": {
+    "id": "ITEM-22",
+    "type": "motion_picture",
+    "title": "The Arrival of a Train at La Ciotat Station",
+    "author": [{ "family": "Lumière", "given": "Louis" }],
+    "issued": { "date-parts": [[1896]] },
+    "director": [{ "family": "Lumière", "given": "Louis" }],
+    "genre": "Short film",
+    "medium": "film"
+  },
+  "ITEM-23": {
+    "id": "ITEM-23",
+    "type": "broadcast",
+    "title": "The Universe in a Nutshell",
+    "author": [{ "family": "Sagan", "given": "Carl" }],
+    "issued": { "date-parts": [[1980, 9, 28]] },
+    "container-title": "Cosmos: A Spacetime Odyssey",
+    "number": "1",
+    "medium": "Television"
+  },
+  "ITEM-24": {
+    "id": "ITEM-24",
+    "type": "interview",
+    "title": "The Future of Artificial Intelligence",
+    "author": [{ "family": "Bengio", "given": "Yoshua" }],
+    "issued": { "date-parts": [[2023, 11, 10]] },
+    "interviewer": [{ "family": "Colbert", "given": "Stephen" }],
+    "medium": "Video interview",
+    "URL": "https://example.com/interview"
+  },
+  "ITEM-25": {
+    "id": "ITEM-25",
+    "type": "book",
+    "title": "Metamorphosis",
+    "author": [{ "family": "Kafka", "given": "Franz" }],
+    "issued": { "date-parts": [[1915]] },
+    "publisher": "Kurt Wolff Verlag",
+    "publisher-place": "Leipzig",
+    "translator": [{ "family": "Wyllie", "given": "David" }],
+    "language": "en"
+  },
+  "ITEM-26": {
+    "id": "ITEM-26",
+    "type": "book",
+    "title": "Éthique",
+    "author": [{ "family": "Spinoza", "given": "Baruch" }],
+    "issued": { "date-parts": [[1677]] },
+    "publisher": "Jan Rieuwertsz",
+    "publisher-place": "Amsterdam",
+    "language": "la"
+  },
+  "ITEM-27": {
+    "id": "ITEM-27",
+    "type": "report",
+    "title": "State of the World's Biodiversity",
+    "author": [{ "literal": "United Nations Environment Programme" }],
+    "editor": [{ "family": "Díaz", "given": "Sandra" }],
+    "issued": { "date-parts": [[2019]] },
+    "publisher": "UNEP",
+    "publisher-place": "Nairobi",
+    "genre": "Assessment report"
+  },
+  "ITEM-28": {
+    "id": "ITEM-28",
+    "type": "personal_communication",
+    "title": "Discussion on CSLN Schema Design",
+    "author": [{ "family": "Smith", "given": "Patricia" }],
+    "issued": { "date-parts": [[2024, 2, 7]] },
+    "type-translated": "Email",
+    "recipient": [{ "family": "Darcus", "given": "Bruce" }]
   }
 }
