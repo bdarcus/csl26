@@ -142,6 +142,29 @@ if ref_type == "article-journal" {
       prefix: "Vol. "
 ```
 
+#### Category Mapping
+To handle formatting that applies to broad categories (like all periodicals), use the `type-mapping` configuration in `options.titles`. This eliminates the need for the processor to know which types are "journals."
+
+```yaml
+options:
+  titles:
+    type-mapping:
+      article-journal: periodical
+      thesis: monograph
+    periodical:
+      emph: true
+```
+
+#### Inner vs Outer Affixes
+Components distinguish between affixes outside the wrap (spacing) and inside the wrap (labels).
+
+```yaml
+- number: pages
+  wrap: parentheses
+  inner-prefix: "pp. "  # Inside: (pp. 45)
+  suffix: " "           # Outside: (pp. 45) next
+```
+
 **Context-Sensitive Examples:**
 Use the `!mode-dependent` tag to handle differences between narrative and parenthetical citations (as in APA 7th):
 
