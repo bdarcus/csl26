@@ -39,40 +39,53 @@ pub fn refs_to_string(proc_templates: Vec<ProcTemplate>) -> String {
                 continue;
             }
 
-            // Add separator between components
+            // Add separator between components.
+            //
+            // The template's separator (from BibliographyConfig) joins components.
+            // Components express any non-default separation via their prefix field.
+            // This logic is intentionally simple: we skip adding the separator only
+            // when punctuation is already present (to avoid doubling).
             if j > 0 && !output.is_empty() {
                 let last_char = output.chars().last().unwrap_or(' ');
                 let first_char = rendered.chars().next().unwrap_or(' ');
 
-                let is_date = matches!(&component.template_component, TemplateComponent::Date(_));
+                // Derive the first punctuation/char of the separator for comparison
+                let sep_first_char = default_separator.chars().next().unwrap_or('.');
 
-                if matches!(first_char, ',' | ';' | ':' | ' ' | '.') {
-                    // No separator needed
-                } else if first_char == '(' && !is_date {
-                    if !last_char.is_whitespace() {
+                // Skip adding separator if:
+                // 1. The rendered component already starts with separator-like punctuation
+                // 2. The output already ends with separator-like punctuation
+                // 3. Special handling for quotes with punctuation-in-quote locales
+                let starts_with_separator = matches!(first_char, ',' | ';' | ':' | ' ' | '.' | '(');
+                let ends_with_separator =
+                    matches!(last_char, '.' | ',' | ':' | ';' | ' ' | ']' | ')');
+
+                if starts_with_separator {
+                    // Component prefix already provides separation (or opens with paren)
+                    // If it starts with '(' and output doesn't end with space, add one
+                    if first_char == '(' && !last_char.is_whitespace() {
                         output.push(' ');
                     }
-                } else if !matches!(last_char, '.' | ',' | ':' | ';' | ' ' | ']') {
-                    if punctuation_in_quote
-                        && (last_char == '"' || last_char == '\u{201D}')
-                        && default_separator.starts_with('.')
-                    {
-                        output.pop();
-                        let quote_str = if last_char == '\u{201D}' {
-                            ".\u{201D} "
-                        } else {
-                            ".\" "
-                        };
-                        output.push_str(quote_str);
-                    } else {
-                        output.push_str(default_separator);
+                } else if ends_with_separator {
+                    // Output already has punctuation; just add space if needed
+                    if !last_char.is_whitespace() && last_char != ']' {
+                        output.push(' ');
                     }
-                } else if last_char == '.' {
-                    output.push(' ');
-                } else if last_char == ']' {
-                    // After closing bracket (numeric citations), no separator
-                } else if !last_char.is_whitespace() {
-                    output.push(' ');
+                } else if punctuation_in_quote
+                    && (last_char == '"' || last_char == '\u{201D}')
+                    && sep_first_char == '.'
+                {
+                    // Special case: move period inside closing quote for locales that want it
+                    output.pop();
+                    let quote_str = if last_char == '\u{201D}' {
+                        ".\u{201D} "
+                    } else {
+                        ".\" "
+                    };
+                    output.push_str(quote_str);
+                } else {
+                    // Normal case: add the configured separator
+                    output.push_str(default_separator);
                 }
             }
             let _ = write!(&mut output, "{}", rendered);

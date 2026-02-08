@@ -984,8 +984,15 @@ function inferTemplate(stylePath, section = 'bibliography') {
           rendered.entries, refByEntry, altName, parserCurrName, minFrac
         );
         if (pairDelim && pairDelim !== delimiterConsensus) {
-          currComp.prefix = pairDelim;
-          found = true;
+          // Don't set whitespace-only prefix for wrapped components.
+          // The renderer adds a space before opening parens/brackets automatically,
+          // so " " prefix would create "( 1962)" instead of "(1962)".
+          if (currComp.wrap && /^\s+$/.test(pairDelim)) {
+            // Skip setting this as prefix - renderer handles it
+          } else {
+            currComp.prefix = pairDelim;
+            found = true;
+          }
           break;
         }
       }
