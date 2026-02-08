@@ -33,7 +33,7 @@ This skill can modify both style YAML and processor/core code when features are 
 Gather and understand the style's formatting rules.
 
 1. Read any provided reference URLs (style guides, university LibGuides, example PDFs)
-2. Study `examples/apa-7th.yaml` as the gold-standard template for CSLN style structure
+2. Study `styles/apa-7th.yaml` as the gold-standard template for CSLN style structure
 3. Read `crates/csln_core/src/template.rs` for available `TemplateComponent` types and rendering options
 4. Read `crates/csln_core/src/style.rs` for top-level `Style`, `Options`, `Citation`, `Bibliography` structs
 5. Identify the citation format class: `author-date`, `numeric`, or `note`
@@ -49,7 +49,7 @@ Gather and understand the style's formatting rules.
 
 Create the style YAML file.
 
-1. Create `examples/<style-name>.yaml`
+1. Create `styles/<style-name>.yaml`
 2. Follow CSLN design principles:
    - **Explicit over magic**: All behavior in the YAML, not hidden in processor
    - **Declarative templates**: Flat components with type overrides, not procedural logic
@@ -84,7 +84,7 @@ bibliography:
 Run the processor and compare output to expectations.
 
 ```bash
-cargo run --bin csln-processor -- examples/<style-name>.yaml
+cargo run --bin csln-processor -- styles/<style-name>.yaml
 ```
 
 Compare each output line against the reference material:
@@ -104,7 +104,7 @@ Add missing features to the processor or core types.
 **Allowed modifications:**
 - `crates/csln_processor/` - Rendering engine
 - `crates/csln_core/` - Type definitions and schema
-- `examples/` - Style files
+- `styles/` - Style files
 
 **Protected files (do NOT modify):**
 - `crates/csln_migrate/` - Migration pipeline

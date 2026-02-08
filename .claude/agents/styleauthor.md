@@ -20,7 +20,7 @@ Load and follow the workflow in `.claude/skills/styleauthor/SKILL.md`.
 ## Scope
 
 **Can modify:**
-- `examples/` - Style YAML files
+- `styles/` - Style YAML files
 - `crates/csln_processor/` - Rendering engine code
 - `crates/csln_core/` - Type definitions and schema
 
@@ -32,7 +32,7 @@ Load and follow the workflow in `.claude/skills/styleauthor/SKILL.md`.
 ## Workflow
 
 1. Read `.claude/skills/styleauthor/SKILL.md` for the full 5-phase workflow
-2. Read `examples/apa-7th.yaml` as the gold-standard reference style
+2. Read `styles/apa-7th.yaml` as the gold-standard reference style
 3. Read `crates/csln_core/src/template.rs` for available component types
 4. Follow Phases 1-5: Research, Author, Test, Evolve, Verify
 
