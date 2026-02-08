@@ -7,13 +7,16 @@ info:
   # - https://apastyle.apa.org/instructional-aids/reference-examples.pdf
   # - https://aut.ac.nz.libguides.com/APA7th/in-text
   # - https://libguides.umgc.edu/c.php?g=1003870&p=7270652
+  # - https://apastyle.apa.org/style-grammar-guidelines/citations/basic-principles/author-date
 options:
   processing: author-date
   contributors:
     # "Smith, J. A."
     initialize-with: ". "
-    # "Smith, J. A., & Doe, B."
-    and: symbol
+    # APA uses "and" in narrative citations and "&" in parenthetical
+    and: !mode-dependent
+      integral: text
+      non-integral: symbol
     delimiter-precedes-last: always
     # Bibliography sorts and displays all authors inverted
     display-as-sort: all
@@ -38,19 +41,41 @@ options:
       emph: false
       quote: false
 citation:
-  wrap: parentheses
-  template:
-    - items:
+  # Parenthetical: (Smith & Jones, 2020)
+  non-integral:
+    wrap: parentheses
+    template:
+      - items:
+        - contributor: author
+          form: short
+          shorten:
+            min: 3
+            use-first: 1
+        - date: issued
+          form: year
+        - variable: locator
+          prefix: ", "
+        delimiter: comma
+  
+  # Narrative: Smith and Jones (2020)
+  integral:
+    wrap: none
+    delimiter: ""
+    template:
       - contributor: author
         form: short
         shorten:
           min: 3
           use-first: 1
-      - date: issued
-        form: year
-      - variable: locator
-        prefix: ", "
-      delimiter: comma
+      - items:
+        - date: issued
+          form: year
+        - variable: locator
+          prefix: ", "
+        delimiter: comma
+        wrap: parentheses
+        prefix: " "
+        prefix-inside-wrap: false
 bibliography:
   # Block-based structure with delimiters
   template:
