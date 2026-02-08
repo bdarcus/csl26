@@ -34,11 +34,16 @@ The template resolver and per-component delimiter detection are working.
 - **Prefix-aware delimiter detection**: Refined separator inference to strip 
   component-level prefixes, allowing accurate detection of underlying section 
   delimiters (e.g. distinguishing ". " from ". In ").
+- **Entry suffix infrastructure**: Implemented `entry_suffix` support in 
+  `csln-processor` and `csln-migrate` pipeline. `infer-template.js` now 
+  passes detected suffix to the renderer, resolving trailing period 
+  mismatches for styles like Springer.
+- **Migration Prep Tooling**: Created `scripts/prep-migration.sh` to 
+  aggregate context for agent-assisted manual migration of complex styles.
 
 1. **Issue number leaking**: Issue numbers render when citeproc-js suppresses
    them (e.g. "37, 1, 1-13" vs "37, 1-13"). Needs type/value-specific
    suppress logic.
-2. **Entry suffix**: Some styles don't want trailing period (springer)
 3. **Editor formatting**: "edited by" vs "(Eds.)" vs "In: Name (ed)"
 5. **Conference papers**: Duplicate container titles
 6. **Unsupported types**: 13 of 28 items undefined (legal, patent, film, etc.)
@@ -53,6 +58,6 @@ The template resolver and per-component delimiter detection are working.
 | elsevier-with-titles | 15/28 | 0/28 |
 
 ## Next steps (priority order)
-1. Fix entry suffix to respect style config (no trailing "." for springer)
-2. Address issue number leaking for styles that suppress issue
-3. Clean up period delimiters in APA (e.g. fix "). " artifacts from inference)
+1. Address issue number leaking for styles that suppress issue
+2. Clean up period delimiters in APA (e.g. fix "). " artifacts from inference)
+3. Expand @styleauthor migration to top-5 parent styles
