@@ -139,6 +139,22 @@ scripts/           # oracle.js for citeproc-js verification
 tests/             # Integration tests
 ```
 
+## Migration Strategy
+
+**Current Approach:** Hybrid strategy combining XML options extraction with output-driven template generation.
+
+See **[docs/architecture/MIGRATION_STRATEGY_ANALYSIS.md](./docs/architecture/MIGRATION_STRATEGY_ANALYSIS.md)** for full analysis.
+
+**Key insight:** The XML semantic compiler excels at extracting global options (name formatting, et-al rules, dates, locales) achieving 87-100% citation match, but fails at template structure (0% bibliography match across all top parent styles) due to fundamental model mismatch between CSL 1.0's procedural approach and CSLN's declarative templates.
+
+**Strategy:**
+1. **Keep XML pipeline for OPTIONS** - Options extractor, preset detector, locale handling (~2,500 lines working code)
+2. **Build output-driven template generator** - Use citeproc-js output + input data cross-referencing for component structure and ordering
+3. **Retain XML compiler as fallback** - For rare reference types and validation
+4. **Cross-validation** - Where both approaches agree, confidence is high
+
+**Current work:** Bean `csl26-m3lb` tracks implementation of the hybrid approach.
+
 ## Development Principles
 
 ### 1. High-Fidelity Data & Math Support
