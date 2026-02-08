@@ -19,6 +19,12 @@ const CSL = require('citeproc');
 const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
+const {
+  normalizeText,
+  parseComponents,
+  analyzeOrdering,
+  findRefDataForEntry,
+} = require('./lib/component-parser');
 
 // Load locale from file
 function loadLocale(lang) {
@@ -41,182 +47,25 @@ const testItems = Object.fromEntries(
 );
 
 /**
- * Component patterns for parsing bibliography entries.
- * These patterns identify common bibliographic components.
- */
-const COMPONENT_PATTERNS = {
-  // Year in parentheses: (2020) or (2020).
-  yearParens: /\((\d{4})\)\.?/,
-  // Year standalone: 2020. or 2020,
-  yearStandalone: /(?:^|\s)(\d{4})[.,]/,
-  // DOI patterns
-  doi: /(?:https?:\/\/doi\.org\/|doi:\s*|DOI:\s*)(10\.\d+\/[^\s]+)/i,
-  // URL patterns
-  url: /(?:URL\s*|Available at\s*)?https?:\/\/[^\s]+/i,
-  // Page ranges: pp. 123-456, p. 123, 123-456, 123–456
-  pages: /(?:pp?\.\s*)?(\d+)[\-–](\d+)/,
-  // Single page
-  page: /(?:p\.\s*)?(\d+)(?![0-9\-–])/,
-  // Volume/issue: 15(3), vol. 15, no. 3
-  volumeIssue: /(?:vol(?:ume)?\.?\s*)?(\d+)\s*\((\d+)\)/i,
-  // Volume only: 521, vol. 15
-  volume: /(?:vol(?:ume)?\.?\s*)?(\d+)(?!\s*\()/,
-  // Edition: 2nd ed., Silver Anniversary Edition
-  edition: /(\d+(?:st|nd|rd|th)\s+ed\.|[A-Za-z\s]+Edition)/i,
-  // Editor markers: (Ed.), (Eds.), edited by
-  editors: /\(Eds?\.\)|edited by|Ed\.|Eds\./i,
-  // "In" prefix for chapters
-  inPrefix: /\bIn[:\s]/,
-  // Publisher-place pattern: City: Publisher or Publisher, City
-  publisherPlace: /([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\s*:\s*([^,.]+)|([^,.]+),\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/,
-};
-
-/**
- * Extract structured components from a bibliography entry string.
- */
-function parseComponents(entry, refData) {
-  const components = {
-    raw: entry,
-    contributors: { found: false, value: null },
-    year: { found: false, value: null },
-    title: { found: false, value: null },
-    containerTitle: { found: false, value: null },
-    volume: { found: false, value: null },
-    issue: { found: false, value: null },
-    pages: { found: false, value: null },
-    publisher: { found: false, value: null },
-    place: { found: false, value: null },
-    doi: { found: false, value: null },
-    url: { found: false, value: null },
-    edition: { found: false, value: null },
-    editors: { found: false, value: null },
-  };
-  
-  const normalized = normalizeText(entry);
-  
-  // Extract year
-  const yearMatch = normalized.match(COMPONENT_PATTERNS.yearParens) || 
-                    normalized.match(COMPONENT_PATTERNS.yearStandalone);
-  if (yearMatch) {
-    components.year = { found: true, value: yearMatch[1] };
-  }
-  
-  // Extract DOI
-  const doiMatch = normalized.match(COMPONENT_PATTERNS.doi);
-  if (doiMatch) {
-    components.doi = { found: true, value: doiMatch[1] };
-  }
-  
-  // Extract URL (if no DOI)
-  if (!components.doi.found) {
-    const urlMatch = normalized.match(COMPONENT_PATTERNS.url);
-    if (urlMatch) {
-      components.url = { found: true, value: urlMatch[0] };
-    }
-  }
-  
-  // Extract pages
-  const pagesMatch = normalized.match(COMPONENT_PATTERNS.pages);
-  if (pagesMatch) {
-    components.pages = { found: true, value: `${pagesMatch[1]}-${pagesMatch[2]}` };
-  }
-  
-  // Extract volume/issue
-  const volIssueMatch = normalized.match(COMPONENT_PATTERNS.volumeIssue);
-  if (volIssueMatch) {
-    components.volume = { found: true, value: volIssueMatch[1] };
-    components.issue = { found: true, value: volIssueMatch[2] };
-  } else {
-    // Try volume only if we have reference data
-    if (refData && refData.volume) {
-      if (normalized.includes(refData.volume)) {
-        components.volume = { found: true, value: refData.volume };
-      }
-    }
-    if (refData && refData.issue) {
-      if (normalized.includes(refData.issue)) {
-        components.issue = { found: true, value: refData.issue };
-      }
-    }
-  }
-  
-  // Extract edition
-  const editionMatch = normalized.match(COMPONENT_PATTERNS.edition);
-  if (editionMatch) {
-    components.edition = { found: true, value: editionMatch[1] };
-  }
-  
-  // Check for editor markers
-  if (COMPONENT_PATTERNS.editors.test(normalized)) {
-    components.editors = { found: true, value: true };
-  }
-  
-  // Use reference data to verify presence of specific fields
-  if (refData) {
-    // Check title presence (normalize both for comparison)
-    if (refData.title) {
-      const titleNorm = normalizeText(refData.title).toLowerCase();
-      const entryNorm = normalized.toLowerCase();
-      components.title = { 
-        found: entryNorm.includes(titleNorm.substring(0, 20)), 
-        value: refData.title 
-      };
-    }
-    
-    // Check container-title presence
-    if (refData['container-title']) {
-      const containerNorm = normalizeText(refData['container-title']).toLowerCase();
-      const entryNorm = normalized.toLowerCase();
-      components.containerTitle = { 
-        found: entryNorm.includes(containerNorm.substring(0, 15)), 
-        value: refData['container-title'] 
-      };
-    }
-    
-    // Check publisher
-    if (refData.publisher) {
-      const pubNorm = normalizeText(refData.publisher).toLowerCase();
-      const entryNorm = normalized.toLowerCase();
-      components.publisher = { 
-        found: entryNorm.includes(pubNorm.substring(0, 10)), 
-        value: refData.publisher 
-      };
-    }
-    
-    // Check contributors (just verify author family names appear)
-    if (refData.author && refData.author.length > 0) {
-      const firstAuthor = refData.author[0];
-      const authorName = firstAuthor.family || firstAuthor.literal || '';
-      components.contributors = {
-        found: normalized.toLowerCase().includes(authorName.toLowerCase()),
-        value: authorName
-      };
-    }
-  }
-  
-  return components;
-}
-
-/**
  * Compare two component sets and identify differences.
  */
 function compareComponents(oracleComp, cslnComp, refData) {
   const differences = [];
   const matches = [];
-  
-  const keys = ['contributors', 'year', 'title', 'containerTitle', 'volume', 
+
+  const keys = ['contributors', 'year', 'title', 'containerTitle', 'volume',
                 'issue', 'pages', 'publisher', 'doi', 'edition', 'editors'];
-  
+
   for (const key of keys) {
     const oracle = oracleComp[key];
     const csln = cslnComp[key];
-    
+
     // Skip if neither has this component
     if (!oracle.found && !csln.found) continue;
-    
+
     if (oracle.found && csln.found) {
       // Both have it - check if values match
-      if (oracle.value === csln.value || 
+      if (oracle.value === csln.value ||
           (typeof oracle.value === 'boolean' && oracle.value === csln.value)) {
         matches.push({ component: key, status: 'match' });
       } else {
@@ -224,75 +73,23 @@ function compareComponents(oracleComp, cslnComp, refData) {
         matches.push({ component: key, status: 'match' }); // Component present in both
       }
     } else if (oracle.found && !csln.found) {
-      differences.push({ 
-        component: key, 
-        issue: 'missing', 
+      differences.push({
+        component: key,
+        issue: 'missing',
         expected: oracle.value,
         detail: `Missing in CSLN output`
       });
     } else if (!oracle.found && csln.found) {
-      differences.push({ 
-        component: key, 
-        issue: 'extra', 
+      differences.push({
+        component: key,
+        issue: 'extra',
         found: csln.value,
         detail: `Extra in CSLN output (not in oracle)`
       });
     }
   }
-  
-  return { differences, matches };
-}
 
-/**
- * Analyze ordering of components in the entry.
- * Returns the order in which key components appear.
- */
-function analyzeOrdering(entry, refData) {
-  const normalized = normalizeText(entry).toLowerCase();
-  const positions = {};
-  
-  // Find positions of key components
-  if (refData) {
-    if (refData.author && refData.author[0]) {
-      const name = (refData.author[0].family || refData.author[0].literal || '').toLowerCase();
-      if (name) positions.contributors = normalized.indexOf(name);
-    }
-    
-    if (refData.issued && refData.issued['date-parts']) {
-      const year = String(refData.issued['date-parts'][0][0]);
-      positions.year = normalized.indexOf(year);
-    }
-    
-    if (refData.title) {
-      const title = refData.title.substring(0, 15).toLowerCase();
-      positions.title = normalized.indexOf(title);
-    }
-    
-    if (refData['container-title']) {
-      const container = refData['container-title'].substring(0, 10).toLowerCase();
-      positions.containerTitle = normalized.indexOf(container);
-    }
-    
-    if (refData.volume) {
-      // Find volume number (be careful not to match within other numbers)
-      const volRegex = new RegExp(`\\b${refData.volume}\\b`);
-      const match = normalized.match(volRegex);
-      if (match) positions.volume = match.index;
-    }
-    
-    if (refData.page) {
-      const pageStart = refData.page.split(/[-–]/)[0];
-      positions.pages = normalized.indexOf(pageStart);
-    }
-  }
-  
-  // Filter out -1 (not found) and sort by position
-  const found = Object.entries(positions)
-    .filter(([_, pos]) => pos >= 0)
-    .sort((a, b) => a[1] - b[1])
-    .map(([key, _]) => key);
-  
-  return found;
+  return { differences, matches };
 }
 
 /**
@@ -300,7 +97,7 @@ function analyzeOrdering(entry, refData) {
  */
 function compareOrdering(oracleOrder, cslnOrder) {
   const issues = [];
-  
+
   // Check if orders match
   if (JSON.stringify(oracleOrder) !== JSON.stringify(cslnOrder)) {
     issues.push({
@@ -310,46 +107,36 @@ function compareOrdering(oracleOrder, cslnOrder) {
       detail: `Component order differs`
     });
   }
-  
-  return issues;
-}
 
-function normalizeText(text) {
-  return text
-    .replace(/<[^>]+>/g, '')       // Strip HTML tags
-    .replace(/&#38;/g, '&')        // HTML entity for &
-    .replace(/_([^_]+)_/g, '$1')   // Strip markdown italics
-    .replace(/\*\*([^*]+)\*\*/g, '$1') // Strip markdown bold
-    .replace(/\s+/g, ' ')          // Normalize whitespace
-    .trim();
+  return issues;
 }
 
 function renderWithCiteprocJs(stylePath) {
   const styleXml = fs.readFileSync(stylePath, 'utf8');
-  
+
   const sys = {
     retrieveLocale: (lang) => loadLocale(lang),
     retrieveItem: (id) => testItems[id]
   };
-  
+
   const citeproc = new CSL.Engine(sys, styleXml);
   citeproc.updateItems(Object.keys(testItems));
-  
+
   const citations = {};
   Object.keys(testItems).forEach(id => {
     citations[id] = citeproc.makeCitationCluster([{ id }]);
   });
-  
+
   const bibResult = citeproc.makeBibliography();
   const bibliography = bibResult ? bibResult[1] : [];
-  
+
   return { citations, bibliography };
 }
 
 function renderWithCslnProcessor(stylePath) {
   const projectRoot = path.resolve(__dirname, '..');
   const absStylePath = path.resolve(stylePath);
-  
+
   let migratedYaml;
   try {
     migratedYaml = execSync(
@@ -360,10 +147,10 @@ function renderWithCslnProcessor(stylePath) {
     console.error('Migration failed:', e.stderr || e.message);
     return null;
   }
-  
+
   const tempFile = path.join(projectRoot, '.migrated-temp.yaml');
   fs.writeFileSync(tempFile, migratedYaml);
-  
+
   let output;
   try {
     output = execSync(
@@ -377,11 +164,11 @@ function renderWithCslnProcessor(stylePath) {
   }
 
   try { fs.unlinkSync(tempFile); } catch {}
-  
+
   const lines = output.split('\n');
   const citations = {};
   const bibliography = [];
-  
+
   let section = null;
   for (const line of lines) {
     if (line.includes('CITATIONS:')) {
@@ -397,7 +184,7 @@ function renderWithCslnProcessor(stylePath) {
       bibliography.push(line.trim());
     }
   }
-  
+
   return { citations, bibliography };
 }
 
@@ -408,17 +195,17 @@ function renderWithCslnProcessor(stylePath) {
 function matchBibliographyEntries(oracleBib, cslnBib) {
   const pairs = [];
   const usedCsln = new Set();
-  
+
   for (const oracleEntry of oracleBib) {
     const oracleNorm = normalizeText(oracleEntry).toLowerCase();
     let bestMatch = null;
     let bestScore = 0;
-    
+
     for (let i = 0; i < cslnBib.length; i++) {
       if (usedCsln.has(i)) continue;
-      
+
       const cslnNorm = normalizeText(cslnBib[i]).toLowerCase();
-      
+
       // Score based on shared words
       const oracleWords = new Set(oracleNorm.split(/\s+/).filter(w => w.length > 3));
       const cslnWords = new Set(cslnNorm.split(/\s+/).filter(w => w.length > 3));
@@ -426,13 +213,13 @@ function matchBibliographyEntries(oracleBib, cslnBib) {
       for (const word of oracleWords) {
         if (cslnWords.has(word)) score++;
       }
-      
+
       if (score > bestScore) {
         bestScore = score;
         bestMatch = i;
       }
     }
-    
+
     if (bestMatch !== null && bestScore > 2) {
       pairs.push({ oracle: oracleEntry, csln: cslnBib[bestMatch], score: bestScore });
       usedCsln.add(bestMatch);
@@ -440,42 +227,15 @@ function matchBibliographyEntries(oracleBib, cslnBib) {
       pairs.push({ oracle: oracleEntry, csln: null, score: 0 });
     }
   }
-  
+
   // Add unmatched CSLN entries
   for (let i = 0; i < cslnBib.length; i++) {
     if (!usedCsln.has(i)) {
       pairs.push({ oracle: null, csln: cslnBib[i], score: 0 });
     }
   }
-  
-  return pairs;
-}
 
-/**
- * Find the reference data for a bibliography entry by matching author/title.
- */
-function findRefDataForEntry(entry, testItems) {
-  const entryNorm = normalizeText(entry).toLowerCase();
-  
-  for (const [id, ref] of Object.entries(testItems)) {
-    // Try to match by author family name
-    if (ref.author && ref.author[0]) {
-      const authorName = (ref.author[0].family || ref.author[0].literal || '').toLowerCase();
-      if (authorName && entryNorm.includes(authorName)) {
-        // Verify with title too
-        if (ref.title) {
-          const titleStart = ref.title.substring(0, 15).toLowerCase();
-          if (entryNorm.includes(titleStart)) {
-            return ref;
-          }
-        }
-        // If title not in entry but author matches, still return
-        return ref;
-      }
-    }
-  }
-  
-  return null;
+  return pairs;
 }
 
 // Main
@@ -551,7 +311,7 @@ for (let i = 0; i < pairs.length; i++) {
     ordering: null,
     issues: [],
   };
-  
+
   if (!pair.oracle) {
     entryResult.issues.push({ issue: 'extra_entry', detail: 'Entry in CSLN but not oracle' });
     results.bibliography.failed++;
@@ -562,36 +322,36 @@ for (let i = 0; i < pairs.length; i++) {
     // Both exist - compare
     const oracleNorm = normalizeText(pair.oracle);
     const cslnNorm = normalizeText(pair.csln);
-    
+
     if (oracleNorm === cslnNorm) {
       entryResult.match = true;
       results.bibliography.passed++;
     } else {
       results.bibliography.failed++;
-      
+
       // Find reference data for this entry
       const refData = findRefDataForEntry(pair.oracle, testItems);
-      
+
       // Parse components
       const oracleComp = parseComponents(pair.oracle, refData);
       const cslnComp = parseComponents(pair.csln, refData);
-      
+
       // Compare components
       const { differences, matches } = compareComponents(oracleComp, cslnComp, refData);
       entryResult.components = { differences, matches };
-      
+
       // Analyze ordering
       const oracleOrder = analyzeOrdering(pair.oracle, refData);
       const cslnOrder = analyzeOrdering(pair.csln, refData);
       const orderIssues = compareOrdering(oracleOrder, cslnOrder);
-      
+
       if (orderIssues.length > 0) {
         entryResult.ordering = { oracle: oracleOrder, csln: cslnOrder };
         results.orderingIssues++;
       }
-      
+
       entryResult.issues = [...differences, ...orderIssues];
-      
+
       // Track component issues for summary
       for (const diff of differences) {
         const key = `${diff.component}:${diff.issue}`;
@@ -599,7 +359,7 @@ for (let i = 0; i < pairs.length; i++) {
       }
     }
   }
-  
+
   results.bibliography.entries.push(entryResult);
 }
 
@@ -613,11 +373,11 @@ if (jsonOutput) {
   if (results.citations.failed > 0) {
     console.log(`  ❌ Failed: ${results.citations.failed}/${results.citations.total}`);
   }
-  
+
   console.log('\n--- BIBLIOGRAPHY ---');
   console.log(`  ✅ Passed: ${results.bibliography.passed}/${results.bibliography.total}`);
   console.log(`  ❌ Failed: ${results.bibliography.failed}/${results.bibliography.total}`);
-  
+
   if (Object.keys(results.componentSummary).length > 0) {
     console.log('\n--- COMPONENT ISSUES ---');
     const sorted = Object.entries(results.componentSummary)
@@ -626,11 +386,11 @@ if (jsonOutput) {
       console.log(`  ${issue}: ${count} entries`);
     }
   }
-  
+
   if (results.orderingIssues > 0) {
     console.log(`\n--- ORDERING ISSUES: ${results.orderingIssues} entries ---`);
   }
-  
+
   if (verbose) {
     console.log('\n--- DETAILED FAILURES ---');
     for (const entry of results.bibliography.entries) {
@@ -648,7 +408,7 @@ if (jsonOutput) {
       }
     }
   }
-  
+
   console.log('\n=== SUMMARY ===');
   console.log(`Citations: ${results.citations.passed}/${results.citations.total} match`);
   console.log(`Bibliography: ${results.bibliography.passed}/${results.bibliography.total} match`);
