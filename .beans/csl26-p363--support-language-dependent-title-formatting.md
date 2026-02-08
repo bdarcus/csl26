@@ -5,7 +5,8 @@ status: todo
 type: feature
 priority: normal
 created_at: 2026-02-07T06:53:34Z
-updated_at: 2026-02-07T06:53:34Z
+updated_at: 2026-02-08T21:04:12Z
+parent: csl26-m3lb
 ---
 
 In current CSL it's impossible to apply different rules for title-casing to title vs book-title. Common for edited volumes in German containing English articles.

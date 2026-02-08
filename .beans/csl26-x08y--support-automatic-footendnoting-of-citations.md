@@ -5,7 +5,8 @@ status: todo
 type: feature
 priority: normal
 created_at: 2026-02-07T06:53:39Z
-updated_at: 2026-02-07T07:40:14Z
+updated_at: 2026-02-08T21:04:19Z
+parent: csl26-u1in
 blocking:
     - csl26-5t6s
 ---
