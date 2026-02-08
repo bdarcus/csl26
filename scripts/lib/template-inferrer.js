@@ -452,23 +452,19 @@ function detectSuppressions(consensusOrdering, typedComponents, componentFrequen
 /**
  * Generate CSLN YAML template from component array and suppressions.
  */
-function generateYaml(template, suppressions) {
+function generateYaml(template) {
   let yaml = 'template:\n';
+  const indent = '  ';
 
   for (const component of template) {
-    // Main component
-    let indent = '  ';
-
     // Find the main key (contributor, date, title, number, variable)
-    const mainKey = Object.keys(component).find(k => !k.startsWith('_'));
+    const mainKey = Object.keys(component).find(
+      k => !['form', 'wrap', 'overrides'].includes(k)
+    );
     if (!mainKey) continue;
 
-    const value = component[mainKey];
+    yaml += `${indent}- ${mainKey}: ${component[mainKey]}\n`;
 
-    // Handle different component types
-    yaml += `${indent}- ${mainKey}: ${value}\n`;
-
-    // Add attributes
     if (component.form) {
       yaml += `${indent}  form: ${component.form}\n`;
     }
@@ -476,13 +472,14 @@ function generateYaml(template, suppressions) {
       yaml += `${indent}  wrap: ${component.wrap}\n`;
     }
 
-    // Add suppress overrides if any
-    const suppressionsForComp = suppressions[component._componentName];
-    if (suppressionsForComp && Object.keys(suppressionsForComp).length > 0) {
+    // Add suppress overrides from component object
+    if (component.overrides && Object.keys(component.overrides).length > 0) {
       yaml += `${indent}  overrides:\n`;
-      for (const [type, _suppress] of Object.entries(suppressionsForComp)) {
+      for (const [type, override] of Object.entries(component.overrides)) {
         yaml += `${indent}    ${type}:\n`;
-        yaml += `${indent}      suppress: true\n`;
+        for (const [key, val] of Object.entries(override)) {
+          yaml += `${indent}      ${key}: ${val}\n`;
+        }
       }
     }
   }
@@ -589,8 +586,20 @@ function inferTemplate(stylePath, section = 'bibliography') {
   // Detect suppress overrides
   const suppressions = detectSuppressions(consensusOrdering, typedComponents, componentFrequency);
 
+  // Attach overrides to template objects and clean up internal fields
+  for (const comp of template) {
+    const compSuppressions = suppressions[comp._componentName];
+    if (compSuppressions && Object.keys(compSuppressions).length > 0) {
+      comp.overrides = {};
+      for (const [type] of Object.entries(compSuppressions)) {
+        comp.overrides[type] = { suppress: true };
+      }
+    }
+    delete comp._componentName;
+  }
+
   // Generate YAML
-  const yaml = generateYaml(template, suppressions);
+  const yaml = generateYaml(template);
 
   // Calculate metadata
   const typesAnalyzed = Object.keys(typedComponents);

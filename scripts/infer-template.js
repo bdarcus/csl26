@@ -95,8 +95,8 @@ if (jsonOutput) {
       for (const comp of result.template) {
         if (comp.overrides && Object.keys(comp.overrides).length > 0) {
           const types = Object.keys(comp.overrides).join(', ');
-          const mainKey = Object.keys(comp).find(k => !k.startsWith('_'));
-          console.error(`    ${comp._componentName} (${mainKey}): suppress in [${types}]`);
+          const mainKey = Object.keys(comp).find(k => !['form', 'wrap', 'overrides'].includes(k));
+          console.error(`    ${mainKey}=${comp[mainKey]}: suppress in [${types}]`);
         }
       }
     }
