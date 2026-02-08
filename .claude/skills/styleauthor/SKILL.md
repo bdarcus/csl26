@@ -68,8 +68,8 @@ Create the style YAML file.
 2. Follow CSLN design principles:
    - **Explicit over magic**: All behavior in the YAML, not hidden in processor
    - **Declarative templates**: Flat components with type overrides, not procedural logic
-   - **Structured blocks**: Use `items` with `delimiter` for grouped components (not flat lists)
-   - **Prefer wrap/prefix/suffix** over custom delimiters where possible
+   - **Structured blocks**: Use `items` with `delimiter` for grouped components (not flat lists). Use nested `items` to handle varying delimiters (e.g., space after a citation number, commas between author/title).
+   - **Prefer wrap for semantic punctuation**: Always use `wrap: parentheses|brackets|quotes` instead of manual `prefix`/`suffix` pairs for balanced characters. Use `prefix`/`suffix` only for unbalanced text or unique spacing. Avoid `suffix: " "` for spacing; use delimiters instead.
    - **Minimize overrides**: Only add type-specific overrides where rendering genuinely differs
 3. Include the `info` block with title, id, link, and source URLs as comments
 4. Add comments explaining non-obvious formatting decisions
@@ -263,6 +263,8 @@ These come from the project's CLAUDE.md:
 4. **Minimal overrides** - Only where rendering genuinely differs by reference type
 5. **Comments for clarity** - Explain non-obvious formatting decisions
 6. **Source attribution** - Include reference URLs in info.link and as comments
+7. **Semantic wrapping** - Use `wrap` for balanced punctuation (brackets, parentheses, quotes) to allow the processor to handle punctuation logic intelligently. Avoid manual `prefix: "["` pairs.
+8. **Semantic joining** - Use nested `items` groups with `delimiter` to manage spacing between component blocks. Avoid trailing spaces in `suffix: " "` or leading spaces in `prefix: " "` when they serve as implicit delimiters between optional components. Static leading elements like citation numbers may use a space suffix for simplicity.
 
 ## Guard Rails
 

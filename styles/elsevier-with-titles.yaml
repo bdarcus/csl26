@@ -20,7 +20,7 @@ options:
     month: long
   bibliography:
     entry-suffix: .
-    separator: ', '
+    separator: ""
   punctuation-in-quote: true
 citation:
   template:
@@ -35,65 +35,66 @@ bibliography:
         use-first: 99
   template:
   - number: citation-number
-    prefix: "["
-    suffix: "] "
-  - contributor: author
-    form: long
-    overrides:
-      paper-conference:
-        suffix: ", "
-      all:
-        initialize-with: "."
-  - title: primary
+    wrap: brackets
+    suffix: " "
   - items:
-    - items:
-      - contributor: editor
-        form: long
-        prefix: "in: "
-        suffix: ","
-        overrides:
-          article-journal:
-            suppress: true
-          book:
-            suppress: true
-          all:
-            initialize-with: "."
-      delimiter: " "
-    - title: parent-monograph
+    - contributor: author
+      form: long
       overrides:
-        chapter:
-          prefix: " "
+        all:
+          initialize-with: "."
+    - title: primary
     - items:
-      - title: parent-serial
-      - number: volume
-      - date: issued
-        form: year
-        wrap: parentheses
-        suppress: true
-        overrides:
-          article-journal:
-            suppress: false
-      - number: pages
+      - items:
+        - contributor: editor
+          form: long
+          prefix: "in: "
+          overrides:
+            article-journal:
+              suppress: true
+            book:
+              suppress: true
+            all:
+              initialize-with: "."
+        delimiter: " "
+      - title: parent-monograph
         overrides:
           chapter:
-            suppress: true
-          book:
-            suppress: true
-      delimiter: " "
+            prefix: " "
+      - items:
+        - title: parent-serial
+        - number: volume
+        - date: issued
+          form: year
+          wrap: parentheses
+          suppress: true
+          overrides:
+            article-journal:
+              suppress: false
+        - number: pages
+          overrides:
+            chapter:
+              suppress: true
+            book:
+              suppress: true
+        delimiter: " "
+      delimiter: ", "
+    - variable: publisher
+    - variable: publisher-place
+    - date: issued
+      form: year
+      overrides:
+        article-journal:
+          suppress: true
+        chapter:
+          suppress: true
+    - number: pages
+      suppress: true
+      overrides:
+        chapter:
+          suppress: false
+          prefix: ": pp. "
+    - variable: url
+    - variable: doi
+      prefix: "https://doi.org/"
     delimiter: ", "
-  - variable: publisher
-  - variable: publisher-place
-  - date: issued
-    form: year
-    overrides:
-      article-journal:
-        suppress: true
-  - number: pages
-    suppress: true
-    overrides:
-      chapter:
-        suppress: false
-        prefix: ": pp. "
-  - variable: url
-  - variable: doi
-    prefix: "https://doi.org/"
