@@ -22,14 +22,16 @@ The template resolver and per-component delimiter detection are working.
   This prevents "( 2019)" rendering. Springer bibliography: 0/28 → 2/28
 - **Renderer separator simplification**: Refactored refs_to_string separator 
   logic to be clearer and more predictable. year:missing dropped 57 → 46.
+- **Name ordering logic**: Fixed name order detection to correctly infer 
+  `family-first` for bibliographic entries. Removed hardcoded `GivenFirst` 
+  override for APA editors in the migrator. APA bibliography now uses correct 
+  name order for both authors and editors.
 
-## Remaining issues
 1. **Issue number leaking**: Issue numbers render when citeproc-js suppresses
    them (e.g. "37, 1, 1-13" vs "37, 1-13"). Needs type/value-specific
    suppress logic.
-2. **Name ordering**: given-first vs family-first not matching some styles
-3. **Entry suffix**: Some styles don't want trailing period (springer)
-4. **Editor formatting**: "edited by" vs "(Eds.)" vs "In: Name (ed)"
+2. **Entry suffix**: Some styles don't want trailing period (springer)
+3. **Editor formatting**: "edited by" vs "(Eds.)" vs "In: Name (ed)"
 5. **Conference papers**: Duplicate container titles
 6. **Unsupported types**: 13 of 28 items undefined (legal, patent, film, etc.)
 
@@ -45,4 +47,4 @@ The template resolver and per-component delimiter detection are working.
 ## Next steps (priority order)
 1. Fix entry suffix to respect style config (no trailing "." for springer)
 2. Address issue number leaking for styles that suppress issue
-3. Fix contributor name ordering for styles requiring family-first
+3. Clean up period delimiters in APA (e.g. fix "). " artifacts from inference)

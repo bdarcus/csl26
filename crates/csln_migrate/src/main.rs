@@ -101,22 +101,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }),
             ..Default::default()
         });
-
-        // Add contributor role options for APA
-        let mut contributors = options.contributors.unwrap_or_default();
-        let mut roles = std::collections::HashMap::new();
-        roles.insert(
-            "editor".to_string(),
-            csln_core::options::RoleRendering {
-                name_order: Some(csln_core::template::NameOrder::GivenFirst),
-                ..Default::default()
-            },
-        );
-        contributors.role = Some(csln_core::options::RoleOptions {
-            roles: Some(roles),
-            ..Default::default()
-        });
-        options.contributors = Some(contributors);
     }
 
     // Resolve template: try hand-authored, cached inferred, or live inference

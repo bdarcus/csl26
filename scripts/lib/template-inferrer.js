@@ -500,7 +500,7 @@ function detectFormatting(componentName, entries, refByEntry) {
     const charBefore = rawHtml[valueIdx - 1] || '';
     const charAfter = rawHtml[valueIdx + rawValue.length] || '';
     if ((charBefore === '\u201c' || charBefore === '"') &&
-        (charAfter === '\u201d' || charAfter === '"' || charAfter === ',')) {
+      (charAfter === '\u201d' || charAfter === '"' || charAfter === ',')) {
       // Comma after is common: "Title," — check char before for opening quote
       if (charBefore === '\u201c' || charBefore === '"') {
         formats.quotes++;
@@ -512,6 +512,121 @@ function detectFormatting(componentName, entries, refByEntry) {
   if (formats.italic / total >= 0.5) return { emph: true };
   if (formats.quotes / total >= 0.5) return { wrap: 'quotes' };
   return null;
+}
+
+/**
+ * Detect name order by comparing rendered output to input name data.
+ * Returns 'family-first' or 'given-first' or null if can't determine.
+ * @param {string} componentText - The text portion of the component
+ * @param {Object} refData - The reference data
+ * @param {string} role - The name role to check ('author', 'editor', etc.)
+ */
+/**
+ * Detect name order by comparing rendered output to input name data.
+ * Returns 'family-first' or 'given-first' or null if can't determine.
+ * @param {string} componentText - The text portion of the component (e.g. window around name)
+ * @param {Array<Object>} names - The list of name objects to check
+ */
+function detectNameOrder(componentText, names) {
+  if (!componentText || !names || !names.length) return null;
+
+  // Find first name with both family and given
+  const nameWithBoth = names.find(n => n.family && n.given);
+  if (!nameWithBoth) return null;
+
+  const family = nameWithBoth.family;
+  const given = nameWithBoth.given;
+
+  // Normalize the component text for comparison (lowercase for case-insensitive matching)
+  const text = normalizeText(componentText).toLowerCase();
+
+  // Find positions in the rendered output
+  const familyPos = text.indexOf(family.toLowerCase());
+  // For given name, also check for initial form (e.g., "Thomas" -> "T." or "T")
+  const givenInitial = given.charAt(0);
+  let givenPos = text.indexOf(given.toLowerCase());
+
+  // If full given not found, check for initial
+  if (givenPos === -1 && givenInitial) {
+    // Look for patterns like "T." or "T. S." at word boundaries
+    const initialPattern = new RegExp(`\\b${givenInitial.toLowerCase()}\\.?`, 'i');
+    const match = text.match(initialPattern);
+    if (match) {
+      givenPos = match.index;
+    }
+  }
+
+  if (familyPos === -1 || givenPos === -1) {
+    return null;
+  }
+
+  const result = familyPos < givenPos ? 'family-first' : 'given-first';
+  return result;
+}
+
+/**
+ * Detect name order patterns across all entries.
+ * Returns global base order and type-specific overrides.
+ */
+function detectNameOrderPatterns(parserName, role, entries, refByEntry) {
+  const results = {}; // type -> order -> count
+
+  for (let i = 0; i < entries.length; i++) {
+    const entry = entries[i];
+    const refData = refByEntry[i];
+    if (!refData) continue;
+
+    // Check if entry actually has this component
+    const comps = parseComponents(entry, refData);
+    if (!comps[parserName] || !comps[parserName].found || !comps[parserName].position) continue;
+
+    const type = refData.type || 'unknown';
+
+    // Extract a window around the component position to include given names/initials
+    const normalized = normalizeText(entry);
+    const pos = comps[parserName].position;
+    const start = Math.max(0, pos.start - 60);
+    const end = Math.min(normalized.length, pos.end + 60);
+    const windowText = normalized.substring(start, end);
+
+    // Get relevant names for this component
+    const names = (parserName === 'contributors')
+      ? (refData.author && refData.author.length > 0 ? refData.author : refData.editor)
+      : refData[role];
+
+    const order = detectNameOrder(windowText, names);
+
+    if (order) {
+      if (!results[type]) results[type] = {};
+      results[type][order] = (results[type][order] || 0) + 1;
+    }
+  }
+
+  // Determine winner per type
+  const typeWinners = {};
+  for (const [type, orders] of Object.entries(results)) {
+    const best = Object.entries(orders).sort((a, b) => b[1] - a[1]);
+    if (best.length > 0) typeWinners[type] = best[0][0];
+  }
+
+  // Determine global consensus
+  const globalOrders = {};
+  for (const order of Object.values(typeWinners)) {
+    globalOrders[order] = (globalOrders[order] || 0) + 1;
+  }
+
+  const bestGlobal = Object.entries(globalOrders).sort((a, b) => b[1] - a[1]);
+  const globalWinner = bestGlobal.length > 0 ? bestGlobal[0][0] : null;
+
+  // Find overrides
+  const overrides = {};
+  for (const [type, winner] of Object.entries(typeWinners)) {
+    if (winner && winner !== globalWinner) {
+      overrides[type] = winner;
+    }
+  }
+
+  return { globalWinner, overrides };
 }
 
 // -- CSLN component mapping --
@@ -531,8 +646,9 @@ function mapComponentToYaml(componentName, entry, refData) {
   }
 
   switch (componentName) {
-    case 'contributors':
+    case 'contributors': {
       return { contributor: 'author', form: 'long' };
+    }
 
     case 'year': {
       const obj = { date: 'issued', form: 'year' };
@@ -577,8 +693,9 @@ function mapComponentToYaml(componentName, entry, refData) {
     case 'edition':
       return { number: 'edition' };
 
-    case 'editors':
+    case 'editors': {
       return { contributor: 'editor', form: 'verb' };
+    }
 
     default:
       return null;
@@ -683,6 +800,8 @@ function generateYaml(template, delimiter) {
     if (component.emph) yaml += `${indent}  emph: true\n`;
     if (component.wrap) yaml += `${indent}  wrap: ${component.wrap}\n`;
     if (component.prefix) yaml += `${indent}  prefix: "${component.prefix}"\n`;
+    if (component['name-order']) yaml += `${indent}  name-order: ${component['name-order']}\n`;
+    if (component.delimiter) yaml += `${indent}  delimiter: "${component.delimiter}"\n`;
 
     // Suppress overrides
     if (component.overrides && Object.keys(component.overrides).length > 0) {
@@ -832,6 +951,15 @@ function inferTemplate(stylePath, section = 'bibliography') {
     }
   }
 
+  // Detect name order patterns for contributors and editors
+  const nameOrderPatterns = {};
+  for (const [compName, role] of Object.entries({ contributors: 'author', editors: 'editor' })) {
+    const patterns = detectNameOrderPatterns(compName, role, rendered.entries, refByEntry);
+    if (patterns.globalWinner || Object.keys(patterns.overrides).length > 0) {
+      nameOrderPatterns[compName] = patterns;
+    }
+  }
+
   // Build template array
   const template = [];
   let skipIssue = false; // when grouped into items with volume
@@ -854,7 +982,7 @@ function inferTemplate(stylePath, section = 'bibliography') {
 
     // Handle volume+issue grouping
     if (componentName === 'volume' && isVolumeIssueGrouped &&
-        consensusOrdering.includes('issue')) {
+      consensusOrdering.includes('issue')) {
       const issueWrap = wrapPatterns['issue'] || null;
       const volumeComp = { number: 'volume' };
       const issueComp = { number: 'issue' };
@@ -890,6 +1018,23 @@ function inferTemplate(stylePath, section = 'bibliography') {
       }
 
       yamlComponent._componentName = componentName;
+
+      // Apply detected name order patterns
+      if (nameOrderPatterns[parserName]) {
+        const patterns = nameOrderPatterns[parserName];
+        if (patterns.globalWinner) {
+          yamlComponent['name-order'] = patterns.globalWinner;
+        }
+        // Apply overrides to existing yamlComponent.overrides if any
+        if (Object.keys(patterns.overrides).length > 0) {
+          if (!yamlComponent.overrides) yamlComponent.overrides = {};
+          for (const [type, order] of Object.entries(patterns.overrides)) {
+            if (!yamlComponent.overrides[type]) yamlComponent.overrides[type] = {};
+            yamlComponent.overrides[type]['name-order'] = order;
+          }
+        }
+      }
+
       template.push(yamlComponent);
     }
   }
@@ -1007,9 +1152,10 @@ function inferTemplate(stylePath, section = 'bibliography') {
     if (comp._componentName) {
       const compSuppressions = suppressions[comp._componentName];
       if (compSuppressions && Object.keys(compSuppressions).length > 0) {
-        comp.overrides = {};
+        if (!comp.overrides) comp.overrides = {};
         for (const [type] of Object.entries(compSuppressions)) {
-          comp.overrides[type] = { suppress: true };
+          if (!comp.overrides[type]) comp.overrides[type] = {};
+          comp.overrides[type].suppress = true;
         }
       }
       delete comp._componentName;
@@ -1102,4 +1248,6 @@ module.exports = {
   detectFormatting,
   mapComponentToYaml,
   generateYaml,
+  detectNameOrder,
+  detectNameOrderPatterns,
 };

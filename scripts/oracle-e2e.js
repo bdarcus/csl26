@@ -19,16 +19,16 @@ const { execSync } = require('child_process');
 
 // Load locale from file (same as oracle.js)
 function loadLocale(lang) {
-    const localePath = path.join(__dirname, `locales-${lang}.xml`);
-    if (fs.existsSync(localePath)) {
-        return fs.readFileSync(localePath, 'utf8');
-    }
-    // Fallback to en-US
-    const fallback = path.join(__dirname, 'locales-en-US.xml');
-    if (fs.existsSync(fallback)) {
-        return fs.readFileSync(fallback, 'utf8');
-    }
-    throw new Error(`Locale not found: ${lang}`);
+  const localePath = path.join(__dirname, `locales-${lang}.xml`);
+  if (fs.existsSync(localePath)) {
+    return fs.readFileSync(localePath, 'utf8');
+  }
+  // Fallback to en-US
+  const fallback = path.join(__dirname, 'locales-en-US.xml');
+  if (fs.existsSync(fallback)) {
+    return fs.readFileSync(fallback, 'utf8');
+  }
+  throw new Error(`Locale not found: ${lang}`);
 }
 
 // Load test items from JSON fixture
@@ -40,47 +40,47 @@ const testItems = Object.fromEntries(
 
 function renderWithCiteprocJs(stylePath) {
   const styleXml = fs.readFileSync(stylePath, 'utf8');
-  
+
   const sys = {
     retrieveLocale: (lang) => loadLocale(lang),
     retrieveItem: (id) => testItems[id]
   };
-  
+
   const citeproc = new CSL.Engine(sys, styleXml);
   citeproc.updateItems(Object.keys(testItems));
-  
+
   // Generate citations using makeCitationCluster (simpler API)
   const citations = {};
   Object.keys(testItems).forEach(id => {
     citations[id] = citeproc.makeCitationCluster([{ id }]);
   });
-  
+
   const bibResult = citeproc.makeBibliography();
   const bibliography = bibResult ? bibResult[1] : [];
-  
+
   return { citations, bibliography };
 }
 
 function renderWithCslnProcessor(stylePath) {
   const projectRoot = path.resolve(__dirname, '..');
   const absStylePath = path.resolve(stylePath);
-  
+
   // Migrate CSL to CSLN
   let migratedYaml;
   try {
     migratedYaml = execSync(
       `cargo run -q --bin csln-migrate -- "${absStylePath}"`,
-      { cwd: projectRoot, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }
+      { cwd: projectRoot, encoding: 'utf8', stdio: ['pipe', 'pipe', 'inherit'] }
     );
   } catch (e) {
     console.error('Migration failed:', e.stderr || e.message);
     return null;
   }
-  
+
   // Write to temp file in project root
   const tempFile = path.join(projectRoot, '.migrated-temp.yaml');
   fs.writeFileSync(tempFile, migratedYaml);
-  
+
   // Run csln_processor
   let output;
   try {
@@ -90,17 +90,17 @@ function renderWithCslnProcessor(stylePath) {
     );
   } catch (e) {
     console.error('Processor failed:', e.stderr || e.message);
-    try { fs.unlinkSync(tempFile); } catch {} // Ignore if already deleted
+    try { fs.unlinkSync(tempFile); } catch { } // Ignore if already deleted
     return null;
   }
 
-  try { fs.unlinkSync(tempFile); } catch {} // Ignore if already deleted
-  
+  try { fs.unlinkSync(tempFile); } catch { } // Ignore if already deleted
+
   // Parse output
   const lines = output.split('\n');
   const citations = {};
   const bibliography = [];
-  
+
   let section = null;
   for (const line of lines) {
     if (line.includes('CITATIONS:')) {
@@ -116,7 +116,7 @@ function renderWithCslnProcessor(stylePath) {
       bibliography.push(line.trim());
     }
   }
-  
+
   return { citations, bibliography };
 }
 

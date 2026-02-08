@@ -150,6 +150,55 @@ function findNumericFieldPosition(entryLower, value) {
   return null;
 }
 
+/**
+ * Expand a name component position to include given name or initials if nearby.
+ * @param {string} entryLower - Normalized lower-case entry text
+ * @param {Object} familyPos - {start, end} of the family name
+ * @param {string} givenName - The given name to search for
+ */
+function expandNamePosition(entryLower, familyPos, givenName) {
+  if (!familyPos) return null;
+
+  if (!givenName) return familyPos;
+
+  const givenLower = givenName.toLowerCase();
+  const givenInitial = givenName.charAt(0).toLowerCase();
+
+  // Try finding full given name or initial near the family name
+  const searchWindow = 50;
+  const start = Math.max(0, familyPos.start - searchWindow);
+  const end = Math.min(entryLower.length, familyPos.end + searchWindow);
+  const text = entryLower.substring(start, end);
+
+  let givenPos = null;
+  let givenLen = 0;
+
+  // 1. Try full given name
+  const idxFull = text.indexOf(givenLower);
+  if (idxFull !== -1) {
+    givenPos = start + idxFull;
+    givenLen = givenLower.length;
+  } else {
+    // 2. Try initial
+    // Basic check for "g." or "g "
+    const initialRegex = new RegExp(`\\b${escapeRegex(givenInitial)}\\.?`, 'i');
+    const match = text.match(initialRegex);
+    if (match) {
+      givenPos = start + match.index;
+      givenLen = match[0].length;
+    }
+  }
+
+  if (givenPos !== null) {
+    // Merge ranges
+    const mergedStart = Math.min(familyPos.start, givenPos);
+    const mergedEnd = Math.max(familyPos.end, givenPos + givenLen);
+    return { start: mergedStart, end: mergedEnd };
+  }
+
+  return familyPos;
+}
+
 // -- Component extraction --
 
 /**
@@ -170,18 +219,18 @@ function parseComponents(entry, refData) {
   const components = {
     raw: entry,
     contributors: { found: false, value: null, position: null },
-    year:          { found: false, value: null, position: null },
-    title:         { found: false, value: null, position: null },
-    containerTitle:{ found: false, value: null, position: null },
-    volume:        { found: false, value: null, position: null },
-    issue:         { found: false, value: null, position: null },
-    pages:         { found: false, value: null, position: null },
-    publisher:     { found: false, value: null, position: null },
-    place:         { found: false, value: null, position: null },
-    doi:           { found: false, value: null, position: null },
-    url:           { found: false, value: null, position: null },
-    edition:       { found: false, value: null, position: null },
-    editors:       { found: false, value: null, position: null },
+    year: { found: false, value: null, position: null },
+    title: { found: false, value: null, position: null },
+    containerTitle: { found: false, value: null, position: null },
+    volume: { found: false, value: null, position: null },
+    issue: { found: false, value: null, position: null },
+    pages: { found: false, value: null, position: null },
+    publisher: { found: false, value: null, position: null },
+    place: { found: false, value: null, position: null },
+    doi: { found: false, value: null, position: null },
+    url: { found: false, value: null, position: null },
+    edition: { found: false, value: null, position: null },
+    editors: { found: false, value: null, position: null },
   };
 
   // === Pattern-based components (not dependent on refData) ===
@@ -275,14 +324,49 @@ function parseComponents(entry, refData) {
   // === Reference-data-driven components ===
 
   if (refData) {
-    // Contributors: first author family/literal name
-    if (refData.author && refData.author.length > 0) {
-      const first = refData.author[0];
-      const name = first.family || first.literal || '';
-      if (name) {
-        const pos = findFieldPosition(entryLower, name);
+    // Contributors: first author (or editor if no author)
+    const principalNames = (refData.author && refData.author.length > 0)
+      ? refData.author : refData.editor;
+
+    if (principalNames && principalNames.length > 0) {
+      const first = principalNames[0];
+      const family = first.family || first.literal || '';
+      const given = first.given || '';
+      if (family) {
+        let pos = findFieldPosition(entryLower, family);
         if (pos) {
-          components.contributors = { found: true, value: name, position: pos };
+          pos = expandNamePosition(entryLower, pos, given);
+          components.contributors = { found: true, value: family, position: pos };
+        }
+      }
+    }
+
+    // Secondary editors (only if not already the principal contributor)
+    if (refData.editor && refData.editor.length > 0) {
+      const firstEditor = refData.editor[0];
+      const family = firstEditor.family || firstEditor.literal || '';
+      const given = firstEditor.given || '';
+      if (family) {
+        let idx = entryLower.indexOf(family.toLowerCase());
+
+        // Check for overlap with contributors (author)
+        if (idx !== -1 && components.contributors.found &&
+          idx >= components.contributors.position.start &&
+          idx < components.contributors.position.end) {
+          // Overlap! Search for next occurrence
+          idx = entryLower.indexOf(family.toLowerCase(), idx + 1);
+        }
+
+        if (idx !== -1) {
+          let pos = { start: idx, end: idx + family.length };
+          // Expand using given name if possible
+          pos = expandNamePosition(entryLower, pos, given);
+
+          components.editors = {
+            found: true,
+            value: family,
+            position: pos
+          };
         }
       }
     }
