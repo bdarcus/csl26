@@ -1,7 +1,7 @@
 ---
 # csl26-p9uv
 title: Fix punctuation suppression after parentheses in bibliography
-status: todo
+status: completed
 type: bug
 priority: medium
 created_at: 2026-02-08T12:00:00Z

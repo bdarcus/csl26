@@ -6,7 +6,7 @@ use csln_core::template::{
 pub fn group_volume_and_issue(
     components: &mut Vec<TemplateComponent>,
     options: &csln_core::options::Config,
-    style_id: &str,
+    style_preset: Option<crate::preset_detector::StylePreset>,
 ) {
     // Volume-issue spacing varies by style:
     // - APA (comma delimiter): no space, e.g., "2(2)"
@@ -124,7 +124,9 @@ pub fn group_volume_and_issue(
                 ) {
                     // Only update outer list delimiter if it's a serial source list
                     // (avoid changing delimiters for lists containing titles)
-                    if style_id.contains("apa") && !list_contains_title(list) {
+                    if matches!(style_preset, Some(crate::preset_detector::StylePreset::Apa))
+                        && !list_contains_title(list)
+                    {
                         list.delimiter = Some(DelimiterPunctuation::Comma);
                     }
                 }

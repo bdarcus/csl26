@@ -134,12 +134,13 @@ pub fn reorder_pages_for_serials(components: &mut Vec<TemplateComponent>) {
 /// Reorder publisher-place for Chicago journal articles.
 pub fn reorder_publisher_place_for_chicago(
     components: &mut Vec<TemplateComponent>,
-    style_id: &str,
+    style_preset: Option<crate::preset_detector::StylePreset>,
 ) {
+    use crate::preset_detector::StylePreset;
     use csln_core::template::{SimpleVariable, TitleType};
 
     // Only apply to Chicago styles
-    if !style_id.contains("chicago") {
+    if !matches!(style_preset, Some(StylePreset::Chicago)) {
         return;
     }
 
@@ -184,11 +185,15 @@ pub fn reorder_publisher_place_for_chicago(
 }
 
 /// Reorder chapter components for APA style.
-pub fn reorder_chapters_for_apa(components: &mut Vec<TemplateComponent>, style_id: &str) {
+pub fn reorder_chapters_for_apa(
+    components: &mut Vec<TemplateComponent>,
+    style_preset: Option<crate::preset_detector::StylePreset>,
+) {
+    use crate::preset_detector::StylePreset;
     use csln_core::template::{ContributorRole, TitleType};
 
     // Only apply to APA styles
-    if !style_id.contains("apa") {
+    if !matches!(style_preset, Some(StylePreset::Apa)) {
         return;
     }
 
@@ -246,11 +251,15 @@ pub fn reorder_chapters_for_apa(components: &mut Vec<TemplateComponent>, style_i
 }
 
 /// Reorder chapter components for Chicago style.
-pub fn reorder_chapters_for_chicago(components: &mut Vec<TemplateComponent>, style_id: &str) {
+pub fn reorder_chapters_for_chicago(
+    components: &mut Vec<TemplateComponent>,
+    style_preset: Option<crate::preset_detector::StylePreset>,
+) {
+    use crate::preset_detector::StylePreset;
     use csln_core::template::{ContributorRole, TitleType};
 
     // Only apply to Chicago styles
-    if !style_id.contains("chicago") {
+    if !matches!(style_preset, Some(StylePreset::Chicago)) {
         return;
     }
 

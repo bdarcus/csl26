@@ -1,8 +1,9 @@
 use csl_legacy::parser::parse_style;
 use csln_core::{template::TemplateComponent, BibliographySpec, CitationSpec, Style, StyleInfo};
 use csln_migrate::{
-    analysis, debug_output::DebugOutputFormatter, passes, provenance::ProvenanceTracker,
-    template_resolver, Compressor, MacroInliner, OptionsExtractor, TemplateCompiler, Upsampler,
+    analysis, debug_output::DebugOutputFormatter, passes, preset_detector,
+    provenance::ProvenanceTracker, template_resolver, Compressor, MacroInliner, OptionsExtractor,
+    TemplateCompiler, Upsampler,
 };
 use roxmltree::Document;
 use std::fs;
@@ -344,6 +345,12 @@ fn compile_from_xml(
         passes::reorder::add_volume_prefix_after_serial(&mut new_bib);
     }
 
+    // Detect holistic style preset for semantic fixups
+    let style_preset = preset_detector::detect_style_preset(options);
+    if let Some(preset) = style_preset {
+        eprintln!("Detected style preset: {:?}", preset);
+    }
+
     if is_in_text_class && is_author_date_processing {
         // Detect if the style uses space prefix for volume (Elsevier pattern)
         let volume_list_has_space_prefix = new_bib.iter().any(|c| {
@@ -362,13 +369,12 @@ fn compile_from_xml(
         // Add type-specific overrides (recursively to handle nested Lists)
         // Pass the extracted volume-pages delimiter for journal article pages
         let vol_pages_delim = options.volume_pages_delimiter.clone();
-        let style_id = &legacy_style.info.id;
         for component in &mut new_bib {
             apply_type_overrides(
                 component,
                 vol_pages_delim.clone(),
                 volume_list_has_space_prefix,
-                style_id,
+                style_preset,
             );
         }
 
@@ -394,22 +400,22 @@ fn compile_from_xml(
         passes::reorder::reorder_serial_components(&mut new_bib);
 
         // Combine volume and issue into a grouped structure: volume(issue)
-        passes::grouping::group_volume_and_issue(&mut new_bib, options, style_id);
+        passes::grouping::group_volume_and_issue(&mut new_bib, options, style_preset);
 
         // Move pages to after the container-title/volume List for serial types.
         passes::reorder::reorder_pages_for_serials(&mut new_bib);
 
         // Reorder publisher-place for Chicago journal articles.
-        passes::reorder::reorder_publisher_place_for_chicago(&mut new_bib, style_id);
+        passes::reorder::reorder_publisher_place_for_chicago(&mut new_bib, style_preset);
 
         // Reorder chapters for APA: "In " prefix + editors before book title
-        passes::reorder::reorder_chapters_for_apa(&mut new_bib, style_id);
+        passes::reorder::reorder_chapters_for_apa(&mut new_bib, style_preset);
 
         // Reorder chapters for Chicago: "In" prefix + book title before editors
-        passes::reorder::reorder_chapters_for_chicago(&mut new_bib, style_id);
+        passes::reorder::reorder_chapters_for_chicago(&mut new_bib, style_preset);
 
         // Fix Chicago issue placement
-        passes::deduplicate::suppress_duplicate_issue_for_journals(&mut new_bib, style_id);
+        passes::deduplicate::suppress_duplicate_issue_for_journals(&mut new_bib, style_preset);
     }
 
     let type_templates_opt = if type_templates.is_empty() {
@@ -425,13 +431,13 @@ fn apply_type_overrides(
     component: &mut TemplateComponent,
     volume_pages_delimiter: Option<csln_core::template::DelimiterPunctuation>,
     volume_list_has_space_prefix: bool,
-    style_id: &str,
+    style_preset: Option<preset_detector::StylePreset>,
 ) {
+    use preset_detector::StylePreset;
     match component {
         // Primary title: style-specific suffix for articles
         TemplateComponent::Title(t) if t.title == csln_core::template::TitleType::Primary => {
-            let is_apa = style_id.contains("apa");
-            if is_apa {
+            if matches!(style_preset, Some(StylePreset::Apa)) {
                 let mut new_ovr = std::collections::HashMap::new();
                 new_ovr.insert(
                     "article-journal".to_string(),
@@ -453,8 +459,7 @@ fn apply_type_overrides(
         TemplateComponent::Title(t)
             if t.title == csln_core::template::TitleType::ParentMonograph =>
         {
-            let is_apa = style_id.contains("apa");
-            if is_apa {
+            if matches!(style_preset, Some(StylePreset::Apa)) {
                 let mut new_ovr = std::collections::HashMap::new();
                 new_ovr.insert(
                     "paper-conference".to_string(),
@@ -477,7 +482,7 @@ fn apply_type_overrides(
         // - Chicago: space suffix (prevents default period separator)
         // - Elsevier: space prefix (handled by List), no suffix needed
         TemplateComponent::Title(t) if t.title == csln_core::template::TitleType::ParentSerial => {
-            let is_chicago = style_id.contains("chicago");
+            let is_chicago = matches!(style_preset, Some(StylePreset::Chicago));
             let mut new_ovr = std::collections::HashMap::new();
 
             // Always unsuppress article-journal (journal title must show)
@@ -589,7 +594,7 @@ fn apply_type_overrides(
                     item,
                     volume_pages_delimiter.clone(),
                     volume_list_has_space_prefix,
-                    style_id,
+                    style_preset,
                 );
             }
         }
