@@ -1,0 +1,118 @@
+---
+info:
+  title: APA 7th Edition (CSLN)
+  id: https://www.zotero.org/styles/apa-7th-csln
+  link: https://apastyle.apa.org/
+  # Sources:
+  # - https://apastyle.apa.org/instructional-aids/reference-examples.pdf
+  # - https://aut.ac.nz.libguides.com/APA7th/in-text
+  # - https://libguides.umgc.edu/c.php?g=1003870&p=7270652
+options:
+  processing: author-date
+  contributors:
+    # "Smith, J. A."
+    initialize-with: ". "
+    # "Smith, J. A., & Doe, B."
+    and: symbol
+    delimiter-precedes-last: always
+    # Bibliography sorts and displays all authors inverted
+    display-as-sort: all
+    # "In E. Editor (Ed.)"
+    editor-label-format: short-suffix
+    shorten:
+      # APA 7th: 21+ authors -> first 19 ... last 1
+      min: 21
+      use-first: 19
+      use-last: 1
+  titles:
+    # Books, Reports, Webpages are italicized
+    monograph:
+      emph: true
+    container-monograph:
+      emph: true
+    # Journal titles are italicized
+    periodical:
+      emph: true
+    # Articles, Chapters are plain
+    component:
+      emph: false
+      quote: false
+citation:
+  wrap: parentheses
+  template:
+    - items:
+      - contributor: author
+        form: short
+        shorten:
+          min: 3
+          use-first: 1
+      - date: issued
+        form: year
+      - variable: locator
+        prefix: ", "
+      delimiter: comma
+bibliography:
+  # Block-based structure with delimiters
+  template:
+    # Block 1: Author (Year).
+    - items:
+        - contributor: author
+          form: long
+        - date: issued
+          form: year
+          wrap: parentheses
+      delimiter: space
+      suffix: "."
+    
+    # Block 2: Title.
+    - title: primary
+      suffix: "."
+      
+    # Block 3: Source (Container, Publisher, Pages)
+    - items:
+        # Chapter: "In E. Editor (Ed.)"
+        - contributor: editor
+          form: verb
+          prefix: "In "
+          overrides:
+            # Only show editor for chapters/entries
+            article-journal: 
+              suppress: true
+            book:
+              suppress: true
+        
+        # Book Title (italicized by options)
+        - title: parent-monograph
+        
+        # Journal Title (italicized by options)
+        - title: parent-serial
+        
+        # Journal Vol(Issue)
+        - items:
+            - number: volume
+              emph: true
+            - number: issue
+              wrap: parentheses
+          delimiter: none
+          
+        # Pages
+        - number: pages
+          overrides:
+            chapter:
+              wrap: parentheses
+              prefix: "pp. "
+              
+        # Publisher (Books only)
+        - variable: publisher
+          overrides:
+            article-journal:
+              suppress: true
+            webpage:
+              suppress: true
+      delimiter: comma
+      suffix: "."
+      
+    # Block 4: DOI / URL
+    - variable: doi
+      prefix: "https://doi.org/"
+    - variable: url
