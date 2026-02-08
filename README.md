@@ -174,6 +174,15 @@ CSLN is built for a long-lived ecosystem:
 | Oracle Verification | ✅ Infrastructure complete - citeproc-js comparison |
 | Corpus Analyzer (`csln_analyze`) | ✅ Complete - feature usage stats for 2,844 styles |
 
+## Style Management
+
+To ensure high performance and maintainable history, CSLN follows a hybrid style management strategy:
+
+- **Core Styles (In-Repo)**: This repository maintains the top ~20 "parent" styles (APA, Chicago, IEEE, Vancouver, etc.) and edge-case test styles. These serve as our primary integration test suite.
+- **Community Styles (Submodule)**: The broader ecosystem of 2,000+ journal-specific styles is managed in a separate repository (e.g., `csln-styles`) and linked as a git submodule.
+
+This approach keeps the core repository lean while providing a tight development loop for the most impactful styles.
+
 ### Current Test Results
 
 ```
