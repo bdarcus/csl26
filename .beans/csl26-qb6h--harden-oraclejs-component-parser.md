@@ -1,7 +1,7 @@
 ---
 # csl26-qb6h
 title: Harden oracle.js component parser
-status: todo
+status: completed
 type: task
 priority: high
 created_at: 2026-02-08T00:38:59Z
