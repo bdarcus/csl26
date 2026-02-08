@@ -10,7 +10,7 @@ description = "CSLN citation and bibliography processor"
 name = "csln_processor"
 
 [[bin]]
-name = "csln_processor"
+name = "csln-processor"
 path = "src/main.rs"
 
 [dependencies]

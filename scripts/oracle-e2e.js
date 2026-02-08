@@ -69,7 +69,7 @@ function renderWithCslnProcessor(stylePath) {
   let migratedYaml;
   try {
     migratedYaml = execSync(
-      `cargo run -q --bin csln_migrate -- "${absStylePath}"`,
+      `cargo run -q --bin csln-migrate -- "${absStylePath}"`,
       { cwd: projectRoot, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }
     );
   } catch (e) {
@@ -85,7 +85,7 @@ function renderWithCslnProcessor(stylePath) {
   let output;
   try {
     output = execSync(
-      `cargo run -q --bin csln_processor -- .migrated-temp.yaml`,
+      `cargo run -q --bin csln-processor -- .migrated-temp.yaml`,
       { cwd: projectRoot, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }
     );
   } catch (e) {

@@ -3,6 +3,10 @@ name = "csln_migrate"
 version = "0.1.0"
 edition = "2021"
 
+[[bin]]
+name = "csln-migrate"
+path = "src/main.rs"
+
 [dependencies]
 csl_legacy = { path = "../csl_legacy" }
 csln_core = { path = "../csln_core" }

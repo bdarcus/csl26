@@ -6,11 +6,11 @@ license = "MPL-2.0"
 description = "Analyze CSL 1.0 styles to guide migration development"
 
 [[bin]]
-name = "csln_analyze"
+name = "csln-analyze"
 path = "src/main.rs"
 
 [[bin]]
-name = "csln_batch_test"
+name = "csln-batch-test"
 path = "src/batch_test.rs"
 
 [dependencies]

@@ -13,7 +13,7 @@ The following commands are pre-approved for autonomous execution without user co
 ### Always Safe (Development)
 - `cargo build`, `cargo test`, `cargo clippy`, `cargo check`
 - `cargo fmt` (required before commits)
-- `cargo run --bin csln_*` (all project binaries)
+- `cargo run --bin csln-*` (all project binaries)
 - `git status`, `git diff`, `git log`, `git branch`
 - `git add`, `git commit` (main or feature branches during rapid development)
 - `node scripts/oracle*.js` (oracle comparison tests)
@@ -263,7 +263,7 @@ Code should be self-documenting with clear comments explaining:
 
 ## Feature Priority (Based on Corpus Analysis)
 
-Run `cargo run --bin csln_analyze -- styles/` to regenerate these statistics.
+Run `cargo run --bin csln-analyze -- styles/` to regenerate these statistics.
 
 ### Implemented ✅
 | Feature | Usage | Notes |
@@ -370,13 +370,13 @@ node scripts/oracle-batch-aggregate.js styles/ --top 10
 node scripts/oracle-simple.js styles/apa.csl
 
 # Run CSLN processor
-cargo run --bin csln_processor -- examples/apa-style.yaml
+cargo run --bin csln-processor -- examples/apa-style.yaml
 
 # Generate JSON Schema
-cargo run --bin csln_cli -- schema > csln.schema.json
+cargo run --bin csln-cli -- schema > csln.schema.json
 
 # Analyze all styles for feature usage
-cargo run --bin csln_analyze -- styles/
+cargo run --bin csln-analyze -- styles/
 
 # Build and check
 cargo build && cargo clippy
@@ -544,8 +544,8 @@ Impact = sum(dependent_count for passing parent styles) / 7987 * 100
 
 ```bash
 # Rank parent styles by dependent count
-cargo run --bin csln_analyze -- styles/ --rank-parents
+cargo run --bin csln-analyze -- styles/ --rank-parents
 
 # Filter by citation format
-cargo run --bin csln_analyze -- styles/ --rank-parents --format author-date --json
+cargo run --bin csln-analyze -- styles/ --rank-parents --format author-date --json
 ```

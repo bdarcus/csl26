@@ -137,7 +137,7 @@ function renderWithCslnProcessor(stylePath) {
   let migratedYaml;
   try {
     migratedYaml = execSync(
-      `cargo run -q --bin csln_migrate -- "${absStylePath}"`,
+      `cargo run -q --bin csln-migrate -- "${absStylePath}"`,
       { cwd: projectRoot, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }
     );
   } catch (e) {
@@ -150,7 +150,7 @@ function renderWithCslnProcessor(stylePath) {
   let output;
   try {
     output = execSync(
-      `cargo run -q --bin csln_processor -- .migrated-temp.yaml`,
+      `cargo run -q --bin csln-processor -- .migrated-temp.yaml`,
       { cwd: projectRoot, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }
     );
   } catch (e) {
@@ -296,7 +296,7 @@ console.log(`Testing ${styleFiles.length} styles...`);
 // Pre-build Rust binaries
 console.log('Building Rust binaries...');
 try {
-  execSync('cargo build --release --bin csln_migrate --bin csln_processor', {
+  execSync('cargo build --release --bin csln-migrate --bin csln-processor', {
     cwd: projectRoot,
     stdio: 'inherit'
   });

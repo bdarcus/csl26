@@ -264,7 +264,7 @@ CSLN uses the same conceptual model as CSL:
 
 ```bash
 # Convert an existing CSL style
-cargo run --bin csln_migrate -- styles/apa.csl
+cargo run --bin csln-migrate -- styles/apa.csl
 
 # Output: csln-new.yaml with clean CSLN format
 ```
@@ -298,7 +298,7 @@ cargo test --workspace
 
 ```bash
 # Run CSLN processor with a style
-cargo run --bin csln_processor -- examples/apa-style.yaml
+cargo run --bin csln-processor -- examples/apa-style.yaml
 ```
 
 ### Style Corpus Analysis
@@ -307,10 +307,10 @@ The `csln_analyze` tool scans all CSL 1.0 styles to identify patterns and gaps:
 
 ```bash
 # Analyze all styles in the styles/ directory
-cargo run --bin csln_analyze -- styles/
+cargo run --bin csln-analyze -- styles/
 
 # Output as JSON for scripting
-cargo run --bin csln_analyze -- styles/ --json
+cargo run --bin csln-analyze -- styles/ --json
 ```
 
 This helps prioritize which features to implement based on actual usage across 2,844 styles.
@@ -330,7 +330,7 @@ node oracle.js ../styles/apa.csl --bib        # Bibliography only
 node oracle.js ../styles/apa.csl --json       # JSON output for scripting
 
 # oracle-e2e.js - End-to-end migration test
-# Migrates CSL 1.0 → CSLN → csln_processor, then compares with citeproc-js
+# Migrates CSL 1.0 → CSLN → csln-processor, then compares with citeproc-js
 node oracle-e2e.js ../styles/apa.csl
 ```
 
@@ -360,10 +360,10 @@ You can generate a formal JSON Schema for CSLN styles using the CLI:
 
 ```bash
 # Output schema to stdout
-cargo run --bin csln_cli -- schema
+cargo run --bin csln-cli -- schema
 
 # Save to file
-cargo run --bin csln_cli -- schema > csln.schema.json
+cargo run --bin csln-cli -- schema > csln.schema.json
 ```
 
 This schema can be used to validate styles or provide intellisense in editors like VS Code.
