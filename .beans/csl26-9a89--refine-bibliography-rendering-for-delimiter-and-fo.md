@@ -26,6 +26,14 @@ The template resolver and per-component delimiter detection are working.
   `family-first` for bibliographic entries. Removed hardcoded `GivenFirst` 
   override for APA editors in the migrator. APA bibliography now uses correct 
   name order for both authors and editors.
+- **Container grouping and prefix detection**: Enhanced `template-inferrer.js` to 
+  detect "In " prefixes for container groups and merge editors and 
+  monographic container titles into semantic `items` blocks. This handles 
+  "In Editor, Book Title" groupings correctly while maintaining clean 
+  journal titles.
+- **Prefix-aware delimiter detection**: Refined separator inference to strip 
+  component-level prefixes, allowing accurate detection of underlying section 
+  delimiters (e.g. distinguishing ". " from ". In ").
 
 1. **Issue number leaking**: Issue numbers render when citeproc-js suppresses
    them (e.g. "37, 1, 1-13" vs "37, 1-13"). Needs type/value-specific

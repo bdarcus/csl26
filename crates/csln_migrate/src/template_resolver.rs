@@ -43,6 +43,9 @@ pub struct ResolvedTemplate {
     /// Bibliography delimiter from inferred fragment (e.g., ". ").
     /// Overrides the XML-extracted options.bibliography.separator when present.
     pub delimiter: Option<String>,
+    /// Bibliography entry suffix from inferred fragment (e.g., ".").
+    /// Overrides the XML-extracted options.bibliography.entry_suffix when present.
+    pub entry_suffix: Option<String>,
 }
 
 /// JSON fragment format produced by `infer-template.js --fragment`.
@@ -55,6 +58,8 @@ struct InferredFragment {
 #[derive(serde::Deserialize)]
 struct FragmentMeta {
     delimiter: Option<String>,
+    #[serde(rename = "entrySuffix")]
+    entry_suffix: Option<String>,
 }
 
 #[derive(serde::Deserialize)]
@@ -84,6 +89,7 @@ pub fn resolve_template(
                 source: TemplateSource::HandAuthored(hand_path),
                 bibliography: template,
                 delimiter: None, // Hand-authored styles define their own options
+                entry_suffix: None,
             });
         }
     }
@@ -94,23 +100,25 @@ pub fn resolve_template(
         .unwrap_or_else(|| workspace_root.join("templates").join("inferred"));
     let cache_path = cache_dir.join(format!("{}.json", style_name));
     if cache_path.exists() {
-        if let Some((template, delimiter)) = load_inferred_json(&cache_path) {
+        if let Some((template, delimiter, entry_suffix)) = load_inferred_json(&cache_path) {
             return Some(ResolvedTemplate {
                 source: TemplateSource::InferredCached(cache_path),
                 bibliography: template,
                 delimiter,
+                entry_suffix,
             });
         }
     }
 
     // 3. Try live inference via Node.js
-    if let Some((template, delimiter)) =
+    if let Some((template, delimiter, entry_suffix)) =
         infer_live(style_path, &cache_dir, style_name, workspace_root)
     {
         return Some(ResolvedTemplate {
             source: TemplateSource::InferredLive,
             bibliography: template,
             delimiter,
+            entry_suffix,
         });
     }
 
@@ -126,11 +134,14 @@ fn load_hand_authored(path: &Path) -> Option<Vec<TemplateComponent>> {
 }
 
 /// Load bibliography template and delimiter from a cached inferred JSON fragment.
-fn load_inferred_json(path: &Path) -> Option<(Vec<TemplateComponent>, Option<String>)> {
+fn load_inferred_json(
+    path: &Path,
+) -> Option<(Vec<TemplateComponent>, Option<String>, Option<String>)> {
     let text = std::fs::read_to_string(path).ok()?;
     let fragment: InferredFragment = serde_json::from_str(&text).ok()?;
-    let delimiter = fragment.meta.and_then(|m| m.delimiter);
-    Some((fragment.bibliography.template, delimiter))
+    let delimiter = fragment.meta.as_ref().and_then(|m| m.delimiter.clone());
+    let entry_suffix = fragment.meta.as_ref().and_then(|m| m.entry_suffix.clone());
+    Some((fragment.bibliography.template, delimiter, entry_suffix))
 }
 
 /// Run the Node.js template inferrer and cache the result.
@@ -139,7 +150,7 @@ fn infer_live(
     cache_dir: &Path,
     style_name: &str,
     workspace_root: &Path,
-) -> Option<(Vec<TemplateComponent>, Option<String>)> {
+) -> Option<(Vec<TemplateComponent>, Option<String>, Option<String>)> {
     // Check if node is available
     if Command::new("node").arg("--version").output().is_err() {
         return None;
@@ -166,15 +177,15 @@ fn infer_live(
 
     let stdout = String::from_utf8(output.stdout).ok()?;
     let fragment: InferredFragment = serde_json::from_str(&stdout).ok()?;
-    let delimiter = fragment.meta.and_then(|m| m.delimiter);
+    let delimiter = fragment.meta.as_ref().and_then(|m| m.delimiter.clone());
+    let entry_suffix = fragment.meta.as_ref().and_then(|m| m.entry_suffix.clone());
 
     // Cache the result for next time
     if std::fs::create_dir_all(cache_dir).is_ok() {
         let cache_path = cache_dir.join(format!("{}.json", style_name));
         let _ = std::fs::write(&cache_path, &stdout);
     }
-
-    Some((fragment.bibliography.template, delimiter))
+    Some((fragment.bibliography.template, delimiter, entry_suffix))
 }
 
 #[cfg(test)]

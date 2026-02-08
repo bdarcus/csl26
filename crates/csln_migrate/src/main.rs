@@ -72,37 +72,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 0. Extract global options (new CSLN Config)
     let mut options = OptionsExtractor::extract(&legacy_style);
 
-    // If it's APA, add the title config
-    if legacy_style.info.title.contains("APA") {
-        options.titles = Some(csln_core::options::TitlesConfig {
-            periodical: Some(csln_core::options::TitleRendering {
-                emph: Some(true),
-                ..Default::default()
-            }),
-            serial: Some(csln_core::options::TitleRendering {
-                emph: Some(true),
-                ..Default::default()
-            }),
-            monograph: Some(csln_core::options::TitleRendering {
-                emph: Some(true),
-                ..Default::default()
-            }),
-            container_monograph: Some(csln_core::options::TitleRendering {
-                emph: Some(true),
-                // Note: "In " prefix is on the editor component, not here
-                ..Default::default()
-            }),
-            component: Some(csln_core::options::TitleRendering {
-                // chapter titles are usually plain in APA
-                ..Default::default()
-            }),
-            default: Some(csln_core::options::TitleRendering {
-                ..Default::default()
-            }),
-            ..Default::default()
-        });
-    }
-
     // Resolve template: try hand-authored, cached inferred, or live inference
     // before falling back to the XML compiler pipeline.
     let style_name = std::path::Path::new(path)
@@ -153,14 +122,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             bib_cfg.separator = Some(delim.clone());
         }
 
-        // Default entry suffix to "." when not set by XML extraction.
-        // Most bibliography styles end entries with a period; in CSL 1.0 this comes
-        // from the group delimiter pattern rather than an explicit layout suffix.
-        {
+        if let Some(ref suffix) = resolved_tmpl.entry_suffix {
+            eprintln!("  Overriding bibliography entry suffix: {:?}", suffix);
             let bib_cfg = options.bibliography.get_or_insert_with(Default::default);
-            if bib_cfg.entry_suffix.is_none() {
-                bib_cfg.entry_suffix = Some(".".to_string());
-            }
+            bib_cfg.entry_suffix = Some(suffix.clone());
         }
 
         // Still need citation from XML pipeline
