@@ -892,20 +892,6 @@ function inferTemplate(stylePath, section = 'bibliography') {
   // Detect suppress overrides
   const suppressions = detectSuppressions(consensusOrdering, typedComponents, componentFrequency);
 
-  // Attach overrides to template objects and clean up internal fields
-  for (const comp of template) {
-    if (comp._componentName) {
-      const compSuppressions = suppressions[comp._componentName];
-      if (compSuppressions && Object.keys(compSuppressions).length > 0) {
-        comp.overrides = {};
-        for (const [type] of Object.entries(compSuppressions)) {
-          comp.overrides[type] = { suppress: true };
-        }
-      }
-      delete comp._componentName;
-    }
-  }
-
   // Find section-level delimiter by counting inter-component delimiters
   // across all entries. Skip contributor and year pairs (their positions
   // are affected by name initials and wrapping parens, not the section
@@ -927,6 +913,43 @@ function inferTemplate(stylePath, section = 'bibliography') {
     }
     const best = Object.entries(delimCounts).sort((a, b) => b[1] - a[1]);
     if (best.length > 0) delimiterConsensus = best[0][0];
+  }
+
+  // Detect per-component delimiter prefixes that differ from section-level delimiter.
+  // For each adjacent pair in the template, if their delimiter differs from the
+  // section-level delimiter, set it as a prefix on the second component.
+  for (let i = 1; i < template.length; i++) {
+    const prevComp = template[i - 1];
+    const currComp = template[i];
+
+    if (!prevComp._componentName || !currComp._componentName) continue;
+    if (currComp.items) continue; // Skip List components (volume+issue)
+
+    const pairDelim = findDelimiterConsensus(
+      rendered.entries,
+      refByEntry,
+      prevComp._componentName,
+      currComp._componentName
+    );
+
+    if (pairDelim && pairDelim !== delimiterConsensus) {
+      // Set as prefix only if different from section delimiter
+      currComp.prefix = pairDelim;
+    }
+  }
+
+  // Attach overrides to template objects and clean up internal fields
+  for (const comp of template) {
+    if (comp._componentName) {
+      const compSuppressions = suppressions[comp._componentName];
+      if (compSuppressions && Object.keys(compSuppressions).length > 0) {
+        comp.overrides = {};
+        for (const [type] of Object.entries(compSuppressions)) {
+          comp.overrides[type] = { suppress: true };
+        }
+      }
+      delete comp._componentName;
+    }
   }
 
   // Generate YAML

@@ -9,6 +9,7 @@ pub mod passes;
 pub mod preset_detector;
 pub mod provenance;
 pub mod template_compiler;
+pub mod template_resolver;
 pub mod upsampler;
 
 pub use compressor::Compressor;

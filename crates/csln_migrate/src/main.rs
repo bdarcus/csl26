@@ -2,10 +2,11 @@ use csl_legacy::parser::parse_style;
 use csln_core::{template::TemplateComponent, BibliographySpec, CitationSpec, Style, StyleInfo};
 use csln_migrate::{
     analysis, debug_output::DebugOutputFormatter, passes, provenance::ProvenanceTracker,
-    Compressor, MacroInliner, OptionsExtractor, TemplateCompiler, Upsampler,
+    template_resolver, Compressor, MacroInliner, OptionsExtractor, TemplateCompiler, Upsampler,
 };
 use roxmltree::Document;
 use std::fs;
+use std::path::PathBuf;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = std::env::args().collect();
@@ -13,6 +14,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Parse command-line arguments
     let mut path = "styles/apa.csl";
     let mut debug_variable: Option<String> = None;
+    let mut template_source: Option<String> = None;
+    let mut template_dir: Option<PathBuf> = None;
 
     let mut i = 1;
     while i < args.len() {
@@ -23,6 +26,26 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     i += 2;
                 } else {
                     eprintln!("Error: --debug-variable requires an argument");
+                    std::process::exit(1);
+                }
+            }
+            "--template-source" => {
+                if i + 1 < args.len() {
+                    template_source = Some(args[i + 1].clone());
+                    i += 2;
+                } else {
+                    eprintln!(
+                        "Error: --template-source requires an argument (auto|hand|inferred|xml)"
+                    );
+                    std::process::exit(1);
+                }
+            }
+            "--template-dir" => {
+                if i + 1 < args.len() {
+                    template_dir = Some(PathBuf::from(&args[i + 1]));
+                    i += 2;
+                } else {
+                    eprintln!("Error: --template-dir requires a path argument");
                     std::process::exit(1);
                 }
             }
@@ -96,6 +119,150 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         options.contributors = Some(contributors);
     }
 
+    // Resolve template: try hand-authored, cached inferred, or live inference
+    // before falling back to the XML compiler pipeline.
+    let style_name = std::path::Path::new(path)
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or("unknown");
+
+    // Determine workspace root by finding the Cargo workspace directory.
+    // For relative paths like "styles/foo.csl", this is the current directory.
+    // For absolute paths, walk up from the style file to find the workspace.
+    let workspace_root = {
+        let style_path = std::path::Path::new(path);
+        if style_path.is_absolute() {
+            // Walk up to find Cargo.toml
+            style_path
+                .ancestors()
+                .find(|p| p.join("Cargo.toml").exists())
+                .unwrap_or(style_path.parent().unwrap_or(std::path::Path::new(".")))
+                .to_path_buf()
+        } else {
+            std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."))
+        }
+    };
+
+    let use_xml = template_source.as_deref() == Some("xml");
+    let resolved = if use_xml {
+        None
+    } else {
+        template_resolver::resolve_template(
+            path,
+            style_name,
+            template_dir.as_deref(),
+            &workspace_root,
+        )
+    };
+
+    // If we have a resolved template, use it directly and skip the XML pipeline.
+    // Otherwise, run the full XML compilation pipeline.
+    let (new_bib, type_templates, new_cit) = if let Some(ref resolved_tmpl) = resolved {
+        eprintln!("Using {} template", resolved_tmpl.source);
+
+        // Override bibliography options with inferred values when available.
+        // The XML options extractor often gets the wrong delimiter (e.g., ", " instead of ". ")
+        // because it reads from group delimiters rather than actual rendered output.
+        if let Some(ref delim) = resolved_tmpl.delimiter {
+            eprintln!("  Overriding bibliography separator: {:?}", delim);
+            let bib_cfg = options.bibliography.get_or_insert_with(Default::default);
+            bib_cfg.separator = Some(delim.clone());
+        }
+
+        // Default entry suffix to "." when not set by XML extraction.
+        // Most bibliography styles end entries with a period; in CSL 1.0 this comes
+        // from the group delimiter pattern rather than an explicit layout suffix.
+        {
+            let bib_cfg = options.bibliography.get_or_insert_with(Default::default);
+            if bib_cfg.entry_suffix.is_none() {
+                bib_cfg.entry_suffix = Some(".".to_string());
+            }
+        }
+
+        // Still need citation from XML pipeline
+        let inliner = MacroInliner::new(&legacy_style);
+        let flattened_cit = inliner.inline_citation(&legacy_style);
+        let mut upsampler = Upsampler::new();
+        upsampler.et_al_min = legacy_style.citation.et_al_min;
+        upsampler.et_al_use_first = legacy_style.citation.et_al_use_first;
+        let raw_cit = upsampler.upsample_nodes(&flattened_cit);
+        let compressor = Compressor;
+        let csln_cit = compressor.compress_nodes(raw_cit);
+        let template_compiler = TemplateCompiler;
+        let new_cit = template_compiler.compile_citation(&csln_cit);
+        (resolved_tmpl.bibliography.clone(), None, new_cit)
+    } else {
+        // Full XML pipeline for both bibliography and citation
+        compile_from_xml(&legacy_style, &mut options, enable_provenance, &tracker)
+    };
+
+    // 5. Build Style in correct format for csln_processor
+    let style = Style {
+        info: StyleInfo {
+            title: Some(legacy_style.info.title.clone()),
+            id: Some(legacy_style.info.id.clone()),
+            default_locale: legacy_style.default_locale.clone(),
+            ..Default::default()
+        },
+        templates: None,
+        options: Some(options.clone()),
+        citation: Some({
+            let (wrap, prefix, suffix) =
+                analysis::citation::infer_citation_wrapping(&legacy_style.citation.layout);
+            CitationSpec {
+                options: None,
+                use_preset: None,
+                template: Some(new_cit),
+                wrap,
+                prefix,
+                suffix,
+                // Extract delimiter from first group in CSL layout (author-year separator)
+                delimiter: analysis::citation::extract_citation_delimiter(
+                    &legacy_style.citation.layout,
+                    &legacy_style.macros,
+                ),
+                multi_cite_delimiter: legacy_style.citation.layout.delimiter.clone(),
+                ..Default::default()
+            }
+        }),
+        bibliography: Some(BibliographySpec {
+            options: None,
+            use_preset: None,
+            template: Some(new_bib),
+            type_templates,
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
+
+    // Output YAML to stdout
+    let yaml = serde_yaml::to_string(&style)?;
+    println!("{}", yaml);
+
+    // Output debug information if requested
+    if let Some(var_name) = debug_variable {
+        eprintln!("\n");
+        eprintln!("=== PROVENANCE DEBUG ===\n");
+        let debug_output = DebugOutputFormatter::format_variable(&tracker, &var_name);
+        eprint!("{}", debug_output);
+    }
+
+    Ok(())
+}
+
+/// Run the full XML compilation pipeline for bibliography and citation templates.
+/// This is the fallback when no hand-authored or inferred template is available.
+#[allow(clippy::type_complexity)]
+fn compile_from_xml(
+    legacy_style: &csl_legacy::model::Style,
+    options: &mut csln_core::options::Config,
+    enable_provenance: bool,
+    tracker: &csln_migrate::provenance::ProvenanceTracker,
+) -> (
+    Vec<TemplateComponent>,
+    Option<std::collections::HashMap<String, Vec<TemplateComponent>>>,
+    Vec<TemplateComponent>,
+) {
     // Extract author suffix before macro inlining (will be lost during inlining)
     let author_suffix = if let Some(ref bib) = legacy_style.bibliography {
         analysis::bibliography::extract_author_suffix(&bib.layout)
@@ -104,18 +271,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     // Extract bibliography-specific 'and' setting (may differ from citation)
-    let bib_and = analysis::bibliography::extract_bibliography_and(&legacy_style);
+    let bib_and = analysis::bibliography::extract_bibliography_and(legacy_style);
 
     // 1. Deconstruction
     let inliner = if enable_provenance {
-        MacroInliner::with_provenance(&legacy_style, tracker.clone())
+        MacroInliner::with_provenance(legacy_style, tracker.clone())
     } else {
-        MacroInliner::new(&legacy_style)
+        MacroInliner::new(legacy_style)
     };
     let flattened_bib = inliner
-        .inline_bibliography(&legacy_style)
+        .inline_bibliography(legacy_style)
         .unwrap_or_default();
-    let flattened_cit = inliner.inline_citation(&legacy_style);
+    let flattened_cit = inliner.inline_citation(legacy_style);
 
     // 2. Semantic Upsampling
     let mut upsampler = if enable_provenance {
@@ -257,8 +424,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
 
         // Move DOI/URL to the end of the bibliography template.
-        // CSL styles typically have access macros at the end, but during macro
-        // expansion they can end up in the middle due to conditional processing.
         passes::reorder::move_access_components_to_end(&mut new_bib);
 
         // Ensure publisher and publisher-place are unsuppressed for chapters
@@ -268,32 +433,24 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         passes::reorder::unsuppress_for_type(&mut new_bib, "document");
 
         // Remove duplicate titles from Lists that already appear at top level.
-        // This happens when container-title appears in multiple CSL macros.
         passes::deduplicate::deduplicate_titles_in_lists(&mut new_bib);
 
         // Propagate type-specific overrides within Lists.
-        // Ensures sibling components (like volume and container-title) have the same
-        // type overrides when they're from the same CSL macro.
         passes::reorder::propagate_list_overrides(&mut new_bib);
 
         // Remove duplicate nested Lists that have identical contents.
-        // This happens when CSL conditions have similar then/else branches.
         passes::deduplicate::deduplicate_nested_lists(&mut new_bib);
 
         // Reorder serial components: container-title before volume.
-        // Due to CSL macro processing, volume often ends up before container-title.
         passes::reorder::reorder_serial_components(&mut new_bib);
 
         // Combine volume and issue into a grouped structure: volume(issue)
-        // MUST run after reorder_serial_components to ensure volume is in correct position first.
-        passes::grouping::group_volume_and_issue(&mut new_bib, &options, style_id);
+        passes::grouping::group_volume_and_issue(&mut new_bib, options, style_id);
 
         // Move pages to after the container-title/volume List for serial types.
         passes::reorder::reorder_pages_for_serials(&mut new_bib);
 
         // Reorder publisher-place for Chicago journal articles.
-        // Chicago requires publisher-place to appear immediately after the journal
-        // title, before the volume.
         passes::reorder::reorder_publisher_place_for_chicago(&mut new_bib, style_id);
 
         // Reorder chapters for APA: "In " prefix + editors before book title
@@ -302,71 +459,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         // Reorder chapters for Chicago: "In" prefix + book title before editors
         passes::reorder::reorder_chapters_for_chicago(&mut new_bib, style_id);
 
-        // Fix Chicago issue placement: suppress issue in parent-monograph lists for journals
-        // Chicago puts issue after volume (handled by group_volume_and_issue) but the CSL
-        // also has issue in parent-monograph groups which creates duplicates
+        // Fix Chicago issue placement
         passes::deduplicate::suppress_duplicate_issue_for_journals(&mut new_bib, style_id);
     }
 
-    // 5. Build Style in correct format for csln_processor
-    let style = Style {
-        info: StyleInfo {
-            title: Some(legacy_style.info.title.clone()),
-            id: Some(legacy_style.info.id.clone()),
-            default_locale: legacy_style.default_locale.clone(),
-            ..Default::default()
-        },
-        templates: None,
-        options: Some(options.clone()),
-        citation: Some({
-            let (wrap, prefix, suffix) =
-                analysis::citation::infer_citation_wrapping(&legacy_style.citation.layout);
-            CitationSpec {
-                options: None,
-                use_preset: None,
-                template: Some(new_cit),
-                wrap,
-                prefix,
-                suffix,
-                // Extract delimiter from first group in CSL layout (author-year separator)
-                delimiter: analysis::citation::extract_citation_delimiter(
-                    &legacy_style.citation.layout,
-                    &legacy_style.macros,
-                ),
-                multi_cite_delimiter: legacy_style.citation.layout.delimiter.clone(),
-                ..Default::default()
-            }
-        }),
-        bibliography: Some(BibliographySpec {
-            options: None,
-            use_preset: None,
-            template: Some(new_bib),
-            // type_templates infrastructure exists but auto-generation is disabled.
-            // Different styles have incompatible chapter formats (APA vs others),
-            // so we can't apply a single template to all author-date styles.
-            type_templates: if type_templates.is_empty() {
-                None
-            } else {
-                Some(type_templates)
-            },
-            ..Default::default()
-        }),
-        ..Default::default()
+    let type_templates_opt = if type_templates.is_empty() {
+        None
+    } else {
+        Some(type_templates)
     };
 
-    // Output YAML to stdout
-    let yaml = serde_yaml::to_string(&style)?;
-    println!("{}", yaml);
-
-    // Output debug information if requested
-    if let Some(var_name) = debug_variable {
-        eprintln!("\n");
-        eprintln!("=== PROVENANCE DEBUG ===\n");
-        let debug_output = DebugOutputFormatter::format_variable(&tracker, &var_name);
-        eprint!("{}", debug_output);
-    }
-
-    Ok(())
+    (new_bib, type_templates_opt, new_cit)
 }
 
 fn apply_type_overrides(

@@ -23,6 +23,8 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 
+const WORKSPACE_ROOT = path.resolve(__dirname, '..');
+
 // Priority parent styles (from STYLE_PRIORITY.md)
 const PRIORITY_STYLES = [
   'apa',
@@ -46,6 +48,20 @@ const PRIORITY_STYLES = [
   'bluebook-law-review',
   'american-political-science-association',
 ];
+
+/**
+ * Detect which template source will be used for a style.
+ * Mirrors the priority cascade in template_resolver.rs.
+ */
+function detectTemplateSource(styleName) {
+  const handPath = path.join(WORKSPACE_ROOT, 'examples', `${styleName}-style.yaml`);
+  if (fs.existsSync(handPath)) return 'hand';
+
+  const cachePath = path.join(WORKSPACE_ROOT, 'templates', 'inferred', `${styleName}.json`);
+  if (fs.existsSync(cachePath)) return 'inferred';
+
+  return 'xml';
+}
 
 /**
  * Run oracle for a single style (synchronous).
@@ -183,6 +199,7 @@ function aggregateResults(results) {
       bibliography: `${result.bibliography.passed}/${result.bibliography.total}`,
       citationsPct: Math.round((result.citations.passed / result.citations.total) * 100),
       bibliographyPct: Math.round((result.bibliography.passed / result.bibliography.total) * 100),
+      templateSource: detectTemplateSource(result.style),
     });
   }
   
@@ -510,14 +527,30 @@ async function main() {
       console.log(`\n--- ORDERING ISSUES: ${summary.orderingIssues} total ---`);
     }
     
+    // Template source summary
+    const sourceCounts = { hand: 0, inferred: 0, xml: 0 };
+    const sourceBibPerfect = { hand: 0, inferred: 0, xml: 0 };
+    for (const s of summary.styleBreakdown) {
+      const src = s.templateSource || 'xml';
+      sourceCounts[src]++;
+      if (s.bibliographyPct === 100) sourceBibPerfect[src]++;
+    }
+    console.log('\n--- TEMPLATE SOURCES ---');
+    for (const src of ['hand', 'inferred', 'xml']) {
+      if (sourceCounts[src] > 0) {
+        console.log(`  ${src.padEnd(10)}: ${sourceCounts[src]} styles, ${sourceBibPerfect[src]} bib 100%`);
+      }
+    }
+
     console.log('\n--- STYLE BREAKDOWN (worst first) ---');
-    console.log('Style                          | Citations | Bibliography');
-    console.log('-------------------------------|-----------|-------------');
+    console.log('Style                          | Citations | Bibliography | Source');
+    console.log('-------------------------------|-----------|--------------|----------');
     for (const s of summary.styleBreakdown.slice(0, 15)) {
       const name = s.style.padEnd(30);
       const cit = s.citations.padStart(9);
       const bib = s.bibliography.padStart(12);
-      console.log(`${name} | ${cit} | ${bib}`);
+      const src = (s.templateSource || 'xml').padStart(8);
+      console.log(`${name} | ${cit} | ${bib} | ${src}`);
     }
     
     if (summary.errors.length > 0) {

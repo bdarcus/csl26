@@ -154,6 +154,20 @@ function compare(oracle, csln, label) {
   }
 }
 
+// Compute similarity between two strings using longest common subsequence ratio.
+function similarity(a, b) {
+  if (a === b) return 1;
+  if (!a || !b) return 0;
+  // Use word-level overlap for speed
+  const wordsA = a.toLowerCase().split(/\s+/);
+  const wordsB = new Set(b.toLowerCase().split(/\s+/));
+  let common = 0;
+  for (const w of wordsA) {
+    if (wordsB.has(w)) common++;
+  }
+  return common / Math.max(wordsA.length, wordsB.size);
+}
+
 // Main
 const stylePath = process.argv[2] || path.join(__dirname, '..', 'styles', 'apa.csl');
 const styleName = path.basename(stylePath, '.csl');
@@ -183,15 +197,46 @@ Object.keys(testItems).forEach(id => {
 
 console.log('\n--- BIBLIOGRAPHY ---');
 let bibMatch = 0;
-// Sort both by first author for comparison
-const oracleBibNorm = oracle.bibliography.filter(b => b).map(b => normalizeText(b)).sort();
-const cslnBibNorm = csln.bibliography.filter(b => b).map(b => normalizeText(b)).sort();
-const bibTotal = Math.max(oracleBibNorm.length, cslnBibNorm.length);
+const oracleBibNorm = oracle.bibliography.filter(b => b).map(b => normalizeText(b));
+const cslnBibNorm = csln.bibliography.filter(b => b).map(b => normalizeText(b));
 
+// Match entries by best similarity rather than positional comparison.
+// When CSLN produces fewer entries (unsupported reference types), positional
+// comparison after sorting mismatches unrelated entries against each other.
+const usedOracle = new Set();
+const matched = [];
+
+for (let ci = 0; ci < cslnBibNorm.length; ci++) {
+  const cEntry = cslnBibNorm[ci];
+  let bestIdx = -1;
+  let bestScore = 0;
+  for (let oi = 0; oi < oracleBibNorm.length; oi++) {
+    if (usedOracle.has(oi)) continue;
+    const score = similarity(cEntry, oracleBibNorm[oi]);
+    if (score > bestScore) {
+      bestScore = score;
+      bestIdx = oi;
+    }
+  }
+  if (bestIdx >= 0) {
+    usedOracle.add(bestIdx);
+    matched.push({ oracle: oracleBibNorm[bestIdx], csln: cEntry });
+  }
+}
+
+// Add unmatched oracle entries
+for (let oi = 0; oi < oracleBibNorm.length; oi++) {
+  if (!usedOracle.has(oi)) {
+    matched.push({ oracle: oracleBibNorm[oi], csln: null });
+  }
+}
+
+const bibTotal = matched.length;
 for (let i = 0; i < bibTotal; i++) {
-  const oEntry = oracleBibNorm[i] || '(missing)';
-  const cEntry = cslnBibNorm[i] || '(missing)';
-  if (compare(oEntry, cEntry, `Entry ${i + 1}`)) {
+  const { oracle: oEntry, csln: cEntry } = matched[i];
+  // Truncate label from oracle entry for readability
+  const label = oEntry.substring(0, 40).replace(/\s+$/, '') + (oEntry.length > 40 ? '...' : '');
+  if (compare(oEntry, cEntry, label)) {
     bibMatch++;
   }
 }

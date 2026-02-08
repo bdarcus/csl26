@@ -8,6 +8,7 @@
  *   node scripts/infer-template.js <style-path>
  *   node scripts/infer-template.js <style-path> --section=citation
  *   node scripts/infer-template.js <style-path> --json
+ *   node scripts/infer-template.js <style-path> --fragment
  *   node scripts/infer-template.js <style-path> --verbose
  */
 
@@ -29,6 +30,7 @@ const section = args
   ?.split('=')[1] || 'bibliography';
 
 const jsonOutput = args.includes('--json');
+const fragmentOutput = args.includes('--fragment');
 const verbose = args.includes('--verbose');
 
 // Validate style path
@@ -45,14 +47,14 @@ if (!fs.existsSync(stylePath)) {
 const styleName = path.basename(stylePath, '.csl');
 
 // Run inference
-if (!jsonOutput) {
+if (!jsonOutput && !fragmentOutput) {
   console.error(`Inferring ${section} template for: ${styleName}`);
 }
 
 const result = inferTemplate(stylePath, section);
 
 if (!result) {
-  if (jsonOutput) {
+  if (jsonOutput || fragmentOutput) {
     console.log(JSON.stringify({ error: 'Template inference failed' }));
   } else {
     console.error(`\nError: Failed to infer template for ${styleName}`);
@@ -61,7 +63,21 @@ if (!result) {
 }
 
 // Output
-if (jsonOutput) {
+if (fragmentOutput) {
+  // Compact JSON fragment for Rust template resolver consumption.
+  // Outputs to stdout only, no stderr noise.
+  console.log(JSON.stringify({
+    meta: {
+      style: styleName,
+      confidence: result.meta.confidence,
+      delimiter: result.meta.delimiterConsensus,
+    },
+    bibliography: {
+      template: result.template,
+    },
+  }));
+  process.exit(0);
+} else if (jsonOutput) {
   // Full result object as JSON
   console.log(JSON.stringify({
     style: styleName,
