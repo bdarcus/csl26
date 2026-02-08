@@ -90,12 +90,22 @@ pub enum DisplayAsSort {
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub enum AndOptions {
+    /// Use the localized term for "and" (e.g., "and" in English).
     Text,
+    /// Use the localized symbol for "and" (e.g., "&" in English).
     Symbol,
+    /// No conjunction (e.g., "Smith, Jones").
     #[default]
     None,
+    /// Context-sensitive conjunction based on the citation mode.
+    ///
+    /// This allows styles like APA 7th to use "and" in narrative (integral)
+    /// citations but "&" in parenthetical (non-integral) ones.
     ModeDependent {
+        /// The option to use for integral/narrative citations (e.g., "Smith and Jones").
         integral: Box<AndOptions>,
+        /// The option to use for non-integral/parenthetical citations (e.g., "(Smith & Jones)").
+        /// Also typically serves as the default for bibliographies.
         #[serde(rename = "non-integral")]
         non_integral: Box<AndOptions>,
     },

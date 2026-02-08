@@ -139,6 +139,17 @@ if ref_type == "article-journal" {
       prefix: "Vol. "
 ```
 
+**Context-Sensitive Examples:**
+Use the `!mode-dependent` tag to handle differences between narrative and parenthetical citations (as in APA 7th):
+
+```yaml
+options:
+  contributors:
+    and: !mode-dependent
+      integral: text        # Narrative: "Smith and Jones (2020)"
+      non-integral: symbol  # Parenthetical: "(Smith & Jones, 2020)"
+```
+
 ### Step 5: Verify the Fix
 
 Re-run the workflow test:
