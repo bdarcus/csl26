@@ -490,7 +490,7 @@ pub struct TemplateList {
 }
 
 /// Delimiter punctuation options.
-#[derive(Debug, Default, Serialize, Clone, PartialEq, JsonSchema)]
+#[derive(Debug, Default, Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub enum DelimiterPunctuation {
     #[default]
@@ -504,17 +504,10 @@ pub enum DelimiterPunctuation {
     Hyphen,
     Space,
     None,
+    /// Custom delimiter string (e.g., ": ").
+    /// Use untagged to allow string input to map to this variant.
+    #[serde(untagged)]
     Custom(String),
-}
-
-impl<'de> serde::Deserialize<'de> for DelimiterPunctuation {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        let s = String::deserialize(deserializer)?;
-        Ok(Self::from_csl_string(&s))
-    }
 }
 
 impl DelimiterPunctuation {
@@ -551,6 +544,7 @@ impl DelimiterPunctuation {
             "-" => Self::Hyphen,
             " " => Self::Space,
             "" => Self::None,
+            "none" => Self::None,
             _ => {
                 let trimmed = s.trim();
                 match trimmed {

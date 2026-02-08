@@ -148,9 +148,18 @@ pub fn get_title_category_rendering(
 ) -> Option<Rendering> {
     let titles_config = config.titles.as_ref()?;
 
+    // Use type_mapping if available to resolve category
+    let mapped_category = ref_type.and_then(|rt| titles_config.type_mapping.get(rt));
+
     let rendering = match title_type {
         TitleType::ParentSerial => {
-            if let Some(rt) = ref_type {
+            if let Some(cat) = mapped_category {
+                match cat.as_str() {
+                    "periodical" => titles_config.periodical.as_ref(),
+                    "serial" => titles_config.serial.as_ref(),
+                    _ => titles_config.periodical.as_ref(),
+                }
+            } else if let Some(rt) = ref_type {
                 if matches!(
                     rt,
                     "article-journal" | "article-magazine" | "article-newspaper"
@@ -168,7 +177,14 @@ pub fn get_title_category_rendering(
             .as_ref()
             .or(titles_config.monograph.as_ref()),
         TitleType::Primary => {
-            if let Some(rt) = ref_type {
+            if let Some(cat) = mapped_category {
+                match cat.as_str() {
+                    "component" => titles_config.component.as_ref(),
+                    "monograph" => titles_config.monograph.as_ref(),
+                    _ => titles_config.default.as_ref(),
+                }
+            } else if let Some(rt) = ref_type {
+                // Legacy hardcoded logic
                 // "Component" titles: articles, chapters, entries - typically quoted
                 if matches!(
                     rt,

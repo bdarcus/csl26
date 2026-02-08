@@ -17,8 +17,41 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 //!
 //! See `.agent/design/STYLE_ALIASING.md` for design context.
 
-use csln_core::options::{AndOptions, ContributorConfig, DateConfig, DisplayAsSort, TitlesConfig};
+use csln_core::options::{
+    AndOptions, Config, ContributorConfig, DateConfig, DisplayAsSort, TitlesConfig,
+};
 use csln_core::presets::{ContributorPreset, DatePreset, TitlePreset};
+
+/// Holistic style presets that combine multiple configuration aspects.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum StylePreset {
+    Apa,
+    Chicago,
+    Ieee,
+    Elsevier,
+    Vancouver,
+    Harvard,
+}
+
+/// Detects a holistic style preset from a full configuration.
+pub fn detect_style_preset(config: &Config) -> Option<StylePreset> {
+    let cp = config
+        .contributors
+        .as_ref()
+        .and_then(detect_contributor_preset);
+    let tp = config.titles.as_ref().and_then(detect_title_preset);
+
+    match (cp, tp) {
+        (Some(ContributorPreset::Apa), Some(TitlePreset::Apa)) => Some(StylePreset::Apa),
+        (Some(ContributorPreset::Chicago), Some(TitlePreset::Chicago)) => {
+            Some(StylePreset::Chicago)
+        }
+        (Some(ContributorPreset::Ieee), Some(TitlePreset::Chicago)) => Some(StylePreset::Ieee),
+        (Some(ContributorPreset::Vancouver), _) => Some(StylePreset::Vancouver),
+        (Some(ContributorPreset::Harvard), _) => Some(StylePreset::Harvard),
+        _ => None,
+    }
+}
 
 /// Detects if a `ContributorConfig` matches a known preset.
 ///

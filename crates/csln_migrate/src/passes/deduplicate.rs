@@ -151,9 +151,13 @@ pub fn list_signature(list: &csln_core::template::TemplateList) -> String {
 }
 
 /// Suppress duplicate issue in parent-monograph lists for article-journal types.
-pub fn suppress_duplicate_issue_for_journals(components: &mut [TemplateComponent], style_id: &str) {
+pub fn suppress_duplicate_issue_for_journals(
+    components: &mut [TemplateComponent],
+    style_preset: Option<crate::preset_detector::StylePreset>,
+) {
+    use crate::preset_detector::StylePreset;
     // Only apply to Chicago styles
-    if !style_id.contains("chicago") {
+    if !matches!(style_preset, Some(StylePreset::Chicago)) {
         return;
     }
 

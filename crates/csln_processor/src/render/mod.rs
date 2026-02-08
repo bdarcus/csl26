@@ -57,18 +57,17 @@ pub fn refs_to_string(proc_templates: Vec<ProcTemplate>) -> String {
                 // 2. The output already ends with separator-like punctuation
                 // 3. Special handling for quotes with punctuation-in-quote locales
                 let starts_with_separator = matches!(first_char, ',' | ';' | ':' | ' ' | '.' | '(');
-                let ends_with_separator =
-                    matches!(last_char, '.' | ',' | ':' | ';' | ' ' | ']' | ')');
+                let ends_with_separator = matches!(last_char, '.' | ',' | ':' | ';' | ' ');
 
                 if starts_with_separator {
                     // Component prefix already provides separation (or opens with paren)
                     // If it starts with '(' and output doesn't end with space, add one
-                    if first_char == '(' && !last_char.is_whitespace() {
+                    if first_char == '(' && !last_char.is_whitespace() && last_char != '[' {
                         output.push(' ');
                     }
                 } else if ends_with_separator {
                     // Output already has punctuation; just add space if needed
-                    if !last_char.is_whitespace() && last_char != ']' {
+                    if !last_char.is_whitespace() {
                         output.push(' ');
                     }
                 } else if punctuation_in_quote
@@ -368,5 +367,57 @@ mod tests {
         let template = vec![vec![c1, c2]];
         let result = refs_to_string(template);
         assert_eq!(result, "Publisher1. Place");
+    }
+
+    #[test]
+    fn test_no_suppression_after_parenthesis() {
+        use csln_core::options::{BibliographyConfig, Config};
+
+        let config = Config {
+            bibliography: Some(BibliographyConfig {
+                separator: Some(", ".to_string()),
+                entry_suffix: Some("".to_string()),
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+
+        let c1 = ProcTemplateComponent {
+            template_component: TemplateComponent::Contributor(
+                csln_core::template::TemplateContributor {
+                    contributor: csln_core::template::ContributorRole::Editor,
+                    rendering: Rendering {
+                        wrap: Some(csln_core::template::WrapPunctuation::Parentheses),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+            ),
+            value: "Eds.".to_string(),
+            prefix: None,
+            suffix: None,
+            ref_type: None,
+            config: Some(config.clone()),
+            url: None,
+        };
+
+        let c2 = ProcTemplateComponent {
+            template_component: TemplateComponent::Title(csln_core::template::TemplateTitle {
+                title: csln_core::template::TitleType::Primary,
+                rendering: Rendering::default(),
+                ..Default::default()
+            }),
+            value: "Title".to_string(),
+            prefix: None,
+            suffix: None,
+            ref_type: None,
+            config: Some(config),
+            url: None,
+        };
+
+        let template = vec![vec![c1, c2]];
+        let result = refs_to_string(template);
+        // Should have a comma between (Eds.) and Title
+        assert_eq!(result, "(Eds.), Title");
     }
 }
