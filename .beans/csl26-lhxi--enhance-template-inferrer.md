@@ -1,7 +1,7 @@
 ---
 # csl26-lhxi
 title: Enhance template inferrer
-status: in-progress
+status: completed
 type: feature
 priority: normal
 created_at: 2026-02-08T06:35:02Z
@@ -16,8 +16,8 @@ Enhancements to scripts/lib/template-inferrer.js for higher fidelity templates:
 
 3. [DONE] Items grouping - volume(issue) detected as grouped unit with delimiter: none. Works for APA, correctly skipped for IEEE.
 
-4. [DEFERRED] Formatting inference - italics on parent-serial, quotes on component titles. Requires parsing HTML output from citeproc-js instead of plain text.
+4. [DONE] Formatting inference - detects italics (emph: true) and quotes (wrap: quotes) by parsing raw HTML output from citeproc-js. Majority vote across entries per component.
 
-5. [DEFERRED] Parent-monograph detection - currently only infers parent-serial, misses book container titles (chapters "In Editor, Book Title").
+5. [DONE] Parent-monograph detection - splits containerTitle into parent-serial and parent-monograph based on reference types (chapter, entry-encyclopedia, entry-dictionary, paper-conference).
 
 6. [DONE] Wrap inference - issue wrap: parentheses detected (APA). Year wrap: parentheses already handled. Section-level delimiter emitted when not default ". ".
