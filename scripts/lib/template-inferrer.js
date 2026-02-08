@@ -317,7 +317,7 @@ function findDelimiterConsensus(entries, refByEntry, comp1, comp2) {
     return null;
   }
   const sorted = Object.entries(delimiters).sort((a, b) => b[1] - a[1]);
-  return sorted[0][0].replace(/["\u201c\u201d]+/g, '').trimEnd() || sorted[0][0];
+  return sorted[0][0].replace(/["\u201c\u201d]+/g, '') || sorted[0][0];
 }
 
 // -- Prefix/suffix and wrap detection --
@@ -438,6 +438,78 @@ function detectWrap(componentName, entries, refByEntry) {
   return null;
 }
 
+// -- Formatting detection --
+
+/**
+ * Detect if a component is rendered with italic or quote formatting.
+ *
+ * Examines the raw HTML output from citeproc-js (before normalizeText
+ * strips tags). Looks for <i>...</i> around the value (italic) or
+ * quote characters (\u201c/\u201d or ") around it (quotes).
+ *
+ * Returns { emph: true }, { wrap: 'quotes' }, or null.
+ */
+function detectFormatting(componentName, entries, refByEntry) {
+  const formats = { italic: 0, quotes: 0 };
+  let total = 0;
+
+  for (let idx = 0; idx < entries.length; idx++) {
+    const refData = refByEntry[idx];
+    if (!refData) continue;
+
+    // Get the raw value to search for in the HTML entry
+    let rawValue = null;
+    switch (componentName) {
+      case 'title':
+        rawValue = refData.title;
+        break;
+      case 'containerTitle':
+        rawValue = refData['container-title'];
+        break;
+      default:
+        return null; // Only titles get formatting
+    }
+    if (!rawValue) continue;
+
+    const rawHtml = entries[idx];
+    const valueLower = rawValue.toLowerCase();
+    const htmlLower = rawHtml.toLowerCase();
+
+    // Check if value exists in the entry at all
+    const valueIdx = htmlLower.indexOf(valueLower);
+    if (valueIdx < 0) continue;
+
+    total++;
+
+    // Check for <i> wrapping: look for <i> before and </i> after
+    const before = rawHtml.substring(Math.max(0, valueIdx - 10), valueIdx);
+    const after = rawHtml.substring(
+      valueIdx + rawValue.length,
+      valueIdx + rawValue.length + 10
+    );
+
+    if (/<i>\s*$/i.test(before) && /^\s*<\/i>/i.test(after)) {
+      formats.italic++;
+    }
+
+    // Check for quote wrapping: \u201c before, \u201d after (or ASCII ")
+    const charBefore = rawHtml[valueIdx - 1] || '';
+    const charAfter = rawHtml[valueIdx + rawValue.length] || '';
+    if ((charBefore === '\u201c' || charBefore === '"') &&
+        (charAfter === '\u201d' || charAfter === '"' || charAfter === ',')) {
+      // Comma after is common: "Title," — check char before for opening quote
+      if (charBefore === '\u201c' || charBefore === '"') {
+        formats.quotes++;
+      }
+    }
+  }
+
+  if (total === 0) return null;
+  if (formats.italic / total >= 0.5) return { emph: true };
+  if (formats.quotes / total >= 0.5) return { wrap: 'quotes' };
+  return null;
+}
+
 // -- CSLN component mapping --
 
 /**
@@ -445,7 +517,10 @@ function detectWrap(componentName, entries, refByEntry) {
  */
 function mapComponentToYaml(componentName, entry, refData) {
   const comps = parseComponents(entry, refData);
-  const comp = comps[componentName];
+  // Map split container title names back to parser's name
+  const parserName = componentName.startsWith('containerTitle')
+    ? 'containerTitle' : componentName;
+  const comp = comps[parserName];
 
   if (!comp || !comp.found) {
     return null;
@@ -468,7 +543,11 @@ function mapComponentToYaml(componentName, entry, refData) {
       return { title: 'primary' };
 
     case 'containerTitle':
+    case 'containerTitleSerial':
       return { title: 'parent-serial' };
+
+    case 'containerTitleMonograph':
+      return { title: 'parent-monograph' };
 
     case 'volume':
       return { number: 'volume' };
@@ -596,6 +675,7 @@ function generateYaml(template, delimiter) {
     yaml += `${indent}- ${mainKey}: ${component[mainKey]}\n`;
 
     if (component.form) yaml += `${indent}  form: ${component.form}\n`;
+    if (component.emph) yaml += `${indent}  emph: true\n`;
     if (component.wrap) yaml += `${indent}  wrap: ${component.wrap}\n`;
     if (component.prefix) yaml += `${indent}  prefix: "${component.prefix}"\n`;
 
@@ -686,6 +766,36 @@ function inferTemplate(stylePath, section = 'bibliography') {
     return null;
   }
 
+  // Split containerTitle into serial/monograph based on reference types.
+  // Monograph containers appear in chapters, encyclopedia entries, etc.
+  // Serial containers appear in journal articles, magazine articles, etc.
+  const MONOGRAPH_TYPES = new Set([
+    'chapter', 'entry-encyclopedia', 'entry-dictionary', 'paper-conference',
+  ]);
+  if (consensusOrdering.includes('containerTitle')) {
+    let hasSerial = false;
+    let hasMonograph = false;
+    for (const [type, data] of Object.entries(typedComponents)) {
+      if (type === 'unknown') continue;
+      const count = data.componentCounts['containerTitle'] || 0;
+      if (count / data.entries.length < 0.5) continue;
+      if (MONOGRAPH_TYPES.has(type)) {
+        hasMonograph = true;
+      } else {
+        hasSerial = true;
+      }
+    }
+    if (hasSerial && hasMonograph) {
+      // Replace containerTitle with both variants at the same position
+      const ctIdx = consensusOrdering.indexOf('containerTitle');
+      consensusOrdering.splice(ctIdx, 1, 'containerTitleMonograph', 'containerTitleSerial');
+    } else if (hasMonograph && !hasSerial) {
+      const ctIdx = consensusOrdering.indexOf('containerTitle');
+      consensusOrdering[ctIdx] = 'containerTitleMonograph';
+    }
+    // If only serial (default), leave as containerTitle → maps to parent-serial
+  }
+
   // Detect volume(issue) grouping pattern
   const isVolumeIssueGrouped = detectVolumeIssueGrouping(
     rendered.entries, refByEntry
@@ -705,6 +815,18 @@ function inferTemplate(stylePath, section = 'bibliography') {
     if (wrap) wrapPatterns[compName] = wrap;
   }
 
+  // Detect formatting (italic/quotes) for title components
+  const formattingPatterns = {};
+  for (const compName of ['title', 'containerTitle']) {
+    const fmt = detectFormatting(compName, rendered.entries, refByEntry);
+    if (fmt) {
+      formattingPatterns[compName] = fmt;
+      // Apply to split variants too
+      formattingPatterns['containerTitleSerial'] = fmt;
+      formattingPatterns['containerTitleMonograph'] = fmt;
+    }
+  }
+
   // Build template array
   const template = [];
   let skipIssue = false; // when grouped into items with volume
@@ -713,10 +835,14 @@ function inferTemplate(stylePath, section = 'bibliography') {
     // Skip issue if already grouped with volume
     if (componentName === 'issue' && skipIssue) continue;
 
+    // Map split container title names back to parser's componentName
+    const parserName = componentName.startsWith('containerTitle')
+      ? 'containerTitle' : componentName;
+
     // Use first entry that has this component to get the mapping
     const entryIdx = rendered.entries.findIndex((entry, idx) => {
       const comps = parseComponents(entry, refByEntry[idx]);
-      return comps[componentName] && comps[componentName].found;
+      return comps[parserName] && comps[parserName].found;
     });
 
     if (entryIdx < 0) continue;
@@ -744,13 +870,18 @@ function inferTemplate(stylePath, section = 'bibliography') {
     );
 
     if (yamlComponent) {
-      // Apply detected prefix
-      if (prefixes[componentName]) {
-        yamlComponent.prefix = prefixes[componentName];
+      // Apply detected prefix (check both split name and parser name)
+      if (prefixes[componentName] || prefixes[parserName]) {
+        yamlComponent.prefix = prefixes[componentName] || prefixes[parserName];
       }
       // Apply detected wrap (for components not already handled)
       if (wrapPatterns[componentName] && !yamlComponent.wrap) {
         yamlComponent.wrap = wrapPatterns[componentName];
+      }
+
+      // Apply detected formatting (italic/quotes)
+      if (formattingPatterns[componentName]) {
+        Object.assign(yamlComponent, formattingPatterns[componentName]);
       }
 
       yamlComponent._componentName = componentName;
@@ -775,18 +906,27 @@ function inferTemplate(stylePath, section = 'bibliography') {
     }
   }
 
-  // Find consensus delimiter (needed for YAML generation)
+  // Find section-level delimiter by counting inter-component delimiters
+  // across all entries. Skip contributor and year pairs (their positions
+  // are affected by name initials and wrapping parens, not the section
+  // delimiter).
   let delimiterConsensus = '. '; // default
-  if (consensusOrdering.length > 1) {
-    const delim = findDelimiterConsensus(
-      rendered.entries,
-      refByEntry,
-      consensusOrdering[0],
-      consensusOrdering[1]
-    );
-    if (delim) {
-      delimiterConsensus = delim;
+  {
+    const skipPairs = new Set(['contributors', 'year', 'editors']);
+    const delimCounts = {};
+    for (let idx = 0; idx < rendered.entries.length; idx++) {
+      const dets = detectDelimiters(rendered.entries[idx], refByEntry[idx]);
+      for (const det of dets) {
+        // Skip pairs involving contributor names or year (noisy positions)
+        if (skipPairs.has(det.between[0]) || skipPairs.has(det.between[1])) continue;
+        const d = det.delimiter.replace(/["\u201c\u201d]+/g, '');
+        if (d.length >= 1 && d.length <= 4 && /^[.,;: ]+$/.test(d)) {
+          delimCounts[d] = (delimCounts[d] || 0) + 1;
+        }
+      }
     }
+    const best = Object.entries(delimCounts).sort((a, b) => b[1] - a[1]);
+    if (best.length > 0) delimiterConsensus = best[0][0];
   }
 
   // Generate YAML
@@ -872,6 +1012,7 @@ module.exports = {
   detectPrefix,
   detectWrap,
   detectVolumeIssueGrouping,
+  detectFormatting,
   mapComponentToYaml,
   generateYaml,
 };

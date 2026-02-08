@@ -186,18 +186,29 @@ function parseComponents(entry, refData) {
 
   // === Pattern-based components (not dependent on refData) ===
 
-  // Year in parentheses: (2020) or (2020).
-  const yearParensMatch = normalized.match(/\((\d{4})\)\.?/);
-  // Year standalone: 2020. or 2020,
-  const yearStandaloneMatch = normalized.match(/(?:^|\s)(\d{4})[.,]/);
+  // Year in parentheses: (2020) — don't capture trailing period (it's a delimiter)
+  const yearParensMatch = normalized.match(/\((\d{4})\)/);
+  // Year standalone: 2020 followed by punctuation (don't capture the punctuation)
+  const yearStandaloneMatch = normalized.match(/(?:^|\s)(\d{4})(?=[.,])/);
   const yearMatch = yearParensMatch || yearStandaloneMatch;
   if (yearMatch) {
     const idx = normalized.indexOf(yearMatch[0]);
-    components.year = {
-      found: true,
-      value: yearMatch[1],
-      position: { start: idx, end: idx + yearMatch[0].length },
-    };
+    if (yearParensMatch) {
+      // Parenthesized: position covers "(2020)" — wrap is part of the component
+      components.year = {
+        found: true,
+        value: yearMatch[1],
+        position: { start: idx, end: idx + yearMatch[0].length },
+      };
+    } else {
+      // Standalone: position covers just the 4-digit year (skip leading space)
+      const yearStart = idx + yearMatch[0].indexOf(yearMatch[1]);
+      components.year = {
+        found: true,
+        value: yearMatch[1],
+        position: { start: yearStart, end: yearStart + yearMatch[1].length },
+      };
+    }
   }
 
   // DOI
