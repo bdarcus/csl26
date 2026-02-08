@@ -1,11 +1,11 @@
 ---
 # csl26-25v6
 title: Integrate template sources with options pipeline
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-02-08T00:39:25Z
-updated_at: 2026-02-08T00:39:30Z
+updated_at: 2026-02-08T12:47:52Z
 blocking:
     - csl26-m3lb
     - csl26-z8rc
