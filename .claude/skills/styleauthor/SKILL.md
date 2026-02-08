@@ -25,8 +25,23 @@ This skill can modify both style YAML and processor/core code when features are 
 - `/styleauthor chicago-author-date --urls https://www.chicagomanualofstyle.org/`
 - `/styleauthor ieee --format numeric`
 - `/styleauthor oscola --format note`
+- `/styleauthor apa --migrate styles-legacy/apa.csl`
 
 ## Workflow Phases
+
+### Migration Workflow (Optional)
+
+Use this workflow when converting an existing CSL 1.0 style. It identifies the target output and baseline configuration to accelerate Phase 1 & 2.
+
+1.  **Prep**: Run `scripts/prep-migration.sh <path-to-csl>`
+2.  **Analyze**:
+    -   **Target Output** (citeproc-js): This is your visual goal.
+    -   **Baseline CSLN**: Use the `options` block as your starting point (it extracts name rules, date forms, etc.).
+3.  **Author**: Proceed to Phase 2, but focus on mapping the visual components in "Target Output" to CSLN template components.
+
+---
+
+## Standard Workflow Phases
 
 ### Phase 1: RESEARCH
 

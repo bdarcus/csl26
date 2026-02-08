@@ -154,6 +154,7 @@ See **[docs/architecture/MIGRATION_STRATEGY_ANALYSIS.md](./docs/architecture/MIG
 3. **Build output-driven template generator** - Use citeproc-js output + input data cross-referencing for component structure and ordering
 4. **Retain XML compiler as fallback** - For rare reference types and validation
 5. **Cross-validation** - Where both approaches agree, confidence is high
+6. **Agent-assisted migration** - Use `./scripts/prep-migration.sh` to provide high-fidelity context (citeproc-js output + migration baseline) to the `@styleauthor` agent for hand-authoring top styles.
 
 **Current work:** Bean `csl26-m3lb` tracks implementation of the hybrid approach.
 
@@ -371,6 +372,9 @@ node scripts/oracle-batch-aggregate.js styles-legacy/ --top 10
 
 # Legacy simple string comparison (rarely needed)
 node scripts/oracle-simple.js styles-legacy/apa.csl
+
+# Prepare for agent-assisted migration
+./scripts/prep-migration.sh styles-legacy/apa.csl
 
 # Run CSLN processor
 cargo run --bin csln-processor -- styles/apa-7th.yaml

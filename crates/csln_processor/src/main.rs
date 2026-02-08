@@ -441,7 +441,9 @@ fn create_test_bibliography() -> Bibliography {
         Reference::from(LegacyReference {
             id: "ITEM-19".to_string(),
             ref_type: "dataset".to_string(),
-            author: Some(vec![Name::literal("NASA Goddard Institute for Space Studies")]),
+            author: Some(vec![Name::literal(
+                "NASA Goddard Institute for Space Studies",
+            )]),
             title: Some("Global Temperature Anomalies 1880-2023".to_string()),
             issued: Some(DateVariable::year(2024)),
             publisher: Some("NASA".to_string()),

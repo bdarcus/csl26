@@ -16,6 +16,9 @@ node scripts/oracle-batch-aggregate.js styles-legacy/ --top 10
 
 # Legacy simple string comparison
 node scripts/oracle-simple.js styles-legacy/apa.csl
+
+# Prepare for agent-assisted migration (Target + Baseline context)
+./scripts/prep-migration.sh styles-legacy/apa.csl
 ```
 
 ## Fidelity Targets
@@ -285,6 +288,20 @@ Bibliography: 3/5 passing
 ./scripts/workflow-test.sh styles-legacy/apa.csl
 ./scripts/workflow-test.sh styles-legacy/ieee.csl --json
 ./scripts/workflow-test.sh styles-legacy/nature.csl --top 20
+```
+
+### `prep-migration.sh` (Agent Context Prep)
+
+**When to use**: When hand-authoring a complex style using the `@styleauthor` agent (Migration Mode).
+
+**What it does**: 
+1. Generates "Target Rendering" using `citeproc-js`.
+2. Generates "Baseline CSLN" using the `csln-migrate` logic.
+3. Packages both into a prompt specifically tailoured for the agent.
+
+**Example usage**:
+```bash
+./scripts/prep-migration.sh styles-legacy/apa.csl
 ```
 
 ## Common Failure Patterns

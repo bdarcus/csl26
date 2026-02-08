@@ -148,13 +148,19 @@ fn load_inferred_json(
         Ok(f) => f,
         Err(e) => {
             eprintln!("  [template_resolver] Failed to parse cache JSON: {}", e);
-            eprintln!("  [template_resolver] First 200 chars: {}", &text[..text.len().min(200)]);
+            eprintln!(
+                "  [template_resolver] First 200 chars: {}",
+                &text[..text.len().min(200)]
+            );
             return None;
         }
     };
     let delimiter = fragment.meta.as_ref().and_then(|m| m.delimiter.clone());
     let entry_suffix = fragment.meta.as_ref().and_then(|m| m.entry_suffix.clone());
-    eprintln!("  [template_resolver] Loaded cached template: delimiter={:?}, entry_suffix={:?}", delimiter, entry_suffix);
+    eprintln!(
+        "  [template_resolver] Loaded cached template: delimiter={:?}, entry_suffix={:?}",
+        delimiter, entry_suffix
+    );
     Some((fragment.bibliography.template, delimiter, entry_suffix))
 }
 
