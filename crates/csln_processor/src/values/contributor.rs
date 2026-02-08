@@ -339,8 +339,8 @@ pub fn format_names(
     // Format each name
     // Use explicit name_order if provided, otherwise use global display_as_sort
     let display_as_sort = config.and_then(|c| c.display_as_sort.clone());
-    let initialize_with = initialize_with_override
-        .or_else(|| config.and_then(|c| c.initialize_with.as_ref()));
+    let initialize_with =
+        initialize_with_override.or_else(|| config.and_then(|c| c.initialize_with.as_ref()));
     let initialize_with_hyphen = config.and_then(|c| c.initialize_with_hyphen);
     let demote_ndp = config.and_then(|c| c.demote_non_dropping_particle.as_ref());
     let sort_separator =
