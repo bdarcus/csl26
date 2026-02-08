@@ -320,14 +320,111 @@ function findDelimiterConsensus(entries, refByEntry, comp1, comp2) {
   return sorted[0][0];
 }
 
+// -- Prefix/suffix and wrap detection --
+
+/**
+ * Detect common prefix patterns before a component across multiple entries.
+ * Returns the prefix string if >50% of entries share it, otherwise null.
+ */
+function detectPrefix(componentName, entries, refByEntry) {
+  const prefixes = {};
+  let total = 0;
+
+  for (let idx = 0; idx < entries.length; idx++) {
+    const comps = parseComponents(entries[idx], refByEntry[idx]);
+    const comp = comps[componentName];
+    if (!comp?.found || !comp.position) continue;
+
+    const normalized = normalizeText(entries[idx]);
+    // Look at up to 20 chars before the component
+    const beforeStart = Math.max(0, comp.position.start - 20);
+    const before = normalized.slice(beforeStart, comp.position.start);
+
+    total++;
+
+    // Check known prefix patterns
+    if (/In\s+$/.test(before)) prefixes['In '] = (prefixes['In '] || 0) + 1;
+    else if (/pp?\.\s*$/.test(before)) prefixes['pp. '] = (prefixes['pp. '] || 0) + 1;
+    else if (/https?:\/\/doi\.org\/$/i.test(before)) prefixes['https://doi.org/'] = (prefixes['https://doi.org/'] || 0) + 1;
+  }
+
+  if (total === 0) return null;
+  const sorted = Object.entries(prefixes).sort((a, b) => b[1] - a[1]);
+  if (sorted.length > 0 && sorted[0][1] / total >= 0.5) {
+    return sorted[0][0];
+  }
+  return null;
+}
+
+/**
+ * Detect if volume and issue appear as a grouped pattern like "12(3)"
+ * with no separator between them. Returns true if >50% of entries
+ * with both volume and issue show this pattern.
+ */
+function detectVolumeIssueGrouping(entries, refByEntry) {
+  let withBoth = 0;
+  let grouped = 0;
+
+  for (let idx = 0; idx < entries.length; idx++) {
+    const comps = parseComponents(entries[idx], refByEntry[idx]);
+    if (!comps.volume?.found || !comps.issue?.found) continue;
+    if (!comps.volume.position || !comps.issue.position) continue;
+
+    withBoth++;
+    const normalized = normalizeText(entries[idx]);
+    // Check text between volume end and issue start
+    const between = normalized.slice(
+      comps.volume.position.end,
+      comps.issue.position.start
+    );
+
+    // Grouped if only "(" or "(" with optional space between them
+    if (/^\s*\(?\s*$/.test(between)) {
+      grouped++;
+    }
+  }
+
+  return withBoth > 0 && grouped / withBoth >= 0.5;
+}
+
+/**
+ * Detect wrap pattern (parentheses/brackets) around a component.
+ * Returns 'parentheses' or 'brackets' if >50% of entries show the pattern.
+ */
+function detectWrap(componentName, entries, refByEntry) {
+  const wraps = {};
+  let total = 0;
+
+  for (let idx = 0; idx < entries.length; idx++) {
+    const comps = parseComponents(entries[idx], refByEntry[idx]);
+    const comp = comps[componentName];
+    if (!comp?.found || !comp.position) continue;
+
+    const normalized = normalizeText(entries[idx]);
+    const charBefore = normalized[comp.position.start - 1] || '';
+    const charAfter = normalized[comp.position.end] || '';
+
+    total++;
+
+    if (charBefore === '(' && charAfter === ')') {
+      wraps['parentheses'] = (wraps['parentheses'] || 0) + 1;
+    } else if (charBefore === '[' && charAfter === ']') {
+      wraps['brackets'] = (wraps['brackets'] || 0) + 1;
+    }
+  }
+
+  if (total === 0) return null;
+  const sorted = Object.entries(wraps).sort((a, b) => b[1] - a[1]);
+  if (sorted.length > 0 && sorted[0][1] / total >= 0.5) {
+    return sorted[0][0];
+  }
+  return null;
+}
+
 // -- CSLN component mapping --
 
 /**
  * Map parser component names to CSLN template component objects.
- *
- * For container-title, we output BOTH parent-serial and parent-monograph
- * as separate components. The suppress override logic will ensure only
- * one renders per type. This matches the APA hand-authored approach.
  */
 function mapComponentToYaml(componentName, entry, refData) {
   const comps = parseComponents(entry, refData);
@@ -343,7 +440,6 @@ function mapComponentToYaml(componentName, entry, refData) {
 
     case 'year': {
       const obj = { date: 'issued', form: 'year' };
-      // Check for parentheses: (2020)
       const yearParensMatch = normalizeText(entry).match(/\((\d{4})\)/);
       if (yearParensMatch) {
         obj.wrap = 'parentheses';
@@ -355,8 +451,6 @@ function mapComponentToYaml(componentName, entry, refData) {
       return { title: 'primary' };
 
     case 'containerTitle':
-      // Default to parent-serial; type-specific overrides will handle
-      // chapter/conference → parent-monograph via suppress logic
       return { title: 'parent-serial' };
 
     case 'volume':
@@ -452,27 +546,38 @@ function detectSuppressions(consensusOrdering, typedComponents, componentFrequen
 /**
  * Generate CSLN YAML template from component array and suppressions.
  */
+/** Known component main keys for filtering metadata fields */
+const MAIN_KEYS = new Set(['contributor', 'date', 'title', 'number', 'variable', 'items']);
+
 function generateYaml(template) {
   let yaml = 'template:\n';
   const indent = '  ';
 
   for (const component of template) {
+    // Items group (volume + issue)
+    if (component.items) {
+      yaml += `${indent}- items:\n`;
+      for (const item of component.items) {
+        const itemKey = Object.keys(item).find(k => MAIN_KEYS.has(k));
+        if (!itemKey) continue;
+        yaml += `${indent}    - ${itemKey}: ${item[itemKey]}\n`;
+        if (item.wrap) yaml += `${indent}      wrap: ${item.wrap}\n`;
+      }
+      yaml += `${indent}  delimiter: none\n`;
+      continue;
+    }
+
     // Find the main key (contributor, date, title, number, variable)
-    const mainKey = Object.keys(component).find(
-      k => !['form', 'wrap', 'overrides'].includes(k)
-    );
+    const mainKey = Object.keys(component).find(k => MAIN_KEYS.has(k));
     if (!mainKey) continue;
 
     yaml += `${indent}- ${mainKey}: ${component[mainKey]}\n`;
 
-    if (component.form) {
-      yaml += `${indent}  form: ${component.form}\n`;
-    }
-    if (component.wrap) {
-      yaml += `${indent}  wrap: ${component.wrap}\n`;
-    }
+    if (component.form) yaml += `${indent}  form: ${component.form}\n`;
+    if (component.wrap) yaml += `${indent}  wrap: ${component.wrap}\n`;
+    if (component.prefix) yaml += `${indent}  prefix: "${component.prefix}"\n`;
 
-    // Add suppress overrides from component object
+    // Suppress overrides
     if (component.overrides && Object.keys(component.overrides).length > 0) {
       yaml += `${indent}  overrides:\n`;
       for (const [type, override] of Object.entries(component.overrides)) {
@@ -559,27 +664,75 @@ function inferTemplate(stylePath, section = 'bibliography') {
     return null;
   }
 
+  // Detect volume(issue) grouping pattern
+  const isVolumeIssueGrouped = detectVolumeIssueGrouping(
+    rendered.entries, refByEntry
+  );
+
+  // Detect prefixes for known components
+  const prefixes = {};
+  for (const compName of ['editors', 'doi', 'pages']) {
+    const prefix = detectPrefix(compName, rendered.entries, refByEntry);
+    if (prefix) prefixes[compName] = prefix;
+  }
+
+  // Detect wrap patterns for components not already handled in mapComponentToYaml
+  const wrapPatterns = {};
+  for (const compName of ['issue', 'pages']) {
+    const wrap = detectWrap(compName, rendered.entries, refByEntry);
+    if (wrap) wrapPatterns[compName] = wrap;
+  }
+
   // Build template array
   const template = [];
+  let skipIssue = false; // when grouped into items with volume
+
   for (const componentName of consensusOrdering) {
+    // Skip issue if already grouped with volume
+    if (componentName === 'issue' && skipIssue) continue;
+
     // Use first entry that has this component to get the mapping
     const entryIdx = rendered.entries.findIndex((entry, idx) => {
       const comps = parseComponents(entry, refByEntry[idx]);
       return comps[componentName] && comps[componentName].found;
     });
 
-    if (entryIdx >= 0) {
-      const yamlComponent = mapComponentToYaml(
-        componentName,
-        rendered.entries[entryIdx],
-        refByEntry[entryIdx]
-      );
+    if (entryIdx < 0) continue;
 
-      if (yamlComponent) {
-        // Track original component name for suppression logic
-        yamlComponent._componentName = componentName;
-        template.push(yamlComponent);
+    // Handle volume+issue grouping
+    if (componentName === 'volume' && isVolumeIssueGrouped &&
+        consensusOrdering.includes('issue')) {
+      const issueWrap = wrapPatterns['issue'] || null;
+      const volumeComp = { number: 'volume' };
+      const issueComp = { number: 'issue' };
+      if (issueWrap) issueComp.wrap = issueWrap;
+
+      template.push({
+        items: [volumeComp, issueComp],
+        _componentName: 'volume',
+      });
+      skipIssue = true;
+      continue;
+    }
+
+    const yamlComponent = mapComponentToYaml(
+      componentName,
+      rendered.entries[entryIdx],
+      refByEntry[entryIdx]
+    );
+
+    if (yamlComponent) {
+      // Apply detected prefix
+      if (prefixes[componentName]) {
+        yamlComponent.prefix = prefixes[componentName];
       }
+      // Apply detected wrap (for components not already handled)
+      if (wrapPatterns[componentName] && !yamlComponent.wrap) {
+        yamlComponent.wrap = wrapPatterns[componentName];
+      }
+
+      yamlComponent._componentName = componentName;
+      template.push(yamlComponent);
     }
   }
 
@@ -588,14 +741,16 @@ function inferTemplate(stylePath, section = 'bibliography') {
 
   // Attach overrides to template objects and clean up internal fields
   for (const comp of template) {
-    const compSuppressions = suppressions[comp._componentName];
-    if (compSuppressions && Object.keys(compSuppressions).length > 0) {
-      comp.overrides = {};
-      for (const [type] of Object.entries(compSuppressions)) {
-        comp.overrides[type] = { suppress: true };
+    if (comp._componentName) {
+      const compSuppressions = suppressions[comp._componentName];
+      if (compSuppressions && Object.keys(compSuppressions).length > 0) {
+        comp.overrides = {};
+        for (const [type] of Object.entries(compSuppressions)) {
+          comp.overrides[type] = { suppress: true };
+        }
       }
+      delete comp._componentName;
     }
-    delete comp._componentName;
   }
 
   // Generate YAML
@@ -692,6 +847,9 @@ module.exports = {
   findConsensusOrdering,
   findDelimiterConsensus,
   detectSuppressions,
+  detectPrefix,
+  detectWrap,
+  detectVolumeIssueGrouping,
   mapComponentToYaml,
   generateYaml,
 };
