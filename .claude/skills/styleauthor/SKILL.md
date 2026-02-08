@@ -70,12 +70,20 @@ info:
   # Sources: ...
 options:
   processing: author-date  # or numeric, note
-  contributors: { ... }
+  contributors: { ... }    # global defaults
   titles: { ... }
 citation:
+  options:                 # citation-specific overrides
+    contributors:
+      shorten:
+        use-first: 1       # fewer authors in citations
   non-integral: { ... }
-  integral: { ... }      # author-date only
+  integral: { ... }        # author-date only
 bibliography:
+  options:                 # bibliography-specific overrides
+    contributors:
+      shorten:
+        min: 99            # show all authors in bibliography
   template: [ ... ]
 ```
 
@@ -152,8 +160,8 @@ Final verification before declaring done.
 ### Top-Level Structure
 - `info` - Style metadata (title, id, link)
 - `options` - Global formatting options
-- `citation` - Citation template(s)
-- `bibliography` - Bibliography template
+- `citation` - Citation specification (template + options)
+- `bibliography` - Bibliography specification (template + options)
 
 ### Key Component Types
 From `TemplateComponent` in `csln_core/src/template.rs`:
@@ -174,11 +182,61 @@ From `Rendering` in `csln_core/src/template.rs`:
 - `wrap` - Parentheses, brackets, quotes
 - `suppress` - Hide this component (for type overrides)
 
+### Three-Tier Options Architecture
+
+Options are resolved in precedence order (inspired by biblatex):
+
+| Tier | Location | Purpose |
+|------|----------|---------|  
+| 1. Global | `options:` | Style-wide defaults |
+| 2. Context | `citation.options:` / `bibliography.options:` | Context-specific overrides |
+| 3. Template | Component `overrides:` | Type-specific rendering |
+
+**Tier 1 - Global options** (at style root):
+```yaml
+options:
+  processing: author-date
+  contributors:
+    and: symbol
+    shorten:
+      min: 21
+      use-first: 19
+```
+
+**Tier 2 - Context-specific options** (within citation/bibliography):
+```yaml
+citation:
+  options:
+    contributors:
+      shorten:
+        min: 3
+        use-first: 1  # Fewer names in citations
+bibliography:
+  options:
+    contributors:
+      shorten:
+        min: 99  # Show all names in bibliography
+```
+
+**Tier 3 - Template overrides** (on individual components):
+```yaml
+- number: pages
+  overrides:
+    chapter:
+      wrap: parentheses
+      prefix: "pp. "
+    article-journal:
+      suppress: true  # Hide pages for journals
+```
+
 ### Options Reference
-From `StyleOptions` in `csln_core/src/style.rs`:
+From `Config` in `csln_core/src/options/mod.rs`:
 - `processing` - author-date, numeric, note
 - `contributors` - Name formatting (initialize-with, and, display-as-sort, shorten)
 - `titles` - Title formatting by category (monograph, periodical, component)
+- `dates` - Date formatting defaults
+- `substitute` - Substitution rules for missing data
+- `localize` - Locale settings
 
 ## Design Principles
 

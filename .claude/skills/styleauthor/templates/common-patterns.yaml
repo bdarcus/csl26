@@ -168,3 +168,46 @@ standard-title-formatting:
     component:
       emph: false
       quote: false
+
+# ============================================================
+# OVERRIDE PATTERNS (Type-Specific Rendering)
+# ============================================================
+
+# --- Type-Specific Suppression ---
+# Suppress a component for certain reference types.
+# Used when a field only applies to some types.
+#
+# Example: Publisher shown for books, hidden for articles/webpages.
+type-specific-suppress:
+  - variable: publisher
+    overrides:
+      article-journal:
+        suppress: true
+      webpage:
+        suppress: true
+
+# --- Type-Specific Formatting ---
+# Different rendering for chapters vs other types.
+#
+# Example: Pages get "pp." prefix and parens for chapters only.
+type-specific-pages:
+  - number: pages
+    overrides:
+      chapter:
+        wrap: parentheses
+        prefix: "pp. "
+
+# --- Type-Specific Prefix ---
+# Add prefix only for certain types.
+#
+# Example: "In" prefix for editor only in chapters.
+type-specific-prefix:
+  - contributor: editor
+    form: verb
+    prefix: "In "
+    overrides:
+      article-journal:
+        suppress: true
+      book:
+        suppress: true
+

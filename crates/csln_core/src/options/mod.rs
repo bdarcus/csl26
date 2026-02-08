@@ -107,6 +107,54 @@ pub struct LinksConfig {
     pub url: Option<bool>,
 }
 
+impl Config {
+    /// Merge another config into this one, with `other` taking precedence.
+    ///
+    /// Used for combining global options with context-specific (citation/bibliography) options.
+    /// Only non-None fields from `other` override fields in `self`.
+    pub fn merge(&mut self, other: &Config) {
+        if other.substitute.is_some() {
+            self.substitute = other.substitute.clone();
+        }
+        if other.processing.is_some() {
+            self.processing = other.processing.clone();
+        }
+        if other.localize.is_some() {
+            self.localize = other.localize.clone();
+        }
+        if other.contributors.is_some() {
+            self.contributors = other.contributors.clone();
+        }
+        if other.dates.is_some() {
+            self.dates = other.dates.clone();
+        }
+        if other.titles.is_some() {
+            self.titles = other.titles.clone();
+        }
+        if other.page_range_format.is_some() {
+            self.page_range_format = other.page_range_format.clone();
+        }
+        if other.bibliography.is_some() {
+            self.bibliography = other.bibliography.clone();
+        }
+        if other.punctuation_in_quote {
+            self.punctuation_in_quote = true;
+        }
+        if other.volume_pages_delimiter.is_some() {
+            self.volume_pages_delimiter = other.volume_pages_delimiter.clone();
+        }
+    }
+
+    /// Create a merged config from base and override, returning a new Config.
+    ///
+    /// Convenience method that clones base, then merges override into it.
+    pub fn merged(base: &Config, override_config: &Config) -> Config {
+        let mut result = base.clone();
+        result.merge(override_config);
+        result
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -177,5 +225,54 @@ substitute:
         let resolved = config.substitute.unwrap().resolve();
         assert_eq!(resolved.template[0], SubstituteKey::Title);
         assert_eq!(resolved.template[1], SubstituteKey::Editor);
+    }
+
+    #[test]
+    fn test_config_merge_precedence() {
+        // Base config with global options
+        let base_yaml = r#"
+processing: author-date
+contributors:
+  display-as-sort: first
+  and: symbol
+"#;
+        let mut base: Config = serde_yaml::from_str(base_yaml).unwrap();
+
+        // Override config (e.g., citation-specific options)
+        let override_yaml = r#"
+contributors:
+  and: text
+"#;
+        let override_config: Config = serde_yaml::from_str(override_yaml).unwrap();
+
+        // Merge: override takes precedence
+        base.merge(&override_config);
+
+        // Processing should remain from base (not overridden)
+        assert_eq!(base.processing, Some(Processing::AuthorDate));
+
+        // Contributors should be replaced by override (whole field replaced)
+        assert_eq!(
+            base.contributors.as_ref().unwrap().and,
+            Some(AndOptions::Text)
+        );
+    }
+
+    #[test]
+    fn test_config_merged_convenience() {
+        let base = Config {
+            processing: Some(Processing::AuthorDate),
+            ..Default::default()
+        };
+        let override_config = Config {
+            punctuation_in_quote: true,
+            ..Default::default()
+        };
+
+        let merged = Config::merged(&base, &override_config);
+
+        // Both fields preserved
+        assert_eq!(merged.processing, Some(Processing::AuthorDate));
+        assert!(merged.punctuation_in_quote);
     }
 }

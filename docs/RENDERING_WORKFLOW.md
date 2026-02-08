@@ -150,6 +150,31 @@ options:
       non-integral: symbol  # Parenthetical: "(Smith & Jones, 2020)"
 ```
 
+### Options Resolution
+
+The processor merges options using **three-tier precedence**:
+
+1. **Global options** (`options:`) - base defaults for all contexts
+2. **Context-specific** (`citation.options:` or `bibliography.options:`) - override global for that context
+3. **Template overrides** (component `overrides:`) - type-specific rendering
+
+**Example: APA uses different author shortening per context**
+```yaml
+options:
+  contributors:
+    shorten:
+      min: 21          # Bibliography: show up to 20 authors
+      use-first: 19
+citation:
+  options:
+    contributors:
+      shorten:
+        min: 3         # Citations: 3+ becomes "First et al."
+        use-first: 1
+```
+
+When debugging unexpectedly different output between citations and bibliography, check for conflicting context-specific options.
+
 ### Step 5: Verify the Fix
 
 Re-run the workflow test:

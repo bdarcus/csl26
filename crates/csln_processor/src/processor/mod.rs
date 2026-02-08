@@ -126,6 +126,38 @@ impl Processor {
         self.style.options.as_ref().unwrap_or(&self.default_config)
     }
 
+    /// Get merged config for citation context.
+    ///
+    /// Combines global options with citation-specific overrides.
+    pub fn get_citation_config(&self) -> std::borrow::Cow<'_, Config> {
+        let base = self.get_config();
+        match self
+            .style
+            .citation
+            .as_ref()
+            .and_then(|c| c.options.as_ref())
+        {
+            Some(cite_opts) => std::borrow::Cow::Owned(Config::merged(base, cite_opts)),
+            None => std::borrow::Cow::Borrowed(base),
+        }
+    }
+
+    /// Get merged config for bibliography context.
+    ///
+    /// Combines global options with bibliography-specific overrides.
+    pub fn get_bibliography_config(&self) -> std::borrow::Cow<'_, Config> {
+        let base = self.get_config();
+        match self
+            .style
+            .bibliography
+            .as_ref()
+            .and_then(|b| b.options.as_ref())
+        {
+            Some(bib_opts) => std::borrow::Cow::Owned(Config::merged(base, bib_opts)),
+            None => std::borrow::Cow::Borrowed(base),
+        }
+    }
+
     /// Process all references to get rendered output.
     pub fn process_references(&self) -> ProcessedReferences {
         let sorted_refs = self.sort_references(self.bibliography.values().collect());
@@ -199,11 +231,14 @@ impl Processor {
             .map(|p| matches!(p, csln_core::options::Processing::AuthorDate))
             .unwrap_or(false);
 
+        // Use citation-specific merged config
+        let cite_config = self.get_citation_config();
+
         let renderer = Renderer::new(
             &self.style,
             &self.bibliography,
             &self.locale,
-            self.get_config(),
+            &cite_config,
             &self.hints,
             &self.citation_numbers,
         );
@@ -257,11 +292,14 @@ impl Processor {
         reference: &Reference,
         entry_number: usize,
     ) -> Option<ProcTemplate> {
+        // Use bibliography-specific merged config
+        let bib_config = self.get_bibliography_config();
+
         let renderer = Renderer::new(
             &self.style,
             &self.bibliography,
             &self.locale,
-            self.get_config(),
+            &bib_config,
             &self.hints,
             &self.citation_numbers,
         );

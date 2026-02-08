@@ -17,6 +17,11 @@ until the output matches the style guide.
 
 Load and follow the workflow in `.claude/skills/styleauthor/SKILL.md`.
 
+## Key Concepts
+
+- **Three-tier options**: Global (`options:`), citation-specific (`citation.options:`), bibliography-specific (`bibliography.options:`). Context-specific options override global for their context.
+- **Template overrides**: Type-specific rendering via `overrides:` on components (e.g., suppress publisher for articles)
+
 ## Scope
 
 **Can modify:**
