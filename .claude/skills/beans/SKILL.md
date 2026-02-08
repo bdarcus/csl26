@@ -1,4 +1,4 @@
-# Bean Task Management
+# Beans Task Management
 
 **Type:** User-Invocable, Agent-Invocable
 **LLM Access:** Yes
@@ -6,25 +6,25 @@
 
 ## Overview
 
-The `/bean` skill provides a streamlined interface to the beans task management system. Beans stores tasks as markdown files in `.beans/` with dependency tracking, priorities, and rich metadata. This skill is optimized for rapid development cycles where GitHub sync overhead is unnecessary.
+The `/beans` skill provides a streamlined interface to the beans task management system. Beans stores tasks as markdown files in `.beans/` with dependency tracking, priorities, and rich metadata. This skill is optimized for rapid development cycles where GitHub sync overhead is unnecessary.
 
 ## Commands
 
 ### List Tasks
 ```
-/bean list [--status STATUS] [--priority PRIORITY] [--type TYPE]
+/beans list [--status STATUS] [--priority PRIORITY] [--type TYPE]
 ```
 Show all beans, optionally filtered by status/priority/type.
 
 **Examples:**
-- `/bean list` - Show all tasks
-- `/bean list --status todo` - Show only todo tasks
-- `/bean list --priority high` - Show high priority tasks
-- `/bean list --type bug` - Show only bugs
+- `/beans list` - Show all tasks
+- `/beans list --status todo` - Show only todo tasks
+- `/beans list --priority high` - Show high priority tasks
+- `/beans list --type bug` - Show only bugs
 
 ### Show Next Task
 ```
-/bean next
+/beans next
 ```
 Recommend the next best task to work on based on:
 1. Blockers (tasks blocking milestones)
@@ -33,13 +33,13 @@ Recommend the next best task to work on based on:
 
 ### Show Task Details
 ```
-/bean show BEAN_ID
+/beans show BEAN_ID
 ```
 Display full bean contents including body and metadata.
 
 ### Create Task
 ```
-/bean create "Title" [--type TYPE] [--priority PRIORITY] [--status STATUS] [--body TEXT]
+/beans create "Title" [--type TYPE] [--priority PRIORITY] [--status STATUS] [--body TEXT]
 ```
 Create a new bean.
 
@@ -48,23 +48,23 @@ Create a new bean.
 **Statuses:** todo (default), in-progress, draft, completed, scrapped
 
 **Examples:**
-- `/bean create "Fix parser bug" --type bug --priority critical`
-- `/bean create "Add new feature" --type feature --priority high --body "Detailed description here"`
+- `/beans create "Fix parser bug" --type bug --priority critical`
+- `/beans create "Add new feature" --type feature --priority high --body "Detailed description here"`
 
 ### Update Task
 ```
-/bean update BEAN_ID [--status STATUS] [--priority PRIORITY] [--blocking BLOCKER_ID]
+/beans update BEAN_ID [--status STATUS] [--priority PRIORITY] [--blocking BLOCKER_ID]
 ```
 Update bean properties.
 
 **Examples:**
-- `/bean update csl26-abc1 --status in-progress` - Mark as started
-- `/bean update csl26-abc1 --status completed` - Mark as done
-- `/bean update csl26-abc1 --blocking csl26-xyz2` - Add blocker relationship
+- `/beans update csl26-abc1 --status in-progress` - Mark as started
+- `/beans update csl26-abc1 --status completed` - Mark as done
+- `/beans update csl26-abc1 --blocking csl26-xyz2` - Add blocker relationship
 
 ### Delete Task
 ```
-/bean delete BEAN_ID
+/beans delete BEAN_ID
 ```
 Delete a bean permanently.
 
@@ -72,23 +72,23 @@ Delete a bean permanently.
 
 ### Starting Work
 ```
-/bean next              # Find recommended task
-/bean show csl26-abc1   # Review details
-/bean update csl26-abc1 --status in-progress
+/beans next              # Find recommended task
+/beans show csl26-abc1   # Review details
+/beans update csl26-abc1 --status in-progress
 ```
 
 ### Completing Work
 ```
-/bean update csl26-abc1 --status completed
-/bean next              # Find next task
+/beans update csl26-abc1 --status completed
+/beans next              # Find next task
 ```
 
 ### Creating Related Tasks
 ```
-/bean create "Parent task" --type milestone
+/beans create "Parent task" --type milestone
 # Note the ID from output: csl26-parent
-/bean create "Subtask 1" --blocking csl26-parent
-/bean create "Subtask 2" --blocking csl26-parent
+/beans create "Subtask 1" --blocking csl26-parent
+/beans create "Subtask 2" --blocking csl26-parent
 ```
 
 ## Integration with AI Agents
@@ -99,7 +99,7 @@ When delegating to `@builder` or `@planner`, reference bean IDs in the task desc
 @builder: Implement csl26-abc1 - Fix delimiter handling
 ```
 
-The agent can then query bean details using `/bean show csl26-abc1`.
+The agent can then query bean details using `/beans show csl26-abc1`.
 
 ## Advantages Over GitHub Issues
 
@@ -118,7 +118,7 @@ The agent can then query bean details using `/bean show csl26-abc1`.
 ## Future Extensions
 
 If GitHub sync becomes necessary later:
-- Add `/bean sync` command for manual push/pull
+- Add `/beans sync` command for manual push/pull
 - Implement issue template mapping
 - Add conflict resolution for divergent updates
 

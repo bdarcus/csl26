@@ -53,18 +53,18 @@ When invoking these agents, they automatically receive CSL domain knowledge and 
 
 For rapid development, use beans for local task management. GitHub Issues remain available for community contributions and long-term planning, but local beans tasks avoid sync overhead during active development.
 
-### Quick Commands (Bean Skill)
+### Quick Commands (Beans Skill)
 
-Use `/bean` skill for fast local task management:
+Use `/beans` skill for fast local task management:
 ```
-/bean list                           # Show all tasks
-/bean next                           # Recommend best task to work on
-/bean update BEAN_ID --status in-progress   # Mark task started
-/bean update BEAN_ID --status completed     # Mark task done
-/bean create "Title" --type bug --priority high
+/beans list                           # Show all tasks
+/beans next                           # Recommend best task to work on
+/beans update BEAN_ID --status in-progress   # Mark task started
+/beans update BEAN_ID --status completed     # Mark task done
+/beans create "Title" --type bug --priority high
 ```
 
-See `.claude/skills/bean/SKILL.md` for full command reference.
+See `.claude/skills/beans/SKILL.md` for full command reference.
 
 ### Issue Templates
 - **Bug Report** (`.github/ISSUE_TEMPLATE/bug_report.md`): Rendering defects, incorrect output
@@ -97,13 +97,13 @@ See `.claude/skills/bean/SKILL.md` for full command reference.
 ### Beans Workflow
 
 ```
-1. Create task:     /bean create "Fix parser bug" --type bug --priority high
-2. List pending:    /bean list --status todo
-3. Find next:       /bean next
-4. Start work:      /bean update BEAN_ID --status in-progress
-5. View details:    /bean show BEAN_ID
-6. Mark done:       /bean update BEAN_ID --status completed
-7. Find next:       /bean next
+1. Create task:     /beans create "Fix parser bug" --type bug --priority high
+2. List pending:    /beans list --status todo
+3. Find next:       /beans next
+4. Start work:      /beans update BEAN_ID --status in-progress
+5. View details:    /beans show BEAN_ID
+6. Mark done:       /beans update BEAN_ID --status completed
+7. Find next:       /beans next
 ```
 
 All queries are instant (local markdown files, no API calls).
@@ -156,7 +156,7 @@ See **[docs/architecture/MIGRATION_STRATEGY_ANALYSIS.md](./docs/architecture/MIG
 5. **Cross-validation** - Where both approaches agree, confidence is high
 6. **Agent-assisted migration** - Use `./scripts/prep-migration.sh` to provide high-fidelity context (citeproc-js output + migration baseline) to the `@styleauthor` agent for hand-authoring top styles.
 
-**Current work:** Bean `csl26-m3lb` tracks implementation of the hybrid approach.
+**Current work:** Beans task `csl26-m3lb` tracks implementation of the hybrid approach.
 
 ## Development Principles
 
