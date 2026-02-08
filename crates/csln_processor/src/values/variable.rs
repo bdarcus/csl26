@@ -18,6 +18,7 @@ impl ComponentValues for TemplateVariable {
             SimpleVariable::PublisherPlace => reference.publisher_place(),
             SimpleVariable::Genre => reference.genre(),
             SimpleVariable::Abstract => reference.abstract_text(),
+            SimpleVariable::Locator => None, // PIN support handled separately in process_citation
             _ => None,
         };
 

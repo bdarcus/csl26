@@ -163,6 +163,8 @@ fn cleanup_dangling_punctuation(output: &mut String) {
         ("; .", "."),
         (",  ", ", "),
         (". .", "."),
+        (".. ", ". "),
+        ("..", "."),
     ];
 
     let mut changed = true;

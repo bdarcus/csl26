@@ -463,6 +463,7 @@ pub enum SimpleVariable {
     Dimensions,
     Scale,
     Version,
+    Locator,
 }
 
 /// A list component for grouping multiple items with a delimiter.
