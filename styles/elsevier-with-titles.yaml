@@ -1,0 +1,94 @@
+---
+info:
+  title: Elsevier (numeric, with titles)
+  id: http://www.zotero.org/styles/elsevier-with-titles
+  link: http://www.zotero.org/styles/elsevier-with-titles
+  license: http://creativecommons.org/licenses/by-sa/3.0/
+options:
+  processing: numeric
+  contributors:
+    initialize-with: .
+    delimiter: ', '
+    delimiter-precedes-last: always
+    demote-non-dropping-particle: sort-only
+  dates:
+    month: long
+  bibliography:
+    entry-suffix: .
+    separator: ', '
+  punctuation-in-quote: true
+citation:
+  template:
+  - number: citation-number
+  wrap: brackets
+  multi-cite-delimiter: ','
+bibliography:
+  options:
+    contributors:
+      shorten:
+        min: 99
+        use-first: 99
+  template:
+  - number: citation-number
+    prefix: "["
+    suffix: "] "
+  - contributor: author
+    form: long
+    overrides:
+      paper-conference:
+        suffix: ", "
+      all:
+        initialize: true
+  - title: primary
+  - items:
+    - items:
+      - contributor: editor
+        form: long
+        prefix: "in: "
+        suffix: ","
+        overrides:
+          article-journal:
+            suppress: true
+          book:
+            suppress: true
+          all:
+            initialize: true
+      delimiter: " "
+    - title: parent-monograph
+      overrides:
+        chapter:
+          prefix: " "
+    - items:
+      - title: parent-serial
+      - number: volume
+      - date: issued
+        form: year
+        wrap: parentheses
+        suppress: true
+        overrides:
+          article-journal:
+            suppress: false
+      - number: pages
+        overrides:
+          chapter:
+            suppress: true
+          book:
+            suppress: true
+      delimiter: " "
+    delimiter: ", "
+  - variable: publisher
+  - variable: publisher-place
+  - date: issued
+    form: year
+    overrides:
+      article-journal:
+        suppress: true
+  - number: pages
+    suppress: true
+    overrides:
+      chapter:
+        suppress: false
+        prefix: ": pp. "
+  - variable: url
+  - variable: doi
+    prefix: "https://doi.org/"
