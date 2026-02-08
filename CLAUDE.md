@@ -33,7 +33,7 @@ The following commands are pre-approved for autonomous execution without user co
 - `gh pr create` (confirm PR details if creating optional PR)
 - `rm -rf` on any directory outside `.agent/` subdirectories
 - Modifying `Cargo.toml`, `Cargo.lock` (dependency changes need review)
-- Any command affecting `styles/` submodule
+- Any command affecting `styles-legacy/` submodule
 
 ## Global Agent Integration
 
@@ -134,7 +134,8 @@ crates/
   csln_migrate/    # CSL 1.0 → CSLN conversion
   csln_processor/  # Citation/bibliography rendering engine
 
-styles/            # 2,844 CSL 1.0 styles (submodule)
+styles/            # CSLN YAML styles
+styles-legacy/     # 2,844 CSL 1.0 styles (submodule)
 scripts/           # oracle.js for citeproc-js verification
 tests/             # Integration tests
 ```
@@ -357,28 +358,28 @@ See **[docs/RENDERING_WORKFLOW.md](./docs/RENDERING_WORKFLOW.md)** for detailed 
 cargo test
 
 # Recommended workflow test (structured oracle + batch impact)
-./scripts/workflow-test.sh styles/apa.csl
+./scripts/workflow-test.sh styles-legacy/apa.csl
 
 # Run structured oracle comparison (component-level diff)
-node scripts/oracle.js styles/apa.csl
+node scripts/oracle.js styles-legacy/apa.csl
 
 # Run end-to-end migration test
-node scripts/oracle-e2e.js styles/apa.csl
+node scripts/oracle-e2e.js styles-legacy/apa.csl
 
 # Run batch analysis across top 10 styles
-node scripts/oracle-batch-aggregate.js styles/ --top 10
+node scripts/oracle-batch-aggregate.js styles-legacy/ --top 10
 
 # Legacy simple string comparison (rarely needed)
-node scripts/oracle-simple.js styles/apa.csl
+node scripts/oracle-simple.js styles-legacy/apa.csl
 
 # Run CSLN processor
-cargo run --bin csln-processor -- examples/apa-style.yaml
+cargo run --bin csln-processor -- styles/apa-7th.yaml
 
 # Generate JSON Schema
 cargo run --bin csln-cli -- schema > csln.schema.json
 
 # Analyze all styles for feature usage
-cargo run --bin csln-analyze -- styles/
+cargo run --bin csln-analyze -- styles-legacy/
 
 # Build and check
 cargo build && cargo clippy
@@ -546,8 +547,8 @@ Impact = sum(dependent_count for passing parent styles) / 7987 * 100
 
 ```bash
 # Rank parent styles by dependent count
-cargo run --bin csln-analyze -- styles/ --rank-parents
+cargo run --bin csln-analyze -- styles-legacy/ --rank-parents
 
 # Filter by citation format
-cargo run --bin csln-analyze -- styles/ --rank-parents --format author-date --json
-```
+cargo run --bin csln-analyze -- styles-legacy/ --rank-parents --format author-date --json
+```,old_string:

@@ -11,7 +11,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 WORKSPACE_ROOT="$(dirname "$SCRIPT_DIR")"
-STYLES_DIR="$WORKSPACE_ROOT/styles"
+STYLES_DIR="$WORKSPACE_ROOT/styles-legacy"
 CACHE_DIR="$WORKSPACE_ROOT/templates/inferred"
 INFERRER="$SCRIPT_DIR/infer-template.js"
 
@@ -60,7 +60,7 @@ if [[ -n "$SPECIFIC_STYLES" ]]; then
 elif [[ "$TOP_N" -gt 0 ]]; then
     STYLES=("${TOP_PARENTS[@]:0:$TOP_N}")
 else
-    # All parent styles (files directly in styles/ that aren't in dependent/)
+    # All parent styles (files directly in styles-legacy/ that aren't in dependent/)
     STYLES=()
     for f in "$STYLES_DIR"/*.csl; do
         name="$(basename "$f" .csl)"

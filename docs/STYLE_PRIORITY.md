@@ -109,13 +109,13 @@ To regenerate this data:
 
 ```bash
 # Full ranking
-cargo run --bin csln-analyze -- styles/ --rank-parents
+cargo run --bin csln-analyze -- styles-legacy/ --rank-parents
 
 # Filter by citation format
-cargo run --bin csln-analyze -- styles/ --rank-parents --format author-date
+cargo run --bin csln-analyze -- styles-legacy/ --rank-parents --format author-date
 
 # JSON output for programmatic use
-cargo run --bin csln-analyze -- styles/ --rank-parents --json
+cargo run --bin csln-analyze -- styles-legacy/ --rank-parents --json
 ```
 
 ## Fields/Disciplines by Top Styles

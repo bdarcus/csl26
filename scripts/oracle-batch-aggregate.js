@@ -301,7 +301,7 @@ function compareResults(baseline, current) {
 
 // Parse arguments
 const args = process.argv.slice(2);
-const stylesDir = args.find(a => !a.startsWith('--')) || path.join(__dirname, '..', 'styles');
+const stylesDir = args.find(a => !a.startsWith('--')) || path.join(__dirname, '..', 'styles-legacy');
 const jsonOutput = args.includes('--json');
 const runAll = args.includes('--all');
 

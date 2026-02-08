@@ -53,7 +53,7 @@ fn print_usage() {
     );
     eprintln!();
     eprintln!("Examples:");
-    eprintln!("  csln_analyze styles/");
-    eprintln!("  csln_analyze styles/ --rank-parents");
-    eprintln!("  csln_analyze styles/ --rank-parents --format author-date --json");
+    eprintln!("  csln_analyze styles-legacy/");
+    eprintln!("  csln_analyze styles-legacy/ --rank-parents");
+    eprintln!("  csln_analyze styles-legacy/ --rank-parents --format author-date --json");
 }

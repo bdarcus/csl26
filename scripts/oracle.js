@@ -240,7 +240,7 @@ function matchBibliographyEntries(oracleBib, cslnBib) {
 
 // Main
 const args = process.argv.slice(2);
-const stylePath = args.find(a => !a.startsWith('--')) || path.join(__dirname, '..', 'styles', 'apa.csl');
+const stylePath = args.find(a => !a.startsWith('--')) || path.join(__dirname, '..', 'styles-legacy', 'apa.csl');
 const jsonOutput = args.includes('--json');
 const verbose = args.includes('--verbose');
 

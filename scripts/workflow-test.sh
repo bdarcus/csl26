@@ -78,12 +78,12 @@ echo "┌─ Step 2: Batch Impact Analysis (Top $BATCH_COUNT Styles)"
 echo "│"
 
 if [ "$JSON_OUTPUT" = true ]; then
-  node "$SCRIPT_DIR/oracle-batch-aggregate.js" styles/ --top "$BATCH_COUNT" --json
+  node "$SCRIPT_DIR/oracle-batch-aggregate.js" styles-legacy/ --top "$BATCH_COUNT" --json
 else
   echo "│  Running batch analysis across top $BATCH_COUNT priority styles..."
   echo "│  This shows whether issues are specific to $STYLE_NAME or systemic."
   echo "│"
-  node "$SCRIPT_DIR/oracle-batch-aggregate.js" styles/ --top "$BATCH_COUNT"
+  node "$SCRIPT_DIR/oracle-batch-aggregate.js" styles-legacy/ --top "$BATCH_COUNT"
 fi
 
 echo "│"

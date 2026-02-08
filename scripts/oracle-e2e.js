@@ -169,7 +169,7 @@ function similarity(a, b) {
 }
 
 // Main
-const stylePath = process.argv[2] || path.join(__dirname, '..', 'styles', 'apa.csl');
+const stylePath = process.argv[2] || path.join(__dirname, '..', 'styles-legacy', 'apa.csl');
 const styleName = path.basename(stylePath, '.csl');
 
 console.log(`\n=== End-to-End Oracle Test: ${styleName} ===\n`);

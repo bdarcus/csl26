@@ -4,7 +4,7 @@ use serde_json::to_string_pretty;
 use std::fs;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let text = fs::read_to_string("../styles/chicago-author-date.csl")?;
+    let text = fs::read_to_string("../styles-legacy/chicago-author-date.csl")?;
     let doc = Document::parse(&text)?;
     let root = doc.root_element();
 

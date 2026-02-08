@@ -6,16 +6,16 @@ This guide describes the standard workflow for debugging and fixing rendering is
 
 ```bash
 # Test a single style (default: structured diff)
-node scripts/oracle.js styles/apa.csl
+node scripts/oracle.js styles-legacy/apa.csl
 
 # Run full workflow test (structured diff + batch impact)
-./scripts/workflow-test.sh styles/apa.csl
+./scripts/workflow-test.sh styles-legacy/apa.csl
 
 # Batch analysis across top 10 styles
-node scripts/oracle-batch-aggregate.js styles/ --top 10
+node scripts/oracle-batch-aggregate.js styles-legacy/ --top 10
 
 # Legacy simple string comparison
-node scripts/oracle-simple.js styles/apa.csl
+node scripts/oracle-simple.js styles-legacy/apa.csl
 ```
 
 ## Fidelity Targets
@@ -54,7 +54,7 @@ When fixing rendering issues, follow this process:
 Start with the structured oracle to see component-level differences:
 
 ```bash
-node scripts/oracle.js styles/apa.csl
+node scripts/oracle.js styles-legacy/apa.csl
 ```
 
 This shows you **which specific components** differ between citeproc-js (oracle) and CSLN, not just that the strings are different.
@@ -77,7 +77,7 @@ This tells you:
 Run the workflow test to see if this is a style-specific issue or systemic:
 
 ```bash
-./scripts/workflow-test.sh styles/apa.csl
+./scripts/workflow-test.sh styles-legacy/apa.csl
 ```
 
 This runs:
@@ -144,7 +144,7 @@ if ref_type == "article-journal" {
 Re-run the workflow test:
 
 ```bash
-./scripts/workflow-test.sh styles/apa.csl
+./scripts/workflow-test.sh styles-legacy/apa.csl
 ```
 
 Check that:
@@ -158,10 +158,10 @@ After significant fixes, update the baseline (regression detection planned):
 
 ```bash
 # Planned: Save baseline after milestone
-node scripts/oracle-batch-aggregate.js styles/ --top 20 --save baselines/baseline-$(date +%F).json
+node scripts/oracle-batch-aggregate.js styles-legacy/ --top 20 --save baselines/baseline-$(date +%F).json
 
 # Planned: Compare against baseline to detect regressions
-node scripts/oracle-batch-aggregate.js styles/ --top 20 --compare baselines/baseline-2026-02-06.json
+node scripts/oracle-batch-aggregate.js styles-legacy/ --top 20 --compare baselines/baseline-2026-02-06.json
 ```
 
 This will catch regressions immediately (e.g., "APA: 15/15 → 14/15 - ITEM-3 now failing").
@@ -193,8 +193,8 @@ Bibliography Entry ITEM-2:
 
 **Example usage:**
 ```bash
-node scripts/oracle.js styles/apa.csl
-node scripts/oracle.js styles/chicago-author-date.csl --verbose
+node scripts/oracle.js styles-legacy/apa.csl
+node scripts/oracle.js styles-legacy/chicago-author-date.csl --verbose
 ```
 
 ### `oracle-simple.js` (String Comparison - LEGACY)
@@ -205,7 +205,7 @@ node scripts/oracle.js styles/chicago-author-date.csl --verbose
 
 **Example usage:**
 ```bash
-node scripts/oracle-simple.js styles/apa.csl
+node scripts/oracle-simple.js styles-legacy/apa.csl
 ```
 
 ### `oracle-batch-aggregate.js` (Multi-Style Impact)
@@ -217,13 +217,13 @@ node scripts/oracle-simple.js styles/apa.csl
 **Example usage:**
 ```bash
 # Test top 10 styles
-node scripts/oracle-batch-aggregate.js styles/ --top 10
+node scripts/oracle-batch-aggregate.js styles-legacy/ --top 10
 
 # Test all author-date styles (may be slow)
-node scripts/oracle-batch-aggregate.js styles/ --format author-date
+node scripts/oracle-batch-aggregate.js styles-legacy/ --format author-date
 
 # JSON output for scripting
-node scripts/oracle-batch-aggregate.js styles/ --top 20 --json
+node scripts/oracle-batch-aggregate.js styles-legacy/ --top 20 --json
 ```
 
 **Output interpretation:**
@@ -246,9 +246,9 @@ Bibliography: 3/5 passing
 
 **Example usage:**
 ```bash
-./scripts/workflow-test.sh styles/apa.csl
-./scripts/workflow-test.sh styles/ieee.csl --json
-./scripts/workflow-test.sh styles/nature.csl --top 20
+./scripts/workflow-test.sh styles-legacy/apa.csl
+./scripts/workflow-test.sh styles-legacy/ieee.csl --json
+./scripts/workflow-test.sh styles-legacy/nature.csl --top 20
 ```
 
 ## Common Failure Patterns
@@ -396,23 +396,23 @@ When a variable ends up in the wrong place or has wrong formatting, trace throug
 
 1. **Check CSL source:**
    ```bash
-   grep -n "volume" styles/apa.csl
+   grep -n "volume" styles-legacy/apa.csl
    ```
 
 2. **Check generated YAML:**
    ```bash
-   csln_migrate styles/apa.csl > /tmp/apa.yaml
+   csln_migrate styles-legacy/apa.csl > /tmp/apa.yaml
    grep -A5 "volume" /tmp/apa.yaml
    ```
 
 3. **Compare with oracle:**
    ```bash
-   node scripts/oracle.js styles/apa.csl --verbose
+   node scripts/oracle.js styles-legacy/apa.csl --verbose
    ```
 
 **Future (Task #24):** Use migration debugger:
 ```bash
-csln_migrate styles/apa.csl --debug-variable volume
+csln_migrate styles-legacy/apa.csl --debug-variable volume
 ```
 
 ### Testing Edge Cases
@@ -435,13 +435,13 @@ When running many tests:
 
 ```bash
 # Test only citations (faster)
-node scripts/oracle.js styles/apa.csl --cite
+node scripts/oracle.js styles-legacy/apa.csl --cite
 
 # Test only bibliography
-node scripts/oracle.js styles/apa.csl --bib
+node scripts/oracle.js styles-legacy/apa.csl --bib
 
 # Limit batch analysis
-node scripts/oracle-batch-aggregate.js styles/ --top 5
+node scripts/oracle-batch-aggregate.js styles-legacy/ --top 5
 ```
 
 ## Troubleshooting
@@ -451,7 +451,7 @@ node scripts/oracle-batch-aggregate.js styles/ --top 5
 Make sure you're running from project root or scripts directory:
 ```bash
 cd /Users/brucedarcus/Code/csl26
-node scripts/oracle.js styles/apa.csl
+node scripts/oracle.js styles-legacy/apa.csl
 ```
 
 ### "Style not found"
@@ -459,10 +459,10 @@ node scripts/oracle.js styles/apa.csl
 Check style path relative to current directory:
 ```bash
 # From project root
-node scripts/oracle.js styles/apa.csl
+node scripts/oracle.js styles-legacy/apa.csl
 
 # From scripts/
-node oracle.js ../styles/apa.csl
+node oracle.js ../styles-legacy/apa.csl
 ```
 
 ### "Locale not found"
@@ -501,17 +501,17 @@ This means the component extraction is incomplete. The structured oracle only ch
 
 ### Phase 2: Migration Debugger (Task #24)
 ```bash
-csln_migrate styles/apa.csl --debug-variable volume
+csln_migrate styles-legacy/apa.csl --debug-variable volume
 # Shows: CSL source → IR → YAML, with deduplication decisions
 ```
 
 ### Phase 3: Regression Detection (Task #25)
 ```bash
 # Save baseline
-node scripts/oracle-batch-aggregate.js styles/ --top 20 --json > baselines/baseline-2026-02-05.json
+node scripts/oracle-batch-aggregate.js styles-legacy/ --top 20 --json > baselines/baseline-2026-02-05.json
 
 # Compare against baseline
-node scripts/oracle-batch-aggregate.js styles/ --top 20 --compare baselines/baseline-2026-02-05.json
+node scripts/oracle-batch-aggregate.js styles-legacy/ --top 20 --compare baselines/baseline-2026-02-05.json
 # Output: "Regression: APA 15/15 → 14/15 (ITEM-3 now failing)"
 ```
 

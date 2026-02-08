@@ -85,7 +85,7 @@ pub fn run_parent_ranker(styles_dir: &str, json_output: bool, format_filter: Opt
             "Warning: No 'dependent' subdirectory found in {}",
             styles_dir
         );
-        eprintln!("Dependent styles are typically in styles/dependent/");
+        eprintln!("Dependent styles are typically in styles-legacy/dependent/");
     }
 
     for entry in WalkDir::new(&dependent_dir)

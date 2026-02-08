@@ -187,8 +187,8 @@ if (args.length === 0) {
     console.log('Usage: node oracle.js <style.csl> [--bib] [--cite] [--json]');
     console.log('');
     console.log('Examples:');
-    console.log('  node oracle.js ../styles/apa.csl');
-    console.log('  node oracle.js ../styles/chicago-author-date.csl --bib');
+    console.log('  node oracle.js ../styles-legacy/apa.csl');
+    console.log('  node oracle.js ../styles-legacy/chicago-author-date.csl --bib');
     process.exit(1);
 }
 

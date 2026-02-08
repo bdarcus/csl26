@@ -239,7 +239,8 @@ crates/
 .agent/              # LLM agent instructions and design documents
 locales/             # CSLN YAML locale files (en-US, de-DE, etc.)
 scripts/             # Oracle verification (citeproc-js) and automation
-styles/              # 2,844 CSL 1.0 styles (submodule)
+styles/              # CSLN YAML styles
+styles-legacy/       # 2,844 CSL 1.0 styles (submodule)
 ```
 
 ## For Style Maintainers
@@ -264,7 +265,7 @@ CSLN uses the same conceptual model as CSL:
 
 ```bash
 # Convert an existing CSL style
-cargo run --bin csln-migrate -- styles/apa.csl
+cargo run --bin csln-migrate -- styles-legacy/apa.csl
 
 # Output: csln-new.yaml with clean CSLN format
 ```
@@ -298,7 +299,7 @@ cargo test --workspace
 
 ```bash
 # Run CSLN processor with a style
-cargo run --bin csln-processor -- examples/apa-style.yaml
+cargo run --bin csln-processor -- styles/apa-7th.yaml
 ```
 
 ### Style Corpus Analysis
@@ -306,11 +307,11 @@ cargo run --bin csln-processor -- examples/apa-style.yaml
 The `csln_analyze` tool scans all CSL 1.0 styles to identify patterns and gaps:
 
 ```bash
-# Analyze all styles in the styles/ directory
-cargo run --bin csln-analyze -- styles/
+# Analyze all styles in the styles-legacy/ directory
+cargo run --bin csln-analyze -- styles-legacy/
 
 # Output as JSON for scripting
-cargo run --bin csln-analyze -- styles/ --json
+cargo run --bin csln-analyze -- styles-legacy/ --json
 ```
 
 This helps prioritize which features to implement based on actual usage across 2,844 styles.
@@ -324,14 +325,14 @@ cd scripts
 npm install   # First time only - installs citeproc
 
 # oracle.js - Render citations/bibliography with citeproc-js
-node oracle.js ../styles/apa.csl              # Both citations and bibliography
-node oracle.js ../styles/apa.csl --cite       # Citations only
-node oracle.js ../styles/apa.csl --bib        # Bibliography only
-node oracle.js ../styles/apa.csl --json       # JSON output for scripting
+node oracle.js ../styles-legacy/apa.csl              # Both citations and bibliography
+node oracle.js ../styles-legacy/apa.csl --cite       # Citations only
+node oracle.js ../styles-legacy/apa.csl --bib        # Bibliography only
+node oracle.js ../styles-legacy/apa.csl --json       # JSON output for scripting
 
 # oracle-e2e.js - End-to-end migration test
 # Migrates CSL 1.0 → CSLN → csln-processor, then compares with citeproc-js
-node oracle-e2e.js ../styles/apa.csl
+node oracle-e2e.js ../styles-legacy/apa.csl
 ```
 
 Example output from `oracle-e2e.js`:

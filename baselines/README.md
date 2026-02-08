@@ -9,7 +9,7 @@ This directory stores baseline test results for regression detection in the rend
 After reaching a milestone (e.g., completing a tier or major feature):
 
 ```bash
-node scripts/oracle-batch-aggregate.js styles/ --top 20 --save baselines/baseline-$(date +%F).json
+node scripts/oracle-batch-aggregate.js styles-legacy/ --top 20 --save baselines/baseline-$(date +%F).json
 ```
 
 ### Compare Against Baseline
@@ -17,7 +17,7 @@ node scripts/oracle-batch-aggregate.js styles/ --top 20 --save baselines/baselin
 When testing changes to detect regressions:
 
 ```bash
-node scripts/oracle-batch-aggregate.js styles/ --top 20 --compare baselines/baseline-2026-02-06.json
+node scripts/oracle-batch-aggregate.js styles-legacy/ --top 20 --compare baselines/baseline-2026-02-06.json
 ```
 
 ### Output Example

@@ -12,7 +12,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = std::env::args().collect();
 
     // Parse command-line arguments
-    let mut path = "styles/apa.csl";
+    let mut path = "styles-legacy/apa.csl";
     let mut debug_variable: Option<String> = None;
     let mut template_source: Option<String> = None;
     let mut template_dir: Option<PathBuf> = None;
@@ -80,7 +80,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .unwrap_or("unknown");
 
     // Determine workspace root by finding the Cargo workspace directory.
-    // For relative paths like "styles/foo.csl", this is the current directory.
+    // For relative paths like "styles-legacy/foo.csl", this is the current directory.
     // For absolute paths, walk up from the style file to find the workspace.
     let workspace_root = {
         let style_path = std::path::Path::new(path);

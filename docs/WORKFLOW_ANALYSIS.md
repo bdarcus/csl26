@@ -128,7 +128,7 @@ Net impact: -1 passing entries
 
 **Example Usage**:
 ```bash
-csln_migrate styles/apa.csl --debug-variable volume
+csln_migrate styles-legacy/apa.csl --debug-variable volume
 
 # Output:
 Variable: volume
