@@ -1,7 +1,7 @@
 ---
 # csl26-l05b
 title: Expand test fixtures to 25-30 references
-status: todo
+status: completed
 type: task
 priority: high
 created_at: 2026-02-08T00:38:50Z
