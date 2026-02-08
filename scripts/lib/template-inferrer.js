@@ -312,18 +312,24 @@ function findDelimiterConsensus(entries, refByEntry, comp1, comp2) {
     }
   }
 
-  // Return most common delimiter
+  // Return most common delimiter, trimming stray quotes from formatting
   if (Object.keys(delimiters).length === 0) {
     return null;
   }
   const sorted = Object.entries(delimiters).sort((a, b) => b[1] - a[1]);
-  return sorted[0][0];
+  return sorted[0][0].replace(/["\u201c\u201d]+/g, '').trimEnd() || sorted[0][0];
 }
 
 // -- Prefix/suffix and wrap detection --
 
 /**
- * Detect common prefix patterns before a component across multiple entries.
+ * Detect common prefix patterns for a component across multiple entries.
+ *
+ * The component parser's position often INCLUDES the prefix (e.g. position
+ * covers "https://doi.org/10.xxx" or "pp. 123-456"). So we check two zones:
+ * 1. Text INSIDE the matched position before the core value
+ * 2. Text BEFORE the matched position (for "In " before editor names)
+ *
  * Returns the prefix string if >50% of entries share it, otherwise null.
  */
 function detectPrefix(componentName, entries, refByEntry) {
@@ -336,16 +342,27 @@ function detectPrefix(componentName, entries, refByEntry) {
     if (!comp?.found || !comp.position) continue;
 
     const normalized = normalizeText(entries[idx]);
-    // Look at up to 20 chars before the component
+    total++;
+
+    // Zone 1: text inside the match (position.start to value start)
+    const matchText = normalized.slice(comp.position.start, comp.position.end);
+
+    // Zone 2: text before the match (up to 20 chars)
     const beforeStart = Math.max(0, comp.position.start - 20);
     const before = normalized.slice(beforeStart, comp.position.start);
 
-    total++;
-
-    // Check known prefix patterns
-    if (/In\s+$/.test(before)) prefixes['In '] = (prefixes['In '] || 0) + 1;
-    else if (/pp?\.\s*$/.test(before)) prefixes['pp. '] = (prefixes['pp. '] || 0) + 1;
-    else if (/https?:\/\/doi\.org\/$/i.test(before)) prefixes['https://doi.org/'] = (prefixes['https://doi.org/'] || 0) + 1;
+    // DOI: "https://doi.org/" is inside the match
+    if (/^https?:\/\/doi\.org\//i.test(matchText)) {
+      prefixes['https://doi.org/'] = (prefixes['https://doi.org/'] || 0) + 1;
+    }
+    // Pages: "pp." or "p." is inside the match
+    else if (/^pp?\.\s*/i.test(matchText)) {
+      prefixes['pp. '] = (prefixes['pp. '] || 0) + 1;
+    }
+    // Editors: "In " appears before the editor name/marker
+    else if (/In\s+$/.test(before)) {
+      prefixes['In '] = (prefixes['In '] || 0) + 1;
+    }
   }
 
   if (total === 0) return null;
@@ -543,14 +560,19 @@ function detectSuppressions(consensusOrdering, typedComponents, componentFrequen
 
 // -- YAML generation --
 
-/**
- * Generate CSLN YAML template from component array and suppressions.
- */
 /** Known component main keys for filtering metadata fields */
 const MAIN_KEYS = new Set(['contributor', 'date', 'title', 'number', 'variable', 'items']);
 
-function generateYaml(template) {
-  let yaml = 'template:\n';
+/**
+ * Generate CSLN YAML for a bibliography/citation section.
+ * Includes delimiter at the section level if not the default ". ".
+ */
+function generateYaml(template, delimiter) {
+  let yaml = '';
+  if (delimiter && delimiter !== '. ') {
+    yaml += `delimiter: "${delimiter}"\n`;
+  }
+  yaml += 'template:\n';
   const indent = '  ';
 
   for (const component of template) {
@@ -753,8 +775,22 @@ function inferTemplate(stylePath, section = 'bibliography') {
     }
   }
 
+  // Find consensus delimiter (needed for YAML generation)
+  let delimiterConsensus = '. '; // default
+  if (consensusOrdering.length > 1) {
+    const delim = findDelimiterConsensus(
+      rendered.entries,
+      refByEntry,
+      consensusOrdering[0],
+      consensusOrdering[1]
+    );
+    if (delim) {
+      delimiterConsensus = delim;
+    }
+  }
+
   // Generate YAML
-  const yaml = generateYaml(template);
+  const yaml = generateYaml(template, delimiterConsensus);
 
   // Calculate metadata
   const typesAnalyzed = Object.keys(typedComponents);
@@ -806,20 +842,6 @@ function inferTemplate(stylePath, section = 'bibliography') {
   }
 
   const confidence = totalEntries > 0 ? totalWeightedConfidence / totalEntries : 0;
-
-  // Find consensus delimiter
-  let delimiterConsensus = '. '; // default
-  if (consensusOrdering.length > 1) {
-    const delim = findDelimiterConsensus(
-      rendered.entries,
-      refByEntry,
-      consensusOrdering[0],
-      consensusOrdering[1]
-    );
-    if (delim) {
-      delimiterConsensus = delim;
-    }
-  }
 
   return {
     template,
