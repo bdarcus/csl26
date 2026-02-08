@@ -1,11 +1,11 @@
 ---
 # csl26-fm9s
 title: Expand test data coverage to 20+ items
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-02-07T06:53:29Z
-updated_at: 2026-02-07T07:40:14Z
+updated_at: 2026-02-08T22:34:47Z
 blocking:
     - csl26-e6v4
     - csl26-r6fn
