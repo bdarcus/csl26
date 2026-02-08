@@ -80,9 +80,10 @@ if (jsonOutput) {
   console.error(`\nConfidence: ${(confidence * 100).toFixed(0)}% | Delimiter: "${delimiterConsensus}" | Types: ${typesAnalyzed.length} | Entries: ${result.meta.entryCount}`);
 
   if (verbose) {
-    console.error('\n--- Per-Type Entry Counts ---');
-    for (const [type, count] of Object.entries(entriesPerType)) {
-      console.error(`  ${type}: ${count} entries`);
+    console.error('\n--- Per-Type Confidence ---');
+    const ptc = result.meta.perTypeConfidence || {};
+    for (const [type, data] of Object.entries(ptc)) {
+      console.error(`  ${type}: ${(data.confidence * 100).toFixed(0)}% (${data.expectedComponents} components, ${data.entryCount} entries)`);
     }
 
     // Suppress overrides summary
