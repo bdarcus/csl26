@@ -149,9 +149,10 @@ See **[docs/architecture/MIGRATION_STRATEGY_ANALYSIS.md](./docs/architecture/MIG
 
 **Strategy:**
 1. **Keep XML pipeline for OPTIONS** - Options extractor, preset detector, locale handling (~2,500 lines working code)
-2. **Build output-driven template generator** - Use citeproc-js output + input data cross-referencing for component structure and ordering
-3. **Retain XML compiler as fallback** - For rare reference types and validation
-4. **Cross-validation** - Where both approaches agree, confidence is high
+2. **LLM-author templates for top parent styles** - Using `/styleauthor` skill or `@styleauthor` agent to create styles from reference materials with iterative test-fix loops. Validated with APA 7th (5/5 citation + bibliography match).
+3. **Build output-driven template generator** - Use citeproc-js output + input data cross-referencing for component structure and ordering
+4. **Retain XML compiler as fallback** - For rare reference types and validation
+5. **Cross-validation** - Where both approaches agree, confidence is high
 
 **Current work:** Bean `csl26-m3lb` tracks implementation of the hybrid approach.
 
@@ -341,6 +342,7 @@ Specialized expertise is available via the following skills in `.claude/skills/`
 
 - **[rust-pro](./.claude/skills/rust-pro/SKILL.md)**: Modern Rust engineering (1.75+), async patterns, and performance optimization. Use proactively for core processor development.
 - **[git-advanced-workflows](./.claude/skills/git-advanced-workflows/SKILL.md)**: Advanced Git operations (rebasing, cherry-picking, bisecting).
+- **[styleauthor](./.claude/skills/styleauthor/SKILL.md)**: LLM-driven style creation from reference materials. Iterative 5-phase workflow: research, author, test, evolve processor if needed, verify. Also available as `@styleauthor` agent for autonomous style creation.
 
 ### Style Classes
 - **in-text**: 2,302 styles (80.9%) - author-date

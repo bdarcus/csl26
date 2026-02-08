@@ -167,7 +167,10 @@ impl CitationSpec {
     ///
     /// If a mode-specific spec exists (e.g., `integral`), it merges with and overrides
     /// the base spec.
-    pub fn resolve_for_mode(&self, mode: &crate::citation::CitationMode) -> std::borrow::Cow<'_, CitationSpec> {
+    pub fn resolve_for_mode(
+        &self,
+        mode: &crate::citation::CitationMode,
+    ) -> std::borrow::Cow<'_, CitationSpec> {
         use crate::citation::CitationMode;
         let mode_spec = match mode {
             CitationMode::Integral => self.integral.as_ref(),
@@ -206,7 +209,7 @@ impl CitationSpec {
                 if spec.multi_cite_delimiter.is_some() {
                     merged.multi_cite_delimiter = spec.multi_cite_delimiter.clone();
                 }
-                
+
                 std::borrow::Cow::Owned(merged)
             }
             None => std::borrow::Cow::Borrowed(self),

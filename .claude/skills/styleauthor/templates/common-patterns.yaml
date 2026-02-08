@@ -1,0 +1,170 @@
+# Common CSLN Style Patterns
+#
+# Reusable snippets extracted from examples/apa-7th.yaml.
+# Copy and adapt these blocks when creating new styles.
+# Each pattern includes comments explaining when and how to use it.
+
+# ============================================================
+# CITATION PATTERNS
+# ============================================================
+
+# --- Author-Date: Parenthetical Citation ---
+# Usage: (Smith & Jones, 2020, p. 15)
+# Wrap the entire citation in parentheses, comma-delimited items.
+parenthetical-citation:
+  wrap: parentheses
+  template:
+    - items:
+      - contributor: author
+        form: short
+        shorten:
+          min: 3
+          use-first: 1
+      - date: issued
+        form: year
+      - variable: locator
+        prefix: ", "
+      delimiter: comma
+
+# --- Author-Date: Narrative Citation ---
+# Usage: Smith and Jones (2020, p. 15)
+# Author outside parens, year+locator inside parens.
+narrative-citation:
+  wrap: none
+  delimiter: ""
+  template:
+    - contributor: author
+      form: short
+      shorten:
+        min: 3
+        use-first: 1
+    - items:
+      - date: issued
+        form: year
+      - variable: locator
+        prefix: ", "
+      delimiter: comma
+      wrap: parentheses
+      prefix: " "
+      prefix-inside-wrap: false
+
+# --- Numeric Citation ---
+# Usage: [1, 2]
+# Wrap in brackets, comma-delimited numbers.
+# numeric-citation:
+#   wrap: brackets
+#   template:
+#     - variable: citation-number
+
+# ============================================================
+# BIBLIOGRAPHY PATTERNS
+# ============================================================
+
+# --- Author + Year Block ---
+# Usage: Smith, J. A. (2020).
+# Author followed by year in parens, period suffix.
+author-year-block:
+  - items:
+    - contributor: author
+      form: long
+    - date: issued
+      form: year
+      wrap: parentheses
+    delimiter: space
+    suffix: "."
+
+# --- Source Block (Container + Volume + Pages + Publisher) ---
+# Usage: Journal Name, 12(3), 45-67. Publisher.
+# Groups source components with comma delimiter and period suffix.
+# Use overrides to suppress components per reference type.
+source-block:
+  - items:
+    # Editor (chapters only)
+    - contributor: editor
+      form: verb
+      prefix: "In "
+      overrides:
+        article-journal:
+          suppress: true
+        book:
+          suppress: true
+
+    # Book title (chapters)
+    - title: parent-monograph
+
+    # Journal title
+    - title: parent-serial
+
+    # Volume(Issue) - grouped with no delimiter
+    - items:
+      - number: volume
+        emph: true
+      - number: issue
+        wrap: parentheses
+      delimiter: none
+
+    # Pages
+    - number: pages
+      overrides:
+        chapter:
+          wrap: parentheses
+          prefix: "pp. "
+
+    # Publisher (books only)
+    - variable: publisher
+      overrides:
+        article-journal:
+          suppress: true
+        webpage:
+          suppress: true
+    delimiter: comma
+    suffix: "."
+
+# --- DOI/URL Block ---
+# Usage: https://doi.org/10.1234/example
+# DOI with prefix, URL as fallback.
+doi-url-block:
+  - variable: doi
+    prefix: "https://doi.org/"
+  - variable: url
+
+# ============================================================
+# OPTIONS PATTERNS
+# ============================================================
+
+# --- Mode-Dependent Conjunction ---
+# "and" in narrative, "&" in parenthetical.
+# Used by APA, many author-date styles.
+mode-dependent-and:
+  and: !mode-dependent
+    integral: text
+    non-integral: symbol
+
+# --- Author Shortening (APA-style) ---
+# 21+ authors -> first 19 ... last 1
+apa-shorten:
+  shorten:
+    min: 21
+    use-first: 19
+    use-last: 1
+
+# --- Author Shortening (3+ -> et al) ---
+# Common pattern: 3+ authors -> "First et al."
+standard-shorten:
+  shorten:
+    min: 3
+    use-first: 1
+
+# --- Title Formatting: Typical Author-Date ---
+# Books/journals italic, articles/chapters plain.
+standard-title-formatting:
+  titles:
+    monograph:
+      emph: true
+    container-monograph:
+      emph: true
+    periodical:
+      emph: true
+    component:
+      emph: false
+      quote: false

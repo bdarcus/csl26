@@ -24,6 +24,20 @@ When evaluating features, consider these four stakeholder perspectives.
 - "How do I express 'use comma for journals, period for books'?"
 - "What are all the options for contributor formatting?"
 
+### LLM-Assisted Style Authoring
+
+LLMs can act as style authors by following the `/styleauthor` workflow (`.claude/skills/styleauthor/SKILL.md`). This was validated by creating the APA 7th Edition CSLN style, where the LLM:
+
+1. Read style guide references (APA website, university LibGuides)
+2. Authored the style YAML using structured blocks, items, delimiters, and overrides
+3. Ran the processor and compared output to reference expectations
+4. Fixed both style YAML and processor code (adding integral citations, locator support)
+5. Iterated until output matched the style guide
+
+This is a **full-stack workflow**: the LLM can evolve the processor and core types when features are missing, not just author YAML. Guard rails (cargo test, clippy, oracle) prevent regressions.
+
+**Key insight**: LLM-authored styles can be higher quality than migration-compiled styles because the LLM understands the style guide's intent, not just the CSL 1.0 XML structure. The APA 7th style created this way achieved 5/5 citation and 5/5 bibliography match.
+
 ---
 
 ## 2. Web Developer

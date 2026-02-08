@@ -19,6 +19,14 @@ Focus:
 - Make sure it 100% accurately represents the code
 - Link to style-hub repo for style wizard integration
 
+**Partial coverage already exists:**
+- `/styleauthor` skill (.claude/skills/styleauthor/SKILL.md) - LLM-driven 5-phase workflow
+- Style spec template (.claude/skills/styleauthor/templates/style-spec.md) - captures formatting rules
+- Common patterns (.claude/skills/styleauthor/templates/common-patterns.yaml) - reusable YAML snippets
+- Gold standard example (examples/apa-7th.yaml) - annotated APA 7th style
+
+This guide should build on these resources, providing a human-readable narrative for style authors who may not use LLM tooling.
+
 Target audience: Style authors from PERSONAS.md
 Output: docs/guides/style-authoring.md
 Effort: 1 week
