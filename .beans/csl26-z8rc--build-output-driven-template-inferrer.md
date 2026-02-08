@@ -1,7 +1,7 @@
 ---
 # csl26-z8rc
 title: Build output-driven template inferrer
-status: todo
+status: completed
 type: feature
 priority: normal
 created_at: 2026-02-08T00:39:18Z
