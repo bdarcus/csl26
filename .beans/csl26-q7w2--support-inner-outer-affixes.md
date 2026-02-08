@@ -1,7 +1,7 @@
 ---
 # csl26-q7w2
 title: Support inner and outer affixes for wrapped components
-status: todo
+status: completed
 type: feature
 priority: low
 created_at: 2026-02-08T12:00:00Z

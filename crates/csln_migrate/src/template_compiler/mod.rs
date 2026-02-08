@@ -1615,12 +1615,21 @@ impl TemplateCompiler {
     /// Convert FormattingOptions to Rendering.
     fn convert_formatting(&self, fmt: &FormattingOptions) -> Rendering {
         // Infer wrap from prefix/suffix patterns
-        let (mut wrap, prefix, suffix) = Self::infer_wrap_from_affixes(&fmt.prefix, &fmt.suffix);
+        let (mut wrap, remaining_prefix, remaining_suffix) =
+            Self::infer_wrap_from_affixes(&fmt.prefix, &fmt.suffix);
 
         // quotes="true" in CSL maps to wrap: quotes in CSLN
         if fmt.quotes == Some(true) {
             wrap = Some(csln_core::template::WrapPunctuation::Quotes);
         }
+
+        // If wrap is detected, remaining affixes are INNER.
+        // If no wrap, affixes are OUTER (default prefix/suffix).
+        let (prefix, suffix, inner_prefix, inner_suffix) = if wrap.is_some() {
+            (None, None, remaining_prefix, remaining_suffix)
+        } else {
+            (remaining_prefix, remaining_suffix, None, None)
+        };
 
         Rendering {
             emph: fmt
@@ -1638,8 +1647,9 @@ impl TemplateCompiler {
             quote: fmt.quotes,
             prefix,
             suffix,
+            inner_prefix,
+            inner_suffix,
             wrap,
-            prefix_inside_wrap: None,
             suppress: None,
             initialize_with: None,
         }
@@ -1715,64 +1725,44 @@ impl TemplateCompiler {
     ) {
         let (wrap, prefix, suffix) = group_wrap;
 
-        // Only apply wrap if the component doesn't already have one
+        // Helper to apply rendering
+        let apply = |rendering: &mut Rendering| {
+            if rendering.wrap.is_none() && wrap.is_some() {
+                rendering.wrap = wrap.clone();
+            }
+
+            // If wrap is being applied (or was already present and we are merging inner content),
+            // then prefix/suffix should go to inner_prefix/inner_suffix.
+            // If no wrap involved, they go to prefix/suffix.
+            // Note: This logic assumes group_wrap comes from infer_wrap_from_affixes,
+            // so if wrap is Some, prefix/suffix are "remaining" (inner).
+            // If wrap is None, prefix/suffix are just outer.
+
+            if wrap.is_some() {
+                // Applying a wrap -> affixes are inner
+                if rendering.inner_prefix.is_none() && prefix.is_some() {
+                    rendering.inner_prefix = prefix.clone();
+                }
+                if rendering.inner_suffix.is_none() && suffix.is_some() {
+                    rendering.inner_suffix = suffix.clone();
+                }
+            } else {
+                // No wrap -> affixes are outer
+                if rendering.prefix.is_none() && prefix.is_some() {
+                    rendering.prefix = prefix.clone();
+                }
+                if rendering.suffix.is_none() && suffix.is_some() {
+                    rendering.suffix = suffix.clone();
+                }
+            }
+        };
+
         match component {
-            TemplateComponent::Date(d) => {
-                if d.rendering.wrap.is_none() && wrap.is_some() {
-                    d.rendering.wrap = wrap.clone();
-                }
-                // Also apply remaining prefix/suffix if not already set
-                if d.rendering.prefix.is_none() && prefix.is_some() {
-                    d.rendering.prefix = prefix.clone();
-                }
-                if d.rendering.suffix.is_none() && suffix.is_some() {
-                    d.rendering.suffix = suffix.clone();
-                }
-            }
-            TemplateComponent::Contributor(c) => {
-                if c.rendering.wrap.is_none() && wrap.is_some() {
-                    c.rendering.wrap = wrap.clone();
-                }
-                if c.rendering.prefix.is_none() && prefix.is_some() {
-                    c.rendering.prefix = prefix.clone();
-                }
-                if c.rendering.suffix.is_none() && suffix.is_some() {
-                    c.rendering.suffix = suffix.clone();
-                }
-            }
-            TemplateComponent::Title(t) => {
-                if t.rendering.wrap.is_none() && wrap.is_some() {
-                    t.rendering.wrap = wrap.clone();
-                }
-                if t.rendering.prefix.is_none() && prefix.is_some() {
-                    t.rendering.prefix = prefix.clone();
-                }
-                if t.rendering.suffix.is_none() && suffix.is_some() {
-                    t.rendering.suffix = suffix.clone();
-                }
-            }
-            TemplateComponent::Number(n) => {
-                if n.rendering.wrap.is_none() && wrap.is_some() {
-                    n.rendering.wrap = wrap.clone();
-                }
-                if n.rendering.prefix.is_none() && prefix.is_some() {
-                    n.rendering.prefix = prefix.clone();
-                }
-                if n.rendering.suffix.is_none() && suffix.is_some() {
-                    n.rendering.suffix = suffix.clone();
-                }
-            }
-            TemplateComponent::Variable(v) => {
-                if v.rendering.wrap.is_none() && wrap.is_some() {
-                    v.rendering.wrap = wrap.clone();
-                }
-                if v.rendering.prefix.is_none() && prefix.is_some() {
-                    v.rendering.prefix = prefix.clone();
-                }
-                if v.rendering.suffix.is_none() && suffix.is_some() {
-                    v.rendering.suffix = suffix.clone();
-                }
-            }
+            TemplateComponent::Date(d) => apply(&mut d.rendering),
+            TemplateComponent::Contributor(c) => apply(&mut c.rendering),
+            TemplateComponent::Title(t) => apply(&mut t.rendering),
+            TemplateComponent::Number(n) => apply(&mut n.rendering),
+            TemplateComponent::Variable(v) => apply(&mut v.rendering),
             _ => {} // List and future variants - don't modify
         }
     }

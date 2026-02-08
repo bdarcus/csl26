@@ -40,9 +40,9 @@ pub fn render_component(component: &ProcTemplateComponent) -> String {
 
     let prefix = rendering.prefix.as_deref().unwrap_or_default();
     let suffix = rendering.suffix.as_deref().unwrap_or_default();
+    let inner_prefix = rendering.inner_prefix.as_deref().unwrap_or_default();
+    let inner_suffix = rendering.inner_suffix.as_deref().unwrap_or_default();
     let wrap = rendering.wrap.as_ref().unwrap_or(&WrapPunctuation::None);
-    // Default: prefix inside wrap (for backward compatibility with "pp." in parentheses)
-    let prefix_inside = rendering.prefix_inside_wrap.unwrap_or(true);
 
     let (wrap_open, wrap_close) = match wrap {
         WrapPunctuation::None => ("", ""),
@@ -66,32 +66,19 @@ pub fn render_component(component: &ProcTemplateComponent) -> String {
         text = format!("<span style=\"font-variant:small-caps\">{}</span>", text);
     }
 
-    // Build output based on prefix_inside_wrap setting
-    // - prefix_inside_wrap: true (default) → "(pp. 1-10)"
-    // - prefix_inside_wrap: false → " [PhD thesis]." (space before bracket, suffix after)
-    if prefix_inside {
-        format!(
-            "{}{}{}{}{}{}{}",
-            wrap_open,
-            prefix,
-            component.prefix.as_deref().unwrap_or_default(),
-            text,
-            component.suffix.as_deref().unwrap_or_default(),
-            suffix,
-            wrap_close,
-        )
-    } else {
-        format!(
-            "{}{}{}{}{}{}{}",
-            prefix,
-            wrap_open,
-            component.prefix.as_deref().unwrap_or_default(),
-            text,
-            component.suffix.as_deref().unwrap_or_default(),
-            wrap_close,
-            suffix
-        )
-    }
+    // Build output: outer_prefix + wrap_open + inner_prefix + extracted_prefix + text + extracted_suffix + inner_suffix + wrap_close + outer_suffix
+    format!(
+        "{}{}{}{}{}{}{}{}{}",
+        prefix,
+        wrap_open,
+        inner_prefix,
+        component.prefix.as_deref().unwrap_or_default(),
+        text,
+        component.suffix.as_deref().unwrap_or_default(),
+        inner_suffix,
+        wrap_close,
+        suffix
+    )
 }
 
 /// Get effective rendering, applying global config, then local template settings, then type-specific overrides.
