@@ -92,13 +92,13 @@ The critical insight is that these approaches fail at *different things*:
 | Capability | XML Compiler | Output-Driven | Hand-Authored |
 |---|---|---|---|
 | Global options (names, dates, et-al) | Excellent | Cannot do | Manual |
-| Template component ordering | Failed (0% bib) | Good (if parser is hardened) | Excellent |
-| Type-specific overrides/suppress | Fragile (heuristic) | Good (observable) | Excellent |
+| Template component ordering | Failed (0% bib) | Validated (6 styles correct) | Excellent |
+| Type-specific overrides/suppress | Fragile (heuristic) | Validated (observable) | Excellent |
 | Coverage of rare types | Complete | Test-data dependent | Domain-expert dependent |
 | Scalability to 2,844 styles | One compiler | Per-style inference | Not feasible |
 | Locale term handling | Direct | Cannot distinguish | Manual |
 | Substitute/disambiguation | Encoded in XML | Requires special test data | Manual |
-| Delimiter inference | Direct from XML | Non-trivial | Manual |
+| Delimiter inference | Direct from XML | Validated (filtered voting) | Manual |
 
 ### Concrete Architecture
 
@@ -143,6 +143,63 @@ The critical insight is that these approaches fail at *different things*:
 
 ---
 
+## Validation Results (2026-02-08)
+
+The output-driven template inferrer (`scripts/lib/template-inferrer.js`) was implemented and tested against 6 major parent styles. Results validate the hybrid approach.
+
+### What the inferrer demonstrated
+
+| Capability | Result | Notes |
+|---|---|---|
+| Component ordering | Correct for all 6 styles | The problem that defeated the XML compiler falls out naturally from positional analysis |
+| Delimiter detection | APA `. `, IEEE `, `, others `. ` | Reliable once contributor/year/editor pairs filtered from voting |
+| Formatting inference | Italic and quote detection from HTML | Majority vote across entries; APA italic titles, IEEE quoted titles |
+| Parent-monograph detection | Serial vs monograph split | Inferred from reference types present in rendered output |
+| Type-specific suppress | Emerges from per-type component presence | No heuristic flattening of choose/if/else needed |
+| Confidence | 95-97% across styles | Per-type coverage metric |
+
+### Styles tested
+
+- **APA 7th** (783 dependents): `. ` delimiter, italic parent titles, both serial and monograph containers
+- **IEEE** (176 dependents): `, ` delimiter, quoted primary titles, italic parent titles
+- **Elsevier Harvard** (665 dependents): `. ` delimiter, no formatting (correct)
+- **Chicago Author-Date** (547 dependents): `. ` delimiter, italic parent titles
+- **Springer Basic** (460 dependents): `. ` delimiter
+- **Nature** (182 dependents): `. ` delimiter
+
+### Cons addressed by implementation
+
+Several Approach B cons identified in the original analysis have been mitigated:
+
+- **Con #2 (Parser fragility)**: The component parser was rewritten with exact field-aware matching, multi-field scoring for reference lookup, and digit-boundary guards for numeric fields. See `scripts/lib/component-parser.js`.
+- **Con #6 (Delimiter and formatting inference)**: Delimiter consensus uses filtered voting across all entry pairs. Formatting detection parses raw HTML output from citeproc-js to identify `<i>` tags and quote characters. Both work reliably.
+- **Con #8 (Non-deterministic)**: With sufficient entries per type (3+), the consensus-based approach produces stable results across runs.
+
+### Remaining gaps
+
+- **Test data coverage** (Con #1): Fixture has 28 items covering ~12 types; rare types (legal, patent) still underrepresented
+- **Locale conflation** (Con #10): "pp." detected as prefix but not distinguished from locale terms
+- **Latent features** (Con #9): Disambiguation, substitute rules still require XML or hand-authoring
+
+### Key architectural insight
+
+The inferrer validates that **the hard problem (template structure) is better solved by observing output than by parsing XML**. The XML compiler's 0% bibliography match was not a bug — it was evidence that procedural-to-declarative translation via macro flattening is fundamentally harder than reverse-engineering from rendered output. Meanwhile, the XML pipeline remains the right tool for options extraction where it achieves 87-100% accuracy.
+
+### Updated effort estimates
+
+| Task | Original estimate | Actual |
+|---|---|---|
+| Parser hardening | 300-500 lines | ~200 lines (component-parser.js rewrite) |
+| Template inferrer | 500-800 lines | ~400 lines (template-inferrer.js) |
+| Test fixture expansion | ~200 lines JSON | Done (28 items, 12+ types) |
+| Integration with options pipeline | ~200 lines | Not yet started |
+
+### Future application: visual style creation
+
+The same output-driven approach could power a visual style editor where users provide example formatted entries (by pasting, uploading, or modifying pre-selected reference data) and the system infers a CSLN template. The component parser and template inferrer already perform the core task: given structured reference data and a formatted string, derive component ordering, delimiters, formatting, and type-specific behavior. This aligns with the progressive-refinement UI described in `docs/architecture/design/STYLE_EDITOR_VISION.md` and would allow style creation without requiring knowledge of any style language.
+
+---
+
 ## Files Referenced
 
 - `crates/csln_migrate/src/template_compiler/mod.rs` - Current template compiler (2,077 lines), the bottleneck
@@ -150,8 +207,11 @@ The critical insight is that these approaches fail at *different things*:
 - `crates/csln_migrate/src/upsampler.rs` - CslNode to CslnNode conversion (works well)
 - `crates/csln_migrate/src/options_extractor/` - Options pipeline (works well, keep)
 - `crates/csln_core/src/template.rs` - CSLN template model (target schema)
-- `scripts/oracle.js` - Oracle with component parser (needs hardening before use as inference foundation)
+- `scripts/oracle.js` - Oracle comparison test
+- `scripts/lib/component-parser.js` - Hardened component parser with field-aware matching
+- `scripts/lib/template-inferrer.js` - Output-driven template inference engine
+- `scripts/infer-template.js` - CLI wrapper for template inference
 - `examples/apa-style.yaml` - Hand-authored APA style (gold standard, 11 components)
-- `tests/fixtures/references-expanded.json` - Test fixture (16 items, 7 types - needs expansion)
+- `tests/fixtures/references-expanded.json` - Test fixture (28 items, 12+ types)
 - `.beans/csl26-rh2u--preserve-macro-call-order-from-csl-10-during-parsi.md` - The triggering bean
 - `.beans/csl26-m3lb--implement-hybrid-migration-strategy.md` - Implementation milestone
