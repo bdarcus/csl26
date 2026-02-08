@@ -607,23 +607,50 @@ function inferTemplate(stylePath, section = 'bibliography') {
     typesAnalyzed.map(type => [type, typedComponents[type].entries.length])
   );
 
-  // Confidence: fraction of entries where all consensus components were found
-  let confidence = 0;
-  if (rendered.entries.length > 0) {
-    let matchCount = 0;
-    for (let idx = 0; idx < rendered.entries.length; idx++) {
-      const comps = parseComponents(rendered.entries[idx], refByEntry[idx]);
-      let allFound = true;
-      for (const compName of consensusOrdering) {
-        if (!comps[compName] || !comps[compName].found) {
-          allFound = false;
-          break;
-        }
+  // Per-type confidence: for each type, what fraction of its expected
+  // components were found in each entry? Average across all entries.
+  // "Expected" = components that appear in >50% of entries for that type.
+  const perTypeConfidence = {};
+  let totalWeightedConfidence = 0;
+  let totalEntries = 0;
+
+  for (const [type, data] of Object.entries(typedComponents)) {
+    if (type === 'unknown') continue;
+
+    // Components expected for this type (present in >50% of its entries)
+    const expectedComponents = [];
+    for (const compName of consensusOrdering) {
+      const count = data.componentCounts[compName] || 0;
+      if (count / data.entries.length >= 0.5) {
+        expectedComponents.push(compName);
       }
-      if (allFound) matchCount++;
     }
-    confidence = matchCount / rendered.entries.length;
+
+    if (expectedComponents.length === 0) continue;
+
+    // For each entry of this type, what fraction of expected components found?
+    let typeTotal = 0;
+    for (const entry of data.entries) {
+      const idx = rendered.entries.indexOf(entry);
+      const comps = parseComponents(entry, refByEntry[idx]);
+      let found = 0;
+      for (const compName of expectedComponents) {
+        if (comps[compName]?.found) found++;
+      }
+      typeTotal += found / expectedComponents.length;
+    }
+
+    const typeConfidence = typeTotal / data.entries.length;
+    perTypeConfidence[type] = {
+      confidence: typeConfidence,
+      expectedComponents: expectedComponents.length,
+      entryCount: data.entries.length,
+    };
+    totalWeightedConfidence += typeConfidence * data.entries.length;
+    totalEntries += data.entries.length;
   }
+
+  const confidence = totalEntries > 0 ? totalWeightedConfidence / totalEntries : 0;
 
   // Find consensus delimiter
   let delimiterConsensus = '. '; // default
@@ -646,6 +673,7 @@ function inferTemplate(stylePath, section = 'bibliography') {
       typesAnalyzed,
       entriesPerType,
       confidence,
+      perTypeConfidence,
       delimiterConsensus,
       entryCount: rendered.entries.length,
       section,
