@@ -33,6 +33,15 @@ pub struct Reference {
     /// Translators
     #[serde(skip_serializing_if = "Option::is_none")]
     pub translator: Option<Vec<Name>>,
+    /// Recipient
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub recipient: Option<Vec<Name>>,
+    /// Director
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub director: Option<Vec<Name>>,
+    /// Interviewer
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub interviewer: Option<Vec<Name>>,
     /// Primary title
     #[serde(skip_serializing_if = "Option::is_none")]
     pub title: Option<String>,
@@ -82,6 +91,21 @@ pub struct Reference {
     /// Publisher place
     #[serde(skip_serializing_if = "Option::is_none")]
     pub publisher_place: Option<String>,
+    /// Authority
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub authority: Option<String>,
+    /// Section
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub section: Option<String>,
+    /// Event
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub event: Option<String>,
+    /// Medium
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub medium: Option<String>,
+    /// Number
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub number: Option<String>,
     /// Genre
     #[serde(skip_serializing_if = "Option::is_none")]
     pub genre: Option<String>,

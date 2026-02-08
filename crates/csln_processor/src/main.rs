@@ -386,6 +386,212 @@ fn create_test_bibliography() -> Bibliography {
         }),
     );
 
+    // ITEM-16: Newspaper article
+    bib.insert(
+        "ITEM-16".to_string(),
+        Reference::from(LegacyReference {
+            id: "ITEM-16".to_string(),
+            ref_type: "article-newspaper".to_string(),
+            author: Some(vec![Name::new("Rodriguez", "Maria")]),
+            title: Some("Major Breakthrough in Quantum Computing Announced".to_string()),
+            container_title: Some("The New York Times".to_string()),
+            issued: Some(DateVariable::full(2024, 3, 15)),
+            section: Some("Science".to_string()),
+            ..Default::default()
+        }),
+    );
+
+    // ITEM-17: Magazine article
+    bib.insert(
+        "ITEM-17".to_string(),
+        Reference::from(LegacyReference {
+            id: "ITEM-17".to_string(),
+            ref_type: "article-magazine".to_string(),
+            author: Some(vec![Name::new("Thompson", "Alexander")]),
+            title: Some("The Art of Minimalism in Modern Design".to_string()),
+            container_title: Some("Wired".to_string()),
+            issued: Some(DateVariable::year_month(2023, 6)),
+            volume: Some(StringOrNumber::String("31".to_string())),
+            issue: Some(StringOrNumber::String("6".to_string())),
+            page: Some("42-49".to_string()),
+            ..Default::default()
+        }),
+    );
+
+    // ITEM-18: Encyclopedia entry
+    bib.insert(
+        "ITEM-18".to_string(),
+        Reference::from(LegacyReference {
+            id: "ITEM-18".to_string(),
+            ref_type: "entry-encyclopedia".to_string(),
+            author: Some(vec![Name::new("Vasari", "Giorgio")]),
+            title: Some("Renaissance Art and Culture".to_string()),
+            container_title: Some("Encyclopedia of World History".to_string()),
+            issued: Some(DateVariable::year(2022)),
+            publisher: Some("Oxford University Press".to_string()),
+            volume: Some(StringOrNumber::String("5".to_string())),
+            page: Some("234-256".to_string()),
+            ..Default::default()
+        }),
+    );
+
+    // ITEM-19: Dataset
+    bib.insert(
+        "ITEM-19".to_string(),
+        Reference::from(LegacyReference {
+            id: "ITEM-19".to_string(),
+            ref_type: "dataset".to_string(),
+            author: Some(vec![Name::literal("NASA Goddard Institute for Space Studies")]),
+            title: Some("Global Temperature Anomalies 1880-2023".to_string()),
+            issued: Some(DateVariable::year(2024)),
+            publisher: Some("NASA".to_string()),
+            url: Some("https://data.giss.nasa.gov/gistemp/".to_string()),
+            ..Default::default()
+        }),
+    );
+
+    // ITEM-20: Legal case
+    bib.insert(
+        "ITEM-20".to_string(),
+        Reference::from(LegacyReference {
+            id: "ITEM-20".to_string(),
+            ref_type: "legal_case".to_string(),
+            title: Some("Brown v. Board of Education".to_string()),
+            issued: Some(DateVariable::full(1954, 5, 17)),
+            authority: Some("U.S. Supreme Court".to_string()),
+            volume: Some(StringOrNumber::String("347".to_string())),
+            container_title: Some("U.S. Reports".to_string()),
+            page: Some("483".to_string()),
+            ..Default::default()
+        }),
+    );
+
+    // ITEM-21: Patent
+    bib.insert(
+        "ITEM-21".to_string(),
+        Reference::from(LegacyReference {
+            id: "ITEM-21".to_string(),
+            ref_type: "patent".to_string(),
+            author: Some(vec![
+                Name::new("Johnson", "David"),
+                Name::new("Lee", "Sarah"),
+            ]),
+            title: Some("Method for Efficient Data Compression".to_string()),
+            issued: Some(DateVariable::full(2021, 7, 13)),
+            number: Some("US 11,043,211 B2".to_string()),
+            ..Default::default()
+        }),
+    );
+
+    // ITEM-22: Motion picture
+    bib.insert(
+        "ITEM-22".to_string(),
+        Reference::from(LegacyReference {
+            id: "ITEM-22".to_string(),
+            ref_type: "motion_picture".to_string(),
+            author: Some(vec![Name::new("Lumière", "Louis")]),
+            title: Some("The Arrival of a Train at La Ciotat Station".to_string()),
+            issued: Some(DateVariable::year(1896)),
+            genre: Some("Short film".to_string()),
+            medium: Some("film".to_string()),
+            ..Default::default()
+        }),
+    );
+
+    // ITEM-23: Broadcast
+    bib.insert(
+        "ITEM-23".to_string(),
+        Reference::from(LegacyReference {
+            id: "ITEM-23".to_string(),
+            ref_type: "broadcast".to_string(),
+            author: Some(vec![Name::new("Sagan", "Carl")]),
+            title: Some("The Universe in a Nutshell".to_string()),
+            issued: Some(DateVariable::full(1980, 9, 28)),
+            container_title: Some("Cosmos: A Spacetime Odyssey".to_string()),
+            number: Some("1".to_string()),
+            medium: Some("Television".to_string()),
+            ..Default::default()
+        }),
+    );
+
+    // ITEM-24: Interview
+    bib.insert(
+        "ITEM-24".to_string(),
+        Reference::from(LegacyReference {
+            id: "ITEM-24".to_string(),
+            ref_type: "interview".to_string(),
+            author: Some(vec![Name::new("Bengio", "Yoshua")]),
+            title: Some("The Future of Artificial Intelligence".to_string()),
+            issued: Some(DateVariable::full(2023, 11, 10)),
+            url: Some("https://example.com/interview".to_string()),
+            interviewer: Some(vec![Name::new("Colbert", "Stephen")]),
+            medium: Some("Video interview".to_string()),
+            ..Default::default()
+        }),
+    );
+
+    // ITEM-25: Book with translator
+    bib.insert(
+        "ITEM-25".to_string(),
+        Reference::from(LegacyReference {
+            id: "ITEM-25".to_string(),
+            ref_type: "book".to_string(),
+            author: Some(vec![Name::new("Kafka", "Franz")]),
+            title: Some("Metamorphosis".to_string()),
+            issued: Some(DateVariable::year(1915)),
+            publisher: Some("Kurt Wolff Verlag".to_string()),
+            publisher_place: Some("Leipzig".to_string()),
+            translator: Some(vec![Name::new("Wyllie", "David")]),
+            ..Default::default()
+        }),
+    );
+
+    // ITEM-26: Spinoza (tests older dates)
+    bib.insert(
+        "ITEM-26".to_string(),
+        Reference::from(LegacyReference {
+            id: "ITEM-26".to_string(),
+            ref_type: "book".to_string(),
+            author: Some(vec![Name::new("Spinoza", "Baruch")]),
+            title: Some("Éthique".to_string()),
+            issued: Some(DateVariable::year(1677)),
+            publisher: Some("Jan Rieuwertsz".to_string()),
+            publisher_place: Some("Amsterdam".to_string()),
+            ..Default::default()
+        }),
+    );
+
+    // ITEM-27: Report with editor
+    bib.insert(
+        "ITEM-27".to_string(),
+        Reference::from(LegacyReference {
+            id: "ITEM-27".to_string(),
+            ref_type: "report".to_string(),
+            author: Some(vec![Name::literal("United Nations Environment Programme")]),
+            editor: Some(vec![Name::new("Díaz", "Sandra")]),
+            title: Some("State of the World's Biodiversity".to_string()),
+            issued: Some(DateVariable::year(2019)),
+            publisher: Some("UNEP".to_string()),
+            publisher_place: Some("Nairobi".to_string()),
+            genre: Some("Assessment report".to_string()),
+            ..Default::default()
+        }),
+    );
+
+    // ITEM-28: Personal communication
+    bib.insert(
+        "ITEM-28".to_string(),
+        Reference::from(LegacyReference {
+            id: "ITEM-28".to_string(),
+            ref_type: "personal_communication".to_string(),
+            author: Some(vec![Name::new("Smith", "Patricia")]),
+            title: Some("Discussion on CSLN Schema Design".to_string()),
+            issued: Some(DateVariable::full(2024, 2, 7)),
+            recipient: Some(vec![Name::new("Darcus", "Bruce")]),
+            ..Default::default()
+        }),
+    );
+
     bib
 }
 
@@ -394,7 +600,9 @@ fn print_human(processor: &Processor, style_name: &str, show_cite: bool, show_bi
 
     let item_ids = [
         "ITEM-1", "ITEM-2", "ITEM-3", "ITEM-4", "ITEM-5", "ITEM-6", "ITEM-7", "ITEM-8", "ITEM-9",
-        "ITEM-10", "ITEM-11", "ITEM-12", "ITEM-13", "ITEM-14", "ITEM-15",
+        "ITEM-10", "ITEM-11", "ITEM-12", "ITEM-13", "ITEM-14", "ITEM-15", "ITEM-16", "ITEM-17",
+        "ITEM-18", "ITEM-19", "ITEM-20", "ITEM-21", "ITEM-22", "ITEM-23", "ITEM-24", "ITEM-25",
+        "ITEM-26", "ITEM-27", "ITEM-28",
     ];
 
     if show_cite {
@@ -449,7 +657,12 @@ fn print_human(processor: &Processor, style_name: &str, show_cite: bool, show_bi
 fn print_json(processor: &Processor, style_name: &str, show_cite: bool, show_bib: bool) {
     use serde_json::json;
 
-    let item_ids = ["ITEM-1", "ITEM-2", "ITEM-3", "ITEM-4"];
+    let item_ids = [
+        "ITEM-1", "ITEM-2", "ITEM-3", "ITEM-4", "ITEM-5", "ITEM-6", "ITEM-7", "ITEM-8", "ITEM-9",
+        "ITEM-10", "ITEM-11", "ITEM-12", "ITEM-13", "ITEM-14", "ITEM-15", "ITEM-16", "ITEM-17",
+        "ITEM-18", "ITEM-19", "ITEM-20", "ITEM-21", "ITEM-22", "ITEM-23", "ITEM-24", "ITEM-25",
+        "ITEM-26", "ITEM-27", "ITEM-28",
+    ];
 
     let mut result = json!({
         "style": style_name,

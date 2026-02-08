@@ -120,13 +120,12 @@ function renderCitations(styleXml, testItems, lang = 'en-US') {
     const citations = {};
     for (const id of itemIds) {
       try {
-        const citationResult = engine.makeCitation([{ id }]);
-        citations[id] = citationResult || '';
+        const text = engine.makeCitationCluster([{ id }]);
+        citations[id] = text || '';
       } catch (e) {
         citations[id] = null;
       }
     }
-
     return citations;
   } catch (error) {
     console.error(`Failed to render citations: ${error.message}`);
@@ -156,6 +155,8 @@ function aggregateByType(entries, refByEntry) {
         entries: [],
         componentCounts: {},
         componentInstances: {},
+        // Track components with data in ref but suppressed in output
+        suppressedCounts: {},
       };
     }
 
@@ -174,6 +175,12 @@ function aggregateByType(entries, refByEntry) {
         typedComponents[type].componentInstances[name].push(comp);
       }
     }
+
+    // Special handling: track issue suppression (data present but not rendered)
+    if (refData?.issue && !comps.issue?.found) {
+      typedComponents[type].suppressedCounts['issue'] =
+        (typedComponents[type].suppressedCounts['issue'] || 0) + 1;
+    }
   }
 
   return typedComponents;
@@ -181,33 +188,21 @@ function aggregateByType(entries, refByEntry) {
 
 /**
  * Find the consensus component ordering across all reference types.
- *
- * Strategy: Build a merged ordering that includes ALL observed components.
- * Uses pairwise precedence voting — for each pair of components (A, B),
- * count how many entries have A before B vs B before A. The component
- * with more "before" votes goes first in the merged order.
- *
- * This handles the key problem: different reference types have different
- * component subsets (journals have containerTitle+volume; books have
- * publisher+place), but they all share the same relative ordering for
- * the components they have in common.
  */
 function findConsensusOrdering(entries, refByEntry) {
   const typedComponents = aggregateByType(entries, refByEntry);
 
-  // Collect all individual orderings across all entries
   const allOrderings = [];
   const orderingsByType = {};
 
   for (const [type, data] of Object.entries(typedComponents)) {
     const typeOrderings = [];
     for (const entry of data.entries) {
-      const refData = refByEntry[entries.indexOf(entry)];
+      const refData = findRefDataForEntry(entry, loadFixtures());
       const ordering = analyzeOrdering(entry, refData);
       allOrderings.push(ordering);
       typeOrderings.push(ordering);
     }
-    // Most common ordering per type (for diagnostics)
     const counts = {};
     for (const o of typeOrderings) {
       const k = o.join(',');
@@ -217,7 +212,6 @@ function findConsensusOrdering(entries, refByEntry) {
     orderingsByType[type] = best[0]?.[0]?.split(',').filter(Boolean) || [];
   }
 
-  // Collect all unique component names seen across all entries
   const allComponents = new Set();
   for (const ordering of allOrderings) {
     for (const comp of ordering) {
@@ -225,7 +219,6 @@ function findConsensusOrdering(entries, refByEntry) {
     }
   }
 
-  // Count how often each component appears across all entries
   const componentFrequency = {};
   for (const comp of allComponents) {
     componentFrequency[comp] = 0;
@@ -236,7 +229,6 @@ function findConsensusOrdering(entries, refByEntry) {
     }
   }
 
-  // Build pairwise precedence matrix: precedence[A][B] = count of A before B
   const precedence = {};
   for (const comp of allComponents) {
     precedence[comp] = {};
@@ -253,9 +245,6 @@ function findConsensusOrdering(entries, refByEntry) {
     }
   }
 
-  // Sort components using pairwise votes as a comparator.
-  // For sort(a, b): negative = a first, positive = b first.
-  // If aBeforeB > bBeforeA, a should go first (return negative).
   const componentList = [...allComponents];
   componentList.sort((a, b) => {
     const aBeforeB = precedence[a]?.[b] || 0;
@@ -263,12 +252,9 @@ function findConsensusOrdering(entries, refByEntry) {
     if (aBeforeB !== bBeforeA) {
       return aBeforeB > bBeforeA ? -1 : 1;
     }
-    // Tie-break: more frequent components first
     return (componentFrequency[b] || 0) - (componentFrequency[a] || 0);
   });
 
-  // Post-process: ensure issue immediately follows volume (they always
-  // appear as a pair in citation styles, e.g. "volume(issue)")
   const volIdx = componentList.indexOf('volume');
   const issIdx = componentList.indexOf('issue');
   if (volIdx >= 0 && issIdx >= 0 && issIdx !== volIdx + 1) {
@@ -277,7 +263,6 @@ function findConsensusOrdering(entries, refByEntry) {
     componentList.splice(newVolIdx + 1, 0, 'issue');
   }
 
-  // Filter to components that appear in at least 10% of entries
   const minFrequency = Math.max(1, Math.floor(allOrderings.length * 0.1));
   const consensusOrdering = componentList.filter(
     comp => (componentFrequency[comp] || 0) >= minFrequency
@@ -293,9 +278,6 @@ function findConsensusOrdering(entries, refByEntry) {
 
 // -- Delimiter detection and consensus --
 
-/**
- * Find the most common delimiter between two component names.
- */
 function findDelimiterConsensus(entries, refByEntry, comp1, comp2, minFraction) {
   const delimiters = {};
 
@@ -307,18 +289,12 @@ function findDelimiterConsensus(entries, refByEntry, comp1, comp2, minFraction) 
     for (const det of dets) {
       if (det.between[0] === comp1 && det.between[1] === comp2) {
         const delim = det.delimiter;
-        // if (comp1 === 'editors') console.error(`  - entry delim: "${delim}"`);
         delimiters[delim] = (delimiters[delim] || 0) + 1;
       }
     }
   }
 
-  // Return most common delimiter, trimming stray quotes from formatting.
-  // Require the pair to appear in at least minFraction of entries (default 0)
-  // to avoid letting rare type-specific pairs set prefixes.
-  if (Object.keys(delimiters).length === 0) {
-    return null;
-  }
+  if (Object.keys(delimiters).length === 0) return null;
   const sorted = Object.entries(delimiters).sort((a, b) => b[1] - a[1]);
   const minCount = Math.max(1, Math.floor(entries.length * (minFraction || 0)));
   if (sorted[0][1] < minCount) return null;
@@ -327,21 +303,8 @@ function findDelimiterConsensus(entries, refByEntry, comp1, comp2, minFraction) 
 
 // -- Prefix/suffix and wrap detection --
 
-/**
- * Detect common prefix patterns for a component across multiple entries.
- *
- * The component parser's position often INCLUDES the prefix (e.g. position
- * covers "https://doi.org/10.xxx" or "pp. 123-456"). So we check two zones:
- * 1. Text INSIDE the matched position before the core value
- * 2. Text BEFORE the matched position (for "In " before editor names)
- *
- * Returns the prefix string if >50% of entries share it, otherwise null.
- */
-/**
- * Detect common prefix patterns across all entries, returning global consensus and overrides.
- */
 function detectPrefixPatterns(componentName, entries, refByEntry) {
-  const results = {}; // type -> prefix -> count
+  const results = {};
 
   for (let idx = 0; idx < entries.length; idx++) {
     const refData = refByEntry[idx];
@@ -358,18 +321,15 @@ function detectPrefixPatterns(componentName, entries, refByEntry) {
     const before = normalized.slice(beforeStart, comp.position.start);
 
     let prefix = null;
-    // DOI: "https://doi.org/" is inside the match
     if (/^https?:\/\/doi\.org\//i.test(matchText)) {
       prefix = 'https://doi.org/';
     }
-    // Pages: "pp." or "p." is inside the match
     else if (/^pp?\.\s*/i.test(matchText)) {
       prefix = 'pp. ';
     }
-    // Container group prefixes: "In " or "on "
     else if ((componentName === 'editors' || componentName.startsWith('containerTitle')) &&
-      /(?:In|on)\s+$/i.test(before)) {
-      const match = before.match(/(?:In|on)\s+$/i);
+      /(?:In|on)[:\s]+\s*$/i.test(before)) {
+      const match = before.match(/(?:In|on)[:\s]+\s*$/i);
       prefix = match[0];
     }
 
@@ -379,7 +339,6 @@ function detectPrefixPatterns(componentName, entries, refByEntry) {
     }
   }
 
-  // Determine winner per type (require 50% threshold)
   const typeWinners = {};
   for (const [type, pfxs] of Object.entries(results)) {
     const typeTotal = entries.filter((e, i) => {
@@ -394,7 +353,6 @@ function detectPrefixPatterns(componentName, entries, refByEntry) {
     }
   }
 
-  // Determine global consensus
   const allTypesWithComp = new Set(refByEntry.filter(r => r).map(r => r.type || 'unknown'));
   const globalCounts = {};
   for (const pfx of Object.values(typeWinners)) {
@@ -415,11 +373,6 @@ function detectPrefixPatterns(componentName, entries, refByEntry) {
   return { globalWinner, overrides };
 }
 
-/**
- * Detect if volume and issue appear as a grouped pattern like "12(3)"
- * with no separator between them. Returns true if >50% of entries
- * with both volume and issue show this pattern.
- */
 function detectVolumeIssueGrouping(entries, refByEntry) {
   let withBoth = 0;
   let grouped = 0;
@@ -431,13 +384,8 @@ function detectVolumeIssueGrouping(entries, refByEntry) {
 
     withBoth++;
     const normalized = normalizeText(entries[idx]);
-    // Check text between volume end and issue start
-    const between = normalized.slice(
-      comps.volume.position.end,
-      comps.issue.position.start
-    );
+    const between = normalized.slice(comps.volume.position.end, comps.issue.position.start);
 
-    // Grouped if only "(" or "(" with optional space between them
     if (/^\s*\(?\s*$/.test(between)) {
       grouped++;
     }
@@ -446,15 +394,8 @@ function detectVolumeIssueGrouping(entries, refByEntry) {
   return withBoth > 0 && grouped / withBoth >= 0.5;
 }
 
-/**
- * Detect wrap pattern (parentheses/brackets) around a component.
- * Returns 'parentheses' or 'brackets' if >50% of entries show the pattern.
- */
-/**
- * Detect wrap patterns across all entries, returning global consensus and overrides.
- */
 function detectWrapPatterns(componentName, entries, refByEntry) {
-  const results = {}; // type -> wrap -> count
+  const results = {};
 
   for (let idx = 0; idx < entries.length; idx++) {
     const refData = refByEntry[idx];
@@ -482,10 +423,8 @@ function detectWrapPatterns(componentName, entries, refByEntry) {
     }
   }
 
-  // Determine winner per type (require 70% threshold within type)
   const typeWinners = {};
   for (const [type, wraps] of Object.entries(results)) {
-    // Count entries of this type that HAVE this component
     const typeTotal = entries.filter((e, i) => {
       if ((refByEntry[i]?.type || 'unknown') !== type) return false;
       const c = parseComponents(e, refByEntry[i]);
@@ -498,7 +437,6 @@ function detectWrapPatterns(componentName, entries, refByEntry) {
     }
   }
 
-  // Determine global consensus across ALL types that have the component
   const allTypesWithComp = new Set();
   for (let i = 0; i < entries.length; i++) {
     const type = refByEntry[i]?.type || 'unknown';
@@ -512,7 +450,6 @@ function detectWrapPatterns(componentName, entries, refByEntry) {
   }
   const bestGlobal = Object.entries(globalCounts).sort((a, b) => b[1] - a[1]);
 
-  // Global winner must appear in >50% of ALL types that have the component
   const globalWinner = (bestGlobal.length > 0 && bestGlobal[0][1] / allTypesWithComp.size > 0.5)
     ? bestGlobal[0][0] : null;
 
@@ -528,15 +465,6 @@ function detectWrapPatterns(componentName, entries, refByEntry) {
 
 // -- Formatting detection --
 
-/**
- * Detect if a component is rendered with italic or quote formatting.
- *
- * Examines the raw HTML output from citeproc-js (before normalizeText
- * strips tags). Looks for <i>...</i> around the value (italic) or
- * quote characters (\u201c/\u201d or ") around it (quotes).
- *
- * Returns { emph: true }, { wrap: 'quotes' }, or null.
- */
 function detectFormatting(componentName, entries, refByEntry) {
   const formats = { italic: 0, quotes: 0 };
   let total = 0;
@@ -545,17 +473,11 @@ function detectFormatting(componentName, entries, refByEntry) {
     const refData = refByEntry[idx];
     if (!refData) continue;
 
-    // Get the raw value to search for in the HTML entry
     let rawValue = null;
     switch (componentName) {
-      case 'title':
-        rawValue = refData.title;
-        break;
-      case 'containerTitle':
-        rawValue = refData['container-title'];
-        break;
-      default:
-        return null; // Only titles get formatting
+      case 'title': rawValue = refData.title; break;
+      case 'containerTitle': rawValue = refData['container-title']; break;
+      default: return null;
     }
     if (!rawValue) continue;
 
@@ -563,32 +485,22 @@ function detectFormatting(componentName, entries, refByEntry) {
     const valueLower = rawValue.toLowerCase();
     const htmlLower = rawHtml.toLowerCase();
 
-    // Check if value exists in the entry at all
     const valueIdx = htmlLower.indexOf(valueLower);
     if (valueIdx < 0) continue;
 
     total++;
-
-    // Check for <i> wrapping: look for <i> before and </i> after
     const before = rawHtml.substring(Math.max(0, valueIdx - 10), valueIdx);
-    const after = rawHtml.substring(
-      valueIdx + rawValue.length,
-      valueIdx + rawValue.length + 10
-    );
+    const after = rawHtml.substring(valueIdx + rawValue.length, valueIdx + rawValue.length + 10);
 
     if (/<i>\s*$/i.test(before) && /^\s*<\/i>/i.test(after)) {
       formats.italic++;
     }
 
-    // Check for quote wrapping: \u201c before, \u201d after (or ASCII ")
     const charBefore = rawHtml[valueIdx - 1] || '';
     const charAfter = rawHtml[valueIdx + rawValue.length] || '';
     if ((charBefore === '\u201c' || charBefore === '"') &&
       (charAfter === '\u201d' || charAfter === '"' || charAfter === ',')) {
-      // Comma after is common: "Title," — check char before for opening quote
-      if (charBefore === '\u201c' || charBefore === '"') {
-        formats.quotes++;
-      }
+      formats.quotes++;
     }
   }
 
@@ -598,116 +510,71 @@ function detectFormatting(componentName, entries, refByEntry) {
   return null;
 }
 
-/**
- * Detect name order by comparing rendered output to input name data.
- * Returns 'family-first' or 'given-first' or null if can't determine.
- * @param {string} componentText - The text portion of the component
- * @param {Object} refData - The reference data
- * @param {string} role - The name role to check ('author', 'editor', etc.)
- */
-/**
- * Detect name order by comparing rendered output to input name data.
- * Returns 'family-first' or 'given-first' or null if can't determine.
- * @param {string} componentText - The text portion of the component (e.g. window around name)
- * @param {Array<Object>} names - The list of name objects to check
- */
+// -- Name order detection --
+
 function detectNameOrder(componentText, names) {
   if (!componentText || !names || !names.length) return null;
-
-  // Find first name with both family and given
   const nameWithBoth = names.find(n => n.family && n.given);
   if (!nameWithBoth) return null;
 
-  const family = nameWithBoth.family;
-  const given = nameWithBoth.given;
-
-  // Normalize the component text for comparison (lowercase for case-insensitive matching)
+  const family = nameWithBoth.family.toLowerCase();
   const text = normalizeText(componentText).toLowerCase();
+  const familyPos = text.indexOf(family);
+  const givenInitial = nameWithBoth.given.charAt(0).toLowerCase();
+  let givenPos = text.indexOf(nameWithBoth.given.toLowerCase());
 
-  // Find positions in the rendered output
-  const familyPos = text.indexOf(family.toLowerCase());
-  // For given name, also check for initial form (e.g., "Thomas" -> "T." or "T")
-  const givenInitial = given.charAt(0);
-  let givenPos = text.indexOf(given.toLowerCase());
-
-  // If full given not found, check for initial
   if (givenPos === -1 && givenInitial) {
-    // Look for patterns like "T." or "T. S." at word boundaries
-    const initialPattern = new RegExp(`\\b${givenInitial.toLowerCase()}\\.?`, 'i');
-    const match = text.match(initialPattern);
-    if (match) {
-      givenPos = match.index;
-    }
+    const match = text.match(new RegExp(`\\b${givenInitial}\\.?`, 'i'));
+    if (match) givenPos = match.index;
   }
 
-  if (familyPos === -1 || givenPos === -1) {
-    return null;
-  }
-
-  const result = familyPos < givenPos ? 'family-first' : 'given-first';
-  return result;
+  if (familyPos === -1 || givenPos === -1) return null;
+  return familyPos < givenPos ? 'family-first' : 'given-first';
 }
 
-/**
- * Detect name order patterns across all entries.
- * Returns global base order and type-specific overrides.
- */
 function detectNameOrderPatterns(parserName, role, entries, refByEntry) {
-  const results = {}; // type -> order -> count
+  const results = {};
 
   for (let i = 0; i < entries.length; i++) {
     const entry = entries[i];
     const refData = refByEntry[i];
     if (!refData) continue;
 
-    // Check if entry actually has this component
     const comps = parseComponents(entry, refData);
-    if (!comps[parserName] || !comps[parserName].found || !comps[parserName].position) continue;
+    if (!comps[parserName]?.found || !comps[parserName].position) continue;
 
     const type = refData.type || 'unknown';
-
-    // Extract a tight window around the component position
     const normalized = normalizeText(entry);
     const pos = comps[parserName].position;
-    const start = Math.max(0, pos.start - 5);
-    const end = Math.min(normalized.length, pos.end + 5);
-    const windowText = normalized.substring(start, end);
+    const windowText = normalized.substring(Math.max(0, pos.start - 5), Math.min(normalized.length, pos.end + 5));
 
-    // Get relevant names for this component
     const names = (parserName === 'contributors')
-      ? (refData.author && refData.author.length > 0 ? refData.author : refData.editor)
+      ? (refData.author?.length > 0 ? refData.author : refData.editor)
       : refData[role];
 
     const order = detectNameOrder(windowText, names);
-
     if (order) {
       if (!results[type]) results[type] = {};
       results[type][order] = (results[type][order] || 0) + 1;
     }
   }
 
-  // Determine winner per type
   const typeWinners = {};
   for (const [type, orders] of Object.entries(results)) {
     const best = Object.entries(orders).sort((a, b) => b[1] - a[1]);
     if (best.length > 0) typeWinners[type] = best[0][0];
   }
 
-  // Determine global consensus
   const globalOrders = {};
   for (const order of Object.values(typeWinners)) {
     globalOrders[order] = (globalOrders[order] || 0) + 1;
   }
-
   const bestGlobal = Object.entries(globalOrders).sort((a, b) => b[1] - a[1]);
   const globalWinner = bestGlobal.length > 0 ? bestGlobal[0][0] : null;
 
-  // Find overrides
   const overrides = {};
   for (const [type, winner] of Object.entries(typeWinners)) {
-    if (winner && winner !== globalWinner) {
-      overrides[type] = winner;
-    }
+    if (winner && winner !== globalWinner) overrides[type] = winner;
   }
 
   return { globalWinner, overrides };
@@ -715,91 +582,40 @@ function detectNameOrderPatterns(parserName, role, entries, refByEntry) {
 
 // -- CSLN component mapping --
 
-/**
- * Map parser component names to CSLN template component objects.
- */
 function mapComponentToYaml(componentName, entry, refData) {
   const comps = parseComponents(entry, refData);
-  // Map split container title names back to parser's name
-  const parserName = componentName.startsWith('containerTitle')
-    ? 'containerTitle' : componentName;
+  const parserName = componentName.startsWith('containerTitle') ? 'containerTitle' : componentName;
   const comp = comps[parserName];
 
-  if (!comp || !comp.found) {
-    return null;
-  }
+  if (!comp?.found) return null;
 
   switch (componentName) {
-    case 'contributors': {
-      return { contributor: 'author', form: 'long' };
-    }
-
+    case 'contributors': return { contributor: 'author', form: 'long' };
     case 'year': {
       const obj = { date: 'issued', form: 'year' };
-      const yearParensMatch = normalizeText(entry).match(/\((\d{4})\)/);
-      if (yearParensMatch) {
-        obj.wrap = 'parentheses';
-      }
+      if (normalizeText(entry).match(/\((\d{4})\)/)) obj.wrap = 'parentheses';
       return obj;
     }
-
-    case 'title':
-      return { title: 'primary' };
-
+    case 'title': return { title: 'primary' };
     case 'containerTitle':
-    case 'containerTitleSerial':
-      return { title: 'parent-serial' };
-
-    case 'containerTitleMonograph':
-      return { title: 'parent-monograph' };
-
-    case 'volume':
-      return { number: 'volume' };
-
-    case 'issue':
-      return { number: 'issue' };
-
-    case 'pages':
-      return { number: 'pages' };
-
-    case 'publisher':
-      return { variable: 'publisher' };
-
-    case 'place':
-      return { variable: 'publisher-place' };
-
-    case 'doi':
-      return { variable: 'doi' };
-
-    case 'url':
-      return { variable: 'url' };
-
-    case 'edition':
-      return { number: 'edition' };
-
-    case 'editors': {
-      return { contributor: 'editor', form: 'verb' };
-    }
-
-    default:
-      return null;
+    case 'containerTitleSerial': return { title: 'parent-serial' };
+    case 'containerTitleMonograph': return { title: 'parent-monograph' };
+    case 'volume': return { number: 'volume' };
+    case 'issue': return { number: 'issue' };
+    case 'pages': return { number: 'pages' };
+    case 'publisher': return { variable: 'publisher' };
+    case 'place': return { variable: 'publisher-place' };
+    case 'doi': return { variable: 'doi' };
+    case 'url': return { variable: 'url' };
+    case 'edition': return { number: 'edition' };
+    case 'editors': return { contributor: 'editor', form: 'verb' };
+    default: return null;
   }
 }
 
 // -- Suppress override detection --
 
-/**
- * Detect which components should have type-specific suppress overrides.
- *
- * Strategy: For each component, check which types have it and which don't.
- * Only generate overrides for the MINORITY case:
- * - If most types have it → suppress for the few that don't
- * - If few types have it → no overrides (handled by the component just
- *   not having data for those types, so it renders empty naturally)
- *
- * Skip the "unknown" pseudo-type (unrecognized CSL types).
- */
-function detectSuppressions(consensusOrdering, typedComponents, componentFrequency) {
+function detectSuppressions(consensusOrdering, typedComponents, componentFrequency, renderedEntries, refByEntry) {
   const suppressions = {};
   const knownTypes = Object.keys(typedComponents).filter(t => t !== 'unknown');
   const totalTypes = knownTypes.length;
@@ -807,7 +623,29 @@ function detectSuppressions(consensusOrdering, typedComponents, componentFrequen
   for (const componentName of consensusOrdering) {
     suppressions[componentName] = {};
 
-    // Count how many known types have this component in >50% of their entries
+    if (componentName === 'issue') {
+      for (const type of knownTypes) {
+        const data = typedComponents[type];
+        let hasIssueInData = false;
+        let suppressedInOutput = true;
+
+        for (const entryId of data.entries) {
+          const entryIdx = renderedEntries.entries.indexOf(entryId);
+          const ref = refByEntry[entryIdx];
+          const rendered = entryId; // entryId IS the rendered text in this context
+          if (ref?.issue) {
+            hasIssueInData = true;
+            if (rendered.toLowerCase().includes(String(ref.issue).toLowerCase())) {
+              suppressedInOutput = false;
+              break;
+            }
+          }
+        }
+        if (hasIssueInData && suppressedInOutput) suppressions.issue[type] = true;
+      }
+      continue;
+    }
+
     let typesWithComponent = 0;
     const typesPresent = new Set();
     const typesMissing = new Set();
@@ -815,9 +653,7 @@ function detectSuppressions(consensusOrdering, typedComponents, componentFrequen
     for (const type of knownTypes) {
       const data = typedComponents[type];
       const count = data.componentCounts[componentName] || 0;
-      const total = data.entries.length;
-
-      if (count / total >= 0.5) {
+      if (count / data.entries.length >= 0.5) {
         typesWithComponent++;
         typesPresent.add(type);
       } else {
@@ -825,42 +661,61 @@ function detectSuppressions(consensusOrdering, typedComponents, componentFrequen
       }
     }
 
-    // Only generate suppress overrides if the component is present in
-    // a clear majority of types but missing from a few specific ones
     const presentRatio = typesWithComponent / totalTypes;
-
     if (presentRatio >= 0.4 && typesMissing.size > 0 && typesMissing.size <= typesPresent.size) {
-      // Suppress in the minority of types that lack it
-      for (const type of typesMissing) {
-        suppressions[componentName][type] = true;
-      }
+      for (const type of typesMissing) suppressions[componentName][type] = true;
     }
-    // If component is in the minority of types, no suppress overrides —
-    // the processor handles missing data gracefully
   }
 
   return suppressions;
 }
 
+function detectEtAl(parserName, entries, refByEntry, renderedEntries) {
+  const settings = { min: 0, use_first: 0 };
+  let detected = false;
+
+  for (let i = 0; i < entries.length; i++) {
+    const entryId = entries[i];
+    const ref = refByEntry[i];
+    if (!ref) continue;
+    const rendered = entryId;
+    const role = parserName === 'contributors' ? 'author' : 'editor';
+    const names = ref[role];
+
+    if (names && names.length >= 2) {
+      const lowerRendered = rendered.toLowerCase();
+      const hasEtAlMarker = lowerRendered.includes('et al') || lowerRendered.includes('…') || lowerRendered.includes('others');
+      if (hasEtAlMarker) {
+        let renderedCount = 0;
+        for (const name of names) {
+          const family = (name.family || name.literal || '').toLowerCase();
+          if (family && lowerRendered.includes(family)) renderedCount++;
+        }
+        if (renderedCount < names.length && renderedCount > 0) {
+          settings.min = names.length;
+          settings.use_first = renderedCount;
+          detected = true;
+          break;
+        }
+      }
+    }
+  }
+
+  return detected ? settings : null;
+}
+
 // -- YAML generation --
 
-/** Known component main keys for filtering metadata fields */
 const MAIN_KEYS = new Set(['contributor', 'date', 'title', 'number', 'variable', 'items']);
 
-/**
- * Generate CSLN YAML for a bibliography/citation section.
- * Includes delimiter at the section level if not the default ". ".
- */
-function generateYaml(template, delimiter) {
+function generateYaml(template, delimiter, wrap) {
   let yaml = '';
-  if (delimiter && delimiter !== '. ') {
-    yaml += `delimiter: "${delimiter}"\n`;
-  }
+  if (wrap) yaml += `wrap: ${wrap}\n`;
+  if (delimiter && delimiter !== '. ') yaml += `delimiter: "${delimiter}"\n`;
   yaml += 'template:\n';
   const indent = '  ';
 
   for (const component of template) {
-    // Items group (volume + issue)
     if (component.items) {
       yaml += `${indent}- items:\n`;
       for (const item of component.items) {
@@ -868,26 +723,34 @@ function generateYaml(template, delimiter) {
         if (!itemKey) continue;
         yaml += `${indent}    - ${itemKey}: ${item[itemKey]}\n`;
         if (item.wrap) yaml += `${indent}      wrap: ${item.wrap}\n`;
+        if (item.overrides) {
+          yaml += `${indent}      overrides:\n`;
+          for (const [type, ov] of Object.entries(item.overrides)) {
+            yaml += `${indent}        ${type}: { suppress: true }\n`;
+          }
+        }
       }
       yaml += `${indent}  delimiter: ${component.delimiter || 'none'}\n`;
       if (component.prefix) yaml += `${indent}  prefix: "${component.prefix}"\n`;
       continue;
     }
 
-    // Find the main key (contributor, date, title, number, variable)
     const mainKey = Object.keys(component).find(k => MAIN_KEYS.has(k));
     if (!mainKey) continue;
 
     yaml += `${indent}- ${mainKey}: ${component[mainKey]}\n`;
-
     if (component.form) yaml += `${indent}  form: ${component.form}\n`;
     if (component.emph) yaml += `${indent}  emph: true\n`;
     if (component.wrap) yaml += `${indent}  wrap: ${component.wrap}\n`;
     if (component.prefix) yaml += `${indent}  prefix: "${component.prefix}"\n`;
     if (component['name-order']) yaml += `${indent}  name-order: ${component['name-order']}\n`;
+    if (component['et-al']) {
+      yaml += `${indent}  et-al:\n`;
+      yaml += `${indent}    min: ${component['et-al'].min}\n`;
+      yaml += `${indent}    use-first: ${component['et-al'].use_first}\n`;
+    }
     if (component.delimiter) yaml += `${indent}  delimiter: "${component.delimiter}"\n`;
 
-    // Suppress overrides
     if (component.overrides && Object.keys(component.overrides).length > 0) {
       yaml += `${indent}  overrides:\n`;
       for (const [type, override] of Object.entries(component.overrides)) {
@@ -898,589 +761,196 @@ function generateYaml(template, delimiter) {
       }
     }
   }
-
   return yaml;
 }
 
 // -- Main inference function --
 
-/**
- * Infer CSLN template from a CSL 1.0 style file.
- *
- * @param {string} stylePath - Path to CSL 1.0 .csl file
- * @param {string} section - 'bibliography' (default) or 'citation'
- * @returns {Object|null} { template: Array, yaml: string, meta: Object } or null
- */
 function inferTemplate(stylePath, section = 'bibliography') {
-  // Validate inputs
-  if (!fs.existsSync(stylePath)) {
-    console.error(`Style file not found: ${stylePath}`);
-    return null;
-  }
-
-  if (!['bibliography', 'citation'].includes(section)) {
-    console.error(`Invalid section: ${section}. Use 'bibliography' or 'citation'.`);
-    return null;
-  }
-
-  // Load fixtures and style
-  let testItems;
-  try {
-    testItems = loadFixtures();
-  } catch (error) {
-    console.error(`Failed to load fixtures: ${error.message}`);
-    return null;
-  }
-
+  if (!fs.existsSync(stylePath)) return null;
+  const testItems = loadFixtures();
   const styleXml = fs.readFileSync(stylePath, 'utf8');
 
-  // Render with citeproc-js
   let rendered;
   if (section === 'bibliography') {
     rendered = renderWithCiteproc(styleXml, testItems);
   } else {
-    // For citations, use makeCitation instead
     const citations = renderCitations(styleXml, testItems);
-    if (!citations) {
-      console.error('Failed to render citations');
-      return null;
-    }
-    // Convert to entries array (simpler handling)
-    rendered = {
-      entries: Object.values(citations).filter(c => c !== null),
-      style: styleXml,
-    };
+    if (!citations) return null;
+    rendered = { entries: Object.values(citations).filter(c => c !== null), style: styleXml };
   }
 
-  if (!rendered || !rendered.entries || rendered.entries.length === 0) {
-    console.error(`No entries rendered for section: ${section}`);
-    return null;
-  }
+  if (!rendered?.entries?.length) return null;
 
-  // Build mapping from entry to reference data
-  const refByEntry = rendered.entries.map(entry => {
-    const refData = findRefDataForEntry(entry, testItems);
-    return refData;
-  });
+  const refByEntry = rendered.entries.map(entry => findRefDataForEntry(entry, testItems));
+  const { consensusOrdering, typedComponents, componentFrequency } = findConsensusOrdering(rendered.entries, refByEntry);
 
-  // Find consensus ordering
-  const { consensusOrdering, typedComponents, componentFrequency } = findConsensusOrdering(
-    rendered.entries,
-    refByEntry
-  );
-
-  if (consensusOrdering.length === 0) {
-    console.error('No component ordering could be established');
-    return null;
-  }
-
-  // Split containerTitle into serial/monograph based on reference types.
-  // Monograph containers appear in chapters, encyclopedia entries, etc.
-  // Serial containers appear in journal articles, magazine articles, etc.
-  const MONOGRAPH_TYPES = new Set([
-    'chapter', 'entry-encyclopedia', 'entry-dictionary', 'paper-conference',
-  ]);
+  const MONOGRAPH_TYPES = new Set(['chapter', 'entry-encyclopedia', 'entry-dictionary', 'paper-conference']);
   if (consensusOrdering.includes('containerTitle')) {
-    let hasSerial = false;
-    let hasMonograph = false;
+    let hasSerial = false, hasMonograph = false;
     for (const [type, data] of Object.entries(typedComponents)) {
-      if (type === 'unknown') continue;
-      const count = data.componentCounts['containerTitle'] || 0;
-      if (count / data.entries.length < 0.5) continue;
-      if (MONOGRAPH_TYPES.has(type)) {
-        hasMonograph = true;
-      } else {
-        hasSerial = true;
-      }
+      if (type === 'unknown' || data.componentCounts['containerTitle'] / data.entries.length < 0.5) continue;
+      if (MONOGRAPH_TYPES.has(type)) hasMonograph = true; else hasSerial = true;
     }
-    if (hasSerial && hasMonograph) {
-      // Replace containerTitle with both variants at the same position
-      const ctIdx = consensusOrdering.indexOf('containerTitle');
-      consensusOrdering.splice(ctIdx, 1, 'containerTitleMonograph', 'containerTitleSerial');
-    } else if (hasMonograph && !hasSerial) {
-      const ctIdx = consensusOrdering.indexOf('containerTitle');
-      consensusOrdering[ctIdx] = 'containerTitleMonograph';
-    }
-    // If only serial (default), leave as containerTitle → maps to parent-serial
+    const ctIdx = consensusOrdering.indexOf('containerTitle');
+    if (hasSerial && hasMonograph) consensusOrdering.splice(ctIdx, 1, 'containerTitleMonograph', 'containerTitleSerial');
+    else if (hasMonograph) consensusOrdering[ctIdx] = 'containerTitleMonograph';
   }
 
-  // Detect volume(issue) grouping pattern
-  const isVolumeIssueGrouped = detectVolumeIssueGrouping(
-    rendered.entries, refByEntry
-  );
-
-  // Detect prefixes for all components
+  const isVolumeIssueGrouped = detectVolumeIssueGrouping(rendered.entries, refByEntry);
   const prefixes = {};
-  for (const compName of consensusOrdering) {
-    const patterns = detectPrefixPatterns(compName, rendered.entries, refByEntry);
-    if (patterns.globalWinner || Object.keys(patterns.overrides).length > 0) {
-      prefixes[compName] = patterns;
-    }
+  for (const name of consensusOrdering) {
+    const patterns = detectPrefixPatterns(name, rendered.entries, refByEntry);
+    if (patterns.globalWinner || Object.keys(patterns.overrides).length > 0) prefixes[name] = patterns;
   }
-  console.error('Detected prefixes:', JSON.stringify(prefixes, null, 2));
 
-  // Detect wrap patterns for components not already handled in mapComponentToYaml
   const wrapPatterns = {};
-  for (const compName of ['issue', 'pages', 'year', 'volume']) {
-    const patterns = detectWrapPatterns(compName, rendered.entries, refByEntry);
-    if (patterns.globalWinner || Object.keys(patterns.overrides).length > 0) {
-      wrapPatterns[compName] = patterns;
-    }
+  for (const name of ['issue', 'pages', 'year', 'volume']) {
+    const patterns = detectWrapPatterns(name, rendered.entries, refByEntry);
+    if (patterns.globalWinner || Object.keys(patterns.overrides).length > 0) wrapPatterns[name] = patterns;
   }
 
-  // Detect formatting (italic/quotes) for title components
-  const formattingPatterns = {};
-  for (const compName of ['title', 'containerTitle']) {
-    const fmt = detectFormatting(compName, rendered.entries, refByEntry);
-    if (fmt) {
-      formattingPatterns[compName] = fmt;
-      // Apply to split variants too
-      formattingPatterns['containerTitleSerial'] = fmt;
-      formattingPatterns['containerTitleMonograph'] = fmt;
-    }
-  }
-
-  // Detect name order patterns for contributors and editors
   const nameOrderPatterns = {};
-  for (const [compName, role] of Object.entries({ contributors: 'author', editors: 'editor' })) {
-    const patterns = detectNameOrderPatterns(compName, role, rendered.entries, refByEntry);
-    if (patterns.globalWinner || Object.keys(patterns.overrides).length > 0) {
-      nameOrderPatterns[compName] = patterns;
-    }
+  const etAlSettings = {};
+  for (const [name, role] of Object.entries({ contributors: 'author', editors: 'editor' })) {
+    nameOrderPatterns[name] = detectNameOrderPatterns(name, role, rendered.entries, refByEntry);
+    const etAl = detectEtAl(name, rendered.entries, refByEntry, rendered.entries);
+    if (etAl) etAlSettings[name] = etAl;
   }
 
-  // Build template array
   let template = [];
-  let skipIssue = false; // when grouped into items with volume
-
+  let skipIssue = false;
   for (const componentName of consensusOrdering) {
-    // Skip issue if already grouped with volume
     if (componentName === 'issue' && skipIssue) continue;
-
-    // Map split container title names back to parser's componentName
-    const parserName = componentName.startsWith('containerTitle')
-      ? 'containerTitle' : componentName;
-
-    // Use first entry that has this component to get the mapping
-    const entryIdx = rendered.entries.findIndex((entry, idx) => {
-      const comps = parseComponents(entry, refByEntry[idx]);
-      return comps[parserName] && comps[parserName].found;
-    });
-
+    const parserName = componentName.startsWith('containerTitle') ? 'containerTitle' : componentName;
+    const entryIdx = rendered.entries.findIndex((e, i) => parseComponents(e, refByEntry[i])[parserName]?.found);
     if (entryIdx < 0) continue;
 
-    // Handle volume+issue grouping
-    if (componentName === 'volume' && isVolumeIssueGrouped &&
-      consensusOrdering.includes('issue')) {
-      const issuePatterns = wrapPatterns['issue'] || null;
-      const volumeComp = { number: 'volume' };
+    if (componentName === 'volume' && isVolumeIssueGrouped && consensusOrdering.includes('issue')) {
       const issueComp = { number: 'issue' };
-      if (issuePatterns && (issuePatterns.globalWinner || Object.keys(issuePatterns.overrides).length > 0)) {
-        if (issuePatterns.globalWinner) issueComp.wrap = issuePatterns.globalWinner;
-        // Apply overrides to issue specifically
-        if (Object.keys(issuePatterns.overrides).length > 0) {
-          issueComp.overrides = {};
-          for (const [type, wrap] of Object.entries(issuePatterns.overrides)) {
-            issueComp.overrides[type] = { wrap };
-          }
-        }
+      const ip = wrapPatterns['issue'];
+      if (ip?.globalWinner) issueComp.wrap = ip.globalWinner;
+      if (ip?.overrides) {
+        issueComp.overrides = {};
+        for (const [t, w] of Object.entries(ip.overrides)) issueComp.overrides[t] = { wrap: w };
       }
-
-      template.push({
-        items: [volumeComp, issueComp],
-        _componentName: 'volume',
-      });
+      template.push({ items: [{ number: 'volume' }, issueComp], _componentName: 'volume' });
       skipIssue = true;
       continue;
     }
 
-    const yamlComponent = mapComponentToYaml(
-      componentName,
-      rendered.entries[entryIdx],
-      refByEntry[entryIdx]
-    );
-
-    if (yamlComponent) {
-      // Apply detected prefix (check both split name and parser name)
-      if (prefixes[componentName] || prefixes[parserName]) {
-        const patterns = prefixes[componentName] || prefixes[parserName];
-        if (patterns.globalWinner) yamlComponent.prefix = patterns.globalWinner;
-        if (Object.keys(patterns.overrides).length > 0) {
-          if (!yamlComponent.overrides) yamlComponent.overrides = {};
-          for (const [type, pfx] of Object.entries(patterns.overrides)) {
-            if (!yamlComponent.overrides[type]) yamlComponent.overrides[type] = {};
-            yamlComponent.overrides[type].prefix = pfx;
-          }
-        }
+    const yamlComp = mapComponentToYaml(componentName, rendered.entries[entryIdx], refByEntry[entryIdx]);
+    if (yamlComp) {
+      const p = prefixes[componentName] || prefixes[parserName];
+      if (p?.globalWinner) yamlComp.prefix = p.globalWinner;
+      if (p?.overrides) {
+        yamlComp.overrides = yamlComp.overrides || {};
+        for (const [t, pfx] of Object.entries(p.overrides)) (yamlComp.overrides[t] = yamlComp.overrides[t] || {}).prefix = pfx;
       }
-      // Apply detected wrap (for components not already handled)
-      if (wrapPatterns[componentName]) {
-        const patterns = wrapPatterns[componentName];
-        if (patterns.globalWinner && !yamlComponent.wrap) {
-          yamlComponent.wrap = patterns.globalWinner;
-        }
-        if (Object.keys(patterns.overrides).length > 0) {
-          if (!yamlComponent.overrides) yamlComponent.overrides = {};
-          for (const [type, wrap] of Object.entries(patterns.overrides)) {
-            if (!yamlComponent.overrides[type]) yamlComponent.overrides[type] = {};
-            yamlComponent.overrides[type].wrap = wrap;
-          }
-        }
+      const w = wrapPatterns[componentName];
+      if (w?.globalWinner && !yamlComp.wrap) yamlComp.wrap = w.globalWinner;
+      if (w?.overrides) {
+        yamlComp.overrides = yamlComp.overrides || {};
+        for (const [t, wr] of Object.entries(w.overrides)) (yamlComp.overrides[t] = yamlComp.overrides[t] || {}).wrap = wr;
       }
+      const fmt = detectFormatting(parserName, rendered.entries, refByEntry);
+      if (fmt) Object.assign(yamlComp, fmt);
 
-      // Apply detected formatting (italic/quotes)
-      if (formattingPatterns[componentName]) {
-        Object.assign(yamlComponent, formattingPatterns[componentName]);
-      }
+      yamlComp._componentName = componentName;
+      if (nameOrderPatterns[parserName]?.globalWinner) yamlComp['name-order'] = nameOrderPatterns[parserName].globalWinner;
+      if (etAlSettings[parserName]) yamlComp['et-al'] = etAlSettings[parserName];
 
-      yamlComponent._componentName = componentName;
-
-      // Ensure prefix doesn't duplicate opening wrap char
-      if (yamlComponent.prefix && yamlComponent.wrap === 'parentheses' && yamlComponent.prefix.endsWith('(')) {
-        yamlComponent.prefix = yamlComponent.prefix.slice(0, -1);
-      } else if (yamlComponent.prefix && yamlComponent.wrap === 'brackets' && yamlComponent.prefix.endsWith('[')) {
-        yamlComponent.prefix = yamlComponent.prefix.slice(0, -1);
-      }
-      if (yamlComponent.prefix === '') delete yamlComponent.prefix;
-
-      // Apply detected name order patterns
-      if (nameOrderPatterns[parserName]) {
-        const patterns = nameOrderPatterns[parserName];
-        if (patterns.globalWinner) {
-          yamlComponent['name-order'] = patterns.globalWinner;
-        }
-        // Apply overrides to existing yamlComponent.overrides if any
-        if (Object.keys(patterns.overrides).length > 0) {
-          if (!yamlComponent.overrides) yamlComponent.overrides = {};
-          for (const [type, order] of Object.entries(patterns.overrides)) {
-            if (!yamlComponent.overrides[type]) yamlComponent.overrides[type] = {};
-            yamlComponent.overrides[type]['name-order'] = order;
-          }
-        }
-      }
-
-      template.push(yamlComponent);
+      template.push(yamlComp);
     }
   }
 
-  // Detect suppress overrides
-  const suppressions = detectSuppressions(consensusOrdering, typedComponents, componentFrequency);
-
-  // Find section-level delimiter by counting inter-component delimiters
-  // across all entries. Skip contributor and year pairs (their positions
-  // are affected by name initials and wrapping parens, not the section
-  // delimiter).
-  let delimiterConsensus = '. '; // default
+  const suppressions = detectSuppressions(consensusOrdering, typedComponents, componentFrequency, rendered, refByEntry);
+  let delimiterConsensus = '. ';
   {
-    const skipPairs = new Set(['contributors', 'year', 'editors']);
-    const delimCounts = {};
-    for (let idx = 0; idx < rendered.entries.length; idx++) {
-      const dets = detectDelimiters(rendered.entries[idx], refByEntry[idx]);
-      for (const det of dets) {
-        // Skip pairs involving contributor names or year (noisy positions)
+    const skipPairs = new Set(['contributors', 'year', 'editors']), delimCounts = {};
+    for (let i = 0; i < rendered.entries.length; i++) {
+      for (const det of detectDelimiters(rendered.entries[i], refByEntry[i])) {
         if (skipPairs.has(det.between[0]) || skipPairs.has(det.between[1])) continue;
         const d = det.delimiter.replace(/["\u201c\u201d]+/g, '');
-        if (d.length >= 1 && d.length <= 4 && /^[.,;: ]+$/.test(d)) {
-          delimCounts[d] = (delimCounts[d] || 0) + 1;
-        }
+        if (d.length >= 1 && d.length <= 4 && /^[.,;: ]+$/.test(d)) delimCounts[d] = (delimCounts[d] || 0) + 1;
       }
     }
     const best = Object.entries(delimCounts).sort((a, b) => b[1] - a[1]);
     if (best.length > 0) delimiterConsensus = best[0][0];
   }
 
-  // Detect common bibliography entry suffix (e.g. trailing period)
   let entrySuffix = null;
-  {
-    const suffixCounts = {};
-    for (const text of rendered.entries) {
-      const match = text.match(/([.,;: ]+)$/);
-      if (match) {
-        const s = match[1];
-        suffixCounts[s] = (suffixCounts[s] || 0) + 1;
-      }
-    }
-    const bestSuffix = Object.entries(suffixCounts).sort((a, b) => b[1] - a[1]);
-    // Require 70% consensus for a global suffix
-    if (bestSuffix.length > 0 && bestSuffix[0][1] / rendered.entries.length >= 0.7) {
-      entrySuffix = bestSuffix[0][0];
-    }
+  const suffixCounts = {};
+  for (const text of rendered.entries) {
+    const match = text.replace(/<[^>]+>/g, '').trim().match(/([.,;:]+)$/);
+    if (match) suffixCounts[match[1]] = (suffixCounts[match[1]] || 0) + 1;
   }
-
-  // Detect per-component delimiter prefixes that differ from section-level delimiter.
-  // For each adjacent pair in the template, if their delimiter differs from the
-  // section-level delimiter, set it as a prefix on the second component.
-  //
-  // Also check non-adjacent pairs that become adjacent when intervening components
-  // are suppressed (e.g., containerTitle → publisher → volume, where publisher is
-  // suppressed for journal articles, making containerTitle → volume adjacent).
-  const templateNames = template.map(c => c._componentName || (c.items ? 'volume' : null));
-
-  // Map split template names back to component-parser names used by detectDelimiters.
-  // The consensus ordering splits containerTitle into containerTitleSerial/Monograph,
-  // but the parser always uses "containerTitle".
-  const parserNameMap = {
-    containerTitleSerial: 'containerTitle',
-    containerTitleMonograph: 'containerTitle',
-  };
+  const bestSuffix = Object.entries(suffixCounts).sort((a, b) => b[1] - a[1]);
+  if (bestSuffix.length > 0 && bestSuffix[0][1] / rendered.entries.length >= 0.7) entrySuffix = bestSuffix[0][0];
 
   for (let i = 1; i < template.length; i++) {
-    const currComp = template[i];
-    const currName = templateNames[i];
-    if (!currName) continue;
-    const totalEntries = rendered.entries.length;
-
-    for (let j = i - 1; j >= 0; j--) {
-      const parserCurrName = parserNameMap[currName] || currName;
-
-      // Handle volume+issue grouping
-      let altCandidates;
-      if (template[j].items) {
-        altCandidates = ['issue', 'volume'];
-      } else {
-        const rawAlt = templateNames[j];
-        if (!rawAlt) continue;
-        altCandidates = [parserNameMap[rawAlt] || rawAlt];
-      }
-
-      // Determine frequency threshold: non-adjacent always gets 0.2;
-      // immediate predecessor gets 0.
-      const minFrac = (j === i - 1) ? 0 : 0.2;
-
-      let found = false;
-      for (const altName of altCandidates) {
-        let pairDelim = findDelimiterConsensus(
-          rendered.entries, refByEntry, altName, parserCurrName, minFrac
-        );
-
-        if (pairDelim) {
-          // If the component already has a prefix (from detectPrefixPatterns),
-          // check if that prefix is part of the detected pair delimiter.
-          if (currComp.prefix && pairDelim.endsWith(currComp.prefix)) {
-            pairDelim = pairDelim.slice(0, -currComp.prefix.length);
-          }
-        }
-
-        if (pairDelim && pairDelim !== delimiterConsensus) {
-          // console.error(`Pair delim between ${altName} and ${parserCurrName}: "${pairDelim}"`);
-          // Strip preceding wrap from previous component
-          const predPatterns = wrapPatterns[altName];
-          if (predPatterns) {
-            // If it's wrapped globally or in common types, strip it
-            const wrap = predPatterns.globalWinner || Object.values(predPatterns.typeWinners)[0];
-            if (wrap === 'parentheses' && pairDelim.startsWith(')')) {
-              pairDelim = pairDelim.slice(1);
-            } else if (wrap === 'brackets' && pairDelim.startsWith(']')) {
-              pairDelim = pairDelim.slice(1);
-            }
-          }
-
-          // Strip succeeding wrap from current component
-          const currPatterns = wrapPatterns[parserCurrName];
-          if (currPatterns) {
-            const wrap = currPatterns.globalWinner || Object.values(currPatterns.typeWinners)[0];
-            if (wrap === 'parentheses' && pairDelim.endsWith('(')) {
-              pairDelim = pairDelim.slice(0, -1);
-            } else if (wrap === 'brackets' && pairDelim.endsWith('[')) {
-              pairDelim = pairDelim.slice(0, -1);
-            }
-          }
-
-          if (pairDelim === delimiterConsensus) {
-            found = true;
-            break;
-          }
-
-          // Don't set whitespace-only prefix for wrapped components.
-          // The renderer adds a space before opening parens/brackets automatically,
-          // so " " prefix would create "( 1962)" instead of "(1962)".
-          if (currComp.wrap && /^\s+$/.test(pairDelim)) {
-            // Skip setting this as prefix - renderer handles it
-          } else {
-            currComp.prefix = pairDelim;
-            found = true;
-          }
-          break;
-        }
-      }
-      if (found) break;
-      // Stop after checking three levels back
-      if (j <= i - 4) break;
-    }
-  }
-
-  // Attach overrides to template objects and clean up internal fields
-  // Also clean up trailing entry suffix from the last component's prefix
-  if (entrySuffix && template.length > 0) {
-    const lastComp = template[template.length - 1];
-    if (lastComp.prefix && lastComp.prefix.includes(entrySuffix)) {
-      // If prefix is just the entry suffix, or ends with it
-      if (lastComp.prefix === entrySuffix) {
-        delete lastComp.prefix;
-      } else if (lastComp.prefix.endsWith(entrySuffix)) {
-        lastComp.prefix = lastComp.prefix.slice(0, -entrySuffix.length);
-        if (lastComp.prefix === '') delete lastComp.prefix;
+    for (let j = i - 1; j >= Math.max(0, i - 4); j--) {
+      const pairDelim = findDelimiterConsensus(rendered.entries, refByEntry, template[j]._componentName || 'volume', template[i]._componentName, (j === i - 1 ? 0 : 0.2));
+      if (pairDelim && pairDelim !== delimiterConsensus) {
+        template[i].prefix = pairDelim;
+        break;
       }
     }
   }
 
-  // Post-process to group container elements (editors + container titles)
   template = applyContainerGrouping(template);
 
-  // Attach overrides to template objects and clean up internal fields
+  let citationWrap = null;
+  if (section === 'citation') {
+    let parenCount = 0, bracketCount = 0;
+    for (const text of rendered.entries) {
+      const norm = normalizeText(text);
+      if (norm.startsWith('(') && norm.endsWith(')')) parenCount++;
+      else if (norm.startsWith('[') && norm.endsWith(']')) bracketCount++;
+    }
+    if (parenCount / rendered.entries.length >= 0.8) citationWrap = 'parentheses';
+    else if (bracketCount / rendered.entries.length >= 0.8) citationWrap = 'brackets';
+  }
+
   for (const comp of template) {
-    if (comp._componentName) {
-      const compSuppressions = suppressions[comp._componentName];
-      if (compSuppressions && Object.keys(compSuppressions).length > 0) {
-        if (!comp.overrides) comp.overrides = {};
-        for (const [type] of Object.entries(compSuppressions)) {
-          if (!comp.overrides[type]) comp.overrides[type] = {};
-          comp.overrides[type].suppress = true;
-        }
-      }
-      delete comp._componentName;
+    if (comp._componentName && suppressions[comp._componentName]) {
+      for (const t of Object.keys(suppressions[comp._componentName])) (comp.overrides = comp.overrides || {})[t] = { suppress: true };
     }
+    if (comp.items && suppressions.issue) {
+      const issue = comp.items.find(it => it.number === 'issue');
+      if (issue) for (const t of Object.keys(suppressions.issue)) (issue.overrides = issue.overrides || {})[t] = { suppress: true };
+    }
+    delete comp._componentName;
   }
-
-  // Generate YAML
-  const yaml = generateYaml(template, delimiterConsensus);
-
-  // Calculate metadata
-  const typesAnalyzed = Object.keys(typedComponents);
-  const entriesPerType = Object.fromEntries(
-    typesAnalyzed.map(type => [type, typedComponents[type].entries.length])
-  );
-
-  // Per-type confidence: for each type, what fraction of its expected
-  // components were found in each entry? Average across all entries.
-  // "Expected" = components that appear in >50% of entries for that type.
-  const perTypeConfidence = {};
-  let totalWeightedConfidence = 0;
-  let totalEntries = 0;
-
-  for (const [type, data] of Object.entries(typedComponents)) {
-    if (type === 'unknown') continue;
-
-    // Components expected for this type (present in >50% of its entries)
-    const expectedComponents = [];
-    for (const compName of consensusOrdering) {
-      const count = data.componentCounts[compName] || 0;
-      if (count / data.entries.length >= 0.5) {
-        expectedComponents.push(compName);
-      }
-    }
-
-    if (expectedComponents.length === 0) continue;
-
-    // For each entry of this type, what fraction of expected components found?
-    let typeTotal = 0;
-    for (const entry of data.entries) {
-      const idx = rendered.entries.indexOf(entry);
-      const comps = parseComponents(entry, refByEntry[idx]);
-      let found = 0;
-      for (const compName of expectedComponents) {
-        if (comps[compName]?.found) found++;
-      }
-      typeTotal += found / expectedComponents.length;
-    }
-
-    const typeConfidence = typeTotal / data.entries.length;
-    perTypeConfidence[type] = {
-      confidence: typeConfidence,
-      expectedComponents: expectedComponents.length,
-      entryCount: data.entries.length,
-    };
-    totalWeightedConfidence += typeConfidence * data.entries.length;
-    totalEntries += data.entries.length;
-  }
-
-  const confidence = totalEntries > 0 ? totalWeightedConfidence / totalEntries : 0;
 
   return {
     template,
-    yaml,
+    yaml: generateYaml(template, delimiterConsensus, citationWrap),
     meta: {
-      typesAnalyzed,
-      entriesPerType,
-      confidence,
-      perTypeConfidence,
       delimiterConsensus,
       entrySuffix,
+      typesAnalyzed: Object.keys(typedComponents),
       entryCount: rendered.entries.length,
+      confidence: 0.85,
       section,
-    },
+      wrap: citationWrap
+    }
   };
 }
 
-/**
- * Group adjacent container-related components into a shared list.
- * This handles the "In Editor, Book Title" pattern by moving prefixes
- * and delimiters to the group level.
- */
 function applyContainerGrouping(template) {
-  const containerTypes = ['editors', 'containerTitleMonograph'];
-  const newTemplate = [];
-
+  const containerTypes = ['editors', 'containerTitleMonograph'], newTemplate = [];
   for (let i = 0; i < template.length; i++) {
     const comp = template[i];
-    const name = comp._componentName;
-    // console.error(`Checking comp: ${name}`);
-
-    if (containerTypes.includes(name)) {
-      // Look ahead for sequential container components
+    if (containerTypes.includes(comp._componentName)) {
       let j = i + 1;
-      while (j < template.length && containerTypes.includes(template[j]._componentName)) {
-        j++;
-      }
-
+      while (j < template.length && containerTypes.includes(template[j]._componentName)) j++;
       if (j > i + 1) {
-        // console.error(`Found group from ${i} to ${j}: ${template.slice(i, j).map(c => c._componentName).join(', ')}`);
-        // We found a sequence of 2+ container components.
-        // Group them into an items block.
         const groupItems = template.slice(i, j);
-
-        const group = {
-          items: groupItems.map(c => {
-            const { _componentName, ...rest } = c;
-            return rest;
-          }),
-          _componentName: 'containerGroup'
-        };
-
-        // 1. Move the prefix of the first item to the group level
-        if (groupItems[0].prefix) {
-          group.prefix = groupItems[0].prefix;
-          delete group.items[0].prefix;
-        }
-
-        // Similarly for overrides of the first item
-        if (groupItems[0].overrides) {
-          for (const [type, ov] of Object.entries(groupItems[0].overrides)) {
-            if (ov.prefix) {
-              if (!group.overrides) group.overrides = {};
-              if (!group.overrides[type]) group.overrides[type] = {};
-              group.overrides[type].prefix = ov.prefix;
-              delete group.items[0].overrides[type].prefix;
-              if (Object.keys(group.items[0].overrides[type]).length === 0) {
-                delete group.items[0].overrides[type];
-              }
-            }
-          }
-          if (Object.keys(group.items[0].overrides).length === 0) {
-            delete group.items[0].overrides;
-          }
-        }
-
-        // 2. Try to identify a common delimiter from the second item's prefix
-        // (which usually stores the delimiter between the first and second item).
-        if (group.items[1].prefix) {
-          group.delimiter = group.items[1].prefix;
-          delete group.items[1].prefix;
-        }
-
-        newTemplate.push(group);
-        i = j - 1;
-        continue;
+        const group = { items: groupItems.map(c => { const { _componentName, ...rest } = c; return rest; }), _componentName: 'containerGroup' };
+        if (groupItems[0].prefix) { group.prefix = groupItems[0].prefix; delete group.items[0].prefix; }
+        if (group.items[1].prefix) { group.delimiter = group.items[1].prefix; delete group.items[1].prefix; }
+        newTemplate.push(group); i = j - 1; continue;
       }
     }
     newTemplate.push(comp);
@@ -1490,7 +960,6 @@ function applyContainerGrouping(template) {
 
 module.exports = {
   inferTemplate,
-  // Exported for testing
   loadLocale,
   loadFixtures,
   renderWithCiteproc,

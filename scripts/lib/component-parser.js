@@ -238,7 +238,7 @@ function parseComponents(entry, refData) {
   // Year in parentheses: (2020) — don't capture trailing period (it's a delimiter)
   const yearParensMatch = normalized.match(/\((\d{4})\)/);
   // Year standalone: 2020 followed by punctuation (don't capture the punctuation)
-  const yearStandaloneMatch = normalized.match(/(?:^|\s)(\d{4})(?=[.,])/);
+  const yearStandaloneMatch = normalized.match(/(?:^|\s)(\d{4})(?=[.,\)])/);
   const yearMatch = yearParensMatch || yearStandaloneMatch;
   if (yearMatch) {
     const idx = normalized.indexOf(yearMatch[0]);

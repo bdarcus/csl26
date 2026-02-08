@@ -137,10 +137,24 @@ fn load_hand_authored(path: &Path) -> Option<Vec<TemplateComponent>> {
 fn load_inferred_json(
     path: &Path,
 ) -> Option<(Vec<TemplateComponent>, Option<String>, Option<String>)> {
-    let text = std::fs::read_to_string(path).ok()?;
-    let fragment: InferredFragment = serde_json::from_str(&text).ok()?;
+    let text = match std::fs::read_to_string(path) {
+        Ok(t) => t,
+        Err(e) => {
+            eprintln!("  [template_resolver] Failed to read cache file: {}", e);
+            return None;
+        }
+    };
+    let fragment: InferredFragment = match serde_json::from_str(&text) {
+        Ok(f) => f,
+        Err(e) => {
+            eprintln!("  [template_resolver] Failed to parse cache JSON: {}", e);
+            eprintln!("  [template_resolver] First 200 chars: {}", &text[..text.len().min(200)]);
+            return None;
+        }
+    };
     let delimiter = fragment.meta.as_ref().and_then(|m| m.delimiter.clone());
     let entry_suffix = fragment.meta.as_ref().and_then(|m| m.entry_suffix.clone());
+    eprintln!("  [template_resolver] Loaded cached template: delimiter={:?}, entry_suffix={:?}", delimiter, entry_suffix);
     Some((fragment.bibliography.template, delimiter, entry_suffix))
 }
 

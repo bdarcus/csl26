@@ -71,6 +71,7 @@ if (fragmentOutput) {
       style: styleName,
       confidence: result.meta.confidence,
       delimiter: result.meta.delimiterConsensus,
+      entrySuffix: result.meta.entrySuffix,
     },
     bibliography: {
       template: result.template,

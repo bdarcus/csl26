@@ -484,7 +484,7 @@ pub struct TemplateList {
 }
 
 /// Delimiter punctuation options.
-#[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq, JsonSchema)]
+#[derive(Debug, Default, Serialize, Clone, PartialEq, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub enum DelimiterPunctuation {
     #[default]
@@ -499,6 +499,16 @@ pub enum DelimiterPunctuation {
     Space,
     None,
     Custom(String),
+}
+
+impl<'de> serde::Deserialize<'de> for DelimiterPunctuation {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        Ok(Self::from_csl_string(&s))
+    }
 }
 
 impl DelimiterPunctuation {
