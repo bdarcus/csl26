@@ -168,20 +168,26 @@ impl Processor {
 
     /// Process a single citation.
     pub fn process_citation(&self, citation: &Citation) -> Result<String, ProcessorError> {
-        let citation_spec = self.style.citation.as_ref();
-        let template_vec = citation_spec
-            .and_then(|cs| cs.resolve_template())
-            .unwrap_or_default();
+        // Resolve the effective citation spec based on the mode (Integral vs NonIntegral)
+        // If the style has no citation spec, we use a default one.
+        let default_spec = csln_core::CitationSpec::default();
+        let effective_spec = self
+            .style
+            .citation
+            .as_ref()
+            .map(|cs| cs.resolve_for_mode(&citation.mode))
+            .unwrap_or(std::borrow::Cow::Borrowed(&default_spec));
+
+        let template_vec = effective_spec.resolve_template().unwrap_or_default();
         let template = template_vec.as_slice();
 
         // Get intra-citation delimiter (between components like author and year)
-        let intra_delimiter = citation_spec
-            .and_then(|cs| cs.delimiter.as_deref())
-            .unwrap_or(", ");
+        let intra_delimiter = effective_spec.delimiter.as_deref().unwrap_or(", ");
 
         // Inter-citation delimiter (between different author groups)
-        let inter_delimiter = citation_spec
-            .and_then(|cs| cs.multi_cite_delimiter.as_deref())
+        let inter_delimiter = effective_spec
+            .multi_cite_delimiter
+            .as_deref()
             .unwrap_or("; ");
 
         // Check if this is an author-date style that supports grouping
@@ -204,18 +210,28 @@ impl Processor {
 
         // Group adjacent items by author for author-date styles
         let rendered_groups = if is_author_date && citation.items.len() > 1 {
-            renderer.render_grouped_citation(&citation.items, template, intra_delimiter)?
+            renderer.render_grouped_citation(
+                &citation.items,
+                template,
+                &citation.mode,
+                intra_delimiter,
+            )?
         } else {
             // No grouping - render each item separately
-            renderer.render_ungrouped_citation(&citation.items, template, intra_delimiter)?
+            renderer.render_ungrouped_citation(
+                &citation.items,
+                template,
+                &citation.mode,
+                intra_delimiter,
+            )?
         };
 
         let content = rendered_groups.join(inter_delimiter);
 
         // Get wrap/prefix/suffix from citation spec
-        let wrap = citation_spec.and_then(|cs| cs.wrap.as_ref());
-        let prefix = citation_spec.and_then(|cs| cs.prefix.as_deref());
-        let suffix = citation_spec.and_then(|cs| cs.suffix.as_deref());
+        let wrap = effective_spec.wrap.as_ref();
+        let prefix = effective_spec.prefix.as_deref();
+        let suffix = effective_spec.suffix.as_deref();
 
         // Apply citation-level prefix from input
         let citation_prefix = citation.prefix.as_deref().unwrap_or("");

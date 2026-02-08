@@ -208,11 +208,15 @@ pub fn citation_to_string(
                     if prev.ends_with('\u{201D}') {
                         result.push_str(delim_trimmed);
                         result.push('\u{201D}');
-                        result.push(' ');
+                        if !delim.is_empty() {
+                            result.push(' ');
+                        }
                     } else {
                         result.push_str(delim_trimmed);
                         result.push('"');
-                        result.push(' ');
+                        if !delim.is_empty() {
+                            result.push(' ');
+                        }
                     }
                 } else {
                     result.push_str(delim);

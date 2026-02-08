@@ -87,13 +87,18 @@ pub enum DisplayAsSort {
 
 /// Conjunction options between contributors.
 #[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq, JsonSchema)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub enum AndOptions {
     Text,
     Symbol,
     #[default]
     None,
+    ModeDependent {
+        integral: Box<AndOptions>,
+        #[serde(rename = "non-integral")]
+        non_integral: Box<AndOptions>,
+    },
 }
 
 /// Role display options.

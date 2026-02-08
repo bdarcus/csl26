@@ -48,6 +48,7 @@ fn test_contributor_values() {
         config: &config,
         locale: &locale,
         context: RenderContext::Citation,
+        mode: csln_core::citation::CitationMode::NonIntegral,
     };
     let reference = make_reference();
     let hints = ProcHints::default();
@@ -77,6 +78,7 @@ fn test_date_values() {
         config: &config,
         locale: &locale,
         context: RenderContext::Citation,
+        mode: csln_core::citation::CitationMode::NonIntegral,
     };
     let reference = make_reference();
     let hints = ProcHints::default();
@@ -101,6 +103,7 @@ fn test_et_al() {
         config: &config,
         locale: &locale,
         context: RenderContext::Citation,
+        mode: csln_core::citation::CitationMode::NonIntegral,
     };
     let hints = ProcHints::default();
 
@@ -220,6 +223,7 @@ fn test_et_al_delimiter_never() {
         config: &config,
         locale: &locale,
         context: RenderContext::Citation,
+        mode: csln_core::citation::CitationMode::NonIntegral,
     };
     let hints = ProcHints::default();
 
@@ -267,6 +271,7 @@ fn test_et_al_delimiter_always() {
         config: &config,
         locale: &locale,
         context: RenderContext::Citation,
+        mode: csln_core::citation::CitationMode::NonIntegral,
     };
     let hints = ProcHints::default();
 
@@ -380,6 +385,7 @@ fn test_template_list_suppression() {
         config: &config,
         locale: &locale,
         context: RenderContext::Citation,
+        mode: csln_core::citation::CitationMode::NonIntegral,
     };
     let reference = Reference::from(LegacyReference {
         id: "multi".to_string(),
@@ -423,6 +429,7 @@ fn test_et_al_use_last() {
         config: &config,
         locale: &locale,
         context: RenderContext::Citation,
+        mode: csln_core::citation::CitationMode::NonIntegral,
     };
     let hints = ProcHints::default();
 
@@ -466,6 +473,7 @@ fn test_et_al_use_last_overlap() {
         config: &config,
         locale: &locale,
         context: RenderContext::Citation,
+        mode: csln_core::citation::CitationMode::NonIntegral,
     };
     let hints = ProcHints::default();
 
@@ -502,6 +510,7 @@ fn test_title_hyperlink() {
         config: &config,
         locale: &locale,
         context: RenderContext::Citation,
+        mode: csln_core::citation::CitationMode::NonIntegral,
     };
     let hints = ProcHints::default();
 
@@ -538,6 +547,7 @@ fn test_title_hyperlink_url_fallback() {
         config: &config,
         locale: &locale,
         context: RenderContext::Citation,
+        mode: csln_core::citation::CitationMode::NonIntegral,
     };
     let hints = ProcHints::default();
 
@@ -573,6 +583,7 @@ fn test_variable_hyperlink() {
         config: &config,
         locale: &locale,
         context: RenderContext::Bibliography,
+        mode: csln_core::citation::CitationMode::NonIntegral,
     };
     let hints = ProcHints::default();
 
@@ -625,6 +636,7 @@ fn test_editor_label_format() {
             config: &config,
             locale: &locale,
             context: RenderContext::Bibliography,
+            mode: csln_core::citation::CitationMode::NonIntegral,
         };
         let values = component.values(&reference, &hints, &options).unwrap();
         // Assuming locale for "editor" verb is "edited by"
@@ -640,6 +652,7 @@ fn test_editor_label_format() {
             config: &config,
             locale: &locale,
             context: RenderContext::Bibliography,
+            mode: csln_core::citation::CitationMode::NonIntegral,
         };
         let values = component.values(&reference, &hints, &options).unwrap();
         // Assuming locale for "editor" short is "Ed."
@@ -655,6 +668,7 @@ fn test_editor_label_format() {
             config: &config,
             locale: &locale,
             context: RenderContext::Bibliography,
+            mode: csln_core::citation::CitationMode::NonIntegral,
         };
         let values = component.values(&reference, &hints, &options).unwrap();
         // Assuming locale for "editor" long is "editor"

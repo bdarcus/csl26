@@ -139,6 +139,14 @@ pub struct CitationSpec {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "multi-cite-delimiter")]
     pub multi_cite_delimiter: Option<String>,
+    /// Configuration for integral (narrative) citations (e.g., "Smith (2020)").
+    /// Overrides fields from the main citation spec when mode is Integral.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub integral: Option<Box<CitationSpec>>,
+    /// Configuration for non-integral (parenthetical) citations (e.g., "(Smith, 2020)").
+    /// Overrides fields from the main citation spec when mode is NonIntegral.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub non_integral: Option<Box<CitationSpec>>,
     /// Unknown fields captured for forward compatibility.
     #[serde(flatten)]
     pub _extra: HashMap<String, serde_json::Value>,
@@ -153,6 +161,56 @@ impl CitationSpec {
         self.template
             .clone()
             .or_else(|| self.use_preset.as_ref().map(|p| p.citation_template()))
+    }
+
+    /// Resolve the effective spec for a given citation mode.
+    ///
+    /// If a mode-specific spec exists (e.g., `integral`), it merges with and overrides
+    /// the base spec.
+    pub fn resolve_for_mode(&self, mode: &crate::citation::CitationMode) -> std::borrow::Cow<'_, CitationSpec> {
+        use crate::citation::CitationMode;
+        let mode_spec = match mode {
+            CitationMode::Integral => self.integral.as_ref(),
+            CitationMode::NonIntegral => self.non_integral.as_ref(),
+        };
+
+        match mode_spec {
+            Some(spec) => {
+                // Merge logic: mode specific > base
+                let mut merged = self.clone();
+                // We don't want to recurse infinitely or keep the mode specs in the merged result
+                merged.integral = None;
+                merged.non_integral = None;
+
+                if spec.options.is_some() {
+                    merged.options = spec.options.clone();
+                }
+                if spec.use_preset.is_some() {
+                    merged.use_preset = spec.use_preset.clone();
+                }
+                if spec.template.is_some() {
+                    merged.template = spec.template.clone();
+                }
+                if spec.wrap.is_some() {
+                    merged.wrap = spec.wrap.clone();
+                }
+                if spec.prefix.is_some() {
+                    merged.prefix = spec.prefix.clone();
+                }
+                if spec.suffix.is_some() {
+                    merged.suffix = spec.suffix.clone();
+                }
+                if spec.delimiter.is_some() {
+                    merged.delimiter = spec.delimiter.clone();
+                }
+                if spec.multi_cite_delimiter.is_some() {
+                    merged.multi_cite_delimiter = spec.multi_cite_delimiter.clone();
+                }
+                
+                std::borrow::Cow::Owned(merged)
+            }
+            None => std::borrow::Cow::Borrowed(self),
+        }
     }
 }
 

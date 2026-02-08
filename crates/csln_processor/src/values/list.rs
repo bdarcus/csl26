@@ -52,8 +52,8 @@ impl ComponentValues for TemplateList {
 
         Some(ProcValues {
             value: values.join(&delimiter),
-            prefix: self.rendering.prefix.clone(),
-            suffix: self.rendering.suffix.clone(),
+            prefix: None,
+            suffix: None,
             url: None,
             substituted_key: None,
         })

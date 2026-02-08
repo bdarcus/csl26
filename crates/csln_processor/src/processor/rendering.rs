@@ -41,6 +41,7 @@ impl<'a> Renderer<'a> {
         &self,
         items: &[crate::reference::CitationItem],
         template: &[TemplateComponent],
+        mode: &csln_core::citation::CitationMode,
         intra_delimiter: &str,
     ) -> Result<Vec<String>, ProcessorError> {
         let mut rendered_items = Vec::new();
@@ -57,6 +58,7 @@ impl<'a> Renderer<'a> {
                 reference,
                 template,
                 RenderContext::Citation,
+                mode.clone(),
                 citation_number,
             ) {
                 let item_str = citation_to_string(&proc, None, None, None, Some(intra_delimiter));
@@ -77,6 +79,7 @@ impl<'a> Renderer<'a> {
         &self,
         items: &[crate::reference::CitationItem],
         template: &[TemplateComponent],
+        mode: &csln_core::citation::CitationMode,
         intra_delimiter: &str,
     ) -> Result<Vec<String>, ProcessorError> {
         use crate::reference::CitationItem;
@@ -147,6 +150,7 @@ impl<'a> Renderer<'a> {
                     reference,
                     template,
                     RenderContext::Citation,
+                    mode.clone(),
                     citation_number,
                 ) {
                     let item_str =
@@ -166,7 +170,7 @@ impl<'a> Renderer<'a> {
                     .ok_or_else(|| ProcessorError::ReferenceNotFound(first_item.id.clone()))?;
 
                 // Render author part from first item
-                let author_part = self.render_author_for_grouping(first_ref, template);
+                let author_part = self.render_author_for_grouping(first_ref, template, mode);
 
                 // Render year parts for all items
                 let mut year_parts = Vec::new();
@@ -207,12 +211,14 @@ impl<'a> Renderer<'a> {
         &self,
         reference: &Reference,
         _template: &[TemplateComponent],
+        mode: &csln_core::citation::CitationMode,
     ) -> String {
         // For grouping, we need the short author form
         let options = RenderOptions {
             config: self.config,
             locale: self.locale,
             context: RenderContext::Citation,
+            mode: mode.clone(),
         };
 
         // Use short form for citations
@@ -297,6 +303,7 @@ impl<'a> Renderer<'a> {
             reference,
             template_ref,
             RenderContext::Bibliography,
+            csln_core::citation::CitationMode::NonIntegral, // Not relevant for bib, but required
             entry_number,
         )
     }
@@ -307,12 +314,14 @@ impl<'a> Renderer<'a> {
         reference: &Reference,
         template: &[TemplateComponent],
         context: RenderContext,
+        mode: csln_core::citation::CitationMode,
         citation_number: usize,
     ) -> Option<ProcTemplate> {
         let options = RenderOptions {
             config: self.config,
             locale: self.locale,
             context,
+            mode,
         };
         let default_hint = ProcHints::default();
         let base_hint = self

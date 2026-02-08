@@ -73,6 +73,7 @@ pub struct RenderOptions<'a> {
     pub config: &'a Config,
     pub locale: &'a Locale,
     pub context: RenderContext,
+    pub mode: csln_core::citation::CitationMode,
 }
 
 /// Trait for extracting values from template components.

@@ -356,14 +356,33 @@ pub fn format_names(
         .collect();
 
     // Determine "and" setting: use override if provided, else global config
-    let and_option = and_override.or_else(|| config.and_then(|c| c.and.as_ref()));
+    let mut and_option = and_override.or_else(|| config.and_then(|c| c.and.as_ref()));
+
+    // Resolve mode-dependent "and" if necessary
+    while let Some(AndOptions::ModeDependent {
+        integral,
+        non_integral,
+    }) = and_option
+    {
+        if options.context == RenderContext::Citation {
+            and_option = if options.mode == csln_core::citation::CitationMode::Integral {
+                Some(integral)
+            } else {
+                Some(non_integral)
+            };
+        } else {
+            // Bibliography usually follows non-integral or has its own override
+            and_option = Some(non_integral);
+        }
+    }
+
     // Determine conjunction between last two names
     // Default (None or no config) means no conjunction, matching CSL behavior
     let and_str = match and_option {
         Some(AndOptions::Text) => Some(locale.and_term(false)),
         Some(AndOptions::Symbol) => Some(locale.and_term(true)),
         Some(AndOptions::None) | None => None, // No conjunction
-        _ => None,                             // Future variants: default to none
+        _ => None,                             // Already resolved ModeDependent
     };
 
     // Check if delimiter should precede last name (Oxford comma)

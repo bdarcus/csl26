@@ -398,7 +398,7 @@ fn print_human(processor: &Processor, style_name: &str, show_cite: bool, show_bi
     ];
 
     if show_cite {
-        println!("CITATIONS:");
+        println!("CITATIONS (Non-Integral):");
         for id in &item_ids {
             let citation = Citation {
                 id: Some(id.to_string()),
@@ -406,6 +406,25 @@ fn print_human(processor: &Processor, style_name: &str, show_cite: bool, show_bi
                     id: id.to_string(),
                     ..Default::default()
                 }],
+                mode: csln_core::citation::CitationMode::NonIntegral,
+                ..Default::default()
+            };
+            match processor.process_citation(&citation) {
+                Ok(text) => println!("  [{}] {}", id, text),
+                Err(e) => println!("  [{}] ERROR: {}", id, e),
+            }
+        }
+        println!();
+
+        println!("CITATIONS (Integral/Narrative):");
+        for id in &item_ids {
+            let citation = Citation {
+                id: Some(id.to_string()),
+                items: vec![CitationItem {
+                    id: id.to_string(),
+                    ..Default::default()
+                }],
+                mode: csln_core::citation::CitationMode::Integral,
                 ..Default::default()
             };
             match processor.process_citation(&citation) {
