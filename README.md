@@ -203,6 +203,8 @@ Features implemented:
 ✓ subsequent-author-substitute (314 styles) - "———" replacement
 ✓ type-specific overrides - publisher suppression, page formatting
 ✓ page label extraction - "pp." from CSL Label nodes (#69)
+✓ pluggable output formats - plain text, HTML, and Djot
+✓ semantic rendering - machine-readable class wrapping (e.g. `csln-title`)
 
 Known gaps (in progress):
 ○ Group delimiter extraction (colon vs period between components)
@@ -307,8 +309,17 @@ cargo test --workspace
 ### Running the Processor
 
 ```bash
-# Run CSLN processor with a style
+# Run CSLN processor with a style (default plain text)
 cargo run --bin csln-processor -- styles/apa-7th.yaml
+
+# Generate semantic HTML
+cargo run --bin csln-processor -- --format html styles/apa-7th.yaml
+
+# Generate Djot with semantic attributes
+cargo run --bin csln-processor -- --format djot styles/apa-7th.yaml
+
+# Disable semantic classes for clean output
+cargo run --bin csln-processor -- --format html --no-semantics styles/apa-7th.yaml
 ```
 
 ### Style Corpus Analysis
