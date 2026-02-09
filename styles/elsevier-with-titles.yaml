@@ -46,17 +46,17 @@ bibliography:
     - title: primary
     - items:
       - items:
-        - contributor: editor
-          form: long
-          prefix: "in: "
-          overrides:
-            article-journal:
-              suppress: true
-            book:
-              suppress: true
-            all:
-              initialize-with: "."
-        delimiter: " "
+          - term: in
+          - contributor: editor
+            form: long
+            overrides:
+              article-journal: { suppress: true }
+              book: { suppress: true }
+              all: { initialize-with: "." }
+        delimiter: ": "
+        overrides:
+          article-journal: { suppress: true }
+          book: { suppress: true }
       - title: parent-monograph
         overrides:
           chapter:

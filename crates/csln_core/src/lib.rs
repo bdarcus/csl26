@@ -22,8 +22,8 @@ pub use legacy::{
     AndTerm, ConditionBlock, CslnInfo, CslnLocale, CslnNode, CslnStyle, DateBlock, DateForm,
     DateOptions, DatePartForm, DateParts, DelimiterPrecedes, ElseIfBranch, EtAlOptions,
     EtAlSubsequent, FontStyle, FontVariant, FontWeight, FormattingOptions, GroupBlock, ItemType,
-    LabelForm, LabelOptions, NameAsSortOrder, NameMode, NamesBlock, NamesOptions, TextDecoration,
-    Variable, VariableBlock, VerticalAlign,
+    LabelForm, LabelOptions, NameAsSortOrder, NameMode, NamesBlock, NamesOptions, TermBlock,
+    TextDecoration, Variable, VariableBlock, VerticalAlign,
 };
 pub use locale::Locale;
 pub use options::Config;

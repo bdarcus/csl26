@@ -12,6 +12,7 @@ pub mod contributor;
 pub mod date;
 pub mod list;
 pub mod number;
+pub mod term;
 pub mod title;
 pub mod variable;
 
@@ -100,7 +101,8 @@ impl ComponentValues for TemplateComponent {
             TemplateComponent::Number(n) => n.values(reference, hints, options),
             TemplateComponent::Variable(v) => v.values(reference, hints, options),
             TemplateComponent::List(l) => l.values(reference, hints, options),
-            _ => None, // Handle future non-exhaustive variants
+            TemplateComponent::Term(t) => t.values(reference, hints, options),
+            _ => None,
         }
     }
 }

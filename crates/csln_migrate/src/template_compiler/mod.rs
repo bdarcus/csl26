@@ -1073,6 +1073,7 @@ impl TemplateCompiler {
             TemplateComponent::Title(t) => Some(format!("title:{:?}", t.title)),
             TemplateComponent::Number(n) => Some(format!("number:{:?}", n.number)),
             TemplateComponent::Variable(v) => Some(format!("variable:{:?}", v.variable)),
+            TemplateComponent::Term(t) => Some(format!("term:{:?}", t.term)),
             // Lists don't have a single key - they contain multiple variables
             TemplateComponent::List(_) => None,
             _ => None,
@@ -1322,6 +1323,7 @@ impl TemplateCompiler {
             (TemplateComponent::Variable(v1), TemplateComponent::Variable(v2)) => {
                 v1.variable == v2.variable
             }
+            (TemplateComponent::Term(t1), TemplateComponent::Term(t2)) => t1.term == t2.term,
             _ => false,
         }
     }
@@ -1332,6 +1334,7 @@ impl TemplateCompiler {
             CslnNode::Names(names) => self.compile_names(names),
             CslnNode::Date(date) => self.compile_date(date),
             CslnNode::Variable(var) => self.compile_variable(var),
+            CslnNode::Term(term) => self.compile_term(term),
             _ => None,
         }
     }
@@ -1469,6 +1472,17 @@ impl TemplateCompiler {
             Variable::EventDate => Some(DateVariable::EventDate),
             _ => None,
         }
+    }
+
+    /// Compile a Term block into a Term component.
+    fn compile_term(&self, term: &csln_core::TermBlock) -> Option<TemplateComponent> {
+        Some(TemplateComponent::Term(csln_core::template::TemplateTerm {
+            term: term.term,
+            form: Some(term.form),
+            rendering: self.convert_formatting(&term.formatting),
+            overrides: None,
+            ..Default::default()
+        }))
     }
 
     /// Compile a Variable block into the appropriate component.
@@ -1794,6 +1808,7 @@ impl TemplateCompiler {
             TemplateComponent::Title(t) => t.rendering.clone(),
             TemplateComponent::Variable(v) => v.rendering.clone(),
             TemplateComponent::List(l) => l.rendering.clone(),
+            TemplateComponent::Term(t) => t.rendering.clone(),
             _ => Rendering::default(),
         }
     }
@@ -1807,6 +1822,7 @@ impl TemplateCompiler {
             TemplateComponent::Title(t) => t.rendering = rendering,
             TemplateComponent::Variable(v) => v.rendering = rendering,
             TemplateComponent::List(l) => l.rendering = rendering,
+            TemplateComponent::Term(t) => t.rendering = rendering,
             _ => {}
         }
     }
@@ -1823,6 +1839,7 @@ impl TemplateCompiler {
             TemplateComponent::Title(t) => t.overrides.clone(),
             TemplateComponent::Variable(v) => v.overrides.clone(),
             TemplateComponent::List(l) => l.overrides.clone(),
+            TemplateComponent::Term(t) => t.overrides.clone(),
             _ => None,
         }
     }
@@ -1847,6 +1864,11 @@ impl TemplateCompiler {
             }
             TemplateComponent::Date(d) => {
                 d.overrides
+                    .get_or_insert_with(HashMap::new)
+                    .insert(type_str, rendering);
+            }
+            TemplateComponent::Term(t) => {
+                t.overrides
                     .get_or_insert_with(HashMap::new)
                     .insert(type_str, rendering);
             }
@@ -1882,6 +1904,7 @@ impl TemplateCompiler {
             CslnNode::Date(d) => d.source_order,
             CslnNode::Names(n) => n.source_order,
             CslnNode::Group(g) => g.source_order,
+            CslnNode::Term(t) => t.source_order,
             _ => None,
         };
         eprintln!(
@@ -1893,6 +1916,7 @@ impl TemplateCompiler {
                 CslnNode::Group(_) => "Group".to_string(),
                 CslnNode::Text { value } => format!("Text({})", value),
                 CslnNode::Condition(_) => "Condition".to_string(),
+                CslnNode::Term(t) => format!("Term({:?})", t.term),
             },
             order
         );

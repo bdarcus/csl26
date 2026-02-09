@@ -255,6 +255,36 @@ impl Locale {
         }
     }
 
+    /// Get a general term by type and form.
+    pub fn general_term(&self, term: &GeneralTerm, form: TermForm) -> Option<&str> {
+        // First try the flattened map
+        if let Some(simple) = self.terms.general.get(term) {
+            return Some(match form {
+                TermForm::Long => &simple.long,
+                TermForm::Short => &simple.short,
+                _ => &simple.long,
+            });
+        }
+
+        // Fallback to specific fields for common terms
+        match term {
+            GeneralTerm::And => self.terms.and.as_deref(),
+            GeneralTerm::EtAl => self.terms.et_al.as_deref(),
+            GeneralTerm::AndOthers => self.terms.and_others.as_deref(),
+            GeneralTerm::Accessed => self.terms.accessed.as_deref(),
+            GeneralTerm::Ibid => self.terms.ibid.as_deref(),
+            GeneralTerm::In => self.terms.in_.as_deref(),
+            GeneralTerm::NoDate => self.terms.no_date.as_deref(),
+            GeneralTerm::Retrieved => self.terms.retrieved.as_deref(),
+            GeneralTerm::At => self.terms.at.as_deref(),
+            GeneralTerm::By => self.terms.by.as_deref(),
+            GeneralTerm::From => self.terms.from.as_deref(),
+            GeneralTerm::Anonymous => Some(&self.terms.anonymous.long),
+            GeneralTerm::Circa => Some(&self.terms.circa.long),
+            _ => None,
+        }
+    }
+
     /// Get the "and" term based on style preference.
     pub fn and_term(&self, use_symbol: bool) -> &str {
         if use_symbol {
@@ -429,7 +459,13 @@ impl Locale {
                         }
                     }
                 }
-                _ => {}
+                _ => {
+                    // Try to parse as GeneralTerm
+                    if let Some(general_term) = Self::parse_general_term(key) {
+                        let simple = Self::extract_simple_term_from_raw(value);
+                        locale.terms.general.insert(general_term, simple);
+                    }
+                }
             }
         }
 
@@ -566,6 +602,56 @@ impl Locale {
         SimpleTerm {
             long: long_str,
             short: short_str,
+        }
+    }
+
+    pub fn parse_general_term(name: &str) -> Option<GeneralTerm> {
+        match name {
+            "in" => Some(GeneralTerm::In),
+            "accessed" => Some(GeneralTerm::Accessed),
+            "retrieved" => Some(GeneralTerm::Retrieved),
+            "at" => Some(GeneralTerm::At),
+            "from" => Some(GeneralTerm::From),
+            "by" => Some(GeneralTerm::By),
+            "no-date" | "no_date" | "no date" => Some(GeneralTerm::NoDate),
+            "anonymous" => Some(GeneralTerm::Anonymous),
+            "circa" => Some(GeneralTerm::Circa),
+            "available-at" | "available_at" | "available at" => Some(GeneralTerm::AvailableAt),
+            "ibid" => Some(GeneralTerm::Ibid),
+            "and" => Some(GeneralTerm::And),
+            "et-al" | "et_al" | "et al" => Some(GeneralTerm::EtAl),
+            "and-others" | "and_others" | "and others" => Some(GeneralTerm::AndOthers),
+            "forthcoming" => Some(GeneralTerm::Forthcoming),
+            "online" => Some(GeneralTerm::Online),
+            "review-of" | "review_of" | "review of" => Some(GeneralTerm::ReviewOf),
+            "original-work-published" => Some(GeneralTerm::OriginalWorkPublished),
+            _ => None,
+        }
+    }
+
+    fn extract_simple_term_from_raw(value: &raw::RawTermValue) -> SimpleTerm {
+        match value {
+            raw::RawTermValue::Simple(s) => SimpleTerm {
+                long: s.clone(),
+                short: s.clone(),
+            },
+            raw::RawTermValue::Forms(forms) => {
+                let long = forms
+                    .get("long")
+                    .and_then(|v| v.as_string())
+                    .unwrap_or("")
+                    .to_string();
+                let short = forms
+                    .get("short")
+                    .and_then(|v| v.as_string())
+                    .unwrap_or(&long)
+                    .to_string();
+                SimpleTerm { long, short }
+            }
+            raw::RawTermValue::SingularPlural { singular, .. } => SimpleTerm {
+                long: singular.clone(),
+                short: singular.clone(),
+            },
         }
     }
 }

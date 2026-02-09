@@ -1,5 +1,6 @@
 use crate::{
-    ConditionBlock, CslnNode, DateBlock, GroupBlock, ItemType, NamesBlock, Variable, VariableBlock,
+    ConditionBlock, CslnNode, DateBlock, GroupBlock, ItemType, NamesBlock, TermBlock, Variable,
+    VariableBlock,
 };
 use std::collections::HashMap;
 
@@ -30,7 +31,15 @@ impl Renderer {
             CslnNode::Names(names_block) => self.render_names(names_block, item),
             CslnNode::Group(group_block) => self.render_group(group_block, item),
             CslnNode::Condition(cond_block) => self.render_condition(cond_block, item),
+            CslnNode::Term(term_block) => self.render_term(term_block),
         }
+    }
+
+    fn render_term(&self, block: &TermBlock) -> String {
+        self.apply_formatting(
+            &format!("{:?}", block.term).to_lowercase(),
+            &block.formatting,
+        )
     }
 
     fn render_variable(&self, block: &VariableBlock, item: &RenderItem) -> String {

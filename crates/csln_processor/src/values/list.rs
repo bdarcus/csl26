@@ -9,6 +9,8 @@ impl ComponentValues for TemplateList {
         hints: &ProcHints,
         options: &RenderOptions<'_>,
     ) -> Option<ProcValues> {
+        let mut has_content = false;
+
         // Collect values from all items, applying their rendering
         let values: Vec<String> = self
             .items
@@ -17,6 +19,11 @@ impl ComponentValues for TemplateList {
                 let v = item.values(reference, hints, options)?;
                 if v.value.is_empty() {
                     return None;
+                }
+
+                // Track if we have any "meaningful" content (not just a term)
+                if !is_term_based(item) {
+                    has_content = true;
                 }
 
                 // Use the central rendering logic to apply global config, local settings, and overrides
@@ -39,7 +46,7 @@ impl ComponentValues for TemplateList {
             })
             .collect();
 
-        if values.is_empty() {
+        if values.is_empty() || !has_content {
             return None;
         }
 
@@ -57,5 +64,15 @@ impl ComponentValues for TemplateList {
             url: None,
             substituted_key: None,
         })
+    }
+}
+
+/// Check if a component is purely term-based or a list of such.
+fn is_term_based(component: &csln_core::template::TemplateComponent) -> bool {
+    use csln_core::template::TemplateComponent;
+    match component {
+        TemplateComponent::Term(_) => true,
+        TemplateComponent::List(l) => l.items.iter().all(is_term_based),
+        _ => false,
     }
 }

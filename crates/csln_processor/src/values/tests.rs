@@ -1,7 +1,7 @@
 use super::*;
 use crate::reference::Reference;
 use csl_legacy::csl_json::{DateVariable, Name, Reference as LegacyReference};
-use csln_core::locale::Locale;
+use csln_core::locale::{GeneralTerm, Locale, TermForm};
 use csln_core::options::*;
 use csln_core::reference::FlatName;
 use csln_core::template::DateVariable as TemplateDateVar;
@@ -674,4 +674,65 @@ fn test_editor_label_format() {
         // Assuming locale for "editor" long is "editor"
         assert_eq!(values.suffix, Some(", editor".to_string()));
     }
+}
+
+#[test]
+fn test_term_values() {
+    let config = make_config();
+    let locale = make_locale();
+    let options = RenderOptions {
+        config: &config,
+        locale: &locale,
+        context: RenderContext::Bibliography,
+        mode: csln_core::citation::CitationMode::NonIntegral,
+    };
+    let reference = make_reference();
+    let hints = ProcHints::default();
+
+    let component = TemplateTerm {
+        term: GeneralTerm::In,
+        form: Some(TermForm::Long),
+        overrides: None,
+        _extra: Default::default(),
+        ..Default::default()
+    };
+
+    let values = component.values(&reference, &hints, &options).unwrap();
+    assert_eq!(values.value, "in");
+}
+
+#[test]
+fn test_template_list_term_suppression() {
+    let config = make_config();
+    let locale = make_locale();
+    let options = RenderOptions {
+        config: &config,
+        locale: &locale,
+        context: RenderContext::Bibliography,
+        mode: csln_core::citation::CitationMode::NonIntegral,
+    };
+    // Reference with no editor
+    let reference = make_reference();
+    let hints = ProcHints::default();
+
+    let component = TemplateList {
+        items: vec![
+            TemplateComponent::Term(TemplateTerm {
+                term: GeneralTerm::In,
+                overrides: None,
+                _extra: Default::default(),
+                ..Default::default()
+            }),
+            TemplateComponent::Contributor(TemplateContributor {
+                contributor: ContributorRole::Editor,
+                ..Default::default()
+            }),
+        ],
+        delimiter: Some(DelimiterPunctuation::Space),
+        ..Default::default()
+    };
+
+    let values = component.values(&reference, &hints, &options);
+    // Should be None because only the term "In" would render, and it's suppressed if no content-bearing items are present
+    assert!(values.is_none());
 }
