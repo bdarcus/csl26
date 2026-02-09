@@ -14,18 +14,22 @@ This skill can modify both style YAML and processor/core code when features are 
 
 ```
 /styleauthor <style-name> [--urls URL1 URL2] [--format author-date|numeric|note]
+/styleauthor update <style-path> [--mode language|output|full]
 ```
 
 **Parameters:**
-- `style-name` (required): Name for the style file (e.g., `chicago-author-date`)
+- `style-name` (required for new styles): Name for the style file (e.g., `chicago-author-date`)
+- `style-path` (required for updates): Path to an existing style file (CSLN or CSL)
 - `--urls` (optional): Reference URLs for the style guide
 - `--format` (optional): Citation format class (default: `author-date`)
+- `--mode` (optional for updates): Update focus (`language`, `output`, or `full`)
 
 **Examples:**
 - `/styleauthor chicago-author-date --urls https://www.chicagomanualofstyle.org/`
 - `/styleauthor ieee --format numeric`
 - `/styleauthor oscola --format note`
 - `/styleauthor apa --migrate styles-legacy/apa.csl`
+- `/styleauthor update styles/apa-7th.yaml --mode language`
 
 ## Workflow Phases
 
@@ -38,6 +42,24 @@ Use this workflow when converting an existing CSL 1.0 style. It identifies the t
     -   **Target Output** (citeproc-js): This is your visual goal.
     -   **Baseline CSLN**: Use the `options` block as your starting point (it extracts name rules, date forms, etc.).
 3.  **Author**: Proceed to Phase 2, but focus on mapping the visual components in "Target Output" to CSLN template components.
+
+### Update Workflow (Optional)
+
+Use this workflow to improve an existing style based on new language features or expanded output coverage.
+
+1.  **Analyze**:
+    -   Compare the style against Phase 2 "Standard Workflow Phases" for modern best practices.
+    -   Identify missing reference types or edge cases by checking oracle output or reference materials.
+2.  **Plan**:
+    -   Fill out `.claude/skills/styleauthor/templates/update-checklist.md`.
+    -   Prioritize modernization (e.g., replacing manual prefix/suffix with `wrap`).
+3.  **Update**:
+    -   Apply changes to the YAML file.
+    -   If improving output, add new overrides or components to handle specific reference types.
+4.  **Test & Verify**:
+    -   Run `cargo run --bin csln-processor -- <style-path>`.
+    -   Verify output against reference materials (e.g., style guide examples) or oracle output (if a legacy CSL exists).
+    -   Ensure no regressions in existing supported types.
 
 ---
 

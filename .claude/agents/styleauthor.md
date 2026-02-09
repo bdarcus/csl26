@@ -1,9 +1,9 @@
 ---
 name: styleauthor
 description: >
-  Full-stack style author. Creates CSLN citation styles from reference materials,
+  Full-stack style author. Creates and updates CSLN citation styles from reference materials,
   iteratively testing and fixing both style YAML and processor code until output
-  matches expectations. Use for creating new citation styles.
+  matches expectations. Use for creating new citation styles or modernizing existing ones.
 model: sonnet
 tools: Read, Write, Edit, Bash, Glob, Grep
 allowedTools: Read, Write, Edit, Bash, Glob, Grep, WebFetch, WebSearch
@@ -39,7 +39,7 @@ Load and follow the workflow in `.claude/skills/styleauthor/SKILL.md`.
 1. Read `.claude/skills/styleauthor/SKILL.md` for the full 5-phase workflow
 2. Read `styles/apa-7th.yaml` as the gold-standard reference style
 3. Read `crates/csln_core/src/template.rs` for available component types
-4. Follow Phases 1-5: Research, Author, Test, Evolve, Verify
+4. Follow Phases 1-5 or the Update Workflow as appropriate
 
 ## Iteration Cap
 
