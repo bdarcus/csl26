@@ -150,9 +150,9 @@ All three must pass before continuing. If tests fail, fix the issue before proce
 
 Final verification before declaring done.
 
-1. If a CSL 1.0 equivalent exists in `styles/`:
+1. If a CSL 1.0 equivalent exists in `styles-legacy/`:
    ```bash
-   node scripts/oracle.js styles/<style-name>.csl
+   node scripts/oracle.js styles-legacy/<style-name>.csl
    ```
    Compare CSLN output to citeproc-js output.
 
