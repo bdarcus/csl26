@@ -66,4 +66,23 @@ pub trait OutputFormat: Default + Clone {
 
     /// Hyperlink the content to a URL.
     fn link(&self, url: &str, content: Self::Output) -> Self::Output;
+
+    /// Format a reference ID for use as a target or link (e.g. adding a prefix).
+    fn format_id(&self, id: &str) -> String {
+        id.to_string()
+    }
+
+    /// Render a full bibliography container.
+    ///
+    /// The default implementation joins the entries with double newlines.
+    fn bibliography(&self, entries: Vec<Self::Output>) -> Self::Output {
+        self.join(entries, "\n\n")
+    }
+
+    /// Render a single bibliography entry with its unique identifier.
+    ///
+    /// The default implementation just returns the content.
+    fn entry(&self, _id: &str, content: Self::Output) -> Self::Output {
+        content
+    }
 }

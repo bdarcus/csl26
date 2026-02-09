@@ -88,4 +88,25 @@ impl OutputFormat for Html {
         }
         format!(r#"<a href="{}">{}</a>"#, url, content)
     }
+
+    fn format_id(&self, id: &str) -> String {
+        format!("ref-{}", id)
+    }
+
+    fn bibliography(&self, entries: Vec<Self::Output>) -> Self::Output {
+        format!(
+            r#"<div class="csln-bibliography">
+{}
+</div>"#,
+            self.join(entries, "\n")
+        )
+    }
+
+    fn entry(&self, id: &str, content: Self::Output) -> Self::Output {
+        format!(
+            r#"<div class="csln-entry" id="{}">{}</div>"#,
+            self.format_id(id),
+            content
+        )
+    }
 }

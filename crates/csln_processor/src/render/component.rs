@@ -28,6 +28,15 @@ pub struct ProcTemplateComponent {
 /// A processed template (list of rendered components).
 pub type ProcTemplate = Vec<ProcTemplateComponent>;
 
+/// A processed bibliography entry.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct ProcEntry {
+    /// The reference ID.
+    pub id: String,
+    /// The processed template components.
+    pub template: ProcTemplate,
+}
+
 use super::format::OutputFormat;
 use super::plain::PlainText;
 

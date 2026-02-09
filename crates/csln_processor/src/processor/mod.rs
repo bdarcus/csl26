@@ -30,7 +30,7 @@ mod tests;
 
 use crate::error::ProcessorError;
 use crate::reference::{Bibliography, Citation, Reference};
-use crate::render::ProcTemplate;
+use crate::render::{ProcEntry, ProcTemplate};
 use crate::values::ProcHints;
 use csln_core::locale::Locale;
 use csln_core::options::Config;
@@ -79,7 +79,7 @@ impl Default for Processor {
 #[derive(Debug, Default)]
 pub struct ProcessedReferences {
     /// Rendered bibliography entries.
-    pub bibliography: Vec<ProcTemplate>,
+    pub bibliography: Vec<ProcEntry>,
     /// Rendered citations (if any).
     pub citations: Option<Vec<String>>,
 }
@@ -161,7 +161,7 @@ impl Processor {
     /// Process all references to get rendered output.
     pub fn process_references(&self) -> ProcessedReferences {
         let sorted_refs = self.sort_references(self.bibliography.values().collect());
-        let mut bibliography: Vec<ProcTemplate> = Vec::new();
+        let mut bibliography: Vec<ProcEntry> = Vec::new();
         let mut prev_reference: Option<&Reference> = None;
 
         let bib_config = self.get_config().bibliography.as_ref();
@@ -170,10 +170,11 @@ impl Processor {
         for (index, reference) in sorted_refs.iter().enumerate() {
             // For numeric styles, use the citation number assigned when first cited.
             // For other styles, use position in sorted bibliography.
+            let ref_id = reference.id().unwrap_or_default();
             let entry_number = self
                 .citation_numbers
                 .borrow()
-                .get(&reference.id().unwrap_or_default())
+                .get(&ref_id)
                 .copied()
                 .unwrap_or(index + 1);
             if let Some(mut proc) = self.process_bibliography_entry(reference, entry_number) {
@@ -187,7 +188,10 @@ impl Processor {
                     }
                 }
 
-                bibliography.push(proc);
+                bibliography.push(ProcEntry {
+                    id: ref_id,
+                    template: proc,
+                });
                 prev_reference = Some(reference);
             }
         }
