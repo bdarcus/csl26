@@ -1,7 +1,7 @@
 ---
 # csl26-4eyw
 title: Add HTML and Djot output modes
-status: todo
+status: completed
 type: feature
 priority: high
 created_at: 2026-02-07T11:47:18Z

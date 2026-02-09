@@ -1,7 +1,7 @@
 ---
 # csl26-qom9
 title: Create output Render Trait
-status: todo
+status: completed
 type: feature
 priority: high
 created_at: 2026-02-07T11:55:37Z

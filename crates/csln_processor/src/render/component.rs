@@ -28,14 +28,26 @@ pub struct ProcTemplateComponent {
 /// A processed template (list of rendered components).
 pub type ProcTemplate = Vec<ProcTemplateComponent>;
 
-/// Render a single component to string.
+use super::format::OutputFormat;
+use super::plain::PlainText;
+
+/// Render a single component to string using the default PlainText format.
 pub fn render_component(component: &ProcTemplateComponent) -> String {
+    PlainText.finish(render_component_with_format::<PlainText>(component))
+}
+
+/// Render a single component using a specific output format.
+pub fn render_component_with_format<F: OutputFormat>(
+    component: &ProcTemplateComponent,
+) -> F::Output {
+    let fmt = F::default();
+
     // Get merged rendering (global config + local settings + overrides)
     let rendering = get_effective_rendering(component);
 
     // Check if suppressed
     if rendering.suppress == Some(true) {
-        return String::new();
+        return fmt.text("");
     }
 
     let prefix = rendering.prefix.as_deref().unwrap_or_default();
@@ -44,41 +56,128 @@ pub fn render_component(component: &ProcTemplateComponent) -> String {
     let inner_suffix = rendering.inner_suffix.as_deref().unwrap_or_default();
     let wrap = rendering.wrap.as_ref().unwrap_or(&WrapPunctuation::None);
 
-    let (wrap_open, wrap_close) = match wrap {
-        WrapPunctuation::None => ("", ""),
-        WrapPunctuation::Parentheses => ("(", ")"),
-        WrapPunctuation::Brackets => ("[", "]"),
-        WrapPunctuation::Quotes => ("\u{201C}", "\u{201D}"), // U+201C (") and U+201D (")
-    };
+    let mut output = fmt.text(&component.value);
 
-    // Apply emphasis/strong/quote
-    let mut text = component.value.clone();
+    // Order of application:
+    // 1. Text styles (emph, strong, etc.)
+    // 2. Links
+    // 3. Inner affixes
+    // 4. Wrap
+    // 5. Outer affixes
+    // 6. Semantic classes (last, to wrap everything)
+
+    // 1. Apply text styles
     if rendering.emph == Some(true) {
-        text = format!("_{}_", text);
+        output = fmt.emph(output);
     }
     if rendering.strong == Some(true) {
-        text = format!("**{}**", text);
-    }
-    if rendering.quote == Some(true) {
-        text = format!("\u{201C}{}\u{201D}", text); // U+201C (") and U+201D (")
+        output = fmt.strong(output);
     }
     if rendering.small_caps == Some(true) {
-        text = format!("<span style=\"font-variant:small-caps\">{}</span>", text);
+        output = fmt.small_caps(output);
+    }
+    if rendering.quote == Some(true) {
+        output = fmt.quote(output);
     }
 
-    // Build output: outer_prefix + wrap_open + inner_prefix + extracted_prefix + text + extracted_suffix + inner_suffix + wrap_close + outer_suffix
-    format!(
-        "{}{}{}{}{}{}{}{}{}",
-        prefix,
-        wrap_open,
+    // 2. Apply links if URL is present
+    if let Some(url) = &component.url {
+        output = fmt.link(url, output);
+    }
+
+    // 3. Inner affixes + extracted val prefix/suffix
+    let total_inner_prefix = format!(
+        "{}{}",
         inner_prefix,
-        component.prefix.as_deref().unwrap_or_default(),
-        text,
+        component.prefix.as_deref().unwrap_or_default()
+    );
+    let total_inner_suffix = format!(
+        "{}{}",
         component.suffix.as_deref().unwrap_or_default(),
-        inner_suffix,
-        wrap_close,
-        suffix
-    )
+        inner_suffix
+    );
+
+    if !total_inner_prefix.is_empty() || !total_inner_suffix.is_empty() {
+        output = fmt.inner_affix(&total_inner_prefix, output, &total_inner_suffix);
+    }
+
+    // 4. Wrap
+    if *wrap != WrapPunctuation::None {
+        output = fmt.wrap_punctuation(wrap, output);
+    }
+
+    // 5. Outer affixes
+    if !prefix.is_empty() || !suffix.is_empty() {
+        output = fmt.affix(prefix, output, suffix);
+    }
+
+    // 6. Apply semantic class based on component type
+    let show_semantics = component
+        .config
+        .as_ref()
+        .and_then(|c| c.semantic_classes)
+        .unwrap_or(true);
+
+    if show_semantics {
+        use csln_core::template::{DateVariable, NumberVariable, SimpleVariable};
+        let semantic_class = match &component.template_component {
+            TemplateComponent::Title(t) => match t.title {
+                TitleType::Primary => Some("csln-title".to_string()),
+                TitleType::ParentMonograph | TitleType::ParentSerial => {
+                    Some("csln-container-title".to_string())
+                }
+                _ => Some("csln-title".to_string()),
+            },
+            TemplateComponent::Contributor(c) => Some(format!("csln-{}", c.contributor.as_str())),
+            TemplateComponent::Date(d) => Some(format!(
+                "csln-{}",
+                match d.date {
+                    DateVariable::Issued => "issued",
+                    DateVariable::Accessed => "accessed",
+                    DateVariable::OriginalPublished => "original-published",
+                    DateVariable::Submitted => "submitted",
+                    DateVariable::EventDate => "event-date",
+                }
+            )),
+            TemplateComponent::Number(n) => Some(format!(
+                "csln-{}",
+                match n.number {
+                    NumberVariable::Volume => "volume",
+                    NumberVariable::Issue => "issue",
+                    NumberVariable::Pages => "pages",
+                    NumberVariable::Edition => "edition",
+                    NumberVariable::ChapterNumber => "chapter-number",
+                    NumberVariable::CollectionNumber => "collection-number",
+                    NumberVariable::NumberOfPages => "number-of-pages",
+                    NumberVariable::NumberOfVolumes => "number-of-volumes",
+                    NumberVariable::CitationNumber => "citation-number",
+                    _ => "number",
+                }
+            )),
+            TemplateComponent::Variable(v) => Some(format!(
+                "csln-{}",
+                match v.variable {
+                    SimpleVariable::Doi => "doi",
+                    SimpleVariable::Url => "url",
+                    SimpleVariable::Isbn => "isbn",
+                    SimpleVariable::Issn => "issn",
+                    SimpleVariable::Pmid => "pmid",
+                    SimpleVariable::Note => "note",
+                    SimpleVariable::Publisher => "publisher",
+                    SimpleVariable::PublisherPlace => "publisher-place",
+                    SimpleVariable::Archive => "archive",
+                    _ => "variable",
+                }
+            )),
+            _ => None,
+        };
+
+        if let Some(class) = semantic_class {
+            output = fmt.semantic(&class, output);
+        }
+    }
+
+    output
 }
 
 /// Get effective rendering, applying global config, then local template settings, then type-specific overrides.
@@ -202,4 +301,29 @@ pub fn get_title_category_rendering(
     rendering
         .map(|r| r.to_rendering())
         .or_else(|| titles_config.default.as_ref().map(|d| d.to_rendering()))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use csln_core::template::{Rendering, TemplateComponent, TemplateTitle, TitleType};
+
+    #[test]
+    fn test_render_with_emphasis() {
+        let component = ProcTemplateComponent {
+            template_component: TemplateComponent::Title(TemplateTitle {
+                title: TitleType::Primary,
+                rendering: Rendering {
+                    emph: Some(true),
+                    ..Default::default()
+                },
+                ..Default::default()
+            }),
+            value: "The Structure of Scientific Revolutions".to_string(),
+            ..Default::default()
+        };
+
+        let result = render_component(&component);
+        assert_eq!(result, "_The Structure of Scientific Revolutions_");
+    }
 }

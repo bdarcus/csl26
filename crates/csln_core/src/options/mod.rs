@@ -68,6 +68,10 @@ pub struct Config {
     /// Examples: Comma (APA ", "), Colon (Chicago ": ").
     #[serde(skip_serializing_if = "Option::is_none")]
     pub volume_pages_delimiter: Option<DelimiterPunctuation>,
+    /// Whether to output semantic markup (HTML spans, Djot attributes).
+    /// Defaults to true.
+    #[serde(default = "default_true", skip_serializing_if = "Option::is_none")]
+    pub semantic_classes: Option<bool>,
     /// Unknown fields captured for forward compatibility.
     #[serde(flatten)]
     pub _extra: HashMap<String, serde_json::Value>,
@@ -142,6 +146,9 @@ impl Config {
         }
         if other.volume_pages_delimiter.is_some() {
             self.volume_pages_delimiter = other.volume_pages_delimiter.clone();
+        }
+        if other.semantic_classes.is_some() {
+            self.semantic_classes = other.semantic_classes;
         }
     }
 
@@ -275,4 +282,8 @@ contributors:
         assert_eq!(merged.processing, Some(Processing::AuthorDate));
         assert!(merged.punctuation_in_quote);
     }
+}
+
+fn default_true() -> Option<bool> {
+    Some(true)
 }

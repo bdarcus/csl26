@@ -30,7 +30,7 @@ mod tests;
 
 use crate::error::ProcessorError;
 use crate::reference::{Bibliography, Citation, Reference};
-use crate::render::{refs_to_string, ProcTemplate};
+use crate::render::ProcTemplate;
 use crate::values::ProcHints;
 use csln_core::locale::Locale;
 use csln_core::options::Config;
@@ -338,9 +338,110 @@ impl Processor {
         renderer.apply_author_substitution(proc, substitute);
     }
 
+    /// Render the bibliography to a string using a specific format.
+    pub fn render_bibliography_with_format<F>(&self) -> String
+    where
+        F: crate::render::format::OutputFormat<Output = String>,
+    {
+        let processed = self.process_references();
+        crate::render::refs_to_string_with_format::<F>(processed.bibliography)
+    }
+
+    /// Render a citation to a string using a specific format.
+    pub fn process_citation_with_format<F>(
+        &self,
+        citation: &Citation,
+    ) -> Result<String, ProcessorError>
+    where
+        F: crate::render::format::OutputFormat<Output = String>,
+    {
+        // Resolve the effective citation spec
+        let default_spec = csln_core::CitationSpec::default();
+        let effective_spec = self
+            .style
+            .citation
+            .as_ref()
+            .map(|cs| cs.resolve_for_mode(&citation.mode))
+            .unwrap_or(std::borrow::Cow::Borrowed(&default_spec));
+
+        let template_vec = effective_spec.resolve_template().unwrap_or_default();
+        let template = template_vec.as_slice();
+
+        let intra_delimiter = effective_spec.delimiter.as_deref().unwrap_or(", ");
+        let inter_delimiter = effective_spec
+            .multi_cite_delimiter
+            .as_deref()
+            .unwrap_or("; ");
+
+        let is_author_date = self
+            .style
+            .options
+            .as_ref()
+            .and_then(|o| o.processing.as_ref())
+            .map(|p| matches!(p, csln_core::options::Processing::AuthorDate))
+            .unwrap_or(false);
+
+        let cite_config = self.get_citation_config();
+        let renderer = Renderer::new(
+            &self.style,
+            &self.bibliography,
+            &self.locale,
+            &cite_config,
+            &self.hints,
+            &self.citation_numbers,
+        );
+
+        // Process group components
+        let rendered_groups = if is_author_date && citation.items.len() > 1 {
+            renderer.render_grouped_citation_with_format::<F>(
+                &citation.items,
+                template,
+                &citation.mode,
+                intra_delimiter,
+            )?
+        } else {
+            renderer.render_ungrouped_citation_with_format::<F>(
+                &citation.items,
+                template,
+                &citation.mode,
+                intra_delimiter,
+            )?
+        };
+
+        let fmt = F::default();
+        let content = fmt.join(rendered_groups, inter_delimiter);
+
+        // Apply citation-level prefix/suffix from input
+        let citation_prefix = citation.prefix.as_deref().unwrap_or("");
+        let citation_suffix = citation.suffix.as_deref().unwrap_or("");
+
+        let output = if !citation_prefix.is_empty() || !citation_suffix.is_empty() {
+            fmt.affix(citation_prefix, content, citation_suffix)
+        } else {
+            content
+        };
+
+        // Get wrap/prefix/suffix from citation spec
+        let wrap = effective_spec
+            .wrap
+            .as_ref()
+            .unwrap_or(&WrapPunctuation::None);
+        let spec_prefix = effective_spec.prefix.as_deref().unwrap_or("");
+        let spec_suffix = effective_spec.suffix.as_deref().unwrap_or("");
+
+        let wrapped = if *wrap != WrapPunctuation::None {
+            fmt.wrap_punctuation(wrap, output)
+        } else if !spec_prefix.is_empty() || !spec_suffix.is_empty() {
+            fmt.affix(spec_prefix, output, spec_suffix)
+        } else {
+            output
+        };
+
+        Ok(fmt.finish(wrapped))
+    }
+
     /// Render the bibliography to a string.
     pub fn render_bibliography(&self) -> String {
-        let processed = self.process_references();
-        refs_to_string(processed.bibliography)
+        self.render_bibliography_with_format::<crate::render::plain::PlainText>()
     }
 }

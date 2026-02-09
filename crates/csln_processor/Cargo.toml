@@ -23,6 +23,8 @@ thiserror = "2.0"
 edtf = { version = "0.2.0", features = ["chrono"] }
 biblatex = "0.10"
 indexmap = "2.13.0"
+clap = { version = "4.4", features = ["derive"] }
+
 
 [lints]
 workspace = true

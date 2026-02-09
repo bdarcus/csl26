@@ -1,6 +1,6 @@
 use crate::error::ProcessorError;
 use crate::reference::{Bibliography, Reference};
-use crate::render::{citation_to_string, ProcTemplate, ProcTemplateComponent};
+use crate::render::{ProcTemplate, ProcTemplateComponent};
 use crate::values::{ComponentValues, ProcHints, RenderContext, RenderOptions};
 use csln_core::locale::Locale;
 use csln_core::options::Config;
@@ -44,7 +44,26 @@ impl<'a> Renderer<'a> {
         mode: &csln_core::citation::CitationMode,
         intra_delimiter: &str,
     ) -> Result<Vec<String>, ProcessorError> {
+        self.render_ungrouped_citation_with_format::<crate::render::plain::PlainText>(
+            items,
+            template,
+            mode,
+            intra_delimiter,
+        )
+    }
+
+    pub fn render_ungrouped_citation_with_format<F>(
+        &self,
+        items: &[crate::reference::CitationItem],
+        template: &[TemplateComponent],
+        mode: &csln_core::citation::CitationMode,
+        intra_delimiter: &str,
+    ) -> Result<Vec<String>, ProcessorError>
+    where
+        F: crate::render::format::OutputFormat<Output = String>,
+    {
         let mut rendered_items = Vec::new();
+        let fmt = F::default();
 
         for item in items {
             let reference = self
@@ -61,12 +80,21 @@ impl<'a> Renderer<'a> {
                 mode.clone(),
                 citation_number,
             ) {
-                let item_str = citation_to_string(&proc, None, None, None, Some(intra_delimiter));
+                let item_str = crate::render::citation::citation_to_string_with_format::<F>(
+                    &proc,
+                    None,
+                    None,
+                    None,
+                    Some(intra_delimiter),
+                );
                 if !item_str.is_empty() {
-                    // Apply item-level prefix/suffix
                     let prefix = item.prefix.as_deref().unwrap_or("");
                     let suffix = item.suffix.as_deref().unwrap_or("");
-                    rendered_items.push(format!("{}{}{}", prefix, item_str, suffix));
+                    if !prefix.is_empty() || !suffix.is_empty() {
+                        rendered_items.push(fmt.affix(prefix, item_str, suffix));
+                    } else {
+                        rendered_items.push(item_str);
+                    }
                 }
             }
         }
@@ -82,6 +110,24 @@ impl<'a> Renderer<'a> {
         mode: &csln_core::citation::CitationMode,
         intra_delimiter: &str,
     ) -> Result<Vec<String>, ProcessorError> {
+        self.render_grouped_citation_with_format::<crate::render::plain::PlainText>(
+            items,
+            template,
+            mode,
+            intra_delimiter,
+        )
+    }
+
+    pub fn render_grouped_citation_with_format<F>(
+        &self,
+        items: &[crate::reference::CitationItem],
+        template: &[TemplateComponent],
+        mode: &csln_core::citation::CitationMode,
+        intra_delimiter: &str,
+    ) -> Result<Vec<String>, ProcessorError>
+    where
+        F: crate::render::format::OutputFormat<Output = String>,
+    {
         use crate::reference::CitationItem;
 
         // Group adjacent items by author key
@@ -116,7 +162,6 @@ impl<'a> Renderer<'a> {
                                 .join("|")
                         })
                         .unwrap_or_default();
-                    // Group if same author AND no item-level prefix (prefix breaks grouping)
                     author_key == last_key && item.prefix.is_none() && !author_key.is_empty()
                 } else {
                     false
@@ -132,12 +177,11 @@ impl<'a> Renderer<'a> {
             }
         }
 
-        // Render each group
         let mut rendered_groups = Vec::new();
+        let fmt = F::default();
 
         for group in groups {
             if group.len() == 1 {
-                // Single item - render normally
                 let item = group[0];
                 let reference = self
                     .bibliography
@@ -153,26 +197,32 @@ impl<'a> Renderer<'a> {
                     mode.clone(),
                     citation_number,
                 ) {
-                    let item_str =
-                        citation_to_string(&proc, None, None, None, Some(intra_delimiter));
+                    let item_str = crate::render::citation::citation_to_string_with_format::<F>(
+                        &proc,
+                        None,
+                        None,
+                        None,
+                        Some(intra_delimiter),
+                    );
                     if !item_str.is_empty() {
                         let prefix = item.prefix.as_deref().unwrap_or("");
                         let suffix = item.suffix.as_deref().unwrap_or("");
-                        rendered_groups.push(format!("{}{}{}", prefix, item_str, suffix));
+                        if !prefix.is_empty() || !suffix.is_empty() {
+                            rendered_groups.push(fmt.affix(prefix, item_str, suffix));
+                        } else {
+                            rendered_groups.push(item_str);
+                        }
                     }
                 }
             } else {
-                // Multiple items - render author once, then years
                 let first_item = group[0];
                 let first_ref = self
                     .bibliography
                     .get(&first_item.id)
                     .ok_or_else(|| ProcessorError::ReferenceNotFound(first_item.id.clone()))?;
 
-                // Render author part from first item
                 let author_part = self.render_author_for_grouping(first_ref, template, mode);
 
-                // Render year parts for all items
                 let mut year_parts = Vec::new();
                 for item in &group {
                     let reference = self
@@ -183,22 +233,21 @@ impl<'a> Renderer<'a> {
                     let year_part = self.render_year_for_grouping(reference);
                     if !year_part.is_empty() {
                         let suffix = item.suffix.as_deref().unwrap_or("");
-                        year_parts.push(format!("{}{}", year_part, suffix));
+                        if !suffix.is_empty() {
+                            year_parts.push(fmt.affix("", year_part, suffix));
+                        } else {
+                            year_parts.push(year_part);
+                        }
                     }
                 }
 
-                // Join: "Author" + delimiter + "2020a, 2020b"
                 let prefix = first_item.prefix.as_deref().unwrap_or("");
                 if !author_part.is_empty() && !year_parts.is_empty() {
-                    rendered_groups.push(format!(
-                        "{}{}{}{}",
-                        prefix,
-                        author_part,
-                        intra_delimiter,
-                        year_parts.join(", ")
-                    ));
+                    let joined_years = year_parts.join(", ");
+                    let content = format!("{}{}{}", author_part, intra_delimiter, joined_years);
+                    rendered_groups.push(fmt.affix(prefix, content, ""));
                 } else if !author_part.is_empty() {
-                    rendered_groups.push(format!("{}{}", prefix, author_part));
+                    rendered_groups.push(fmt.affix(prefix, author_part, ""));
                 }
             }
         }
