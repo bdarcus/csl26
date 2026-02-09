@@ -33,6 +33,7 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 //!
 //! This keeps all conditional logic in the style, making it testable and portable.
 
+use crate::locale::{GeneralTerm, TermForm};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -148,6 +149,7 @@ pub enum TemplateComponent {
     Number(TemplateNumber),
     Variable(TemplateVariable),
     List(TemplateList),
+    Term(TemplateTerm),
 }
 
 impl Default for TemplateComponent {
@@ -166,6 +168,7 @@ impl TemplateComponent {
             TemplateComponent::Number(n) => &n.rendering,
             TemplateComponent::Variable(v) => &v.rendering,
             TemplateComponent::List(l) => &l.rendering,
+            TemplateComponent::Term(t) => &t.rendering,
         }
     }
 
@@ -178,6 +181,7 @@ impl TemplateComponent {
             TemplateComponent::Number(n) => n.overrides.as_ref(),
             TemplateComponent::Variable(v) => v.overrides.as_ref(),
             TemplateComponent::List(l) => l.overrides.as_ref(),
+            TemplateComponent::Term(t) => t.overrides.as_ref(),
         }
     }
 }
@@ -473,6 +477,25 @@ pub enum SimpleVariable {
     Scale,
     Version,
     Locator,
+}
+
+/// A term component for rendering locale-specific text.
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Default, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct TemplateTerm {
+    /// Which term to render.
+    pub term: GeneralTerm,
+    /// Form: long (default), short, or symbol.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub form: Option<TermForm>,
+    #[serde(flatten, default)]
+    pub rendering: Rendering,
+    /// Type-specific rendering overrides.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub overrides: Option<HashMap<String, Rendering>>,
+    /// Unknown fields captured for forward compatibility.
+    #[serde(flatten)]
+    pub _extra: HashMap<String, serde_json::Value>,
 }
 
 /// A list component for grouping multiple items with a delimiter.

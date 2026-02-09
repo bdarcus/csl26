@@ -100,21 +100,26 @@ bibliography:
     # Block 3: Source (Container, Publisher, Pages)
     - items:
         # Chapter: "In E. Editor (Ed.)"
-        - contributor: editor
-          form: verb
-          prefix: "In "
+        - items:
+            - term: in
+            - items:
+                - contributor: editor
+                  form: verb
+                  overrides:
+                    # Only show editor for chapters/entries
+                    article-journal: { suppress: true }
+                    book: { suppress: true }
+                
+                # Book Title (italicized by options)
+                - title: parent-monograph
+                
+                # Journal Title (italicized by options)
+                - title: parent-serial
+              delimiter: comma
+          delimiter: space
           overrides:
-            # Only show editor for chapters/entries
-            article-journal: 
-              suppress: true
-            book:
-              suppress: true
-        
-        # Book Title (italicized by options)
-        - title: parent-monograph
-        
-        # Journal Title (italicized by options)
-        - title: parent-serial
+            article-journal: { suppress: true }
+            book: { suppress: true }
         
         # Journal Vol(Issue)
         - items:

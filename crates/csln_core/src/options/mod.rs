@@ -162,6 +162,10 @@ impl Config {
     }
 }
 
+fn default_true() -> Option<bool> {
+    Some(true)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -282,8 +286,4 @@ contributors:
         assert_eq!(merged.processing, Some(Processing::AuthorDate));
         assert!(merged.punctuation_in_quote);
     }
-}
-
-fn default_true() -> Option<bool> {
-    Some(true)
 }

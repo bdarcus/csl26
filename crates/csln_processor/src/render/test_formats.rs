@@ -109,7 +109,7 @@ mod tests {
         let result = render_component_with_format::<Html>(&component);
         assert_eq!(
             result,
-            r#"<span class="csln-link"><a href="https://example.com">https://example.com</a></span>"#
+            r#"<span class="csln-url"><a href="https://example.com">https://example.com</a></span>"#
         );
     }
 }

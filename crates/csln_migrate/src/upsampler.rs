@@ -80,6 +80,21 @@ impl Upsampler {
                     }
                 }
                 if let Some(term) = &t.term {
+                    if let Some(general_term) = csln::locale::Locale::parse_general_term(term) {
+                        return Some(csln::CslnNode::Term(csln::TermBlock {
+                            term: general_term,
+                            form: self.map_term_form(t.form.as_deref()),
+                            formatting: self.map_formatting(
+                                &t.formatting,
+                                &t.prefix,
+                                &t.suffix,
+                                t.quotes,
+                            ),
+                            source_order: t.macro_call_order,
+                        }));
+                    }
+
+                    // Fallback for unknown terms
                     let prefix = t.prefix.as_deref().unwrap_or("");
                     let suffix = t.suffix.as_deref().unwrap_or("");
                     let text_cased = self.apply_text_case(term, t.text_case.as_deref());
@@ -630,6 +645,15 @@ impl Upsampler {
             quotes,
             prefix: prefix.clone(),
             suffix: suffix.clone(),
+        }
+    }
+    fn map_term_form(&self, form: Option<&str>) -> csln::locale::TermForm {
+        match form {
+            Some("short") => csln::locale::TermForm::Short,
+            Some("verb") => csln::locale::TermForm::Verb,
+            Some("verb-short") => csln::locale::TermForm::VerbShort,
+            Some("symbol") => csln::locale::TermForm::Symbol,
+            _ => csln::locale::TermForm::Long,
         }
     }
 }

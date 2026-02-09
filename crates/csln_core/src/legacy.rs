@@ -3,6 +3,7 @@ SPDX-License-Identifier: MPL-2.0
 SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 */
 
+use crate::locale::{GeneralTerm, TermForm};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -160,6 +161,16 @@ pub enum CslnNode {
     Names(NamesBlock),
     Group(GroupBlock),
     Condition(ConditionBlock),
+    Term(TermBlock),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct TermBlock {
+    pub term: GeneralTerm,
+    pub form: TermForm,
+    #[serde(flatten)]
+    pub formatting: FormattingOptions,
+    pub source_order: Option<usize>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]

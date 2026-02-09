@@ -7,13 +7,38 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 /// Form for term lookup.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, JsonSchema)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum TermForm {
     Long,
     Short,
     Verb,
     VerbShort,
     Symbol,
+}
+
+/// A list of general terms for citation formatting.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub enum GeneralTerm {
+    #[default]
+    In,
+    Accessed,
+    Retrieved,
+    At,
+    From,
+    By,
+    NoDate,
+    Anonymous,
+    Circa,
+    AvailableAt,
+    Ibid,
+    And,
+    EtAl,
+    AndOthers,
+    Forthcoming,
+    Online,
+    ReviewOf,
+    OriginalWorkPublished,
 }
 
 /// General terms used in citations and bibliographies.
@@ -52,6 +77,9 @@ pub struct Terms {
     pub no_date: Option<String>,
     /// "retrieved" for access dates.
     pub retrieved: Option<String>,
+    /// All other general terms.
+    #[serde(flatten, default)]
+    pub general: std::collections::HashMap<GeneralTerm, SimpleTerm>,
 }
 
 impl Terms {
@@ -79,6 +107,7 @@ impl Terms {
             in_: Some("in".into()),
             no_date: Some("n.d.".into()),
             retrieved: Some("retrieved".into()),
+            general: std::collections::HashMap::new(),
         }
     }
 }
