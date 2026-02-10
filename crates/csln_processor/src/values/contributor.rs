@@ -331,7 +331,7 @@ pub fn format_names(
 
     // Format each name
     // Use explicit name_order if provided, otherwise use global display_as_sort
-    let display_as_sort = config.and_then(|c| c.display_as_sort.clone());
+    let display_as_sort = config.and_then(|c| c.display_as_sort);
     let initialize_with =
         initialize_with_override.or_else(|| config.and_then(|c| c.initialize_with.as_ref()));
     let initialize_with_hyphen = config.and_then(|c| c.initialize_with_hyphen);
@@ -395,7 +395,8 @@ pub fn format_names(
                 Some(non_integral)
             };
         } else {
-            // Bibliography usually follows non-integral or has its own override
+            // In bibliography, always use the non-integral (parenthetical) conjunction style
+            // for APA (which uses & in bib but 'and' in narrative citations)
             and_option = Some(non_integral);
         }
     }
@@ -419,7 +420,7 @@ pub fn format_names(
         // No conjunction - just join all with delimiter
         formatted_first.join(delimiter)
     } else if formatted_first.len() == 2 {
-        let and_str = and_str.unwrap();
+        let conjunction = and_str.as_ref().unwrap();
         // For two names: citations don't use delimiter before conjunction,
         // but bibliographies do (contextual Oxford comma).
         let use_delimiter = if options.context == RenderContext::Bibliography {
@@ -440,10 +441,13 @@ pub fn format_names(
         if use_delimiter {
             format!(
                 "{}{}{} {}",
-                formatted_first[0], delimiter, and_str, formatted_first[1]
+                formatted_first[0], delimiter, conjunction, formatted_first[1]
             )
         } else {
-            format!("{} {} {}", formatted_first[0], and_str, formatted_first[1])
+            format!(
+                "{} {} {}",
+                formatted_first[0], conjunction, formatted_first[1]
+            )
         }
     } else {
         let and_str = and_str.unwrap();

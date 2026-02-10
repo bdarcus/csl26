@@ -126,8 +126,12 @@ impl Config {
         if other.localize.is_some() {
             self.localize = other.localize.clone();
         }
-        if other.contributors.is_some() {
-            self.contributors = other.contributors.clone();
+        if let Some(other_contributors) = &other.contributors {
+            if let Some(this_contributors) = &mut self.contributors {
+                this_contributors.merge(other_contributors);
+            } else {
+                self.contributors = Some(other_contributors.clone());
+            }
         }
         if other.dates.is_some() {
             self.dates = other.dates.clone();

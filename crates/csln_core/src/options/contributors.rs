@@ -53,6 +53,48 @@ pub struct ContributorConfig {
     pub _extra: HashMap<String, serde_json::Value>,
 }
 
+impl ContributorConfig {
+    /// Merge another ContributorConfig into this one.
+    pub fn merge(&mut self, other: &ContributorConfig) {
+        if other.display_as_sort.is_some() {
+            self.display_as_sort = other.display_as_sort;
+        }
+        if other.initialize_with.is_some() {
+            self.initialize_with = other.initialize_with.clone();
+        }
+        if other.initialize_with_hyphen.is_some() {
+            self.initialize_with_hyphen = other.initialize_with_hyphen;
+        }
+        if other.shorten.is_some() {
+            self.shorten = other.shorten.clone();
+        }
+        if other.delimiter.is_some() {
+            self.delimiter = other.delimiter.clone();
+        }
+        if other.and.is_some() {
+            self.and = other.and.clone();
+        }
+        if other.delimiter_precedes_last.is_some() {
+            self.delimiter_precedes_last = other.delimiter_precedes_last;
+        }
+        if other.delimiter_precedes_et_al.is_some() {
+            self.delimiter_precedes_et_al = other.delimiter_precedes_et_al;
+        }
+        if other.role.is_some() {
+            self.role = other.role.clone();
+        }
+        if other.editor_label_format.is_some() {
+            self.editor_label_format = other.editor_label_format;
+        }
+        if other.demote_non_dropping_particle.is_some() {
+            self.demote_non_dropping_particle = other.demote_non_dropping_particle;
+        }
+        if other.sort_separator.is_some() {
+            self.sort_separator = other.sort_separator.clone();
+        }
+    }
+}
+
 /// Format for editor labels.
 #[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
@@ -66,7 +108,7 @@ pub enum EditorLabelFormat {
 }
 
 /// Options for demoting non-dropping particles.
-#[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq, JsonSchema)]
+#[derive(Debug, Default, Deserialize, Serialize, Clone, Copy, PartialEq, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub enum DemoteNonDroppingParticle {
     Never,
@@ -76,7 +118,7 @@ pub enum DemoteNonDroppingParticle {
 }
 
 /// When to display names in sort order (family-first).
-#[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq, JsonSchema)]
+#[derive(Debug, Default, Deserialize, Serialize, Clone, Copy, PartialEq, JsonSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum DisplayAsSort {
     All,
@@ -164,7 +206,7 @@ impl RoleRendering {
 }
 
 /// When to use delimiter before last contributor.
-#[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq, JsonSchema)]
+#[derive(Debug, Default, Deserialize, Serialize, Clone, Copy, PartialEq, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub enum DelimiterPrecedesLast {
     AfterInvertedName,
@@ -206,7 +248,7 @@ impl Default for ShortenListOptions {
 }
 
 /// How to render "and others" / et al.
-#[derive(Debug, Default, PartialEq, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Default, PartialEq, Clone, Copy, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub enum AndOtherOptions {
     #[default]
