@@ -120,10 +120,15 @@ If multiple styles show the same component failure (e.g., "year issue" in both A
 Based on the style's priority and the nature of the issue, choose the appropriate fix strategy:
 
 #### High Priority / Tier 2 Styles (Top 10)
-→ Use **Agent-Assisted LLM Authoring**
-- If the bibliography template structure is fundamentally wrong or missing components.
-- **Workflow**: Run `./scripts/prep-migration.sh <style>` and use the `@styleauthor` agent to hand-author the CSLN template.
-- **Goal**: 100% oracle match.
+→ Use **Specialized Agent Workflow**
+
+This project uses a tri-agent specialist model to achieve high-fidelity rendering for top parent styles:
+
+1.  **@dstyleplan**: Conducts deep research on the style guide and designs the component tree architecture (nesting and delimiters). Identifies missing processor features.
+2.  **@styleplan**: Converts the architectural design into a technical build plan with actionable tasks and exact code snippets for the builder.
+3.  **@styleauthor**: Executes the implementation (Haiku) using the hand-authoring loop.
+
+**Workflow**: Run `./scripts/prep-migration.sh <style>` and use the specialized agents to hand-author the CSLN template.
 
 #### Systemic Issues (affects Tier 3/4 styles)
 → Fix in `crates/csln_processor/`
@@ -159,6 +164,16 @@ if ref_type == "article-journal" {
   overrides:
     article-journal:
       prefix: "Vol. "
+```
+
+#### Handling Missing Dates
+If a reference is missing a date, use the `fallback` field in the `TemplateDate` component to provide alternative content, such as the "n.d." (no date) term.
+
+```yaml
+- date: issued
+  form: year
+  fallback:
+    - term: no-date
 ```
 
 #### Category Mapping

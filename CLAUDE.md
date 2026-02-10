@@ -44,6 +44,11 @@ This project leverages global Claude Code agents from `~/.claude/` while adding 
 - **@builder**: Implementation specialist (2-retry cap, no questions) - use for coding tasks
 - **@reviewer**: QA specialist with conflict detection - use proactively after code changes
 
+**Specialized Style Agents (via `/styleauthor`):**
+- **@dstyleplan**: Deep research and architectural design for new styles.
+- **@styleplan**: Maintenance, bug fixes, and technical build planning.
+- **@styleauthor**: High-speed implementation (Haiku) for style templates.
+
 **Project-Specific Context Layers:**
 When invoking these agents, they automatically receive CSL domain knowledge and Rust expertise from this file. The global agents handle general development workflow while project-specific instructions guide CSL/citation processing decisions.
 
