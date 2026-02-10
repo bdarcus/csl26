@@ -86,6 +86,7 @@ fn test_date_values() {
     let component = TemplateDate {
         date: TemplateDateVar::Issued,
         form: DateForm::Year,
+        fallback: None,
         rendering: Default::default(),
         overrides: None,
         _extra: Default::default(),
@@ -735,4 +736,39 @@ fn test_template_list_term_suppression() {
     let values = component.values(&reference, &hints, &options);
     // Should be None because only the term "In" would render, and it's suppressed if no content-bearing items are present
     assert!(values.is_none());
+}
+
+#[test]
+fn test_date_fallback() {
+    let config = make_config();
+    let locale = make_locale();
+    let options = RenderOptions {
+        config: &config,
+        locale: &locale,
+        context: RenderContext::Bibliography,
+        mode: csln_core::citation::CitationMode::NonIntegral,
+    };
+    // Reference with NO issued date
+    let reference = Reference::from(LegacyReference {
+        id: "no-date".to_string(),
+        ref_type: "book".to_string(),
+        author: Some(vec![Name::new("Aristotle", "Ancient")]),
+        title: Some("Poetics".to_string()),
+        ..Default::default()
+    });
+    let hints = ProcHints::default();
+
+    let component = TemplateDate {
+        date: TemplateDateVar::Issued,
+        form: DateForm::Year,
+        fallback: Some(vec![TemplateComponent::Term(TemplateTerm {
+            term: GeneralTerm::NoDate,
+            form: Some(TermForm::Short),
+            ..Default::default()
+        })]),
+        ..Default::default()
+    };
+
+    let values = component.values(&reference, &hints, &options).unwrap();
+    assert_eq!(values.value, "n.d.");
 }

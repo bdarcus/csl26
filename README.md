@@ -99,6 +99,14 @@ bibliography:
 
 **50 lines instead of 3,000.** The same semantic information, expressed declaratively.
 
+## Key Features
+
+- **Declarative Templates**: High-level components (`contributor`, `date`, `title`) replace procedural logic.
+- **Three-Tier Options**: Context-aware formatting (global, citation/bibliography, and type-specific).
+- **Oracle Verification**: Built-in scripts to compare output against `citeproc-js` for exact fidelity.
+- **Modern Input**: Native support for CSLN YAML/JSON bibliography format with EDTF date support.
+- **Diverse Fixtures**: Built-in 10-item test dataset covering edge cases like massive author lists and missing dates.
+
 ## Key Design Principles
 
 ### 1. Declarative Over Procedural

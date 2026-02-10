@@ -84,7 +84,16 @@ pub fn refs_to_string_with_format<F: OutputFormat<Output = String>>(
                     entry_output.push_str(quote_str);
                 } else {
                     // Normal case: add the configured separator
-                    entry_output.push_str(default_separator);
+                    // Skip adding separator if we already have a space
+                    if !last_char.is_whitespace() && !first_char.is_whitespace() {
+                        entry_output.push_str(default_separator);
+                    } else if !last_char.is_whitespace() && first_char.is_whitespace() {
+                        // entry_output ends with content, component starts with space
+                        // don't add separator, but maybe ensure it has punctuation if separator is ". "
+                        if default_separator.starts_with('.') && !ends_with_separator {
+                            entry_output.push('.');
+                        }
+                    }
                 }
             }
             let _ = write!(&mut entry_output, "{}", rendered);
@@ -145,10 +154,16 @@ fn cleanup_dangling_punctuation(output: &mut String) {
         (", ,", ","),
         (": .", "."),
         ("; .", "."),
+        (".,", "."), // Handle et al., -> et al.
+        (" ,", ","),
+        (" ;", ";"),
+        (" :", ":"),
+        (" .", "."),
         (",  ", ", "),
         (". .", "."),
         (".. ", ". "),
         ("..", "."),
+        ("  ", " "), // Double space to single
     ];
 
     let mut changed = true;
