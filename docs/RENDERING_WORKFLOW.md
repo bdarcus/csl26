@@ -21,6 +21,19 @@ node scripts/oracle-simple.js styles-legacy/apa.csl
 ./scripts/prep-migration.sh styles-legacy/apa.csl
 ```
 
+## Hybrid Migration Strategy
+
+CSLN uses a three-tier architecture to balance high fidelity for popular styles with broad coverage for the long tail of CSL 1.0 styles (see `csl26-m3lb`).
+
+| Tier | Target | Method | Goal |
+|------|--------|--------|------|
+| **Tier 1: Core Options** | All Styles | XML Semantic Compiler | 100% fidelity for global options (names, dates, et-al) |
+| **Tier 2: Top Styles** | Top 10 Parents | Agent-Assisted LLM Authoring | 100% citation + bibliography fidelity via `@styleauthor` |
+| **Tier 3: The Long Tail** | 300+ Parents | Output-Driven Inference | 80%+ fidelity via automated template generation |
+| **Tier 4: Fallback** | Remaining | XML Template Compiler | Baseline rendering for obscure styles |
+
+**Priority**: We prioritize **Tier 2** for the top 10 parent styles (covering 60% of all dependent styles) and **Tier 3** for the next 40 styles.
+
 ## Fidelity Targets
 
 Know when you've reached "good enough" for a style:
@@ -33,16 +46,16 @@ Know when you've reached "good enough" for a style:
 
 **When to Move On**: Once a style reaches 12/15+ bibliography matches, move to the next priority style. Perfecting one style has lower ROI than improving many styles to "good enough."
 
-## Component-First Strategy
+## Component-First Strategy (Tier 3 & 4)
 
-**Key Principle**: Fix common failures across styles, not individual styles in isolation.
+**Key Principle**: Fix common failures across the "Long Tail" of styles, not individual styles in isolation.
 
-**Why**: Each component fix can improve 10-20 styles simultaneously, converging much faster than style-by-style debugging.
+**Why**: For Tier 3 and 4 styles (which use the automated compiler/inference), each component fix in the processor or migration logic can improve 10-20 styles simultaneously.
 
 **Recommended Iteration Loop**:
 1. Run batch analysis across top 20 styles
 2. Identify most common component failure (e.g., "year formatting" in 15 styles)
-3. Fix that ONE component issue in processor/migration
+3. Fix that ONE component issue in processor or migration code
 4. Re-run batch and measure improvement
 5. Repeat with next most common failure
 
@@ -104,22 +117,28 @@ If multiple styles show the same component failure (e.g., "year issue" in both A
 
 ### Step 3: Locate the Fix
 
-Based on scope, determine where to make changes:
+Based on the style's priority and the nature of the issue, choose the appropriate fix strategy:
 
-#### Systemic Issues (affects multiple styles)
+#### High Priority / Tier 2 Styles (Top 10)
+→ Use **Agent-Assisted LLM Authoring**
+- If the bibliography template structure is fundamentally wrong or missing components.
+- **Workflow**: Run `./scripts/prep-migration.sh <style>` and use the `@styleauthor` agent to hand-author the CSLN template.
+- **Goal**: 100% oracle match.
+
+#### Systemic Issues (affects Tier 3/4 styles)
 → Fix in `crates/csln_processor/`
-- Example: Year parentheses missing across all author-date styles
-- Look in: `rendering.rs`, `bibliography.rs`, date formatting logic
+- Example: Year parentheses missing across all author-date styles.
+- Look in: `rendering.rs`, `bibliography.rs`, date formatting logic.
 
-#### Style-Specific Issues (affects one style or one style family)
+#### Style-Specific Issues (Tier 3/4)
 → Fix in migration logic or style YAML
-- Example: APA uses "Vol." prefix, IEEE doesn't
-- Check: `crates/csln_migrate/`, generated YAML overrides
+- Example: APA uses "Vol." prefix, IEEE doesn't.
+- Check: `crates/csln_migrate/`, generated YAML overrides.
 
 #### Migration Issues (CSL → YAML conversion wrong)
 → Fix in `crates/csln_migrate/`
-- Example: Variable ends up in wrong template section
-- **Migration Debugger** (planned): `csln_migrate --debug-variable VAR` will show provenance tracking through compilation pipeline
+- Example: Variable ends up in wrong template section.
+- **Migration Debugger** (planned): `csln_migrate --debug-variable VAR` will show provenance tracking.
 
 ### Step 4: Make the Fix
 
@@ -315,17 +334,18 @@ Bibliography: 3/5 passing
 
 ### `prep-migration.sh` (Agent Context Prep)
 
-**When to use**: When hand-authoring a complex style using the `@styleauthor` agent (Migration Mode).
+**When to use**: Mandatory first step when hand-authoring a high-priority (Tier 2) style using the `@styleauthor` agent.
 
 **What it does**: 
 1. Generates "Target Rendering" using `citeproc-js`.
-2. Generates "Baseline CSLN" using the `csln-migrate` logic.
-3. Packages both into a prompt specifically tailoured for the agent.
+2. Generates "Baseline CSLN" (Tier 1 options + Tier 4 templates).
+3. Packages both into a high-fidelity context packet for the agent.
 
 **Example usage**:
 ```bash
 ./scripts/prep-migration.sh styles-legacy/apa.csl
 ```
+Then, copy the output and provide it to the `@styleauthor` agent to begin the iterative authoring process.
 
 ## Common Failure Patterns
 
