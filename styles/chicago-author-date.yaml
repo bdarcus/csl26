@@ -1,0 +1,135 @@
+info:
+  title: "Chicago Manual of Style 18th edition (author-date)"
+  id: "chicago-author-date"
+  link: "https://www.chicagomanualofstyle.org/"
+  authors:
+    - name: "Bruce D'Arcus"
+      uri: "https://github.com/bdarcus"
+  categories:
+    - author-date
+    - generic-base
+  license: "http://creativecommons.org/licenses/by-sa/3.0/"
+
+options:
+  processing: author-date
+  contributors:
+    and: text
+    initialize-with: ". "
+    # For author-date, CMOS uses family-first only for the first author in bib
+    display-as-sort: first
+    delimiter-precedes-last: always
+    et-al:
+      min: 10
+      use-first: 7
+    substitute:
+      - editor
+      - translator
+      - title
+  dates:
+    form: numeric
+    month: long
+    substitute:
+      - term: no-date
+        form: short
+
+citation:
+  options:
+    contributors:
+      shorten:
+        # 3 or more authors -> Author1 et al.
+        min: 3
+        use-first: 1
+  non-integral:
+    wrap: parentheses
+    template:
+      - items:
+          - contributor: author
+            form: short
+          - date: issued
+            form: year
+            fallback:
+              - term: no-date
+        delimiter: ", "
+      - variable: locator
+        prefix: ", "
+
+  integral:
+    wrap: none
+    template:
+      - contributor: author
+        form: short
+      - items:
+          - date: issued
+            form: year
+            fallback:
+              - term: no-date
+          - variable: locator
+            prefix: ", "
+        delimiter: ""
+        wrap: parentheses
+        prefix: " "
+
+bibliography:
+  options:
+    contributors:
+      display-as-sort: first
+      # Show up to 10 authors, then truncate
+      shorten:
+        min: 11
+        use-first: 7
+  template:
+    - contributor: author
+      form: long
+      suffix: "."
+    - date: issued
+      form: year
+      suffix: "."
+      fallback:
+        - term: no-date
+          suffix: "."
+    - title: primary
+      suffix: "."
+      overrides:
+        article-journal:
+          wrap: quotes
+        chapter:
+          wrap: quotes
+    
+    # Source block
+    - items:
+        # Chapter "In" logic
+        - items:
+            - term: in
+            - title: parent-monograph
+              emph: true
+            - contributor: editor
+              form: verb
+          delimiter: space
+          overrides:
+            article-journal: { suppress: true }
+            book: { suppress: true }
+            report: { suppress: true }
+
+        - title: parent-serial
+          form: long
+          emph: true
+        - items:
+            - items:
+                - number: volume
+                - number: issue
+                  wrap: parentheses
+              delimiter: space
+            - number: pages
+              prefix: ": "
+          delimiter: none
+      delimiter: space
+      suffix: "."
+    
+    # Publication
+    - items:
+        - variable: publisher-place
+        - variable: publisher
+      delimiter: ": "
+      suffix: "."
+      overrides:
+        article-journal: { suppress: true }
