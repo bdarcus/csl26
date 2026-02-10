@@ -399,6 +399,24 @@ fn print_human<F>(
             }
         }
         println!();
+
+        println!("CITATIONS (Integral):");
+        for id in item_ids {
+            let citation = Citation {
+                id: Some(id.to_string()),
+                items: vec![CitationItem {
+                    id: id.to_string(),
+                    ..Default::default()
+                }],
+                mode: csln_core::citation::CitationMode::Integral,
+                ..Default::default()
+            };
+            match processor.process_citation_with_format::<F>(&citation) {
+                Ok(text) => println!("  [{}] {}", id, text),
+                Err(e) => println!("  [{}] ERROR: {}", id, e),
+            }
+        }
+        println!();
     }
 
     if show_bib {
@@ -427,7 +445,7 @@ fn print_json(
     });
 
     if show_cite {
-        let citations: Vec<_> = item_ids
+        let non_integral: Vec<_> = item_ids
             .iter()
             .map(|id| {
                 let citation = Citation {
@@ -436,6 +454,7 @@ fn print_json(
                         id: id.to_string(),
                         ..Default::default()
                     }],
+                    mode: csln_core::citation::CitationMode::NonIntegral,
                     ..Default::default()
                 };
                 json!({
@@ -444,7 +463,30 @@ fn print_json(
                 })
             })
             .collect();
-        result["citations"] = json!(citations);
+
+        let integral: Vec<_> = item_ids
+            .iter()
+            .map(|id| {
+                let citation = Citation {
+                    id: Some(id.to_string()),
+                    items: vec![CitationItem {
+                        id: id.to_string(),
+                        ..Default::default()
+                    }],
+                    mode: csln_core::citation::CitationMode::Integral,
+                    ..Default::default()
+                };
+                json!({
+                    "id": id,
+                    "text": processor.process_citation(&citation).unwrap_or_else(|e| e.to_string())
+                })
+            })
+            .collect();
+
+        result["citations"] = json!({
+            "non-integral": non_integral,
+            "integral": integral
+        });
     }
 
     if show_bib {
