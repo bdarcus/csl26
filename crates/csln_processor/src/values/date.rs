@@ -9,15 +9,25 @@ impl ComponentValues for TemplateDate {
         hints: &ProcHints,
         options: &RenderOptions<'_>,
     ) -> Option<ProcValues> {
-        let date: EdtfString = match self.date {
-            TemplateDateVar::Issued => reference.issued()?,
-            TemplateDateVar::Accessed => reference.accessed().unwrap_or(EdtfString(String::new())), // accessed might be None
-            _ => return None,
+        let date_opt: Option<EdtfString> = match self.date {
+            TemplateDateVar::Issued => reference.issued(),
+            TemplateDateVar::Accessed => reference.accessed(),
+            _ => None,
         };
-        if date.0.is_empty() {
+
+        if date_opt.is_none() || date_opt.as_ref().unwrap().0.is_empty() {
+            // Handle fallback if date is missing
+            if let Some(fallbacks) = &self.fallback {
+                for component in fallbacks {
+                    if let Some(values) = component.values(reference, hints, options) {
+                        return Some(values);
+                    }
+                }
+            }
             return None;
         }
 
+        let date = date_opt.unwrap();
         let locale = options.locale;
 
         let formatted = match self.form {

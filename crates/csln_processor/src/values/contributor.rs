@@ -299,15 +299,8 @@ pub fn format_names(
 
     // Determine shortening options:
     // 1. Use explicit override from template (e.g. bibliography et-al)
-    // 2. Else if context is Citation, use global config
-    // 3. Else don't shorten (default for bibliography unless explicit)
-    let shorten = shorten_override.or_else(|| {
-        if options.context == RenderContext::Citation {
-            config.and_then(|c| c.shorten.as_ref())
-        } else {
-            None
-        }
-    });
+    // 2. Else use global config
+    let shorten = shorten_override.or_else(|| config.and_then(|c| c.shorten.as_ref()));
 
     let (first_names, use_et_al, last_names) = if let Some(opts) = shorten {
         let use_first = hints.min_names_to_show.unwrap_or(opts.use_first as usize);
