@@ -30,6 +30,30 @@ pub use options::Config;
 pub use presets::{ContributorPreset, DatePreset, SubstitutePreset, TitlePreset};
 pub use template::TemplateComponent;
 
+/// A collection of bibliographic references with optional metadata.
+#[derive(Debug, Default, Deserialize, Serialize, JsonSchema, Clone)]
+#[serde(rename_all = "kebab-case")]
+pub struct InputBibliography {
+    /// Bibliography metadata.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub info: Option<InputBibliographyInfo>,
+    /// The list of references.
+    pub references: Vec<reference::InputReference>,
+    /// Unknown fields captured for forward compatibility.
+    #[serde(flatten)]
+    pub _extra: HashMap<String, serde_json::Value>,
+}
+
+/// Metadata for an input bibliography.
+#[derive(Debug, Default, Deserialize, Serialize, JsonSchema, Clone)]
+#[serde(rename_all = "kebab-case")]
+pub struct InputBibliographyInfo {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub title: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub author: Option<String>,
+}
+
 /// A named template (reusable sequence of components).
 pub type Template = Vec<TemplateComponent>;
 

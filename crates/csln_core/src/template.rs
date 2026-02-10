@@ -298,6 +298,9 @@ impl ContributorRole {
 pub struct TemplateDate {
     pub date: DateVariable,
     pub form: DateForm,
+    /// Fallback components if the primary date is missing.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub fallback: Option<Vec<TemplateComponent>>,
     #[serde(flatten, default)]
     pub rendering: Rendering,
     /// Type-specific rendering overrides.
