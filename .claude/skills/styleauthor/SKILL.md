@@ -6,16 +6,21 @@
 
 ## Overview
 
-The `/styleauthor` skill guides creation of CSLN styles from scratch. It follows a 5-phase iterative workflow: research reference materials, author the style YAML, test with the processor, evolve processor code if needed, and verify against oracle output.
+The style authoring workflow uses a tri-agent model adapted from the `minmax` patterns:
 
-This skill can modify both style YAML and processor/core code when features are missing. Guard rails ensure regressions are caught.
+1.  **`@dstyleplan` (Specialist)**: Deep research and architectural design.
+2.  **`@styleplan` (Specialist)**: Maintenance, bug fixes, and build planning.
+3.  **`@styleauthor` (Builder)**: Implementation specialist (Haiku).
 
 ## Invocation
 
-```
-/styleauthor <style-name> [--urls URL1 URL2] [--format author-date|numeric|note]
-/styleauthor update <style-path> [--mode language|output|full]
-```
+The `/styleauthor` slash command is the universal entry point. Whichever agent receives the command acts as the **Coordinator** and follows the delegation logic below.
+
+### Delegation Logic
+- **If New Style / Complex Research**: Coordinator **must** delegate Phase 1 to `@dstyleplan`.
+- **If Maintenance / Simple Gaps**: Coordinator delegates to `@styleplan` for the build plan.
+- **If Build Complete**: Coordinator **must** hand samples back to `@styleplan` or `@reviewer` for a final **Rendering Audit** before completion.
+- **If Plan Approved**: Coordinator delegate Phase 3-4 to `@styleauthor`.
 
 **Parameters:**
 - `style-name` (required for new styles): Name for the style file (e.g., `chicago-author-date`)
@@ -25,11 +30,13 @@ This skill can modify both style YAML and processor/core code when features are 
 - `--mode` (optional for updates): Update focus (`language`, `output`, or `full`)
 
 **Examples:**
-- `/styleauthor chicago-author-date --urls https://www.chicagomanualofstyle.org/`
-- `/styleauthor ieee --format numeric`
-- `/styleauthor oscola --format note`
-- `/styleauthor apa --migrate styles-legacy/apa.csl`
-- `/styleauthor update styles/apa-7th.yaml --mode language`
+
+- **Standard Entry**:
+  `/styleauthor chicago-author-date --urls https://www.chicagomanualofstyle.org/`
+- **Targeted Research**:
+  `@dstyleplan /styleauthor nature --urls ...`
+- **Targeted Modernization**:
+  `@styleplan /styleauthor update styles/apa-7th.yaml --mode language`
 
 ## Workflow Phases
 
@@ -65,86 +72,36 @@ Use this workflow to improve an existing style based on new language features or
 
 ## Standard Workflow Phases
 
-### Phase 1: RESEARCH
+### Phase 1: RESEARCH (@dstyleplan)
 
-Gather and understand the style's formatting rules.
+Gather and understand the style's formatting rules using deep research and sequential thinking.
 
-1. Read any provided reference URLs (style guides, university LibGuides, example PDFs)
-2. Study `styles/apa-7th.yaml` as the gold-standard template for CSLN style structure
-3. Read `crates/csln_core/src/template.rs` for available `TemplateComponent` types and rendering options
-4. Read `crates/csln_core/src/style.rs` for top-level `Style`, `Options`, `Citation`, `Bibliography` structs
-5. Identify the citation format class: `author-date`, `numeric`, or `note`
-6. Extract key formatting rules:
-   - Author name format (inverted? initials? conjunction?)
-   - Title formatting (italics, quotes, capitalization)
-   - Source block structure (container, volume/issue, pages, publisher, DOI)
-   - Citation format (parenthetical vs narrative, numbering scheme)
+1. Read reference URLs, guide documents, and example PDFs.
+2. Design the component tree architecture (nesting and delimiters).
+3. **Identify Gaps**: Check if `csln_core` or the processor needs updates to support the requested formatting.
 
-**Output:** Mental model of the style's rules, ready for authoring.
+**Output:** Mental model of the style's architecture and identified gaps.
 
-### Phase 2: AUTHOR
+### Phase 2: PLAN (@styleplan)
 
-Create the style YAML file.
+Convert the architecture into actionable tasks.
 
-1. Create `styles/<style-name>.yaml`
-2. Follow CSLN design principles:
-   - **Explicit over magic**: All behavior in the YAML, not hidden in processor
-   - **Declarative templates**: Flat components with type overrides, not procedural logic
-   - **Structured blocks**: Use `items` with `delimiter` for grouped components (not flat lists). Use nested `items` to handle varying delimiters (e.g., space after a citation number, commas between author/title).
-   - **Prefer wrap for semantic punctuation**: Always use `wrap: parentheses|brackets|quotes` instead of manual `prefix`/`suffix` pairs for balanced characters. Use `prefix`/`suffix` only for unbalanced text or unique spacing. Avoid `suffix: " "` for spacing; use delimiters instead.
-   - **Minimize overrides**: Only add type-specific overrides where rendering genuinely differs
-3. Include the `info` block with title, id, link, and source URLs as comments
-4. Add comments explaining non-obvious formatting decisions
-5. Refer to `.claude/skills/styleauthor/templates/common-patterns.yaml` for reusable snippets
+1. Draft specific code changes for identified gaps (e.g., new components in `template.rs`).
+2. Create a step-by-step implementation list for the builder.
+3. Define assumptions and success criteria.
 
-**Structure guide:**
-```yaml
----
-info:
-  title: Style Name (CSLN)
-  id: https://www.zotero.org/styles/<style-name>-csln
-  link: <official-guide-url>
-  # Sources: ...
-options:
-  processing: author-date  # or numeric, note
-  contributors: { ... }    # global defaults
-  titles: { ... }
-citation:
-  options:                 # citation-specific overrides
-    contributors:
-      shorten:
-        use-first: 1       # fewer authors in citations
-  non-integral: { ... }
-  integral: { ... }        # author-date only
-bibliography:
-  options:                 # bibliography-specific overrides
-    contributors:
-      shorten:
-        min: 99            # show all authors in bibliography
-  template: [ ... ]
-```
+### Phase 3: BUILD (@styleauthor)
 
-### Phase 3: TEST
+A high-speed Implementation Specialist (Haiku) takes over for the execution and test loop.
 
-Run the processor and compare output to expectations.
+1. Implement core fixes and schema changes first.
+2. Run `~/.claude/scripts/verify.sh` to ensure base correctness.
+3. Author the style YAML using `/styleauthor`.
+4. Verify rendering output against oracle or guides.
 
-```bash
-cargo run --bin csln-processor -- styles/<style-name>.yaml
-```
+### Phase 4: EVOLVE & ITERATE
 
-Compare each output line against the reference material:
-- Check author formatting (name order, initials, conjunction, et al)
-- Check title formatting (italics, quotes, case)
-- Check source block (container, volume/issue, pages, publisher)
-- Check punctuation and spacing between components
-- Check citation format (parenthetical wrapping, narrative structure)
-
-If output matches expectations, proceed to Phase 5.
-If not, iterate: fix the style YAML and re-run. If the issue is a missing processor feature, go to Phase 4.
-
-### Phase 4: EVOLVE (if needed)
-
-Add missing features to the processor or core types.
+If output doesn't match after 2 implementation retries, the builder escalates back to `@styleplan` to refine the strategy.
 
 **Allowed modifications:**
 - `crates/csln_processor/` - Rendering engine
@@ -168,11 +125,12 @@ All three must pass before continuing. If tests fail, fix the issue before proce
 - What's blocked and why
 - Suggested processor changes needed
 
-### Phase 5: VERIFY
+### Phase 5: VERIFY (@styleplan)
 
-Final verification before declaring done.
+Final verification before declaring done. The builder MUST surface output samples for this phase.
 
-1. If a CSL 1.0 equivalent exists in `styles-legacy/`:
+1. **Rendering Audit**: @styleplan checks for spacing issues (double spaces, space before punctuation).
+2. If a CSL 1.0 equivalent exists in `styles-legacy/`:
    ```bash
    node scripts/oracle.js styles-legacy/<style-name>.csl
    ```

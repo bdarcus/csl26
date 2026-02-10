@@ -92,6 +92,14 @@ When agents are invoked on this project, they automatically receive:
 
 This is handled through `CLAUDE.md` which acts as a context layer on top of global agent behavior.
 
+### Specialized Style Agents
+
+In addition to global agents, this project utilizes three specialized specialists for citation style authoring (accessible via the `/styleauthor` skill):
+
+- **@dstyleplan**: The **Deep Architect**. Prioritizes correctness and holistic design. Conducts research and designs component trees using `sequential-thinking`.
+- **@styleplan**: The **Architect**. Threshold: Maintenance & Simple Gaps. Provides technical build plans and Rust code snippets for the builder.
+- **@styleauthor**: The **Builder** (Haiku). Implementation specialist with a 2-retry cap. Executes the plan without asking questions.
+
 ## Task Dependencies
 
 The migration set up proper dependency chains:
