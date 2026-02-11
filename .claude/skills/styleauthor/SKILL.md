@@ -78,7 +78,7 @@ Gather and understand the style's formatting rules using deep research and seque
 
 1. Read reference URLs, guide documents, and example PDFs.
 2. Design the component tree architecture (nesting and delimiters).
-3. **Identify Gaps**: Check if `csln_core` or the processor needs updates to support the requested formatting.
+3. **Identify Gaps**: Check if `csln_core` or the processor needs updates to support the requested formatting. If so, `@dstyleplan` must ask the user for approval to create a new task for core changes.
 
 **Output:** Mental model of the style's architecture and identified gaps.
 
@@ -86,7 +86,7 @@ Gather and understand the style's formatting rules using deep research and seque
 
 Convert the architecture into actionable tasks.
 
-1. Draft specific code changes for identified gaps (e.g., new components in `template.rs`).
+1. Draft specific code changes for identified gaps (e.g., new components in `template.rs`). For significant core changes, present drafted code to the user for review.
 2. Create a step-by-step implementation list for the builder.
 3. Define assumptions and success criteria.
 
@@ -101,7 +101,7 @@ A high-speed Implementation Specialist (Haiku) takes over for the execution and 
 
 ### Phase 4: EVOLVE & ITERATE
 
-If output doesn't match after 2 implementation retries, the builder escalates back to `@styleplan` to refine the strategy.
+If output doesn't match after 2 implementation retries, the builder escalates back to `@styleplan` to refine the strategy. When escalating, the agent must report the problem details to the user.
 
 **Allowed modifications:**
 - `crates/csln_processor/` - Rendering engine
@@ -114,13 +114,14 @@ If output doesn't match after 2 implementation retries, the builder escalates ba
 - `tests/fixtures/` - Test fixtures
 
 **After every processor change:**
+The agent must always run these checks and report their outcome to the user:
 ```bash
 cargo fmt && cargo clippy --all-targets --all-features -- -D warnings && cargo test
 ```
 
 All three must pass before continuing. If tests fail, fix the issue before proceeding.
 
-**Iteration cap:** Maximum 10 test-fix cycles. If blocked after 10 iterations, report:
+**Iteration cap:** Maximum 10 test-fix cycles. If blocked after 10 iterations, the agent must clearly output the following to the user:
 - What works correctly
 - What's blocked and why
 - Suggested processor changes needed
