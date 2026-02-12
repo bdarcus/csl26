@@ -8,6 +8,12 @@ use crate::render::format::OutputFormat;
 use crate::render::plain::PlainText;
 use std::fmt::Write;
 
+/// Check if a character is a final punctuation mark (not a space).
+/// This distinguishes between intentional component suffixes and separator duplication.
+fn is_final_punctuation(c: char) -> bool {
+    matches!(c, '.' | ',' | ':' | ';' | '!' | '?')
+}
+
 /// Render processed templates into a final bibliography string using PlainText format.
 pub fn refs_to_string(proc_entries: Vec<ProcEntry>) -> String {
     refs_to_string_with_format::<PlainText>(proc_entries)
@@ -52,12 +58,16 @@ pub fn refs_to_string_with_format<F: OutputFormat<Output = String>>(
                 // Derive the first punctuation/char of the separator for comparison
                 let sep_first_char = default_separator.chars().next().unwrap_or('.');
 
+                // Check if last output ends with intentional punctuation (not just space).
+                // Component suffixes like ", " should be preserved and NOT followed by default separator.
+                // We only suppress the separator if the last non-space character is punctuation.
+                let trimmed_last = entry_output.trim_end().chars().last().unwrap_or(' ');
+                let ends_with_punctuation = is_final_punctuation(trimmed_last);
+
                 // Skip adding separator if:
                 // 1. The rendered component already starts with separator-like punctuation
-                // 2. The entry_output already ends with separator-like punctuation
-                // 3. Special handling for quotes with punctuation-in-quote locales
+                // 2. Special handling for quotes with punctuation-in-quote locales
                 let starts_with_separator = matches!(first_char, ',' | ';' | ':' | ' ' | '.' | '(');
-                let ends_with_separator = matches!(last_char, '.' | ',' | ':' | ';' | ' ');
 
                 if starts_with_separator {
                     // Component prefix already provides separation (or opens with paren)
@@ -65,11 +75,15 @@ pub fn refs_to_string_with_format<F: OutputFormat<Output = String>>(
                     if first_char == '(' && !last_char.is_whitespace() && last_char != '[' {
                         entry_output.push(' ');
                     }
-                } else if ends_with_separator {
-                    // entry_output already has punctuation; just add space if needed
+                } else if ends_with_punctuation {
+                    // entry_output ends with punctuation (component suffix with punctuation).
+                    // This suffix is intentional formatting. Do NOT add default separator.
+                    // Just ensure there's space before the next component.
                     if !last_char.is_whitespace() {
                         entry_output.push(' ');
                     }
+                    // If last_char is already whitespace, it's part of the component suffix,
+                    // so we preserve it as-is (e.g., ", " stays as ", ")
                 } else if punctuation_in_quote
                     && (last_char == '"' || last_char == '\u{201D}')
                     && sep_first_char == '.'
@@ -90,7 +104,7 @@ pub fn refs_to_string_with_format<F: OutputFormat<Output = String>>(
                     } else if !last_char.is_whitespace() && first_char.is_whitespace() {
                         // entry_output ends with content, component starts with space
                         // don't add separator, but maybe ensure it has punctuation if separator is ". "
-                        if default_separator.starts_with('.') && !ends_with_separator {
+                        if default_separator.starts_with('.') && !ends_with_punctuation {
                             entry_output.push('.');
                         }
                     }
@@ -154,7 +168,9 @@ fn cleanup_dangling_punctuation(output: &mut String) {
         (", ,", ","),
         (": .", "."),
         ("; .", "."),
-        (".,", "."), // Handle et al., -> et al.
+        // NOTE: Removed (".,", ".") pattern - it was too aggressive and removed legitimate
+        // component suffixes like "S.," from author initials. In CSLN, component suffixes are
+        // explicit and well-defined, so we don't have the CSL 1.0 dual-punctuation issue.
         (" ,", ","),
         (" ;", ";"),
         (" :", ":"),
@@ -317,5 +333,65 @@ mod tests {
 <div class="csln-entry" id="ref-ref-1">Reference Content</div>
 </div>"#
         );
+    }
+
+    #[test]
+    fn test_component_suffix_preserved_elsevier_harvard() {
+        use csln_core::options::{BibliographyConfig, Config};
+
+        // Elsevier Harvard: author component has suffix `, ` and date has suffix `.`
+        // Expected: "Hawking, S., 1988." (comma from author suffix preserved)
+        let config = Config {
+            bibliography: Some(BibliographyConfig {
+                separator: Some(". ".to_string()),
+                entry_suffix: Some(".".to_string()),
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+
+        let c1 = ProcTemplateComponent {
+            template_component: TemplateComponent::Contributor(
+                csln_core::template::TemplateContributor {
+                    contributor: csln_core::template::ContributorRole::Author,
+                    rendering: Rendering {
+                        suffix: Some(", ".to_string()),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+            ),
+            value: "Hawking, S.".to_string(),
+            prefix: None,
+            suffix: None,
+            ref_type: None,
+            config: Some(config.clone()),
+            url: None,
+        };
+
+        let c2 = ProcTemplateComponent {
+            template_component: TemplateComponent::Date(csln_core::template::TemplateDate {
+                date: csln_core::template::DateVariable::Issued,
+                rendering: Rendering {
+                    suffix: Some(".".to_string()),
+                    ..Default::default()
+                },
+                ..Default::default()
+            }),
+            value: "1988".to_string(),
+            prefix: None,
+            suffix: None,
+            ref_type: None,
+            config: Some(config),
+            url: None,
+        };
+
+        let entries = vec![ProcEntry {
+            id: "hawking1988".to_string(),
+            template: vec![c1, c2],
+        }];
+        let result = refs_to_string(entries);
+        // The comma from author's suffix should be preserved
+        assert_eq!(result, "Hawking, S., 1988.");
     }
 }
