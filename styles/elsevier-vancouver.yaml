@@ -1,0 +1,157 @@
+version: '0.2.0'
+info:
+  title: Elsevier - NLM/Vancouver (citation-sequence)
+  id: elsevier-vancouver
+  link: http://www.zotero.org/styles/elsevier-vancouver
+
+options:
+  substitute:
+    contributor-role-form: long
+    template:
+    - editor
+    - translator
+  processing: numeric
+  contributors:
+    display-as-sort: all
+    initialize-with: ''
+    delimiter: ', '
+    delimiter-precedes-last: always
+    demote-non-dropping-particle: sort-only
+    sort-separator: ' '
+  dates:
+    month: long
+  page-range-format: minimal
+  bibliography:
+    entry-suffix: .
+    separator: '. '
+  punctuation-in-quote: true
+
+citation:
+  template:
+  - number: citation-number
+  wrap: brackets
+  multi-cite-delimiter: ','
+  delimiter: ''
+
+bibliography:
+  template:
+  - contributor: author
+    form: long
+    suffix: '. '
+
+  - title: primary
+    suffix: '. '
+
+  - items:
+    - title: parent-serial
+      suffix: ' '
+    - date: issued
+      form: year
+      suffix: ';'
+    - number: volume
+      suffix: ':'
+    delimiter: none
+    overrides:
+      article-journal:
+        suppress: false
+      default:
+        suppress: true
+
+  - number: pages
+    prefix: ''
+    overrides:
+      article-journal:
+        suppress: false
+      default:
+        suppress: true
+
+  - variable: publisher-place
+    prefix: '. '
+    suffix: ': '
+    overrides:
+      book:
+        suppress: false
+      report:
+        suppress: false
+      default:
+        suppress: true
+
+  - variable: publisher
+    suffix: '; '
+    overrides:
+      book:
+        suppress: false
+      report:
+        suppress: false
+      default:
+        suppress: true
+
+  - date: issued
+    form: year
+    overrides:
+      book:
+        suppress: false
+      report:
+        suppress: false
+      default:
+        suppress: true
+
+  - contributor: editor
+    form: long
+    prefix: '. In: '
+    suffix: '. '
+    overrides:
+      chapter:
+        suppress: false
+      paper-conference:
+        suppress: false
+      default:
+        suppress: true
+
+  - title: parent-monograph
+    suffix: ', '
+    overrides:
+      chapter:
+        suppress: false
+      paper-conference:
+        suppress: false
+      default:
+        suppress: true
+
+  - variable: publisher
+    suffix: '; '
+    overrides:
+      chapter:
+        suppress: false
+      paper-conference:
+        suppress: false
+      default:
+        suppress: true
+
+  - date: issued
+    form: year
+    overrides:
+      chapter:
+        suppress: false
+      paper-conference:
+        suppress: false
+      default:
+        suppress: true
+
+  - number: pages
+    prefix: ', p. '
+    overrides:
+      chapter:
+        suppress: false
+      paper-conference:
+        suppress: false
+      default:
+        suppress: true
+
+  - variable: doi
+    prefix: '. https://doi.org/'
+    overrides:
+      article-journal:
+        suppress: false
+      default:
+        suppress: true
