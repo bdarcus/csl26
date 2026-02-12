@@ -14,6 +14,9 @@ pub mod types;
 #[cfg(test)]
 mod tests;
 
+#[cfg(test)]
+mod multilingual_tests;
+
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use url::Url;

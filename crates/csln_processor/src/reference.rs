@@ -16,8 +16,8 @@ pub use csln_core::citation::{Citation, CitationItem, CitationMode, LocatorType}
 
 // Re-export reference types from csln_core
 pub use csln_core::reference::{
-    Contributor, ContributorList, EdtfString, FlatName, InputReference as Reference, NumOrStr,
-    SimpleName, StructuredName, Title,
+    Contributor, ContributorList, EdtfString, FlatName, InputReference as Reference,
+    MultilingualString, NumOrStr, SimpleName, StructuredName, Title,
 };
 
 /// A bibliography is a collection of references keyed by ID.
@@ -46,7 +46,7 @@ mod tests {
         // No longer direct access to family on Contributor
         if let Some(Contributor::ContributorList(list)) = reference.author() {
             if let Contributor::StructuredName(name) = &list.0[0] {
-                assert_eq!(name.family, "Kuhn".to_string());
+                assert_eq!(name.family, MultilingualString::Simple("Kuhn".to_string()));
             }
         }
     }

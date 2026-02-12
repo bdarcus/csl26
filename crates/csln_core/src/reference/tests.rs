@@ -19,7 +19,7 @@ fn test_parse_csl_json() {
 
     if let Some(Contributor::ContributorList(list)) = reference.author() {
         if let Contributor::StructuredName(name) = &list.0[0] {
-            assert_eq!(name.family, "Kuhn".to_string());
+            assert_eq!(name.family, MultilingualString::Simple("Kuhn".to_string()));
         }
     }
 }

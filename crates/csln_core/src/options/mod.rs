@@ -9,6 +9,7 @@ pub mod bibliography;
 pub mod contributors;
 pub mod dates;
 pub mod localization;
+pub mod multilingual;
 pub mod processing;
 pub mod substitute;
 
@@ -20,6 +21,7 @@ pub use contributors::{
 };
 pub use dates::DateConfig;
 pub use localization::{Localize, MonthFormat, Scope};
+pub use multilingual::{MultilingualConfig, MultilingualMode, ScriptConfig};
 pub use processing::{
     Disambiguation, Group, Processing, ProcessingCustom, Sort, SortKey, SortSpec,
 };
@@ -43,6 +45,9 @@ pub struct Config {
     /// Localization settings.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub localize: Option<Localize>,
+    /// Multilingual rendering defaults.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub multilingual: Option<MultilingualConfig>,
     /// Contributor formatting defaults.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub contributors: Option<ContributorConfig>,
@@ -125,6 +130,9 @@ impl Config {
         }
         if other.localize.is_some() {
             self.localize = other.localize.clone();
+        }
+        if other.multilingual.is_some() {
+            self.multilingual = other.multilingual.clone();
         }
         if let Some(other_contributors) = &other.contributors {
             if let Some(this_contributors) = &mut self.contributors {
