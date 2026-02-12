@@ -1,0 +1,104 @@
+version: '0.2.0'
+info:
+  title: Elsevier (author-date/Harvard, with titles)
+  id: elsevier-harvard
+  link: https://www.elsevier.com/authors/policies-and-guidelines/how-to-cite
+
+options:
+  processing: author-date
+  contributors:
+    and: text
+    initialize-with: '.'
+    delimiter: ', '
+    delimiter-precedes-last: always
+    demote-non-dropping-particle: never
+    sort-separator: ', '
+    display-as-sort: all
+  dates:
+    month: numeric
+  bibliography:
+    hanging-indent: true
+    separator: '. '
+    entry-suffix: '.'
+  punctuation-in-quote: true
+  volume-pages-delimiter: comma
+
+citation:
+  template:
+    - contributor: author
+      form: short
+      shorten:
+        min: 3
+        use-first: 1
+        and-others: et-al
+        delimiter-precedes-last: contextual
+      and: text
+    - date: issued
+      form: year
+  wrap: parentheses
+  multi-cite-delimiter: '; '
+
+bibliography:
+  template:
+    - contributor: author
+      form: long
+      delimiter: ', '
+      suffix: ', '
+    - date: issued
+      form: year
+      suffix: '.'
+    - title: primary
+      prefix: '. '
+    - contributor: editor
+      form: verb
+      prefix: ', in: '
+      overrides:
+        article-journal:
+          suppress: true
+        chapter:
+          suppress: false
+        paper-conference:
+          suppress: false
+    - title: parent-monograph
+      overrides:
+        article-journal:
+          suppress: true
+        chapter:
+          suppress: false
+    - title: parent-serial
+      prefix: '. '
+      overrides:
+        article-journal:
+          suppress: false
+    - items:
+        - number: volume
+        - number: issue
+      delimiter: ', '
+      prefix: ' '
+      overrides:
+        article-journal:
+          suppress: false
+        default:
+          suppress: true
+    - number: pages
+      overrides:
+        chapter:
+          prefix: 'pp. '
+        paper-conference:
+          prefix: 'pp. '
+        article-journal:
+          prefix: ', '
+        default:
+          suppress: true
+    - variable: publisher
+      prefix: '. '
+      overrides:
+        article-journal:
+          suppress: true
+    - variable: publisher-place
+      prefix: ', '
+      overrides:
+        article-journal:
+          suppress: true
+    - variable: doi
+      prefix: '. https://doi.org/'
