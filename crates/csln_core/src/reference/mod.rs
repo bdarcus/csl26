@@ -277,6 +277,16 @@ impl InputReference {
         }
     }
 
+    /// Return the language.
+    pub fn language(&self) -> Option<LangID> {
+        match self {
+            InputReference::Monograph(r) => r.language.clone(),
+            InputReference::CollectionComponent(r) => r.language.clone(),
+            InputReference::SerialComponent(r) => r.language.clone(),
+            InputReference::Collection(r) => r.language.clone(),
+        }
+    }
+
     /// Set the reference ID.
     pub fn set_id(&mut self, id: String) {
         match self {

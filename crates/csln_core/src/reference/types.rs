@@ -2,6 +2,7 @@ use crate::reference::contributor::Contributor;
 use crate::reference::date::EdtfString;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::fmt;
 use std::fmt::{Display, Formatter};
 use url::Url;
@@ -28,6 +29,59 @@ impl Display for NumOrStr {
     }
 }
 
+/// A string that can be represented in multiple languages and scripts.
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, JsonSchema)]
+#[serde(untagged)]
+pub enum MultilingualString {
+    Simple(String),
+    Complex(MultilingualComplex),
+}
+
+/// Complex multilingual representation with original, transliterations, and translations.
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct MultilingualComplex {
+    /// The text in its original script.
+    pub original: String,
+    /// ISO 639/BCP 47 language code for the original text.
+    pub lang: Option<LangID>,
+    /// Transliterations/Transcriptions of the original text.
+    /// Keys are script codes or full BCP 47 tags.
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+    pub transliterations: HashMap<String, String>,
+    /// Translations of the text into other languages.
+    /// Keys are ISO 639/BCP 47 language codes.
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+    pub translations: HashMap<LangID, String>,
+}
+
+impl From<String> for MultilingualString {
+    fn from(s: String) -> Self {
+        Self::Simple(s)
+    }
+}
+
+impl From<&str> for MultilingualString {
+    fn from(s: &str) -> Self {
+        Self::Simple(s.to_string())
+    }
+}
+
+impl Display for MultilingualString {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        match self {
+            Self::Simple(s) => write!(f, "{}", s),
+            Self::Complex(c) => write!(f, "{}", c.original),
+        }
+    }
+}
+
+impl Default for MultilingualString {
+    fn default() -> Self {
+        Self::Simple(String::new())
+    }
+}
+
 /// A monograph, such as a book or a report, is a monolithic work published or produced as a complete entity.
 #[derive(Debug, Deserialize, Serialize, Clone, JsonSchema, PartialEq)]
 #[serde(rename_all = "kebab-case")]
@@ -42,6 +96,7 @@ pub struct Monograph {
     pub publisher: Option<Contributor>,
     pub url: Option<Url>,
     pub accessed: Option<EdtfString>,
+    pub language: Option<LangID>,
     pub note: Option<String>,
     pub isbn: Option<String>,
     pub doi: Option<String>,
@@ -77,6 +132,7 @@ pub struct Collection {
     pub publisher: Option<Contributor>,
     pub url: Option<Url>,
     pub accessed: Option<EdtfString>,
+    pub language: Option<LangID>,
     pub note: Option<String>,
     pub isbn: Option<String>,
     pub keywords: Option<Vec<String>>,
@@ -107,6 +163,7 @@ pub struct CollectionComponent {
     pub pages: Option<NumOrStr>,
     pub url: Option<Url>,
     pub accessed: Option<EdtfString>,
+    pub language: Option<LangID>,
     pub note: Option<String>,
     pub doi: Option<String>,
     pub genre: Option<String>,
@@ -137,6 +194,7 @@ pub struct SerialComponent {
     pub parent: Parent<Serial>,
     pub url: Option<Url>,
     pub accessed: Option<EdtfString>,
+    pub language: Option<LangID>,
     pub note: Option<String>,
     pub doi: Option<String>,
     pub pages: Option<String>,
@@ -202,6 +260,8 @@ pub enum Title {
     Single(String),
     /// A structured title.
     Structured(StructuredTitle),
+    /// A complex multilingual title.
+    Multilingual(MultilingualComplex),
     /// A title in multiple languages.
     Multi(Vec<(LangID, String)>),
     /// A structured title in multiple languages.
@@ -232,6 +292,7 @@ impl fmt::Display for Title {
         match self {
             Title::Single(s) => write!(f, "{}", s),
             Title::Multi(_m) => write!(f, "[multilingual title]"),
+            Title::Multilingual(m) => write!(f, "{}", m.original),
             Title::Structured(s) => {
                 let subtitle = match &s.sub {
                     Subtitle::String(s) => s.clone(),

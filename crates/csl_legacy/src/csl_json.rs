@@ -109,6 +109,9 @@ pub struct Reference {
     /// Genre
     #[serde(skip_serializing_if = "Option::is_none")]
     pub genre: Option<String>,
+    /// Language (BCP 47)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub language: Option<String>,
     /// Abstract
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "abstract")]

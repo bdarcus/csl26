@@ -8,6 +8,7 @@ use url::Url;
 impl From<csl_legacy::csl_json::Reference> for InputReference {
     fn from(legacy: csl_legacy::csl_json::Reference) -> Self {
         let id = Some(legacy.id);
+        let language = legacy.language;
         let title = legacy
             .title
             .map(Title::Single)
@@ -47,12 +48,13 @@ impl From<csl_legacy::csl_json::Reference> for InputReference {
                     issued,
                     publisher: legacy.publisher.map(|n| {
                         Contributor::SimpleName(SimpleName {
-                            name: n,
+                            name: n.into(),
                             location: legacy.publisher_place,
                         })
                     }),
                     url,
                     accessed,
+                    language,
                     note,
                     isbn,
                     doi,
@@ -88,12 +90,13 @@ impl From<csl_legacy::csl_json::Reference> for InputReference {
                         issued: EdtfString(String::new()),
                         publisher: legacy.publisher.map(|n| {
                             Contributor::SimpleName(SimpleName {
-                                name: n,
+                                name: n.into(),
                                 location: legacy.publisher_place,
                             })
                         }),
                         url: None,
                         accessed: None,
+                        language: None,
                         note: None,
                         isbn: None,
                         keywords: None,
@@ -101,6 +104,7 @@ impl From<csl_legacy::csl_json::Reference> for InputReference {
                     pages: legacy.page.map(NumOrStr::Str),
                     url,
                     accessed,
+                    language,
                     note,
                     doi,
                     genre: legacy.genre,
@@ -132,6 +136,7 @@ impl From<csl_legacy::csl_json::Reference> for InputReference {
                     }),
                     url,
                     accessed,
+                    language,
                     note,
                     doi,
                     pages: legacy.page,
@@ -156,12 +161,13 @@ impl From<csl_legacy::csl_json::Reference> for InputReference {
                 issued,
                 publisher: legacy.publisher.map(|n| {
                     Contributor::SimpleName(SimpleName {
-                        name: n,
+                        name: n.into(),
                         location: legacy.publisher_place,
                     })
                 }),
                 url,
                 accessed,
+                language,
                 note,
                 isbn,
                 doi,
@@ -208,13 +214,13 @@ impl From<Vec<csl_legacy::csl_json::Name>> for Contributor {
             .map(|n| {
                 if let Some(literal) = n.literal {
                     Contributor::SimpleName(SimpleName {
-                        name: literal,
+                        name: literal.into(),
                         location: None,
                     })
                 } else {
                     Contributor::StructuredName(StructuredName {
-                        given: n.given.unwrap_or_default(),
-                        family: n.family.unwrap_or_default(),
+                        given: n.given.unwrap_or_default().into(),
+                        family: n.family.unwrap_or_default().into(),
                         suffix: n.suffix,
                         dropping_particle: n.dropping_particle,
                         non_dropping_particle: n.non_dropping_particle,
@@ -248,7 +254,7 @@ impl InputReference {
             .unwrap_or(EdtfString(String::new()));
         let publisher = field_str("publisher").map(|p| {
             Contributor::SimpleName(SimpleName {
-                name: p,
+                name: p.into(),
                 location: field_str("location"),
             })
         });
@@ -261,6 +267,8 @@ impl InputReference {
             let all_persons: Vec<Person> = e.into_iter().flat_map(|(persons, _)| persons).collect();
             Contributor::from_biblatex_persons(&all_persons)
         });
+
+        let language = field_str("langid").or_else(|| field_str("language"));
 
         match entry.entry_type.to_string().to_lowercase().as_str() {
             "book" | "mvbook" | "collection" | "mvcollection" => {
@@ -275,6 +283,7 @@ impl InputReference {
                     publisher,
                     url: field_str("url").and_then(|u| Url::parse(&u).ok()),
                     accessed: None,
+                    language,
                     note: field_str("note"),
                     isbn: field_str("isbn"),
                     doi: field_str("doi"),
@@ -306,6 +315,7 @@ impl InputReference {
                         publisher,
                         url: None,
                         accessed: None,
+                        language: None,
                         note: None,
                         isbn: None,
                         keywords: None,
@@ -313,6 +323,7 @@ impl InputReference {
                     pages: field_str("pages").map(NumOrStr::Str),
                     url: field_str("url").and_then(|u| Url::parse(&u).ok()),
                     accessed: field_str("urldate").map(EdtfString),
+                    language,
                     note: field_str("note"),
                     doi: field_str("doi"),
                     genre: field_str("type"),
@@ -338,6 +349,7 @@ impl InputReference {
                     }),
                     url: field_str("url").and_then(|u| Url::parse(&u).ok()),
                     accessed: field_str("urldate").map(EdtfString),
+                    language,
                     note: field_str("note"),
                     doi: field_str("doi"),
                     pages: field_str("pages"),
@@ -357,6 +369,7 @@ impl InputReference {
                 publisher,
                 url: field_str("url").and_then(|u| Url::parse(&u).ok()),
                 accessed: field_str("urldate").map(EdtfString),
+                language,
                 note: field_str("note"),
                 isbn: field_str("isbn"),
                 doi: field_str("doi"),
@@ -376,8 +389,8 @@ impl Contributor {
             .iter()
             .map(|p| {
                 Contributor::StructuredName(StructuredName {
-                    given: p.given_name.clone(),
-                    family: p.name.clone(),
+                    given: p.given_name.clone().into(),
+                    family: p.name.clone().into(),
                     suffix: if p.suffix.is_empty() {
                         None
                     } else {

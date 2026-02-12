@@ -19,9 +19,9 @@ This document outlines the architectural design for adding "elegant" multilingua
 
 The core data model in `csln_core` will be updated to support **Parallel Metadata**.
 
-### 1.1 `Contrbutor` and `String` Fields
+### 1.1 `Contributor` and `String` Fields
 
-Currently, fields like `title` and `author` (via `Contributor`) primarily store single string values. We will introduce a pattern to allow them to store complex objects without breaking the simple string ease-of-use.
+Currently, fields like `title` and `author` (via `Contributor`) primarily store single string values. We use a pattern to allow them to store complex objects without breaking the simple string ease-of-use.
 
 **Schema (YAML) Examples:**
 
@@ -31,34 +31,71 @@ title: "The Great Gatsby"
 author: "Fitzgerald, F. Scott"
 ```
 
-*Advanced (Multilingual):*
+*Advanced (Multilingual Title):*
 ```yaml
 title:
   original: "战争与和平"
-  transliteration: "Zhànzhēng yǔ Hépíng"
-  translation: "War and Peace"
+  lang: "zh"
+  transliterations:
+    zh-Latn-pinyin: "Zhànzhēng yǔ Hépíng"
+  translations:
+    en: "War and Peace"
+```
+
+*Advanced (Multilingual Contributor):*
+Names use a holistic multilingual approach where the entire name structure has parallel variants.
+
+```yaml
 author:
-  family:
-    original: "Tolstoy"
-    transliteration: "Tolstoy"
-  given: "Leo"
+  original:
+    family: " Tolstoy"
+    given: "Leo"
+  lang: "ru"
+  transliterations:
+    Latn:
+      family: "Tolstoy"
+      given: "Leo"
 ```
 
 ### 1.2 Internal Representation
 
-We will use Serde's `untagged` enum feature to seamlessly support both formats.
+We use Serde's `untagged` enum feature to seamlessly support both formats. This model incorporates feedback that alternate fields need explicit language and script tagging.
 
 ```rust
-#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+// For Titles and simple strings
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, JsonSchema)]
 #[serde(untagged)]
 pub enum MultilingualString {
     Simple(String),
-    Complex {
-        original: Option<String>,
-        transliteration: Option<String>,
-        translation: Option<String>,
-        lang: Option<String>, // ISO language code for the original
-    }
+    Complex(MultilingualComplex),
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct MultilingualComplex {
+    pub original: String,
+    pub lang: Option<LangID>,
+    pub transliterations: HashMap<String, String>,
+    pub translations: HashMap<LangID, String>,
+}
+
+// For Contributors
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, JsonSchema)]
+#[serde(untagged)]
+pub enum Contributor {
+    SimpleName(SimpleName),
+    StructuredName(StructuredName),
+    Multilingual(MultilingualName), // Holistic parallel names
+    ContributorList(ContributorList),
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct MultilingualName {
+    pub original: StructuredName,
+    pub lang: Option<LangID>,
+    pub transliterations: HashMap<String, StructuredName>,
+    pub translations: HashMap<LangID, StructuredName>,
 }
 ```
 
@@ -69,34 +106,42 @@ A new global configuration section `multilingual` will be added to the CSLN styl
 ```yaml
 options:
   multilingual:
-    # How to render titles:
+    # Preferred view for titles:
     # - primary: Use original script
     # - transliterated: Prefer transliteration
-    # - translated: Use translation
+    # - translated: Use translation matching style locale
     # - combined: "original [translation]" pattern
     title-mode: "transliterated [translated]" 
     
-    # How to render names:
+    # Preferred view for names:
+    # - primary, transliterated, translated, combined
     name-mode: "transliterated"
     
-    # Transliteration standard (informational for now, potential validation later)
-    transliteration-standard: "ala-lc"
+    # Preferred script for transliterations (e.g., "Latn", "Cyrl")
+    preferred-script: "Latn"
+
+    # Script-specific behavior
+    scripts:
+      cjk:
+        use-native-ordering: true # FamilyGiven for CJK
+        delimiter: ""            # No space between Family/Given
 ```
 
 ## 3. Processor Logic
 
-The `csln_processor` will implement the view logic.
-
 ### 3.1 Value Resolution
 
-When the template requests a variable (e.g., `title`), the processor will:
+... [existing resolution logic] ...
 
-1.  Check the `MultilingualOptions` for the current style.
-2.  Resolves the value based on the mode:
-    *   **Primary**: Returns `original` ?? `Simple` string.
-    *   **Transliterated**: Returns `transliteration` ?? `original`.
-    *   **Translated**: Returns `translation` ?? `original`.
-    *   **Combined**: Formats the string using the specified pattern (e.g., `"{transliteration} [{translation}]"`). 
+### 3.2 Script-Aware Ordering
+
+For contributors, the processor must be script-aware to handle ordering (Given Family vs Family Given) and delimiters.
+
+1.  **Detection**: Determine the script of the resolved name (e.g., Latin vs CJK).
+2.  **Ordering**: 
+    *   If CJK and `use-native-ordering` is true, use `FamilyGiven`.
+    *   If Latin, use `Given Family` (unless `sort-order` is requested).
+3.  **Delimiters**: Use script-appropriate delimiters for contributor lists (e.g., "・" for Japanese lists).
 
 ### 3.2 Locale Separation
 
