@@ -192,12 +192,19 @@ See **[docs/architecture/MIGRATION_STRATEGY_ANALYSIS.md](./docs/architecture/MIG
 - **Fallback Chain**: Multilingual fields must always implement a `Display` fallback (e.g., `Complex.original` -> `Simple string`).
 - **Mode Fallback**: If a style requests a `translated` view but the data only provides `original`, the processor must return `original` rather than failing.
 
-### 4. Rust Engineering Standards (Code-as-Schema)
+### 4. Multilingual Support
+
+- **Explicit Language/Script Tagging**: All multilingual metadata uses BCP 47 tags with script and optional variant (e.g., "ja-Latn-hepburn" for Hepburn romanization)
+- **Graceful Degradation**: Simple string → original → transliteration → translation fallback chain via `Display` trait
+- **Surface-Level Disambiguation**: Disambiguation matches displayed written forms (transliterated strings if style shows transliteration), NOT PIDs (ORCID/DOI are for identity, not disambiguation)
+- **Declarative Modes**: Styles declare viewing preference (original/transliterated/translated/combined) without procedural logic
+
+### 5. Rust Engineering Standards (Code-as-Schema)
 
 - **Serde-Driven Truth**: We use a Code-First approach. The Rust structs and enums are the source of truth for the schema.
 - **Total Stability**: Prohibit the use of `unwrap()` or `unsafe`. Use idiomatic Rust `Result` patterns for all processing logic.
 
-### 5. Explicit Over Magic
+### 6. Explicit Over Magic
 
 **The style language should be explicit; the processor should be dumb.**
 
@@ -222,7 +229,7 @@ Good (explicit in style):
 
 This makes styles portable, testable, and understandable without reading processor code.
 
-### 6. Declarative Templates
+### 7. Declarative Templates
 
 Replace CSL 1.0's procedural `<choose>/<if>` with flat templates + type overrides:
 ```yaml
@@ -240,18 +247,18 @@ bibliography:
           suppress: true  # Journals don't show publisher
 ```
 
-### 7. Structured Name Input
+### 8. Structured Name Input
 
 Names must be structured (`family`/`given` or `literal`), never parsed from strings. Corporate names can contain commas.
 
-### 8. Oracle Verification
+### 9. Oracle Verification
 
 All changes must pass the verification loop:
 1. Render with citeproc-js → String A
 2. Render with CSLN → String B
 3. **Pass**: A == B (for supported features)
 
-### 9. Well-Commented Code
+### 10. Well-Commented Code
 
 Code should be self-documenting with clear comments explaining:
 - **Why** decisions were made, not just what the code does

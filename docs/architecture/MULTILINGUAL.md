@@ -48,7 +48,7 @@ Names use a holistic multilingual approach where the entire name structure has p
 ```yaml
 author:
   original:
-    family: " Tolstoy"
+    family: "Tolstoy"
     given: "Leo"
   lang: "ru"
   transliterations:
@@ -75,6 +75,14 @@ pub enum MultilingualString {
 pub struct MultilingualComplex {
     pub original: String,
     pub lang: Option<LangID>,
+    /// Transliterations/Transcriptions of the original text.
+    /// Keys MUST be valid BCP 47 language tags including script and optional variant subtags.
+    /// Script subtag specifies the writing system (Latn=Latin, Cyrl=Cyrillic, etc.).
+    /// Variant subtag specifies the romanization method:
+    ///   Japanese: "ja-Latn-hepburn" (Hepburn), "ja-Latn-kunrei" (Kunrei-shiki)
+    ///   Chinese: "zh-Latn-pinyin" (Pinyin), "zh-Latn-wadegile" (Wade-Giles)
+    ///   Russian: "ru-Latn-alalc97" (ALA-LC), "ru-Latn-bgn" (BGN/PCGN)
+    /// Matching strategy: exact BCP 47 tag → script prefix → fallback to original.
     pub transliterations: HashMap<String, String>,
     pub translations: HashMap<LangID, String>,
 }
@@ -97,6 +105,23 @@ pub struct MultilingualName {
     pub transliterations: HashMap<String, StructuredName>,
     pub translations: HashMap<LangID, StructuredName>,
 }
+```
+
+### 1.3 Transliteration Methods
+
+Transliteration keys use BCP 47 language tags with script and variant subtags to specify the exact romanization system used.
+
+**Common transliteration variants:**
+- Japanese: `ja-Latn-hepburn` (Hepburn), `ja-Latn-kunrei` (Kunrei-shiki)
+- Chinese: `zh-Latn-pinyin` (Pinyin), `zh-Latn-wadegile` (Wade-Giles)
+- Russian: `ru-Latn-alalc97` (ALA-LC), `ru-Latn-bgn` (BGN/PCGN)
+
+**Matching strategy:**
+1. Exact BCP 47 tag match (e.g., "ja-Latn-hepburn")
+2. Prefix match on script (e.g., "ja-Latn" matches any Latin transliteration)
+3. Fallback to `original` field
+
+Future: `preferred-transliteration` style option will allow explicit method selection.
 ```
 
 ## 2. Style Configuration
@@ -173,7 +198,22 @@ multilingual = ["dep:icu_collation", "dep:icu_locid", "dep:icu_properties"]
 
 ## 5. Disambiguation
 
-When names appear in multiple scripts, simple string matching fails to identify them as the same person.
+Citation disambiguation resolves surface-level ambiguity in written references for readers, not real-world identity verification.
 
-*   **Strategy**: Use Persistent Identifiers (ORCID, DOI, etc.) as the primary key for disambiguation grouping.
-*   **Fallback**: If no PID is present, fall back to string comparison of the `transliteration` field if available.
+### 5.1 Strategy
+
+**Primary:** String matching on the displayed written form:
+- If style displays `transliteration`, compare transliterated strings
+- If style displays `original`, compare original script strings
+- If style displays `translation`, compare translated strings
+
+**Fallback:** If no exact match, use normalized comparison (Unicode NFC, case-folding)
+
+### 5.2 PIDs Are Not Disambiguation Keys
+
+Persistent identifiers (ORCID, DOI, ISBN) serve identity verification and linking purposes, but are NOT used for citation disambiguation. Two reasons:
+
+1. **Scope mismatch**: PIDs identify entities globally, but disambiguation only needs to distinguish items within a single bibliography
+2. **Display mismatch**: Readers see "Smith, J." vs "Smith, John" in text, not ORCIDs
+
+PIDs remain valuable for metadata quality and cross-referencing, but disambiguation operates on rendered output strings.
