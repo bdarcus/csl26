@@ -24,20 +24,8 @@ const {
   parseComponents,
   analyzeOrdering,
   findRefDataForEntry,
-} = require('./lib/component-parser');
-
-// Load locale from file
-function loadLocale(lang) {
-    const localePath = path.join(__dirname, `locales-${lang}.xml`);
-    if (fs.existsSync(localePath)) {
-        return fs.readFileSync(localePath, 'utf8');
-    }
-    const fallback = path.join(__dirname, 'locales-en-US.xml');
-    if (fs.existsSync(fallback)) {
-        return fs.readFileSync(fallback, 'utf8');
-    }
-    throw new Error(`Locale not found: ${lang}`);
-}
+  loadLocale,
+} = require('./oracle-utils');
 
 // Load test items from JSON fixture
 const fixturesPath = path.join(__dirname, '..', 'tests', 'fixtures', 'references-expanded.json');

@@ -18,9 +18,10 @@ The `/styleauthor` slash command is the universal entry point. Whichever agent r
 
 ### Delegation Logic
 - **If New Style / Complex Research**: Coordinator **must** delegate Phase 1 to `@dstyleplan`.
+- **If Simple Migration**: Coordinator may skip Phase 1 and delegate directly to `@styleplan` (see Simple Migration Checklist).
 - **If Maintenance / Simple Gaps**: Coordinator delegates to `@styleplan` for the build plan.
 - **If Build Complete**: Coordinator **must** hand samples back to `@styleplan` or `@reviewer` for a final **Rendering Audit** before completion.
-- **If Plan Approved**: Coordinator delegate Phase 3-4 to `@styleauthor`.
+- **If Plan Approved**: Coordinator delegates Phase 3-4 to `@styleauthor`.
 
 **Parameters:**
 - `style-name` (required for new styles): Name for the style file (e.g., `chicago-author-date`)
@@ -40,15 +41,46 @@ The `/styleauthor` slash command is the universal entry point. Whichever agent r
 
 ## Workflow Phases
 
+### Progress Tracking
+
+The workflow automatically creates task tracking for visibility:
+
+**At workflow start:**
+```bash
+/beans create "Style: {style-name}" --type feature --priority high
+/beans update TASK_ID --status in-progress
+```
+
+**During execution:**
+- Mark current phase as `in-progress` when starting: `/beans update TASK_ID --note "Phase N: [phase-name]"`
+- Mark phase as `completed` when finished
+- Update main task with current status
+- On escalation: `/beans update TASK_ID --status blocked --note "Escalated: [reason]"`
+
+**Benefits:**
+- Real-time progress visibility for user
+- Resume capability for interrupted workflows
+- Clear audit trail of workflow execution
+- Automatic task filtering by `in-progress` for next work
+
+---
+
 ### Migration Workflow (Optional)
 
 Use this workflow when converting an existing CSL 1.0 style. It identifies the target output and baseline configuration to accelerate Phase 1 & 2.
+
+**For standard migrations**, see **[Simple Migration Checklist](./templates/simple-migration-checklist.md)** to potentially skip Phase 1 (research) and save ~50K tokens.
 
 1.  **Prep**: Run `scripts/prep-migration.sh <path-to-csl>`
 2.  **Analyze**:
     -   **Target Output** (citeproc-js): This is your visual goal.
     -   **Baseline CSLN**: Use the `options` block as your starting point (it extracts name rules, date forms, etc.).
 3.  **Author**: Proceed to Phase 2, but focus on mapping the visual components in "Target Output" to CSLN template components.
+
+**Simple Path** (if criteria met):
+- Skip Phase 1 research
+- Proceed directly to Phase 2 (build plan)
+- See checklist for when this is appropriate
 
 ### Update Workflow (Optional)
 
