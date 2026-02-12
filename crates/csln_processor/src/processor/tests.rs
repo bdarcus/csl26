@@ -19,6 +19,7 @@ fn make_style() -> Style {
         },
         options: Some(Config {
             processing: Some(Processing::AuthorDate),
+            substitute: Some(csln_core::options::SubstituteConfig::default()),
             contributors: Some(ContributorConfig {
                 shorten: Some(ShortenListOptions {
                     min: 3,
@@ -864,4 +865,74 @@ fn test_sort_anonymous_work_by_title() {
 {}",
         result
     );
+}
+
+#[test]
+fn test_whole_entry_linking_html() {
+    use crate::render::html::Html;
+    use csln_core::options::{LinkAnchor, LinkTarget, LinksConfig};
+
+    let mut style = make_style();
+    style.options.as_mut().unwrap().links = Some(LinksConfig {
+        target: Some(LinkTarget::Url),
+        anchor: Some(LinkAnchor::Entry),
+        ..Default::default()
+    });
+
+    let mut bib = Bibliography::new();
+    bib.insert(
+        "link1".to_string(),
+        Reference::from(LegacyReference {
+            id: "link1".to_string(),
+            ref_type: "webpage".to_string(),
+            title: Some("Linked Page".to_string()),
+            url: Some("https://example.com".to_string()),
+            issued: Some(DateVariable::year(2023)),
+            ..Default::default()
+        }),
+    );
+
+    let processor = Processor::new(style, bib);
+    let result = processor.render_bibliography_with_format::<Html>();
+
+    // The whole entry content should be wrapped in an <a> tag inside the entry div
+    assert!(result.contains(r#"id="ref-link1""#));
+    assert!(result.contains(r#"<a href="https://example.com/">"#));
+    assert!(result.contains("Linked Page"));
+}
+
+#[test]
+fn test_global_title_linking_html() {
+    use crate::render::html::Html;
+    use csln_core::options::{LinkAnchor, LinkTarget, LinksConfig};
+
+    let mut style = make_style();
+    style.options.as_mut().unwrap().links = Some(LinksConfig {
+        target: Some(LinkTarget::Doi),
+        anchor: Some(LinkAnchor::Title),
+        ..Default::default()
+    });
+
+    let mut bib = Bibliography::new();
+    bib.insert(
+        "doi1".to_string(),
+        Reference::from(LegacyReference {
+            id: "doi1".to_string(),
+            ref_type: "book".to_string(),
+            title: Some("Linked Title".to_string()),
+            doi: Some("10.1001/test".to_string()),
+            issued: Some(DateVariable::year(2023)),
+            ..Default::default()
+        }),
+    );
+
+    let processor = Processor::new(style, bib);
+    let result = processor.render_bibliography_with_format::<Html>();
+
+    println!("Result: {}", result);
+
+    // The title should be automatically hyperlinked because of global config.
+    // Note: In this test, title substitutes for author, so it gets csln-author class.
+    assert!(result.contains(r#"<span class="csln-author"><a href="https://doi.org/10.1001/test">"#));
+    assert!(result.contains("Linked Title"));
 }

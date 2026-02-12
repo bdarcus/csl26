@@ -102,3 +102,6 @@ bibliography:
           suppress: true
     - variable: doi
       prefix: '. https://doi.org/'
+      links:
+        target: doi
+        anchor: component

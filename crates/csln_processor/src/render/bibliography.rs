@@ -141,7 +141,26 @@ pub fn refs_to_string_with_format<F: OutputFormat<Output = String>>(
         }
 
         cleanup_dangling_punctuation(&mut entry_output);
-        rendered_entries.push(fmt.entry(&entry.id, entry_output));
+
+        // Resolve entry URL if whole-entry linking is enabled
+        let entry_url = proc_template
+            .first()
+            .and_then(|c| c.config.as_ref())
+            .and_then(|cfg| cfg.links.as_ref())
+            .and_then(|links| {
+                use csln_core::options::LinkAnchor;
+                if matches!(links.anchor, Some(LinkAnchor::Entry)) {
+                    // We need the reference to resolve the URL.
+                    // This is a bit tricky as ProcEntry doesn't have the reference.
+                    // But we can look it up from the bibliography if we had access to it.
+                    // For now, let's see if any component in the template has a URL resolved.
+                    proc_template.iter().find_map(|c| c.url.clone())
+                } else {
+                    None
+                }
+            });
+
+        rendered_entries.push(fmt.entry(&entry.id, entry_output, entry_url.as_deref()));
     }
 
     fmt.finish(fmt.bibliography(rendered_entries))

@@ -7,7 +7,7 @@ impl ComponentValues for TemplateVariable {
         &self,
         reference: &Reference,
         _hints: &ProcHints,
-        _options: &RenderOptions<'_>,
+        options: &RenderOptions<'_>,
     ) -> Option<ProcValues> {
         let value = match self.variable {
             SimpleVariable::Doi => reference.doi(),
@@ -23,18 +23,37 @@ impl ComponentValues for TemplateVariable {
         };
 
         value.filter(|s: &String| !s.is_empty()).map(|value| {
-            let mut url = None;
-            if let Some(links) = &self.links {
-                if links.doi == Some(true) {
-                    url = reference
-                        .doi()
-                        .as_ref()
-                        .map(|d| format!("https://doi.org/{}", d));
-                }
-                if url.is_none() && links.url == Some(true) {
-                    url = reference.url().map(|u| u.to_string());
+            use csln_core::options::{LinkAnchor, LinkTarget};
+            let component_anchor = match self.variable {
+                SimpleVariable::Url => LinkAnchor::Url,
+                SimpleVariable::Doi => LinkAnchor::Doi,
+                _ => LinkAnchor::Component,
+            };
+
+            let mut url = crate::values::resolve_effective_url(
+                self.links.as_ref(),
+                options.config.links.as_ref(),
+                reference,
+                component_anchor,
+            );
+
+            // Fallback for simple legacy config
+            if url.is_none() {
+                if let Some(links) = &self.links {
+                    if self.variable == SimpleVariable::Url
+                        && (links.url == Some(true)
+                            || matches!(links.target, Some(LinkTarget::Url | LinkTarget::UrlOrDoi)))
+                    {
+                        url = reference.url().map(|u| u.to_string());
+                    } else if self.variable == SimpleVariable::Doi
+                        && (links.doi == Some(true)
+                            || matches!(links.target, Some(LinkTarget::Doi | LinkTarget::UrlOrDoi)))
+                    {
+                        url = reference.doi().map(|d| format!("https://doi.org/{}", d));
+                    }
                 }
             }
+
             ProcValues {
                 value,
                 prefix: None,

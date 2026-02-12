@@ -79,4 +79,8 @@ impl OutputFormat for PlainText {
         // Plain text just renders the text content of the link
         content
     }
+
+    fn entry(&self, _id: &str, content: Self::Output, _url: Option<&str>) -> Self::Output {
+        content
+    }
 }

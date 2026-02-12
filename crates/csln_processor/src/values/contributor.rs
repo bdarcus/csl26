@@ -97,11 +97,19 @@ impl ComponentValues for TemplateContributor {
                                 } else {
                                     None
                                 };
+
+                                let url = crate::values::resolve_effective_url(
+                                    self.links.as_ref(),
+                                    options.config.links.as_ref(),
+                                    reference,
+                                    csln_core::options::LinkAnchor::Component,
+                                );
+
                                 return Some(ProcValues {
                                     value: formatted,
                                     prefix: None,
                                     suffix,
-                                    url: None,
+                                    url,
                                     // Mark editor as rendered to suppress explicit editor component
                                     // Use the same key format as get_variable_key() for consistency
                                     substituted_key: Some("contributor:Editor".to_string()),
@@ -120,11 +128,20 @@ impl ComponentValues for TemplateContributor {
                             } else {
                                 title_str
                             };
+
+                            // Check if links should be applied to substituted title
+                            let url = crate::values::resolve_effective_url(
+                                self.links.as_ref(),
+                                options.config.links.as_ref(),
+                                reference,
+                                csln_core::options::LinkAnchor::Title,
+                            );
+
                             return Some(ProcValues {
                                 value,
                                 prefix: None,
                                 suffix: None,
-                                url: None,
+                                url,
                                 substituted_key: Some("title:Primary".to_string()),
                             });
                         }
@@ -144,11 +161,19 @@ impl ComponentValues for TemplateContributor {
                                     effective_rendering.initialize_with.as_ref(),
                                     hints,
                                 );
+
+                                let url = crate::values::resolve_effective_url(
+                                    self.links.as_ref(),
+                                    options.config.links.as_ref(),
+                                    reference,
+                                    csln_core::options::LinkAnchor::Component,
+                                );
+
                                 return Some(ProcValues {
                                     value: formatted,
                                     prefix: None,
                                     suffix: Some(" (Trans.)".to_string()),
-                                    url: None,
+                                    url,
                                     substituted_key: None,
                                 });
                             }
@@ -271,7 +296,12 @@ impl ComponentValues for TemplateContributor {
             value: formatted,
             prefix: role_prefix,
             suffix: role_suffix,
-            url: None,
+            url: crate::values::resolve_effective_url(
+                self.links.as_ref(),
+                options.config.links.as_ref(),
+                reference,
+                csln_core::options::LinkAnchor::Component, // Contributors only link if explicit or whole-component
+            ),
             substituted_key: None,
         })
     }

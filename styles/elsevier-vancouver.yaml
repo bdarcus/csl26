@@ -155,6 +155,9 @@ bibliography:
   # 10. Article: DOI
   - variable: doi
     prefix: '. https://doi.org/'
+    links:
+      target: doi
+      anchor: component
     overrides:
       article-journal:
         suppress: false

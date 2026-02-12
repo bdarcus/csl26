@@ -213,6 +213,9 @@ pub struct TemplateContributor {
     pub and: Option<crate::options::AndOptions>,
     #[serde(flatten, default)]
     pub rendering: Rendering,
+    /// Structured link options (DOI, URL).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub links: Option<crate::options::LinksConfig>,
     /// Type-specific rendering overrides.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub overrides: Option<HashMap<String, Rendering>>,
@@ -303,6 +306,9 @@ pub struct TemplateDate {
     pub fallback: Option<Vec<TemplateComponent>>,
     #[serde(flatten, default)]
     pub rendering: Rendering,
+    /// Structured link options (DOI, URL).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub links: Option<crate::options::LinksConfig>,
     /// Type-specific rendering overrides.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub overrides: Option<HashMap<String, Rendering>>,
@@ -388,6 +394,9 @@ pub struct TemplateNumber {
     pub label_form: Option<LabelForm>,
     #[serde(flatten)]
     pub rendering: Rendering,
+    /// Structured link options (DOI, URL).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub links: Option<crate::options::LinksConfig>,
     /// Type-specific rendering overrides.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub overrides: Option<HashMap<String, Rendering>>,

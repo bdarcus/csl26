@@ -27,6 +27,62 @@ use csln_core::template::TemplateComponent;
 pub use contributor::format_contributors_short;
 pub use date::int_to_letter;
 
+/// Resolve the URL for a component based on its links configuration and the reference data.
+pub fn resolve_url(
+    links: &csln_core::options::LinksConfig,
+    reference: &Reference,
+) -> Option<String> {
+    use csln_core::options::LinkTarget;
+
+    let target = links.target.as_ref().unwrap_or(&LinkTarget::UrlOrDoi);
+
+    match target {
+        LinkTarget::Url => reference.url().map(|u| u.to_string()),
+        LinkTarget::Doi => reference.doi().map(|d| format!("https://doi.org/{}", d)),
+        LinkTarget::UrlOrDoi => reference
+            .url()
+            .map(|u| u.to_string())
+            .or_else(|| reference.doi().map(|d| format!("https://doi.org/{}", d))),
+        LinkTarget::Pubmed => reference
+            .id()
+            .filter(|id| id.starts_with("pmid:"))
+            .map(|id| format!("https://pubmed.ncbi.nlm.nih.gov/{}/", &id[5..])),
+        LinkTarget::Pmcid => reference
+            .id()
+            .filter(|id| id.starts_with("pmc:"))
+            .map(|id| format!("https://www.ncbi.nlm.nih.gov/pmc/articles/{}/", &id[4..])),
+    }
+}
+
+/// Resolve the effective URL for a component, checking local links then falling back to global config.
+pub fn resolve_effective_url(
+    local_links: Option<&csln_core::options::LinksConfig>,
+    global_links: Option<&csln_core::options::LinksConfig>,
+    reference: &Reference,
+    component_anchor: csln_core::options::LinkAnchor,
+) -> Option<String> {
+    use csln_core::options::LinkAnchor;
+
+    // 1. Check local links first
+    if let Some(links) = local_links {
+        let anchor = links.anchor.as_ref().unwrap_or(&LinkAnchor::Component);
+        if matches!(anchor, LinkAnchor::Component) || *anchor == component_anchor {
+            return resolve_url(links, reference);
+        }
+    }
+
+    // 2. Fall back to global links if anchor matches this component type
+    if let Some(links) = global_links {
+        if let Some(anchor) = &links.anchor {
+            if *anchor == component_anchor {
+                return resolve_url(links, reference);
+            }
+        }
+    }
+
+    None
+}
+
 /// Processed values ready for rendering.
 #[derive(Debug, Clone, Default)]
 pub struct ProcValues {

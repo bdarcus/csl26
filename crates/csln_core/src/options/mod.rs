@@ -63,6 +63,9 @@ pub struct Config {
     /// Bibliography-specific settings.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub bibliography: Option<BibliographyConfig>,
+    /// Hyperlink configuration.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub links: Option<LinksConfig>,
     /// Whether to place periods/commas inside quotation marks.
     /// true = American style ("text."), false = British style ("text".)
     /// Defaults to false; en-US locale typically sets this to true.
@@ -114,6 +117,39 @@ pub struct LinksConfig {
     /// Link value to the item's URL.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub url: Option<bool>,
+    /// The target for the link (url, doi, etc.).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub target: Option<LinkTarget>,
+    /// What text should be hyperlinked (title, url, etc.).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub anchor: Option<LinkAnchor>,
+}
+
+/// Link target options.
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub enum LinkTarget {
+    Url,
+    Doi,
+    UrlOrDoi,
+    Pubmed,
+    Pmcid,
+}
+
+/// Link anchor options.
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub enum LinkAnchor {
+    /// Link the title component.
+    Title,
+    /// Link the URL component itself.
+    Url,
+    /// Link the DOI component itself.
+    Doi,
+    /// Link the specific component this config is attached to.
+    Component,
+    /// Link the entire bibliography entry.
+    Entry,
 }
 
 impl Config {
@@ -152,6 +188,9 @@ impl Config {
         }
         if other.bibliography.is_some() {
             self.bibliography = other.bibliography.clone();
+        }
+        if other.links.is_some() {
+            self.links = other.links.clone();
         }
         if other.punctuation_in_quote {
             self.punctuation_in_quote = true;

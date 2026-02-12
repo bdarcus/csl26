@@ -112,4 +112,29 @@ mod tests {
             r#"<span class="csln-url"><a href="https://example.com">https://example.com</a></span>"#
         );
     }
+
+    #[test]
+    fn test_html_title_link_doi() {
+        use csln_core::options::{LinkAnchor, LinkTarget, LinksConfig};
+        let component = ProcTemplateComponent {
+            template_component: TemplateComponent::Title(TemplateTitle {
+                title: TitleType::Primary,
+                links: Some(LinksConfig {
+                    target: Some(LinkTarget::Doi),
+                    anchor: Some(LinkAnchor::Title),
+                    ..Default::default()
+                }),
+                ..Default::default()
+            }),
+            value: "My Title".to_string(),
+            url: Some("https://doi.org/10.1001/test".to_string()),
+            ..Default::default()
+        };
+
+        let result = render_component_with_format::<Html>(&component);
+        assert_eq!(
+            result,
+            r#"<span class="csln-title"><a href="https://doi.org/10.1001/test">My Title</a></span>"#
+        );
+    }
 }

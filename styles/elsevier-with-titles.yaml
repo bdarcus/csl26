@@ -95,6 +95,12 @@ bibliography:
           suppress: false
           prefix: ": pp. "
     - variable: url
+      links:
+        target: url
+        anchor: component
     - variable: doi
       prefix: "https://doi.org/"
+      links:
+        target: doi
+        anchor: component
     delimiter: ", "

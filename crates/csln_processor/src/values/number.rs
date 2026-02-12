@@ -51,7 +51,12 @@ impl ComponentValues for TemplateNumber {
                 value,
                 prefix,
                 suffix: None,
-                url: None,
+                url: crate::values::resolve_effective_url(
+                    self.links.as_ref(),
+                    options.config.links.as_ref(),
+                    reference,
+                    csln_core::options::LinkAnchor::Component,
+                ),
                 substituted_key: None,
             }
         })

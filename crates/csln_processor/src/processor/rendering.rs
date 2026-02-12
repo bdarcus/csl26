@@ -348,13 +348,14 @@ impl<'a> Renderer<'a> {
 
         let template_ref = &template;
 
-        self.process_template_with_number(
-            reference,
-            template_ref,
-            RenderContext::Bibliography,
-            csln_core::citation::CitationMode::NonIntegral, // Not relevant for bib, but required
-            entry_number,
-        )
+        let options = RenderOptions {
+            config: self.config,
+            locale: self.locale,
+            context: RenderContext::Bibliography,
+            mode: csln_core::citation::CitationMode::NonIntegral,
+        };
+
+        self.process_template_with_number_internal(reference, template_ref, options, entry_number)
     }
 
     /// Process a template for a reference with citation number.
@@ -372,6 +373,16 @@ impl<'a> Renderer<'a> {
             context,
             mode,
         };
+        self.process_template_with_number_internal(reference, template, options, citation_number)
+    }
+
+    fn process_template_with_number_internal(
+        &self,
+        reference: &Reference,
+        template: &[TemplateComponent],
+        options: RenderOptions<'_>,
+        citation_number: usize,
+    ) -> Option<ProcTemplate> {
         let default_hint = ProcHints::default();
         let base_hint = self
             .hints
@@ -406,9 +417,20 @@ impl<'a> Renderer<'a> {
                 }
 
                 // Extract value from reference
-                let values = component.values(reference, &hint, &options)?;
+                let mut values = component.values(reference, &hint, &options)?;
                 if values.value.is_empty() {
                     return None;
+                }
+
+                // If whole-entry linking is enabled and this component doesn't have a URL,
+                // try to resolve it from global config.
+                if values.url.is_none() {
+                    if let Some(links) = &options.config.links {
+                        use csln_core::options::LinkAnchor;
+                        if matches!(links.anchor, Some(LinkAnchor::Entry)) {
+                            values.url = crate::values::resolve_url(links, reference);
+                        }
+                    }
                 }
 
                 // Mark variable as rendered for deduplication

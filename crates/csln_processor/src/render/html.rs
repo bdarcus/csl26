@@ -102,7 +102,12 @@ impl OutputFormat for Html {
         )
     }
 
-    fn entry(&self, id: &str, content: Self::Output) -> Self::Output {
+    fn entry(&self, id: &str, content: Self::Output, url: Option<&str>) -> Self::Output {
+        let content = if let Some(u) = url {
+            self.link(u, content)
+        } else {
+            content
+        };
         format!(
             r#"<div class="csln-entry" id="{}">{}</div>"#,
             self.format_id(id),

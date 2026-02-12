@@ -85,4 +85,12 @@ impl OutputFormat for Djot {
         }
         format!("[{}]({})", content, url)
     }
+
+    fn entry(&self, _id: &str, content: Self::Output, url: Option<&str>) -> Self::Output {
+        if let Some(u) = url {
+            self.link(u, content)
+        } else {
+            content
+        }
+    }
 }

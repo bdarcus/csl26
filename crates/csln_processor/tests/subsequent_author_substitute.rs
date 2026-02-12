@@ -44,6 +44,7 @@ fn make_style_with_substitute(substitute: Option<String>) -> Style {
                     shorten: None,
                     and: None,
                     rendering: Rendering::default(),
+                    links: None,
                     overrides: None,
                     _extra: Default::default(),
                 }),

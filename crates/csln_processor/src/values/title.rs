@@ -7,7 +7,7 @@ impl ComponentValues for TemplateTitle {
         &self,
         reference: &Reference,
         _hints: &ProcHints,
-        _options: &RenderOptions<'_>,
+        options: &RenderOptions<'_>,
     ) -> Option<ProcValues> {
         let binding = reference.ref_type();
 
@@ -45,15 +45,13 @@ impl ComponentValues for TemplateTitle {
         };
 
         value.filter(|s| !s.is_empty()).map(|value| {
-            let mut url = None;
-            if let Some(links) = &self.links {
-                if links.doi == Some(true) {
-                    url = reference.doi().map(|d| format!("https://doi.org/{}", d));
-                }
-                if url.is_none() && links.url == Some(true) {
-                    url = reference.url().map(|u| u.to_string());
-                }
-            }
+            use csln_core::options::LinkAnchor;
+            let url = crate::values::resolve_effective_url(
+                self.links.as_ref(),
+                options.config.links.as_ref(),
+                reference,
+                LinkAnchor::Title,
+            );
             ProcValues {
                 value,
                 prefix: None,

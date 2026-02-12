@@ -62,6 +62,7 @@ fn test_contributor_values() {
         shorten: None,
         and: None,
         rendering: Default::default(),
+        links: None,
         overrides: None,
         _extra: Default::default(),
     };
@@ -88,6 +89,7 @@ fn test_date_values() {
         form: DateForm::Year,
         fallback: None,
         rendering: Default::default(),
+        links: None,
         overrides: None,
         _extra: Default::default(),
     };
@@ -128,6 +130,7 @@ fn test_et_al() {
         shorten: None,
         and: None,
         rendering: Default::default(),
+        links: None,
         overrides: None,
         _extra: Default::default(),
     };
@@ -244,6 +247,7 @@ fn test_et_al_delimiter_never() {
         shorten: None,
         and: None,
         rendering: Default::default(),
+        links: None,
         overrides: None,
         _extra: Default::default(),
     };
@@ -292,6 +296,7 @@ fn test_et_al_delimiter_always() {
         shorten: None,
         and: None,
         rendering: Default::default(),
+        links: None,
         overrides: None,
         _extra: Default::default(),
     };
@@ -448,6 +453,7 @@ fn test_et_al_use_last() {
     let component = TemplateContributor {
         contributor: ContributorRole::Author,
         form: ContributorForm::Short,
+        links: None,
         ..Default::default()
     };
 
@@ -492,6 +498,7 @@ fn test_et_al_use_last_overlap() {
     let component = TemplateContributor {
         contributor: ContributorRole::Author,
         form: ContributorForm::Short,
+        links: None,
         ..Default::default()
     };
 
@@ -526,6 +533,8 @@ fn test_title_hyperlink() {
         title: TitleType::Primary,
         links: Some(LinksConfig {
             doi: Some(true),
+            target: Some(LinkTarget::Doi),
+            anchor: Some(LinkAnchor::Title),
             ..Default::default()
         }),
         ..Default::default()
@@ -565,6 +574,8 @@ fn test_title_hyperlink_url_fallback() {
         links: Some(LinksConfig {
             doi: Some(true),
             url: Some(true),
+            target: Some(LinkTarget::UrlOrDoi),
+            anchor: Some(LinkAnchor::Title),
         }),
         ..Default::default()
     };
@@ -599,6 +610,8 @@ fn test_variable_hyperlink() {
         variable: SimpleVariable::Publisher,
         links: Some(LinksConfig {
             doi: Some(true),
+            target: Some(LinkTarget::Doi),
+            anchor: Some(LinkAnchor::Component),
             ..Default::default()
         }),
         ..Default::default()
@@ -625,6 +638,7 @@ fn test_editor_label_format() {
     let component = TemplateContributor {
         contributor: ContributorRole::Editor,
         form: ContributorForm::Long,
+        links: None,
         ..Default::default()
     };
 

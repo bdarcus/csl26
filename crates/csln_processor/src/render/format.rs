@@ -79,10 +79,10 @@ pub trait OutputFormat: Default + Clone {
         self.join(entries, "\n\n")
     }
 
-    /// Render a single bibliography entry with its unique identifier.
+    /// Render a single bibliography entry with its unique identifier and optional link.
     ///
     /// The default implementation just returns the content.
-    fn entry(&self, _id: &str, content: Self::Output) -> Self::Output {
+    fn entry(&self, _id: &str, content: Self::Output, _url: Option<&str>) -> Self::Output {
         content
     }
 }

@@ -149,4 +149,10 @@ bibliography:
     # Block 4: DOI / URL
     - variable: doi
       prefix: "https://doi.org/"
+      links:
+        target: doi
+        anchor: component
     - variable: url
+      links:
+        target: url
+        anchor: component
