@@ -35,70 +35,19 @@ citation:
 
 bibliography:
   template:
+  # 1. Author
   - contributor: author
     form: long
     suffix: '. '
 
+  # 2. Title
   - title: primary
     suffix: '. '
 
-  - items:
-    - title: parent-serial
-      suffix: ' '
-    - date: issued
-      form: year
-      suffix: ';'
-    - number: volume
-      suffix: ':'
-    delimiter: none
-    overrides:
-      article-journal:
-        suppress: false
-      default:
-        suppress: true
-
-  - number: pages
-    prefix: ''
-    overrides:
-      article-journal:
-        suppress: false
-      default:
-        suppress: true
-
-  - variable: publisher-place
-    prefix: '. '
-    suffix: ': '
-    overrides:
-      book:
-        suppress: false
-      report:
-        suppress: false
-      default:
-        suppress: true
-
-  - variable: publisher
-    suffix: '; '
-    overrides:
-      book:
-        suppress: false
-      report:
-        suppress: false
-      default:
-        suppress: true
-
-  - date: issued
-    form: year
-    overrides:
-      book:
-        suppress: false
-      report:
-        suppress: false
-      default:
-        suppress: true
-
+  # 3. Chapter: "In: Editors. "
   - contributor: editor
     form: long
-    prefix: '. In: '
+    prefix: 'In: '
     suffix: '. '
     overrides:
       chapter:
@@ -108,6 +57,7 @@ bibliography:
       default:
         suppress: true
 
+  # 4. Chapter: parent-monograph title
   - title: parent-monograph
     suffix: ', '
     overrides:
@@ -118,26 +68,78 @@ bibliography:
       default:
         suppress: true
 
+  # 5. Journal: "Container Year;Volume:Pages"
+  - items:
+    - title: parent-serial
+      suffix: ' '
+    - date: issued
+      form: year
+      suffix: ';'
+    - number: volume
+      suffix: ':'
+    - number: pages
+    delimiter: ''
+    overrides:
+      article-journal:
+        suppress: false
+      book:
+        suppress: true
+      chapter:
+        suppress: true
+      paper-conference:
+        suppress: true
+      report:
+        suppress: true
+      default:
+        suppress: true
+
+  # 6. Book: publisher-place
+  - variable: publisher-place
+    suffix: ': '
+    prefix: '. '
+    overrides:
+      book:
+        suppress: false
+      report:
+        suppress: false
+      default:
+        suppress: true
+
+  # 7. Book/Chapter: publisher
   - variable: publisher
     suffix: '; '
     overrides:
+      book:
+        suppress: false
+      report:
+        suppress: false
       chapter:
         suppress: false
       paper-conference:
         suppress: false
+      article-journal:
+        suppress: true
       default:
         suppress: true
 
+  # 8. Book/Chapter: year
   - date: issued
     form: year
     overrides:
+      book:
+        suppress: false
+      report:
+        suppress: false
       chapter:
         suppress: false
       paper-conference:
         suppress: false
+      article-journal:
+        suppress: true
       default:
         suppress: true
 
+  # 9. Chapter: pages
   - number: pages
     prefix: ', p. '
     overrides:
@@ -145,9 +147,12 @@ bibliography:
         suppress: false
       paper-conference:
         suppress: false
+      article-journal:
+        suppress: true
       default:
         suppress: true
 
+  # 10. Article: DOI
   - variable: doi
     prefix: '. https://doi.org/'
     overrides:
