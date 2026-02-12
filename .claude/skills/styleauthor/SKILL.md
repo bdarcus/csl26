@@ -281,11 +281,37 @@ These come from the project's CLAUDE.md:
 7. **Semantic wrapping** - Use `wrap` for balanced punctuation (brackets, parentheses, quotes) to allow the processor to handle punctuation logic intelligently. Avoid manual `prefix: "["` pairs.
 8. **Semantic joining** - Use nested `items` groups with `delimiter` to manage spacing between component blocks. Avoid trailing spaces in `suffix: " "` or leading spaces in `prefix: " "` when they serve as implicit delimiters between optional components. Static leading elements like citation numbers may use a space suffix for simplicity.
 
+## Autonomous Command Whitelist
+
+The styleauthor workflow has pre-approved safe operations that execute without confirmation:
+
+### Always Safe (Style Development)
+- Creating/editing `styles/*.yaml` - New or updated style files
+- Running `node scripts/oracle*.js` - Oracle comparison tests
+- `cargo fmt`, `cargo clippy`, `cargo check` - Code quality checks
+- `cargo test` - Test suite execution
+- `cargo run --bin csln-*` - Project binaries
+- `git add`, `git commit` (feature branches only) - Commits to feature branches
+- `git status`, `git diff`, `git log`, `git branch` - Inspection commands
+- `mkdir -p styles/`, `mkdir -p tests/` - Safe directory creation
+
+### Safe Cleanup
+- Removing generated files: `target/`, `*.log`, `*.tmp`
+
+### Require Confirmation
+- `git push --force` or `git push --force-with-lease` - Destructive pushes
+- `git push origin main` - Pushing to main branch
+- `rm -rf` outside style/test temp directories - Destructive deletions
+- Modifying `Cargo.toml`, `Cargo.lock` - Dependency changes
+- Modifying `crates/csln_migrate/` - Migration pipeline (protected)
+- Modifying `scripts/oracle*.js` - Oracle scripts (protected)
+- Modifying `tests/fixtures/` - Test fixtures (protected)
+
 ## Guard Rails
 
 - **Always** run `cargo fmt && cargo clippy && cargo test` before declaring done
 - **Always** test with at least 4 reference types (article, book, chapter, webpage)
 - **Never** modify migration code, oracle scripts, or test fixtures
-- **Never** commit - leave that to the user or lead agent
+- **Never** commit to main directly - only to feature branches
 - **Validation checkpoint** at iteration 2: If match rate <50%, escalate immediately
 - **Maximum** 6 test-fix iterations before escalating (reduced from 10)

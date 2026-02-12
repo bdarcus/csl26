@@ -49,6 +49,8 @@ This project leverages global Claude Code agents from `~/.claude/` while adding 
 - **@styleplan**: Maintenance, bug fixes, and technical build planning.
 - **@styleauthor**: High-speed implementation (Haiku) for style templates.
 
+  **Auto-Approval Note:** The `@styleauthor` agent operates with autonomous command approval for the style development workflow. See **[Autonomous Command Whitelist](../skills/styleauthor/SKILL.md#autonomous-command-whitelist)** in the styleauthor skill for approved safe operations (style editing, oracle tests, code formatting, feature branch commits). Destructive operations and main branch pushes still require confirmation.
+
 **Project-Specific Context Layers:**
 When invoking these agents, they automatically receive CSL domain knowledge and Rust expertise from this file. The global agents handle general development workflow while project-specific instructions guide CSL/citation processing decisions.
 
