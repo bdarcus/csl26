@@ -94,11 +94,14 @@ pub struct Monograph {
     pub translator: Option<Contributor>,
     pub issued: EdtfString,
     pub publisher: Option<Contributor>,
+    #[serde(alias = "URL")]
     pub url: Option<Url>,
     pub accessed: Option<EdtfString>,
     pub language: Option<LangID>,
     pub note: Option<String>,
+    #[serde(alias = "ISBN")]
     pub isbn: Option<String>,
+    #[serde(alias = "DOI")]
     pub doi: Option<String>,
     pub edition: Option<String>,
     pub genre: Option<String>,
@@ -130,10 +133,12 @@ pub struct Collection {
     pub translator: Option<Contributor>,
     pub issued: EdtfString,
     pub publisher: Option<Contributor>,
+    #[serde(alias = "URL")]
     pub url: Option<Url>,
     pub accessed: Option<EdtfString>,
     pub language: Option<LangID>,
     pub note: Option<String>,
+    #[serde(alias = "ISBN")]
     pub isbn: Option<String>,
     pub keywords: Option<Vec<String>>,
 }
@@ -161,10 +166,12 @@ pub struct CollectionComponent {
     pub issued: EdtfString,
     pub parent: Parent<Collection>,
     pub pages: Option<NumOrStr>,
+    #[serde(alias = "URL")]
     pub url: Option<Url>,
     pub accessed: Option<EdtfString>,
     pub language: Option<LangID>,
     pub note: Option<String>,
+    #[serde(alias = "DOI")]
     pub doi: Option<String>,
     pub genre: Option<String>,
     pub keywords: Option<Vec<String>>,
@@ -192,10 +199,12 @@ pub struct SerialComponent {
     pub issued: EdtfString,
     /// The parent work, such as a magazine or journal.
     pub parent: Parent<Serial>,
+    #[serde(alias = "URL")]
     pub url: Option<Url>,
     pub accessed: Option<EdtfString>,
     pub language: Option<LangID>,
     pub note: Option<String>,
+    #[serde(alias = "DOI")]
     pub doi: Option<String>,
     pub pages: Option<String>,
     pub volume: Option<NumOrStr>,
@@ -218,6 +227,7 @@ pub enum SerialComponentType {
 pub struct Serial {
     pub r#type: SerialType,
     pub title: Title,
+    #[serde(alias = "ISSN")]
     pub issn: Option<String>,
 }
 

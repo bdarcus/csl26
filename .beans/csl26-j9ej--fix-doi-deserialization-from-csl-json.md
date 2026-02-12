@@ -1,7 +1,7 @@
 ---
 # csl26-j9ej
 title: Fix DOI deserialization from CSL JSON
-status: todo
+status: completed
 type: bug
 priority: high
 created_at: 2026-02-12T22:00:03Z
