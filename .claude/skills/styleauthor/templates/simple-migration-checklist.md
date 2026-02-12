@@ -37,15 +37,31 @@ Before deciding to use the simple path, verify:
 5. **Phase 4** (styleauthor + styleplan): Iterate if needed (max 10 cycles)
 6. **Phase 5** (styleplan): Rendering audit and verification
 
-## Token Savings
+## Token Savings & Cost
 
+**Token savings from skipping Phase 1:**
 - Skip @dstyleplan sequential thinking: ~35K tokens
 - Skip deep gap analysis: ~15K tokens
-- **Total savings: ~50K tokens (35% reduction)**
+- **Tokens saved: ~50K tokens**
+
+**Model change impact:**
+- @styleauthor now uses Sonnet (was Haiku) for better template design
+- Cost: 3x per token, but ~70% fewer iterations needed
+- Net result: Similar total cost, but faster completion and fewer errors
+
+**Total workflow:**
+- Full workflow: ~140K tokens (Phase 1: 50K, Phase 2: 15K, Phase 3-4: 75K)
+- Simple path: ~90K tokens (Phase 2: 15K, Phase 3-4: 75K)
+- **Savings: ~50K tokens (36% reduction)**
 
 ## Risk Mitigation
 
-If @styleauthor hits blockers during Phase 3-4:
+**Validation checkpoint at iteration 2:**
+- Prevents wasted iterations on wrong template structure
+- If match rate <50%, escalate immediately to @styleplan
+- Saves ~80K tokens on failures
+
+**If @styleauthor hits blockers during Phase 3-4:**
 - Escalate to @dstyleplan for deep analysis
 - Switches to full workflow with research phase
 - No loss of work (escalation captures all context)

@@ -10,7 +10,7 @@ The style authoring workflow uses a tri-agent model adapted from the `minmax` pa
 
 1.  **`@dstyleplan` (Specialist)**: Deep research and architectural design.
 2.  **`@styleplan` (Specialist)**: Maintenance, bug fixes, and build planning.
-3.  **`@styleauthor` (Builder)**: Implementation specialist (Haiku).
+3.  **`@styleauthor` (Builder)**: Implementation specialist (Sonnet).
 
 ## Invocation
 
@@ -124,7 +124,7 @@ Convert the architecture into actionable tasks.
 
 ### Phase 3: BUILD (@styleauthor)
 
-A high-speed Implementation Specialist (Haiku) takes over for the execution and test loop.
+Implementation Specialist (Sonnet) takes over for the execution and test loop.
 
 1. Implement core fixes and schema changes first.
 2. Run `~/.claude/scripts/verify.sh` to ensure base correctness.
@@ -133,7 +133,9 @@ A high-speed Implementation Specialist (Haiku) takes over for the execution and 
 
 ### Phase 4: EVOLVE & ITERATE
 
-If output doesn't match after 2 implementation retries, the builder escalates back to `@styleplan` to refine the strategy. When escalating, the agent must report the problem details to the user.
+**Validation Checkpoint:** After iteration 2, run quick validation check. If output match rate is <50%, escalate immediately to `@styleplan` for template redesign. Do not continue iterating on fundamentally wrong structure.
+
+If output doesn't match after 2 implementation retries (excluding checkpoint escalation), the builder escalates back to `@styleplan` to refine the strategy. When escalating, the agent must report the problem details to the user.
 
 **Allowed modifications:**
 - `crates/csln_processor/` - Rendering engine
@@ -153,7 +155,7 @@ cargo fmt && cargo clippy --all-targets --all-features -- -D warnings && cargo t
 
 All three must pass before continuing. If tests fail, fix the issue before proceeding.
 
-**Iteration cap:** Maximum 10 test-fix cycles. If blocked after 10 iterations, the agent must clearly output the following to the user:
+**Iteration cap:** Maximum 6 test-fix cycles (reduced from 10 due to validation checkpoint at iteration 2). If blocked after 6 iterations, the agent must clearly output the following to the user:
 - What works correctly
 - What's blocked and why
 - Suggested processor changes needed
@@ -285,4 +287,5 @@ These come from the project's CLAUDE.md:
 - **Always** test with at least 4 reference types (article, book, chapter, webpage)
 - **Never** modify migration code, oracle scripts, or test fixtures
 - **Never** commit - leave that to the user or lead agent
-- **Maximum** 10 test-fix iterations before escalating
+- **Validation checkpoint** at iteration 2: If match rate <50%, escalate immediately
+- **Maximum** 6 test-fix iterations before escalating (reduced from 10)
