@@ -188,6 +188,10 @@ See **[docs/architecture/MIGRATION_STRATEGY_ANALYSIS.md](./docs/architecture/MIG
 3. **Strict Linting**: The runtime processor ignores extra fields, but `csln_analyze` (and language servers) must report them as warnings or errors to catch typos.
 4. **Extension via Defaults**: All new features must be `Option<T>` with `#[serde(default)]`.
 
+**Graceful Degradation for Multilingual Data**
+- **Fallback Chain**: Multilingual fields must always implement a `Display` fallback (e.g., `Complex.original` -> `Simple string`).
+- **Mode Fallback**: If a style requests a `translated` view but the data only provides `original`, the processor must return `original` rather than failing.
+
 ### 4. Rust Engineering Standards (Code-as-Schema)
 
 - **Serde-Driven Truth**: We use a Code-First approach. The Rust structs and enums are the source of truth for the schema.
