@@ -18,9 +18,16 @@ serde_yaml = "0.9"
 serde_cbor = "0.11"
 thiserror = "2.0"
 csln_edtf = { path = "../csln_edtf", features = ["serde"] }
-biblatex = "0.10"
-indexmap = "2.13.0"
+biblatex = "0.11"
+indexmap = "2.2.6"
 clap = { version = "4.4", features = ["derive"] }
+
+[dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports"] }
+
+[[bench]]
+name = "rendering"
+harness = false
 
 [lints]
 workspace = true

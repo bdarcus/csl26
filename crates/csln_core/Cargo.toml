@@ -13,3 +13,10 @@ csln_edtf = { path = "../csln_edtf", features = ["serde"] }
 url = { version = "2.5", features = ["serde"] }
 biblatex = "0.11"
 csl_legacy = { path = "../csl_legacy" }
+
+[dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports"] }
+
+[[bench]]
+name = "formats"
+harness = false

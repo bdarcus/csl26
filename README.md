@@ -398,6 +398,20 @@ Citations: 5/5 match
 cargo doc --workspace --open
 ```
 
+### Benchmarking
+
+CSLN uses [Criterion.rs](https://github.com/bheisler/criterion.rs) for statistical performance benchmarking.
+
+```bash
+# Run all benchmarks
+cargo bench
+
+# Run format comparison benchmark (YAML vs JSON vs CBOR)
+cargo bench -p csln_core --bench formats
+```
+
+Benchmarks are currently focused on deserialization performance for styles and bibliographies. Current results show CBOR and JSON outperforming YAML by 3-4x.
+
 ### JSON Schema Generation
 
 You can generate a formal JSON Schema for CSLN styles using the CLI:
