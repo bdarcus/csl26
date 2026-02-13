@@ -114,28 +114,103 @@
 
         <!-- Advanced Dates -->
         <article class="example-card rounded-xl overflow-hidden shadow-sm">
-            <div class="p-8 grid md:grid-cols-2 gap-8 items-center bg-slate-50 border-b border-slate-200">
-                <div>
-                    <div class="flex items-center gap-3 mb-4">
-                        <div class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
-                            <span class="material-icons">event</span>
-                        </div>
-                        <h2 class="text-2xl font-bold text-slate-900">Advanced Dates</h2>
+            <div class="p-8 bg-slate-50 border-b border-slate-200">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                        <span class="material-icons">event</span>
                     </div>
-                    <p class="text-slate-600 leading-relaxed">
-                        CSLN provides native support for complex dates, including approximate dates ("circa"),
-                        uncertainty, and ranges. Configure output formats easily.
-                    </p>
+                    <h2 class="text-2xl font-bold text-slate-900">Advanced Dates (EDTF)</h2>
                 </div>
+                <p class="text-slate-600 leading-relaxed mb-6">
+                    CSLN uses Extended Date/Time Format (EDTF) for native support of uncertainty, approximation,
+                    and ranges. Configure style-specific rendering preferences declaratively.
+                </p>
             </div>
-            <div class="bg-slate-900 p-6 overflow-x-auto">
-                <pre class="font-mono text-sm text-slate-300 leading-relaxed">
+
+            <!-- Style Configuration -->
+            <div class="border-b border-slate-200">
+                <div class="px-8 py-4 bg-slate-100">
+                    <h3 class="text-sm font-semibold text-slate-700 uppercase tracking-wide">Style Configuration</h3>
+                </div>
+                <div class="bg-slate-900 p-6 overflow-x-auto">
+                    <pre class="font-mono text-sm text-slate-300 leading-relaxed">
+<span class="text-indigo-400">options</span>:
+  <span class="text-primary">dates</span>:
+    <span class="text-primary">uncertainty-marker</span>: <span class="text-emerald-400">"?"</span>           <span class="text-slate-500"># or null to suppress</span>
+    <span class="text-primary">approximation-marker</span>: <span class="text-emerald-400">"ca. "</span>       <span class="text-slate-500"># or "~"</span>
+    <span class="text-primary">range-delimiter</span>: <span class="text-emerald-400">"–"</span>              <span class="text-slate-500"># en-dash (U+2013)</span>
+    <span class="text-primary">open-range-marker</span>: <span class="text-emerald-400">"–present"</span>     <span class="text-slate-500"># for 1990/..</span>
+
 <span class="text-indigo-400">bibliography</span>:
   <span class="text-primary">template</span>:
     - <span class="text-primary">date</span>: <span class="text-emerald-400">issued</span>
-      <span class="text-primary">form</span>: <span class="text-emerald-400">full</span>       <span class="text-slate-500"># "May 20, 2024"</span>
-      <span class="text-primary">wrap</span>: <span class="text-emerald-400">parentheses</span>  <span class="text-slate-500"># "(May 20, 2024)"</span>
-</pre>
+      <span class="text-primary">form</span>: <span class="text-emerald-400">full</span>                      <span class="text-slate-500"># year | year-month | full</span>
+      <span class="text-primary">wrap</span>: <span class="text-emerald-400">parentheses</span></pre>
+                </div>
+            </div>
+
+            <!-- EDTF Examples -->
+            <div>
+                <div class="px-8 py-4 bg-slate-100">
+                    <h3 class="text-sm font-semibold text-slate-700 uppercase tracking-wide">EDTF Strings & Rendered Output</h3>
+                </div>
+                <div class="p-6 bg-white">
+                    <div class="grid gap-4">
+                        <div class="border-l-4 border-primary pl-4">
+                            <div class="text-xs font-semibold text-slate-500 uppercase mb-1">Uncertain Date</div>
+                            <div class="font-mono text-xs text-slate-400 mb-1">EDTF: "1990?"</div>
+                            <div class="font-mono text-sm text-slate-900">1990?</div>
+                            <div class="text-xs text-slate-500 mt-1">Displays uncertainty marker (Chicago) or suppresses (APA)</div>
+                        </div>
+                        <div class="border-l-4 border-emerald-500 pl-4">
+                            <div class="text-xs font-semibold text-slate-500 uppercase mb-1">Approximate Date</div>
+                            <div class="font-mono text-xs text-slate-400 mb-1">EDTF: "1990~"</div>
+                            <div class="font-mono text-sm text-slate-900">ca. 1990</div>
+                            <div class="text-xs text-slate-500 mt-1">Rendered with locale-specific term</div>
+                        </div>
+                        <div class="border-l-4 border-indigo-500 pl-4">
+                            <div class="text-xs font-semibold text-slate-500 uppercase mb-1">Date Range</div>
+                            <div class="font-mono text-xs text-slate-400 mb-1">EDTF: "1990/2000"</div>
+                            <div class="font-mono text-sm text-slate-900">1990–2000</div>
+                            <div class="text-xs text-slate-500 mt-1">Range delimiter defaults to en-dash</div>
+                        </div>
+                        <div class="border-l-4 border-amber-500 pl-4">
+                            <div class="text-xs font-semibold text-slate-500 uppercase mb-1">Mixed Uncertainty Range</div>
+                            <div class="font-mono text-xs text-slate-400 mb-1">EDTF: "1990~/2000?"</div>
+                            <div class="font-mono text-sm text-slate-900">ca. 1990–2000?</div>
+                            <div class="text-xs text-slate-500 mt-1">Combines approximation and uncertainty markers</div>
+                        </div>
+                        <div class="border-l-4 border-rose-500 pl-4">
+                            <div class="text-xs font-semibold text-slate-500 uppercase mb-1">Open-Ended Range</div>
+                            <div class="font-mono text-xs text-slate-400 mb-1">EDTF: "1990/.."</div>
+                            <div class="font-mono text-sm text-slate-900">1990–present</div>
+                            <div class="text-xs text-slate-500 mt-1">Uses locale-specific open-ended term</div>
+                        </div>
+                        <div class="border-l-4 border-purple-500 pl-4">
+                            <div class="text-xs font-semibold text-slate-500 uppercase mb-1">Year-Month Precision</div>
+                            <div class="font-mono text-xs text-slate-400 mb-1">EDTF: "1990-05/2000-12"</div>
+                            <div class="font-mono text-sm text-slate-900">May 1990–December 2000</div>
+                            <div class="text-xs text-slate-500 mt-1">Preserves precision for range endpoints</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- EDTF Info -->
+            <div class="bg-slate-50 p-6 border-t border-slate-200">
+                <div class="flex items-start gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary flex-shrink-0 mt-1">
+                        <span class="material-icons text-sm">info</span>
+                    </div>
+                    <div class="text-sm text-slate-600 leading-relaxed">
+                        <strong class="text-slate-900">EDTF Standard:</strong>
+                        CSLN implements Level 1 EDTF (ISO 8601-2) via the <code class="text-xs bg-slate-200 px-1 rounded">edtf</code> Rust crate.
+                        Uncertainty (<code class="text-xs bg-slate-200 px-1 rounded">?</code>), approximation
+                        (<code class="text-xs bg-slate-200 px-1 rounded">~</code>), and range
+                        (<code class="text-xs bg-slate-200 px-1 rounded">/</code>) metadata is preserved and rendered according to style configuration.
+                        Styles can suppress markers (like APA) or display them (like Chicago).
+                    </div>
+                </div>
             </div>
         </article>
 

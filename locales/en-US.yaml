@@ -32,6 +32,8 @@ dates:
     - Summer
     - Autumn
     - Winter
+  uncertainty-term: uncertain
+  open-ended-term: present
 roles:
   author:
     long: 

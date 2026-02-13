@@ -294,7 +294,7 @@ mod tests {
 
         let config = DateConfig {
             month: MonthFormat::Numeric,
-            _extra: std::collections::HashMap::new(),
+            ..Default::default()
         };
         assert_eq!(detect_date_preset(&config), Some(DatePreset::Iso));
     }

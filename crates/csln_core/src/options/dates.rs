@@ -13,15 +13,35 @@ use std::collections::HashMap;
 #[serde(rename_all = "kebab-case")]
 pub struct DateConfig {
     pub month: MonthFormat,
+    /// Marker for uncertain dates (e.g., "?" or "uncertain"). None suppresses display.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub uncertainty_marker: Option<String>,
+    /// Marker for approximate dates (e.g., "ca. " or "~"). None suppresses display.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub approximation_marker: Option<String>,
+    /// Delimiter for date ranges (default: en-dash "–").
+    #[serde(default = "default_range_delimiter")]
+    pub range_delimiter: String,
+    /// Marker for open-ended ranges (e.g., "–present"). None uses locale default.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub open_range_marker: Option<String>,
     /// Unknown fields captured for forward compatibility.
     #[serde(flatten)]
     pub _extra: HashMap<String, serde_json::Value>,
+}
+
+fn default_range_delimiter() -> String {
+    "–".to_string() // U+2013 en-dash
 }
 
 impl Default for DateConfig {
     fn default() -> Self {
         Self {
             month: MonthFormat::Long,
+            uncertainty_marker: Some("?".to_string()),
+            approximation_marker: Some("ca. ".to_string()),
+            range_delimiter: default_range_delimiter(),
+            open_range_marker: None,
             _extra: HashMap::new(),
         }
     }

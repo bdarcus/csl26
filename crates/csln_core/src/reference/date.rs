@@ -111,6 +111,61 @@ impl EdtfString {
             _ => String::new(),
         }
     }
+
+    /// Check if the date is uncertain (has "?" qualifier).
+    pub fn is_uncertain(&self) -> bool {
+        self.0.contains('?')
+    }
+
+    /// Check if the date is approximate (has "~" qualifier).
+    pub fn is_approximate(&self) -> bool {
+        self.0.contains('~')
+    }
+
+    /// Check if the date is a range (interval).
+    pub fn is_range(&self) -> bool {
+        matches!(
+            self.parse(),
+            RefDate::Edtf(Edtf::Interval(_, _) | Edtf::IntervalFrom(_, _) | Edtf::IntervalTo(_, _))
+        )
+    }
+
+    /// Get the range end date if this is a range, formatted as a string.
+    pub fn range_end(&self, months: &MonthList) -> Option<String> {
+        match self.parse() {
+            RefDate::Edtf(edtf) => match edtf {
+                Edtf::Interval(_start, end) => {
+                    let year = end.year().to_string();
+                    let month = end.month().and_then(|m| m.value());
+                    let day = end.day().and_then(|d| d.value());
+
+                    match (month, day) {
+                        (Some(m), Some(d)) if m > 0 && d > 0 => {
+                            let month_str = EdtfString::month_to_string(m, months);
+                            Some(format!("{} {}, {}", month_str, d, year))
+                        }
+                        (Some(m), _) if m > 0 => {
+                            let month_str = EdtfString::month_to_string(m, months);
+                            Some(format!("{} {}", month_str, year))
+                        }
+                        _ => Some(year),
+                    }
+                }
+                Edtf::IntervalFrom(_start, _terminal) => None, // Open-ended
+                Edtf::IntervalTo(_terminal, end) => {
+                    let year = end.year().to_string();
+                    Some(year)
+                }
+                _ => None,
+            },
+            RefDate::Literal(_) => None,
+        }
+    }
+
+    /// Check if the range is open-ended (ends with "..").
+    pub fn is_open_range(&self) -> bool {
+        matches!(self.parse(), RefDate::Edtf(Edtf::IntervalFrom(_, _)))
+    }
 }
 
 impl fmt::Display for EdtfString {

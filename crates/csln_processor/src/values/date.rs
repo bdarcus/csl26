@@ -29,53 +29,130 @@ impl ComponentValues for TemplateDate {
 
         let date = date_opt.unwrap();
         let locale = options.locale;
+        let date_config = options.config.dates.as_ref();
 
-        let formatted = match self.form {
-            DateForm::Year => {
-                let year = date.year();
-                if year.is_empty() {
-                    None
+        let formatted = if date.is_range() {
+            // Handle date ranges
+            let start = match self.form {
+                DateForm::Year => date.year(),
+                DateForm::YearMonth => {
+                    let month = date.month(&locale.dates.months.long);
+                    let year = date.year();
+                    if month.is_empty() {
+                        year
+                    } else {
+                        format!("{} {}", month, year)
+                    }
+                }
+                DateForm::MonthDay => {
+                    let month = date.month(&locale.dates.months.long);
+                    let day = date.day();
+                    match day {
+                        Some(d) => format!("{} {}", month, d),
+                        None => month,
+                    }
+                }
+                DateForm::Full => {
+                    let year = date.year();
+                    let month = date.month(&locale.dates.months.long);
+                    let day = date.day();
+                    match (month.is_empty(), day) {
+                        (true, _) => year,
+                        (false, None) => format!("{} {}", month, year),
+                        (false, Some(d)) => format!("{} {}, {}", month, d, year),
+                    }
+                }
+            };
+
+            if date.is_open_range() {
+                // Open-ended range (e.g., "1990/..")
+                if let Some(end_marker) = date_config
+                    .and_then(|c| c.open_range_marker.as_deref())
+                    .or(locale.dates.open_ended_term.as_deref())
+                {
+                    // U+2013 en-dash is the Unicode standard range delimiter (not language-specific)
+                    let delimiter = date_config
+                        .map(|c| c.range_delimiter.as_str())
+                        .unwrap_or("–");
+                    Some(format!("{}{}{}", start, delimiter, end_marker))
                 } else {
-                    Some(year)
+                    // No open-ended term available - return start date only
+                    Some(start)
                 }
+            } else if let Some(end) = date.range_end(&locale.dates.months.long) {
+                // Closed range with end date
+                // U+2013 en-dash is the Unicode standard range delimiter (not language-specific)
+                let delimiter = date_config
+                    .map(|c| c.range_delimiter.as_str())
+                    .unwrap_or("–");
+                Some(format!("{}{}{}", start, delimiter, end))
+            } else {
+                Some(start)
             }
-            DateForm::YearMonth => {
-                let year = date.year();
-                if year.is_empty() {
-                    return None;
+        } else {
+            // Single date (not a range)
+            match self.form {
+                DateForm::Year => {
+                    let year = date.year();
+                    if year.is_empty() {
+                        None
+                    } else {
+                        Some(year)
+                    }
                 }
-                let month = date.month(&locale.dates.months.long);
-                if month.is_empty() {
-                    Some(year)
-                } else {
-                    Some(format!("{} {}", month, year))
+                DateForm::YearMonth => {
+                    let year = date.year();
+                    if year.is_empty() {
+                        return None;
+                    }
+                    let month = date.month(&locale.dates.months.long);
+                    if month.is_empty() {
+                        Some(year)
+                    } else {
+                        Some(format!("{} {}", month, year))
+                    }
                 }
-            }
-            DateForm::MonthDay => {
-                let month = date.month(&locale.dates.months.long);
-                if month.is_empty() {
-                    return None;
+                DateForm::MonthDay => {
+                    let month = date.month(&locale.dates.months.long);
+                    if month.is_empty() {
+                        return None;
+                    }
+                    let day = date.day();
+                    match day {
+                        Some(d) => Some(format!("{} {}", month, d)),
+                        None => Some(month),
+                    }
                 }
-                let day = date.day();
-                match day {
-                    Some(d) => Some(format!("{} {}", month, d)),
-                    None => Some(month),
-                }
-            }
-            DateForm::Full => {
-                let year = date.year();
-                if year.is_empty() {
-                    return None;
-                }
-                let month = date.month(&locale.dates.months.long);
-                let day = date.day();
-                match (month.is_empty(), day) {
-                    (true, _) => Some(year),
-                    (false, None) => Some(format!("{} {}", month, year)),
-                    (false, Some(d)) => Some(format!("{} {}, {}", month, d, year)),
+                DateForm::Full => {
+                    let year = date.year();
+                    if year.is_empty() {
+                        return None;
+                    }
+                    let month = date.month(&locale.dates.months.long);
+                    let day = date.day();
+                    match (month.is_empty(), day) {
+                        (true, _) => Some(year),
+                        (false, None) => Some(format!("{} {}", month, year)),
+                        (false, Some(d)) => Some(format!("{} {}, {}", month, d, year)),
+                    }
                 }
             }
         };
+
+        // Apply uncertainty and approximation markers
+        let formatted = formatted.map(|mut value| {
+            if date.is_approximate() {
+                if let Some(marker) = date_config.and_then(|c| c.approximation_marker.as_ref()) {
+                    value = format!("{}{}", marker, value);
+                }
+            }
+            if date.is_uncertain() {
+                if let Some(marker) = date_config.and_then(|c| c.uncertainty_marker.as_ref()) {
+                    value = format!("{}{}", value, marker);
+                }
+            }
+            value
+        });
 
         // Handle disambiguation suffix (a, b, c...)
         let suffix = if hints.disamb_condition

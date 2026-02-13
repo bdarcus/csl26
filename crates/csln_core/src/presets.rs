@@ -138,20 +138,20 @@ impl DatePreset {
     pub fn config(&self) -> DateConfig {
         match self {
             DatePreset::YearOnly => DateConfig {
-                month: MonthFormat::Long, // Not used when year-only, but kept for consistency
-                _extra: HashMap::new(),
+                month: MonthFormat::Long,
+                ..Default::default()
             },
             DatePreset::Full => DateConfig {
                 month: MonthFormat::Long,
-                _extra: HashMap::new(),
+                ..Default::default()
             },
             DatePreset::MonthYear => DateConfig {
                 month: MonthFormat::Long,
-                _extra: HashMap::new(),
+                ..Default::default()
             },
             DatePreset::Iso => DateConfig {
                 month: MonthFormat::Numeric,
-                _extra: HashMap::new(),
+                ..Default::default()
             },
         }
     }

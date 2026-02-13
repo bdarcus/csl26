@@ -409,6 +409,8 @@ impl Locale {
                     short: raw.dates.months.short,
                 },
                 seasons: raw.dates.seasons,
+                uncertainty_term: raw.dates.uncertainty_term,
+                open_ended_term: raw.dates.open_ended_term,
             },
             roles: HashMap::new(),
             locators: HashMap::new(),

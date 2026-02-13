@@ -26,11 +26,16 @@ pub struct RawLocale {
 
 /// Raw date terms for YAML parsing.
 #[derive(Debug, Default, Deserialize, Serialize, Clone)]
+#[serde(rename_all = "kebab-case")]
 pub struct RawDateTerms {
     #[serde(default)]
     pub months: RawMonthNames,
     #[serde(default)]
     pub seasons: Vec<String>,
+    #[serde(default)]
+    pub uncertainty_term: Option<String>,
+    #[serde(default)]
+    pub open_ended_term: Option<String>,
 }
 
 /// Raw month names for YAML parsing.

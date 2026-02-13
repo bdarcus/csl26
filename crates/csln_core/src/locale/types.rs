@@ -164,6 +164,12 @@ pub struct DateTerms {
     /// Season names (Spring, Summer, Autumn, Winter).
     #[serde(default)]
     pub seasons: Vec<String>,
+    /// Term for uncertain dates (e.g., "uncertain").
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub uncertainty_term: Option<String>,
+    /// Term for open-ended date ranges (e.g., "present").
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub open_ended_term: Option<String>,
 }
 
 impl DateTerms {
@@ -177,6 +183,8 @@ impl DateTerms {
                 "Autumn".into(),
                 "Winter".into(),
             ],
+            uncertainty_term: Some("uncertain".into()),
+            open_ended_term: Some("present".into()),
         }
     }
 }
