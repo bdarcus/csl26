@@ -136,22 +136,26 @@ function renderWithCslnProcessor(stylePath) {
     return null;
   }
 
-  const tempFile = path.join(projectRoot, '.migrated-temp.yaml');
-  fs.writeFileSync(tempFile, migratedYaml);
+  const tempStyleFile = path.join(projectRoot, '.migrated-temp.yaml');
+  const tempRefFile = path.join(projectRoot, '.migrated-refs.json');
+  fs.writeFileSync(tempStyleFile, migratedYaml);
+  fs.writeFileSync(tempRefFile, JSON.stringify(testItems, null, 2));
 
   let output;
   try {
     output = execSync(
-      `cargo run -q --bin csln-processor -- .migrated-temp.yaml`,
+      `cargo run -q --bin csln -- process .migrated-refs.json .migrated-temp.yaml`,
       { cwd: projectRoot, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }
     );
   } catch (e) {
     console.error('Processor failed:', e.stderr || e.message);
-    try { fs.unlinkSync(tempFile); } catch {}
+    try { fs.unlinkSync(tempStyleFile); } catch {}
+    try { fs.unlinkSync(tempRefFile); } catch {}
     return null;
   }
 
-  try { fs.unlinkSync(tempFile); } catch {}
+  try { fs.unlinkSync(tempStyleFile); } catch {}
+  try { fs.unlinkSync(tempRefFile); } catch {}
 
   const lines = output.split('\n');
   const citations = {};
@@ -159,16 +163,18 @@ function renderWithCslnProcessor(stylePath) {
 
   let section = null;
   for (const line of lines) {
-    if (line.includes('CITATIONS:')) {
+    if (line.includes('CITATIONS (Non-Integral)') || line.includes('CITATIONS (Integral)')) {
       section = 'citations';
+      continue;
     } else if (line.includes('BIBLIOGRAPHY:')) {
       section = 'bibliography';
-    } else if (section === 'citations' && line.match(/\[ITEM-\d+\]/)) {
-      const match = line.match(/\[(ITEM-\d+)\]\s*(.+)/);
+      continue;
+    } else if (section === 'citations' && line.match(/\[.+\]\s*\[/)) {
+      const match = line.match(/\[([^\]]+)\]\s*(.+)/);
       if (match) {
         citations[match[1]] = match[2].trim();
       }
-    } else if (section === 'bibliography' && line.trim()) {
+    } else if (section === 'bibliography' && line.trim() && !line.includes('===')) {
       bibliography.push(line.trim());
     }
   }
