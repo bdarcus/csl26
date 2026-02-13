@@ -225,18 +225,18 @@
             </div>
             <div class="bg-slate-900 p-6 overflow-x-auto">
                 <pre class="font-mono text-sm text-slate-300 leading-relaxed">
-<span class="text-indigo-400">style</span>:
-  <span class="text-primary">uses</span>: <span class="text-emerald-400">"presets/author-date"</span>
-  
-  <span class="text-primary">citation</span>:
-    <span class="text-primary">narrative</span>:
-      <span class="text-primary">layout</span>: <span class="text-emerald-400">"Author (Year)"</span>
-    <span class="text-primary">parenthetical</span>:
-      <span class="text-primary">layout</span>: <span class="text-emerald-400">"(Author, Year)"</span>
-      
-  <span class="text-primary">overrides</span>:
-    <span class="text-primary">et-al-min</span>: <span class="text-emerald-400">4</span>
-    <span class="text-primary">et-al-use-first</span>: <span class="text-emerald-400">1</span>
+<span class="text-indigo-400">info</span>:
+  <span class="text-primary">title</span>: <span class="text-emerald-400">"My Custom Style"</span>
+<span class="text-indigo-400">options</span>:
+  <span class="text-primary">contributors</span>:
+    <span class="text-primary">shorten</span>: { <span class="text-primary">min</span>: <span class="text-emerald-400">4</span>, <span class="text-primary">use-first</span>: <span class="text-emerald-400">1</span> }
+<span class="text-indigo-400">citation</span>:
+  <span class="text-primary">use-preset</span>: <span class="text-emerald-400">apa</span>
+  <span class="text-primary">integral</span>:  <span class="text-slate-500"># "Smith (2024)"</span>
+    <span class="text-primary">template</span>:
+      - <span class="text-primary">contributor</span>: <span class="text-emerald-400">author</span>
+      - <span class="text-primary">date</span>: <span class="text-emerald-400">issued</span>
+        <span class="text-primary">wrap</span>: <span class="text-emerald-400">parentheses</span>
 </pre>
             </div>
         </article>
