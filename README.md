@@ -221,12 +221,17 @@ The hybrid migration strategy has been validated with the following results:
 ```
 crates/
 ├── csl_legacy/      # CSL 1.0 XML parser (read-only)
+│   └── src/
+│       ├── csl_json.rs  # CSL JSON import/export
+│       ├── model.rs     # Legacy XML schema types
+│       └── parser.rs    # XML parsing logic
+├── csln/            # Main CLI entry point
 ├── csln_analyze/    # Corpus-wide analysis and batch testing
-│   ├── src/
-│   │   ├── analyzer.rs  # Style feature statistics
-│   │   ├── ranker.rs    # Parent style ranking logic
-│   │   └── main.rs      # CLI entry point
-├── csln_cli/        # CLI tools (schema generation, etc.)
+│   └── src/
+│       ├── analyzer.rs  # Style feature statistics
+│       ├── batch_test.rs # Oracle comparison runner
+│       ├── ranker.rs    # Parent style ranking logic
+│       └── main.rs      # CLI entry point
 ├── csln_core/       # CSLN schema and core types
 │   ├── src/
 │   │   ├── citation.rs  # Citation model
@@ -238,20 +243,22 @@ crates/
 │   │   ├── renderer.rs  # Rendering orchestration
 │   │   ├── template.rs  # Template components
 │   │   └── reference/   # Internal reference model
+├── csln_edtf/       # Extended Date/Time Format (EDTF) handling
 ├── csln_migrate/    # CSL 1.0 → CSLN converter
-│   ├── src/
-│   │   ├── options_extractor/ # Extracts config from XML
-│   │   ├── template_compiler/ # Compiles XML macros to CSLN templates
-│   │   ├── upsampler.rs       # XML to CSLN Node mapping
-│   │   ├── analysis/          # Style-specific feature detection
-│   │   └── passes/            # Transformation passes
+│   └── src/
+│       ├── options_extractor/ # Extracts config from XML
+│       ├── template_compiler/ # Compiles XML macros to CSLN templates
+│       ├── upsampler.rs       # XML to CSLN Node mapping
+│       ├── analysis/          # Style-specific feature detection
+│       └── passes/            # Transformation passes
 └── csln_processor/  # Citation/bibliography renderer
-    ├── src/
-    │   ├── processor/   # Core logic (disambiguation, matching, sorting)
-    │   ├── values/      # Field-level extraction and formatting
-    │   └── render/      # String rendering (mod, component)
+    └── src/
+        ├── processor/   # Core logic (disambiguation, matching, sorting)
+        ├── values/      # Field-level extraction and formatting
+        └── render/      # String rendering (plain, HTML, Djot)
 
-.agent/              # LLM agent instructions and design documents
+.beans/              # Local task management
+.claude/             # Agent instructions and design documents
 locales/             # CSLN YAML locale files (en-US, de-DE, etc.)
 scripts/             # Oracle verification (citeproc-js) and automation
 styles/              # CSLN YAML styles
