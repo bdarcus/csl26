@@ -1,5 +1,3 @@
-use csln_core::reference::InputReference;
-use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 
@@ -11,17 +9,19 @@ fn test_verify_comprehensive_examples() {
 
     let content = fs::read_to_string(&path).expect("Failed to read comprehensive.yaml");
 
-    // Attempt to deserialize into the expected map structure
-    let references: Result<HashMap<String, InputReference>, _> = serde_yaml::from_str(&content);
+    // Attempt to deserialize into the expected InputBibliography structure
+    let bib: Result<csln_core::InputBibliography, _> = serde_yaml::from_str(&content);
 
-    match references {
-        Ok(refs) => {
+    match bib {
+        Ok(bib) => {
+            let refs = bib.references;
             println!("Successfully parsed {} references", refs.len());
-            for (key, reference) in &refs {
-                println!("Parsed: {}", key);
+            for reference in &refs {
+                let id = reference.id().expect("Reference should have an ID");
+                println!("Parsed: {}", id);
 
                 // Verify specific fields for Foucault example
-                if key == "foucault_discipline" {
+                if id == "foucault_discipline" {
                     let keywords = reference.keywords().expect("Should have keywords");
                     assert!(keywords.contains(&"humanities".to_string()));
                     assert!(keywords.contains(&"translation".to_string()));
