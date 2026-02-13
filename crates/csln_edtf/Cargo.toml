@@ -1,0 +1,18 @@
+[package]
+name = "csln_edtf"
+version = "0.1.0"
+edition = "2024"
+description = "A modern EDTF (Extended Date/Time Format) parser built with winnow."
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/csl-next/csl26"
+
+[dependencies]
+winnow = "0.7"
+serde = { version = "1.0", features = ["derive"], optional = true }
+
+[features]
+default = []
+serde = ["dep:serde"]
+
+[lints]
+workspace = true

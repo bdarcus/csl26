@@ -1,6 +1,6 @@
 use crate::locale::MonthList;
 use crate::reference::types::RefDate;
-use edtf::level_1::Edtf;
+use csln_edtf::{Day, Edtf, MonthOrSeason};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::fmt;
@@ -12,16 +12,10 @@ pub struct EdtfString(pub String);
 impl EdtfString {
     /// Parse the string as an EDTF date etc, or return the string as a literal.
     pub fn parse(&self) -> RefDate {
-        match Edtf::parse(&self.0) {
+        let mut input = self.0.as_str();
+        match csln_edtf::parse(&mut input) {
             Ok(edtf) => RefDate::Edtf(edtf),
             Err(_) => RefDate::Literal(self.0.clone()),
-        }
-    }
-
-    fn component_to_u32(&self, component: Option<edtf::level_1::Component>) -> u32 {
-        match component {
-            Some(component) => component.value().unwrap_or(0),
-            None => 0,
         }
     }
 
@@ -30,12 +24,10 @@ impl EdtfString {
         let parsed_date = self.parse();
         match parsed_date {
             RefDate::Edtf(edtf) => match edtf {
-                Edtf::Date(date) => date.year().to_string(),
-                Edtf::YYear(year) => format!("{}", year.value()),
-                Edtf::DateTime(datetime) => datetime.date().year().to_string(),
-                Edtf::Interval(start, _end) => format!("{}", start.year()),
-                Edtf::IntervalFrom(date, _terminal) => format!("{}", date.year()),
-                Edtf::IntervalTo(_terminal, date) => format!("{}", date.year()),
+                Edtf::Date(date) => date.year.value.to_string(),
+                Edtf::Interval(interval) => interval.start.year.value.to_string(),
+                Edtf::IntervalFrom(date) => date.year.value.to_string(),
+                Edtf::IntervalTo(date) => date.year.value.to_string(),
             },
             RefDate::Literal(_) => String::new(),
         }
@@ -58,14 +50,18 @@ impl EdtfString {
     pub fn month(&self, months: &[String]) -> String {
         let parsed_date = self.parse();
         let month: Option<u32> = match parsed_date {
-            RefDate::Edtf(edtf) => match edtf {
-                Edtf::Date(date) => Some(self.component_to_u32(date.month())),
-                Edtf::YYear(_year) => None,
-                Edtf::DateTime(datetime) => Some(datetime.date().month()),
-                Edtf::Interval(_start, _end) => None,
-                Edtf::IntervalFrom(_date, _terminal) => None,
-                Edtf::IntervalTo(_terminal, _date) => None,
-            },
+            RefDate::Edtf(edtf) => {
+                let m_opt = match edtf {
+                    Edtf::Date(date) => date.month_or_season,
+                    Edtf::Interval(interval) => interval.start.month_or_season,
+                    Edtf::IntervalFrom(date) => date.month_or_season,
+                    Edtf::IntervalTo(date) => date.month_or_season,
+                };
+                match m_opt {
+                    Some(MonthOrSeason::Month(m)) => Some(m),
+                    _ => None,
+                }
+            }
             RefDate::Literal(_) => None,
         };
         match month {
@@ -89,14 +85,18 @@ impl EdtfString {
     pub fn day(&self) -> Option<u32> {
         let parsed_date = self.parse();
         match parsed_date {
-            RefDate::Edtf(edtf) => match edtf {
-                Edtf::Date(date) => Some(self.component_to_u32(date.day())),
-                Edtf::YYear(_) => None,
-                Edtf::DateTime(datetime) => Some(datetime.date().day()),
-                Edtf::Interval(_, _) => None,
-                Edtf::IntervalFrom(_, _) => None,
-                Edtf::IntervalTo(_, _) => None,
-            },
+            RefDate::Edtf(edtf) => {
+                let d_opt = match edtf {
+                    Edtf::Date(date) => date.day,
+                    Edtf::Interval(interval) => interval.start.day,
+                    Edtf::IntervalFrom(date) => date.day,
+                    Edtf::IntervalTo(date) => date.day,
+                };
+                match d_opt {
+                    Some(Day::Day(d)) => Some(d),
+                    _ => None,
+                }
+            }
             RefDate::Literal(_) => None,
         }
         .filter(|&d| d > 0)
@@ -126,7 +126,7 @@ impl EdtfString {
     pub fn is_range(&self) -> bool {
         matches!(
             self.parse(),
-            RefDate::Edtf(Edtf::Interval(_, _) | Edtf::IntervalFrom(_, _) | Edtf::IntervalTo(_, _))
+            RefDate::Edtf(Edtf::Interval(_) | Edtf::IntervalFrom(_) | Edtf::IntervalTo(_))
         )
     }
 
@@ -134,10 +134,17 @@ impl EdtfString {
     pub fn range_end(&self, months: &MonthList) -> Option<String> {
         match self.parse() {
             RefDate::Edtf(edtf) => match edtf {
-                Edtf::Interval(_start, end) => {
-                    let year = end.year().to_string();
-                    let month = end.month().and_then(|m| m.value());
-                    let day = end.day().and_then(|d| d.value());
+                Edtf::Interval(interval) => {
+                    let end = &interval.end;
+                    let year = end.year.value.to_string();
+                    let month = match end.month_or_season {
+                        Some(MonthOrSeason::Month(m)) => Some(m),
+                        _ => None,
+                    };
+                    let day = match end.day {
+                        Some(Day::Day(d)) => Some(d),
+                        _ => None,
+                    };
 
                     match (month, day) {
                         (Some(m), Some(d)) if m > 0 && d > 0 => {
@@ -151,9 +158,9 @@ impl EdtfString {
                         _ => Some(year),
                     }
                 }
-                Edtf::IntervalFrom(_start, _terminal) => None, // Open-ended
-                Edtf::IntervalTo(_terminal, end) => {
-                    let year = end.year().to_string();
+                Edtf::IntervalFrom(_date) => None, // Open-ended
+                Edtf::IntervalTo(date) => {
+                    let year = date.year.value.to_string();
                     Some(year)
                 }
                 _ => None,
@@ -164,7 +171,7 @@ impl EdtfString {
 
     /// Check if the range is open-ended (ends with "..").
     pub fn is_open_range(&self) -> bool {
-        matches!(self.parse(), RefDate::Edtf(Edtf::IntervalFrom(_, _)))
+        matches!(self.parse(), RefDate::Edtf(Edtf::IntervalFrom(_)))
     }
 }
 

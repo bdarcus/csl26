@@ -5,7 +5,8 @@ members = [
     "crates/csln_migrate",
     "crates/csln_processor",
     "crates/csln_analyze",
-    "crates/csln"
+    "crates/csln",
+    "crates/csln_edtf"
 ]
 resolver = "2"
 
