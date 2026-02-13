@@ -130,11 +130,11 @@
             </div>
             <div class="bg-slate-900 p-6 overflow-x-auto">
                 <pre class="font-mono text-sm text-slate-300 leading-relaxed">
-<span class="text-indigo-400">citation-date</span>:
-  <span class="text-primary">form</span>: <span class="text-emerald-400">text</span>      <span class="text-slate-500"># "May 20, 2024"</span>
-  <span class="text-primary">parts</span>: <span class="text-emerald-400">day-month-year</span>
-  <span class="text-primary">approximate</span>: <span class="text-emerald-400">true</span> <span class="text-slate-500"># Prepends "ca." or localized equivalent</span>
-  <span class="text-primary">localize</span>: <span class="text-emerald-400">true</span>
+<span class="text-indigo-400">bibliography</span>:
+  <span class="text-primary">template</span>:
+    - <span class="text-primary">date</span>: <span class="text-emerald-400">issued</span>
+      <span class="text-primary">form</span>: <span class="text-emerald-400">full</span>       <span class="text-slate-500"># "May 20, 2024"</span>
+      <span class="text-primary">wrap</span>: <span class="text-emerald-400">parentheses</span>  <span class="text-slate-500"># "(May 20, 2024)"</span>
 </pre>
             </div>
         </article>
@@ -157,23 +157,12 @@
             </div>
             <div class="bg-slate-900 p-6 overflow-x-auto">
                 <pre class="font-mono text-sm text-slate-300 leading-relaxed">
-<span class="text-indigo-400">title</span>:
-  <span class="text-primary">original</span>: <span class="text-emerald-400">"战争与和平"</span>
-  <span class="text-primary">lang</span>: <span class="text-emerald-400">"zh"</span>
-  <span class="text-primary">transliterations</span>:
-    <span class="text-primary">zh-Latn-pinyin</span>: <span class="text-emerald-400">"Zhànzhēng yǔ Hépíng"</span>
-  <span class="text-primary">translations</span>:
-    <span class="text-primary">en</span>: <span class="text-emerald-400">"War and Peace"</span>
-
-<span class="text-indigo-400">author</span>:
-  <span class="text-primary">original</span>:
-    <span class="text-primary">family</span>: <span class="text-emerald-400">"Tolstoy"</span>
-    <span class="text-primary">given</span>: <span class="text-emerald-400">"Leo"</span>
-  <span class="text-primary">lang</span>: <span class="text-emerald-400">"ru"</span>
-  <span class="text-primary">transliterations</span>:
-    <span class="text-primary">Latn</span>:
-      <span class="text-primary">family</span>: <span class="text-emerald-400">"Tolstoy"</span>
-      <span class="text-primary">given</span>: <span class="text-emerald-400">"Leo"</span>
+<span class="text-indigo-400">options</span>:
+  <span class="text-primary">multilingual</span>:
+    <span class="text-primary">mode</span>: <span class="text-emerald-400">translated</span>  <span class="text-slate-500"># Prefer translations when available</span>
+    <span class="text-primary">fallback</span>: <span class="text-emerald-400">original</span>
+  <span class="text-primary">localize</span>:
+    <span class="text-primary">default-locale</span>: <span class="text-emerald-400">en-US</span>
 </pre>
             </div>
         </article>
@@ -196,13 +185,15 @@
             </div>
             <div class="bg-slate-900 p-6 overflow-x-auto">
                 <pre class="font-mono text-sm text-slate-300 leading-relaxed">
-<span class="text-indigo-400">title-block</span>:
-  <span class="text-primary">text-case</span>: <span class="text-emerald-400">title-case</span>
-  <span class="text-primary">strip-periods</span>: <span class="text-emerald-400">true</span>
-  <span class="text-primary">link</span>:
-    <span class="text-primary">href</span>: <span class="text-emerald-400">"https://doi.org/{doi}"</span>
-    <span class="text-primary">if-present</span>: <span class="text-emerald-400">"doi"</span>
-    <span class="text-primary">else-href</span>: <span class="text-emerald-400">"{url}"</span>
+<span class="text-indigo-400">bibliography</span>:
+  <span class="text-primary">template</span>:
+    - <span class="text-primary">title</span>: <span class="text-emerald-400">primary</span>
+      <span class="text-primary">emph</span>: <span class="text-emerald-400">true</span>
+      <span class="text-primary">links</span>:
+        <span class="text-primary">target</span>: <span class="text-emerald-400">url-or-doi</span>
+        <span class="text-primary">anchor</span>: <span class="text-emerald-400">title</span>
+    - <span class="text-primary">variable</span>: <span class="text-emerald-400">doi</span>
+      <span class="text-primary">prefix</span>: <span class="text-emerald-400">"https://doi.org/"</span>
 </pre>
             </div>
         </article>
