@@ -18,22 +18,23 @@ These commands have no side effects and are safe in all contexts:
 - `cargo build`, `cargo check` - Compile project
 - `cargo clippy --all-targets --all-features -- -D warnings` - Lint with zero-tolerance
 - `cargo fmt` - Format code (required before commits)
-- `cargo run --bin csln-*` (all project binaries) - Execute tools with no persistence
+- `cargo run --bin csln-* [args]` - Execute project binaries with arguments (no persistence)
 - `cargo test` - Run test suite
 
 **Git Status & Inspection**
-- `git status`, `git diff`, `git log`, `git branch` - Non-mutating inspection
+- `git status`, `git diff`, `git log`, `git branch` - Non-mutating inspection (read-only)
 
 **Scripts & Automation**
-- `node scripts/oracle*.js` (oracle comparison tests) - Verification workflows
-- `mkdir -p docs/`, `mkdir -p examples/` - Create documentation directories
+- `./scripts/*.sh` - All shell scripts (oracle tests, prep-migration, workflow-test, etc.)
+- `node scripts/oracle*.js` - Oracle comparison tests (structured, e2e, batch, simple variants)
+- `mkdir -p docs/`, `mkdir -p examples/`, `mkdir -p scripts/`, `mkdir -p tests/` - Create documentation and tool directories
 
 ### Safety Tier 2: Safe During Rapid Development (Development-Only)
 
 These commands are pre-approved **only during rapid development mode** (current project state) and **only on feature branches and main**:
 
 **Git Commits (Main & Feature Branches)**
-- `git add [files]` - Stage changes
+- `git add [files]` - Stage changes (state-mutating, requires pre-commit checks first)
 - `git commit -m "..."` - Create commits on main or feature branches
   - **Prerequisites**: Must run pre-commit checks (`cargo fmt && cargo clippy && cargo test`) **BEFORE** committing
   - **Scope**: Both main branch and feature branches (feat/*, fix/*, refactor/*, docs/*)
@@ -42,22 +43,25 @@ These commands are pre-approved **only during rapid development mode** (current 
 
 **Git Branch Management**
 - `git checkout -b [branch-name]` - Create feature branches for major changes
-- `git checkout [branch-name]` - Switch branches
+- `git checkout [branch-name]` - Switch branches (non-destructive)
 
 ### Safety Tier 3: Safe Cleanup (Project-Specific, Scoped)
 
-These commands are safe within defined project boundaries:
+These commands are safe within defined project boundaries (no confirmation required):
 
-- Removing generated files: `target/`, `*.log`, `*.tmp`
-- Removing `.agent/` subdirectory contents for snapshot rollback
+- Removing generated build artifacts: `rm -rf target/` - Rust build output
+- Removing temporary files: `rm -f *.log`, `rm -f *.tmp` - Logs and temp files
+- Removing snapshot backups: `rm -rf .agent/` - Agent snapshot rollback directory (label-checked by `~/.claude/scripts/snapshot.sh`)
 
 ### Safety Tier 4: Safe File Operations (Read/Write in Designated Areas)
 
-- **Creating/editing files in**: `docs/`, `examples/`, `.claude/skills/`, `crates/*/src/`
-- **Project documentation**: `CLAUDE.md`, `README.md`, root-level `*.md` files
-- **Task management**: `.beans/` directory (task tracking files)
-- **Moving files with**: `git mv [file] [dest]` (preserves Git history)
-- **Reading**: Any project files (unrestricted)
+- **Creating/editing source code**: `crates/*/src/` - Rust source files
+- **Creating/editing documentation**: `docs/`, `examples/`, `tests/`, `scripts/` - Docs and automation
+- **Creating/editing project files**: `CLAUDE.md`, `README.md`, root-level `*.md` files
+- **Creating/editing skills**: `.claude/skills/` - Agent skill definitions
+- **Task management**: `.beans/` directory (task tracking and YAML frontmatter)
+- **Moving files with git**: `git mv [file] [dest]` - Preserves Git history (safer than shell mv)
+- **Reading**: Any project files (unrestricted read access)
 
 ### Safety Tier 5: Require Explicit User Confirmation
 
