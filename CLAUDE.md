@@ -283,6 +283,22 @@ Code should be self-documenting with clear comments explaining:
 - References to CSL 1.0 spec where relevant
 - Known limitations or TODOs
 
+## Documentation Quality
+
+For human-oriented documentation (READMEs, guides, architecture docs), use the `/humanizer` skill to ensure clarity and readability while maintaining technical precision.
+
+**Scope:**
+- Applies to: Markdown files in `docs/`, root-level READMEs (`README.md`, `CONTRIBUTING.md`), architecture documentation
+- Does NOT apply to: Inline code comments, API documentation, error messages, technical specifications
+
+**Humanizer Rules:**
+- Follow all humanizer recommendations except rule 18
+- Rule 18 (curly quotes) is explicitly excluded - technical documentation may use typographic quotes intentionally
+- Rule 13 (em dash moderation) triggers only when 3+ em dashes appear in a single paragraph - em dashes have legitimate uses for parenthetical clarifications in technical writing
+
+**Usage:**
+Use `/humanizer` on documentation files before finalizing user-facing content. This is guidance for review, not a mandatory pre-commit check.
+
 ## Verification Requirements
 
 Different types of changes require different levels of verification to maintain quality while optimizing for development velocity.
