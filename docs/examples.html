@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Examples | CSLN</title>
+
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries,typography"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap"
+        rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#2a94d6", // Desaturated blue
+                        "background-light": "#fdfbf7", // Soft cream off-white
+                        "accent-cream": "#f5f2eb",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"],
+                        "mono": ["JetBrains Mono", "monospace"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+    <style type="text/tailwindcss">
+        body {
+            font-family: 'Inter', sans-serif;
+            color: #374151;
+        }
+        .font-mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .glass-nav {
+            background: rgba(253, 251, 247, 0.85);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(42, 148, 214, 0.1);
+        }
+        .example-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            transition: all 0.3s ease;
+        }
+        .example-card:hover {
+            border-color: #2a94d6;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+    </style>
+</head>
+
+<body class="bg-background-light text-slate-700 selection:bg-primary/20">
+
+    <!-- Navigation -->
+    <nav class="fixed top-0 w-full z-50 glass-nav">
+        <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <a href="index.html" class="flex items-center gap-2 group">
+                    <div
+                        class="w-8 h-8 bg-primary rounded flex items-center justify-center group-hover:brightness-110 transition-all">
+                        <span class="text-white font-mono font-bold">C</span>
+                    </div>
+                    <span class="font-mono text-xl font-bold tracking-tight text-slate-900">CSLN</span>
+                </a>
+            </div>
+            <div class="hidden md:flex items-center gap-8">
+                <a class="text-sm font-medium hover:text-primary transition-colors text-slate-600"
+                    href="index.html#features">Features</a>
+                <a class="text-sm font-medium text-primary" href="examples.html">Examples</a>
+                <a class="text-sm font-medium hover:text-primary transition-colors text-slate-600"
+                    href="https://github.com/bdarcus/csl26">GitHub</a>
+                <a class="bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded font-medium text-sm flex items-center gap-2 transition-all"
+                    href="https://github.com/bdarcus/csl26">
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                        <path
+                            d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z">
+                        </path>
+                    </svg>
+                    Source
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Header -->
+    <header class="pt-32 pb-16 px-6">
+        <div class="max-w-4xl mx-auto text-center">
+            <h1 class="text-4xl md:text-5xl font-mono font-bold tracking-tight text-slate-900 mb-6">
+                Feature Examples
+            </h1>
+            <p class="text-xl text-slate-500 max-w-2xl mx-auto leading-relaxed">
+                See how CSLN's YAML syntax handles complex citation requirements with elegant, readable configuration.
+            </p>
+        </div>
+    </header>
+
+    <!-- Examples Grid -->
+    <section class="max-w-6xl mx-auto px-6 pb-24 grid gap-12">
+
+        <!-- Advanced Dates -->
+        <article class="example-card rounded-xl overflow-hidden shadow-sm">
+            <div class="p-8 grid md:grid-cols-2 gap-8 items-center bg-slate-50 border-b border-slate-200">
+                <div>
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                            <span class="material-icons">event</span>
+                        </div>
+                        <h2 class="text-2xl font-bold text-slate-900">Advanced Dates</h2>
+                    </div>
+                    <p class="text-slate-600 leading-relaxed">
+                        CSLN provides native support for complex dates, including approximate dates ("circa"),
+                        uncertainty, and ranges. Configure output formats easily.
+                    </p>
+                </div>
+            </div>
+            <div class="bg-slate-900 p-6 overflow-x-auto">
+                <pre class="font-mono text-sm text-slate-300 leading-relaxed">
+<span class="text-indigo-400">citation-date</span>:
+  <span class="text-primary">form</span>: <span class="text-emerald-400">text</span>      <span class="text-slate-500"># "May 20, 2024"</span>
+  <span class="text-primary">parts</span>: <span class="text-emerald-400">day-month-year</span>
+  <span class="text-primary">approximate</span>: <span class="text-emerald-400">true</span> <span class="text-slate-500"># Prepends "ca." or localized equivalent</span>
+  <span class="text-primary">localize</span>: <span class="text-emerald-400">true</span>
+</pre>
+            </div>
+        </article>
+
+        <!-- Multilingual Support -->
+        <article class="example-card rounded-xl overflow-hidden shadow-sm">
+            <div class="p-8 grid md:grid-cols-2 gap-8 items-center bg-slate-50 border-b border-slate-200">
+                <div>
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                            <span class="material-icons">translate</span>
+                        </div>
+                        <h2 class="text-2xl font-bold text-slate-900">Multilingual Support</h2>
+                    </div>
+                    <p class="text-slate-600 leading-relaxed">
+                        Define locale-specific overrides directly within your style. changing punctuation, terms, or
+                        formatting based on the target language.
+                    </p>
+                </div>
+            </div>
+            <div class="bg-slate-900 p-6 overflow-x-auto">
+                <pre class="font-mono text-sm text-slate-300 leading-relaxed">
+<span class="text-indigo-400">title</span>:
+  <span class="text-primary">original</span>: <span class="text-emerald-400">"战争与和平"</span>
+  <span class="text-primary">lang</span>: <span class="text-emerald-400">"zh"</span>
+  <span class="text-primary">transliterations</span>:
+    <span class="text-primary">zh-Latn-pinyin</span>: <span class="text-emerald-400">"Zhànzhēng yǔ Hépíng"</span>
+  <span class="text-primary">translations</span>:
+    <span class="text-primary">en</span>: <span class="text-emerald-400">"War and Peace"</span>
+
+<span class="text-indigo-400">author</span>:
+  <span class="text-primary">original</span>:
+    <span class="text-primary">family</span>: <span class="text-emerald-400">"Tolstoy"</span>
+    <span class="text-primary">given</span>: <span class="text-emerald-400">"Leo"</span>
+  <span class="text-primary">lang</span>: <span class="text-emerald-400">"ru"</span>
+  <span class="text-primary">transliterations</span>:
+    <span class="text-primary">Latn</span>:
+      <span class="text-primary">family</span>: <span class="text-emerald-400">"Tolstoy"</span>
+      <span class="text-primary">given</span>: <span class="text-emerald-400">"Leo"</span>
+</pre>
+            </div>
+        </article>
+
+        <!-- Title Formatting & Declarative Links -->
+        <article class="example-card rounded-xl overflow-hidden shadow-sm">
+            <div class="p-8 grid md:grid-cols-2 gap-8 items-center bg-slate-50 border-b border-slate-200">
+                <div>
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                            <span class="material-icons">title</span>
+                        </div>
+                        <h2 class="text-2xl font-bold text-slate-900">Titles & Links</h2>
+                    </div>
+                    <p class="text-slate-600 leading-relaxed">
+                        Control title casing and auto-linking behavior declaratively. Automatically link titles to DOIs
+                        when available.
+                    </p>
+                </div>
+            </div>
+            <div class="bg-slate-900 p-6 overflow-x-auto">
+                <pre class="font-mono text-sm text-slate-300 leading-relaxed">
+<span class="text-indigo-400">title-block</span>:
+  <span class="text-primary">text-case</span>: <span class="text-emerald-400">title-case</span>
+  <span class="text-primary">strip-periods</span>: <span class="text-emerald-400">true</span>
+  <span class="text-primary">link</span>:
+    <span class="text-primary">href</span>: <span class="text-emerald-400">"https://doi.org/{doi}"</span>
+    <span class="text-primary">if-present</span>: <span class="text-emerald-400">"doi"</span>
+    <span class="text-primary">else-href</span>: <span class="text-emerald-400">"{url}"</span>
+</pre>
+            </div>
+        </article>
+
+        <!-- Contextual Logic & Presets -->
+        <article class="example-card rounded-xl overflow-hidden shadow-sm">
+            <div class="p-8 grid md:grid-cols-2 gap-8 items-center bg-slate-50 border-b border-slate-200">
+                <div>
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                            <span class="material-icons">auto_awesome</span>
+                        </div>
+                        <h2 class="text-2xl font-bold text-slate-900">Context & Presets</h2>
+                    </div>
+                    <p class="text-slate-600 leading-relaxed">
+                        Use presets to compose styles from trusted foundations. Handle narrative vs. parenthetical
+                        citations with explicit context toggles.
+                    </p>
+                </div>
+            </div>
+            <div class="bg-slate-900 p-6 overflow-x-auto">
+                <pre class="font-mono text-sm text-slate-300 leading-relaxed">
+<span class="text-indigo-400">style</span>:
+  <span class="text-primary">uses</span>: <span class="text-emerald-400">"presets/author-date"</span>
+  
+  <span class="text-primary">citation</span>:
+    <span class="text-primary">narrative</span>:
+      <span class="text-primary">layout</span>: <span class="text-emerald-400">"Author (Year)"</span>
+    <span class="text-primary">parenthetical</span>:
+      <span class="text-primary">layout</span>: <span class="text-emerald-400">"(Author, Year)"</span>
+      
+  <span class="text-primary">overrides</span>:
+    <span class="text-primary">et-al-min</span>: <span class="text-emerald-400">4</span>
+    <span class="text-primary">et-al-use-first</span>: <span class="text-emerald-400">1</span>
+</pre>
+            </div>
+        </article>
+
+    </section>
+
+    <!-- Footer -->
+    <footer class="py-12 px-6 border-t border-slate-200 bg-white">
+        <div class="max-w-7xl mx-auto">
+            <div class="flex flex-col md:flex-row justify-between items-center gap-8">
+                <div class="flex items-center gap-2">
+                    <div class="w-6 h-6 bg-primary rounded flex items-center justify-center">
+                        <span class="text-white font-mono text-xs font-bold">C</span>
+                    </div>
+                    <span class="font-mono text-lg font-bold text-slate-900">CSLN</span>
+                </div>
+                <div class="flex gap-8 text-sm font-medium text-slate-500">
+                    <a class="hover:text-primary transition-colors" href="https://github.com/bdarcus/csl26">GitHub</a>
+                    <a class="hover:text-primary transition-colors" href="examples.html">Examples</a>
+                    <a class="hover:text-primary transition-colors" href="#">Styles Registry</a>
+                </div>
+                <div class="text-sm text-slate-400">
+                    © 2026 CSLN Project. MIT Licensed.
+                </div>
+            </div>
+        </div>
+    </footer>
+
+</body>
+
+</html>
