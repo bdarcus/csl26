@@ -18,4 +18,10 @@ Goals:
 - 100% fidelity for top 10 parent styles (APA, Elsevier, Springer, IEEE, etc.)
 - Robust migration debugger and verification tools
 
-Refs: STYLE_PRIORITY.md, docs/RENDERING_WORKFLOW.md
+**Multilingual Portability (Frank Bennett insight):**
+- Detect CSL 1.0 macros with prefix/suffix attributes during migration
+- Emit warnings about potential multilingual punctuation conflicts
+- Where possible, hoist punctuation to parent delimiter attributes
+- Ensures migrated CSLN styles work across multilingual rendering modes
+
+Refs: STYLE_PRIORITY.md, docs/RENDERING_WORKFLOW.md, Frank Bennett CSL-M guidance
