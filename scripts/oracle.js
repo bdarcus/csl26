@@ -326,30 +326,35 @@ for (let i = 0; i < pairs.length; i++) {
       // Find reference data for this entry
       const refData = findRefDataForEntry(pair.oracle, testItems);
 
-      // Parse components
-      const oracleComp = parseComponents(pair.oracle, refData);
-      const cslnComp = parseComponents(pair.csln, refData);
+      // Parse components (only if reference data found)
+      if (refData) {
+        const oracleComp = parseComponents(pair.oracle, refData);
+        const cslnComp = parseComponents(pair.csln, refData);
 
-      // Compare components
-      const { differences, matches } = compareComponents(oracleComp, cslnComp, refData);
-      entryResult.components = { differences, matches };
+        // Compare components
+        const { differences, matches } = compareComponents(oracleComp, cslnComp, refData);
+        entryResult.components = { differences, matches };
 
-      // Analyze ordering
-      const oracleOrder = analyzeOrdering(pair.oracle, refData);
-      const cslnOrder = analyzeOrdering(pair.csln, refData);
-      const orderIssues = compareOrdering(oracleOrder, cslnOrder);
+        // Analyze ordering
+        const oracleOrder = analyzeOrdering(pair.oracle, refData);
+        const cslnOrder = analyzeOrdering(pair.csln, refData);
+        const orderIssues = compareOrdering(oracleOrder, cslnOrder);
 
-      if (orderIssues.length > 0) {
-        entryResult.ordering = { oracle: oracleOrder, csln: cslnOrder };
-        results.orderingIssues++;
-      }
+        if (orderIssues.length > 0) {
+          entryResult.ordering = { oracle: oracleOrder, csln: cslnOrder };
+          results.orderingIssues++;
+        }
 
-      entryResult.issues = [...differences, ...orderIssues];
+        entryResult.issues = [...differences, ...orderIssues];
 
-      // Track component issues for summary
-      for (const diff of differences) {
-        const key = `${diff.component}:${diff.issue}`;
-        results.componentSummary[key] = (results.componentSummary[key] || 0) + 1;
+        // Track component issues for summary
+        for (const diff of differences) {
+          const key = `${diff.component}:${diff.issue}`;
+          results.componentSummary[key] = (results.componentSummary[key] || 0) + 1;
+        }
+      } else {
+        // No reference data found - skip component analysis
+        entryResult.issues = [];
       }
     }
   }
