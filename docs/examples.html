@@ -141,29 +141,107 @@
 
         <!-- Multilingual Support -->
         <article class="example-card rounded-xl overflow-hidden shadow-sm">
-            <div class="p-8 grid md:grid-cols-2 gap-8 items-center bg-slate-50 border-b border-slate-200">
-                <div>
-                    <div class="flex items-center gap-3 mb-4">
-                        <div class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
-                            <span class="material-icons">translate</span>
-                        </div>
-                        <h2 class="text-2xl font-bold text-slate-900">Multilingual Support</h2>
+            <div class="p-8 bg-slate-50 border-b border-slate-200">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                        <span class="material-icons">translate</span>
                     </div>
-                    <p class="text-slate-600 leading-relaxed">
-                        Define locale-specific overrides directly within your style. changing punctuation, terms, or
-                        formatting based on the target language.
-                    </p>
+                    <h2 class="text-2xl font-bold text-slate-900">Multilingual Support</h2>
                 </div>
+                <p class="text-slate-600 leading-relaxed mb-6">
+                    CSLN handles multilingual metadata with BCP 47 language tags, supporting original scripts,
+                    transliterations (Pinyin, Hepburn, ALA-LC), and translations. Styles declaratively specify
+                    rendering preferences with automatic fallback.
+                </p>
             </div>
-            <div class="bg-slate-900 p-6 overflow-x-auto">
-                <pre class="font-mono text-sm text-slate-300 leading-relaxed">
+
+            <!-- Style Configuration -->
+            <div class="border-b border-slate-200">
+                <div class="px-8 py-4 bg-slate-100">
+                    <h3 class="text-sm font-semibold text-slate-700 uppercase tracking-wide">Style Configuration</h3>
+                </div>
+                <div class="bg-slate-900 p-6 overflow-x-auto">
+                    <pre class="font-mono text-sm text-slate-300 leading-relaxed">
 <span class="text-indigo-400">options</span>:
   <span class="text-primary">multilingual</span>:
-    <span class="text-primary">mode</span>: <span class="text-emerald-400">translated</span>  <span class="text-slate-500"># Prefer translations when available</span>
-    <span class="text-primary">fallback</span>: <span class="text-emerald-400">original</span>
-  <span class="text-primary">localize</span>:
-    <span class="text-primary">default-locale</span>: <span class="text-emerald-400">en-US</span>
-</pre>
+    <span class="text-primary">title-mode</span>: <span class="text-emerald-400">transliterated</span>  <span class="text-slate-500"># primary | transliterated | translated | combined</span>
+    <span class="text-primary">name-mode</span>: <span class="text-emerald-400">transliterated</span>
+    <span class="text-primary">preferred-script</span>: <span class="text-emerald-400">Latn</span>       <span class="text-slate-500"># Latin script for romanization</span></pre>
+                </div>
+            </div>
+
+            <!-- Reference Data -->
+            <div class="border-b border-slate-200">
+                <div class="px-8 py-4 bg-slate-100">
+                    <h3 class="text-sm font-semibold text-slate-700 uppercase tracking-wide">Reference Data (YAML)</h3>
+                </div>
+                <div class="bg-slate-900 p-6 overflow-x-auto">
+                    <pre class="font-mono text-sm text-slate-300 leading-relaxed">
+<span class="text-indigo-400">id</span>: war-peace-zh
+<span class="text-indigo-400">type</span>: book
+<span class="text-indigo-400">title</span>:
+  <span class="text-primary">original</span>: <span class="text-emerald-400">"战争与和平"</span>
+  <span class="text-primary">lang</span>: <span class="text-emerald-400">"zh"</span>
+  <span class="text-primary">transliterations</span>:
+    <span class="text-primary">zh-Latn-pinyin</span>: <span class="text-emerald-400">"Zhànzhēng yǔ Hépíng"</span>
+  <span class="text-primary">translations</span>:
+    <span class="text-primary">en</span>: <span class="text-emerald-400">"War and Peace"</span>
+<span class="text-indigo-400">author</span>:
+  <span class="text-primary">original</span>:
+    <span class="text-primary">family</span>: <span class="text-emerald-400">"Толстой"</span>
+    <span class="text-primary">given</span>: <span class="text-emerald-400">"Лев"</span>
+  <span class="text-primary">lang</span>: <span class="text-emerald-400">"ru"</span>
+  <span class="text-primary">transliterations</span>:
+    <span class="text-primary">Latn</span>:
+      <span class="text-primary">family</span>: <span class="text-emerald-400">"Tolstoy"</span>
+      <span class="text-primary">given</span>: <span class="text-emerald-400">"Leo"</span></pre>
+                </div>
+            </div>
+
+            <!-- Rendering Examples -->
+            <div>
+                <div class="px-8 py-4 bg-slate-100">
+                    <h3 class="text-sm font-semibold text-slate-700 uppercase tracking-wide">Rendered Output by Mode</h3>
+                </div>
+                <div class="p-6 bg-white">
+                    <div class="grid gap-4">
+                        <div class="border-l-4 border-primary pl-4">
+                            <div class="text-xs font-semibold text-slate-500 uppercase mb-1">Primary Mode</div>
+                            <div class="font-mono text-sm text-slate-900">战争与和平. Лев Толстой (1869)</div>
+                            <div class="text-xs text-slate-500 mt-1">Original scripts preserved</div>
+                        </div>
+                        <div class="border-l-4 border-emerald-500 pl-4">
+                            <div class="text-xs font-semibold text-slate-500 uppercase mb-1">Transliterated Mode</div>
+                            <div class="font-mono text-sm text-slate-900">Zhànzhēng yǔ Hépíng. Leo Tolstoy (1869)</div>
+                            <div class="text-xs text-slate-500 mt-1">Romanized for Western readers</div>
+                        </div>
+                        <div class="border-l-4 border-indigo-500 pl-4">
+                            <div class="text-xs font-semibold text-slate-500 uppercase mb-1">Translated Mode</div>
+                            <div class="font-mono text-sm text-slate-900">War and Peace. Leo Tolstoy (1869)</div>
+                            <div class="text-xs text-slate-500 mt-1">English translation when available</div>
+                        </div>
+                        <div class="border-l-4 border-amber-500 pl-4">
+                            <div class="text-xs font-semibold text-slate-500 uppercase mb-1">Combined Mode</div>
+                            <div class="font-mono text-sm text-slate-900">Zhànzhēng yǔ Hépíng [War and Peace]. Leo Tolstoy (1869)</div>
+                            <div class="text-xs text-slate-500 mt-1">Both romanization and translation</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- BCP 47 Matching -->
+            <div class="bg-slate-50 p-6 border-t border-slate-200">
+                <div class="flex items-start gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary flex-shrink-0 mt-1">
+                        <span class="material-icons text-sm">info</span>
+                    </div>
+                    <div class="text-sm text-slate-600 leading-relaxed">
+                        <strong class="text-slate-900">BCP 47 Fallback Strategy:</strong><br>
+                        1. Exact tag match (<code class="text-xs bg-slate-200 px-1 rounded">"ja-Latn-hepburn"</code>)<br>
+                        2. Substring match (<code class="text-xs bg-slate-200 px-1 rounded">"Latn"</code> matches any Latin script)<br>
+                        3. Fallback to <code class="text-xs bg-slate-200 px-1 rounded">original</code> field
+                    </div>
+                </div>
             </div>
         </article>
 

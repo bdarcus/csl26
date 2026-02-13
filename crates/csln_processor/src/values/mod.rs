@@ -27,6 +27,187 @@ use csln_core::template::TemplateComponent;
 pub use contributor::format_contributors_short;
 pub use date::int_to_letter;
 
+/// Resolve a multilingual string based on style configuration.
+///
+/// Applies BCP 47 fallback logic:
+/// 1. Exact tag match (e.g., "ja-Latn-hepburn")
+/// 2. Script prefix match (e.g., "ja-Latn")
+/// 3. Fallback to original field
+///
+/// # Arguments
+/// * `string` - The multilingual string to resolve
+/// * `mode` - The rendering mode from style config
+/// * `preferred_script` - Optional preferred script (e.g., "Latn")
+/// * `style_locale` - The style's locale for translation matching
+pub fn resolve_multilingual_string(
+    string: &csln_core::reference::types::MultilingualString,
+    mode: Option<&csln_core::options::MultilingualMode>,
+    preferred_script: Option<&String>,
+    style_locale: &str,
+) -> String {
+    use csln_core::options::MultilingualMode;
+    use csln_core::reference::types::MultilingualString;
+
+    match string {
+        MultilingualString::Simple(s) => s.clone(),
+        MultilingualString::Complex(complex) => {
+            let mode = mode.unwrap_or(&MultilingualMode::Primary);
+
+            match mode {
+                MultilingualMode::Primary => complex.original.clone(),
+
+                MultilingualMode::Transliterated => {
+                    // Try exact match first, then prefix match, then fallback
+                    if let Some(script) = preferred_script {
+                        // Try exact script match
+                        if let Some(trans) = complex.transliterations.get(script) {
+                            return trans.clone();
+                        }
+
+                        // Try substring match (e.g., "Latn" matches "ja-Latn-hepburn")
+                        for (tag, trans) in &complex.transliterations {
+                            if tag.contains(script) {
+                                return trans.clone();
+                            }
+                        }
+                    }
+
+                    // Fallback: use any available transliteration, or original
+                    complex
+                        .transliterations
+                        .values()
+                        .next()
+                        .cloned()
+                        .unwrap_or_else(|| complex.original.clone())
+                }
+
+                MultilingualMode::Translated => {
+                    // Try to match style locale
+                    complex
+                        .translations
+                        .get(style_locale)
+                        .cloned()
+                        .unwrap_or_else(|| complex.original.clone())
+                }
+
+                MultilingualMode::Combined => {
+                    // Format: "transliterated [translated]" or fallback variants
+                    let trans = if let Some(script) = preferred_script {
+                        complex.transliterations.get(script).or_else(|| {
+                            complex
+                                .transliterations
+                                .iter()
+                                .find(|(tag, _)| tag.contains(script))
+                                .map(|(_, v)| v)
+                        })
+                    } else {
+                        complex.transliterations.values().next()
+                    };
+
+                    let translation = complex.translations.get(style_locale);
+
+                    match (trans, translation) {
+                        (Some(t), Some(tr)) => format!("{} [{}]", t, tr),
+                        (Some(t), None) => t.clone(),
+                        (None, Some(tr)) => format!("{} [{}]", complex.original, tr),
+                        (None, None) => complex.original.clone(),
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// Resolve a multilingual contributor name based on style configuration.
+///
+/// Uses holistic name matching - selects the entire name variant (original/transliterated/translated)
+/// as a unit rather than mixing fields from different variants.
+///
+/// # Arguments
+/// * `contributor` - The contributor to resolve
+/// * `mode` - The rendering mode from style config
+/// * `preferred_script` - Optional preferred script (e.g., "Latn")
+/// * `style_locale` - The style's locale for translation matching
+pub fn resolve_multilingual_name(
+    contributor: &csln_core::reference::contributor::Contributor,
+    mode: Option<&csln_core::options::MultilingualMode>,
+    preferred_script: Option<&String>,
+    style_locale: &str,
+) -> Vec<crate::reference::FlatName> {
+    use csln_core::options::MultilingualMode;
+    use csln_core::reference::contributor::Contributor;
+
+    match contributor {
+        // Simple and structured names have no multilingual data
+        Contributor::SimpleName(_) | Contributor::StructuredName(_) => contributor.to_names_vec(),
+
+        // Multilingual names: select variant holistically
+        Contributor::Multilingual(m) => {
+            let mode = mode.unwrap_or(&MultilingualMode::Primary);
+
+            let selected_name = match mode {
+                MultilingualMode::Primary => &m.original,
+
+                MultilingualMode::Transliterated => {
+                    if let Some(script) = preferred_script {
+                        // Try exact script match
+                        if let Some(name) = m.transliterations.get(script) {
+                            name
+                        } else {
+                            // Try substring match (e.g., "Latn" matches "ru-Latn-alalc97")
+                            m.transliterations
+                                .iter()
+                                .find(|(tag, _)| tag.contains(script))
+                                .map(|(_, n)| n)
+                                .unwrap_or(&m.original)
+                        }
+                    } else {
+                        // Use any available transliteration
+                        m.transliterations.values().next().unwrap_or(&m.original)
+                    }
+                }
+
+                MultilingualMode::Translated => {
+                    m.translations.get(style_locale).unwrap_or(&m.original)
+                }
+
+                // Combined mode for names defaults to transliterated (parenthetical combo not common for names)
+                MultilingualMode::Combined => {
+                    if let Some(script) = preferred_script {
+                        m.transliterations
+                            .get(script)
+                            .or_else(|| {
+                                m.transliterations
+                                    .iter()
+                                    .find(|(tag, _)| tag.contains(script))
+                                    .map(|(_, n)| n)
+                            })
+                            .unwrap_or(&m.original)
+                    } else {
+                        m.transliterations.values().next().unwrap_or(&m.original)
+                    }
+                }
+            };
+
+            // Convert selected name to FlatName
+            vec![crate::reference::FlatName {
+                given: Some(selected_name.given.to_string()),
+                family: Some(selected_name.family.to_string()),
+                suffix: selected_name.suffix.clone(),
+                dropping_particle: selected_name.dropping_particle.clone(),
+                non_dropping_particle: selected_name.non_dropping_particle.clone(),
+                literal: None,
+            }]
+        }
+
+        Contributor::ContributorList(l) => {
+            l.0.iter()
+                .flat_map(|c| resolve_multilingual_name(c, mode, preferred_script, style_locale))
+                .collect()
+        }
+    }
+}
+
 /// Resolve the URL for a component based on its links configuration and the reference data.
 pub fn resolve_url(
     links: &csln_core::options::LinksConfig,

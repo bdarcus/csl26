@@ -11,8 +11,9 @@ impl ComponentValues for TemplateTitle {
     ) -> Option<ProcValues> {
         let binding = reference.ref_type();
 
-        let value = match self.title {
-            TitleType::Primary => reference.title().map(|t| t.to_string()),
+        // Get the raw title based on type
+        let raw_title = match self.title {
+            TitleType::Primary => reference.title(),
             TitleType::ParentSerial => {
                 if matches!(
                     binding.as_str(),
@@ -22,7 +23,7 @@ impl ComponentValues for TemplateTitle {
                         | "article"
                         | "paper-conference"
                 ) {
-                    reference.container_title().map(|t| t.to_string())
+                    reference.container_title()
                 } else {
                     None
                 }
@@ -36,13 +37,45 @@ impl ComponentValues for TemplateTitle {
                         | "entry-dictionary"
                         | "entry-encyclopedia"
                 ) {
-                    reference.container_title().map(|t| t.to_string())
+                    reference.container_title()
                 } else {
                     None
                 }
             }
             _ => None,
         };
+
+        // Resolve multilingual title if configured
+        let value = raw_title.map(|title| {
+            use csln_core::reference::types::Title;
+
+            match title {
+                Title::Single(s) => s.clone(),
+                Title::Multilingual(m) => {
+                    let mode = options
+                        .config
+                        .multilingual
+                        .as_ref()
+                        .and_then(|ml| ml.title_mode.as_ref());
+                    let preferred_script = options
+                        .config
+                        .multilingual
+                        .as_ref()
+                        .and_then(|ml| ml.preferred_script.as_ref());
+                    let locale_str = "en"; // TODO: get from options.locale
+
+                    let complex =
+                        csln_core::reference::types::MultilingualString::Complex(m.clone());
+                    crate::values::resolve_multilingual_string(
+                        &complex,
+                        mode,
+                        preferred_script,
+                        locale_str,
+                    )
+                }
+                _ => title.to_string(),
+            }
+        });
 
         value.filter(|s| !s.is_empty()).map(|value| {
             use csln_core::options::LinkAnchor;

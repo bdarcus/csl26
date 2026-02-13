@@ -27,15 +27,34 @@ impl ComponentValues for TemplateContributor {
             }
         }
 
-        let names = match self.contributor {
+        let contributor = match self.contributor {
             ContributorRole::Author => reference.author(),
             ContributorRole::Editor => reference.editor(),
             ContributorRole::Translator => reference.translator(),
             _ => None,
         };
 
+        // Resolve multilingual names if configured
+        let names_vec = if let Some(contrib) = contributor {
+            let mode = options
+                .config
+                .multilingual
+                .as_ref()
+                .and_then(|m| m.name_mode.as_ref());
+            let preferred_script = options
+                .config
+                .multilingual
+                .as_ref()
+                .and_then(|m| m.preferred_script.as_ref());
+            let locale_str = "en"; // TODO: get from options.locale
+
+            crate::values::resolve_multilingual_name(&contrib, mode, preferred_script, locale_str)
+        } else {
+            Vec::new()
+        };
+
         // Handle substitution if author is empty
-        if names.is_none() && matches!(self.contributor, ContributorRole::Author) {
+        if names_vec.is_empty() && matches!(self.contributor, ContributorRole::Author) {
             // Use explicit substitute config, or fall back to default (editor → title → translator)
             let default_substitute = csln_core::options::SubstituteConfig::default();
             let substitute_config = options
@@ -49,7 +68,24 @@ impl ComponentValues for TemplateContributor {
                 match key {
                     SubstituteKey::Editor => {
                         if let Some(editors) = reference.editor() {
-                            let names_vec = editors.to_names_vec();
+                            let mode = options
+                                .config
+                                .multilingual
+                                .as_ref()
+                                .and_then(|m| m.name_mode.as_ref());
+                            let preferred_script = options
+                                .config
+                                .multilingual
+                                .as_ref()
+                                .and_then(|m| m.preferred_script.as_ref());
+                            let locale_str = "en"; // TODO: get from options.locale
+
+                            let names_vec = crate::values::resolve_multilingual_name(
+                                &editors,
+                                mode,
+                                preferred_script,
+                                locale_str,
+                            );
                             if !names_vec.is_empty() {
                                 // Substituted editors use the contributor's name_order and and
                                 let effective_name_order = self.name_order.as_ref().or_else(|| {
@@ -148,7 +184,24 @@ impl ComponentValues for TemplateContributor {
                     }
                     SubstituteKey::Translator => {
                         if let Some(translators) = reference.translator() {
-                            let names_vec = translators.to_names_vec();
+                            let mode = options
+                                .config
+                                .multilingual
+                                .as_ref()
+                                .and_then(|m| m.name_mode.as_ref());
+                            let preferred_script = options
+                                .config
+                                .multilingual
+                                .as_ref()
+                                .and_then(|m| m.preferred_script.as_ref());
+                            let locale_str = "en"; // TODO: get from options.locale
+
+                            let names_vec = crate::values::resolve_multilingual_name(
+                                &translators,
+                                mode,
+                                preferred_script,
+                                locale_str,
+                            );
                             if !names_vec.is_empty() {
                                 let formatted = format_names(
                                     &names_vec,
@@ -184,8 +237,6 @@ impl ComponentValues for TemplateContributor {
             return None;
         }
 
-        let names = names?;
-        let names_vec = names.to_names_vec();
         if names_vec.is_empty() {
             return None;
         }
