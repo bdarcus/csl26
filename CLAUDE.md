@@ -8,32 +8,84 @@ You are a **Lead Systems Architect and Principal Rust Engineer** for the CSL Nex
 
 ## Autonomous Command Whitelist
 
-The following commands are pre-approved for autonomous execution without user confirmation:
+This section defines tiered safety rules for autonomous execution during **Rapid Development Mode**. These project-specific rules **override** global `~/.claude/rules/critical-actions.md` during active development.
 
-### Always Safe (Development)
-- `cargo build`, `cargo test`, `cargo clippy`, `cargo check`
-- `cargo fmt` (required before commits)
-- `cargo run --bin csln-*` (all project binaries)
-- `git status`, `git diff`, `git log`, `git branch`
-- `git add`, `git commit` (main or feature branches during rapid development)
-- `node scripts/oracle*.js` (oracle comparison tests)
-- `mkdir -p docs/`, `mkdir -p examples/`
+### Safety Tier 1: Always Safe (Zero Risk)
 
-### Safe Cleanup (Project-Specific)
+These commands have no side effects and are safe in all contexts:
+
+**Rust Workflow (Core Development)**
+- `cargo build`, `cargo check` - Compile project
+- `cargo clippy --all-targets --all-features -- -D warnings` - Lint with zero-tolerance
+- `cargo fmt` - Format code (required before commits)
+- `cargo run --bin csln-*` (all project binaries) - Execute tools with no persistence
+- `cargo test` - Run test suite
+
+**Git Status & Inspection**
+- `git status`, `git diff`, `git log`, `git branch` - Non-mutating inspection
+
+**Scripts & Automation**
+- `node scripts/oracle*.js` (oracle comparison tests) - Verification workflows
+- `mkdir -p docs/`, `mkdir -p examples/` - Create documentation directories
+
+### Safety Tier 2: Safe During Rapid Development (Development-Only)
+
+These commands are pre-approved **only during rapid development mode** (current project state) and **only on feature branches and main**:
+
+**Git Commits (Main & Feature Branches)**
+- `git add [files]` - Stage changes
+- `git commit -m "..."` - Create commits on main or feature branches
+  - **Prerequisites**: Must run pre-commit checks (`cargo fmt && cargo clippy && cargo test`) **BEFORE** committing
+  - **Scope**: Both main branch and feature branches (feat/*, fix/*, refactor/*, docs/*)
+  - **Requirement**: Commit messages follow Conventional Commits format (see Git Workflow section)
+  - **Limitation**: Never commit with `--amend` (always create new commits)
+
+**Git Branch Management**
+- `git checkout -b [branch-name]` - Create feature branches for major changes
+- `git checkout [branch-name]` - Switch branches
+
+### Safety Tier 3: Safe Cleanup (Project-Specific, Scoped)
+
+These commands are safe within defined project boundaries:
+
 - Removing generated files: `target/`, `*.log`, `*.tmp`
+- Removing `.agent/` subdirectory contents for snapshot rollback
 
-### Safe File Operations
-- Creating/editing files in `docs/`, `examples/`, `.claude/skills/`
-- Moving files with `git mv` (preserves history)
-- Reading any project files
+### Safety Tier 4: Safe File Operations (Read/Write in Designated Areas)
 
-### Require Confirmation
-- `git push origin main` (confirm if pre-commit checks haven't been explicitly shown)
-- `git push --force` or `git push --force-with-lease` (always confirm destructive pushes)
-- `gh pr create` (confirm PR details if creating optional PR)
-- `rm -rf` on any directory outside `.agent/` subdirectories
-- Modifying `Cargo.toml`, `Cargo.lock` (dependency changes need review)
-- Any command affecting `styles-legacy/` submodule
+- **Creating/editing files in**: `docs/`, `examples/`, `.claude/skills/`, `crates/*/src/`
+- **Moving files with**: `git mv [file] [dest]` (preserves Git history)
+- **Reading**: Any project files (unrestricted)
+
+### Safety Tier 5: Require Explicit User Confirmation
+
+These operations are confirmation-gated in ALL contexts:
+
+**Destructive Git Operations**
+- `git push origin main` - Pushing to main requires confirmation (even with pre-commit checks passed)
+- `git push --force` or `git push --force-with-lease` - Force pushes always require confirmation
+- `git rebase`, `git reset --hard` - Destructive history operations always require confirmation
+- `git branch -D` - Deleting branches requires confirmation
+
+**System & Dependency Changes**
+- `rm -rf [dir]` on any directory outside `.agent/` subdirectories - Always confirm
+- Modifying `Cargo.toml`, `Cargo.lock` - Dependency changes require review
+- Any command affecting `styles-legacy/` submodule - Always confirm
+
+**GitHub Operations**
+- `gh pr create` - Confirm PR details and target branch
+
+## Override Relationship
+
+**During Rapid Development Mode:**
+- This project-specific whitelist takes precedence over `~/.claude/rules/critical-actions.md`
+- Global rules still apply to pushes (always confirm `git push origin main`)
+- When project switches to PR-mandatory mode or production approach, revert to strict global rules
+
+**Tier Escalation:**
+- Moving from Tier 2 → Tier 3+: Requires explicit user confirmation each time
+- Pre-commit checks (fmt, clippy, test) are mandatory gates for Tier 2 commits, not optional
+- No exceptions to pre-commit checks: All code must pass quality gates before commit
 
 ## Global Agent Integration
 
