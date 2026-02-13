@@ -344,66 +344,147 @@
 
         <!-- Title Formatting & Declarative Links -->
         <article id="titles-links" class="example-card rounded-xl overflow-hidden shadow-sm scroll-mt-24">
-            <div class="p-8 grid md:grid-cols-2 gap-8 items-center bg-slate-50 border-b border-slate-200">
-                <div>
-                    <div class="flex items-center gap-3 mb-4">
-                        <div class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
-                            <span class="material-icons">title</span>
-                        </div>
-                        <h2 class="text-2xl font-bold text-slate-900">Titles & Links</h2>
+            <div class="p-8 bg-slate-50 border-b border-slate-200">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                        <span class="material-icons">title</span>
                     </div>
-                    <p class="text-slate-600 leading-relaxed">
-                        Control title casing and auto-linking behavior declaratively. Automatically link titles to DOIs
-                        when available.
-                    </p>
+                    <h2 class="text-2xl font-bold text-slate-900">Titles & Links</h2>
                 </div>
+                <p class="text-slate-600 leading-relaxed mb-6">
+                    CSLN separates title content from its role (primary, parent-monograph, parent-serial) and 
+                    uses declarative global formatting rules for consistency across item types.
+                </p>
+            </div>
+
+            <div class="grid md:grid-cols-2 border-b border-slate-200">
+                <div class="border-r border-slate-200">
+                    <div class="px-8 py-4 bg-slate-100">
+                        <h3 class="text-sm font-semibold text-slate-700 uppercase tracking-wide">Global Formatting (options.titles)</h3>
+                    </div>
+                    <div class="bg-slate-900 p-6 h-full">
+                        <pre class="font-mono text-sm text-slate-300 leading-relaxed">
+<span class="text-indigo-400">titles</span>:
+  <span class="text-primary">monograph</span>:
+    <span class="text-primary">emph</span>: <span class="text-emerald-400">true</span>      <span class="text-slate-500"># Italics for books</span>
+  <span class="text-primary">periodical</span>:
+    <span class="text-primary">emph</span>: <span class="text-emerald-400">true</span>      <span class="text-slate-500"># Italics for journals</span>
+  <span class="text-primary">component</span>:
+    <span class="text-primary">emph</span>: <span class="text-emerald-400">false</span>     <span class="text-slate-500"># Plain for articles</span></pre>
+                    </div>
+                </div>
+                <div>
+                    <div class="px-8 py-4 bg-slate-100">
+                        <h3 class="text-sm font-semibold text-slate-700 uppercase tracking-wide">Template Usage & Links</h3>
+                    </div>
+                    <div class="bg-slate-900 p-6 h-full">
+                        <pre class="font-mono text-sm text-slate-300 leading-relaxed">
+<span class="text-indigo-400">template</span>:
+  - <span class="text-primary">title</span>: <span class="text-emerald-400">primary</span>
+    <span class="text-primary">links</span>:
+      <span class="text-primary">target</span>: <span class="text-emerald-400">doi</span>
+      <span class="text-primary">anchor</span>: <span class="text-emerald-400">component</span>
+  - <span class="text-primary">title</span>: <span class="text-emerald-400">parent-serial</span>
+    <span class="text-primary">suffix</span>: <span class="text-emerald-400">","</span></pre>
+                    </div>
+                </div>
+            </div>
+        </article>
+
+        <!-- Type-Specific Overrides -->
+        <article id="overrides" class="example-card rounded-xl overflow-hidden shadow-sm scroll-mt-24">
+            <div class="p-8 bg-slate-50 border-b border-slate-200">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                        <span class="material-icons">settings_input_component</span>
+                    </div>
+                    <h2 class="text-2xl font-bold text-slate-900">Type-Specific Overrides</h2>
+                </div>
+                <p class="text-slate-600 leading-relaxed mb-6">
+                    Avoid complex conditional logic. Components in CSLN can declaratively override their behavior 
+                    or suppress themselves based on the item type (e.g., article, book, webpage).
+                </p>
             </div>
             <div class="bg-slate-900 p-6 overflow-x-auto">
                 <pre class="font-mono text-sm text-slate-300 leading-relaxed">
 <span class="text-indigo-400">bibliography</span>:
   <span class="text-primary">template</span>:
-    - <span class="text-primary">title</span>: <span class="text-emerald-400">primary</span>
-      <span class="text-primary">emph</span>: <span class="text-emerald-400">true</span>
-      <span class="text-primary">links</span>:
-        <span class="text-primary">target</span>: <span class="text-emerald-400">url-or-doi</span>
-        <span class="text-primary">anchor</span>: <span class="text-emerald-400">title</span>
-    - <span class="text-primary">variable</span>: <span class="text-emerald-400">doi</span>
-      <span class="text-primary">prefix</span>: <span class="text-emerald-400">"https://doi.org/"</span>
-</pre>
+    - <span class="text-primary">variable</span>: <span class="text-emerald-400">publisher</span>
+      <span class="text-primary">overrides</span>:
+        <span class="text-primary">article-journal</span>: { <span class="text-primary">suppress</span>: <span class="text-emerald-400">true</span> }
+        <span class="text-primary">webpage</span>:         { <span class="text-primary">suppress</span>: <span class="text-emerald-400">true</span> }
+    - <span class="text-primary">number</span>: <span class="text-emerald-400">pages</span>
+      <span class="text-primary">overrides</span>:
+        <span class="text-primary">chapter</span>:
+          <span class="text-primary">prefix</span>: <span class="text-emerald-400">"pp. "</span>
+          <span class="text-primary">wrap</span>: <span class="text-emerald-400">parentheses</span></pre>
             </div>
         </article>
 
         <!-- Contextual Logic & Presets -->
         <article id="context-presets" class="example-card rounded-xl overflow-hidden shadow-sm scroll-mt-24">
-            <div class="p-8 grid md:grid-cols-2 gap-8 items-center bg-slate-50 border-b border-slate-200">
-                <div>
-                    <div class="flex items-center gap-3 mb-4">
-                        <div class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
-                            <span class="material-icons">auto_awesome</span>
-                        </div>
-                        <h2 class="text-2xl font-bold text-slate-900">Context & Presets</h2>
+            <div class="p-8 bg-slate-50 border-b border-slate-200">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                        <span class="material-icons">auto_awesome</span>
                     </div>
-                    <p class="text-slate-600 leading-relaxed">
-                        Use presets to compose styles from trusted foundations. Handle narrative vs. parenthetical
-                        citations with explicit context toggles.
-                    </p>
+                    <h2 class="text-2xl font-bold text-slate-900">Context & Presets</h2>
                 </div>
+                <p class="text-slate-600 leading-relaxed mb-6">
+                    CSLN supports "presets" (reusable style foundations) and distinct templates for 
+                    narrative (integral) vs. parenthetical (non-integral) citations.
+                </p>
             </div>
             <div class="bg-slate-900 p-6 overflow-x-auto">
                 <pre class="font-mono text-sm text-slate-300 leading-relaxed">
-<span class="text-indigo-400">info</span>:
-  <span class="text-primary">title</span>: <span class="text-emerald-400">"My Custom Style"</span>
-<span class="text-indigo-400">options</span>:
-  <span class="text-primary">contributors</span>:
-    <span class="text-primary">shorten</span>: { <span class="text-primary">min</span>: <span class="text-emerald-400">4</span>, <span class="text-primary">use-first</span>: <span class="text-emerald-400">1</span> }
 <span class="text-indigo-400">citation</span>:
   <span class="text-primary">use-preset</span>: <span class="text-emerald-400">apa</span>
-  <span class="text-primary">integral</span>:  <span class="text-slate-500"># "Smith (2024)"</span>
+  <span class="text-primary">integral</span>:      <span class="text-slate-500"># Narrative: Smith (2024)</span>
     <span class="text-primary">template</span>:
       - <span class="text-primary">contributor</span>: <span class="text-emerald-400">author</span>
       - <span class="text-primary">date</span>: <span class="text-emerald-400">issued</span>
         <span class="text-primary">wrap</span>: <span class="text-emerald-400">parentheses</span>
-</pre>
+        <span class="text-primary">prefix</span>: <span class="text-emerald-400">" "</span>
+  <span class="text-primary">non-integral</span>:  <span class="text-slate-500"># Parenthetical: (Smith, 2024)</span>
+    <span class="text-primary">wrap</span>: <span class="text-emerald-400">parentheses</span>
+    <span class="text-primary">template</span>:
+      - <span class="text-primary">contributor</span>: <span class="text-emerald-400">author</span>
+      - <span class="text-primary">date</span>: <span class="text-emerald-400">issued</span>
+      <span class="text-primary">delimiter</span>: <span class="text-emerald-400">comma</span></pre>
+            </div>
+        </article>
+
+        <!-- Binary Performance -->
+        <article id="binary-performance" class="example-card rounded-xl overflow-hidden shadow-sm scroll-mt-24">
+            <div class="p-8 bg-slate-50 border-b border-slate-200">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                        <span class="material-icons">speed</span>
+                    </div>
+                    <h2 class="text-2xl font-bold text-slate-900">Binary Performance (CBOR)</h2>
+                </div>
+                <p class="text-slate-600 leading-relaxed mb-6">
+                    For production environments, CSLN styles and bibliographies can be compiled into 
+                    binary CBOR (Concise Binary Object Representation) for near-instant loading.
+                </p>
+            </div>
+            <div class="p-8 bg-white">
+                <div class="grid md:grid-cols-2 gap-8">
+                    <div>
+                        <h4 class="font-bold text-slate-900 mb-3 text-sm uppercase tracking-wider">Compilation</h4>
+                        <div class="bg-slate-900 rounded-lg p-4 font-mono text-xs text-slate-300">
+                            <span class="text-primary">$</span> csln convert apa.yaml --output apa.cbor
+                        </div>
+                        <p class="text-xs text-slate-500 mt-2 italic">Reduces parse time by up to 90% for large styles.</p>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-slate-900 mb-3 text-sm uppercase tracking-wider">Processing</h4>
+                        <div class="bg-slate-900 rounded-lg p-4 font-mono text-xs text-slate-300">
+                            <span class="text-primary">$</span> csln process data.cbor style.cbor
+                        </div>
+                        <p class="text-xs text-slate-500 mt-2 italic">Full binary pipeline for maximum throughput.</p>
+                    </div>
+                </div>
             </div>
         </article>
 
