@@ -56,15 +56,42 @@ Before deciding to use the simple path, verify:
 
 ## Risk Mitigation
 
-**Validation checkpoint at iteration 2:**
-- Prevents wasted iterations on wrong template structure
-- If match rate <50%, escalate immediately to @styleplan
+**Focused Validation (oracle-migration.js):**
+- Uses same 7-item subset as prep-migration.sh for consistency
+- Fast execution (~10 seconds vs 30+ for full oracle.js)
+- Clear success threshold: 5/7 items = acceptable, 7/7 = perfect
+
+**Validation checkpoint at iteration 1:**
+- Run oracle-migration.js immediately after first implementation
+- If match rate <5/7 (71%), escalate immediately to @styleplan
+- Don't waste iterations on fundamentally wrong template
 - Saves ~80K tokens on failures
+
+**Time Budget Enforcement:**
+- Simple migration: 5 minutes max (1-2 iterations)
+- Complex migration: 10 minutes max (4-5 iterations)
+- Exceeded budget → escalate with status report
 
 **If @styleauthor hits blockers during Phase 3-4:**
 - Escalate to @dstyleplan for deep analysis
 - Switches to full workflow with research phase
 - No loss of work (escalation captures all context)
+
+## Fast-Path Detection (Auto-Skip Phase 1)
+
+For maximum efficiency, automatically detect simple migrations:
+
+**Auto-qualify if ALL criteria met:**
+- [ ] Processing type is `numeric` OR `author-date`
+- [ ] Baseline CSLN from prep shows standard options (no exotic features)
+- [ ] Prep output shows <5 type overrides needed
+- [ ] Similar to existing style (check for `elsevier-*`, `apa-*`, `chicago-*` patterns)
+
+**If auto-qualified:**
+- Skip Phase 1 research entirely
+- Use focused 7-item validation (oracle-migration.js)
+- Time budget: 5 minutes max
+- Success threshold: 5/7 items (71%) on first iteration
 
 ## Coordinator Decision Tree
 
@@ -78,8 +105,10 @@ Analyzing new style request...
 │
 └─ SIMPLE MIGRATION → Check prep output
    │
-   ├─ Standard format (APA-like)? YES → Use simple path
+   ├─ Auto-qualifies (numeric/author-date)? YES → FAST PATH
    │ └─ Skip Phase 1 → @styleplan (Phase 2) → @styleauthor (Phase 3-4)
+   │    Use oracle-migration.js (7 items) for validation
+   │    Time budget: 5 minutes
    │
    └─ Complex features? YES → Use full workflow
      └─ Use @dstyleplan (Phase 1)

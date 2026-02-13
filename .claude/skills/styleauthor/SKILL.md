@@ -133,7 +133,19 @@ Implementation Specialist (Sonnet) takes over for the execution and test loop.
 
 ### Phase 4: EVOLVE & ITERATE
 
-**Validation Checkpoint:** After iteration 2, run quick validation check. If output match rate is <50%, escalate immediately to `@styleplan` for template redesign. Do not continue iterating on fundamentally wrong structure.
+**Validation Checkpoint:** After iteration 1, run validation check:
+- **Simple migrations**: Use `oracle-migration.js` (7-item focused test, ~10 seconds)
+- **Complex styles**: Use full `oracle.js` (31-item comprehensive test)
+- **Success threshold**: ≥5/7 items (71%) for simple, ≥50% for complex
+- **If below threshold**: Escalate immediately to `@styleplan` for template redesign
+- **Don't waste iterations** on fundamentally wrong structure
+
+**Agent Transparency Requirement:**
+After each iteration, the builder MUST report to user:
+- Iteration number and validation results (X/7 or X/31 matches)
+- What was fixed in this iteration
+- What issues remain (if any)
+- Next step (continue iterating or escalate)
 
 If output doesn't match after 2 implementation retries (excluding checkpoint escalation), the builder escalates back to `@styleplan` to refine the strategy. When escalating, the agent must report the problem details to the user.
 
@@ -184,6 +196,63 @@ Final verification before declaring done. The builder MUST surface output sample
    - Chapter/edited book
    - Webpage
    - Report (if applicable to the style)
+
+## Time Budgets & Success Criteria
+
+### Time Budget Enforcement
+
+**Simple Migration (numeric/author-date):**
+- Phase 2 (plan): 2 minutes max
+- Phase 3-4 (build + iterate): 5 minutes max
+- **Total: 7 minutes** (down from 15 minutes)
+
+**Complex Migration (note styles, legal citations):**
+- Phase 1 (research): 5 minutes max
+- Phase 2 (plan): 3 minutes max
+- Phase 3-4 (build + iterate): 10 minutes max
+- **Total: 18 minutes**
+
+**If time budget exceeded:**
+- Agent must stop and report current status
+- Surface what works, what's blocked, why
+- User decides: continue iterating, accept partial success, or abandon
+
+### Success Criteria Matrix
+
+**Simple Migration (7-item focused test):**
+```
+oracle-migration.js results:
+  7/7 citations + 7/7 bibliography = PERFECT ✅
+  5-6/7 = ACCEPTABLE ✅ (document gaps in YAML comments)
+  <5/7 = ESCALATE ⚠️ (template redesign needed)
+```
+
+**Complex Style (31-item comprehensive test):**
+```
+oracle.js results:
+  >80% match = EXCELLENT ✅
+  60-80% match = ACCEPTABLE ✅ (document known gaps)
+  <60% match = ESCALATE ⚠️ (schema or processor changes needed)
+```
+
+**Validation cadence:**
+- Iteration 1: Quick check (oracle-migration.js for simple, oracle.js for complex)
+- Iteration 2: Full validation if iteration 1 passed
+- Iteration 3+: Only if making targeted fixes to specific issues
+
+### Validation Scripts
+
+**oracle-migration.js** (to be created):
+- Uses same 7-item subset as prep-migration.sh
+- Fast execution (~10 seconds)
+- Outputs: X/7 citations, X/7 bibliography
+- Exit code 0 if ≥5/7, exit code 1 if <5/7
+
+**oracle.js** (existing):
+- Full 31-item comprehensive test
+- Slower execution (~30 seconds)
+- Outputs: X/31 citations, X/31 bibliography + component diff
+- Use for final verification or complex styles
 
 ## Schema Reference
 
