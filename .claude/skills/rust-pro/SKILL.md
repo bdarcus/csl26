@@ -91,6 +91,13 @@ Expert Rust developer mastering Rust 1.75+ features, advanced type system usage,
 - Coverage analysis with tarpaulin
 - Continuous integration and automated testing
 
+**Project-Specific Benchmark Requirements:**
+- Hot path changes (citation rendering, bibliography processing, style parsing, name/date formatting) require before/after benchmarks
+- Use `cargo bench --bench rendering` or `cargo bench --bench formats`
+- Capture baseline in `.bench-baselines/`, compare with `critcmp`
+- Include performance deltas in commit messages for optimization work
+- See CLAUDE.md "Verification Requirements" for full policy
+
 ### Unsafe Code & FFI
 - Safe abstractions over unsafe code
 - Foreign Function Interface (FFI) with C libraries

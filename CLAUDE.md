@@ -283,6 +283,48 @@ Code should be self-documenting with clear comments explaining:
 - References to CSL 1.0 spec where relevant
 - Known limitations or TODOs
 
+## Verification Requirements
+
+Different types of changes require different levels of verification to maintain quality while optimizing for development velocity.
+
+| Change Type | Verification Required |
+|-------------|----------------------|
+| Config/Docs/Styles (<5 lines) | Syntax check only |
+| Bugfixes (non-hot path) | `cargo fmt && cargo clippy && cargo test` |
+| New features (cold path) | `cargo fmt && cargo clippy && cargo test` |
+| Hot path refactoring | Pre-commit checks + **Benchmarks** (before/after) |
+| Algorithm changes | Pre-commit checks + **Benchmarks** (regression check) |
+| Format/Parser optimization | Pre-commit checks + **Benchmarks** (validated claim) |
+| Performance claims | Pre-commit checks + **Benchmarks** (evidence-based) |
+
+**Hot paths:** citation rendering, bibliography processing, style parsing, name formatting, date formatting, substitution logic
+
+### Benchmark Workflow (Optional, for Performance Work)
+
+Benchmarks are **opt-in** for performance-sensitive changes. Do NOT add them to pre-commit checks.
+
+```bash
+# 1. Capture baseline
+cargo bench --bench rendering > .bench-baselines/baseline-$(date +%Y%m%d).txt
+
+# 2. Make performance changes
+# ... implement optimization ...
+
+# 3. Compare after changes
+cargo bench --bench rendering > .bench-baselines/after-$(date +%Y%m%d).txt
+
+# 4. Manual comparison (install critcmp: cargo install critcmp)
+critcmp .bench-baselines/baseline-*.txt .bench-baselines/after-*.txt
+
+# 5. Include relevant deltas in commit message body
+```
+
+**Available benchmarks:**
+- `cargo bench --bench rendering` - Citation/bibliography processing (APA-focused)
+- `cargo bench --bench formats` - YAML/JSON/CBOR deserialization
+
+Baseline files are stored in `.bench-baselines/` (gitignored, local-only).
+
 ## Current Status
 
 - **APA 7th**: 5/5 citations ✅, 5/5 bibliography ✅
@@ -420,6 +462,10 @@ cargo run --bin csln-analyze -- styles-legacy/
 
 # Build and check
 cargo build && cargo clippy
+
+# Performance benchmarks (opt-in for hot path changes)
+cargo bench --bench rendering        # Citation/bibliography processing
+cargo bench --bench formats          # Format deserialization (YAML/JSON/CBOR)
 ```
 
 ## Issue Handling

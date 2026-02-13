@@ -28,3 +28,6 @@ tasks-backup-*/
 # Project-specific symlinks (local configuration)
 .gemini/
 GEMINI.md
+
+# Benchmark baselines (local-only performance tracking)
+.bench-baselines/
