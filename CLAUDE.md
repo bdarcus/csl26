@@ -54,6 +54,8 @@ These commands are safe within defined project boundaries:
 ### Safety Tier 4: Safe File Operations (Read/Write in Designated Areas)
 
 - **Creating/editing files in**: `docs/`, `examples/`, `.claude/skills/`, `crates/*/src/`
+- **Project documentation**: `CLAUDE.md`, `README.md`, root-level `*.md` files
+- **Task management**: `.beans/` directory (task tracking files)
 - **Moving files with**: `git mv [file] [dest]` (preserves Git history)
 - **Reading**: Any project files (unrestricted)
 
