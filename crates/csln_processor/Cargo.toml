@@ -9,9 +9,7 @@ description = "CSLN citation and bibliography processor"
 [lib]
 name = "csln_processor"
 
-[[bin]]
-name = "csln-processor"
-path = "src/main.rs"
+
 
 [dependencies]
 csln_core = { path = "../csln_core" }
