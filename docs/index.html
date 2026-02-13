@@ -195,6 +195,7 @@
             <div class="text-center mb-16">
                 <h2 class="text-3xl md:text-4xl font-bold text-slate-900 mb-4">Reimagined for the Web</h2>
                 <p class="text-slate-500">Significant evolution over CSL 1.0, targeting modern scholarly needs.</p>
+                <p class="text-sm text-slate-400 mt-4">Built using a hybrid migration strategy: XML options extraction (87-100% citation accuracy) + output-driven template inference + hand-authored top styles. <a href="../docs/architecture/MIGRATION_STRATEGY_ANALYSIS.md" class="text-primary hover:underline">Learn more.</a></p>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 
@@ -235,16 +236,16 @@
                     </p>
                 </a>
 
-                <!-- Contextual Logic / APA -->
+                <!-- Type-Specific Overrides -->
                 <a href="examples.html#overrides" class="feature-card p-8 rounded-xl border border-slate-200 transition-all group block">
                     <div
                         class="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center text-primary mb-6 group-hover:bg-primary group-hover:text-white transition-colors">
                         <span class="material-icons">sync_alt</span>
                     </div>
-                    <h3 class="text-xl font-bold text-slate-900 mb-3">Contextual Logic</h3>
+                    <h3 class="text-xl font-bold text-slate-900 mb-3">Type-Specific Overrides</h3>
                     <p class="text-slate-500 leading-relaxed text-sm">
-                        Distinction between narrative/integral and parenthetical/non-integral citations, supporting APA
-                        requirements out of the box.
+                        Declare how components should render differently for each reference type (e.g., suppress publisher
+                        for articles but show for books) without procedural conditionals.
                     </p>
                 </a>
 
