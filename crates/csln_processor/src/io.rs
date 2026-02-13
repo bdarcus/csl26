@@ -9,56 +9,116 @@ use std::path::Path;
 
 use csl_legacy::csl_json::Reference as LegacyReference;
 use csln_core::reference::InputReference;
+use csln_core::InputBibliography;
 
 use crate::{Bibliography, Reference};
 
 /// Load a bibliography from a file given its path.
-/// Supports CSLN YAML/JSON and CSL-JSON.
+/// Supports CSLN YAML/JSON/CBOR and CSL-JSON.
 pub fn load_bibliography(path: &Path) -> Result<Bibliography, String> {
-    let content =
-        fs::read_to_string(path).map_err(|e| format!("Error reading references file: {}", e))?;
+    let bytes = fs::read(path).map_err(|e| format!("Error reading references file: {}", e))?;
+    let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("yaml");
 
     let mut bib = indexmap::IndexMap::new();
 
-    // 1. Try parsing as CSLN InputBibliography (YAML/JSON)
-    if let Ok(input_bib) = serde_yaml::from_str::<csln_core::InputBibliography>(&content) {
-        for r in input_bib.references {
-            if let Some(id) = r.id() {
-                bib.insert(id.to_string(), r);
+    // Try parsing as CSLN formats
+    match ext {
+        "cbor" => {
+            if let Ok(input_bib) = serde_cbor::from_slice::<InputBibliography>(&bytes) {
+                for r in input_bib.references {
+                    if let Some(id) = r.id() {
+                        bib.insert(id.to_string(), r);
+                    }
+                }
+                return Ok(bib);
             }
         }
-        return Ok(bib);
-    }
-
-    // 2. Try parsing as HashMap<String, InputReference> (YAML/JSON)
-    // This is common for YAML bib files where keys are IDs.
-    if let Ok(map) = serde_yaml::from_str::<HashMap<String, InputReference>>(&content) {
-        for (key, mut r) in map {
-            if r.id().is_none() {
-                r.set_id(key.clone());
+        "json" => {
+            // CSL-JSON is Vec<LegacyReference>
+            if let Ok(legacy_bib) = serde_json::from_slice::<Vec<LegacyReference>>(&bytes) {
+                for ref_item in legacy_bib {
+                    bib.insert(ref_item.id.clone(), Reference::from(ref_item));
+                }
+                return Ok(bib);
             }
-            bib.insert(key, r);
-        }
-        return Ok(bib);
-    }
+            // Also try CSLN JSON
+            if let Ok(input_bib) = serde_json::from_slice::<InputBibliography>(&bytes) {
+                for r in input_bib.references {
+                    if let Some(id) = r.id() {
+                        bib.insert(id.to_string(), r);
+                    }
+                }
+                return Ok(bib);
+            }
 
-    // 3. Try parsing as Vec<InputReference> (YAML/JSON)
-    if let Ok(refs) = serde_yaml::from_str::<Vec<InputReference>>(&content) {
-        for r in refs {
-            if let Some(id) = r.id() {
-                bib.insert(id.to_string(), r);
+            // Try HashMap of LegacyReference
+            if let Ok(map) = serde_json::from_slice::<HashMap<String, serde_json::Value>>(&bytes) {
+                let mut found = false;
+                for (id, val) in map {
+                    if let Ok(ref_item) = serde_json::from_value::<LegacyReference>(val) {
+                        let mut r = Reference::from(ref_item);
+                        if r.id().is_none() {
+                            r.set_id(id.clone());
+                        }
+                        bib.insert(id, r);
+                        found = true;
+                    }
+                }
+                if found {
+                    return Ok(bib);
+                }
             }
         }
-        return Ok(bib);
-    }
+        _ => {
+            // YAML/Fallback
+            let content = String::from_utf8_lossy(&bytes);
+            if let Ok(input_bib) = serde_yaml::from_str::<InputBibliography>(&content) {
+                for r in input_bib.references {
+                    if let Some(id) = r.id() {
+                        bib.insert(id.to_string(), r);
+                    }
+                }
+                return Ok(bib);
+            }
 
-    // 4. Fallback: Try parsing as Legacy CSL-JSON
-    if let Ok(legacy_bib) = serde_json::from_str::<Vec<LegacyReference>>(&content) {
-        for ref_item in legacy_bib {
-            bib.insert(ref_item.id.clone(), Reference::from(ref_item));
+            // Try parsing as HashMap<String, serde_yaml::Value> (YAML/JSON)
+            if let Ok(map) = serde_yaml::from_str::<HashMap<String, serde_yaml::Value>>(&content) {
+                let mut found = false;
+                for (key, val) in map {
+                    if let Ok(mut r) = serde_yaml::from_value::<InputReference>(val.clone()) {
+                        if r.id().is_none() {
+                            r.set_id(key.clone());
+                        }
+                        bib.insert(key, r);
+                        found = true;
+                    } else if let Ok(ref_item) = serde_yaml::from_value::<LegacyReference>(val) {
+                        let mut r = Reference::from(ref_item);
+                        if r.id().is_none() {
+                            r.set_id(key.clone());
+                        }
+                        bib.insert(key, r);
+                        found = true;
+                    }
+                }
+                if found {
+                    return Ok(bib);
+                }
+            }
+
+            // Try parsing as Vec<InputReference> (YAML/JSON)
+            if let Ok(refs) = serde_yaml::from_str::<Vec<InputReference>>(&content) {
+                for r in refs {
+                    if let Some(id) = r.id() {
+                        bib.insert(id.to_string(), r);
+                    }
+                }
+                return Ok(bib);
+            }
         }
-        return Ok(bib);
     }
 
-    Err("Error parsing references: could not parse as CSLN (YAML/JSON) or CSL-JSON".to_string())
+    Err(
+        "Error parsing references: could not parse as CSLN (YAML/JSON/CBOR) or CSL-JSON"
+            .to_string(),
+    )
 }

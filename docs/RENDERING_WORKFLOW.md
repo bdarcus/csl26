@@ -5,20 +5,17 @@ This guide describes the standard workflow for debugging and fixing rendering is
 ## Quick Reference
 
 ```bash
+# Process a bibliography with a style (default plain text)
+csln process references.json styles/apa-7th.yaml
+
+# Convert a YAML style to binary CBOR for performance
+csln convert styles/apa-7th.yaml --output styles/apa-7th.cbor
+
+# Generate semantic HTML
+csln process references.json styles/apa-7th.yaml --format html
+
 # Test a single style (default: structured diff)
 node scripts/oracle.js styles-legacy/apa.csl
-
-# Run full workflow test (structured diff + batch impact)
-./scripts/workflow-test.sh styles-legacy/apa.csl
-
-# Batch analysis across top 10 styles
-node scripts/oracle-batch-aggregate.js styles-legacy/ --top 10
-
-# Legacy simple string comparison
-node scripts/oracle-simple.js styles-legacy/apa.csl
-
-# Prepare for agent-assisted migration (Target + Baseline context)
-./scripts/prep-migration.sh styles-legacy/apa.csl
 ```
 
 ## Hybrid Migration Strategy

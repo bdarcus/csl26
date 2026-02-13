@@ -329,24 +329,24 @@ impl Locale {
         Ok(Self::from_raw(raw))
     }
 
-    /// Load locale from a file path directly.
-    pub fn from_yaml_file(path: &std::path::Path) -> Result<Self, String> {
-        let yaml = std::fs::read_to_string(path)
-            .map_err(|e| format!("Failed to read locale file: {}", e))?;
-        Self::from_yaml_str(&yaml)
-    }
-
     /// Load a locale by ID (e.g., "en-US", "de-DE") from a locales directory.
     /// Falls back to en-US if the locale file is not found.
     pub fn load(locale_id: &str, locales_dir: &std::path::Path) -> Self {
-        let file_name = format!("{}.yaml", locale_id);
-        let file_path = locales_dir.join(&file_name);
+        let extensions = ["yaml", "yml", "json", "cbor"];
 
-        if file_path.exists() {
-            match Self::from_yaml_file(&file_path) {
-                Ok(locale) => return locale,
-                Err(e) => {
-                    eprintln!("Warning: Failed to load locale {}: {}", locale_id, e);
+        for ext in &extensions {
+            let file_name = format!("{}.{}", locale_id, ext);
+            let file_path = locales_dir.join(&file_name);
+
+            if file_path.exists() {
+                match Self::from_file(&file_path) {
+                    Ok(locale) => return locale,
+                    Err(e) => {
+                        eprintln!(
+                            "Warning: Failed to load locale {}.{}: {}",
+                            locale_id, ext, e
+                        );
+                    }
                 }
             }
         }
@@ -359,8 +359,10 @@ impl Locale {
                 for entry in entries.flatten() {
                     let name = entry.file_name();
                     let name_str = name.to_string_lossy();
-                    if name_str.starts_with(base) && name_str.ends_with(".yaml") {
-                        if let Ok(locale) = Self::from_yaml_file(&entry.path()) {
+                    if name_str.starts_with(base)
+                        && extensions.iter().any(|ext| name_str.ends_with(ext))
+                    {
+                        if let Ok(locale) = Self::from_file(&entry.path()) {
                             return locale;
                         }
                     }
@@ -370,6 +372,26 @@ impl Locale {
 
         // Default to hardcoded en-US
         Self::en_us()
+    }
+
+    /// Load locale from a file path directly (detects format).
+    pub fn from_file(path: &std::path::Path) -> Result<Self, String> {
+        let bytes =
+            std::fs::read(path).map_err(|e| format!("Failed to read locale file: {}", e))?;
+        let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("yaml");
+
+        match ext {
+            "cbor" => serde_cbor::from_slice::<raw::RawLocale>(&bytes)
+                .map(Self::from_raw)
+                .map_err(|e| format!("Failed to parse CBOR locale: {}", e)),
+            "json" => serde_json::from_slice::<raw::RawLocale>(&bytes)
+                .map(Self::from_raw)
+                .map_err(|e| format!("Failed to parse JSON locale: {}", e)),
+            _ => {
+                let content = String::from_utf8_lossy(&bytes);
+                Self::from_yaml_str(&content)
+            }
+        }
     }
 
     /// Convert a RawLocale to a Locale.

@@ -1,11 +1,14 @@
 use clap::{Parser, Subcommand, ValueEnum};
-use csln_core::{Locale, Style};
+use csln_core::locale::RawLocale;
+use csln_core::reference::InputReference;
+use csln_core::{InputBibliography, Locale, Style};
 use csln_processor::{
     io::load_bibliography,
     render::{djot::Djot, html::Html, plain::PlainText},
     Citation, CitationItem, Processor,
 };
 use schemars::schema_for;
+use serde::Serialize;
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -14,6 +17,13 @@ use std::path::{Path, PathBuf};
 struct Cli {
     #[command(subcommand)]
     command: Commands,
+}
+
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum, Debug)]
+enum DataType {
+    Style,
+    Bib,
+    Locale,
 }
 
 #[derive(Subcommand)]
@@ -58,6 +68,19 @@ enum Commands {
     Validate {
         /// Path to the style YAML/JSON file
         path: PathBuf,
+    },
+    /// Convert between CSLN formats (YAML, JSON, CBOR)
+    Convert {
+        /// Path to the input file
+        input: PathBuf,
+
+        /// Path to the output file
+        #[arg(short, long)]
+        output: PathBuf,
+
+        /// Data type (style, bib, locale)
+        #[arg(short, long, value_enum)]
+        r#type: Option<DataType>,
     },
     /// Show the structure of a CSLN style
     Tree {
@@ -108,20 +131,38 @@ fn main() {
             }
 
             // Load style
-            let style_content = match fs::read_to_string(&style) {
-                Ok(content) => content,
+            let style_bytes = match fs::read(&style) {
+                Ok(bytes) => bytes,
                 Err(e) => {
                     eprintln!("Error reading style: {}", e);
                     std::process::exit(1);
                 }
             };
 
-            let mut style_obj: Style = match serde_yaml::from_str(&style_content) {
-                Ok(s) => s,
-                Err(e) => {
-                    eprintln!("Error parsing style: {}", e);
-                    std::process::exit(1);
-                }
+            let style_ext = style.extension().and_then(|e| e.to_str()).unwrap_or("yaml");
+
+            let mut style_obj: Style = match style_ext {
+                "cbor" => match serde_cbor::from_slice(&style_bytes) {
+                    Ok(s) => s,
+                    Err(e) => {
+                        eprintln!("Error parsing CBOR style: {}", e);
+                        std::process::exit(1);
+                    }
+                },
+                "json" => match serde_json::from_slice(&style_bytes) {
+                    Ok(s) => s,
+                    Err(e) => {
+                        eprintln!("Error parsing JSON style: {}", e);
+                        std::process::exit(1);
+                    }
+                },
+                _ => match serde_yaml::from_slice(&style_bytes) {
+                    Ok(s) => s,
+                    Err(e) => {
+                        eprintln!("Error parsing YAML style: {}", e);
+                        std::process::exit(1);
+                    }
+                },
             };
 
             if no_semantics {
@@ -184,22 +225,87 @@ fn main() {
             }
         }
         Commands::Validate { path } => {
-            let content = match fs::read_to_string(&path) {
-                Ok(c) => c,
+            let bytes = match fs::read(&path) {
+                Ok(b) => b,
                 Err(e) => {
                     eprintln!("Error reading file: {}", e);
                     std::process::exit(1);
                 }
             };
 
+            let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("yaml");
+
             // Try parsing as Style
-            match serde_yaml::from_str::<Style>(&content) {
+            let res = match ext {
+                "cbor" => serde_cbor::from_slice::<Style>(&bytes)
+                    .map(|_| ())
+                    .map_err(|e| e.to_string()),
+                "json" => serde_json::from_slice::<Style>(&bytes)
+                    .map(|_| ())
+                    .map_err(|e| e.to_string()),
+                _ => serde_yaml::from_slice::<Style>(&bytes)
+                    .map(|_| ())
+                    .map_err(|e| e.to_string()),
+            };
+
+            match res {
                 Ok(_) => println!("Reference style is valid."),
                 Err(e) => {
                     eprintln!("Validation failed: {}", e);
                     std::process::exit(1);
                 }
             }
+        }
+        Commands::Convert {
+            input,
+            output,
+            r#type,
+        } => {
+            let input_bytes = fs::read(&input).expect("Failed to read input file");
+            let input_ext = input.extension().and_then(|e| e.to_str()).unwrap_or("yaml");
+            let output_ext = output
+                .extension()
+                .and_then(|e| e.to_str())
+                .unwrap_or("yaml");
+
+            // Detect data type if not provided
+            let data_type = r#type.unwrap_or_else(|| {
+                let stem = input.file_stem().and_then(|s| s.to_str()).unwrap_or("");
+                if stem.contains("bib") || stem.contains("ref") {
+                    DataType::Bib
+                } else if stem.len() == 5 && stem.contains('-') {
+                    // e.g. en-US
+                    DataType::Locale
+                } else {
+                    DataType::Style
+                }
+            });
+
+            match data_type {
+                DataType::Style => {
+                    let style: Style = deserialize_any(&input_bytes, input_ext);
+                    let out_bytes = serialize_any(&style, output_ext);
+                    fs::write(&output, out_bytes).expect("Failed to write output");
+                }
+                DataType::Bib => {
+                    let bib_obj = load_bibliography(&input).expect("Failed to load bibliography");
+                    // Convert internal Bibliography (IndexMap) back to InputBibliography
+                    let references: Vec<InputReference> =
+                        bib_obj.into_iter().map(|(_, r)| r).collect();
+                    let input_bib = InputBibliography {
+                        references,
+                        ..Default::default()
+                    };
+                    let out_bytes = serialize_any(&input_bib, output_ext);
+                    fs::write(&output, out_bytes).expect("Failed to write output");
+                }
+                DataType::Locale => {
+                    let locale: RawLocale = deserialize_any(&input_bytes, input_ext);
+                    let out_bytes = serialize_any(&locale, output_ext);
+                    fs::write(&output, out_bytes).expect("Failed to write output");
+                }
+            }
+            println!("Converted {} to {}", input.display(), output.display());
         }
         Commands::Tree { path: _ } => {
             eprintln!("The 'tree' command is not yet implemented.");
@@ -223,6 +329,30 @@ fn find_locales_dir(style_path: &str) -> PathBuf {
         }
     }
     PathBuf::from(".")
+}
+
+fn deserialize_any<T: serde::de::DeserializeOwned>(bytes: &[u8], ext: &str) -> T {
+    match ext {
+        "yaml" | "yml" => serde_yaml::from_slice(bytes).expect("Failed to parse YAML"),
+        "json" => serde_json::from_slice(bytes).expect("Failed to parse JSON"),
+        "cbor" => serde_cbor::from_slice(bytes).expect("Failed to parse CBOR"),
+        _ => serde_yaml::from_slice(bytes).expect("Failed to parse YAML (fallback)"),
+    }
+}
+
+fn serialize_any<T: Serialize>(obj: &T, ext: &str) -> Vec<u8> {
+    match ext {
+        "yaml" | "yml" => serde_yaml::to_string(obj)
+            .expect("Failed to serialize YAML")
+            .into_bytes(),
+        "json" => serde_json::to_string_pretty(obj)
+            .expect("Failed to serialize JSON")
+            .into_bytes(),
+        "cbor" => serde_cbor::to_vec(obj).expect("Failed to serialize CBOR"),
+        _ => serde_yaml::to_string(obj)
+            .expect("Failed to serialize YAML (fallback)")
+            .into_bytes(),
+    }
 }
 
 fn print_human<F>(

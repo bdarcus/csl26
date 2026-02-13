@@ -298,6 +298,18 @@
                     </p>
                 </div>
 
+                <!-- Binary Performance -->
+                <div class="feature-card p-8 rounded-xl border border-slate-200 transition-all group">
+                    <div
+                        class="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center text-primary mb-6 group-hover:bg-primary group-hover:text-white transition-colors">
+                        <span class="material-icons">speed</span>
+                    </div>
+                    <h3 class="text-xl font-bold text-slate-900 mb-3">Binary Performance</h3>
+                    <p class="text-slate-500 leading-relaxed text-sm">
+                        Native CBOR support for lightning-fast loading of massive bibliographies and styles.
+                    </p>
+                </div>
+
             </div>
         </div>
     </section>
@@ -326,17 +338,17 @@
 
                         <!-- Example 2 -->
                         <div>
-                            <h4 class="font-bold text-slate-900 mb-2">Validate your style</h4>
+                            <h4 class="font-bold text-slate-900 mb-2">Convert to binary (Performance Mode)</h4>
                             <div class="bg-slate-900 rounded-lg p-4 font-mono text-sm text-slate-300 shadow-md">
-                                <span class="text-primary">$</span> csln validate styles/my-custom-style.yaml
+                                <span class="text-primary">$</span> csln convert styles/apa.yaml --output styles/apa.cbor
                             </div>
                         </div>
 
                         <!-- Example 3 -->
                         <div>
-                            <h4 class="font-bold text-slate-900 mb-2">View style structure</h4>
+                            <h4 class="font-bold text-slate-900 mb-2">Validate your style</h4>
                             <div class="bg-slate-900 rounded-lg p-4 font-mono text-sm text-slate-300 shadow-md">
-                                <span class="text-primary">$</span> csln tree styles/chicago.yaml
+                                <span class="text-primary">$</span> csln validate styles/my-custom-style.yaml
                             </div>
                         </div>
                     </div>

@@ -105,6 +105,7 @@ bibliography:
 - **Three-Tier Options**: Context-aware formatting (global, citation/bibliography, and type-specific).
 - **Oracle Verification**: Built-in scripts to compare output against `citeproc-js` for exact fidelity.
 - **Modern Input**: Native support for CSLN YAML/JSON bibliography format with EDTF date support.
+- **High Performance**: Native support for **CBOR binary format** for lightning-fast style and bibliography loading.
 - **Diverse Fixtures**: Built-in 10-item test dataset covering edge cases like massive author lists and missing dates.
 
 ## Key Design Principles
@@ -159,7 +160,7 @@ CSLN prevents data loss by supporting:
 
 The engine is built for dual-mode operation:
 - **Batch**: High-throughput CLI for build systems (like Pandoc)
-- **Interactive**: Low-latency JSON server mode for reference managers (like Zotero)
+- **Interactive**: Low-latency JSON server mode for reference managers (like Zotero). Supports binary formats (CBOR) to minimize startup latency.
 
 ### 7. Stability & Forward Compatibility
 
@@ -316,18 +317,32 @@ cargo test --workspace
 
 ### Running the Processor
 
+The `csln` binary is the primary entry point for processing and conversion.
+
 ```bash
-# Run CSLN processor with a style (default plain text)
-cargo run --bin csln-processor -- styles/apa-7th.yaml
+# Process a bibliography with a style (default plain text)
+csln process references.json styles/apa-7th.yaml
 
 # Generate semantic HTML
-cargo run --bin csln-processor -- --format html styles/apa-7th.yaml
+csln process references.json styles/apa-7th.yaml --format html
 
 # Generate Djot with semantic attributes
-cargo run --bin csln-processor -- --format djot styles/apa-7th.yaml
+csln process references.json styles/apa-7th.yaml --format djot
+```
 
-# Disable semantic classes for clean output
-cargo run --bin csln-processor -- --format html --no-semantics styles/apa-7th.yaml
+### Format Conversion
+
+CSLN supports YAML, JSON, and CBOR. Use the `convert` command to switch between them.
+
+```bash
+# Convert a YAML style to binary CBOR (performance mode)
+csln convert styles/apa-7th.yaml --output styles/apa-7th.cbor
+
+# Convert a large JSON bibliography to CBOR
+csln convert references.json --output references.cbor
+
+# Convert a CBOR locale back to YAML for editing
+csln convert locales/en-US.cbor --output locales/en-US.yaml
 ```
 
 ### Style Corpus Analysis
@@ -389,10 +404,10 @@ You can generate a formal JSON Schema for CSLN styles using the CLI:
 
 ```bash
 # Output schema to stdout
-cargo run --bin csln-cli -- schema
+csln schema
 
 # Save to file
-cargo run --bin csln-cli -- schema > csln.schema.json
+csln schema > csln.schema.json
 ```
 
 This schema can be used to validate styles or provide intellisense in editors like VS Code.

@@ -236,7 +236,7 @@ terms:
     long: album
   and:
     long: and
-    symbol: &
+    symbol: "&"
   and others:
     long: and others
   anonymous:
@@ -244,7 +244,7 @@ terms:
     short: anon.
   at:
     long: at
-    symbol: @
+    symbol: "@"
   audio_recording:
     long: audio recording
     short: au. rec.
@@ -500,9 +500,9 @@ terms:
   colon:
     long: ":"
   comma:
-    long: ,
+    long: ","
   semicolon:
-    long: ;
+    long: ";"
   ordinal:
     long: th
   ordinal_01:
