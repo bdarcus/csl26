@@ -454,6 +454,40 @@
             </div>
         </article>
 
+        <!-- Options-Level Presets -->
+        <article id="options-presets" class="example-card rounded-xl overflow-hidden shadow-sm scroll-mt-24">
+            <div class="p-8 bg-slate-50 border-b border-slate-200">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                        <span class="material-icons">tune</span>
+                    </div>
+                    <h2 class="text-2xl font-bold text-slate-900">Options-Level Presets</h2>
+                </div>
+                <p class="text-slate-600 leading-relaxed mb-6">
+                    Common configuration patterns for contributors, dates, and titles can be expressed as
+                    a single preset name instead of spelling out every field. Mix preset shorthand with
+                    explicit overrides for maximum clarity and concision.
+                </p>
+            </div>
+            <div class="bg-slate-900 p-6 overflow-x-auto">
+                <pre class="font-mono text-sm text-slate-300 leading-relaxed">
+<span class="text-slate-500"># Named presets replace verbose config blocks</span>
+<span class="text-indigo-400">options</span>:
+  <span class="text-primary">contributors</span>:            <span class="text-slate-500"># Explicit config (verbose)</span>
+    <span class="text-primary">display-as-sort</span>: <span class="text-emerald-400">all</span>
+    <span class="text-primary">initialize-with</span>: <span class="text-emerald-400">". "</span>
+    <span class="text-primary">delimiter</span>: <span class="text-emerald-400">", "</span>
+    <span class="text-primary">and</span>: <span class="text-emerald-400">symbol</span>
+  <span class="text-primary">dates</span>: <span class="text-emerald-400">long</span>              <span class="text-slate-500"># Preset shorthand</span>
+  <span class="text-primary">titles</span>: <span class="text-emerald-400">apa</span>             <span class="text-slate-500"># Preset shorthand</span>
+
+<span class="text-slate-500"># Available presets:</span>
+<span class="text-slate-500">#   contributors: apa | chicago | harvard | springer | vancouver</span>
+<span class="text-slate-500">#   dates:        long | short | numeric | iso</span>
+<span class="text-slate-500">#   titles:       apa | chicago | humanities | ieee | scientific</span></pre>
+            </div>
+        </article>
+
         <!-- Binary Performance -->
         <article id="binary-performance" class="example-card rounded-xl overflow-hidden shadow-sm scroll-mt-24">
             <div class="p-8 bg-slate-50 border-b border-slate-200">

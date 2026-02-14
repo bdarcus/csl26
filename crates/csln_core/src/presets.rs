@@ -44,21 +44,30 @@ use std::collections::HashMap;
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub enum ContributorPreset {
-    /// First author family-first, "&" symbol, et al. after 20 authors.
+    /// First author family-first, "&" symbol, et al. after 20 authors,
+    /// initials with period-space, comma before "&".
     /// Example: "Smith, J. D., & Jones, M. K."
     Apa,
-    /// First author family-first, "and" text, no serial comma.
-    /// Example: "Smith, John D. and Mary K. Jones"
+    /// First author family-first, "and" text, contextual serial comma,
+    /// full given names (no initials).
+    /// Example: "Smith, John D., and Mary K. Jones"
     Chicago,
-    /// All authors family-first, no conjunction.
+    /// All authors family-first, no conjunction, compact initials (no
+    /// period/space), et al. after 6 of 7+.
     /// Example: "Smith JD, Jones MK, Brown AB"
     Vancouver,
-    /// All authors family-first, "and" before last.
+    /// Given-first format, "and" text, initials with period-space,
+    /// comma before "and".
     /// Example: "J. D. Smith, M. K. Jones, and A. B. Brown"
     Ieee,
-    /// First author family-first, "and" text (Elsevier/Springer variant).
-    /// Example: "Smith, J.D. and Jones, M.K."
+    /// All authors family-first, "and" text, compact initials (period,
+    /// no space), comma before "and".
+    /// Example: "Smith, J.D., Jones, M.K., and Brown, A.B."
     Harvard,
+    /// All authors family-first, no conjunction, compact initials (no
+    /// period/space), space sort-separator, et al. after 3 of 5+.
+    /// Example: "Smith JD, Jones MK, Brown AB"
+    Springer,
 }
 
 impl ContributorPreset {
@@ -106,10 +115,25 @@ impl ContributorPreset {
                 ..Default::default()
             },
             ContributorPreset::Harvard => ContributorConfig {
-                display_as_sort: Some(DisplayAsSort::First),
+                display_as_sort: Some(DisplayAsSort::All),
                 and: Some(AndOptions::Text),
                 delimiter: Some(", ".to_string()),
+                delimiter_precedes_last: Some(DelimiterPrecedesLast::Always),
                 initialize_with: Some(".".to_string()),
+                ..Default::default()
+            },
+            ContributorPreset::Springer => ContributorConfig {
+                display_as_sort: Some(DisplayAsSort::All),
+                and: Some(AndOptions::None),
+                delimiter: Some(", ".to_string()),
+                delimiter_precedes_last: Some(DelimiterPrecedesLast::Always),
+                initialize_with: Some("".to_string()),
+                sort_separator: Some(" ".to_string()),
+                shorten: Some(ShortenListOptions {
+                    min: 5,
+                    use_first: 3,
+                    ..Default::default()
+                }),
                 ..Default::default()
             },
         }
@@ -118,18 +142,24 @@ impl ContributorPreset {
 
 /// Date formatting presets.
 ///
-/// Each preset defines how dates are displayed in citations and bibliographies.
+/// Each preset defines how dates are displayed in citations and bibliographies,
+/// including month format, EDTF uncertainty/approximation markers, and range
+/// delimiters.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub enum DatePreset {
-    /// Year only: (2024)
-    YearOnly,
-    /// Full date with locale-appropriate format: (January 15, 2024)
-    Full,
-    /// Month and year only: (January 2024)
-    MonthYear,
-    /// ISO 8601 format: (2024-01-15)
+    /// Long month names, EDTF markers, en-dash ranges.
+    /// Example: "January 15, 2024", "ca. 2024", "2024?"
+    Long,
+    /// Short month names, EDTF markers, en-dash ranges.
+    /// Example: "Jan 15, 2024"
+    Short,
+    /// Numeric months, EDTF markers, en-dash ranges.
+    /// Example: "1/15/2024"
+    Numeric,
+    /// ISO 8601 numeric format, no EDTF markers.
+    /// Example: "2024-01-15"
     Iso,
 }
 
@@ -137,20 +167,22 @@ impl DatePreset {
     /// Convert this preset to a concrete `DateConfig`.
     pub fn config(&self) -> DateConfig {
         match self {
-            DatePreset::YearOnly => DateConfig {
+            DatePreset::Long => DateConfig {
                 month: MonthFormat::Long,
                 ..Default::default()
             },
-            DatePreset::Full => DateConfig {
-                month: MonthFormat::Long,
+            DatePreset::Short => DateConfig {
+                month: MonthFormat::Short,
                 ..Default::default()
             },
-            DatePreset::MonthYear => DateConfig {
-                month: MonthFormat::Long,
+            DatePreset::Numeric => DateConfig {
+                month: MonthFormat::Numeric,
                 ..Default::default()
             },
             DatePreset::Iso => DateConfig {
                 month: MonthFormat::Numeric,
+                uncertainty_marker: None,
+                approximation_marker: None,
                 ..Default::default()
             },
         }
@@ -175,6 +207,10 @@ pub enum TitlePreset {
     /// IEEE style: article titles quoted, book/journal titles italic.
     /// Example: "Article title," *Book Title*. *Journal Title*.
     Ieee,
+    /// Humanities style: monographs, periodicals, and serials all italic,
+    /// articles plain. Common in geography, history, and social sciences.
+    /// Example: Article title. *Book Title*. *Journal Title*. *Series Title*.
+    Humanities,
     /// Scientific/Vancouver style: all titles plain (no formatting).
     /// Example: Article title. Book title. Journal title.
     Scientific,
@@ -183,47 +219,31 @@ pub enum TitlePreset {
 impl TitlePreset {
     /// Convert this preset to a concrete `TitlesConfig`.
     pub fn config(&self) -> TitlesConfig {
+        let emph_rendering = TitleRendering {
+            emph: Some(true),
+            ..Default::default()
+        };
         match self {
             TitlePreset::Apa => TitlesConfig {
-                component: Some(TitleRendering::default()), // Plain
-                monograph: Some(TitleRendering {
-                    emph: Some(true),
-                    ..Default::default()
-                }),
-                periodical: Some(TitleRendering {
-                    emph: Some(true),
-                    ..Default::default()
-                }),
+                component: Some(TitleRendering::default()),
+                monograph: Some(emph_rendering.clone()),
+                periodical: Some(emph_rendering),
                 ..Default::default()
             },
-            TitlePreset::Chicago => TitlesConfig {
+            TitlePreset::Chicago | TitlePreset::Ieee => TitlesConfig {
                 component: Some(TitleRendering {
                     quote: Some(true),
                     ..Default::default()
                 }),
-                monograph: Some(TitleRendering {
-                    emph: Some(true),
-                    ..Default::default()
-                }),
-                periodical: Some(TitleRendering {
-                    emph: Some(true),
-                    ..Default::default()
-                }),
+                monograph: Some(emph_rendering.clone()),
+                periodical: Some(emph_rendering),
                 ..Default::default()
             },
-            TitlePreset::Ieee => TitlesConfig {
-                component: Some(TitleRendering {
-                    quote: Some(true),
-                    ..Default::default()
-                }),
-                monograph: Some(TitleRendering {
-                    emph: Some(true),
-                    ..Default::default()
-                }),
-                periodical: Some(TitleRendering {
-                    emph: Some(true),
-                    ..Default::default()
-                }),
+            TitlePreset::Humanities => TitlesConfig {
+                component: Some(TitleRendering::default()),
+                monograph: Some(emph_rendering.clone()),
+                periodical: Some(emph_rendering.clone()),
+                serial: Some(emph_rendering),
                 ..Default::default()
             },
             TitlePreset::Scientific => TitlesConfig {
@@ -320,15 +340,30 @@ mod tests {
     }
 
     #[test]
-    fn test_date_preset_year_only() {
-        let config = DatePreset::YearOnly.config();
+    fn test_contributor_preset_springer() {
+        let config = ContributorPreset::Springer.config();
+        assert_eq!(config.and, Some(AndOptions::None));
+        assert_eq!(config.display_as_sort, Some(DisplayAsSort::All));
+        assert_eq!(config.sort_separator, Some(" ".to_string()));
+        let shorten = config.shorten.unwrap();
+        assert_eq!(shorten.min, 5);
+        assert_eq!(shorten.use_first, 3);
+    }
+
+    #[test]
+    fn test_date_preset_long() {
+        let config = DatePreset::Long.config();
         assert_eq!(config.month, MonthFormat::Long);
+        assert!(config.uncertainty_marker.is_some());
     }
 
     #[test]
     fn test_date_preset_iso() {
         let config = DatePreset::Iso.config();
         assert_eq!(config.month, MonthFormat::Numeric);
+        // ISO preset suppresses EDTF markers
+        assert!(config.uncertainty_marker.is_none());
+        assert!(config.approximation_marker.is_none());
     }
 
     #[test]
@@ -372,6 +407,7 @@ mod tests {
             ContributorPreset::Vancouver,
             ContributorPreset::Ieee,
             ContributorPreset::Harvard,
+            ContributorPreset::Springer,
         ];
         for preset in contributor_presets {
             let yaml = serde_yaml::to_string(&preset).unwrap();
@@ -379,9 +415,9 @@ mod tests {
         }
 
         let date_presets = vec![
-            DatePreset::YearOnly,
-            DatePreset::Full,
-            DatePreset::MonthYear,
+            DatePreset::Long,
+            DatePreset::Short,
+            DatePreset::Numeric,
             DatePreset::Iso,
         ];
         for preset in date_presets {
@@ -393,6 +429,7 @@ mod tests {
             TitlePreset::Apa,
             TitlePreset::Chicago,
             TitlePreset::Ieee,
+            TitlePreset::Humanities,
             TitlePreset::Scientific,
         ];
         for preset in title_presets {

@@ -1,32 +1,33 @@
 info:
-  title: Elsevier (author-date/Harvard, with titles)
-  id: http://www.zotero.org/styles/elsevier-harvard
+  title: Annals of the Association of American Geographers
+  id: http://www.zotero.org/styles/annals-of-the-association-of-american-geographers
   default-locale: en-US
 options:
   substitute:
     contributor-role-form: short
     template:
       - editor
-      - translator
+      - title
   contributors:
-    display-as-sort: all
-    initialize-with: .
+    display-as-sort: first
+    initialize-with: ". "
     delimiter: ", "
     delimiter-precedes-last: always
-    demote-non-dropping-particle: never
+    demote-non-dropping-particle: sort-only
     sort-separator: ", "
-  dates: numeric
+  dates: long
+  titles: humanities
   bibliography:
-    hanging-indent: true
+    subsequent-author-substitute: ———
+    entry-suffix: .
     separator: ". "
   punctuation-in-quote: true
-  volume-pages-delimiter: comma
 citation:
   template:
     - contributor: author
       form: short
       shorten:
-        min: 3
+        min: 4
         use-first: 1
         and-others: et-al
         delimiter-precedes-last: contextual
@@ -34,6 +35,7 @@ citation:
     - date: issued
       form: year
   wrap: parentheses
+  delimiter: " "
   multi-cite-delimiter: "; "
 bibliography:
   template:
@@ -42,31 +44,22 @@ bibliography:
       name-order: family-first
     - date: issued
       form: year
-      prefix: ", "
+      prefix: " "
     - title: primary
     - items:
         - contributor: editor
           form: verb
           name-order: given-first
         - title: parent-monograph
+          emph: true
     - title: parent-serial
-    - variable: publisher
+      emph: true
     - items:
         - number: volume
         - number: issue
-          overrides:
-            article-magazine:
-              suppress: true
     - number: pages
-      overrides:
-        chapter:
-          prefix: "pp. "
-        paper-conference:
-          prefix: "pp. "
-      prefix: ", "
+      prefix: ":"
     - variable: publisher-place
-      prefix: ", "
-    - variable: doi
-      overrides:
-        article-journal:
-          prefix: https://doi.org/
+    - variable: publisher
+      prefix: ": "
+    - variable: url

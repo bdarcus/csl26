@@ -8,6 +8,35 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+/// Date config: either a preset name or explicit configuration.
+///
+/// Allows styles to write `dates: long` as shorthand, or provide
+/// full explicit configuration with field-level overrides.
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(untagged)]
+pub enum DateConfigEntry {
+    /// A named preset (e.g., "long", "short", "numeric", "iso").
+    Preset(crate::presets::DatePreset),
+    /// Explicit date configuration.
+    Explicit(DateConfig),
+}
+
+impl Default for DateConfigEntry {
+    fn default() -> Self {
+        DateConfigEntry::Explicit(DateConfig::default())
+    }
+}
+
+impl DateConfigEntry {
+    /// Resolve this entry to a concrete `DateConfig`.
+    pub fn resolve(&self) -> DateConfig {
+        match self {
+            DateConfigEntry::Preset(preset) => preset.config(),
+            DateConfigEntry::Explicit(config) => config.clone(),
+        }
+    }
+}
+
 /// Date formatting configuration.
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]

@@ -15,11 +15,11 @@ pub mod substitute;
 
 pub use bibliography::{BibliographyConfig, SubsequentAuthorSubstituteRule};
 pub use contributors::{
-    AndOptions, AndOtherOptions, ContributorConfig, DelimiterPrecedesLast,
+    AndOptions, AndOtherOptions, ContributorConfig, ContributorConfigEntry, DelimiterPrecedesLast,
     DemoteNonDroppingParticle, DisplayAsSort, EditorLabelFormat, RoleOptions, RoleRendering,
     ShortenListOptions,
 };
-pub use dates::DateConfig;
+pub use dates::{DateConfig, DateConfigEntry};
 pub use localization::{Localize, MonthFormat, Scope};
 pub use multilingual::{MultilingualConfig, MultilingualMode, ScriptConfig};
 pub use processing::{
@@ -48,14 +48,29 @@ pub struct Config {
     /// Multilingual rendering defaults.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub multilingual: Option<MultilingualConfig>,
-    /// Contributor formatting defaults.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    /// Contributor formatting defaults. Accepts a preset name (e.g., "apa")
+    /// or explicit configuration.
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "deserialize_contributor_config",
+        default
+    )]
     pub contributors: Option<ContributorConfig>,
-    /// Date formatting defaults.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    /// Date formatting defaults. Accepts a preset name (e.g., "long")
+    /// or explicit configuration.
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "deserialize_date_config",
+        default
+    )]
     pub dates: Option<DateConfig>,
-    /// Title formatting defaults.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    /// Title formatting defaults. Accepts a preset name (e.g., "apa")
+    /// or explicit configuration.
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "deserialize_titles_config",
+        default
+    )]
     pub titles: Option<crate::options::titles::TitlesConfig>,
     /// Page range formatting (expanded, minimal, chicago).
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -219,6 +234,38 @@ impl Config {
     }
 }
 
+/// Deserialize contributor config from either a preset name or explicit config.
+fn deserialize_contributor_config<'de, D>(
+    deserializer: D,
+) -> Result<Option<ContributorConfig>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let value: Option<ContributorConfigEntry> = Option::deserialize(deserializer)?;
+    Ok(value.map(|entry| entry.resolve()))
+}
+
+/// Deserialize date config from either a preset name or explicit config.
+fn deserialize_date_config<'de, D>(deserializer: D) -> Result<Option<DateConfig>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let value: Option<DateConfigEntry> = Option::deserialize(deserializer)?;
+    Ok(value.map(|entry| entry.resolve()))
+}
+
+/// Deserialize titles config from either a preset name or explicit config.
+fn deserialize_titles_config<'de, D>(
+    deserializer: D,
+) -> Result<Option<crate::options::titles::TitlesConfig>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let value: Option<crate::options::titles::TitlesConfigEntry> =
+        Option::deserialize(deserializer)?;
+    Ok(value.map(|entry| entry.resolve()))
+}
+
 fn default_true() -> Option<bool> {
     Some(true)
 }
@@ -267,6 +314,35 @@ contributors:
             config.contributors.as_ref().unwrap().and,
             Some(AndOptions::Symbol)
         );
+    }
+
+    #[test]
+    fn test_contributor_config_preset() {
+        // Test that a preset name parses and resolves correctly for contributors
+        let yaml = r#"contributors: apa"#;
+        let config: Config = serde_yaml::from_str(yaml).unwrap();
+        let contributors = config.contributors.unwrap();
+        assert_eq!(contributors.and, Some(AndOptions::Symbol));
+        assert_eq!(contributors.display_as_sort, Some(DisplayAsSort::First));
+    }
+
+    #[test]
+    fn test_date_config_preset() {
+        // Test that a preset name parses and resolves correctly for dates
+        let yaml = r#"dates: long"#;
+        let config: Config = serde_yaml::from_str(yaml).unwrap();
+        let dates = config.dates.unwrap();
+        assert_eq!(dates.month, MonthFormat::Long);
+    }
+
+    #[test]
+    fn test_titles_config_preset() {
+        // Test that a preset name parses and resolves correctly for titles
+        let yaml = r#"titles: chicago"#;
+        let config: Config = serde_yaml::from_str(yaml).unwrap();
+        let titles = config.titles.unwrap();
+        assert_eq!(titles.component.unwrap().quote, Some(true));
+        assert_eq!(titles.monograph.unwrap().emph, Some(true));
     }
 
     #[test]
@@ -319,7 +395,7 @@ contributors:
         // Processing should remain from base (not overridden)
         assert_eq!(base.processing, Some(Processing::AuthorDate));
 
-        // Contributors should be replaced by override (whole field replaced)
+        // Contributors should be merged with override values taking precedence
         assert_eq!(
             base.contributors.as_ref().unwrap().and,
             Some(AndOptions::Text)

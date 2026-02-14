@@ -362,13 +362,69 @@ bibliography:
       suppress: true  # Hide pages for journals
 ```
 
+### Presets (Shorthand Configuration)
+
+Options that support presets can be specified as a single string instead of an
+explicit configuration block. The preset expands to standard defaults at parse
+time. Use presets when the style closely matches a known pattern, and explicit
+config when you need fine-grained control.
+
+**Contributor presets** (`options.contributors`):
+- `apa` - First family-first, "&", ". " initials, 21/19 et al.
+- `chicago` - First family-first, "and", contextual comma
+- `vancouver` - All family-first, no conjunction, compact initials, 7/6 et al.
+- `harvard` - All family-first, "and", "." initials
+- `springer` - All family-first, no conjunction, space sort-separator, 5/3 et al.
+- `ieee` - Given-first, "and", ". " initials
+
+**Date presets** (`options.dates`):
+- `long` - Long month names, EDTF markers ("?", "ca. ", en-dash)
+- `short` - Short month names, EDTF markers
+- `numeric` - Numeric months, EDTF markers
+- `iso` - ISO numeric, no EDTF markers
+
+**Title presets** (`options.titles`):
+- `apa` - Articles plain, books/journals italic
+- `chicago` - Articles quoted, books/journals italic
+- `ieee` - Same as chicago
+- `humanities` - Articles plain, books/journals/series italic
+- `scientific` - All plain
+
+**Substitute presets** (`options.substitute`):
+- `standard` - Editor, Title, Translator
+- `editor-first` - Editor, Translator, Title
+- `title-first` - Title, Editor, Translator
+
+**Example using presets:**
+```yaml
+options:
+  contributors: apa        # Expands to full APA contributor config
+  dates: long              # Long months with EDTF markers
+  titles: apa              # Articles plain, books/journals italic
+  substitute: standard     # Editor -> Title -> Translator
+```
+
+**Example mixing preset with explicit override:**
+```yaml
+options:
+  # Can't use preset because we need custom overrides
+  contributors:
+    initialize-with: ". "
+    editor-label-format: short-suffix
+    demote-non-dropping-particle: never
+    delimiter-precedes-last: always
+    and: symbol
+  dates: long              # Preset works here
+  titles: apa              # Preset works here
+```
+
 ### Options Reference
 From `Config` in `csln_core/src/options/mod.rs`:
 - `processing` - author-date, numeric, note
-- `contributors` - Name formatting (initialize-with, and, display-as-sort, shorten)
-- `titles` - Title formatting by category (monograph, periodical, component)
-- `dates` - Date formatting defaults
-- `substitute` - Substitution rules for missing data
+- `contributors` - Name formatting (preset name or explicit config)
+- `titles` - Title formatting (preset name or explicit config by category)
+- `dates` - Date formatting (preset name or explicit config)
+- `substitute` - Substitution rules (preset name or explicit config)
 - `localize` - Locale settings
 
 ## Design Principles

@@ -7,6 +7,35 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+/// Contributor config: either a preset name or explicit configuration.
+///
+/// Allows styles to write `contributors: apa` as shorthand, or provide
+/// full explicit configuration with field-level overrides.
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(untagged)]
+pub enum ContributorConfigEntry {
+    /// A named preset (e.g., "apa", "chicago", "vancouver", "springer").
+    Preset(crate::presets::ContributorPreset),
+    /// Explicit contributor configuration.
+    Explicit(Box<ContributorConfig>),
+}
+
+impl Default for ContributorConfigEntry {
+    fn default() -> Self {
+        ContributorConfigEntry::Explicit(Box::default())
+    }
+}
+
+impl ContributorConfigEntry {
+    /// Resolve this entry to a concrete `ContributorConfig`.
+    pub fn resolve(&self) -> ContributorConfig {
+        match self {
+            ContributorConfigEntry::Preset(preset) => preset.config(),
+            ContributorConfigEntry::Explicit(config) => *config.clone(),
+        }
+    }
+}
+
 /// Contributor formatting configuration.
 #[derive(Debug, Default, PartialEq, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]

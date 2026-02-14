@@ -73,10 +73,14 @@ pub fn detect_contributor_preset(config: &ContributorConfig) -> Option<Contribut
         return Some(ContributorPreset::Apa);
     }
 
-    // Vancouver: all inverted, no "and"
+    // Vancouver/Springer: all inverted, no "and"
     if config.display_as_sort == Some(DisplayAsSort::All)
         && (config.and == Some(AndOptions::None) || config.and.is_none())
     {
+        // Springer has space sort-separator and lower et-al threshold
+        if config.sort_separator.as_deref() == Some(" ") {
+            return Some(ContributorPreset::Springer);
+        }
         return Some(ContributorPreset::Vancouver);
     }
 
@@ -85,17 +89,19 @@ pub fn detect_contributor_preset(config: &ContributorConfig) -> Option<Contribut
         return Some(ContributorPreset::Ieee);
     }
 
+    // Harvard: all inverted, text "and"
+    if config.display_as_sort == Some(DisplayAsSort::All) && config.and == Some(AndOptions::Text) {
+        return Some(ContributorPreset::Harvard);
+    }
+
     // Chicago: first inverted, text "and", contextual comma
     if config.display_as_sort == Some(DisplayAsSort::First) && config.and == Some(AndOptions::Text)
     {
-        // Chicago has contextual delimiter-precedes-last
         if let Some(dpl) = &config.delimiter_precedes_last {
             if *dpl == csln_core::options::DelimiterPrecedesLast::Contextual {
                 return Some(ContributorPreset::Chicago);
             }
         }
-        // Default to Harvard for text "and" + first-sort without contextual comma
-        return Some(ContributorPreset::Harvard);
     }
 
     None
@@ -146,14 +152,11 @@ pub fn detect_title_preset(config: &TitlesConfig) -> Option<TitlePreset> {
 pub fn detect_date_preset(config: &DateConfig) -> Option<DatePreset> {
     use csln_core::options::MonthFormat;
 
-    // ISO: numeric months
-    if config.month == MonthFormat::Numeric {
-        return Some(DatePreset::Iso);
+    match config.month {
+        MonthFormat::Numeric => Some(DatePreset::Numeric),
+        MonthFormat::Short => Some(DatePreset::Short),
+        MonthFormat::Long => Some(DatePreset::Long),
     }
-
-    // Most styles use long month format - default to year-only as it's most common
-    // in author-date styles
-    Some(DatePreset::YearOnly)
 }
 
 #[cfg(test)]
@@ -211,15 +214,30 @@ mod tests {
 
     #[test]
     fn test_detect_harvard_contributor() {
-        // Harvard is like Chicago but without contextual comma
+        // Harvard: all inverted, text "and"
         let config = ContributorConfig {
             and: Some(AndOptions::Text),
-            display_as_sort: Some(DisplayAsSort::First),
+            display_as_sort: Some(DisplayAsSort::All),
             ..Default::default()
         };
         assert_eq!(
             detect_contributor_preset(&config),
             Some(ContributorPreset::Harvard)
+        );
+    }
+
+    #[test]
+    fn test_detect_springer_contributor() {
+        // Springer: all inverted, no "and", space sort-separator
+        let config = ContributorConfig {
+            and: Some(AndOptions::None),
+            display_as_sort: Some(DisplayAsSort::All),
+            sort_separator: Some(" ".to_string()),
+            ..Default::default()
+        };
+        assert_eq!(
+            detect_contributor_preset(&config),
+            Some(ContributorPreset::Springer)
         );
     }
 
@@ -289,13 +307,13 @@ mod tests {
     }
 
     #[test]
-    fn test_detect_iso_date() {
+    fn test_detect_numeric_date() {
         use csln_core::options::MonthFormat;
 
         let config = DateConfig {
             month: MonthFormat::Numeric,
             ..Default::default()
         };
-        assert_eq!(detect_date_preset(&config), Some(DatePreset::Iso));
+        assert_eq!(detect_date_preset(&config), Some(DatePreset::Numeric));
     }
 }

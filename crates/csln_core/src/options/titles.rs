@@ -7,6 +7,35 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+/// Title config: either a preset name or explicit configuration.
+///
+/// Allows styles to write `titles: apa` as shorthand, or provide
+/// full explicit configuration with field-level overrides.
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(untagged)]
+pub enum TitlesConfigEntry {
+    /// A named preset (e.g., "apa", "chicago", "humanities", "scientific").
+    Preset(crate::presets::TitlePreset),
+    /// Explicit title configuration.
+    Explicit(Box<TitlesConfig>),
+}
+
+impl Default for TitlesConfigEntry {
+    fn default() -> Self {
+        TitlesConfigEntry::Explicit(Box::default())
+    }
+}
+
+impl TitlesConfigEntry {
+    /// Resolve this entry to a concrete `TitlesConfig`.
+    pub fn resolve(&self) -> TitlesConfig {
+        match self {
+            TitlesConfigEntry::Preset(preset) => preset.config(),
+            TitlesConfigEntry::Explicit(config) => *config.clone(),
+        }
+    }
+}
+
 /// Title formatting configuration by title type.
 #[derive(Debug, Default, PartialEq, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
