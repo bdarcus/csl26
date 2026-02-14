@@ -8,6 +8,9 @@ This guide describes the standard workflow for debugging and fixing rendering is
 # Process a bibliography with a style (default plain text)
 csln process references.json styles/apa-7th.yaml
 
+# Process with reference keys shown for debugging ([ITEM-1] ...)
+csln process references.json styles/apa-7th.yaml --show-keys
+
 # Convert a YAML style to binary CBOR for performance
 csln convert styles/apa-7th.yaml --output styles/apa-7th.cbor
 

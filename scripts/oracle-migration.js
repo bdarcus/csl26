@@ -171,13 +171,13 @@ function renderWithCsln(stylePath) {
     try {
         // Render bibliography
         const bibOutput = execSync(
-            `cargo run -q --bin csln -- process ${tmpFixture} ${cslnStylePath} --bib`,
+            `cargo run -q --bin csln -- process ${tmpFixture} ${cslnStylePath} --bib --show-keys`,
             { encoding: 'utf8', cwd: path.join(__dirname, '..') }
         );
 
         // Render citations
         const citeOutput = execSync(
-            `cargo run -q --bin csln -- process ${tmpFixture} ${cslnStylePath} --cite`,
+            `cargo run -q --bin csln -- process ${tmpFixture} ${cslnStylePath} --cite --show-keys`,
             { encoding: 'utf8', cwd: path.join(__dirname, '..') }
         );
 

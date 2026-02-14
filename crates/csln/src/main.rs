@@ -65,6 +65,10 @@ enum Commands {
         #[arg(short, long, value_delimiter = ',')]
         keys: Option<Vec<String>>,
 
+        /// Show reference keys/IDs in output (default: false)
+        #[arg(long)]
+        show_keys: bool,
+
         /// Output as JSON
         #[arg(long)]
         json: bool,
@@ -160,6 +164,7 @@ fn main() {
             mut bib,
             mut cite,
             keys,
+            show_keys,
             json,
             no_semantics,
         } => {
@@ -248,17 +253,38 @@ fn main() {
                 .unwrap_or_else(|| "unknown".to_string());
 
             if json {
-                print_json(&processor, &style_name, cite, bib, &item_ids);
+                print_json(&processor, &style_name, cite, bib, &item_ids, show_keys);
             } else {
                 match format {
                     Format::Plain => {
-                        print_human::<PlainText>(&processor, &style_name, cite, bib, &item_ids);
+                        print_human::<PlainText>(
+                            &processor,
+                            &style_name,
+                            cite,
+                            bib,
+                            &item_ids,
+                            show_keys,
+                        );
                     }
                     Format::Html => {
-                        print_human::<Html>(&processor, &style_name, cite, bib, &item_ids);
+                        print_human::<Html>(
+                            &processor,
+                            &style_name,
+                            cite,
+                            bib,
+                            &item_ids,
+                            show_keys,
+                        );
                     }
                     Format::Djot => {
-                        print_human::<Djot>(&processor, &style_name, cite, bib, &item_ids);
+                        print_human::<Djot>(
+                            &processor,
+                            &style_name,
+                            cite,
+                            bib,
+                            &item_ids,
+                            show_keys,
+                        );
                     }
                 }
             }
@@ -408,6 +434,7 @@ fn print_human<F>(
     show_cite: bool,
     show_bib: bool,
     item_ids: &[String],
+    show_keys: bool,
 ) where
     F: csln_processor::render::format::OutputFormat<Output = String>,
 {
@@ -426,7 +453,13 @@ fn print_human<F>(
                 ..Default::default()
             };
             match processor.process_citation_with_format::<F>(&citation) {
-                Ok(text) => println!("  [{}] {}", id, text),
+                Ok(text) => {
+                    if show_keys {
+                        println!("  [{}] {}", id, text);
+                    } else {
+                        println!("  {}", text);
+                    }
+                }
                 Err(e) => println!("  [{}] ERROR: {}", id, e),
             }
         }
@@ -444,7 +477,13 @@ fn print_human<F>(
                 ..Default::default()
             };
             match processor.process_citation_with_format::<F>(&citation) {
-                Ok(text) => println!("  [{}] {}", id, text),
+                Ok(text) => {
+                    if show_keys {
+                        println!("  [{}] {}", id, text);
+                    } else {
+                        println!("  {}", text);
+                    }
+                }
                 Err(e) => println!("  [{}] ERROR: {}", id, e),
             }
         }
@@ -459,7 +498,11 @@ fn print_human<F>(
             let text = csln_processor::render::refs_to_string_with_format::<F>(vec![entry.clone()]);
             let trimmed = text.trim();
             if !trimmed.is_empty() {
-                println!("  [{}] {}", entry.id, trimmed);
+                if show_keys {
+                    println!("  [{}] {}", entry.id, trimmed);
+                } else {
+                    println!("  {}", trimmed);
+                }
             }
         }
     }
@@ -471,6 +514,7 @@ fn print_json(
     show_cite: bool,
     show_bib: bool,
     item_ids: &[String],
+    _show_keys: bool,
 ) {
     use serde_json::json;
 

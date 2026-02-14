@@ -365,6 +365,9 @@ The `csln` binary is the primary entry point for processing and conversion.
 # Process a bibliography with a style (default plain text)
 csln process references.json styles/apa-7th.yaml
 
+# Show reference keys/IDs for debugging (e.g. [ITEM-1])
+csln process references.json styles/apa-7th.yaml --show-keys
+
 # Generate semantic HTML
 csln process references.json styles/apa-7th.yaml --format html
 

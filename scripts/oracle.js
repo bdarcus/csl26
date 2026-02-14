@@ -144,7 +144,7 @@ function renderWithCslnProcessor(stylePath) {
   let output;
   try {
     output = execSync(
-      `cargo run -q --bin csln -- process .migrated-refs.json .migrated-temp.yaml`,
+      `cargo run -q --bin csln -- process .migrated-refs.json .migrated-temp.yaml --show-keys`,
       { cwd: projectRoot, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }
     );
   } catch (e) {
@@ -169,13 +169,18 @@ function renderWithCslnProcessor(stylePath) {
     } else if (line.includes('BIBLIOGRAPHY:')) {
       section = 'bibliography';
       continue;
-    } else if (section === 'citations' && line.match(/\[.+\]\s*\[/)) {
-      const match = line.match(/\[([^\]]+)\]\s*(.+)/);
+    } else if (section === 'citations' && line.trim() && !line.includes('===')) {
+      const match = line.match(/^\s*\[([^\]]+)\]\s+(.+)/);
       if (match) {
         citations[match[1]] = match[2].trim();
       }
     } else if (section === 'bibliography' && line.trim() && !line.includes('===')) {
-      bibliography.push(line.trim());
+      const match = line.match(/^\s*\[([^\]]+)\]\s+(.+)/);
+      if (match) {
+        bibliography.push(match[2].trim());
+      } else {
+        bibliography.push(line.trim());
+      }
     }
   }
 
