@@ -147,8 +147,9 @@ function renderWithCiteprocJs(stylePath) {
 
     const bib = citeproc.makeBibliography();
     if (bib && bib[1]) {
+        const entryIds = bib[0].entry_ids;
         bib[1].forEach((entry, idx) => {
-            bibliography.push({ id: itemIds[idx], text: entry });
+            bibliography.push({ id: entryIds[idx][0], text: entry });
         });
     }
 
@@ -192,10 +193,11 @@ function renderWithCsln(stylePath) {
             }
         });
 
-        const bibLines = bibOutput.split('\n').filter(line => line.trim() && !line.includes('===') && !line.includes('BIBLIOGRAPHY'));
-        Object.keys(testItems).forEach((id, idx) => {
-            if (bibLines[idx]) {
-                bibliography.push({ id, text: bibLines[idx].trim() });
+        const bibLines = bibOutput.split('\n').filter(line => line.match(/^\s*\[ITEM-\d+\]/));
+        bibLines.forEach(line => {
+            const match = line.match(/^\s*\[(ITEM-\d+)\]\s+(.+)$/);
+            if (match) {
+                bibliography.push({ id: match[1], text: match[2] });
             }
         });
 
@@ -213,36 +215,47 @@ function compareOutputs(oracle, csln) {
     let bibliographyMatches = 0;
     const mismatches = [];
 
-    // Compare citations
-    for (let i = 0; i < oracle.citations.length; i++) {
-        const oracleCite = normalizeText(oracle.citations[i].text);
-        const cslnCite = csln.citations[i] ? normalizeText(csln.citations[i].text) : '';
+    // Build maps for CSLN outputs (indexed by ID)
+    const cslnCiteMap = new Map();
+    csln.citations.forEach(cite => {
+        cslnCiteMap.set(cite.id, normalizeText(cite.text));
+    });
 
-        if (oracleCite === cslnCite) {
+    const cslnBibMap = new Map();
+    csln.bibliography.forEach(bib => {
+        cslnBibMap.set(bib.id, normalizeText(bib.text));
+    });
+
+    // Compare citations by ID
+    for (const oracleCite of oracle.citations) {
+        const oracleText = normalizeText(oracleCite.text);
+        const cslnText = cslnCiteMap.get(oracleCite.id) || '';
+
+        if (oracleText === cslnText) {
             citationMatches++;
         } else {
             mismatches.push({
                 type: 'citation',
-                id: oracle.citations[i].id,
-                oracle: oracleCite,
-                csln: cslnCite
+                id: oracleCite.id,
+                oracle: oracleText,
+                csln: cslnText
             });
         }
     }
 
-    // Compare bibliography
-    for (let i = 0; i < oracle.bibliography.length; i++) {
-        const oracleBib = normalizeText(oracle.bibliography[i].text);
-        const cslnBib = csln.bibliography[i] ? normalizeText(csln.bibliography[i].text) : '';
+    // Compare bibliography by ID
+    for (const oracleBib of oracle.bibliography) {
+        const oracleText = normalizeText(oracleBib.text);
+        const cslnText = cslnBibMap.get(oracleBib.id) || '';
 
-        if (oracleBib === cslnBib) {
+        if (oracleText === cslnText) {
             bibliographyMatches++;
         } else {
             mismatches.push({
                 type: 'bibliography',
-                id: oracle.bibliography[i].id,
-                oracle: oracleBib,
-                csln: cslnBib
+                id: oracleBib.id,
+                oracle: oracleText,
+                csln: cslnText
             });
         }
     }

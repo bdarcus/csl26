@@ -3,7 +3,6 @@ SPDX-License-Identifier: MPL-2.0
 SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 */
 
-use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 
@@ -51,8 +50,10 @@ pub fn load_bibliography(path: &Path) -> Result<Bibliography, String> {
                 return Ok(bib);
             }
 
-            // Try HashMap of LegacyReference
-            if let Ok(map) = serde_json::from_slice::<HashMap<String, serde_json::Value>>(&bytes) {
+            // Try IndexMap of LegacyReference (preserves insertion order from JSON)
+            if let Ok(map) =
+                serde_json::from_slice::<indexmap::IndexMap<String, serde_json::Value>>(&bytes)
+            {
                 let mut found = false;
                 for (id, val) in map {
                     if let Ok(ref_item) = serde_json::from_value::<LegacyReference>(val) {
@@ -81,8 +82,10 @@ pub fn load_bibliography(path: &Path) -> Result<Bibliography, String> {
                 return Ok(bib);
             }
 
-            // Try parsing as HashMap<String, serde_yaml::Value> (YAML/JSON)
-            if let Ok(map) = serde_yaml::from_str::<HashMap<String, serde_yaml::Value>>(&content) {
+            // Try parsing as IndexMap<String, serde_yaml::Value> (YAML/JSON, preserves order)
+            if let Ok(map) =
+                serde_yaml::from_str::<indexmap::IndexMap<String, serde_yaml::Value>>(&content)
+            {
                 let mut found = false;
                 for (key, val) in map {
                     if let Ok(mut r) = serde_yaml::from_value::<InputReference>(val.clone()) {

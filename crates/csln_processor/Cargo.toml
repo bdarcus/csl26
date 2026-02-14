@@ -19,7 +19,7 @@ serde_cbor = "0.11"
 thiserror = "2.0"
 csln_edtf = { path = "../csln_edtf", features = ["serde"] }
 biblatex = "0.11"
-indexmap = "2.2.6"
+indexmap = { version = "2.2.6", features = ["serde"] }
 clap = { version = "4.4", features = ["derive"] }
 
 [dev-dependencies]

@@ -579,31 +579,33 @@ impl Locale {
     ) -> SimpleTerm {
         let long_str = long
             .as_ref()
-            .and_then(|v| match v {
-                raw::RawTermValue::Simple(s) => Some(s.clone()),
-                raw::RawTermValue::SingularPlural {
-                    singular,
-                    plural: p,
-                } => Some(if plural { p.clone() } else { singular.clone() }),
-                _ => None,
-            })
+            .and_then(|v| Self::extract_term_string(v, plural))
             .unwrap_or_default();
 
         let short_str = short
             .as_ref()
-            .and_then(|v| match v {
-                raw::RawTermValue::Simple(s) => Some(s.clone()),
-                raw::RawTermValue::SingularPlural {
-                    singular,
-                    plural: p,
-                } => Some(if plural { p.clone() } else { singular.clone() }),
-                _ => None,
-            })
+            .and_then(|v| Self::extract_term_string(v, plural))
             .unwrap_or_default();
 
         SimpleTerm {
             long: long_str,
             short: short_str,
+        }
+    }
+
+    fn extract_term_string(value: &raw::RawTermValue, plural: bool) -> Option<String> {
+        match value {
+            raw::RawTermValue::Simple(s) => Some(s.clone()),
+            raw::RawTermValue::SingularPlural {
+                singular,
+                plural: p,
+            } => Some(if plural { p.clone() } else { singular.clone() }),
+            raw::RawTermValue::Forms(forms) => {
+                let key = if plural { "plural" } else { "singular" };
+                forms
+                    .get(key)
+                    .and_then(|v| Self::extract_term_string(v, false))
+            }
         }
     }
 
