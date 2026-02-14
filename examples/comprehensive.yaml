@@ -52,6 +52,16 @@ references:
     issued: "2020"
     isbn: "9781588397096"
 
+  - id: chaucer_canterbury
+    type: book
+    keywords: [humanities, literature, medieval]
+    title: The Canterbury Tales
+    author:
+      family: Chaucer
+      given: Geoffrey
+    issued: "1387~"
+    note: Written circa 1387.
+
   # --- Social Sciences ---
   - id: berger_luckmann
     type: book
