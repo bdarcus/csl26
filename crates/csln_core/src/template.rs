@@ -528,7 +528,7 @@ pub struct TemplateList {
 }
 
 /// Delimiter punctuation options.
-#[derive(Debug, Default, Serialize, Deserialize, Clone, PartialEq, JsonSchema)]
+#[derive(Debug, Default, Serialize, Deserialize, Clone, PartialEq)]
 #[serde(rename_all = "kebab-case")]
 pub enum DelimiterPunctuation {
     #[default]
@@ -543,9 +543,23 @@ pub enum DelimiterPunctuation {
     Space,
     None,
     /// Custom delimiter string (e.g., ": ").
-    /// Use untagged to allow string input to map to this variant.
     #[serde(untagged)]
     Custom(String),
+}
+
+impl JsonSchema for DelimiterPunctuation {
+    fn schema_name() -> String {
+        "DelimiterPunctuation".into()
+    }
+
+    fn json_schema(_gen: &mut schemars::gen::SchemaGenerator) -> schemars::schema::Schema {
+        use schemars::schema::{InstanceType, SchemaObject};
+        SchemaObject {
+            instance_type: Some(InstanceType::String.into()),
+            ..Default::default()
+        }
+        .into()
+    }
 }
 
 impl DelimiterPunctuation {

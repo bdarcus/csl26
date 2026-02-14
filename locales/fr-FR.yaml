@@ -2,6 +2,18 @@ locale: fr-FR
 dates:
   months:
     long:
+      - janvier
+      - février
+      - mars
+      - avril
+      - mai
+      - juin
+      - juillet
+      - août
+      - septembre
+      - octobre
+      - novembre
+      - décembre
     short:
       - janv.
       - févr.
@@ -233,7 +245,7 @@ terms:
     long: album
   and:
     long: et
-    symbol: &
+    symbol: "&"
   and others:
     long: et autres
   anonymous:
@@ -241,7 +253,7 @@ terms:
     short: anon.
   at:
     long: sur
-    symbol: @
+    symbol: "@"
   audio_recording:
     long: enregistrement audio
     short: enr. audio
@@ -495,7 +507,7 @@ terms:
   colon:
     long: "&#160;:"
   comma:
-    long: ,
+    long: ","
   semicolon:
     long: "&#160;;"
   ordinal:

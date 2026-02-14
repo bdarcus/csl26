@@ -456,17 +456,18 @@ Benchmarks are currently focused on deserialization performance for styles and b
 
 ### JSON Schema Generation
 
-You can generate a formal JSON Schema for CSLN styles using the CLI:
+You can generate formal JSON Schemas for all CSLN models using the CLI:
 
 ```bash
-# Output schema to stdout
-csln schema
+# Output specific schema to stdout (style, bib, locale, citation)
+csln schema style
+csln schema bib
 
-# Save to file
-csln schema > csln.schema.json
+# Save all schemas to a directory
+csln schema --out-dir ./schemas
 ```
 
-This schema can be used to validate styles or provide intellisense in editors like VS Code.
+These schemas can be used to validate your files or provide intellisense in editors like VS Code.
 
 ## Roadmap
 

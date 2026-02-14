@@ -49,7 +49,7 @@ citation:
             form: year
             fallback:
               - term: no-date
-        delimiter: ", "
+        delimiter: comma
       - variable: locator
         prefix: ", "
 
@@ -129,7 +129,7 @@ bibliography:
     - items:
         - variable: publisher-place
         - variable: publisher
-      delimiter: ": "
+      delimiter: period
       suffix: "."
       overrides:
         article-journal: { suppress: true }

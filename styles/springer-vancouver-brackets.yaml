@@ -79,7 +79,7 @@ bibliography:
     - number: volume
       suffix: ':'
     - number: pages
-    delimiter: ''
+    delimiter: none
     overrides:
       article-journal:
         suppress: false

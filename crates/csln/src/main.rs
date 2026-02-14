@@ -24,12 +24,21 @@ enum DataType {
     Style,
     Bib,
     Locale,
+    Citation,
 }
 
 #[derive(Subcommand)]
 enum Commands {
-    /// Generate JSON schema for CSLN styles
-    Schema,
+    /// Generate JSON schema for CSLN models
+    Schema {
+        /// Data type (style, bib, locale, citation)
+        #[arg(index = 1, value_enum)]
+        r#type: Option<DataType>,
+
+        /// Output directory to export all schemas
+        #[arg(short, long)]
+        out_dir: Option<PathBuf>,
+    },
     /// Process a bibliography and citations
     Process {
         /// Path to the references file (CSLN YAML/JSON or CSL-JSON)
@@ -110,9 +119,39 @@ fn main() {
     let cli = Cli::parse();
 
     match cli.command {
-        Commands::Schema => {
-            let schema = schema_for!(Style);
-            println!("{}", serde_json::to_string_pretty(&schema).unwrap());
+        Commands::Schema { r#type, out_dir } => {
+            if let Some(dir) = out_dir {
+                fs::create_dir_all(&dir).expect("Failed to create output directory");
+                let types = [
+                    (DataType::Style, "style.json"),
+                    (DataType::Bib, "bib.json"),
+                    (DataType::Locale, "locale.json"),
+                    (DataType::Citation, "citation.json"),
+                ];
+                for (t, filename) in types {
+                    let schema = match t {
+                        DataType::Style => schema_for!(Style),
+                        DataType::Bib => schema_for!(InputBibliography),
+                        DataType::Locale => schema_for!(RawLocale),
+                        DataType::Citation => schema_for!(Citation),
+                    };
+                    let path = dir.join(filename);
+                    fs::write(&path, serde_json::to_string_pretty(&schema).unwrap())
+                        .expect("Failed to write schema file");
+                }
+                println!("Schemas exported to {}", dir.display());
+            } else if let Some(t) = r#type {
+                let schema = match t {
+                    DataType::Style => schema_for!(Style),
+                    DataType::Bib => schema_for!(InputBibliography),
+                    DataType::Locale => schema_for!(RawLocale),
+                    DataType::Citation => schema_for!(Citation),
+                };
+                println!("{}", serde_json::to_string_pretty(&schema).unwrap());
+            } else {
+                eprintln!("Error: specify a type (style, bib, locale, citation) or --out-dir");
+                std::process::exit(1);
+            }
         }
         Commands::Process {
             references,
@@ -273,6 +312,8 @@ fn main() {
                 let stem = input.file_stem().and_then(|s| s.to_str()).unwrap_or("");
                 if stem.contains("bib") || stem.contains("ref") {
                     DataType::Bib
+                } else if stem.contains("cite") || stem.contains("citation") {
+                    DataType::Citation
                 } else if stem.len() == 5 && stem.contains('-') {
                     // e.g. en-US
                     DataType::Locale
@@ -302,6 +343,12 @@ fn main() {
                 DataType::Locale => {
                     let locale: RawLocale = deserialize_any(&input_bytes, input_ext);
                     let out_bytes = serialize_any(&locale, output_ext);
+                    fs::write(&output, out_bytes).expect("Failed to write output");
+                }
+                DataType::Citation => {
+                    let citations: csln_core::citation::Citations =
+                        deserialize_any(&input_bytes, input_ext);
+                    let out_bytes = serialize_any(&citations, output_ext);
                     fs::write(&output, out_bytes).expect("Failed to write output");
                 }
             }

@@ -3,12 +3,13 @@ SPDX-License-Identifier: MPL-2.0
 SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 */
 
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 /// Raw locale format for YAML parsing.
 /// This is a simpler format that uses string keys for terms.
-#[derive(Debug, Default, Deserialize, Serialize, Clone)]
+#[derive(Debug, Default, Deserialize, Serialize, Clone, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct RawLocale {
     /// The locale identifier (e.g., "en-US", "de-DE").
@@ -25,7 +26,7 @@ pub struct RawLocale {
 }
 
 /// Raw date terms for YAML parsing.
-#[derive(Debug, Default, Deserialize, Serialize, Clone)]
+#[derive(Debug, Default, Deserialize, Serialize, Clone, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub struct RawDateTerms {
     #[serde(default)]
@@ -39,7 +40,7 @@ pub struct RawDateTerms {
 }
 
 /// Raw month names for YAML parsing.
-#[derive(Debug, Default, Deserialize, Serialize, Clone)]
+#[derive(Debug, Default, Deserialize, Serialize, Clone, JsonSchema)]
 pub struct RawMonthNames {
     #[serde(default)]
     pub long: Vec<String>,
@@ -48,7 +49,7 @@ pub struct RawMonthNames {
 }
 
 /// Raw role term with form-keyed values.
-#[derive(Debug, Default, Deserialize, Serialize, Clone)]
+#[derive(Debug, Default, Deserialize, Serialize, Clone, JsonSchema)]
 pub struct RawRoleTerm {
     #[serde(default)]
     pub long: Option<RawTermValue>,
@@ -61,7 +62,7 @@ pub struct RawRoleTerm {
 }
 
 /// A term value that can be a simple string or have singular/plural forms.
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]
 #[serde(untagged)]
 pub enum RawTermValue {
     /// Simple string value.

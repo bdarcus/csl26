@@ -78,7 +78,7 @@ bibliography:
             book:
               suppress: true
         delimiter: " "
-      delimiter: ", "
+      delimiter: comma
     - variable: publisher
     - variable: publisher-place
     - date: issued
@@ -103,4 +103,4 @@ bibliography:
       links:
         target: doi
         anchor: component
-    delimiter: ", "
+    delimiter: comma

@@ -454,15 +454,15 @@ terms:
   close_inner_quote:
     long: ‘
   page_range_delimiter:
-    long: –
+    long: "–"
   colon:
     long: ":"
   comma:
-    long: ,
+    long: ","
   semicolon:
-    long: ;
+    long: ";"
   ordinal:
-    long: .
+    long: "."
   long_ordinal_01:
     long: erster
   long_ordinal_02:
