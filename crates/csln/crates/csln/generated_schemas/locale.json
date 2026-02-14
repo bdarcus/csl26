@@ -1,0 +1,190 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "RawLocale",
+  "description": "Raw locale format for YAML parsing. This is a simpler format that uses string keys for terms.",
+  "type": "object",
+  "required": [
+    "locale"
+  ],
+  "properties": {
+    "dates": {
+      "description": "Date-related terms.",
+      "default": {
+        "months": {
+          "long": [],
+          "short": []
+        },
+        "open-ended-term": null,
+        "seasons": [],
+        "uncertainty-term": null
+      },
+      "allOf": [
+        {
+          "$ref": "#/definitions/RawDateTerms"
+        }
+      ]
+    },
+    "locale": {
+      "description": "The locale identifier (e.g., \"en-US\", \"de-DE\").",
+      "type": "string"
+    },
+    "roles": {
+      "description": "Role terms keyed by role name.",
+      "default": {},
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/definitions/RawRoleTerm"
+      }
+    },
+    "terms": {
+      "description": "General terms keyed by term name.",
+      "default": {},
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/definitions/RawTermValue"
+      }
+    }
+  },
+  "definitions": {
+    "RawDateTerms": {
+      "description": "Raw date terms for YAML parsing.",
+      "type": "object",
+      "properties": {
+        "months": {
+          "default": {
+            "long": [],
+            "short": []
+          },
+          "allOf": [
+            {
+              "$ref": "#/definitions/RawMonthNames"
+            }
+          ]
+        },
+        "open-ended-term": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "seasons": {
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "uncertainty-term": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "RawMonthNames": {
+      "description": "Raw month names for YAML parsing.",
+      "type": "object",
+      "properties": {
+        "long": {
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "short": {
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "RawRoleTerm": {
+      "description": "Raw role term with form-keyed values.",
+      "type": "object",
+      "properties": {
+        "long": {
+          "default": null,
+          "anyOf": [
+            {
+              "$ref": "#/definitions/RawTermValue"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "short": {
+          "default": null,
+          "anyOf": [
+            {
+              "$ref": "#/definitions/RawTermValue"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "verb": {
+          "default": null,
+          "anyOf": [
+            {
+              "$ref": "#/definitions/RawTermValue"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "verb-short": {
+          "default": null,
+          "anyOf": [
+            {
+              "$ref": "#/definitions/RawTermValue"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "RawTermValue": {
+      "description": "A term value that can be a simple string or have singular/plural forms.",
+      "anyOf": [
+        {
+          "description": "Simple string value.",
+          "type": "string"
+        },
+        {
+          "description": "Form-keyed value (for terms with long/short forms).",
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/RawTermValue"
+          }
+        },
+        {
+          "description": "Singular/plural forms.",
+          "type": "object",
+          "required": [
+            "plural",
+            "singular"
+          ],
+          "properties": {
+            "plural": {
+              "type": "string"
+            },
+            "singular": {
+              "type": "string"
+            }
+          }
+        }
+      ]
+    }
+  }
+}

@@ -468,10 +468,10 @@ node scripts/oracle-simple.js styles-legacy/apa.csl
 ./scripts/prep-migration.sh styles-legacy/apa.csl
 
 # Run CSLN processor
-cargo run --bin csln-processor -- styles/apa-7th.yaml
+cargo run --bin csln -- process tests/fixtures/references-expanded.json styles/apa-7th.yaml
 
 # Generate JSON Schema
-cargo run --bin csln-cli -- schema > csln.schema.json
+cargo run --bin csln -- schema > csln.schema.json
 
 # Analyze all styles for feature usage
 cargo run --bin csln-analyze -- styles-legacy/

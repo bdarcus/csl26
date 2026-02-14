@@ -31,7 +31,7 @@ const testItems = Object.fromEntries(
 );
 
 /**
- * Render CSLN YAML style with csln-processor.
+ * Render CSLN YAML style with csln process.
  * @param {string} yamlPath - Path to CSLN YAML file
  * @returns {{ citations: Object, bibliography: Array }|null}
  */
@@ -42,7 +42,7 @@ function renderWithCslnYaml(yamlPath) {
   let output;
   try {
     output = execSync(
-      `cargo run -q --bin csln-processor -- "${absYamlPath}"`,
+      `cargo run -q --bin csln -- process tests/fixtures/references-expanded.json "${absYamlPath}"`,
       { cwd: projectRoot, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }
     );
   } catch (e) {

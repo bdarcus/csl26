@@ -1,0 +1,145 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Citation",
+  "description": "A citation containing one or more references.",
+  "type": "object",
+  "required": [
+    "items"
+  ],
+  "properties": {
+    "id": {
+      "description": "The citation ID (optional, for tracking).",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "items": {
+      "description": "The citation items (references being cited).",
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/CitationItem"
+      }
+    },
+    "mode": {
+      "description": "Citation mode: integral (narrative) vs non-integral (parenthetical). Only relevant for author-date styles.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/CitationMode"
+        }
+      ]
+    },
+    "note-number": {
+      "description": "Note number for footnote/endnote styles. Assigned by the document processor, not the citation processor.",
+      "type": [
+        "integer",
+        "null"
+      ],
+      "format": "uint32",
+      "minimum": 0.0
+    },
+    "prefix": {
+      "description": "Prefix text before all citation items.",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "suffix": {
+      "description": "Suffix text after all citation items.",
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "definitions": {
+    "CitationItem": {
+      "description": "A single citation item referencing a bibliography entry.",
+      "type": "object",
+      "required": [
+        "id"
+      ],
+      "properties": {
+        "id": {
+          "description": "The reference ID (citekey).",
+          "type": "string"
+        },
+        "label": {
+          "description": "Locator type (page, chapter, etc.)",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/LocatorType"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "locator": {
+          "description": "Locator value (e.g., \"42-45\" for pages)",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "prefix": {
+          "description": "Prefix text before this item",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "suffix": {
+          "description": "Suffix text after this item",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "CitationMode": {
+      "description": "Citation mode for author-date styles.\n\nDetermines how the author name is rendered relative to the citation.",
+      "oneOf": [
+        {
+          "description": "Author inline in text: \"Smith (2020) argues...\" Also known as \"narrative\" or \"in-text\" citations.",
+          "type": "string",
+          "enum": [
+            "integral"
+          ]
+        },
+        {
+          "description": "Author in parentheses: \"(Smith, 2020)\" The default mode for most citations.",
+          "type": "string",
+          "enum": [
+            "non-integral"
+          ]
+        }
+      ]
+    },
+    "LocatorType": {
+      "description": "Locator types for pinpoint citations.",
+      "type": "string",
+      "enum": [
+        "book",
+        "chapter",
+        "column",
+        "figure",
+        "folio",
+        "line",
+        "note",
+        "number",
+        "opus",
+        "page",
+        "paragraph",
+        "part",
+        "section",
+        "sub-verbo",
+        "verse",
+        "volume",
+        "issue"
+      ]
+    }
+  }
+}

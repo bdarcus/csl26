@@ -416,7 +416,7 @@ node oracle.js ../styles-legacy/apa.csl --bib        # Bibliography only
 node oracle.js ../styles-legacy/apa.csl --json       # JSON output for scripting
 
 # oracle-e2e.js - End-to-end migration test
-# Migrates CSL 1.0 → CSLN → csln-processor, then compares with citeproc-js
+# Migrates CSL 1.0 → CSLN → csln process, then compares with citeproc-js
 node oracle-e2e.js ../styles-legacy/apa.csl
 ```
 

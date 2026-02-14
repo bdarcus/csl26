@@ -81,11 +81,11 @@ function renderWithCslnProcessor(stylePath) {
   const tempFile = path.join(projectRoot, '.migrated-temp.yaml');
   fs.writeFileSync(tempFile, migratedYaml);
 
-  // Run csln_processor
+  // Run csln process
   let output;
   try {
     output = execSync(
-      `cargo run -q --bin csln-processor -- .migrated-temp.yaml`,
+      `cargo run -q --bin csln -- process tests/fixtures/references-expanded.json .migrated-temp.yaml`,
       { cwd: projectRoot, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }
     );
   } catch (e) {

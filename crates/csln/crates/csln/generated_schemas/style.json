@@ -1,0 +1,2845 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Style",
+  "description": "The new CSLN Style model.\n\nThis is the target schema for CSLN, featuring declarative options and simple template components instead of procedural conditionals.",
+  "type": "object",
+  "required": [
+    "info"
+  ],
+  "properties": {
+    "bibliography": {
+      "description": "Bibliography specification.",
+      "anyOf": [
+        {
+          "$ref": "#/definitions/BibliographySpec"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "citation": {
+      "description": "Citation specification.",
+      "anyOf": [
+        {
+          "$ref": "#/definitions/CitationSpec"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "info": {
+      "description": "Style metadata.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/StyleInfo"
+        }
+      ]
+    },
+    "options": {
+      "description": "Global style options.",
+      "anyOf": [
+        {
+          "$ref": "#/definitions/Config"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "templates": {
+      "description": "Named reusable templates.",
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/TemplateComponent"
+        }
+      }
+    },
+    "version": {
+      "description": "Style schema version.",
+      "default": "1.0",
+      "type": "string"
+    }
+  },
+  "additionalProperties": true,
+  "definitions": {
+    "AndOptions": {
+      "description": "Conjunction options between contributors.",
+      "oneOf": [
+        {
+          "description": "Use the localized term for \"and\" (e.g., \"and\" in English).",
+          "type": "string",
+          "enum": [
+            "text"
+          ]
+        },
+        {
+          "description": "Use the localized symbol for \"and\" (e.g., \"&\" in English).",
+          "type": "string",
+          "enum": [
+            "symbol"
+          ]
+        },
+        {
+          "description": "No conjunction (e.g., \"Smith, Jones\").",
+          "type": "string",
+          "enum": [
+            "none"
+          ]
+        },
+        {
+          "description": "Context-sensitive conjunction based on the citation mode.\n\nThis allows styles like APA 7th to use \"and\" in narrative (integral) citations but \"&\" in parenthetical (non-integral) ones.",
+          "type": "object",
+          "required": [
+            "mode-dependent"
+          ],
+          "properties": {
+            "mode-dependent": {
+              "type": "object",
+              "required": [
+                "integral",
+                "non-integral"
+              ],
+              "properties": {
+                "integral": {
+                  "description": "The option to use for integral/narrative citations (e.g., \"Smith and Jones\").",
+                  "allOf": [
+                    {
+                      "$ref": "#/definitions/AndOptions"
+                    }
+                  ]
+                },
+                "non-integral": {
+                  "description": "The option to use for non-integral/parenthetical citations (e.g., \"(Smith & Jones)\"). Also typically serves as the default for bibliographies.",
+                  "allOf": [
+                    {
+                      "$ref": "#/definitions/AndOptions"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "AndOtherOptions": {
+      "description": "How to render \"and others\" / et al.",
+      "type": "string",
+      "enum": [
+        "et-al",
+        "text"
+      ]
+    },
+    "BibliographyConfig": {
+      "description": "Bibliography-specific configuration.",
+      "type": "object",
+      "properties": {
+        "entry-suffix": {
+          "description": "Suffix appended to each bibliography entry (e.g., \".\"). Extracted from CSL 1.0 `<layout suffix=\".\">` attribute. If None, a trailing period is added by default unless entry ends with DOI/URL.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "hanging-indent": {
+          "description": "Whether to use a hanging indent.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "separator": {
+          "description": "Separator between bibliography components (e.g., \". \" for Chicago/APA, \", \" for Elsevier). Extracted from CSL 1.0 group delimiter attribute. Defaults to \". \" if not specified.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "subsequent-author-substitute": {
+          "description": "String to substitute for repeating authors (e.g., \"———\").",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "subsequent-author-substitute-rule": {
+          "description": "Rule for when to apply the substitute.",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/SubsequentAuthorSubstituteRule"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "suppress-period-after-url": {
+          "description": "Whether to suppress the trailing period after URLs/DOIs. Default behavior is to add a period (Chicago, MLA style). Set to true to suppress the period (APA 7th, Bluebook style).",
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": true
+    },
+    "BibliographySpec": {
+      "description": "Bibliography specification.",
+      "type": "object",
+      "properties": {
+        "options": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Config"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "template": {
+          "description": "The default template for bibliography entries.",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "$ref": "#/definitions/TemplateComponent"
+          }
+        },
+        "type-templates": {
+          "description": "Type-specific template overrides. When present, replaces the default template for entries of the specified types. Keys are reference type names (e.g., \"chapter\", \"article-journal\").",
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/TemplateComponent"
+            }
+          }
+        },
+        "use-preset": {
+          "description": "Reference to an embedded template preset. If both `use_preset` and `template` are present, `template` takes precedence.",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/TemplatePreset"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": true
+    },
+    "CitationSpec": {
+      "description": "Citation specification.",
+      "type": "object",
+      "properties": {
+        "delimiter": {
+          "description": "Delimiter between components within a single citation item (e.g., \", \" or \" \"). Defaults to \", \".",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "integral": {
+          "description": "Configuration for integral (narrative) citations (e.g., \"Smith (2020)\"). Overrides fields from the main citation spec when mode is Integral.",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/CitationSpec"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "multi-cite-delimiter": {
+          "description": "Delimiter between multiple citation items (e.g., \"; \"). Defaults to \"; \".",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "non-integral": {
+          "description": "Configuration for non-integral (parenthetical) citations (e.g., \"(Smith, 2020)\"). Overrides fields from the main citation spec when mode is NonIntegral.",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/CitationSpec"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "options": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Config"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "prefix": {
+          "description": "Prefix for the citation (use only when `wrap` doesn't suffice, e.g., \" (\" or \"[Ref \").",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "suffix": {
+          "description": "Suffix for the citation (use only when `wrap` doesn't suffice).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "template": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "$ref": "#/definitions/TemplateComponent"
+          }
+        },
+        "use-preset": {
+          "description": "Reference to an embedded template preset. If both `use_preset` and `template` are present, `template` takes precedence.",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/TemplatePreset"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "wrap": {
+          "description": "Wrap the entire citation in punctuation. Preferred over prefix/suffix.",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/WrapPunctuation"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": true
+    },
+    "Config": {
+      "description": "Top-level style configuration.",
+      "type": "object",
+      "properties": {
+        "bibliography": {
+          "description": "Bibliography-specific settings.",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/BibliographyConfig"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "contributors": {
+          "description": "Contributor formatting defaults.",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/ContributorConfig"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "dates": {
+          "description": "Date formatting defaults.",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/DateConfig"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "links": {
+          "description": "Hyperlink configuration.",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/LinksConfig"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "localize": {
+          "description": "Localization settings.",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Localize"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "multilingual": {
+          "description": "Multilingual rendering defaults.",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/MultilingualConfig"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "page-range-format": {
+          "description": "Page range formatting (expanded, minimal, chicago).",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/PageRangeFormat"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "processing": {
+          "description": "Processing mode (author-date, numeric, etc.).",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Processing"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "punctuation-in-quote": {
+          "description": "Whether to place periods/commas inside quotation marks. true = American style (\"text.\"), false = British style (\"text\".) Defaults to false; en-US locale typically sets this to true.",
+          "type": "boolean"
+        },
+        "semantic-classes": {
+          "description": "Whether to output semantic markup (HTML spans, Djot attributes). Defaults to true.",
+          "default": true,
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "substitute": {
+          "description": "Substitution rules for missing data.",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/SubstituteConfig"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "titles": {
+          "description": "Title formatting defaults.",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/TitlesConfig"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "volume-pages-delimiter": {
+          "description": "Delimiter between volume/issue and pages for serial sources. Processor adds trailing space when rendering. Examples: Comma (APA \", \"), Colon (Chicago \": \").",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/DelimiterPunctuation"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": true
+    },
+    "ContributorConfig": {
+      "description": "Contributor formatting configuration.",
+      "type": "object",
+      "properties": {
+        "and": {
+          "description": "Conjunction between last two contributors.",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/AndOptions"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "delimiter": {
+          "description": "The delimiter between contributors.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "delimiter-precedes-et-al": {
+          "description": "When to include delimiter before \"et al.\".",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/DelimiterPrecedesLast"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "delimiter-precedes-last": {
+          "description": "When to include delimiter before the last contributor.",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/DelimiterPrecedesLast"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "demote-non-dropping-particle": {
+          "description": "Handling of non-dropping particles (e.g., \"van\" in \"van Gogh\").",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/DemoteNonDroppingParticle"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "display-as-sort": {
+          "description": "When to display a contributor's name in sort order.",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/DisplayAsSort"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "editor-label-format": {
+          "description": "Global format for editor labels.",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/EditorLabelFormat"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "initialize-with": {
+          "description": "String to append after initialized given names (e.g., \". \" for \"J. Smith\"). If None, full given names are used (e.g., \"John Smith\").",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "initialize-with-hyphen": {
+          "description": "Whether to include a hyphen when initializing names (e.g., \"J.-P. Sartre\").",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "role": {
+          "description": "When and how to display contributor roles.",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/RoleOptions"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "shorten": {
+          "description": "Shorten the list of contributors (et al. handling).",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/ShortenListOptions"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "sort-separator": {
+          "description": "Delimiter between family and given name when inverted (default: \", \").",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": true
+    },
+    "ContributorForm": {
+      "description": "How to render contributor names.",
+      "type": "string",
+      "enum": [
+        "long",
+        "short",
+        "verb",
+        "verb-short"
+      ]
+    },
+    "ContributorRole": {
+      "description": "Contributor roles.",
+      "type": "string",
+      "enum": [
+        "author",
+        "editor",
+        "translator",
+        "director",
+        "publisher",
+        "recipient",
+        "interviewer",
+        "interviewee",
+        "inventor",
+        "counsel",
+        "composer",
+        "collection-editor",
+        "container-author",
+        "editorial-director",
+        "illustrator",
+        "original-author",
+        "reviewed-author"
+      ]
+    },
+    "DateConfig": {
+      "description": "Date formatting configuration.",
+      "type": "object",
+      "required": [
+        "month"
+      ],
+      "properties": {
+        "approximation-marker": {
+          "description": "Marker for approximate dates (e.g., \"ca. \" or \"~\"). None suppresses display.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "month": {
+          "$ref": "#/definitions/MonthFormat"
+        },
+        "open-range-marker": {
+          "description": "Marker for open-ended ranges (e.g., \"–present\"). None uses locale default.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "range-delimiter": {
+          "description": "Delimiter for date ranges (default: en-dash \"–\").",
+          "default": "–",
+          "type": "string"
+        },
+        "uncertainty-marker": {
+          "description": "Marker for uncertain dates (e.g., \"?\" or \"uncertain\"). None suppresses display.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": true
+    },
+    "DateForm": {
+      "description": "Date rendering forms.",
+      "type": "string",
+      "enum": [
+        "year",
+        "year-month",
+        "full",
+        "month-day"
+      ]
+    },
+    "DateVariable": {
+      "description": "Date variables.",
+      "type": "string",
+      "enum": [
+        "issued",
+        "accessed",
+        "original-published",
+        "submitted",
+        "event-date"
+      ]
+    },
+    "DelimiterPrecedesLast": {
+      "description": "When to use delimiter before last contributor.",
+      "type": "string",
+      "enum": [
+        "after-inverted-name",
+        "always",
+        "never",
+        "contextual"
+      ]
+    },
+    "DelimiterPunctuation": {
+      "description": "Delimiter punctuation options.",
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "null"
+        },
+        {
+          "type": "null"
+        },
+        {
+          "type": "null"
+        },
+        {
+          "type": "null"
+        },
+        {
+          "type": "null"
+        },
+        {
+          "type": "null"
+        },
+        {
+          "type": "null"
+        },
+        {
+          "type": "null"
+        },
+        {
+          "type": "null"
+        },
+        {
+          "description": "Custom delimiter string (e.g., \": \").",
+          "type": "string"
+        }
+      ]
+    },
+    "DemoteNonDroppingParticle": {
+      "description": "Options for demoting non-dropping particles.",
+      "type": "string",
+      "enum": [
+        "never",
+        "sort-only",
+        "display-and-sort"
+      ]
+    },
+    "Disambiguation": {
+      "description": "Disambiguation settings.",
+      "type": "object",
+      "required": [
+        "names",
+        "year-suffix"
+      ],
+      "properties": {
+        "add-givenname": {
+          "default": false,
+          "type": "boolean"
+        },
+        "names": {
+          "type": "boolean"
+        },
+        "year-suffix": {
+          "type": "boolean"
+        }
+      }
+    },
+    "DisplayAsSort": {
+      "description": "When to display names in sort order (family-first).",
+      "type": "string",
+      "enum": [
+        "all",
+        "first",
+        "none"
+      ]
+    },
+    "EditorLabelFormat": {
+      "description": "Format for editor labels.",
+      "oneOf": [
+        {
+          "description": "\"edited by John Doe\"",
+          "type": "string",
+          "enum": [
+            "verb-prefix"
+          ]
+        },
+        {
+          "description": "\"John Doe (Ed.)\"",
+          "type": "string",
+          "enum": [
+            "short-suffix"
+          ]
+        },
+        {
+          "description": "\"John Doe, editor\"",
+          "type": "string",
+          "enum": [
+            "long-suffix"
+          ]
+        }
+      ]
+    },
+    "GeneralTerm": {
+      "description": "A list of general terms for citation formatting.",
+      "type": "string",
+      "enum": [
+        "in",
+        "accessed",
+        "retrieved",
+        "at",
+        "from",
+        "by",
+        "no-date",
+        "anonymous",
+        "circa",
+        "available-at",
+        "ibid",
+        "and",
+        "et-al",
+        "and-others",
+        "forthcoming",
+        "online",
+        "review-of",
+        "original-work-published"
+      ]
+    },
+    "Group": {
+      "description": "Grouping configuration for bibliography.",
+      "type": "object",
+      "required": [
+        "template"
+      ],
+      "properties": {
+        "template": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/SortKey"
+          }
+        }
+      }
+    },
+    "LabelForm": {
+      "description": "Label rendering forms.",
+      "type": "string",
+      "enum": [
+        "long",
+        "short",
+        "symbol"
+      ]
+    },
+    "LinkAnchor": {
+      "description": "Link anchor options.",
+      "oneOf": [
+        {
+          "description": "Link the title component.",
+          "type": "string",
+          "enum": [
+            "title"
+          ]
+        },
+        {
+          "description": "Link the URL component itself.",
+          "type": "string",
+          "enum": [
+            "url"
+          ]
+        },
+        {
+          "description": "Link the DOI component itself.",
+          "type": "string",
+          "enum": [
+            "doi"
+          ]
+        },
+        {
+          "description": "Link the specific component this config is attached to.",
+          "type": "string",
+          "enum": [
+            "component"
+          ]
+        },
+        {
+          "description": "Link the entire bibliography entry.",
+          "type": "string",
+          "enum": [
+            "entry"
+          ]
+        }
+      ]
+    },
+    "LinkTarget": {
+      "description": "Link target options.",
+      "type": "string",
+      "enum": [
+        "url",
+        "doi",
+        "url-or-doi",
+        "pubmed",
+        "pmcid"
+      ]
+    },
+    "LinksConfig": {
+      "description": "Structured link options.",
+      "type": "object",
+      "properties": {
+        "anchor": {
+          "description": "What text should be hyperlinked (title, url, etc.).",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/LinkAnchor"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "doi": {
+          "description": "Link value to the item's DOI.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "target": {
+          "description": "The target for the link (url, doi, etc.).",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/LinkTarget"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "url": {
+          "description": "Link value to the item's URL.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      }
+    },
+    "Localize": {
+      "description": "Localization scope settings.",
+      "type": "object",
+      "required": [
+        "scope"
+      ],
+      "properties": {
+        "scope": {
+          "$ref": "#/definitions/Scope"
+        }
+      }
+    },
+    "MonthFormat": {
+      "description": "Month display format.",
+      "type": "string",
+      "enum": [
+        "long",
+        "short",
+        "numeric"
+      ]
+    },
+    "MultilingualConfig": {
+      "description": "Multilingual rendering options.",
+      "type": "object",
+      "properties": {
+        "name-mode": {
+          "description": "Preferred rendering mode for names.",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/MultilingualMode"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "preferred-script": {
+          "description": "Preferred script for transliterations (e.g., \"Latn\").",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "scripts": {
+          "description": "Script-specific behavior configuration.",
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/ScriptConfig"
+          }
+        },
+        "title-mode": {
+          "description": "Preferred rendering mode for titles.",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/MultilingualMode"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "MultilingualMode": {
+      "description": "Rendering modes for multilingual content.",
+      "oneOf": [
+        {
+          "description": "Use original script.",
+          "type": "string",
+          "enum": [
+            "primary"
+          ]
+        },
+        {
+          "description": "Use transliteration.",
+          "type": "string",
+          "enum": [
+            "transliterated"
+          ]
+        },
+        {
+          "description": "Use translation matching style locale.",
+          "type": "string",
+          "enum": [
+            "translated"
+          ]
+        },
+        {
+          "description": "Combine multiple views (e.g., \"transliterated [translated]\"). For now, this is a placeholder for more complex formatting strings.",
+          "type": "string",
+          "enum": [
+            "combined"
+          ]
+        }
+      ]
+    },
+    "NameOrder": {
+      "description": "Name display order.",
+      "oneOf": [
+        {
+          "description": "Display as \"Given Family\" (e.g., \"John Smith\").",
+          "type": "string",
+          "enum": [
+            "given-first"
+          ]
+        },
+        {
+          "description": "Display as \"Family, Given\" (e.g., \"Smith, John\").",
+          "type": "string",
+          "enum": [
+            "family-first"
+          ]
+        }
+      ]
+    },
+    "NumberForm": {
+      "description": "Number rendering forms.",
+      "type": "string",
+      "enum": [
+        "numeric",
+        "ordinal",
+        "roman"
+      ]
+    },
+    "NumberVariable": {
+      "description": "Number variables.",
+      "type": "string",
+      "enum": [
+        "volume",
+        "issue",
+        "pages",
+        "edition",
+        "chapter-number",
+        "collection-number",
+        "number-of-pages",
+        "number-of-volumes",
+        "citation-number"
+      ]
+    },
+    "PageRangeFormat": {
+      "description": "Page range formatting options.",
+      "oneOf": [
+        {
+          "description": "Full expansion: 321-328 → 321–328",
+          "type": "string",
+          "enum": [
+            "expanded"
+          ]
+        },
+        {
+          "description": "Minimal digits: 321-328 → 321–8",
+          "type": "string",
+          "enum": [
+            "minimal"
+          ]
+        },
+        {
+          "description": "Minimal two digits: 321-328 → 321–28",
+          "type": "string",
+          "enum": [
+            "minimal-two"
+          ]
+        },
+        {
+          "description": "Chicago Manual of Style 15th ed rules",
+          "type": "string",
+          "enum": [
+            "chicago"
+          ]
+        },
+        {
+          "description": "Chicago Manual of Style 16th/17th ed rules",
+          "type": "string",
+          "enum": [
+            "chicago16"
+          ]
+        }
+      ]
+    },
+    "Processing": {
+      "description": "Processing mode for citation/bibliography generation.",
+      "oneOf": [
+        {
+          "type": "string",
+          "enum": [
+            "author-date",
+            "numeric",
+            "note"
+          ]
+        },
+        {
+          "type": "object",
+          "required": [
+            "custom"
+          ],
+          "properties": {
+            "custom": {
+              "$ref": "#/definitions/ProcessingCustom"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "ProcessingCustom": {
+      "description": "Custom processing configuration.",
+      "type": "object",
+      "properties": {
+        "disambiguate": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Disambiguation"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "group": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Group"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "sort": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Sort"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "Rendering": {
+      "description": "Rendering instructions applied to template components.\n\nThese fields are flattened into parent structs, so in YAML you write: ```yaml - title: primary emph: true prefix: \"In \" ``` Rather than nesting under a `rendering:` key.",
+      "type": "object",
+      "properties": {
+        "emph": {
+          "description": "Render in italics/emphasis.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "initialize-with": {
+          "description": "Override name initialization (e.g., \". \" or \"\").",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "inner-prefix": {
+          "description": "Text to prepend inside the wrap.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "inner-suffix": {
+          "description": "Text to append inside the wrap.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "prefix": {
+          "description": "Text to prepend to the rendered value (outside any wrap).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "quote": {
+          "description": "Render in quotes.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "small-caps": {
+          "description": "Render in small caps.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "strong": {
+          "description": "Render in bold/strong.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "suffix": {
+          "description": "Text to append to the rendered value (outside any wrap).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "suppress": {
+          "description": "If true, suppress this component entirely (render as empty string). Useful for type-specific overrides like suppressing publisher for journals.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "wrap": {
+          "description": "Punctuation to wrap the value in (e.g., parentheses).",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/WrapPunctuation"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "RoleOptions": {
+      "description": "Role display options.",
+      "type": "object",
+      "properties": {
+        "form": {
+          "description": "Global role label form.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "omit": {
+          "description": "Contributor roles for which to omit the role description.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "prefix": {
+          "description": "Global prefix for role labels.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "roles": {
+          "description": "Formatting for specific roles.",
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {
+            "$ref": "#/definitions/RoleRendering"
+          }
+        },
+        "suffix": {
+          "description": "Global suffix for role labels.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "RoleRendering": {
+      "description": "Rendering options for contributor roles.",
+      "type": "object",
+      "properties": {
+        "emph": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "name-order": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/NameOrder"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "prefix": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "small-caps": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "strong": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "suffix": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "Scope": {
+      "description": "Localization scope.",
+      "type": "string",
+      "enum": [
+        "global",
+        "per-item"
+      ]
+    },
+    "ScriptConfig": {
+      "description": "Configuration for specific scripts.",
+      "type": "object",
+      "properties": {
+        "delimiter": {
+          "description": "Custom delimiter for this script.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "use-native-ordering": {
+          "description": "Whether to use native ordering for this script (e.g., FamilyGiven for CJK).",
+          "default": false,
+          "type": "boolean"
+        }
+      }
+    },
+    "ShortenListOptions": {
+      "description": "Et al. / list shortening options.",
+      "type": "object",
+      "required": [
+        "min",
+        "use-first"
+      ],
+      "properties": {
+        "and-others": {
+          "description": "How to render \"and others\".",
+          "default": "et-al",
+          "allOf": [
+            {
+              "$ref": "#/definitions/AndOtherOptions"
+            }
+          ]
+        },
+        "delimiter-precedes-last": {
+          "description": "When to use delimiter before last name.",
+          "default": "contextual",
+          "allOf": [
+            {
+              "$ref": "#/definitions/DelimiterPrecedesLast"
+            }
+          ]
+        },
+        "min": {
+          "description": "Minimum number of names to trigger shortening.",
+          "type": "integer",
+          "format": "uint8",
+          "minimum": 0.0
+        },
+        "use-first": {
+          "description": "Number of names to show when shortened.",
+          "type": "integer",
+          "format": "uint8",
+          "minimum": 0.0
+        },
+        "use-last": {
+          "description": "Number of names to show after the ellipsis (et-al-use-last).",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint8",
+          "minimum": 0.0
+        }
+      }
+    },
+    "SimpleVariable": {
+      "description": "Simple string variables.",
+      "type": "string",
+      "enum": [
+        "doi",
+        "isbn",
+        "issn",
+        "url",
+        "pmid",
+        "pmcid",
+        "abstract",
+        "note",
+        "annote",
+        "keyword",
+        "genre",
+        "medium",
+        "source",
+        "status",
+        "archive",
+        "archive-location",
+        "publisher",
+        "publisher-place",
+        "event-place",
+        "dimensions",
+        "scale",
+        "version",
+        "locator"
+      ]
+    },
+    "Sort": {
+      "description": "Sorting configuration.",
+      "type": "object",
+      "required": [
+        "template"
+      ],
+      "properties": {
+        "render-substitutions": {
+          "description": "Use same substitutions for sorting as for rendering.",
+          "default": false,
+          "type": "boolean"
+        },
+        "shorten-names": {
+          "description": "Shorten name lists for sorting the same as for display.",
+          "default": false,
+          "type": "boolean"
+        },
+        "template": {
+          "description": "Sort keys in order.",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/SortSpec"
+          }
+        }
+      }
+    },
+    "SortKey": {
+      "description": "Available sort keys.",
+      "oneOf": [
+        {
+          "type": "string",
+          "enum": [
+            "author",
+            "year",
+            "title"
+          ]
+        },
+        {
+          "description": "Sort by citation order (for numeric styles).",
+          "type": "string",
+          "enum": [
+            "citation-number"
+          ]
+        }
+      ]
+    },
+    "SortSpec": {
+      "description": "A single sort specification.",
+      "type": "object",
+      "required": [
+        "key"
+      ],
+      "properties": {
+        "ascending": {
+          "default": true,
+          "type": "boolean"
+        },
+        "key": {
+          "$ref": "#/definitions/SortKey"
+        }
+      }
+    },
+    "StyleInfo": {
+      "description": "Style metadata.",
+      "type": "object",
+      "properties": {
+        "default-locale": {
+          "description": "Default locale for the style (e.g., \"en-US\", \"de-DE\"). Used for locale-aware term resolution.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "title": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "SubsequentAuthorSubstituteRule": {
+      "description": "Rules for subsequent author substitution.",
+      "oneOf": [
+        {
+          "description": "Substitute only if ALL authors match.",
+          "type": "string",
+          "enum": [
+            "complete-all"
+          ]
+        },
+        {
+          "description": "Substitute each matching name individually.",
+          "type": "string",
+          "enum": [
+            "complete-each"
+          ]
+        },
+        {
+          "description": "Substitute each matching name until the first mismatch.",
+          "type": "string",
+          "enum": [
+            "partial-each"
+          ]
+        },
+        {
+          "description": "Substitute only the first name if it matches.",
+          "type": "string",
+          "enum": [
+            "partial-first"
+          ]
+        }
+      ]
+    },
+    "Substitute": {
+      "description": "Explicit substitution configuration.",
+      "type": "object",
+      "properties": {
+        "contributor-role-form": {
+          "description": "Form to use for contributor roles when substituting.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "overrides": {
+          "description": "Type-specific substitution overrides.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/SubstituteKey"
+            }
+          }
+        },
+        "template": {
+          "description": "Ordered list of fields to try as substitutes.",
+          "default": [],
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/SubstituteKey"
+          }
+        }
+      }
+    },
+    "SubstituteConfig": {
+      "description": "Substitution rules for missing author data.",
+      "anyOf": [
+        {
+          "description": "A named preset (e.g., \"standard\", \"editor-first\", \"title-first\").",
+          "allOf": [
+            {
+              "$ref": "#/definitions/SubstitutePreset"
+            }
+          ]
+        },
+        {
+          "description": "Explicit substitution configuration.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Substitute"
+            }
+          ]
+        }
+      ]
+    },
+    "SubstituteKey": {
+      "description": "Fields that can be used as author substitutes.",
+      "type": "string",
+      "enum": [
+        "editor",
+        "title",
+        "translator"
+      ]
+    },
+    "SubstitutePreset": {
+      "description": "Substitute presets for author substitution fallback logic.\n\nThese presets define the order in which fields are tried when the primary author is missing. Most styles follow the standard order, but some have variations.",
+      "oneOf": [
+        {
+          "description": "Standard substitution order: Editor → Title → Translator. Used by most citation styles (APA, Chicago, etc.).",
+          "type": "string",
+          "enum": [
+            "standard"
+          ]
+        },
+        {
+          "description": "Editor-first: Editor → Translator → Title. Prioritizes contributors over title.",
+          "type": "string",
+          "enum": [
+            "editor-first"
+          ]
+        },
+        {
+          "description": "Title-first: Title → Editor → Translator. Used when anonymous works should show title prominently.",
+          "type": "string",
+          "enum": [
+            "title-first"
+          ]
+        }
+      ]
+    },
+    "TemplateComponent": {
+      "description": "A template component - the building blocks of citation/bibliography templates.\n\nEach variant handles a specific data type with appropriate formatting options.",
+      "anyOf": [
+        {
+          "$ref": "#/definitions/TemplateContributor"
+        },
+        {
+          "$ref": "#/definitions/TemplateDate"
+        },
+        {
+          "$ref": "#/definitions/TemplateTitle"
+        },
+        {
+          "$ref": "#/definitions/TemplateNumber"
+        },
+        {
+          "$ref": "#/definitions/TemplateVariable"
+        },
+        {
+          "$ref": "#/definitions/TemplateList"
+        },
+        {
+          "$ref": "#/definitions/TemplateTerm"
+        }
+      ]
+    },
+    "TemplateContributor": {
+      "description": "A contributor component for rendering names.",
+      "type": "object",
+      "required": [
+        "contributor",
+        "form"
+      ],
+      "properties": {
+        "and": {
+          "description": "Override the conjunction between the last two names. Use `none` for bibliography when citation uses `text` or `symbol`.",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/AndOptions"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "contributor": {
+          "description": "Which contributor role to render (author, editor, etc.).",
+          "allOf": [
+            {
+              "$ref": "#/definitions/ContributorRole"
+            }
+          ]
+        },
+        "delimiter": {
+          "description": "Custom delimiter between names (overrides global setting).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "emph": {
+          "description": "Render in italics/emphasis.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "form": {
+          "description": "How to display the contributor (long names, short, with label, etc.).",
+          "allOf": [
+            {
+              "$ref": "#/definitions/ContributorForm"
+            }
+          ]
+        },
+        "initialize-with": {
+          "description": "Override name initialization (e.g., \". \" or \"\").",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "inner-prefix": {
+          "description": "Text to prepend inside the wrap.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "inner-suffix": {
+          "description": "Text to append inside the wrap.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "links": {
+          "description": "Structured link options (DOI, URL).",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/LinksConfig"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "name-order": {
+          "description": "Override the global name order for this specific component. Use to show editors as \"Given Family\" even when global setting is \"Family, Given\".",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/NameOrder"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "overrides": {
+          "description": "Type-specific rendering overrides.",
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {
+            "$ref": "#/definitions/Rendering"
+          }
+        },
+        "prefix": {
+          "description": "Text to prepend to the rendered value (outside any wrap).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "quote": {
+          "description": "Render in quotes.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "shorten": {
+          "description": "Shorten the list of names (et al. configuration).",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/ShortenListOptions"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "small-caps": {
+          "description": "Render in small caps.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "sort-separator": {
+          "description": "Delimiter between family and given name when inverted (overrides global setting).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "strong": {
+          "description": "Render in bold/strong.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "suffix": {
+          "description": "Text to append to the rendered value (outside any wrap).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "suppress": {
+          "description": "If true, suppress this component entirely (render as empty string). Useful for type-specific overrides like suppressing publisher for journals.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "wrap": {
+          "description": "Punctuation to wrap the value in (e.g., parentheses).",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/WrapPunctuation"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": true
+    },
+    "TemplateDate": {
+      "description": "A date component for rendering dates.",
+      "type": "object",
+      "required": [
+        "date",
+        "form"
+      ],
+      "properties": {
+        "date": {
+          "$ref": "#/definitions/DateVariable"
+        },
+        "emph": {
+          "description": "Render in italics/emphasis.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "fallback": {
+          "description": "Fallback components if the primary date is missing.",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "$ref": "#/definitions/TemplateComponent"
+          }
+        },
+        "form": {
+          "$ref": "#/definitions/DateForm"
+        },
+        "initialize-with": {
+          "description": "Override name initialization (e.g., \". \" or \"\").",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "inner-prefix": {
+          "description": "Text to prepend inside the wrap.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "inner-suffix": {
+          "description": "Text to append inside the wrap.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "links": {
+          "description": "Structured link options (DOI, URL).",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/LinksConfig"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "overrides": {
+          "description": "Type-specific rendering overrides.",
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {
+            "$ref": "#/definitions/Rendering"
+          }
+        },
+        "prefix": {
+          "description": "Text to prepend to the rendered value (outside any wrap).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "quote": {
+          "description": "Render in quotes.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "small-caps": {
+          "description": "Render in small caps.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "strong": {
+          "description": "Render in bold/strong.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "suffix": {
+          "description": "Text to append to the rendered value (outside any wrap).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "suppress": {
+          "description": "If true, suppress this component entirely (render as empty string). Useful for type-specific overrides like suppressing publisher for journals.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "wrap": {
+          "description": "Punctuation to wrap the value in (e.g., parentheses).",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/WrapPunctuation"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": true
+    },
+    "TemplateList": {
+      "description": "A list component for grouping multiple items with a delimiter.",
+      "type": "object",
+      "required": [
+        "items"
+      ],
+      "properties": {
+        "delimiter": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/DelimiterPunctuation"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "emph": {
+          "description": "Render in italics/emphasis.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "initialize-with": {
+          "description": "Override name initialization (e.g., \". \" or \"\").",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "inner-prefix": {
+          "description": "Text to prepend inside the wrap.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "inner-suffix": {
+          "description": "Text to append inside the wrap.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/TemplateComponent"
+          }
+        },
+        "overrides": {
+          "description": "Type-specific rendering overrides.",
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {
+            "$ref": "#/definitions/Rendering"
+          }
+        },
+        "prefix": {
+          "description": "Text to prepend to the rendered value (outside any wrap).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "quote": {
+          "description": "Render in quotes.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "small-caps": {
+          "description": "Render in small caps.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "strong": {
+          "description": "Render in bold/strong.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "suffix": {
+          "description": "Text to append to the rendered value (outside any wrap).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "suppress": {
+          "description": "If true, suppress this component entirely (render as empty string). Useful for type-specific overrides like suppressing publisher for journals.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "wrap": {
+          "description": "Punctuation to wrap the value in (e.g., parentheses).",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/WrapPunctuation"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": true
+    },
+    "TemplateNumber": {
+      "description": "A number component (volume, issue, pages, etc.).",
+      "type": "object",
+      "required": [
+        "number"
+      ],
+      "properties": {
+        "emph": {
+          "description": "Render in italics/emphasis.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "form": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/NumberForm"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "initialize-with": {
+          "description": "Override name initialization (e.g., \". \" or \"\").",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "inner-prefix": {
+          "description": "Text to prepend inside the wrap.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "inner-suffix": {
+          "description": "Text to append inside the wrap.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "label-form": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/LabelForm"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "links": {
+          "description": "Structured link options (DOI, URL).",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/LinksConfig"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "number": {
+          "$ref": "#/definitions/NumberVariable"
+        },
+        "overrides": {
+          "description": "Type-specific rendering overrides.",
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {
+            "$ref": "#/definitions/Rendering"
+          }
+        },
+        "prefix": {
+          "description": "Text to prepend to the rendered value (outside any wrap).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "quote": {
+          "description": "Render in quotes.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "small-caps": {
+          "description": "Render in small caps.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "strong": {
+          "description": "Render in bold/strong.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "suffix": {
+          "description": "Text to append to the rendered value (outside any wrap).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "suppress": {
+          "description": "If true, suppress this component entirely (render as empty string). Useful for type-specific overrides like suppressing publisher for journals.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "wrap": {
+          "description": "Punctuation to wrap the value in (e.g., parentheses).",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/WrapPunctuation"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": true
+    },
+    "TemplatePreset": {
+      "description": "Available embedded template presets.\n\nThese reference battle-tested templates for common citation styles. See `csln_core::embedded` for the actual template implementations.",
+      "oneOf": [
+        {
+          "description": "APA 7th edition (author-date)",
+          "type": "string",
+          "enum": [
+            "apa"
+          ]
+        },
+        {
+          "description": "Chicago Manual of Style (author-date)",
+          "type": "string",
+          "enum": [
+            "chicago-author-date"
+          ]
+        },
+        {
+          "description": "Vancouver (numeric)",
+          "type": "string",
+          "enum": [
+            "vancouver"
+          ]
+        },
+        {
+          "description": "IEEE (numeric)",
+          "type": "string",
+          "enum": [
+            "ieee"
+          ]
+        },
+        {
+          "description": "Harvard/Elsevier (author-date)",
+          "type": "string",
+          "enum": [
+            "harvard"
+          ]
+        }
+      ]
+    },
+    "TemplateTerm": {
+      "description": "A term component for rendering locale-specific text.",
+      "type": "object",
+      "required": [
+        "term"
+      ],
+      "properties": {
+        "emph": {
+          "description": "Render in italics/emphasis.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "form": {
+          "description": "Form: long (default), short, or symbol.",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/TermForm"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "initialize-with": {
+          "description": "Override name initialization (e.g., \". \" or \"\").",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "inner-prefix": {
+          "description": "Text to prepend inside the wrap.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "inner-suffix": {
+          "description": "Text to append inside the wrap.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "overrides": {
+          "description": "Type-specific rendering overrides.",
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {
+            "$ref": "#/definitions/Rendering"
+          }
+        },
+        "prefix": {
+          "description": "Text to prepend to the rendered value (outside any wrap).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "quote": {
+          "description": "Render in quotes.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "small-caps": {
+          "description": "Render in small caps.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "strong": {
+          "description": "Render in bold/strong.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "suffix": {
+          "description": "Text to append to the rendered value (outside any wrap).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "suppress": {
+          "description": "If true, suppress this component entirely (render as empty string). Useful for type-specific overrides like suppressing publisher for journals.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "term": {
+          "description": "Which term to render.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/GeneralTerm"
+            }
+          ]
+        },
+        "wrap": {
+          "description": "Punctuation to wrap the value in (e.g., parentheses).",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/WrapPunctuation"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": true
+    },
+    "TemplateTitle": {
+      "description": "A title component.",
+      "type": "object",
+      "required": [
+        "title"
+      ],
+      "properties": {
+        "emph": {
+          "description": "Render in italics/emphasis.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "form": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/TitleForm"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "initialize-with": {
+          "description": "Override name initialization (e.g., \". \" or \"\").",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "inner-prefix": {
+          "description": "Text to prepend inside the wrap.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "inner-suffix": {
+          "description": "Text to append inside the wrap.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "links": {
+          "description": "Structured link options (DOI, URL).",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/LinksConfig"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "overrides": {
+          "description": "Type-specific rendering overrides.",
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {
+            "$ref": "#/definitions/Rendering"
+          }
+        },
+        "prefix": {
+          "description": "Text to prepend to the rendered value (outside any wrap).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "quote": {
+          "description": "Render in quotes.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "small-caps": {
+          "description": "Render in small caps.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "strong": {
+          "description": "Render in bold/strong.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "suffix": {
+          "description": "Text to append to the rendered value (outside any wrap).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "suppress": {
+          "description": "If true, suppress this component entirely (render as empty string). Useful for type-specific overrides like suppressing publisher for journals.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "title": {
+          "$ref": "#/definitions/TitleType"
+        },
+        "wrap": {
+          "description": "Punctuation to wrap the value in (e.g., parentheses).",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/WrapPunctuation"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": true
+    },
+    "TemplateVariable": {
+      "description": "A simple variable component (DOI, ISBN, URL, etc.).",
+      "type": "object",
+      "required": [
+        "variable"
+      ],
+      "properties": {
+        "emph": {
+          "description": "Render in italics/emphasis.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "initialize-with": {
+          "description": "Override name initialization (e.g., \". \" or \"\").",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "inner-prefix": {
+          "description": "Text to prepend inside the wrap.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "inner-suffix": {
+          "description": "Text to append inside the wrap.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "links": {
+          "description": "Structured link options (DOI, URL).",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/LinksConfig"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "overrides": {
+          "description": "Type-specific rendering overrides. Use `suppress: true` to hide for certain types.",
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {
+            "$ref": "#/definitions/Rendering"
+          }
+        },
+        "prefix": {
+          "description": "Text to prepend to the rendered value (outside any wrap).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "quote": {
+          "description": "Render in quotes.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "small-caps": {
+          "description": "Render in small caps.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "strong": {
+          "description": "Render in bold/strong.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "suffix": {
+          "description": "Text to append to the rendered value (outside any wrap).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "suppress": {
+          "description": "If true, suppress this component entirely (render as empty string). Useful for type-specific overrides like suppressing publisher for journals.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "variable": {
+          "$ref": "#/definitions/SimpleVariable"
+        },
+        "wrap": {
+          "description": "Punctuation to wrap the value in (e.g., parentheses).",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/WrapPunctuation"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": true
+    },
+    "TermForm": {
+      "description": "Form for term lookup.",
+      "type": "string",
+      "enum": [
+        "Long",
+        "Short",
+        "Verb",
+        "VerbShort",
+        "Symbol"
+      ]
+    },
+    "TitleForm": {
+      "description": "Title rendering forms.",
+      "type": "string",
+      "enum": [
+        "short",
+        "long"
+      ]
+    },
+    "TitleRendering": {
+      "description": "Rendering options for titles.",
+      "type": "object",
+      "properties": {
+        "emph": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "prefix": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "quote": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "small-caps": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "strong": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "suffix": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "TitleType": {
+      "description": "Types of titles.",
+      "oneOf": [
+        {
+          "description": "The primary title of the cited work.",
+          "type": "string",
+          "enum": [
+            "primary"
+          ]
+        },
+        {
+          "description": "Title of a book/monograph containing the cited work.",
+          "type": "string",
+          "enum": [
+            "parent-monograph"
+          ]
+        },
+        {
+          "description": "Title of a periodical/serial containing the cited work.",
+          "type": "string",
+          "enum": [
+            "parent-serial"
+          ]
+        }
+      ]
+    },
+    "TitlesConfig": {
+      "description": "Title formatting configuration by title type.",
+      "type": "object",
+      "properties": {
+        "component": {
+          "description": "Formatting for component titles (articles, chapters).",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/TitleRendering"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "container-monograph": {
+          "description": "Formatting for monograph containers (book containing chapters).",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/TitleRendering"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "default": {
+          "description": "Default formatting for all titles.",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/TitleRendering"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "monograph": {
+          "description": "Formatting for monograph titles (books).",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/TitleRendering"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "periodical": {
+          "description": "Formatting for periodical titles (journals, magazines).",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/TitleRendering"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "serial": {
+          "description": "Formatting for serial titles (series).",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/TitleRendering"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "type-mapping": {
+          "description": "Mapping of reference types to title categories. Category keys: monograph, periodical, component. Example: { \"thesis\": \"monograph\", \"article-journal\": \"periodical\" }",
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "WrapPunctuation": {
+      "description": "Punctuation to wrap a component in.",
+      "type": "string",
+      "enum": [
+        "parentheses",
+        "brackets",
+        "quotes",
+        "none"
+      ]
+    }
+  }
+}
