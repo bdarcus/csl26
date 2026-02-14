@@ -414,12 +414,9 @@ Before designing new features, consult [PRIOR_ART.md](./docs/architecture/PRIOR_
 | Medium | Hyperlink configuration | CSL Appendix VI | #155 |
 | Medium | Separate citation/bibliography name limits | biblatex | #64 |
 | Medium | Sorting shortcuts (`nty`, `ynt`) | biblatex | #61 |
-| Medium | Extended legal types | CSL-M | - |
-| Medium | `court-class` jurisdiction hierarchies | CSL-M | - |
+| Medium | Legal citations (Tier 1: core types) | CSL-M | csl26-rmoi |
+| Medium | Legal citations (Tier 2: specialist features) | CSL-M | csl26-rmoi |
 | Medium | Djot integration (documents + fields) | - | #86 |
-| Low | Parallel citation support | CSL-M | - |
-| Low | `hereinafter` variable | CSL-M | - |
-| Low | Extended position conditions | CSL-M | - |
 | Low | Incremental computation (salsa) | citeproc-rs | - |
 
 ## Design Documents
@@ -428,6 +425,7 @@ Architectural decisions and design rationale:
 
 - **[STYLE_ALIASING.md](./docs/architecture/design/STYLE_ALIASING.md)**: Style aliasing and presets strategy. Recommends presets for configuration reuse instead of CSL 1.0's parent/child aliasing. Refs: #89
 - **[STYLE_EDITOR_VISION.md](./docs/architecture/design/STYLE_EDITOR_VISION.md)**: User stories and API requirements for a web-based style editor. Ensures the core library supports progressive-refinement UIs and JSON API exposure.
+- **[LEGAL_CITATIONS.md](./docs/architecture/design/LEGAL_CITATIONS.md)**: Two-tier legal citation architecture. Core legal types (Tier 1) for academics citing legal materials in APA/Chicago/MLA, optional specialist features (Tier 2) for Bluebook/ALWD. Refs: csl26-rmoi
 
 ## Skills
 
