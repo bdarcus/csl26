@@ -128,7 +128,18 @@ impl ComponentValues for TemplateContributor {
                                         options
                                             .locale
                                             .role_term(&ContributorRole::Editor, plural, term_form)
-                                            .map(|term| format!(" ({})", term))
+                                            .map(|term| {
+                                                let term_str =
+                                                    if crate::values::should_strip_periods(
+                                                        &effective_rendering,
+                                                        options,
+                                                    ) {
+                                                        crate::values::strip_trailing_periods(term)
+                                                    } else {
+                                                        term.to_string()
+                                                    };
+                                                format!(" ({})", term_str)
+                                            })
                                     })
                                 } else {
                                     None
@@ -301,21 +312,60 @@ impl ComponentValues for TemplateContributor {
                             options
                                 .locale
                                 .role_term(&self.contributor, plural, TermForm::Verb);
-                        (term.map(|t| format!("{} ", t)), None)
+                        (
+                            term.map(|t| {
+                                let term_str = if crate::values::should_strip_periods(
+                                    &effective_rendering,
+                                    options,
+                                ) {
+                                    crate::values::strip_trailing_periods(t)
+                                } else {
+                                    t.to_string()
+                                };
+                                format!("{} ", term_str)
+                            }),
+                            None,
+                        )
                     }
                     EditorLabelFormat::ShortSuffix => {
                         let term =
                             options
                                 .locale
                                 .role_term(&self.contributor, plural, TermForm::Short);
-                        (None, term.map(|t| format!(" ({})", t)))
+                        (
+                            None,
+                            term.map(|t| {
+                                let term_str = if crate::values::should_strip_periods(
+                                    &effective_rendering,
+                                    options,
+                                ) {
+                                    crate::values::strip_trailing_periods(t)
+                                } else {
+                                    t.to_string()
+                                };
+                                format!(" ({})", term_str)
+                            }),
+                        )
                     }
                     EditorLabelFormat::LongSuffix => {
                         let term =
                             options
                                 .locale
                                 .role_term(&self.contributor, plural, TermForm::Long);
-                        (None, term.map(|t| format!(", {}", t)))
+                        (
+                            None,
+                            term.map(|t| {
+                                let term_str = if crate::values::should_strip_periods(
+                                    &effective_rendering,
+                                    options,
+                                ) {
+                                    crate::values::strip_trailing_periods(t)
+                                } else {
+                                    t.to_string()
+                                };
+                                format!(", {}", term_str)
+                            }),
+                        )
                     }
                 }
             } else {
@@ -330,14 +380,40 @@ impl ComponentValues for TemplateContributor {
                         _ => TermForm::Verb,
                     };
                     let term = options.locale.role_term(role, plural, term_form);
-                    (term.map(|t| format!("{} ", t)), None)
+                    (
+                        term.map(|t| {
+                            let term_str = if crate::values::should_strip_periods(
+                                &effective_rendering,
+                                options,
+                            ) {
+                                crate::values::strip_trailing_periods(t)
+                            } else {
+                                t.to_string()
+                            };
+                            format!("{} ", term_str)
+                        }),
+                        None,
+                    )
                 }
                 (ContributorForm::Long, ContributorRole::Editor | ContributorRole::Translator) => {
                     let plural = names_vec.len() > 1;
                     let term = options
                         .locale
                         .role_term(&self.contributor, plural, TermForm::Short);
-                    (None, term.map(|t| format!(" ({})", t)))
+                    (
+                        None,
+                        term.map(|t| {
+                            let term_str = if crate::values::should_strip_periods(
+                                &effective_rendering,
+                                options,
+                            ) {
+                                crate::values::strip_trailing_periods(t)
+                            } else {
+                                t.to_string()
+                            };
+                            format!(" ({})", term_str)
+                        }),
+                    )
                 }
                 _ => (None, None),
             }

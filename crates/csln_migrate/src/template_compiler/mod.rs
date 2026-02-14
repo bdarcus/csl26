@@ -1666,6 +1666,7 @@ impl TemplateCompiler {
             wrap,
             suppress: None,
             initialize_with: None,
+            strip_periods: fmt.strip_periods,
         }
     }
 

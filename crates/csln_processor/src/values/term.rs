@@ -16,11 +16,16 @@ impl ComponentValues for TemplateTerm {
         options: &RenderOptions<'_>,
     ) -> Option<ProcValues> {
         let form = self.form.unwrap_or(TermForm::Long);
-        let value = options
+        let mut value = options
             .locale
             .general_term(&self.term, form)
             .unwrap_or("")
             .to_string();
+
+        // Apply strip-periods if configured
+        if crate::values::should_strip_periods(&self.rendering, options) {
+            value = crate::values::strip_trailing_periods(&value);
+        }
 
         if value.is_empty() {
             None

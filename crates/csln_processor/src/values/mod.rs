@@ -343,3 +343,27 @@ impl ComponentValues for TemplateComponent {
         }
     }
 }
+
+/// Check if periods should be stripped based on three-tier precedence.
+///
+/// Resolution order:
+/// 1. Component-level `strip_periods`
+/// 2. Global config `strip_periods`
+/// 3. Defaults to false
+pub fn should_strip_periods(
+    rendering: &csln_core::template::Rendering,
+    options: &RenderOptions<'_>,
+) -> bool {
+    rendering
+        .strip_periods
+        .or(options.config.strip_periods)
+        .unwrap_or(false)
+}
+
+/// Strip trailing periods from a string.
+///
+/// Only removes periods at the end of the string, preserves internal periods
+/// (e.g., "Ph.D." remains unchanged if there's no trailing period).
+pub fn strip_trailing_periods(s: &str) -> String {
+    s.trim_end_matches('.').to_string()
+}

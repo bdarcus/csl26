@@ -398,6 +398,8 @@ pub struct FormattingOptions {
     pub prefix: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub suffix: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub strip_periods: Option<bool>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]

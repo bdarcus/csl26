@@ -80,6 +80,9 @@ pub struct Config {
     /// Defaults to true.
     #[serde(default = "default_true", skip_serializing_if = "Option::is_none")]
     pub semantic_classes: Option<bool>,
+    /// Strip trailing periods from terms, labels, and abbreviated dates.
+    #[serde(skip_serializing_if = "Option::is_none", rename = "strip-periods")]
+    pub strip_periods: Option<bool>,
     /// Unknown fields captured for forward compatibility.
     #[serde(flatten)]
     pub _extra: HashMap<String, serde_json::Value>,
@@ -200,6 +203,9 @@ impl Config {
         }
         if other.semantic_classes.is_some() {
             self.semantic_classes = other.semantic_classes;
+        }
+        if other.strip_periods.is_some() {
+            self.strip_periods = other.strip_periods;
         }
     }
 

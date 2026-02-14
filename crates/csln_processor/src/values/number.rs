@@ -39,7 +39,15 @@ impl ComponentValues for TemplateNumber {
                     options
                         .locale
                         .locator_term(&locator_type, plural, term_form)
-                        .map(|t| format!("{} ", t))
+                        .map(|t| {
+                            let term_str =
+                                if crate::values::should_strip_periods(&self.rendering, options) {
+                                    crate::values::strip_trailing_periods(t)
+                                } else {
+                                    t.to_string()
+                                };
+                            format!("{} ", term_str)
+                        })
                 } else {
                     None
                 }

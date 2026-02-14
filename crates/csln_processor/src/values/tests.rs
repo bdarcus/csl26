@@ -786,3 +786,163 @@ fn test_date_fallback() {
     let values = component.values(&reference, &hints, &options).unwrap();
     assert_eq!(values.value, "n.d.");
 }
+
+#[test]
+fn test_strip_periods_global_config() {
+    let mut config = make_config();
+    config.strip_periods = Some(true);
+    let locale = make_locale();
+    let reference = Reference::from(LegacyReference {
+        id: "editor1".to_string(),
+        ref_type: "book".to_string(),
+        editor: Some(vec![Name::new("Smith", "John")]),
+        title: Some("A Book".to_string()),
+        issued: Some(DateVariable::year(2020)),
+        publisher: Some("Publisher".to_string()),
+        ..Default::default()
+    });
+    let hints = ProcHints::default();
+
+    let options = RenderOptions {
+        config: &config,
+        locale: &locale,
+        context: RenderContext::Bibliography,
+        mode: csln_core::citation::CitationMode::NonIntegral,
+    };
+
+    let component = TemplateContributor {
+        contributor: ContributorRole::Editor,
+        form: ContributorForm::Long,
+        ..Default::default()
+    };
+
+    let values = component.values(&reference, &hints, &options).unwrap();
+    // Should have "(Ed)" instead of "(Ed.)" due to strip_periods
+    assert!(values.suffix.is_some());
+    assert_eq!(values.suffix.as_ref().unwrap(), " (Ed)");
+}
+
+#[test]
+fn test_strip_periods_component_override() {
+    let mut config = make_config();
+    config.strip_periods = Some(false); // Global is false
+    let locale = make_locale();
+    let reference = Reference::from(LegacyReference {
+        id: "editor1".to_string(),
+        ref_type: "book".to_string(),
+        editor: Some(vec![Name::new("Smith", "John")]),
+        title: Some("A Book".to_string()),
+        issued: Some(DateVariable::year(2020)),
+        publisher: Some("Publisher".to_string()),
+        ..Default::default()
+    });
+    let hints = ProcHints::default();
+
+    let options = RenderOptions {
+        config: &config,
+        locale: &locale,
+        context: RenderContext::Bibliography,
+        mode: csln_core::citation::CitationMode::NonIntegral,
+    };
+
+    // Component overrides global setting
+    let component = TemplateContributor {
+        contributor: ContributorRole::Editor,
+        form: ContributorForm::Long,
+        rendering: Rendering {
+            strip_periods: Some(true),
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+
+    let values = component.values(&reference, &hints, &options).unwrap();
+    // Should strip periods because component overrides global
+    assert!(values.suffix.is_some());
+    assert_eq!(values.suffix.as_ref().unwrap(), " (Ed)");
+}
+
+#[test]
+fn test_strip_periods_no_strip_by_default() {
+    let config = make_config();
+    let locale = make_locale();
+    let reference = Reference::from(LegacyReference {
+        id: "editor1".to_string(),
+        ref_type: "book".to_string(),
+        editor: Some(vec![Name::new("Smith", "John")]),
+        title: Some("A Book".to_string()),
+        issued: Some(DateVariable::year(2020)),
+        publisher: Some("Publisher".to_string()),
+        ..Default::default()
+    });
+    let hints = ProcHints::default();
+
+    let options = RenderOptions {
+        config: &config,
+        locale: &locale,
+        context: RenderContext::Bibliography,
+        mode: csln_core::citation::CitationMode::NonIntegral,
+    };
+
+    let component = TemplateContributor {
+        contributor: ContributorRole::Editor,
+        form: ContributorForm::Long,
+        ..Default::default()
+    };
+
+    let values = component.values(&reference, &hints, &options).unwrap();
+    // Should preserve periods by default
+    assert!(values.suffix.is_some());
+    assert_eq!(values.suffix.as_ref().unwrap(), " (Ed.)");
+}
+
+#[test]
+fn test_strip_trailing_periods() {
+    assert_eq!(strip_trailing_periods("test."), "test");
+    assert_eq!(strip_trailing_periods("test"), "test");
+    assert_eq!(strip_trailing_periods("Ph.D."), "Ph.D");
+    assert_eq!(strip_trailing_periods("A.B.C."), "A.B.C");
+    assert_eq!(strip_trailing_periods("..."), "");
+}
+
+#[test]
+fn test_should_strip_periods_precedence() {
+    let config = Config {
+        strip_periods: Some(true),
+        ..Default::default()
+    };
+    let locale = make_locale();
+    let options = RenderOptions {
+        config: &config,
+        locale: &locale,
+        context: RenderContext::Bibliography,
+        mode: csln_core::citation::CitationMode::NonIntegral,
+    };
+
+    // Component override takes precedence
+    let rendering_override_true = Rendering {
+        strip_periods: Some(true),
+        ..Default::default()
+    };
+    assert!(should_strip_periods(&rendering_override_true, &options));
+
+    let rendering_override_false = Rendering {
+        strip_periods: Some(false),
+        ..Default::default()
+    };
+    assert!(!should_strip_periods(&rendering_override_false, &options));
+
+    // Falls back to config when component has None
+    let rendering_default = Rendering::default();
+    assert!(should_strip_periods(&rendering_default, &options));
+
+    // Defaults to false when both are None
+    let config_none = Config::default();
+    let options_none = RenderOptions {
+        config: &config_none,
+        locale: &locale,
+        context: RenderContext::Bibliography,
+        mode: csln_core::citation::CitationMode::NonIntegral,
+    };
+    assert!(!should_strip_periods(&rendering_default, &options_none));
+}

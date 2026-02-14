@@ -645,6 +645,7 @@ impl Upsampler {
             quotes,
             prefix: prefix.clone(),
             suffix: suffix.clone(),
+            strip_periods: None,
         }
     }
     fn map_term_form(&self, form: Option<&str>) -> csln::locale::TermForm {

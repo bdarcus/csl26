@@ -84,6 +84,9 @@ pub struct Rendering {
     /// Override name initialization (e.g., ". " or "").
     #[serde(skip_serializing_if = "Option::is_none")]
     pub initialize_with: Option<String>,
+    /// Strip trailing periods from rendered value.
+    #[serde(skip_serializing_if = "Option::is_none", rename = "strip-periods")]
+    pub strip_periods: Option<bool>,
 }
 
 impl Rendering {
@@ -121,6 +124,9 @@ impl Rendering {
         }
         if other.initialize_with.is_some() {
             self.initialize_with = other.initialize_with.clone();
+        }
+        if other.strip_periods.is_some() {
+            self.strip_periods = other.strip_periods;
         }
     }
 }
