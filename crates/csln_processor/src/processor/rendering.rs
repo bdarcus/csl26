@@ -473,16 +473,107 @@ impl<'a> Renderer<'a> {
 }
 
 /// Get a unique key for a template component's variable.
+///
+/// The key includes rendering context (prefix/suffix) to allow the same variable
+/// to render multiple times if it appears in semantically different contexts.
+/// This enables styles like Chicago that require year after author AND after publisher.
 pub fn get_variable_key(component: &TemplateComponent) -> Option<String> {
     use csln_core::template::*;
 
+    // Helper to create context suffix from rendering options
+    let context_suffix = |rendering: &Rendering| -> String {
+        match (&rendering.prefix, &rendering.suffix) {
+            (Some(p), Some(s)) => format!(":{}_{}", p, s),
+            (Some(p), None) => format!(":{}", p),
+            (None, Some(s)) => format!(":{}", s),
+            (None, None) => String::new(),
+        }
+    };
+
     match component {
-        TemplateComponent::Contributor(c) => Some(format!("contributor:{:?}", c.contributor)),
-        TemplateComponent::Date(d) => Some(format!("date:{:?}", d.date)),
-        TemplateComponent::Title(t) => Some(format!("title:{:?}", t.title)),
-        TemplateComponent::Number(n) => Some(format!("number:{:?}", n.number)),
-        TemplateComponent::Variable(v) => Some(format!("variable:{:?}", v.variable)),
+        TemplateComponent::Contributor(c) => {
+            let ctx = context_suffix(&c.rendering);
+            Some(format!("contributor:{:?}{}", c.contributor, ctx))
+        }
+        TemplateComponent::Date(d) => {
+            let ctx = context_suffix(&d.rendering);
+            Some(format!("date:{:?}{}", d.date, ctx))
+        }
+        TemplateComponent::Title(t) => {
+            let ctx = context_suffix(&t.rendering);
+            Some(format!("title:{:?}{}", t.title, ctx))
+        }
+        TemplateComponent::Number(n) => {
+            let ctx = context_suffix(&n.rendering);
+            Some(format!("number:{:?}{}", n.number, ctx))
+        }
+        TemplateComponent::Variable(v) => {
+            let ctx = context_suffix(&v.rendering);
+            Some(format!("variable:{:?}{}", v.variable, ctx))
+        }
         TemplateComponent::List(_) => None, // Lists contain multiple variables, not deduplicated
         _ => None,                          // Future component types
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use csln_core::template::*;
+
+    #[test]
+    fn test_variable_key_includes_context() {
+        // Date with no prefix/suffix
+        let date1 = TemplateComponent::Date(TemplateDate {
+            date: DateVariable::Issued,
+            form: DateForm::Year,
+            rendering: Rendering::default(),
+            fallback: None,
+            links: None,
+            overrides: None,
+            _extra: std::collections::HashMap::new(),
+        });
+
+        // Same date with prefix
+        let date2 = TemplateComponent::Date(TemplateDate {
+            date: DateVariable::Issued,
+            form: DateForm::Year,
+            rendering: Rendering {
+                prefix: Some(", ".to_string()),
+                ..Default::default()
+            },
+            fallback: None,
+            links: None,
+            overrides: None,
+            _extra: std::collections::HashMap::new(),
+        });
+
+        // Same date with suffix
+        let date3 = TemplateComponent::Date(TemplateDate {
+            date: DateVariable::Issued,
+            form: DateForm::Year,
+            rendering: Rendering {
+                suffix: Some(".".to_string()),
+                ..Default::default()
+            },
+            fallback: None,
+            links: None,
+            overrides: None,
+            _extra: std::collections::HashMap::new(),
+        });
+
+        let key1 = get_variable_key(&date1);
+        let key2 = get_variable_key(&date2);
+        let key3 = get_variable_key(&date3);
+
+        // All three should have different keys due to different contexts
+        assert_ne!(key1, key2);
+        assert_ne!(key1, key3);
+        assert_ne!(key2, key3);
+
+        // Verify the keys include context markers
+        assert_eq!(key1, Some("date:Issued".to_string()));
+        assert_eq!(key2, Some("date:Issued:, ".to_string()));
+        assert_eq!(key3, Some("date:Issued:.".to_string()));
     }
 }
