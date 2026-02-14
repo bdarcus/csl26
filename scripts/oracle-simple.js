@@ -10,6 +10,10 @@
  * Usage: node oracle-simple.js <style.csl> [--bib] [--cite]
  *
  * Outputs JSON with rendered citations/bibliography for comparison.
+ *
+ * Exit codes:
+ *   0 - Success (rendering completed)
+ *   2 - Fatal error (file not found, parse error)
  */
 
 const CSL = require('citeproc');
@@ -189,7 +193,7 @@ if (args.length === 0) {
     console.log('Examples:');
     console.log('  node oracle.js ../styles-legacy/apa.csl');
     console.log('  node oracle.js ../styles-legacy/chicago-author-date.csl --bib');
-    process.exit(1);
+    process.exit(2);
 }
 
 const stylePath = args[0];
@@ -199,7 +203,7 @@ const jsonOutput = args.includes('--json');
 
 if (!fs.existsSync(stylePath)) {
     console.error(`Style not found: ${stylePath}`);
-    process.exit(1);
+    process.exit(2);
 }
 
 try {
@@ -230,5 +234,5 @@ try {
 } catch (e) {
     console.error('Error:', e.message);
     if (process.env.DEBUG) console.error(e.stack);
-    process.exit(1);
+    process.exit(2);
 }
