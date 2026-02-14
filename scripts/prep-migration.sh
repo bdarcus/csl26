@@ -19,30 +19,60 @@ STYLE_NAME=$(basename "$STYLE_PATH" .csl)
 echo "--- MIGRATION PREPARATION FOR: $STYLE_NAME ---"
 echo ""
 
-# 1. Get Target Output (Oracle)
-echo "=== PHASE 1: TARGET OUTPUT (citeproc-js) ==="
-node scripts/oracle-simple.js "$STYLE_PATH"
+# 1. Get Target Output (Oracle) - Validation Only
+echo "=== PHASE 1: TARGET OUTPUT (Oracle) ==="
+# We run this just to show the user/LLM the goal state, and to warm up the cache
+node scripts/oracle-migration.js "$STYLE_PATH" || true
 echo ""
 
-# 2. Get Baseline CSLN (Migration Tool)
-echo "=== PHASE 2: BASELINE CSLN (Migration Tool) ==="
-cargo run -q --bin csln-migrate -- "$STYLE_PATH"
+# 2. Run Automation Pipeline
+echo "=== PHASE 2: AUTOMATED MIGRATION ==="
+TEMP_DIR=".tmp_migration"
+mkdir -p "$TEMP_DIR"
+BASE_YAML="$TEMP_DIR/base.yaml"
+CITE_JSON="$TEMP_DIR/citation.json"
+BIB_JSON="$TEMP_DIR/bibliography.json"
+
+echo "-> Extracting base options (csln-migrate)..."
+# Capture output to file instead of stdout? 
+# csln-migrate currently prints to stdout. We need to capture it.
+cargo run -q --bin csln-migrate -- "$STYLE_PATH" > "$BASE_YAML"
+
+echo "-> Inferring citation template..."
+node scripts/infer-template.js "$STYLE_PATH" --section=citation --fragment > "$CITE_JSON"
+
+echo "-> Inferring bibliography template..."
+node scripts/infer-template.js "$STYLE_PATH" --section=bibliography --fragment > "$BIB_JSON"
+
+echo "-> Merging into CSLN style..."
+node scripts/merge-migration.js "$STYLE_NAME" "$BASE_YAML" "$CITE_JSON" "$BIB_JSON"
+
+# Cleanup
+rm -rf "$TEMP_DIR"
+
+echo "Created: styles/$STYLE_NAME.yaml"
 echo ""
 
-# 3. Generate Agent Prompt
+# 3. Generate Verification Prompt
 echo "=== PHASE 3: AGENT PROMPT ==="
 cat <<EOF
-I am migrating the CSL 1.0 style "$STYLE_NAME" to CSLN.
-
-TARGET RENDERING:
-Reference the "PHASE 1" output above for exactly how citations and bibliography entries should look.
-
-BASELINE OPTIONS:
-Reference the "PHASE 2" output above for the initial extraction of global options (contributors, dates, etc.).
+I have auto-generated the CSLN style file "styles/$STYLE_NAME.yaml" using the new output-driven migration workflow.
 
 TASK:
-1. Use the /styleauthor skill to create "styles/$STYLE_NAME.yaml".
-2. Use the "Baseline CSLN" for the 'options' block.
-3. Hand-author the 'template' blocks in 'citation' and 'bibliography' to match the "Target Rendering".
-4. Follow the iterative author-test-verify loop until 100% match is achieved.
+1. Review the generated file "styles/$STYLE_NAME.yaml".
+   - It combines global options extracted by Rust with templates inferred from citeproc-js output.
+   - It is likely 80-90% correct but may need refinement for edge cases.
+
+2. Verify the output:
+   - Run: \`node scripts/oracle-migration.js "$STYLE_PATH"\`
+   - Compare the CSLN output against the Oracle output.
+
+3. Iterate & Fix:
+   - If match rate is < 100%, analyze the mismatches.
+   - Edit "styles/$STYLE_NAME.yaml" to fix formatting issues.
+   - Repeat verification until passing.
+
+4. Final Polish:
+   - Ensure all lints pass: \`cargo clippy --all-targets -- -D warnings\`
+   - Commit the final result.
 EOF

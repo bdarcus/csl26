@@ -68,14 +68,14 @@ The workflow automatically creates task tracking for visibility:
 ### Migration Workflow (Optional)
 
 Use this workflow when converting an existing CSL 1.0 style. It identifies the target output and baseline configuration to accelerate Phase 1 & 2.
-
 **For standard migrations**, see **[Simple Migration Checklist](./templates/simple-migration-checklist.md)** to potentially skip Phase 1 (research) and save ~50K tokens.
 
 1.  **Prep**: Run `scripts/prep-migration.sh <path-to-csl>`
-2.  **Analyze**:
-    -   **Target Output** (citeproc-js): This is your visual goal.
-    -   **Baseline CSLN**: Use the `options` block as your starting point (it extracts name rules, date forms, etc.).
-3.  **Author**: Proceed to Phase 2, but focus on mapping the visual components in "Target Output" to CSLN template components.
+    -   This **automatically generates** `styles/<style-name>.yaml` by merging `csln-migrate` options with `infer-template.js` templates.
+2.  **Verify**:
+    -   Run `node scripts/oracle-migration.js <path-to-csl>` to check initial quality.
+    -   Review the generated YAML for obvious issues or missing logic.
+3.  **Refine**: Proceed to Phase 3 (Build), but focus on *fixing mismatches* rather than authoring from scratch.
 
 **Simple Path** (if criteria met):
 - Skip Phase 1 research
