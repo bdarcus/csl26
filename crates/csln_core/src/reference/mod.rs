@@ -39,6 +39,20 @@ pub enum InputReference {
     SerialComponent(Box<SerialComponent>),
     /// A collection of works, such as an anthology or proceedings.
     Collection(Box<Collection>),
+    /// A legal case (court decision).
+    LegalCase(Box<LegalCase>),
+    /// A statute or legislative act.
+    Statute(Box<Statute>),
+    /// An international treaty or agreement.
+    Treaty(Box<Treaty>),
+    /// A legislative or administrative hearing.
+    Hearing(Box<Hearing>),
+    /// An administrative regulation.
+    Regulation(Box<Regulation>),
+    /// A legal brief or filing.
+    Brief(Box<Brief>),
+    /// A classic work with standard citation forms.
+    Classic(Box<Classic>),
 }
 
 impl InputReference {
@@ -49,6 +63,13 @@ impl InputReference {
             InputReference::CollectionComponent(r) => r.id.clone(),
             InputReference::SerialComponent(r) => r.id.clone(),
             InputReference::Collection(r) => r.id.clone(),
+            InputReference::LegalCase(r) => r.id.clone(),
+            InputReference::Statute(r) => r.id.clone(),
+            InputReference::Treaty(r) => r.id.clone(),
+            InputReference::Hearing(r) => r.id.clone(),
+            InputReference::Regulation(r) => r.id.clone(),
+            InputReference::Brief(r) => r.id.clone(),
+            InputReference::Classic(r) => r.id.clone(),
         }
     }
 
@@ -58,6 +79,9 @@ impl InputReference {
             InputReference::Monograph(r) => r.author.clone(),
             InputReference::CollectionComponent(r) => r.author.clone(),
             InputReference::SerialComponent(r) => r.author.clone(),
+            InputReference::Treaty(r) => r.author.clone(),
+            InputReference::Brief(r) => r.author.clone(),
+            InputReference::Classic(r) => r.author.clone(),
             _ => None,
         }
     }
@@ -70,6 +94,7 @@ impl InputReference {
                 Parent::Embedded(p) => p.editor.clone(),
                 Parent::Id(_) => None,
             },
+            InputReference::Classic(r) => r.editor.clone(),
             _ => None,
         }
     }
@@ -81,6 +106,8 @@ impl InputReference {
             InputReference::CollectionComponent(r) => r.translator.clone(),
             InputReference::SerialComponent(r) => r.translator.clone(),
             InputReference::Collection(r) => r.translator.clone(),
+            InputReference::Classic(r) => r.translator.clone(),
+            _ => None,
         }
     }
 
@@ -96,6 +123,7 @@ impl InputReference {
                 }
             }
             InputReference::Collection(r) => r.publisher.clone(),
+            InputReference::Classic(r) => r.publisher.clone(),
             _ => None,
         }
     }
@@ -107,6 +135,13 @@ impl InputReference {
             InputReference::CollectionComponent(r) => r.title.clone(),
             InputReference::SerialComponent(r) => r.title.clone(),
             InputReference::Collection(r) => r.title.clone(),
+            InputReference::LegalCase(r) => Some(r.title.clone()),
+            InputReference::Statute(r) => Some(r.title.clone()),
+            InputReference::Treaty(r) => Some(r.title.clone()),
+            InputReference::Hearing(r) => Some(r.title.clone()),
+            InputReference::Regulation(r) => Some(r.title.clone()),
+            InputReference::Brief(r) => Some(r.title.clone()),
+            InputReference::Classic(r) => Some(r.title.clone()),
         }
     }
 
@@ -117,6 +152,13 @@ impl InputReference {
             InputReference::CollectionComponent(r) => Some(r.issued.clone()),
             InputReference::SerialComponent(r) => Some(r.issued.clone()),
             InputReference::Collection(r) => Some(r.issued.clone()),
+            InputReference::LegalCase(r) => Some(r.issued.clone()),
+            InputReference::Statute(r) => Some(r.issued.clone()),
+            InputReference::Treaty(r) => Some(r.issued.clone()),
+            InputReference::Hearing(r) => Some(r.issued.clone()),
+            InputReference::Regulation(r) => Some(r.issued.clone()),
+            InputReference::Brief(r) => Some(r.issued.clone()),
+            InputReference::Classic(r) => Some(r.issued.clone()),
         }
     }
 
@@ -126,7 +168,8 @@ impl InputReference {
             InputReference::Monograph(r) => r.doi.clone(),
             InputReference::CollectionComponent(r) => r.doi.clone(),
             InputReference::SerialComponent(r) => r.doi.clone(),
-            InputReference::Collection(_) => None,
+            InputReference::LegalCase(r) => r.doi.clone(),
+            _ => None,
         }
     }
 
@@ -137,6 +180,13 @@ impl InputReference {
             InputReference::CollectionComponent(r) => r.url.clone(),
             InputReference::SerialComponent(r) => r.url.clone(),
             InputReference::Collection(r) => r.url.clone(),
+            InputReference::LegalCase(r) => r.url.clone(),
+            InputReference::Statute(r) => r.url.clone(),
+            InputReference::Treaty(r) => r.url.clone(),
+            InputReference::Hearing(r) => r.url.clone(),
+            InputReference::Regulation(r) => r.url.clone(),
+            InputReference::Brief(r) => r.url.clone(),
+            InputReference::Classic(r) => r.url.clone(),
         }
     }
 
@@ -150,6 +200,8 @@ impl InputReference {
             },
             InputReference::SerialComponent(_) => None,
             InputReference::Collection(r) => r.publisher.as_ref().and_then(|c| c.location()),
+            InputReference::Classic(r) => r.publisher.as_ref().and_then(|c| c.location()),
+            _ => None,
         }
     }
 
@@ -163,6 +215,8 @@ impl InputReference {
             },
             InputReference::SerialComponent(_) => None,
             InputReference::Collection(r) => r.publisher.as_ref().and_then(|c| c.name()),
+            InputReference::Classic(r) => r.publisher.as_ref().and_then(|c| c.name()),
+            _ => None,
         }
     }
 
@@ -204,6 +258,11 @@ impl InputReference {
     pub fn volume(&self) -> Option<NumOrStr> {
         match self {
             InputReference::SerialComponent(r) => r.volume.clone(),
+            InputReference::LegalCase(r) => r.volume.clone().map(NumOrStr::Str),
+            InputReference::Statute(r) => r.volume.clone().map(NumOrStr::Str),
+            InputReference::Treaty(r) => r.volume.clone().map(NumOrStr::Str),
+            InputReference::Regulation(r) => r.volume.clone().map(NumOrStr::Str),
+            InputReference::Classic(r) => r.volume.clone().map(NumOrStr::Str),
             _ => None,
         }
     }
@@ -221,6 +280,57 @@ impl InputReference {
         match self {
             InputReference::CollectionComponent(r) => r.pages.clone(),
             InputReference::SerialComponent(r) => r.pages.clone().map(NumOrStr::Str),
+            InputReference::LegalCase(r) => r.page.clone().map(NumOrStr::Str),
+            InputReference::Treaty(r) => r.page.clone().map(NumOrStr::Str),
+            _ => None,
+        }
+    }
+
+    /// Return the authority (court, legislative body, etc.) for legal references.
+    pub fn authority(&self) -> Option<String> {
+        match self {
+            InputReference::LegalCase(r) => Some(r.authority.clone()),
+            InputReference::Statute(r) => r.authority.clone(),
+            InputReference::Hearing(r) => r.authority.clone(),
+            InputReference::Regulation(r) => r.authority.clone(),
+            InputReference::Brief(r) => r.authority.clone(),
+            _ => None,
+        }
+    }
+
+    /// Return the reporter (legal reporter series).
+    pub fn reporter(&self) -> Option<String> {
+        match self {
+            InputReference::LegalCase(r) => r.reporter.clone(),
+            InputReference::Treaty(r) => r.reporter.clone(),
+            _ => None,
+        }
+    }
+
+    /// Return the code (legal code abbreviation).
+    pub fn code(&self) -> Option<String> {
+        match self {
+            InputReference::Statute(r) => r.code.clone(),
+            InputReference::Regulation(r) => r.code.clone(),
+            _ => None,
+        }
+    }
+
+    /// Return the section (legal section number).
+    pub fn section(&self) -> Option<String> {
+        match self {
+            InputReference::Statute(r) => r.section.clone(),
+            InputReference::Regulation(r) => r.section.clone(),
+            InputReference::Classic(r) => r.section.clone(),
+            _ => None,
+        }
+    }
+
+    /// Return the number (docket number, session number, etc.).
+    pub fn number(&self) -> Option<String> {
+        match self {
+            InputReference::Hearing(r) => r.number.clone(),
+            InputReference::Brief(r) => r.number.clone(),
             _ => None,
         }
     }
@@ -240,6 +350,13 @@ impl InputReference {
             InputReference::CollectionComponent(r) => r.accessed.clone(),
             InputReference::SerialComponent(r) => r.accessed.clone(),
             InputReference::Collection(r) => r.accessed.clone(),
+            InputReference::LegalCase(r) => r.accessed.clone(),
+            InputReference::Statute(r) => r.accessed.clone(),
+            InputReference::Treaty(r) => r.accessed.clone(),
+            InputReference::Hearing(r) => r.accessed.clone(),
+            InputReference::Regulation(r) => r.accessed.clone(),
+            InputReference::Brief(r) => r.accessed.clone(),
+            InputReference::Classic(r) => r.accessed.clone(),
         }
     }
 
@@ -277,6 +394,13 @@ impl InputReference {
             InputReference::CollectionComponent(r) => r.keywords.clone(),
             InputReference::SerialComponent(r) => r.keywords.clone(),
             InputReference::Collection(r) => r.keywords.clone(),
+            InputReference::LegalCase(r) => r.keywords.clone(),
+            InputReference::Statute(r) => r.keywords.clone(),
+            InputReference::Treaty(r) => r.keywords.clone(),
+            InputReference::Hearing(r) => r.keywords.clone(),
+            InputReference::Regulation(r) => r.keywords.clone(),
+            InputReference::Brief(r) => r.keywords.clone(),
+            InputReference::Classic(r) => r.keywords.clone(),
         }
     }
 
@@ -287,6 +411,13 @@ impl InputReference {
             InputReference::CollectionComponent(r) => r.language.clone(),
             InputReference::SerialComponent(r) => r.language.clone(),
             InputReference::Collection(r) => r.language.clone(),
+            InputReference::LegalCase(r) => r.language.clone(),
+            InputReference::Statute(r) => r.language.clone(),
+            InputReference::Treaty(r) => r.language.clone(),
+            InputReference::Hearing(r) => r.language.clone(),
+            InputReference::Regulation(r) => r.language.clone(),
+            InputReference::Brief(r) => r.language.clone(),
+            InputReference::Classic(r) => r.language.clone(),
         }
     }
 
@@ -297,6 +428,13 @@ impl InputReference {
             InputReference::CollectionComponent(component) => component.id = Some(id),
             InputReference::SerialComponent(component) => component.id = Some(id),
             InputReference::Collection(collection) => collection.id = Some(id),
+            InputReference::LegalCase(r) => r.id = Some(id),
+            InputReference::Statute(r) => r.id = Some(id),
+            InputReference::Treaty(r) => r.id = Some(id),
+            InputReference::Hearing(r) => r.id = Some(id),
+            InputReference::Regulation(r) => r.id = Some(id),
+            InputReference::Brief(r) => r.id = Some(id),
+            InputReference::Classic(r) => r.id = Some(id),
         }
     }
 
@@ -328,6 +466,13 @@ impl InputReference {
                 CollectionType::EditedBook => "book".to_string(),
                 _ => "collection".to_string(),
             },
+            InputReference::LegalCase(_) => "legal-case".to_string(),
+            InputReference::Statute(_) => "statute".to_string(),
+            InputReference::Treaty(_) => "treaty".to_string(),
+            InputReference::Hearing(_) => "hearing".to_string(),
+            InputReference::Regulation(_) => "regulation".to_string(),
+            InputReference::Brief(_) => "brief".to_string(),
+            InputReference::Classic(_) => "classic".to_string(),
         }
     }
 }

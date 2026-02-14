@@ -322,3 +322,176 @@ pub enum RefDate {
     Edtf(csln_edtf::Edtf),
     Literal(String),
 }
+
+/// A legal case (court decision).
+#[derive(Debug, Deserialize, Serialize, Clone, JsonSchema, PartialEq)]
+#[serde(rename_all = "kebab-case")]
+pub struct LegalCase {
+    pub id: Option<RefID>,
+    /// Case name (e.g., "Brown v. Board of Education")
+    pub title: Title,
+    /// Court or authority (e.g., "U.S. Supreme Court")
+    pub authority: String,
+    /// Reporter volume
+    pub volume: Option<String>,
+    /// Reporter abbreviation (e.g., "U.S.", "F.2d")
+    pub reporter: Option<String>,
+    /// First page of case in reporter
+    pub page: Option<String>,
+    /// Decision date
+    pub issued: EdtfString,
+    #[serde(alias = "URL")]
+    pub url: Option<Url>,
+    pub accessed: Option<EdtfString>,
+    pub language: Option<LangID>,
+    pub note: Option<String>,
+    #[serde(alias = "DOI")]
+    pub doi: Option<String>,
+    pub keywords: Option<Vec<String>>,
+}
+
+/// A statute or legislative act.
+#[derive(Debug, Deserialize, Serialize, Clone, JsonSchema, PartialEq)]
+#[serde(rename_all = "kebab-case")]
+pub struct Statute {
+    pub id: Option<RefID>,
+    /// Statute name (e.g., "Civil Rights Act of 1964")
+    pub title: Title,
+    /// Legislative body (e.g., "U.S. Congress")
+    pub authority: Option<String>,
+    /// Code volume
+    pub volume: Option<String>,
+    /// Code abbreviation (e.g., "U.S.C.", "Pub. L.")
+    pub code: Option<String>,
+    /// Section or page number
+    pub section: Option<String>,
+    /// Enactment or publication date
+    pub issued: EdtfString,
+    #[serde(alias = "URL")]
+    pub url: Option<Url>,
+    pub accessed: Option<EdtfString>,
+    pub language: Option<LangID>,
+    pub note: Option<String>,
+    pub keywords: Option<Vec<String>>,
+}
+
+/// An international treaty or agreement.
+#[derive(Debug, Deserialize, Serialize, Clone, JsonSchema, PartialEq)]
+#[serde(rename_all = "kebab-case")]
+pub struct Treaty {
+    pub id: Option<RefID>,
+    /// Treaty name (e.g., "Treaty of Versailles")
+    pub title: Title,
+    /// Parties to the treaty
+    pub author: Option<Contributor>,
+    /// Treaty series volume
+    pub volume: Option<String>,
+    /// Treaty series abbreviation (e.g., "U.N.T.S.")
+    pub reporter: Option<String>,
+    /// Page or treaty number
+    pub page: Option<String>,
+    /// Signing or ratification date
+    pub issued: EdtfString,
+    #[serde(alias = "URL")]
+    pub url: Option<Url>,
+    pub accessed: Option<EdtfString>,
+    pub language: Option<LangID>,
+    pub note: Option<String>,
+    pub keywords: Option<Vec<String>>,
+}
+
+/// A legislative or administrative hearing.
+#[derive(Debug, Deserialize, Serialize, Clone, JsonSchema, PartialEq)]
+#[serde(rename_all = "kebab-case")]
+pub struct Hearing {
+    pub id: Option<RefID>,
+    /// Hearing title
+    pub title: Title,
+    /// Legislative body conducting the hearing (e.g., "U.S. Senate Committee on Finance")
+    pub authority: Option<String>,
+    /// Session or congress number
+    pub number: Option<String>,
+    /// Hearing date
+    pub issued: EdtfString,
+    #[serde(alias = "URL")]
+    pub url: Option<Url>,
+    pub accessed: Option<EdtfString>,
+    pub language: Option<LangID>,
+    pub note: Option<String>,
+    pub keywords: Option<Vec<String>>,
+}
+
+/// An administrative regulation.
+#[derive(Debug, Deserialize, Serialize, Clone, JsonSchema, PartialEq)]
+#[serde(rename_all = "kebab-case")]
+pub struct Regulation {
+    pub id: Option<RefID>,
+    /// Regulation title
+    pub title: Title,
+    /// Regulatory authority (e.g., "EPA", "Federal Register")
+    pub authority: Option<String>,
+    /// Code volume
+    pub volume: Option<String>,
+    /// Code abbreviation (e.g., "C.F.R.", "Fed. Reg.")
+    pub code: Option<String>,
+    /// Section or page number
+    pub section: Option<String>,
+    /// Publication or effective date
+    pub issued: EdtfString,
+    #[serde(alias = "URL")]
+    pub url: Option<Url>,
+    pub accessed: Option<EdtfString>,
+    pub language: Option<LangID>,
+    pub note: Option<String>,
+    pub keywords: Option<Vec<String>>,
+}
+
+/// A legal brief or filing.
+#[derive(Debug, Deserialize, Serialize, Clone, JsonSchema, PartialEq)]
+#[serde(rename_all = "kebab-case")]
+pub struct Brief {
+    pub id: Option<RefID>,
+    /// Brief title or case name
+    pub title: Title,
+    /// Court (e.g., "U.S. Supreme Court")
+    pub authority: Option<String>,
+    /// Author/filer of the brief
+    pub author: Option<Contributor>,
+    /// Docket number
+    pub number: Option<String>,
+    /// Filing date
+    pub issued: EdtfString,
+    #[serde(alias = "URL")]
+    pub url: Option<Url>,
+    pub accessed: Option<EdtfString>,
+    pub language: Option<LangID>,
+    pub note: Option<String>,
+    pub keywords: Option<Vec<String>>,
+}
+
+/// A classic work (Aristotle, Bible, etc.) with standard citation forms.
+#[derive(Debug, Deserialize, Serialize, Clone, JsonSchema, PartialEq)]
+#[serde(rename_all = "kebab-case")]
+pub struct Classic {
+    pub id: Option<RefID>,
+    /// Work title (e.g., "Nicomachean Ethics")
+    pub title: Title,
+    /// Author (e.g., "Aristotle")
+    pub author: Option<Contributor>,
+    /// Editor or translator
+    pub editor: Option<Contributor>,
+    pub translator: Option<Contributor>,
+    /// Volume in standard reference system
+    pub volume: Option<String>,
+    /// Section, book, or chapter in standard reference system
+    pub section: Option<String>,
+    /// Publication date of this edition (not original)
+    pub issued: EdtfString,
+    pub publisher: Option<Contributor>,
+    #[serde(alias = "URL")]
+    pub url: Option<Url>,
+    pub accessed: Option<EdtfString>,
+    pub language: Option<LangID>,
+    pub note: Option<String>,
+    pub keywords: Option<Vec<String>>,
+}
