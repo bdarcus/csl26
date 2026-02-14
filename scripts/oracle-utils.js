@@ -22,6 +22,7 @@ function normalizeText(text) {
     .replace(/&#38;/g, '&')            // HTML entity for &
     .replace(/_([^_]+)_/g, '$1')       // Strip markdown italics
     .replace(/\*\*([^*]+)\*\*/g, '$1') // Strip markdown bold
+    .replace(/^\d+\.\s+/, '')          // Strip bibliography numbering prefix
     .replace(/\s+/g, ' ')             // Normalize whitespace
     .trim();
 }
