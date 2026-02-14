@@ -42,6 +42,9 @@ bibliography:
       form: long
       suffix: "."
       name-order: family-first
+      overrides:
+        legal-case:
+          suppress: true
     - date: issued
       form: year
       wrap: parentheses
@@ -55,8 +58,26 @@ bibliography:
           suppress: true
         article-magazine:
           suppress: true
+        legal-case:
+          suppress: true
     - title: primary
       emph: true
+      overrides:
+        legal-case:
+          template:
+            - title: primary
+              emph: true
+              suffix: ","
+            - variable: volume
+              prefix: " "
+            - variable: reporter
+              prefix: " "
+            - variable: page
+              prefix: " "
+            - date: issued
+              form: year
+              wrap: parentheses
+              prefix: " "
     - items:
         - items:
             - contributor: editor
