@@ -131,14 +131,11 @@ Implementation Specialist (Sonnet) takes over for the execution and test loop.
 3. Author the style YAML using `/styleauthor`.
 4. Verify rendering output against oracle or guides.
 
-### Phase 4: EVOLVE & ITERATE
-
-**Validation Checkpoint:** After iteration 1, run validation check:
-- **Simple migrations**: Use `oracle-migration.js` (7-item focused test, ~10 seconds)
-- **Complex styles**: Use full `oracle.js` (31-item comprehensive test)
-- **Success threshold**: ≥5/7 items (71%) for simple, ≥50% for complex
-- **If below threshold**: Escalate immediately to `@styleplan` for template redesign
-- **Don't waste iterations** on fundamentally wrong structure
+**MANDATORY Validation Gate at Iteration 1:**
+- **Simple migrations**: Run `node scripts/oracle-migration.js "$STYLE_PATH" --json`
+- **Threshold**: Match rate must be ≥ 71% (5/7 items).
+- **If FAIL**: Stop and escalate to @styleplan for template redesign. Using more iterations on a flawed template architecture wastes tokens.
+- **If PASS**: Continue to iteration 2 for final polish.
 
 **Agent Transparency Requirement:**
 After each iteration, the builder MUST report to user:
@@ -146,6 +143,32 @@ After each iteration, the builder MUST report to user:
 - What was fixed in this iteration
 - What issues remain (if any)
 - Next step (continue iterating or escalate)
+
+**Beans Task Updates (Required):**
+The agent MUST update the associated beans task after each iteration:
+
+```bash
+# After iteration N completes:
+beans update <TASK_ID> --body "Iteration N/6 complete
+
+Match rate: X/7 (YY%)
+Fixed: <brief description>
+Remaining: <issue list or 'None'>
+
+Next: <continue | escalate | verify>
+"
+```
+
+If escalating to @styleplan:
+```bash
+beans update <TASK_ID> --status blocked --body "Escalation after iteration N
+
+Match rate: X/7 (<71% threshold)
+Issues: <specific problems>
+
+Action: Escalated to @styleplan for template redesign
+"
+```
 
 If output doesn't match after 2 implementation retries (excluding checkpoint escalation), the builder escalates back to `@styleplan` to refine the strategy. When escalating, the agent must report the problem details to the user.
 
@@ -177,11 +200,22 @@ All three must pass before continuing. If tests fail, fix the issue before proce
 Final verification before declaring done. The builder MUST surface output samples for this phase.
 
 1. **Rendering Audit**: @styleplan checks for spacing issues (double spaces, space before punctuation).
-2. If a CSL 1.0 equivalent exists in `styles-legacy/`:
+
+2. Validation strategy based on migration type:
+
+   **Simple migrations** (author-date, numeric with <5 overrides):
+   ```bash
+   node scripts/oracle-migration.js styles-legacy/<style-name>.csl
+   # 7-item focused test, ~10 seconds
+   # Pass threshold: ≥5/7 (71%)
+   ```
+
+   **Complex migrations** (note styles, legal, exotic features):
    ```bash
    node scripts/oracle.js styles-legacy/<style-name>.csl
+   # 31-item comprehensive test, ~30 seconds
+   # Pass threshold: ≥50% match
    ```
-   Compare CSLN output to citeproc-js output.
 
 2. Run full test suite to check for regressions:
    ```bash

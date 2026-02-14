@@ -50,6 +50,33 @@ try {
         }
     }
 
+    // OPT-1.4: Confidence gate — reject low-confidence inferences early
+    if (bibData.meta && typeof bibData.meta.confidence === 'number') {
+        const confidence = bibData.meta.confidence;
+        if (confidence < 0.70) {
+            console.error('❌ Low Confidence Template Rejected\n');
+            console.error(`Confidence: ${(confidence * 100).toFixed(0)}% (threshold: 70%)`);
+            console.error(`Source: bibliography template inference\n`);
+            console.error('The inferred template is unlikely to produce correct output.');
+            console.error('');
+            console.error('Next Steps:');
+            console.error('  1. Use @dstyleplan for Phase 1 manual research');
+            console.error('  2. Check if the style has exotic features (complex conditionals)');
+            console.error('  3. Try re-running with a different fixture set');
+            process.exit(1);
+        }
+    }
+
+    if (citeData.meta && typeof citeData.meta.confidence === 'number') {
+        const confidence = citeData.meta.confidence;
+        if (confidence < 0.70) {
+            console.error('⚠️  Low Confidence Citation Template\n');
+            console.error(`Confidence: ${(confidence * 100).toFixed(0)}% (threshold: 70%)`);
+            console.error('Proceeding with merge, but citation template may need manual review.');
+            console.error('');
+        }
+    }
+
     // Merge bibliography template
     if (bibData.bibliography && bibData.bibliography.template) {
         if (!baseData.bibliography) baseData.bibliography = {};
@@ -93,6 +120,23 @@ try {
     console.log(`Successfully merged migration data to: ${outputPath}`);
 
 } catch (err) {
-    console.error(`Error merging migration data: ${err.message}`);
-    process.exit(1);
+    console.error('❌ Migration Merge Failed\n');
+    console.error(`Error: ${err.message}`);
+
+    if (err.message.includes('not found')) {
+        console.error('\nMissing required input files:');
+        console.error(`  - Base YAML: ${basePath}`);
+        console.error(`  - Citation template: ${citePath}`);
+        console.error(`  - Bibliography template: ${bibPath}`);
+        console.error('\nEnsure prep-migration.sh completed successfully.');
+    } else if (err.message.includes('parse')) {
+        console.error('\nInvalid JSON/YAML format in input files.');
+        console.error('Check that infer-template.js and csln-migrate produced valid output.');
+    }
+
+    console.error('\nNext Steps:');
+    console.error('  1. Re-run prep-migration.sh to regenerate input files');
+    console.error('  2. Check error logs from previous pipeline steps');
+    console.error('  3. Verify CSL source file is valid XML');
+    process.exit(2);
 }

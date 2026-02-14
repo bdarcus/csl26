@@ -41,7 +41,7 @@ if (!stylePath) {
 
 if (!fs.existsSync(stylePath)) {
   console.error(`Error: Style file not found: ${stylePath}`);
-  process.exit(1);
+  process.exit(2);
 }
 
 const styleName = path.basename(stylePath, '.csl');
@@ -55,11 +55,25 @@ const result = inferTemplate(stylePath, section);
 
 if (!result) {
   if (jsonOutput || fragmentOutput) {
-    console.log(JSON.stringify({ error: 'Template inference failed' }));
+    console.log(JSON.stringify({
+      error: 'Template inference failed',
+      reason: 'Unable to extract consistent component ordering',
+      style: styleName
+    }));
   } else {
-    console.error(`\nError: Failed to infer template for ${styleName}`);
+    console.error('❌ Template Inference Failed\n');
+    console.error(`Style: ${styleName}`);
+    console.error('Reason: Unable to extract consistent component ordering from citeproc-js output\n');
+    console.error('This typically means the style has:');
+    console.error('  - Complex conditional logic (position-based rendering)');
+    console.error('  - Inconsistent delimiter patterns across reference types');
+    console.error('  - Heavy use of substitution rules\n');
+    console.error('Next Steps:');
+    console.error('  1. Use @dstyleplan for manual architecture design');
+    console.error('  2. Check CSL source for complex <choose> blocks');
+    console.error('  3. Report issue if this is a standard author-date/numeric style');
   }
-  process.exit(1);
+  process.exit(2);
 }
 
 // Output

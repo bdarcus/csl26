@@ -13,6 +13,11 @@
  *   node oracle.js ../styles/apa.csl --json
  *   node oracle.js ../styles/apa.csl --verbose
  *   node oracle.js ../styles/apa.csl --simple  # fallback to simple mode
+ *
+ * Exit codes:
+ *   0 - Success (all citations and bibliography entries match)
+ *   1 - Failed validation (some entries don't match)
+ *   2 - Fatal error (file not found, parse error, CSLN rendering failed)
  */
 
 const CSL = require('citeproc');
@@ -260,11 +265,25 @@ const csln = renderWithCslnProcessor(stylePath);
 
 if (!csln) {
   if (jsonOutput) {
-    console.log(JSON.stringify({ error: 'CSLN rendering failed' }));
+    console.log(JSON.stringify({
+      error: 'CSLN rendering failed',
+      reason: 'Processor execution error or migration output invalid',
+      style: styleName
+    }));
   } else {
-    console.log('\n❌ CSLN rendering failed\n');
+    console.error('❌ CSLN Rendering Failed\n');
+    console.error(`Style: ${styleName}`);
+    console.error('Reason: Processor execution error or invalid migration output\n');
+    console.error('Common causes:');
+    console.error('  - Invalid YAML syntax in migrated style');
+    console.error('  - Unsupported schema features in migration output');
+    console.error('  - Missing required fields (info.id, version)\n');
+    console.error('Next Steps:');
+    console.error('  1. Check migration output: cargo run --bin csln-migrate -- <csl-path>');
+    console.error('  2. Validate YAML syntax: yamllint .migrated-temp.yaml');
+    console.error('  3. Check processor error: cargo run --bin csln -- process <refs> <style>');
   }
-  process.exit(1);
+  process.exit(2);
 }
 
 // Analyze bibliography

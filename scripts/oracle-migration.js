@@ -10,8 +10,9 @@
  *   node oracle-migration.js styles-legacy/apa.csl --json
  *
  * Exit codes:
- *   0 - Success (≥5/7 items match)
- *   1 - Failure (<5/7 items match)
+ *   0 - Success (meets quality threshold ≥5/7 items)
+ *   1 - Failed validation (below threshold)
+ *   2 - Fatal error (file not found, parse error, CSLN rendering failed)
  */
 
 const CSL = require('citeproc');
@@ -19,8 +20,8 @@ const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
 const {
-  normalizeText,
-  loadLocale,
+    normalizeText,
+    loadLocale,
 } = require('./oracle-utils');
 
 // 7-item focused test set (same as oracle-simple.js)
@@ -121,10 +122,10 @@ const testItems = {
 
 function createSys(items) {
     return {
-        retrieveLocale: function(lang) {
+        retrieveLocale: function (lang) {
             return loadLocale(lang);
         },
-        retrieveItem: function(id) {
+        retrieveItem: function (id) {
             return items[id];
         }
     };
@@ -161,7 +162,9 @@ function renderWithCsln(stylePath) {
     const cslnStylePath = path.join(__dirname, '..', 'styles', `${styleName}.yaml`);
 
     if (!fs.existsSync(cslnStylePath)) {
-        throw new Error(`CSLN style not found: ${cslnStylePath}`);
+        console.error(`❌ CSLN style not found: ${cslnStylePath}`);
+        console.error('\nRun prep-migration.sh first to generate the CSLN style.');
+        process.exit(2);
     }
 
     // Create temp fixture with 7-item subset
@@ -274,12 +277,12 @@ const jsonOutput = args.includes('--json');
 
 if (!stylePath) {
     console.error('Usage: node oracle-migration.js <style.csl> [--json]');
-    process.exit(1);
+    process.exit(2);
 }
 
 if (!fs.existsSync(stylePath)) {
     console.error(`Style not found: ${stylePath}`);
-    process.exit(1);
+    process.exit(2);
 }
 
 console.error('\n=== Migration Oracle (7-item focused test) ===\n');
@@ -295,24 +298,49 @@ const results = compareOutputs(oracle, csln);
 if (jsonOutput) {
     console.log(JSON.stringify(results, null, 2));
 } else {
+    if (results.mismatches.length > 0) {
+        console.log('\n┌──────────────────────────────────────────────────────────────┐');
+        console.log('│                   MIGRATION MISMATCH ANALYSIS                │');
+        console.log('└──────────────────────────────────────────────────────────────┘\n');
+
+        results.mismatches.forEach(mm => {
+            console.log(`ID: [${mm.id}] | TYPE: ${mm.type.toUpperCase()}`);
+            console.log(`┌─────────┬────────────────────────────────────────────────────┐`);
+            console.log(`│ SOURCE  │ RENDERING                                          │`);
+            console.log(`├─────────┼────────────────────────────────────────────────────┤`);
+
+            const wrap = (text, width) => {
+                const lines = [];
+                for (let i = 0; i < text.length; i += width) {
+                    lines.push(text.substring(i, i + width));
+                }
+                return lines.length > 0 ? lines : [""];
+            };
+
+            const oracleLines = wrap(mm.oracle, 50);
+            const cslnLines = wrap(mm.csln, 50);
+
+            console.log(`│ ORACLE  │ ${oracleLines[0].padEnd(50)} │`);
+            for (let i = 1; i < oracleLines.length; i++) console.log(`│         │ ${oracleLines[i].padEnd(50)} │`);
+
+            console.log(`├─────────┼────────────────────────────────────────────────────┤`);
+
+            console.log(`│ CSLN    │ ${cslnLines[0].padEnd(50)} │`);
+            for (let i = 1; i < cslnLines.length; i++) console.log(`│         │ ${cslnLines[i].padEnd(50)} │`);
+
+            console.log(`└─────────┴────────────────────────────────────────────────────┘\n`);
+        });
+    } else {
+        console.log('\n✅ PERFECT MATCH (100%)\n');
+    }
+
     console.log(`Citations: ${results.citations.matches}/${results.citations.total} match`);
     console.log(`Bibliography: ${results.bibliography.matches}/${results.bibliography.total} match`);
 
     const totalMatches = results.citations.matches + results.bibliography.matches;
     const totalItems = results.citations.total + results.bibliography.total;
 
-    console.log(`\nOverall: ${totalMatches}/${totalItems} (${Math.round(totalMatches/totalItems*100)}%)`);
-
-    if (results.mismatches.length > 0 && results.mismatches.length <= 5) {
-        console.log('\nMismatches:');
-        results.mismatches.forEach(mm => {
-            console.log(`\n[${mm.id}] ${mm.type}:`);
-            console.log(`  Oracle: ${mm.oracle}`);
-            console.log(`  CSLN:   ${mm.csln}`);
-        });
-    } else if (results.mismatches.length > 5) {
-        console.log(`\n${results.mismatches.length} mismatches (use --json for details)`);
-    }
+    console.log(`\nOverall Score: ${Math.round(totalMatches / totalItems * 100)}%`);
 
     // Success threshold: ≥5/7 items (71%)
     const threshold = 5;
