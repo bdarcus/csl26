@@ -10,8 +10,9 @@
 #
 version: ""
 info:
-  title: APA Style 7th edition
-  id: http://www.zotero.org/styles/apa
+  title: APA 7th Edition (CSLN)
+  id: https://www.zotero.org/styles/apa-7th-csln
+  link: https://apastyle.apa.org/
 options:
   substitute:
     contributor-role-form: short
