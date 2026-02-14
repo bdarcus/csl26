@@ -14,6 +14,7 @@ info:
   id: http://www.zotero.org/styles/springer-basic-author-date
   default-locale: en-US
 options:
+  strip-periods: true
   substitute:
     contributor-role-form: short
     template:
