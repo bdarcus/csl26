@@ -1,7 +1,7 @@
 ---
 # csl26-5qh6
 title: Restore semantic tagging in Djot/HTML output modes
-status: todo
+status: completed
 type: bug
 priority: normal
 created_at: 2026-02-10T16:22:34Z

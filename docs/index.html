@@ -287,15 +287,16 @@
                     </p>
                 </a>
 
-                <!-- Maintenance -->
-                <a href="https://github.com/bdarcus/csl26" class="feature-card p-8 rounded-xl border border-slate-200 transition-all group block">
+                <!-- Pluggable Output Formats -->
+                <a href="examples.html#output-formats" class="feature-card p-8 rounded-xl border border-slate-200 transition-all group block">
                     <div
                         class="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center text-primary mb-6 group-hover:bg-primary group-hover:text-white transition-colors">
-                        <span class="material-icons">build</span>
+                        <span class="material-icons">html</span>
                     </div>
-                    <h3 class="text-xl font-bold text-slate-900 mb-3">Integrated Repo</h3>
+                    <h3 class="text-xl font-bold text-slate-900 mb-3">Pluggable Output</h3>
                     <p class="text-slate-500 leading-relaxed text-sm">
-                        Code, schema, and documentation all in one maintained repository for easier iteration.
+                        Generate clean, semantically-enhanced output in Plain Text, HTML, or Djot with a flexible
+                        architecture for future LaTeX and Typst support.
                     </p>
                 </a>
 
@@ -331,17 +332,17 @@
                     <div class="space-y-6">
                         <!-- Example 1 -->
                         <div>
-                            <h4 class="font-bold text-slate-900 mb-2">Process a bibliography</h4>
+                            <h4 class="font-bold text-slate-900 mb-2">Process a bibliography (HTML)</h4>
                             <div class="bg-slate-900 rounded-lg p-4 font-mono text-sm text-slate-300 shadow-md">
-                                <span class="text-primary">$</span> csln process inputs/paper.json styles/apa.yaml
+                                <span class="text-primary">$</span> csln process paper.json apa.yaml <span class="text-emerald-400">--format html</span>
                             </div>
                         </div>
 
-                        <!-- Example 1b (Debug) -->
+                        <!-- Example 1b (Djot) -->
                         <div>
-                            <h4 class="font-bold text-slate-900 mb-2">Process with debug keys</h4>
+                            <h4 class="font-bold text-slate-900 mb-2">Process for static sites (Djot)</h4>
                             <div class="bg-slate-900 rounded-lg p-4 font-mono text-sm text-slate-300 shadow-md">
-                                <span class="text-primary">$</span> csln process inputs/paper.json styles/apa.yaml --show-keys
+                                <span class="text-primary">$</span> csln process paper.json apa.yaml <span class="text-emerald-400">--format djot</span>
                             </div>
                         </div>
 
@@ -405,7 +406,7 @@
                 </div>
                 <div class="flex gap-8 text-sm font-medium text-slate-500">
                     <a class="hover:text-primary transition-colors" href="https://github.com/bdarcus/csl26">GitHub</a>
-                    <a class="hover:text-primary transition-colors" href="#">Documentation</a>
+                    <a class="hover:text-primary transition-colors" href="examples.html">Examples</a>
                     <a class="hover:text-primary transition-colors" href="https://github.com/bdarcus/style-hub">Styles Registry</a>
                 </div>
                 <div class="text-sm text-slate-400">
