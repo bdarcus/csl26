@@ -1,0 +1,126 @@
+# Springer Basic (numeric, brackets) - migrated from CSL 1.0
+#
+# Source: http://www.zotero.org/styles/springer-basic-brackets
+# Refs: springer-basic-brackets.csl (CSL 1.0)
+#
+# Migration notes:
+# - Numeric citation format with bracket wrapping [1, 2]
+# - Bibliography: Author (Year) Title. Container Vol:Pages. DOI
+# - Chapter: In: Editor (eds) Container. Publisher, Place, pp X-Y
+# - strip-periods at global level matches CSL source's consistent strip-periods usage
+# - No contributor-role-form in substitute: editors substitute as plain names per CSL source
+# - Tested against oracle-migration.js
+#
+version: '0.2.0'
+info:
+  title: Springer - Basic (numeric, brackets)
+  id: springer-basic-brackets
+  link: http://www.zotero.org/styles/springer-basic-brackets
+
+options:
+  substitute:
+    template:
+    - editor
+    - translator
+  processing: numeric
+  strip-periods: true
+  contributors:
+    display-as-sort: all
+    initialize-with: ''
+    delimiter: ', '
+    delimiter-precedes-last: always
+    demote-non-dropping-particle: sort-only
+    sort-separator: ' '
+    shorten:
+      min: 5
+      use-first: 3
+  dates:
+    month: long
+  bibliography:
+    separator: '. '
+  punctuation-in-quote: true
+
+citation:
+  template:
+  - number: citation-number
+  wrap: brackets
+  multi-cite-delimiter: ', '
+
+bibliography:
+  template:
+  # 1. Author (Year) Title
+  - contributor: author
+    form: long
+
+  - date: issued
+    form: year
+    wrap: parentheses
+    prefix: ' '
+
+  - title: primary
+    prefix: ' '
+
+  # Chapter/paper-conference: "In: Editor (eds) Container"
+  - items:
+    - prefix: 'In: '
+      contributor: editor
+      form: long
+    - title: parent-monograph
+    overrides:
+      chapter:
+        suppress: false
+      paper-conference:
+        suppress: false
+      default:
+        suppress: true
+
+  # Journal article: "Container Volume:Pages"
+  - items:
+    - title: parent-serial
+      suffix: ' '
+    - number: volume
+      suffix: ':'
+    - number: pages
+    delimiter: none
+    overrides:
+      article-journal:
+        suppress: false
+      default:
+        suppress: true
+
+  # Book/report/chapter: "Publisher, Publisher-place"
+  - items:
+    - variable: publisher
+    - variable: publisher-place
+    delimiter: ', '
+    overrides:
+      book:
+        suppress: false
+      report:
+        suppress: false
+      chapter:
+        suppress: false
+      paper-conference:
+        suppress: false
+      default:
+        suppress: true
+
+  # Chapter pages: "pp X-Y"
+  - number: pages
+    prefix: ', pp '
+    overrides:
+      chapter:
+        suppress: false
+      paper-conference:
+        suppress: false
+      default:
+        suppress: true
+
+  # DOI for articles
+  - variable: doi
+    prefix: 'https://doi.org/'
+    overrides:
+      article-journal:
+        suppress: false
+      default:
+        suppress: true
