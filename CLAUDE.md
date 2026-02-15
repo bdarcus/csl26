@@ -426,6 +426,8 @@ Architectural decisions and design rationale:
 - **[STYLE_ALIASING.md](./docs/architecture/design/STYLE_ALIASING.md)**: Style aliasing and presets strategy. Recommends presets for configuration reuse instead of CSL 1.0's parent/child aliasing. Refs: #89
 - **[STYLE_EDITOR_VISION.md](./docs/architecture/design/STYLE_EDITOR_VISION.md)**: User stories and API requirements for a web-based style editor. Ensures the core library supports progressive-refinement UIs and JSON API exposure.
 - **[LEGAL_CITATIONS.md](./docs/architecture/design/LEGAL_CITATIONS.md)**: Two-tier legal citation architecture. Core legal types (Tier 1) for academics citing legal materials in APA/Chicago/MLA, optional specialist features (Tier 2) for Bluebook/ALWD. Refs: csl26-rmoi
+- **[TYPE_SYSTEM_ARCHITECTURE.md](./docs/architecture/design/TYPE_SYSTEM_ARCHITECTURE.md)**: Analysis of structural vs flat type system approaches. Recommends hybrid model (structural for academic, flat for legal/domain-specific) with documented type addition policy. Refs: csl26-wodz
+- **[TYPE_ADDITION_POLICY.md](./docs/architecture/TYPE_ADDITION_POLICY.md)**: **Active policy** for deciding when to add new reference types. Uses 4-factor test (semantic distinction, style discrimination, field schema difference, no meaningful parent). Hybrid model balances data efficiency with style clarity.
 
 ## Skills
 

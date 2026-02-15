@@ -1,47 +1,52 @@
 ---
 # csl26-wodz
 title: 'Decide: structural vs flat type system architecture'
-status: todo
+status: completed
 type: feature
 priority: high
 created_at: 2026-02-14T22:53:24Z
-updated_at: 2026-02-14T22:53:24Z
+updated_at: 2026-02-15T00:18:09Z
 ---
 
 Architectural decision triggered by legal citations PR #164.
 
+**DECISION: Option A - Hybrid Model with Type Addition Policy**
+
 **Question:** Should CSLN use structural types (Monograph, SerialComponent),
 flat types (JournalArticle, MagazineArticle, LegalCase), or hybrid?
 
-**Current State:** Hybrid (structural for academic, flat for legal)
+**Answer:** Hybrid approach with documented 4-factor test policy.
 
-**Options:**
-A. Hybrid - keep current structural + new flat legal types
-B. Structural - consolidate all into structural categories
-C. Flat - expand all to explicit semantic types (~25-30 types)
+**Rationale:**
+1. Data efficiency - Parent-child relationships reduce duplication for academic refs
+2. Style clarity - Flat types enable explicit overrides for legal/domain refs
+3. User alignment - Semantic type names match mental models
+4. CSL 1.0 compatibility - Flat types map 1:1, structural map many:1
 
-**Impact Areas:**
-- Style template complexity
-- Code maintenance burden
-- User experience (type selection)
-- CSL 1.0 migration path
-- Alignment with CSLN principles
+**4-Factor Test for New Types:**
+1. Semantic distinction - users think of it differently
+2. Style discrimination - 20%+ of major styles format differently
+3. Field schema difference - 3+ unique required/expected fields
+4. No meaningful parent - container is locator, not semantic
 
-**Analysis:** docs/architecture/design/TYPE_SYSTEM_ARCHITECTURE.md
+**Pass all 4 → Add flat type**
+**Fail 3-4 → Use structural type** (efficiency > template complexity)
 
-**Decision Criteria:**
-1. Is parent-child relationship valuable for academic materials?
-2. How important is style template simplicity?
-3. Code efficiency vs style authoring clarity priority?
-4. Should CSLN match CSL 1.0 type vocabulary?
-5. Can we tolerate architectural inconsistency?
+**Documentation:**
+✅ TYPE_SYSTEM_ARCHITECTURE.md - full analysis, recommendation
+✅ TYPE_ADDITION_POLICY.md - active policy with decision criteria
+✅ CLAUDE.md - updated with policy links
 
-**Next Steps:**
-1. Review impact analysis
-2. Consult with domain experts and style authors
-3. Choose option (A, B, or C)
-4. If Option C: create migration plan bean
-5. Document decision criteria for future types
+**Impact:**
+- No breaking changes (current types validated against policy)
+- Legal citations PR #164 proceeds (LegalCase, Treaty, etc. pass 4-factor test)
+- Future type additions use documented policy
 
-**Blocking:** Legal citations merge decision (csl26-rmoi)
-May impact future type additions and style authoring patterns.
+**Follow-up:**
+- Bean csl26-piea: Implement policy infrastructure (PR template, examples, audit)
+
+**References:**
+- TYPE_SYSTEM_ARCHITECTURE.md
+- TYPE_ADDITION_POLICY.md
+- biblatex (31 flat types) - better prior art than CSL 1.0 hierarchy
+- Legal citations: csl26-rmoi, PR #164

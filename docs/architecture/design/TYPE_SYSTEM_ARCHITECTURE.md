@@ -412,13 +412,54 @@ Whichever option is chosen should be evaluated on:
 - User Personas: PERSONAS.md
 - CSL 1.0 Specification: https://docs.citationstyles.org/en/stable/specification.html
 
+## Recommendation: Option A (Hybrid) with Type Addition Policy
+
+**Decision:** Use **Option A (Hybrid approach)** with documented policy for future type additions.
+
+**Rationale:**
+
+After deep analysis (see [TYPE_ADDITION_POLICY.md](./TYPE_ADDITION_POLICY.md)), the hybrid model best balances CSLN's design principles:
+
+1. **Data efficiency** - Parent-child relationships for academic references reduce duplication
+2. **Style clarity** - Flat types for legal/domain-specific references enable explicit overrides
+3. **User alignment** - Semantic type names match user mental models
+4. **CSL 1.0 compatibility** - Flat types map 1:1, structural types map many:1
+
+**Policy:** Use the **4-factor test** to decide when to add new types:
+1. Semantic distinction (users think of it differently)
+2. Style discrimination (20%+ of major styles format differently)
+3. Field schema difference (3+ unique required/expected fields)
+4. No meaningful parent (container is locator, not semantic)
+
+**Pass all 4 factors → Add flat type**
+**Fail factors 3-4 → Use structural type** (efficiency > template complexity)
+
+See full decision criteria, flowchart, and examples in [TYPE_ADDITION_POLICY.md](./TYPE_ADDITION_POLICY.md).
+
+## Implementation
+
+**Type Addition Policy:** [docs/architecture/TYPE_ADDITION_POLICY.md](./TYPE_ADDITION_POLICY.md)
+
+**Current Type Audit:**
+- ✅ SerialComponent types conform to policy (parent-child efficiency)
+- ✅ Legal flat types conform to policy (4-factor test passed)
+- ✅ Monograph types conform to policy (monolithic works)
+
+**Future Type Candidates:**
+- Dataset (high priority, validate against DataCite/APA)
+- Software (medium priority, FORCE11 guidelines emerging)
+- Standard (medium priority, ISO/ANSI citations)
+
+**No breaking changes required.** The current hybrid approach is validated and documented.
+
 ## Next Steps
 
-1. **User decision:** Choose Option A, B, or C based on priority trade-offs
-2. **If Option C chosen:** Create migration plan bean
-3. **If Option A chosen:** Document decision criteria for future type additions
-4. **If Option B chosen:** Re-implement legal citations as SerialComponents
+1. ✅ **Decision made:** Option A (Hybrid) with Type Addition Policy
+2. ✅ **Policy documented:** TYPE_ADDITION_POLICY.md created
+3. ⏳ **Enforcement:** Add policy to PR template (bean: TBD)
+4. ⏳ **Examples:** Create decision matrix for 10 test cases (bean: TBD)
+5. ⏳ **Mapping:** Document biblatex → CSLN type mapping (bean: TBD)
 
 ---
 
-**Status:** Awaiting decision from project lead.
+**Status:** Decision finalized. Policy active for future type additions.
