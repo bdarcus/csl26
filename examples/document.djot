@@ -2,10 +2,10 @@
 
 This is a test document using the proposed Djot citation syntax.
 
-Multi-cite with prefix and locator: [see ;@kuhn1962; @watson1953, ch. 2]{.cite}.
+Multi-cite with prefix and locator: [see ;@kuhn1962; @watson1953, ch. 2].
 
-Narrative with locator: @kuhn1962[p. 10]{.cite} argues...
+Narrative with locator: @kuhn1962[p. 10] argues...
 
-Simple parenthetical: [@watson1953]{.cite}.
+Simple parenthetical: [@watson1953].
 
-Another multi-cite: [compare @smith2010, p. 45; @brown1954 for context]{.cite}.
+Another multi-cite: [compare @smith2010, p. 45; @brown1954 for context].

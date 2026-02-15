@@ -23,7 +23,7 @@ pub trait CitationParser {
 }
 
 /// A parser for Djot citations using winnow.
-/// Syntax: `[prefix @key1; @key2, locator suffix]{.cite}` or `@key[locator]{.cite}`
+/// Syntax: `[prefix @key1; @key2, locator suffix]` or `@key[locator]`
 pub struct WinnowCitationParser;
 
 impl Default for WinnowCitationParser {
@@ -52,6 +52,7 @@ impl CitationParser for WinnowCitationParser {
             let potential = &input[start_pos..];
             let mut p_input = potential;
 
+            // Try to parse the citation structure
             if let Ok(citation) = parse_any_citation(&mut p_input) {
                 let consumed = potential.len() - p_input.len();
                 let end_pos = start_pos + consumed;
@@ -61,6 +62,7 @@ impl CitationParser for WinnowCitationParser {
                 input = &input[shift..];
                 offset += shift;
             } else {
+                // Not a citation, skip and continue
                 let shift = start_pos + 1;
                 input = &input[shift..];
                 offset += shift;
@@ -71,19 +73,20 @@ impl CitationParser for WinnowCitationParser {
     }
 }
 
+/// Parse either parenthetical `[...]` or narrative `@key [...]`
 fn parse_any_citation(input: &mut &str) -> winnow::Result<Citation, ContextError> {
     alt((parse_parenthetical_citation, parse_narrative_citation)).parse_next(input)
 }
 
+/// Parse `[content]`
 fn parse_parenthetical_citation(input: &mut &str) -> winnow::Result<Citation, ContextError> {
     let _ = '['.parse_next(input)?;
     let citation = parse_citation_content.parse_next(input)?;
     let _ = ']'.parse_next(input)?;
-    let _ = space0.parse_next(input)?;
-    let _ = alt(("{.cite}", "{class=\"cite\"}")).parse_next(input)?;
     Ok(citation)
 }
 
+/// Parse `@key [locator]` or just `@key`
 fn parse_narrative_citation(input: &mut &str) -> winnow::Result<Citation, ContextError> {
     let _: char = '@'.parse_next(input)?;
     let key: &str =
@@ -96,7 +99,7 @@ fn parse_narrative_citation(input: &mut &str) -> winnow::Result<Citation, Contex
 
     let mut input_checkpoint = *input;
     let locator_res: winnow::Result<&str, ContextError> =
-        parse_citation_attribute_brackets(&mut input_checkpoint);
+        parse_citation_locator_brackets(&mut input_checkpoint);
 
     let mut citation = Citation {
         mode: CitationMode::Integral,
@@ -112,14 +115,12 @@ fn parse_narrative_citation(input: &mut &str) -> winnow::Result<Citation, Contex
     Ok(citation)
 }
 
-fn parse_citation_attribute_brackets<'a>(
+fn parse_citation_locator_brackets<'a>(
     input: &mut &'a str,
 ) -> winnow::Result<&'a str, ContextError> {
     let _ = '['.parse_next(input)?;
     let l = take_until(0.., ']').parse_next(input)?;
     let _ = ']'.parse_next(input)?;
-    let _ = space0.parse_next(input)?;
-    let _ = alt(("{.cite}", "{class=\"cite\"}")).parse_next(input)?;
     Ok(l)
 }
 
@@ -224,7 +225,7 @@ mod tests {
     #[test]
     fn test_parse_complex_djot_citation() {
         let parser = WinnowCitationParser;
-        let content = "[see ;@kuhn1962; @watson1953, ch. 2]{.cite}";
+        let content = "[see ;@kuhn1962; @watson1953, ch. 2]";
         let citations = parser.parse_citations(content);
 
         assert_eq!(citations.len(), 1);
@@ -235,5 +236,20 @@ mod tests {
         assert_eq!(citation.items[1].id, "watson1953");
         assert_eq!(citation.items[1].locator, Some("2".to_string()));
         assert_eq!(citation.items[1].label, Some(LocatorType::Chapter));
+    }
+
+    #[test]
+    fn test_parse_narrative_with_locator() {
+        let parser = WinnowCitationParser;
+        let content = "@kuhn1962[p. 10]";
+        let citations = parser.parse_citations(content);
+
+        assert_eq!(citations.len(), 1);
+        let (_, _, citation) = &citations[0];
+        assert_eq!(citation.mode, CitationMode::Integral);
+        assert_eq!(citation.items.len(), 1);
+        assert_eq!(citation.items[0].id, "kuhn1962");
+        assert_eq!(citation.items[0].locator, Some("10".to_string()));
+        assert_eq!(citation.items[0].label, Some(LocatorType::Page));
     }
 }
