@@ -3,10 +3,9 @@ SPDX-License-Identifier: MPL-2.0
 SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 */
 
-//! Document-level citation processing.
+//! Djot document parsing and HTML conversion.
 
-use crate::processor::Processor;
-use crate::render::format::OutputFormat;
+use super::CitationParser;
 use crate::{Citation, CitationItem};
 use csln_core::citation::{CitationMode, LocatorType};
 use winnow::ascii::space0;
@@ -15,24 +14,17 @@ use winnow::error::ContextError;
 use winnow::prelude::*;
 use winnow::token::{take_until, take_while};
 
-/// A trait for document parsers that can identify citations.
-pub trait CitationParser {
-    /// Find and extract citations from a document string.
-    /// Returns a list of (start_index, end_index, citation_model) tuples.
-    fn parse_citations(&self, content: &str) -> Vec<(usize, usize, Citation)>;
-}
-
 /// A parser for Djot citations using winnow.
 /// Syntax: `[prefix @key1; @key2, locator suffix]` or `@key[locator]`
-pub struct WinnowCitationParser;
+pub struct DjotParser;
 
-impl Default for WinnowCitationParser {
+impl Default for DjotParser {
     fn default() -> Self {
         Self
     }
 }
 
-impl CitationParser for WinnowCitationParser {
+impl CitationParser for DjotParser {
     fn parse_citations(&self, content: &str) -> Vec<(usize, usize, Citation)> {
         let mut results = Vec::new();
         let mut input = content;
@@ -204,8 +196,6 @@ fn parse_hybrid_locators(item: &mut CitationItem, locator_str: &str) {
         let key = lp[..colon_pos].trim().to_lowercase();
         let val_with_rest = lp[colon_pos + 1..].trim();
 
-        // Handle potential comma for multiple structured locators: `page: 23, section: V`
-        // For now, we only support one locator per item in the model, so we take the first.
         let val = if let Some(comma_pos) = val_with_rest.find(',') {
             &val_with_rest[..comma_pos]
         } else {
@@ -245,62 +235,10 @@ fn map_label_str(s: &str) -> Option<LocatorType> {
     }
 }
 
-impl Processor {
-    pub fn process_document<P, F>(
-        &self,
-        content: &str,
-        parser: &P,
-        format: DocumentFormat,
-    ) -> String
-    where
-        P: CitationParser,
-        F: OutputFormat<Output = String>,
-    {
-        use crate::render::plain::PlainText;
-
-        let mut result = String::new();
-        let mut last_idx = 0;
-        let citations = parser.parse_citations(content);
-
-        // Always render citations as plain text for Djot documents
-        // HTML conversion happens at the end via jotdown
-        for (start, end, citation) in citations {
-            result.push_str(&content[last_idx..start]);
-            match self.process_citation_with_format::<PlainText>(&citation) {
-                Ok(rendered) => result.push_str(&rendered),
-                Err(_) => result.push_str(&content[start..end]),
-            }
-            last_idx = end;
-        }
-
-        result.push_str(&content[last_idx..]);
-        result.push_str("\n\n# Bibliography\n\n");
-        let bib_content = self.render_bibliography_with_format::<PlainText>();
-        result.push_str(&bib_content);
-
-        // Convert to HTML if requested
-        match format {
-            DocumentFormat::Html => djot_to_html(&result),
-            DocumentFormat::Djot | DocumentFormat::Plain => result,
-        }
-    }
-}
-
 /// Convert Djot markup to HTML using jotdown.
-fn djot_to_html(djot: &str) -> String {
+pub fn djot_to_html(djot: &str) -> String {
     let events = jotdown::Parser::new(djot);
     jotdown::html::render_to_string(events)
-}
-
-/// Document output format.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DocumentFormat {
-    /// Plain text (raw Djot markup).
-    Plain,
-    /// Djot markup (same as Plain).
-    Djot,
-    /// HTML output.
-    Html,
 }
 
 #[cfg(test)]
@@ -309,7 +247,7 @@ mod tests {
 
     #[test]
     fn test_parse_complex_djot_citation() {
-        let parser = WinnowCitationParser;
+        let parser = DjotParser;
         let content = "[see ;@kuhn1962; @watson1953, ch. 2]";
         let citations = parser.parse_citations(content);
 
@@ -325,7 +263,7 @@ mod tests {
 
     #[test]
     fn test_parse_narrative_with_locator() {
-        let parser = WinnowCitationParser;
+        let parser = DjotParser;
         let content = "@kuhn1962[p. 10]";
         let citations = parser.parse_citations(content);
 
@@ -340,7 +278,7 @@ mod tests {
 
     #[test]
     fn test_parse_structured_locator() {
-        let parser = WinnowCitationParser;
+        let parser = DjotParser;
         let content = "[@kuhn1962, section: 5]";
         let citations = parser.parse_citations(content);
 
@@ -352,7 +290,7 @@ mod tests {
 
     #[test]
     fn test_parse_infix_citation() {
-        let parser = WinnowCitationParser;
+        let parser = DjotParser;
         let content = "@smith(argues that x)";
         let citations = parser.parse_citations(content);
 
@@ -366,7 +304,7 @@ mod tests {
 
     #[test]
     fn test_parse_infix_with_locator() {
-        let parser = WinnowCitationParser;
+        let parser = DjotParser;
         let content = "@smith(argues that x)[23]";
         let citations = parser.parse_citations(content);
 
@@ -382,7 +320,7 @@ mod tests {
 
     #[test]
     fn test_parse_infix_with_structured_locator() {
-        let parser = WinnowCitationParser;
+        let parser = DjotParser;
         let content = "@jones(notes that y)[chapter: 5]";
         let citations = parser.parse_citations(content);
 

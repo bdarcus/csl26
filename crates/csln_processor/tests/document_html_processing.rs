@@ -8,7 +8,7 @@ use csln_core::{
     BibliographySpec, Style, StyleInfo,
 };
 use csln_processor::{
-    processor::document::{DocumentFormat, WinnowCitationParser},
+    processor::document::{djot::DjotParser, DocumentFormat},
     reference::Reference,
     Processor,
 };
@@ -81,7 +81,7 @@ fn test_document_html_output_contains_heading() {
     let document = "This is a test document with a citation [@kuhn1962].\n\nMore text here.";
 
     // Process document as HTML
-    let parser = WinnowCitationParser;
+    let parser = DjotParser;
     let html_output = processor.process_document::<_, csln_processor::render::html::Html>(
         document,
         &parser,
@@ -173,7 +173,7 @@ fn test_document_djot_output_unmodified() {
     let document = "Document with citation [@ref1].";
 
     // Process as Djot format
-    let parser = WinnowCitationParser;
+    let parser = DjotParser;
     let djot_output = processor.process_document::<_, csln_processor::render::djot::Djot>(
         document,
         &parser,
