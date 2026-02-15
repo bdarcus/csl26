@@ -256,58 +256,16 @@ impl Processor {
 
         // Convert to HTML if requested
         match format {
-            DocumentFormat::Html => simple_djot_to_html(&result),
+            DocumentFormat::Html => djot_to_html(&result),
             DocumentFormat::Djot | DocumentFormat::Plain => result,
         }
     }
 }
 
-/// Simple Djot to HTML converter.
-/// Handles basic Djot syntax: headings (#), paragraphs, and escaping.
-fn simple_djot_to_html(djot: &str) -> String {
-    let mut html = String::new();
-    let lines: Vec<&str> = djot.lines().collect();
-    let mut i = 0;
-
-    while i < lines.len() {
-        let line = lines[i];
-
-        if line.is_empty() {
-            i += 1;
-            continue;
-        }
-
-        // Handle headings
-        if line.starts_with('#') {
-            let level = line.chars().take_while(|c| *c == '#').count();
-            let content = line[level..].trim();
-            let content_html = escape_html(content);
-            html.push_str(&format!("<h{}>{}</h{}>\n", level, content_html, level));
-            i += 1;
-            continue;
-        }
-
-        // Handle paragraphs
-        let mut para_lines = vec![line];
-        i += 1;
-        while i < lines.len() && !lines[i].is_empty() && !lines[i].starts_with('#') {
-            para_lines.push(lines[i]);
-            i += 1;
-        }
-
-        let para_text = para_lines.join(" ");
-        let para_html = escape_html(&para_text);
-        html.push_str(&format!("<p>{}</p>\n", para_html));
-    }
-
-    html
-}
-
-fn escape_html(s: &str) -> String {
-    s.replace('&', "&amp;")
-        .replace('<', "&lt;")
-        .replace('>', "&gt;")
-        .replace('"', "&quot;")
+/// Convert Djot markup to HTML using jotdown.
+fn djot_to_html(djot: &str) -> String {
+    let events = jotdown::Parser::new(djot);
+    jotdown::html::render_to_string(events)
 }
 
 /// Document output format.

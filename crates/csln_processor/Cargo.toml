@@ -23,6 +23,7 @@ indexmap = { version = "2.2.6", features = ["serde"] }
 clap = { version = "4.4", features = ["derive"] }
 regex = "1.10"
 winnow = "0.7"
+jotdown = "0.5"
 
 [dev-dependencies]
 criterion = { version = "0.5", features = ["html_reports"] }

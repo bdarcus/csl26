@@ -330,6 +330,7 @@ dependencies = [
  "csln_core",
  "csln_edtf",
  "indexmap",
+ "jotdown",
  "regex",
  "serde",
  "serde_cbor",
@@ -557,6 +558,12 @@ name = "itoa"
 version = "1.0.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "92ecc6618181def0457392ccd0ee51198e065e016d1d527a7ac1b6dc7c1f09d2"
+
+[[package]]
+name = "jotdown"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3fff02adc563a0901266af314a47aa676f950a2f328a60b20691fdba0946fd98"
 
 [[package]]
 name = "js-sys"
