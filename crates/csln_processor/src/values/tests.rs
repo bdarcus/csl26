@@ -51,6 +51,7 @@ fn test_contributor_values() {
         mode: csln_core::citation::CitationMode::NonIntegral,
         locator: None,
         locator_label: None,
+        infix: None,
     };
     let reference = make_reference();
     let hints = ProcHints::default();
@@ -85,6 +86,7 @@ fn test_date_values() {
         mode: csln_core::citation::CitationMode::NonIntegral,
         locator: None,
         locator_label: None,
+        infix: None,
     };
     let reference = make_reference();
     let hints = ProcHints::default();
@@ -114,6 +116,7 @@ fn test_et_al() {
         mode: csln_core::citation::CitationMode::NonIntegral,
         locator: None,
         locator_label: None,
+        infix: None,
     };
     let hints = ProcHints::default();
 
@@ -238,6 +241,7 @@ fn test_et_al_delimiter_never() {
         mode: csln_core::citation::CitationMode::NonIntegral,
         locator: None,
         locator_label: None,
+        infix: None,
     };
     let hints = ProcHints::default();
 
@@ -290,6 +294,7 @@ fn test_et_al_delimiter_always() {
         mode: csln_core::citation::CitationMode::NonIntegral,
         locator: None,
         locator_label: None,
+        infix: None,
     };
     let hints = ProcHints::default();
 
@@ -408,6 +413,7 @@ fn test_template_list_suppression() {
         mode: csln_core::citation::CitationMode::NonIntegral,
         locator: None,
         locator_label: None,
+        infix: None,
     };
     let reference = Reference::from(LegacyReference {
         id: "multi".to_string(),
@@ -454,6 +460,7 @@ fn test_et_al_use_last() {
         mode: csln_core::citation::CitationMode::NonIntegral,
         locator: None,
         locator_label: None,
+        infix: None,
     };
     let hints = ProcHints::default();
 
@@ -501,6 +508,7 @@ fn test_et_al_use_last_overlap() {
         mode: csln_core::citation::CitationMode::NonIntegral,
         locator: None,
         locator_label: None,
+        infix: None,
     };
     let hints = ProcHints::default();
 
@@ -541,6 +549,7 @@ fn test_title_hyperlink() {
         mode: csln_core::citation::CitationMode::NonIntegral,
         locator: None,
         locator_label: None,
+        infix: None,
     };
     let hints = ProcHints::default();
 
@@ -582,6 +591,7 @@ fn test_title_hyperlink_url_fallback() {
         mode: csln_core::citation::CitationMode::NonIntegral,
         locator: None,
         locator_label: None,
+        infix: None,
     };
     let hints = ProcHints::default();
 
@@ -622,6 +632,7 @@ fn test_variable_hyperlink() {
         mode: csln_core::citation::CitationMode::NonIntegral,
         locator: None,
         locator_label: None,
+        infix: None,
     };
     let hints = ProcHints::default();
 
@@ -680,6 +691,7 @@ fn test_editor_label_format() {
             mode: csln_core::citation::CitationMode::NonIntegral,
             locator: None,
             locator_label: None,
+            infix: None,
         };
         let values = component.values(&reference, &hints, &options).unwrap();
         // Assuming locale for "editor" verb is "edited by"
@@ -698,6 +710,7 @@ fn test_editor_label_format() {
             mode: csln_core::citation::CitationMode::NonIntegral,
             locator: None,
             locator_label: None,
+            infix: None,
         };
         let values = component.values(&reference, &hints, &options).unwrap();
         // Assuming locale for "editor" short is "Ed."
@@ -716,6 +729,7 @@ fn test_editor_label_format() {
             mode: csln_core::citation::CitationMode::NonIntegral,
             locator: None,
             locator_label: None,
+            infix: None,
         };
         let values = component.values(&reference, &hints, &options).unwrap();
         // Assuming locale for "editor" long is "editor"
@@ -734,6 +748,7 @@ fn test_term_values() {
         mode: csln_core::citation::CitationMode::NonIntegral,
         locator: None,
         locator_label: None,
+        infix: None,
     };
     let reference = make_reference();
     let hints = ProcHints::default();
@@ -761,6 +776,7 @@ fn test_template_list_term_suppression() {
         mode: csln_core::citation::CitationMode::NonIntegral,
         locator: None,
         locator_label: None,
+        infix: None,
     };
     // Reference with no editor
     let reference = make_reference();
@@ -799,6 +815,7 @@ fn test_date_fallback() {
         mode: csln_core::citation::CitationMode::NonIntegral,
         locator: None,
         locator_label: None,
+        infix: None,
     };
     // Reference with NO issued date
     let reference = Reference::from(LegacyReference {
@@ -848,6 +865,7 @@ fn test_strip_periods_global_config() {
         mode: csln_core::citation::CitationMode::NonIntegral,
         locator: None,
         locator_label: None,
+        infix: None,
     };
 
     let component = TemplateContributor {
@@ -885,6 +903,7 @@ fn test_strip_periods_component_override() {
         mode: csln_core::citation::CitationMode::NonIntegral,
         locator: None,
         locator_label: None,
+        infix: None,
     };
 
     // Component overrides global setting
@@ -926,6 +945,7 @@ fn test_strip_periods_no_strip_by_default() {
         mode: csln_core::citation::CitationMode::NonIntegral,
         locator: None,
         locator_label: None,
+        infix: None,
     };
 
     let component = TemplateContributor {
@@ -963,6 +983,7 @@ fn test_should_strip_periods_precedence() {
         mode: csln_core::citation::CitationMode::NonIntegral,
         locator: None,
         locator_label: None,
+        infix: None,
     };
 
     // Component override takes precedence
@@ -991,6 +1012,7 @@ fn test_should_strip_periods_precedence() {
         mode: csln_core::citation::CitationMode::NonIntegral,
         locator: None,
         locator_label: None,
+        infix: None,
     };
     assert!(!should_strip_periods(&rendering_default, &options_none));
 }

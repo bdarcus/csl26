@@ -81,6 +81,7 @@ impl<'a> Renderer<'a> {
                 citation_number,
                 item.locator.as_deref(),
                 item.label.clone(),
+                item.infix.as_deref(),
             ) {
                 let item_str = crate::render::citation::citation_to_string_with_format::<F>(
                     &proc,
@@ -200,6 +201,7 @@ impl<'a> Renderer<'a> {
                     citation_number,
                     item.locator.as_deref(),
                     item.label.clone(),
+                    item.infix.as_deref(),
                 ) {
                     let item_str = crate::render::citation::citation_to_string_with_format::<F>(
                         &proc, None, None, None, None,
@@ -250,13 +252,9 @@ impl<'a> Renderer<'a> {
                     // NonIntegral: "Kuhn, 1962a, 1962b" - no inner parens (outer wrap adds them)
                     let content = match mode {
                         csln_core::citation::CitationMode::Integral => {
-                            // Check for infix (only applies to single-item citations)
-                            if group.len() == 1 {
-                                if let Some(infix) = &first_item.infix {
-                                    format!("{} {} ({})", author_part, infix, joined_years)
-                                } else {
-                                    format!("{} ({})", author_part, joined_years)
-                                }
+                            // Check for infix (only applies to first item if authors match)
+                            if let Some(infix) = &first_item.infix {
+                                format!("{} {} ({})", author_part, infix, joined_years)
                             } else {
                                 format!("{} ({})", author_part, joined_years)
                             }
@@ -290,6 +288,7 @@ impl<'a> Renderer<'a> {
             mode: mode.clone(),
             locator: None,
             locator_label: None,
+            infix: None,
         };
 
         // Use short form for citations
@@ -377,6 +376,7 @@ impl<'a> Renderer<'a> {
             mode: csln_core::citation::CitationMode::NonIntegral,
             locator: None,
             locator_label: None,
+            infix: None,
         };
 
         self.process_template_with_number_internal(reference, template_ref, options, entry_number)
@@ -393,6 +393,7 @@ impl<'a> Renderer<'a> {
         citation_number: usize,
         locator: Option<&str>,
         locator_label: Option<csln_core::citation::LocatorType>,
+        infix: Option<&str>,
     ) -> Option<ProcTemplate> {
         let options = RenderOptions {
             config: self.config,
@@ -401,6 +402,7 @@ impl<'a> Renderer<'a> {
             mode,
             locator,
             locator_label,
+            infix,
         };
         self.process_template_with_number_internal(reference, template, options, citation_number)
     }
