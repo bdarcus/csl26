@@ -50,6 +50,30 @@ references:
         name: Academic Press
     pages: "45-67"
 
+  # Test refs for document processing
+  - id: brown1954
+    type: article-journal
+    title: Some Classic Work
+    author:
+      - family: Brown
+        given: Robert
+    issued: "1954"
+    parent:
+      type: journal
+      title: Journal of Important Research
+    volume: "12"
+    pages: "100-150"
+
+  - id: jones2015
+    type: book
+    title: Contemporary Analysis
+    author:
+      - family: Jones
+        given: Sarah
+    issued: "2015"
+    publisher:
+      name: University Press
+
   # 4. Monograph with original-date and keywords (for test verification)
   - id: foucault_discipline
     type: book

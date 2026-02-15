@@ -36,6 +36,73 @@ impl<'a> Renderer<'a> {
         }
     }
 
+    /// Check if this is a numeric style with integral mode.
+    fn should_render_author_year_for_numeric_integral(
+        &self,
+        mode: &csln_core::citation::CitationMode,
+    ) -> bool {
+        matches!(mode, csln_core::citation::CitationMode::Integral)
+            && self
+                .config
+                .processing
+                .as_ref()
+                .map(|p| matches!(p, csln_core::options::Processing::Numeric))
+                .unwrap_or(false)
+    }
+
+    /// Ensure suffix has proper spacing (add space if suffix doesn't start with
+    /// punctuation and isn't empty).
+    fn ensure_suffix_spacing(&self, suffix: &str) -> String {
+        if suffix.is_empty() {
+            String::new()
+        } else if suffix.starts_with(char::is_whitespace) {
+            // Already has leading space or whitespace
+            suffix.to_string()
+        } else {
+            // Add space before suffix to separate from content
+            format!(" {}", suffix)
+        }
+    }
+
+    /// Render author + infix (bare) + citation number for numeric integral citations.
+    fn render_author_year_for_numeric_integral(
+        &self,
+        reference: &Reference,
+        item: &crate::reference::CitationItem,
+        citation_number: usize,
+    ) -> String {
+        let options = RenderOptions {
+            config: self.config,
+            locale: self.locale,
+            context: RenderContext::Citation,
+            mode: csln_core::citation::CitationMode::Integral,
+            locator: item.locator.as_deref(),
+            locator_label: item.label.clone(),
+            infix: item.infix.as_deref(),
+        };
+
+        // Render author in short form
+        let author_part = if let Some(authors) = reference.author() {
+            crate::values::format_contributors_short(&authors.to_names_vec(), &options)
+        } else {
+            String::new()
+        };
+
+        // Format: "Author infix [N]" or "Author [N]"
+        if !author_part.is_empty() {
+            if let Some(infix_text) = &item.infix {
+                // Include infix between author and number (bare, no parens)
+                format!("{} {} [{}]", author_part, infix_text, citation_number)
+            } else {
+                // Just author + citation number
+                format!("{} [{}]", author_part, citation_number)
+            }
+        } else {
+            // Fallback: just citation number if no author
+            format!("[{}]", citation_number)
+        }
+    }
+
     /// Render citation items without grouping.
     pub fn render_ungrouped_citation(
         &self,
@@ -65,38 +132,60 @@ impl<'a> Renderer<'a> {
         let mut rendered_items = Vec::new();
         let fmt = F::default();
 
+        // For numeric styles with integral mode, render author-year instead
+        let use_author_year = self.should_render_author_year_for_numeric_integral(mode);
+
         for item in items {
             let reference = self
                 .bibliography
                 .get(&item.id)
                 .ok_or_else(|| ProcessorError::ReferenceNotFound(item.id.clone()))?;
 
-            let citation_number = self.get_or_assign_citation_number(&item.id);
-
-            if let Some(proc) = self.process_template_with_number(
-                reference,
-                template,
-                RenderContext::Citation,
-                mode.clone(),
-                citation_number,
-                item.locator.as_deref(),
-                item.label.clone(),
-                item.infix.as_deref(),
-            ) {
-                let item_str = crate::render::citation::citation_to_string_with_format::<F>(
-                    &proc,
-                    None,
-                    None,
-                    None,
-                    Some(intra_delimiter),
-                );
+            if use_author_year {
+                // Numeric integral: render author + infix + citation number
+                let citation_number = self.get_or_assign_citation_number(&item.id);
+                let item_str =
+                    self.render_author_year_for_numeric_integral(reference, item, citation_number);
                 if !item_str.is_empty() {
                     let prefix = item.prefix.as_deref().unwrap_or("");
                     let suffix = item.suffix.as_deref().unwrap_or("");
                     if !prefix.is_empty() || !suffix.is_empty() {
-                        rendered_items.push(fmt.affix(prefix, item_str, suffix));
+                        let spaced_suffix = self.ensure_suffix_spacing(suffix);
+                        rendered_items.push(fmt.affix(prefix, item_str, &spaced_suffix));
                     } else {
                         rendered_items.push(item_str);
+                    }
+                }
+            } else {
+                // Standard rendering: use template with citation number
+                let citation_number = self.get_or_assign_citation_number(&item.id);
+
+                if let Some(proc) = self.process_template_with_number(
+                    reference,
+                    template,
+                    RenderContext::Citation,
+                    mode.clone(),
+                    citation_number,
+                    item.locator.as_deref(),
+                    item.label.clone(),
+                    item.infix.as_deref(),
+                ) {
+                    let item_str = crate::render::citation::citation_to_string_with_format::<F>(
+                        &proc,
+                        None,
+                        None,
+                        None,
+                        Some(intra_delimiter),
+                    );
+                    if !item_str.is_empty() {
+                        let prefix = item.prefix.as_deref().unwrap_or("");
+                        let suffix = item.suffix.as_deref().unwrap_or("");
+                        if !prefix.is_empty() || !suffix.is_empty() {
+                            let spaced_suffix = self.ensure_suffix_spacing(suffix);
+                            rendered_items.push(fmt.affix(prefix, item_str, &spaced_suffix));
+                        } else {
+                            rendered_items.push(item_str);
+                        }
                     }
                 }
             }
@@ -210,7 +299,8 @@ impl<'a> Renderer<'a> {
                         let prefix = item.prefix.as_deref().unwrap_or("");
                         let suffix = item.suffix.as_deref().unwrap_or("");
                         if !prefix.is_empty() || !suffix.is_empty() {
-                            rendered_groups.push(fmt.affix(prefix, item_str, suffix));
+                            let spaced_suffix = self.ensure_suffix_spacing(suffix);
+                            rendered_groups.push(fmt.affix(prefix, item_str, &spaced_suffix));
                         } else {
                             rendered_groups.push(item_str);
                         }
@@ -236,7 +326,8 @@ impl<'a> Renderer<'a> {
                     if !year_part.is_empty() {
                         let suffix = item.suffix.as_deref().unwrap_or("");
                         if !suffix.is_empty() {
-                            year_parts.push(fmt.affix("", year_part, suffix));
+                            let spaced_suffix = self.ensure_suffix_spacing(suffix);
+                            year_parts.push(fmt.affix("", year_part, &spaced_suffix));
                         } else {
                             year_parts.push(year_part);
                         }

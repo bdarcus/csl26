@@ -285,9 +285,17 @@ impl Processor {
             _ => (prefix.unwrap_or(""), suffix.unwrap_or("")),
         };
 
+        // Ensure citation-level suffix has proper spacing
+        let formatted_suffix =
+            if citation_suffix.is_empty() || citation_suffix.starts_with(char::is_whitespace) {
+                citation_suffix.to_string()
+            } else {
+                format!(" {}", citation_suffix)
+            };
+
         Ok(format!(
             "{}{}{}{}{}",
-            open, citation_prefix, content, citation_suffix, close
+            open, citation_prefix, content, formatted_suffix, close
         ))
     }
 
@@ -420,8 +428,16 @@ impl Processor {
         let citation_prefix = citation.prefix.as_deref().unwrap_or("");
         let citation_suffix = citation.suffix.as_deref().unwrap_or("");
 
+        // Ensure proper spacing before suffix
+        let spaced_suffix =
+            if !citation_suffix.is_empty() && !citation_suffix.starts_with(char::is_whitespace) {
+                format!(" {}", citation_suffix)
+            } else {
+                citation_suffix.to_string()
+            };
+
         let output = if !citation_prefix.is_empty() || !citation_suffix.is_empty() {
-            fmt.affix(citation_prefix, content, citation_suffix)
+            fmt.affix(citation_prefix, content, &spaced_suffix)
         } else {
             content
         };
@@ -434,7 +450,17 @@ impl Processor {
         let spec_prefix = effective_spec.prefix.as_deref().unwrap_or("");
         let spec_suffix = effective_spec.suffix.as_deref().unwrap_or("");
 
-        let wrapped = if *wrap != WrapPunctuation::None {
+        // For integral (narrative) citations, don't apply wrapping
+        // (they're part of the narrative text, not parenthetical)
+        let wrapped = if matches!(citation.mode, csln_core::citation::CitationMode::Integral) {
+            // Integral mode: skip wrapping, apply only prefix/suffix
+            if !spec_prefix.is_empty() || !spec_suffix.is_empty() {
+                fmt.affix(spec_prefix, output, spec_suffix)
+            } else {
+                output
+            }
+        } else if *wrap != WrapPunctuation::None {
+            // Non-integral mode: apply wrap
             fmt.wrap_punctuation(wrap, output)
         } else if !spec_prefix.is_empty() || !spec_suffix.is_empty() {
             fmt.affix(spec_prefix, output, spec_suffix)

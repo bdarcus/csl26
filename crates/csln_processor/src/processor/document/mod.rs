@@ -40,17 +40,14 @@ impl Processor {
         P: CitationParser,
         F: crate::render::format::OutputFormat<Output = String>,
     {
-        use crate::render::plain::PlainText;
-
         let mut result = String::new();
         let mut last_idx = 0;
         let citations = parser.parse_citations(content);
 
-        // Always render citations as plain text for Djot documents
-        // HTML conversion happens at the end via jotdown
+        // Render citations in the specified format
         for (start, end, citation) in citations {
             result.push_str(&content[last_idx..start]);
-            match self.process_citation_with_format::<PlainText>(&citation) {
+            match self.process_citation_with_format::<F>(&citation) {
                 Ok(rendered) => result.push_str(&rendered),
                 Err(_) => result.push_str(&content[start..end]),
             }
@@ -65,7 +62,7 @@ impl Processor {
 
 ",
         );
-        let bib_content = self.render_bibliography_with_format::<PlainText>();
+        let bib_content = self.render_bibliography_with_format::<F>();
         result.push_str(&bib_content);
 
         // Convert to HTML if requested

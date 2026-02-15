@@ -171,11 +171,17 @@ fn parse_citation_item(input: &mut &str) -> winnow::Result<CitationItem, Context
         ..Default::default()
     };
 
+    // Only consume text after key if there's a comma. Otherwise,
+    // leave remaining text for the global suffix parser.
+    let checkpoint = *input;
     let after_key: &str = take_while(0.., |c: char| c != ';' && c != ']').parse_next(input)?;
 
     if let Some(comma_pos) = after_key.find(',') {
         let locator_part = after_key[comma_pos + 1..].trim();
         parse_hybrid_locators(&mut item, locator_part);
+    } else {
+        // No comma found: don't consume the text, restore position
+        *input = checkpoint;
     }
 
     let _ = opt(';').parse_next(input)?;
@@ -330,5 +336,49 @@ mod tests {
         assert_eq!(citation.items[0].infix, Some("notes that y".to_string()));
         assert_eq!(citation.items[0].locator, Some("5".to_string()));
         assert_eq!(citation.items[0].label, Some(LocatorType::Chapter));
+    }
+
+    #[test]
+    fn test_parse_multi_cite_with_suffix() {
+        let parser = DjotParser;
+        let content = "[compare @smith2010, page: 45; @brown1954 for context]";
+        let citations = parser.parse_citations(content);
+
+        assert_eq!(citations.len(), 1, "Should parse one citation");
+        let (_, _, citation) = &citations[0];
+        assert_eq!(citation.prefix, Some("compare ".to_string()));
+        assert_eq!(citation.items.len(), 2);
+        assert_eq!(citation.items[0].id, "smith2010");
+        assert_eq!(citation.items[0].locator, Some("45".to_string()));
+        assert_eq!(citation.items[1].id, "brown1954");
+        assert_eq!(citation.suffix, Some("for context".to_string()));
+    }
+
+    #[test]
+    fn test_parse_narrative_infix_with_chapter() {
+        let parser = DjotParser;
+        let content = "@jones2015(suggests that y)[ch. 3]";
+        let citations = parser.parse_citations(content);
+
+        assert_eq!(citations.len(), 1);
+        let (_, _, citation) = &citations[0];
+        assert_eq!(citation.mode, CitationMode::Integral);
+        assert_eq!(citation.items[0].id, "jones2015");
+        assert_eq!(citation.items[0].infix, Some("suggests that y".to_string()));
+        assert_eq!(citation.items[0].locator, Some("3".to_string()));
+        assert_eq!(citation.items[0].label, Some(LocatorType::Chapter));
+    }
+
+    #[test]
+    fn test_parse_narrative_infix_only() {
+        let parser = DjotParser;
+        let content = "@brown1954(notes)";
+        let citations = parser.parse_citations(content);
+
+        assert_eq!(citations.len(), 1);
+        let (_, _, citation) = &citations[0];
+        assert_eq!(citation.mode, CitationMode::Integral);
+        assert_eq!(citation.items[0].id, "brown1954");
+        assert_eq!(citation.items[0].infix, Some("notes".to_string()));
     }
 }

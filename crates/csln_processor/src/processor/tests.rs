@@ -936,3 +936,124 @@ fn test_global_title_linking_html() {
     assert!(result.contains(r#"<span class="csln-author"><a href="https://doi.org/10.1001/test">"#));
     assert!(result.contains("Linked Title"));
 }
+
+#[test]
+fn test_numeric_integral_citation_author_year() {
+    use csln_core::options::Processing;
+
+    let mut style = make_style();
+    // Override to numeric style
+    style.options = Some(Config {
+        processing: Some(Processing::Numeric),
+        ..Default::default()
+    });
+
+    let bib = make_bibliography();
+    let processor = Processor::new(style, bib);
+
+    // Integral mode citation - should render author-year instead of number
+    let citation = Citation {
+        id: Some("c1".to_string()),
+        mode: csln_core::citation::CitationMode::Integral,
+        items: vec![crate::reference::CitationItem {
+            id: "kuhn1962".to_string(),
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+
+    let result = processor.process_citation(&citation).unwrap();
+    // For numeric+integral, expect author + citation number wrapped in parentheses
+    // The citation spec has wrap: Parentheses, so output is "(" + "Kuhn [1]" + ")"
+    assert_eq!(result, "(Kuhn [1])");
+}
+
+#[test]
+fn test_numeric_non_integral_citation_number() {
+    use csln_core::citation::CitationMode;
+    use csln_core::options::Processing;
+
+    let mut style = make_style();
+    // Override to numeric style with citation number template
+    style.options = Some(Config {
+        processing: Some(Processing::Numeric),
+        ..Default::default()
+    });
+    style.citation = Some(csln_core::CitationSpec {
+        template: Some(vec![TemplateComponent::Number(
+            csln_core::template::TemplateNumber {
+                number: csln_core::template::NumberVariable::CitationNumber,
+                form: None,
+                rendering: Rendering::default(),
+                ..Default::default()
+            },
+        )]),
+        wrap: Some(WrapPunctuation::Brackets),
+        ..Default::default()
+    });
+
+    let bib = make_bibliography();
+    let processor = Processor::new(style, bib);
+
+    // Non-integral mode citation - should render citation number
+    let citation = Citation {
+        id: Some("c1".to_string()),
+        mode: CitationMode::NonIntegral,
+        items: vec![crate::reference::CitationItem {
+            id: "kuhn1962".to_string(),
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+
+    let result = processor.process_citation(&citation).unwrap();
+    // For numeric+non-integral, expect number format: "[1]"
+    assert_eq!(result, "[1]");
+}
+
+#[test]
+fn test_numeric_integral_with_multiple_items() {
+    use csln_core::options::Processing;
+
+    let mut style = make_style();
+    style.options = Some(Config {
+        processing: Some(Processing::Numeric),
+        ..Default::default()
+    });
+
+    let mut bib = make_bibliography();
+    bib.insert(
+        "smith2020".to_string(),
+        Reference::from(LegacyReference {
+            id: "smith2020".to_string(),
+            ref_type: "book".to_string(),
+            author: Some(vec![Name::new("Smith", "Jane")]),
+            issued: Some(DateVariable::year(2020)),
+            ..Default::default()
+        }),
+    );
+
+    let processor = Processor::new(style, bib);
+
+    // Integral mode with multiple items
+    let citation = Citation {
+        id: Some("c1".to_string()),
+        mode: csln_core::citation::CitationMode::Integral,
+        items: vec![
+            crate::reference::CitationItem {
+                id: "kuhn1962".to_string(),
+                ..Default::default()
+            },
+            crate::reference::CitationItem {
+                id: "smith2020".to_string(),
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    };
+
+    let result = processor.process_citation(&citation).unwrap();
+    // Should render both as author + citation number
+    assert!(result.contains("Kuhn [1]"));
+    assert!(result.contains("Smith [2]"));
+}
