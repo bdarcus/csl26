@@ -38,6 +38,7 @@ fn make_style_with_substitute(substitute: Option<String>) -> Style {
                 TemplateComponent::Contributor(TemplateContributor {
                     contributor: ContributorRole::Author,
                     form: ContributorForm::Long,
+                    label: None,
                     name_order: None,
                     delimiter: None,
                     sort_separator: None,

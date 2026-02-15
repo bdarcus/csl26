@@ -37,6 +37,7 @@ fn test_document_html_output_contains_heading() {
                 TemplateComponent::Contributor(TemplateContributor {
                     contributor: ContributorRole::Author,
                     form: ContributorForm::Long,
+                    label: None,
                     name_order: None,
                     delimiter: None,
                     sort_separator: None,
@@ -131,6 +132,7 @@ fn test_document_djot_output_unmodified() {
                 TemplateComponent::Contributor(TemplateContributor {
                     contributor: ContributorRole::Author,
                     form: ContributorForm::Long,
+                    label: None,
                     name_order: None,
                     delimiter: None,
                     sort_separator: None,

@@ -58,6 +58,7 @@ fn test_contributor_values() {
     let component = TemplateContributor {
         contributor: ContributorRole::Author,
         form: ContributorForm::Short,
+        label: None,
         name_order: None,
         delimiter: None,
         sort_separator: None,
@@ -130,6 +131,7 @@ fn test_et_al() {
     let component = TemplateContributor {
         contributor: ContributorRole::Author,
         form: ContributorForm::Short,
+        label: None,
         name_order: None,
         delimiter: None,
         sort_separator: None,
@@ -249,6 +251,7 @@ fn test_et_al_delimiter_never() {
     let component = TemplateContributor {
         contributor: ContributorRole::Author,
         form: ContributorForm::Short,
+        label: None,
         name_order: None,
         delimiter: None,
         sort_separator: None,
@@ -300,6 +303,7 @@ fn test_et_al_delimiter_always() {
     let component = TemplateContributor {
         contributor: ContributorRole::Author,
         form: ContributorForm::Short,
+        label: None,
         name_order: None,
         delimiter: None,
         sort_separator: None,

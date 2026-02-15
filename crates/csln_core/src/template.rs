@@ -192,6 +192,38 @@ impl TemplateComponent {
     }
 }
 
+/// Configuration for role labels (e.g., "eds.", "trans.").
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub struct RoleLabel {
+    /// Locale term key for the role (e.g., "editor", "translator").
+    pub term: String,
+    /// Term form: short ("eds.") or long ("editors").
+    #[serde(default)]
+    pub form: RoleLabelForm,
+    /// Where to place the label relative to names.
+    #[serde(default)]
+    pub placement: LabelPlacement,
+}
+
+/// Term form for role labels.
+#[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub enum RoleLabelForm {
+    #[default]
+    Short,
+    Long,
+}
+
+/// Label placement relative to contributor names.
+#[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub enum LabelPlacement {
+    Prefix,
+    #[default]
+    Suffix,
+}
+
 /// A contributor component for rendering names.
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Default, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
@@ -200,6 +232,9 @@ pub struct TemplateContributor {
     pub contributor: ContributorRole,
     /// How to display the contributor (long names, short, with label, etc.).
     pub form: ContributorForm,
+    /// Optional role label configuration (e.g., "eds." for editors).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub label: Option<RoleLabel>,
     /// Override the global name order for this specific component.
     /// Use to show editors as "Given Family" even when global setting is "Family, Given".
     #[serde(skip_serializing_if = "Option::is_none")]

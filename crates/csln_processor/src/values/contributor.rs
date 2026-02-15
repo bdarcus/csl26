@@ -293,25 +293,123 @@ impl ComponentValues for TemplateContributor {
             hints,
         );
 
-        // Add role term based on form:
-        let editor_format = options
-            .config
-            .contributors
-            .as_ref()
-            .and_then(|c| c.editor_label_format);
+        // Check for explicit label configuration first
+        let (role_prefix, role_suffix) = if let Some(label_config) = &self.label {
+            use csln_core::template::{LabelPlacement, RoleLabelForm};
 
-        let (role_prefix, role_suffix) = if let Some(format) = editor_format {
-            if matches!(
-                self.contributor,
-                ContributorRole::Editor | ContributorRole::Translator
-            ) {
-                let plural = names_vec.len() > 1;
-                match format {
-                    EditorLabelFormat::VerbPrefix => {
-                        let term =
-                            options
-                                .locale
-                                .role_term(&self.contributor, plural, TermForm::Verb);
+            // Determine if plural based on contributor count
+            let plural = names_vec.len() > 1;
+
+            // Map label form to term form
+            let term_form = match label_config.form {
+                RoleLabelForm::Short => TermForm::Short,
+                RoleLabelForm::Long => TermForm::Long,
+            };
+
+            // Parse the role from term string (e.g., "editor" -> ContributorRole::Editor)
+            let role = match label_config.term.as_str() {
+                "editor" => Some(ContributorRole::Editor),
+                "translator" => Some(ContributorRole::Translator),
+                _ => Some(self.contributor.clone()), // Fall back to current role
+            };
+
+            // Look up term from locale
+            let term_text = role.and_then(|r| options.locale.role_term(&r, plural, term_form));
+
+            // Apply placement
+            match label_config.placement {
+                LabelPlacement::Prefix => (term_text.map(|t| format!("{} ", t)), None),
+                LabelPlacement::Suffix => (None, term_text.map(|t| format!(" {}", t))),
+            }
+        } else {
+            // Fall back to global editor_label_format configuration
+            let editor_format = options
+                .config
+                .contributors
+                .as_ref()
+                .and_then(|c| c.editor_label_format);
+
+            if let Some(format) = editor_format {
+                if matches!(
+                    self.contributor,
+                    ContributorRole::Editor | ContributorRole::Translator
+                ) {
+                    let plural = names_vec.len() > 1;
+                    match format {
+                        EditorLabelFormat::VerbPrefix => {
+                            let term =
+                                options
+                                    .locale
+                                    .role_term(&self.contributor, plural, TermForm::Verb);
+                            (
+                                term.map(|t| {
+                                    let term_str = if crate::values::should_strip_periods(
+                                        &effective_rendering,
+                                        options,
+                                    ) {
+                                        crate::values::strip_trailing_periods(t)
+                                    } else {
+                                        t.to_string()
+                                    };
+                                    format!("{} ", term_str)
+                                }),
+                                None,
+                            )
+                        }
+                        EditorLabelFormat::ShortSuffix => {
+                            let term = options.locale.role_term(
+                                &self.contributor,
+                                plural,
+                                TermForm::Short,
+                            );
+                            (
+                                None,
+                                term.map(|t| {
+                                    let term_str = if crate::values::should_strip_periods(
+                                        &effective_rendering,
+                                        options,
+                                    ) {
+                                        crate::values::strip_trailing_periods(t)
+                                    } else {
+                                        t.to_string()
+                                    };
+                                    format!(" ({})", term_str)
+                                }),
+                            )
+                        }
+                        EditorLabelFormat::LongSuffix => {
+                            let term =
+                                options
+                                    .locale
+                                    .role_term(&self.contributor, plural, TermForm::Long);
+                            (
+                                None,
+                                term.map(|t| {
+                                    let term_str = if crate::values::should_strip_periods(
+                                        &effective_rendering,
+                                        options,
+                                    ) {
+                                        crate::values::strip_trailing_periods(t)
+                                    } else {
+                                        t.to_string()
+                                    };
+                                    format!(", {}", term_str)
+                                }),
+                            )
+                        }
+                    }
+                } else {
+                    (None, None)
+                }
+            } else {
+                match (&self.form, &self.contributor) {
+                    (ContributorForm::Verb | ContributorForm::VerbShort, role) => {
+                        let plural = names_vec.len() > 1;
+                        let term_form = match self.form {
+                            ContributorForm::VerbShort => TermForm::VerbShort,
+                            _ => TermForm::Verb,
+                        };
+                        let term = options.locale.role_term(role, plural, term_form);
                         (
                             term.map(|t| {
                                 let term_str = if crate::values::should_strip_periods(
@@ -327,7 +425,11 @@ impl ComponentValues for TemplateContributor {
                             None,
                         )
                     }
-                    EditorLabelFormat::ShortSuffix => {
+                    (
+                        ContributorForm::Long,
+                        ContributorRole::Editor | ContributorRole::Translator,
+                    ) => {
+                        let plural = names_vec.len() > 1;
                         let term =
                             options
                                 .locale
@@ -347,75 +449,8 @@ impl ComponentValues for TemplateContributor {
                             }),
                         )
                     }
-                    EditorLabelFormat::LongSuffix => {
-                        let term =
-                            options
-                                .locale
-                                .role_term(&self.contributor, plural, TermForm::Long);
-                        (
-                            None,
-                            term.map(|t| {
-                                let term_str = if crate::values::should_strip_periods(
-                                    &effective_rendering,
-                                    options,
-                                ) {
-                                    crate::values::strip_trailing_periods(t)
-                                } else {
-                                    t.to_string()
-                                };
-                                format!(", {}", term_str)
-                            }),
-                        )
-                    }
+                    _ => (None, None),
                 }
-            } else {
-                (None, None)
-            }
-        } else {
-            match (&self.form, &self.contributor) {
-                (ContributorForm::Verb | ContributorForm::VerbShort, role) => {
-                    let plural = names_vec.len() > 1;
-                    let term_form = match self.form {
-                        ContributorForm::VerbShort => TermForm::VerbShort,
-                        _ => TermForm::Verb,
-                    };
-                    let term = options.locale.role_term(role, plural, term_form);
-                    (
-                        term.map(|t| {
-                            let term_str = if crate::values::should_strip_periods(
-                                &effective_rendering,
-                                options,
-                            ) {
-                                crate::values::strip_trailing_periods(t)
-                            } else {
-                                t.to_string()
-                            };
-                            format!("{} ", term_str)
-                        }),
-                        None,
-                    )
-                }
-                (ContributorForm::Long, ContributorRole::Editor | ContributorRole::Translator) => {
-                    let plural = names_vec.len() > 1;
-                    let term = options
-                        .locale
-                        .role_term(&self.contributor, plural, TermForm::Short);
-                    (
-                        None,
-                        term.map(|t| {
-                            let term_str = if crate::values::should_strip_periods(
-                                &effective_rendering,
-                                options,
-                            ) {
-                                crate::values::strip_trailing_periods(t)
-                            } else {
-                                t.to_string()
-                            };
-                            format!(" ({})", term_str)
-                        }),
-                    )
-                }
-                _ => (None, None),
             }
         };
 
