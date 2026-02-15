@@ -57,6 +57,10 @@ pub enum InputReference {
     Patent(Box<Patent>),
     /// A research dataset.
     Dataset(Box<Dataset>),
+    /// A technical standard or specification.
+    Standard(Box<Standard>),
+    /// Software or source code.
+    Software(Box<Software>),
 }
 
 impl InputReference {
@@ -76,6 +80,8 @@ impl InputReference {
             InputReference::Classic(r) => r.id.clone(),
             InputReference::Patent(r) => r.id.clone(),
             InputReference::Dataset(r) => r.id.clone(),
+            InputReference::Standard(r) => r.id.clone(),
+            InputReference::Software(r) => r.id.clone(),
         }
     }
 
@@ -90,6 +96,7 @@ impl InputReference {
             InputReference::Classic(r) => r.author.clone(),
             InputReference::Patent(r) => r.author.clone(),
             InputReference::Dataset(r) => r.author.clone(),
+            InputReference::Software(r) => r.author.clone(),
             _ => None,
         }
     }
@@ -133,6 +140,8 @@ impl InputReference {
             InputReference::Collection(r) => r.publisher.clone(),
             InputReference::Classic(r) => r.publisher.clone(),
             InputReference::Dataset(r) => r.publisher.clone(),
+            InputReference::Standard(r) => r.publisher.clone(),
+            InputReference::Software(r) => r.publisher.clone(),
             _ => None,
         }
     }
@@ -153,6 +162,8 @@ impl InputReference {
             InputReference::Classic(r) => Some(r.title.clone()),
             InputReference::Patent(r) => Some(r.title.clone()),
             InputReference::Dataset(r) => Some(r.title.clone()),
+            InputReference::Standard(r) => Some(r.title.clone()),
+            InputReference::Software(r) => Some(r.title.clone()),
         }
     }
 
@@ -172,6 +183,8 @@ impl InputReference {
             InputReference::Classic(r) => Some(r.issued.clone()),
             InputReference::Patent(r) => Some(r.issued.clone()),
             InputReference::Dataset(r) => Some(r.issued.clone()),
+            InputReference::Standard(r) => Some(r.issued.clone()),
+            InputReference::Software(r) => Some(r.issued.clone()),
         }
     }
 
@@ -183,6 +196,7 @@ impl InputReference {
             InputReference::SerialComponent(r) => r.doi.clone(),
             InputReference::LegalCase(r) => r.doi.clone(),
             InputReference::Dataset(r) => r.doi.clone(),
+            InputReference::Software(r) => r.doi.clone(),
             _ => None,
         }
     }
@@ -203,6 +217,8 @@ impl InputReference {
             InputReference::Classic(r) => r.url.clone(),
             InputReference::Patent(r) => r.url.clone(),
             InputReference::Dataset(r) => r.url.clone(),
+            InputReference::Standard(r) => r.url.clone(),
+            InputReference::Software(r) => r.url.clone(),
         }
     }
 
@@ -218,6 +234,8 @@ impl InputReference {
             InputReference::Collection(r) => r.publisher.as_ref().and_then(|c| c.location()),
             InputReference::Classic(r) => r.publisher.as_ref().and_then(|c| c.location()),
             InputReference::Dataset(r) => r.publisher.as_ref().and_then(|c| c.location()),
+            InputReference::Standard(r) => r.publisher.as_ref().and_then(|c| c.location()),
+            InputReference::Software(r) => r.publisher.as_ref().and_then(|c| c.location()),
             _ => None,
         }
     }
@@ -234,6 +252,8 @@ impl InputReference {
             InputReference::Collection(r) => r.publisher.as_ref().and_then(|c| c.name()),
             InputReference::Classic(r) => r.publisher.as_ref().and_then(|c| c.name()),
             InputReference::Dataset(r) => r.publisher.as_ref().and_then(|c| c.name()),
+            InputReference::Standard(r) => r.publisher.as_ref().and_then(|c| c.name()),
+            InputReference::Software(r) => r.publisher.as_ref().and_then(|c| c.name()),
             _ => None,
         }
     }
@@ -304,7 +324,7 @@ impl InputReference {
         }
     }
 
-    /// Return the authority (court, legislative body, etc.) for legal references.
+    /// Return the authority (court, legislative body, standards org, etc.).
     pub fn authority(&self) -> Option<String> {
         match self {
             InputReference::LegalCase(r) => Some(r.authority.clone()),
@@ -312,6 +332,7 @@ impl InputReference {
             InputReference::Hearing(r) => r.authority.clone(),
             InputReference::Regulation(r) => r.authority.clone(),
             InputReference::Brief(r) => r.authority.clone(),
+            InputReference::Standard(r) => r.authority.clone(),
             _ => None,
         }
     }
@@ -377,6 +398,8 @@ impl InputReference {
             InputReference::Classic(r) => r.accessed.clone(),
             InputReference::Patent(r) => r.accessed.clone(),
             InputReference::Dataset(r) => r.accessed.clone(),
+            InputReference::Standard(r) => r.accessed.clone(),
+            InputReference::Software(r) => r.accessed.clone(),
         }
     }
 
@@ -423,6 +446,8 @@ impl InputReference {
             InputReference::Classic(r) => r.keywords.clone(),
             InputReference::Patent(r) => r.keywords.clone(),
             InputReference::Dataset(r) => r.keywords.clone(),
+            InputReference::Standard(r) => r.keywords.clone(),
+            InputReference::Software(r) => r.keywords.clone(),
         }
     }
 
@@ -442,6 +467,8 @@ impl InputReference {
             InputReference::Classic(r) => r.language.clone(),
             InputReference::Patent(r) => r.language.clone(),
             InputReference::Dataset(r) => r.language.clone(),
+            InputReference::Standard(r) => r.language.clone(),
+            InputReference::Software(r) => r.language.clone(),
         }
     }
 
@@ -461,6 +488,8 @@ impl InputReference {
             InputReference::Classic(r) => r.id = Some(id),
             InputReference::Patent(r) => r.id = Some(id),
             InputReference::Dataset(r) => r.id = Some(id),
+            InputReference::Standard(r) => r.id = Some(id),
+            InputReference::Software(r) => r.id = Some(id),
         }
     }
 
@@ -501,6 +530,8 @@ impl InputReference {
             InputReference::Classic(_) => "classic".to_string(),
             InputReference::Patent(_) => "patent".to_string(),
             InputReference::Dataset(_) => "dataset".to_string(),
+            InputReference::Standard(_) => "standard".to_string(),
+            InputReference::Software(_) => "software".to_string(),
         }
     }
 }

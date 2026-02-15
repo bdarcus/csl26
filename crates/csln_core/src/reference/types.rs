@@ -557,3 +557,59 @@ pub struct Dataset {
     pub note: Option<String>,
     pub keywords: Option<Vec<String>>,
 }
+
+/// A technical standard or specification.
+#[derive(Debug, Deserialize, Serialize, Clone, JsonSchema, PartialEq)]
+#[serde(rename_all = "kebab-case")]
+pub struct Standard {
+    pub id: Option<RefID>,
+    /// Standard title
+    pub title: Title,
+    /// Standards organization (e.g., "ISO", "ANSI", "IEEE")
+    pub authority: Option<String>,
+    /// Standard number (e.g., "ISO 8601", "IEEE 754-2008")
+    pub number: String,
+    /// Publication date
+    pub issued: EdtfString,
+    /// Status (e.g., "published", "draft", "withdrawn")
+    pub status: Option<String>,
+    /// Publisher (usually same as authority)
+    pub publisher: Option<Contributor>,
+    #[serde(alias = "URL")]
+    pub url: Option<Url>,
+    pub accessed: Option<EdtfString>,
+    pub language: Option<LangID>,
+    pub note: Option<String>,
+    pub keywords: Option<Vec<String>>,
+}
+
+/// Software or source code.
+#[derive(Debug, Deserialize, Serialize, Clone, JsonSchema, PartialEq)]
+#[serde(rename_all = "kebab-case")]
+pub struct Software {
+    pub id: Option<RefID>,
+    /// Software title
+    pub title: Title,
+    /// Author(s)/developer(s)
+    pub author: Option<Contributor>,
+    /// Release date
+    pub issued: EdtfString,
+    /// Publisher or repository (e.g., "GitHub", "Zenodo")
+    pub publisher: Option<Contributor>,
+    /// Version number (e.g., "4.1.0", "v2.3.1")
+    pub version: Option<String>,
+    /// Repository URL
+    pub repository: Option<String>,
+    /// License (e.g., "MIT", "GPL-3.0", "Apache-2.0")
+    pub license: Option<String>,
+    /// Platform (e.g., "Windows", "macOS", "Linux", "cross-platform")
+    pub platform: Option<String>,
+    #[serde(alias = "DOI")]
+    pub doi: Option<String>,
+    #[serde(alias = "URL")]
+    pub url: Option<Url>,
+    pub accessed: Option<EdtfString>,
+    pub language: Option<LangID>,
+    pub note: Option<String>,
+    pub keywords: Option<Vec<String>>,
+}
