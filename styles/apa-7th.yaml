@@ -78,6 +78,14 @@ bibliography:
               form: year
               wrap: parentheses
               prefix: " "
+        patent:
+          emph: false
+        dataset:
+          emph: false
+        standard:
+          emph: false
+        software:
+          emph: false
     - items:
         - items:
             - contributor: editor
@@ -131,8 +139,19 @@ bibliography:
           suppress: true
         webpage:
           suppress: true
+        patent:
+          template:
+            - variable: authority
+              prefix: ". "
+              suffix: "."
+        standard:
+          suppress: true
     - variable: doi
       overrides:
         article-journal:
+          prefix: https://doi.org/
+        dataset:
+          prefix: https://doi.org/
+        software:
           prefix: https://doi.org/
     - variable: url
