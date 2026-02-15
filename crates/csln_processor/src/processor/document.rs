@@ -108,7 +108,7 @@ fn parse_narrative_citation(input: &mut &str) -> winnow::Result<Citation, Contex
 
     if let Ok(locator_part) = locator_res {
         *input = input_checkpoint;
-        apply_locator_to_item(&mut item, locator_part);
+        parse_hybrid_locators(&mut item, locator_part);
     }
 
     citation.items.push(item);
@@ -163,7 +163,7 @@ fn parse_citation_item(input: &mut &str) -> winnow::Result<CitationItem, Context
 
     if let Some(comma_pos) = after_key.find(',') {
         let locator_part = after_key[comma_pos + 1..].trim();
-        apply_locator_to_item(&mut item, locator_part);
+        parse_hybrid_locators(&mut item, locator_part);
     }
 
     let _ = opt(';').parse_next(input)?;
@@ -172,22 +172,56 @@ fn parse_citation_item(input: &mut &str) -> winnow::Result<CitationItem, Context
     Ok(item)
 }
 
-fn apply_locator_to_item(item: &mut CitationItem, locator_str: &str) {
+/// Parse locators in either `p. 23` or `page: 23, section: V` format.
+fn parse_hybrid_locators(item: &mut CitationItem, locator_str: &str) {
     let lp = locator_str.trim();
-    if let Some(space_pos) = lp.find(' ') {
-        let label_str = lp[..space_pos].trim_end_matches('.');
-        let value = &lp[space_pos + 1..];
+    if lp.is_empty() {
+        return;
+    }
 
-        item.label = match label_str {
-            "p" | "page" | "pp" => Some(LocatorType::Page),
-            "vol" | "volume" => Some(LocatorType::Volume),
-            "ch" | "chap" | "chapter" => Some(LocatorType::Chapter),
-            "sec" | "section" => Some(LocatorType::Section),
-            _ => Some(LocatorType::Page),
+    // Check for explicit key-value: `page: 23`
+    if let Some(colon_pos) = lp.find(':') {
+        let key = lp[..colon_pos].trim().to_lowercase();
+        let val_with_rest = lp[colon_pos + 1..].trim();
+
+        // Handle potential comma for multiple structured locators: `page: 23, section: V`
+        // For now, we only support one locator per item in the model, so we take the first.
+        let val = if let Some(comma_pos) = val_with_rest.find(',') {
+            &val_with_rest[..comma_pos]
+        } else {
+            val_with_rest
         };
-        item.locator = Some(value.to_string());
-    } else if !lp.is_empty() {
-        item.locator = Some(lp.to_string());
+
+        item.label = map_label_str(&key);
+        item.locator = Some(val.trim().to_string());
+    } else {
+        // Fallback to shorthand: `p. 23`
+        if let Some(space_pos) = lp.find(' ') {
+            let label_str = lp[..space_pos].trim_end_matches('.');
+            let value = &lp[space_pos + 1..];
+
+            item.label = map_label_str(label_str);
+            item.locator = Some(value.to_string());
+        } else {
+            // No label, assume page
+            item.label = Some(LocatorType::Page);
+            item.locator = Some(lp.to_string());
+        }
+    }
+}
+
+fn map_label_str(s: &str) -> Option<LocatorType> {
+    match s.trim().trim_end_matches('.').to_lowercase().as_str() {
+        "p" | "page" | "pp" => Some(LocatorType::Page),
+        "vol" | "volume" => Some(LocatorType::Volume),
+        "ch" | "chap" | "chapter" => Some(LocatorType::Chapter),
+        "sec" | "section" => Some(LocatorType::Section),
+        "fig" | "figure" => Some(LocatorType::Figure),
+        "line" | "l" => Some(LocatorType::Line),
+        "note" | "n" => Some(LocatorType::Note),
+        "part" => Some(LocatorType::Part),
+        "col" | "column" => Some(LocatorType::Column),
+        _ => Some(LocatorType::Page),
     }
 }
 
@@ -251,5 +285,17 @@ mod tests {
         assert_eq!(citation.items[0].id, "kuhn1962");
         assert_eq!(citation.items[0].locator, Some("10".to_string()));
         assert_eq!(citation.items[0].label, Some(LocatorType::Page));
+    }
+
+    #[test]
+    fn test_parse_structured_locator() {
+        let parser = WinnowCitationParser;
+        let content = "[@kuhn1962, section: 5]";
+        let citations = parser.parse_citations(content);
+
+        assert_eq!(citations.len(), 1);
+        let (_, _, citation) = &citations[0];
+        assert_eq!(citation.items[0].locator, Some("5".to_string()));
+        assert_eq!(citation.items[0].label, Some(LocatorType::Section));
     }
 }

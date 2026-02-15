@@ -6,6 +6,8 @@ Multi-cite with prefix and locator: [see ;@kuhn1962; @watson1953, ch. 2].
 
 Narrative with locator: @kuhn1962[p. 10] argues...
 
+Structured locator: [@kuhn1962, section: 5].
+
 Simple parenthetical: [@watson1953].
 
-Another multi-cite: [compare @smith2010, p. 45; @brown1954 for context].
+Another multi-cite: [compare @smith2010, page: 45; @brown1954 for context].
