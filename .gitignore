@@ -1,6 +1,7 @@
 target/
 **/*.rs.bk
 *.swp
+**/*.cbor
 .DS_Store
 csl.json
 csln.json
