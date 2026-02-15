@@ -145,9 +145,9 @@
 
         <!-- Examples Grid -->
         <section class="max-w-6xl mx-auto px-6 pb-24 grid gap-12">
-            <!-- Advanced Dates -->
+            <!-- Advanced Citations: Narrative, Infix & Conjunctions -->
             <article
-                id="advanced-dates"
+                id="advanced-citations"
                 class="example-card rounded-xl overflow-hidden shadow-sm scroll-mt-24"
             >
                 <div class="p-8 bg-slate-50 border-b border-slate-200">
@@ -155,51 +155,27 @@
                         <div
                             class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary"
                         >
-                            <span class="material-icons">event</span>
+                            <span class="material-icons">auto_awesome</span>
                         </div>
                         <h2 class="text-2xl font-bold text-slate-900">
-                            Advanced Dates (EDTF)
+                            Advanced Citations
                         </h2>
                     </div>
                     <p class="text-slate-600 leading-relaxed mb-6">
-                        CSLN uses Extended Date/Time Format (EDTF) for native
-                        support of uncertainty, approximation, and ranges.
-                        Configure style-specific rendering preferences
-                        declaratively.
+                        CSLN supports sophisticated citation patterns, including
+                        narrative (integral) vs. parenthetical (non-integral) 
+                        modes, mid-citation "infix" text, and context-aware 
+                        conjunctions (e.g., APA's "and" vs. "&").
                     </p>
                 </div>
 
-                <!-- Locale Configuration -->
+                <!-- Mode-Dependent Conjunctions -->
                 <div class="border-b border-slate-200">
                     <div class="px-8 py-4 bg-slate-100">
                         <h3
                             class="text-sm font-semibold text-slate-700 uppercase tracking-wide"
                         >
-                            Locale Configuration (en-US.yaml)
-                        </h3>
-                    </div>
-                    <div class="bg-slate-900 p-6 overflow-x-auto">
-                        <pre
-                            class="font-mono text-sm text-slate-300 leading-relaxed"
-                        >
-<span class="text-indigo-400">dates</span>:
-  <span class="text-primary">uncertainty-term</span>: <span class="text-emerald-400">uncertain</span>
-  <span class="text-primary">open-ended-term</span>: <span class="text-emerald-400">present</span>
-
-<span class="text-indigo-400">terms</span>:
-  <span class="text-primary">circa</span>:
-    <span class="text-primary">long</span>: <span class="text-emerald-400">circa</span>
-    <span class="text-primary">short</span>: <span class="text-emerald-400">c.</span></pre>
-                    </div>
-                </div>
-
-                <!-- Style Configuration -->
-                <div class="border-b border-slate-200">
-                    <div class="px-8 py-4 bg-slate-100">
-                        <h3
-                            class="text-sm font-semibold text-slate-700 uppercase tracking-wide"
-                        >
-                            Style Configuration (Optional Overrides)
+                            Mode-Dependent Conjunctions (APA Style)
                         </h3>
                     </div>
                     <div class="bg-slate-900 p-6 overflow-x-auto">
@@ -207,190 +183,130 @@
                             class="font-mono text-sm text-slate-300 leading-relaxed"
                         >
 <span class="text-indigo-400">options</span>:
-  <span class="text-primary">dates</span>:
-    <span class="text-primary">uncertainty-marker</span>: <span class="text-emerald-400">"?"</span>           <span class="text-slate-500"># or null to suppress</span>
-    <span class="text-primary">approximation-marker</span>: <span class="text-emerald-400">"ca. "</span>       <span class="text-slate-500"># uses locale circa term</span>
-    <span class="text-primary">range-delimiter</span>: <span class="text-emerald-400">"–"</span>              <span class="text-slate-500"># en-dash (U+2013)</span>
-    <span class="text-primary">open-range-marker</span>: <span class="text-emerald-400">null</span>           <span class="text-slate-500"># uses locale open-ended-term</span>
-
-<span class="text-indigo-400">bibliography</span>:
-  <span class="text-primary">template</span>:
-    - <span class="text-primary">date</span>: <span class="text-emerald-400">issued</span>
-      <span class="text-primary">form</span>: <span class="text-emerald-400">full</span>                      <span class="text-slate-500"># year | year-month | full</span>
-      <span class="text-primary">wrap</span>: <span class="text-emerald-400">parentheses</span></pre>
+  <span class="text-primary">contributors</span>:
+    <span class="text-primary">and</span>: <span class="text-emerald-400">!mode-dependent</span>
+      <span class="text-primary">integral</span>: <span class="text-emerald-400">text</span>      <span class="text-slate-500"># "Smith and Jones (2024)"</span>
+      <span class="text-primary">non-integral</span>: <span class="text-emerald-400">symbol</span>  <span class="text-slate-500"># "(Smith & Jones, 2024)"</span></pre>
                     </div>
                 </div>
 
-                <!-- EDTF Examples -->
+                <div class="border-b border-slate-200">
+                    <div class="px-8 py-4 bg-slate-100">
+                        <h3
+                            class="text-sm font-semibold text-slate-700 uppercase tracking-wide"
+                        >
+                            Template Contexts & Infix Support
+                        </h3>
+                    </div>
+                    <div class="bg-slate-900 p-6 overflow-x-auto">
+                        <pre
+                            class="font-mono text-sm text-slate-300 leading-relaxed"
+                        >
+<span class="text-indigo-400">citation</span>:
+  <span class="text-primary">integral</span>:
+    <span class="text-primary">template</span>:
+      - <span class="text-primary">contributor</span>: <span class="text-emerald-400">author</span>
+      - <span class="text-primary">variable</span>: <span class="text-emerald-400">infix</span>        <span class="text-slate-500"># Renders @smith(argues) as "Smith argues..."</span>
+        <span class="text-primary">prefix</span>: <span class="text-emerald-400">" "</span>
+      - <span class="text-primary">date</span>: <span class="text-emerald-400">issued</span>
+        <span class="text-primary">wrap</span>: <span class="text-emerald-400">parentheses</span>
+        <span class="text-primary">prefix</span>: <span class="text-emerald-400">" "</span></pre>
+                    </div>
+                </div>
+
+                <!-- Visual Output -->
                 <div>
                     <div class="px-8 py-4 bg-slate-100">
                         <h3
                             class="text-sm font-semibold text-slate-700 uppercase tracking-wide"
                         >
-                            EDTF Strings & Rendered Output
+                            Rendered Examples (Draft Djot Syntax)
                         </h3>
                     </div>
                     <div class="p-6 bg-white">
                         <div class="grid gap-4">
                             <div class="border-l-4 border-primary pl-4">
-                                <div
-                                    class="text-xs font-semibold text-slate-500 uppercase mb-1"
-                                >
-                                    Uncertain Date
-                                </div>
-                                <div
-                                    class="font-mono text-xs text-slate-400 mb-1"
-                                >
-                                    EDTF: "1990?"
-                                </div>
-                                <div class="font-mono text-sm text-slate-900">
-                                    1990?
-                                </div>
-                                <div class="text-xs text-slate-500 mt-1">
-                                    Displays uncertainty marker (Chicago) or
-                                    suppresses (APA)
-                                </div>
+                                <div class="text-xs font-semibold text-slate-500 uppercase mb-1">Narrative with Infix</div>
+                                <div class="font-mono text-xs text-slate-400 mb-1">Source: @kuhn1962(notes that)[p. 10]</div>
+                                <div class="font-mono text-sm text-slate-900">Kuhn notes that (1962, p. 10)</div>
                             </div>
                             <div class="border-l-4 border-emerald-500 pl-4">
-                                <div
-                                    class="text-xs font-semibold text-slate-500 uppercase mb-1"
-                                >
-                                    Approximate Date
-                                </div>
-                                <div
-                                    class="font-mono text-xs text-slate-400 mb-1"
-                                >
-                                    EDTF: "1990~"
-                                </div>
-                                <div class="font-mono text-sm text-slate-900">
-                                    ca. 1990
-                                </div>
-                                <div class="text-xs text-slate-500 mt-1">
-                                    Uses locale circa term (short form) or style
-                                    override
-                                </div>
+                                <div class="text-xs font-semibold text-slate-500 uppercase mb-1">Narrative (Multiple Authors)</div>
+                                <div class="font-mono text-xs text-slate-400 mb-1">Source: @weinberg1971</div>
+                                <div class="font-mono text-sm text-slate-900">Weinberg and Freedman (1971)</div>
                             </div>
                             <div class="border-l-4 border-indigo-500 pl-4">
-                                <div
-                                    class="text-xs font-semibold text-slate-500 uppercase mb-1"
-                                >
-                                    Date Range
-                                </div>
-                                <div
-                                    class="font-mono text-xs text-slate-400 mb-1"
-                                >
-                                    EDTF: "1990/2000"
-                                </div>
-                                <div class="font-mono text-sm text-slate-900">
-                                    1990–2000
-                                </div>
-                                <div class="text-xs text-slate-500 mt-1">
-                                    Range delimiter defaults to en-dash
-                                </div>
-                            </div>
-                            <div class="border-l-4 border-amber-500 pl-4">
-                                <div
-                                    class="text-xs font-semibold text-slate-500 uppercase mb-1"
-                                >
-                                    Mixed Uncertainty Range
-                                </div>
-                                <div
-                                    class="font-mono text-xs text-slate-400 mb-1"
-                                >
-                                    EDTF: "1990~/2000?"
-                                </div>
-                                <div class="font-mono text-sm text-slate-900">
-                                    ca. 1990–2000?
-                                </div>
-                                <div class="text-xs text-slate-500 mt-1">
-                                    Combines approximation and uncertainty
-                                    markers
-                                </div>
+                                <div class="text-xs font-semibold text-slate-500 uppercase mb-1">Parenthetical (APA Conjunction)</div>
+                                <div class="font-mono text-xs text-slate-400 mb-1">Source: [@weinberg1971]</div>
+                                <div class="font-mono text-sm text-slate-900">(Weinberg & Freedman, 1971)</div>
                             </div>
                             <div class="border-l-4 border-rose-500 pl-4">
-                                <div
-                                    class="text-xs font-semibold text-slate-500 uppercase mb-1"
-                                >
-                                    Open-Ended Range
-                                </div>
-                                <div
-                                    class="font-mono text-xs text-slate-400 mb-1"
-                                >
-                                    EDTF: "1990/.."
-                                </div>
-                                <div class="font-mono text-sm text-slate-900">
-                                    1990–present
-                                </div>
-                                <div class="text-xs text-slate-500 mt-1">
-                                    Uses locale open-ended-term ("present" in
-                                    en-US)
-                                </div>
+                                <div class="text-xs font-semibold text-slate-500 uppercase mb-1">Multi-cite (Parenthetical)</div>
+                                <div class="font-mono text-xs text-slate-400 mb-1">Source: [@kuhn1962; @weinberg1971]</div>
+                                <div class="font-mono text-sm text-slate-900">(Kuhn, 1962; Weinberg & Freedman, 1971)</div>
                             </div>
-                            <div class="border-l-4 border-purple-500 pl-4">
-                                <div
-                                    class="text-xs font-semibold text-slate-500 uppercase mb-1"
-                                >
-                                    Year-Month Precision
-                                </div>
-                                <div
-                                    class="font-mono text-xs text-slate-400 mb-1"
-                                >
-                                    EDTF: "1990-05/2000-12"
-                                </div>
-                                <div class="font-mono text-sm text-slate-900">
-                                    May 1990–December 2000
-                                </div>
-                                <div class="text-xs text-slate-500 mt-1">
-                                    Preserves precision for range endpoints
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- EDTF Info -->
-                <div class="bg-slate-50 p-6 border-t border-slate-200">
-                    <div class="flex items-start gap-3">
-                        <div
-                            class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary flex-shrink-0 mt-1"
-                        >
-                            <span class="material-icons text-sm">info</span>
-                        </div>
-                        <div class="text-sm text-slate-600 leading-relaxed">
-                            <strong class="text-slate-900"
-                                >EDTF Standard:</strong
-                            >
-                            CSLN implements Level 1 EDTF (ISO 8601-2) via the
-                            <code class="text-xs bg-slate-200 px-1 rounded"
-                                >edtf</code
-                            >
-                            Rust crate. Uncertainty (<code
-                                class="text-xs bg-slate-200 px-1 rounded"
-                                >?</code
-                            >), approximation (<code
-                                class="text-xs bg-slate-200 px-1 rounded"
-                                >~</code
-                            >), and range (<code
-                                class="text-xs bg-slate-200 px-1 rounded"
-                                >/</code
-                            >) metadata is preserved and rendered according to
-                            locale terms and style overrides. <br /><br />
-                            <strong class="text-slate-900"
-                                >Locale vs. Style:</strong
-                            >
-                            Locales provide language-specific default terms
-                            (<code class="text-xs bg-slate-200 px-1 rounded"
-                                >circa</code
-                            >,
-                            <code class="text-xs bg-slate-200 px-1 rounded"
-                                >open-ended-term</code
-                            >). Styles can override these with custom markers or
-                            suppress them entirely (e.g., APA suppresses
-                            uncertainty markers).
                         </div>
                     </div>
                 </div>
             </article>
+
+            <!-- Document Processing -->
+            <article
+                id="document-processing"
+                class="example-card rounded-xl overflow-hidden shadow-sm scroll-mt-24"
+            >
+                <div class="p-8 bg-slate-50 border-b border-slate-200">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div
+                            class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary"
+                        >
+                            <span class="material-icons">description</span>
+                        </div>
+                        <h2 class="text-2xl font-bold text-slate-900">
+                            Document Processing
+                        </h2>
+                    </div>
+                    <p class="text-slate-600 leading-relaxed mb-6">
+                        CSLN can process full documents by extracting citations using a high-performance 
+                        <code class="text-xs bg-slate-200 px-1 rounded">winnow</code> parser. It supports 
+                        the <strong class="text-slate-900">draft Djot citation syntax</strong>, including multi-cites and narrative (integral) modes.
+                    </p>
+                </div>
+
+                <div class="p-6 bg-white">
+                    <div class="grid gap-6">
+                        <!-- Djot Input -->
+                        <div class="border-l-4 border-slate-300 pl-4">
+                            <div
+                                class="text-xs font-semibold text-slate-500 uppercase mb-1"
+                            >
+                                Djot Input (paper.djot)
+                            </div>
+                            <div class="bg-slate-900 rounded p-3 overflow-x-auto mt-1">
+                                <pre class="font-mono text-xs text-slate-300 leading-relaxed">
+According to @kuhn1962[p. 10], revolutions are...
+Multi-cite: [see ;@kuhn1962; @watson1953, chapter: 2].
+Structured: [@kuhn1962, section: 5].</pre>
+                            </div>
+                        </div>
+
+                        <!-- Rendered Output -->
+                        <div class="border-l-4 border-emerald-500 pl-4">
+                            <div
+                                class="text-xs font-semibold text-slate-500 uppercase mb-1"
+                            >
+                                Rendered Output (Plain Text)
+                            </div>
+                            <div class="font-mono text-sm text-slate-900 mt-1">
+                                According to Kuhn (1962, p. 10), revolutions are...<br/>
+                                Multi-cite: (see Kuhn, 1962; Watson & Crick, 1953, ch. 2).
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </article>
+
+            <!-- Advanced Dates -->
 
             <!-- Multilingual Support -->
             <article
@@ -684,111 +600,6 @@
                 </div>
             </article>
 
-            <!-- Advanced Citations: Narrative, Infix & Conjunctions -->
-            <article
-                id="advanced-citations"
-                class="example-card rounded-xl overflow-hidden shadow-sm scroll-mt-24"
-            >
-                <div class="p-8 bg-slate-50 border-b border-slate-200">
-                    <div class="flex items-center gap-3 mb-4">
-                        <div
-                            class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary"
-                        >
-                            <span class="material-icons">auto_awesome</span>
-                        </div>
-                        <h2 class="text-2xl font-bold text-slate-900">
-                            Advanced Citations
-                        </h2>
-                    </div>
-                    <p class="text-slate-600 leading-relaxed mb-6">
-                        CSLN supports sophisticated citation patterns, including
-                        narrative (integral) vs. parenthetical (non-integral) 
-                        modes, mid-citation "infix" text, and context-aware 
-                        conjunctions (e.g., APA's "and" vs. "&").
-                    </p>
-                </div>
-
-                <!-- Mode-Dependent Conjunctions -->
-                <div class="border-b border-slate-200">
-                    <div class="px-8 py-4 bg-slate-100">
-                        <h3
-                            class="text-sm font-semibold text-slate-700 uppercase tracking-wide"
-                        >
-                            Mode-Dependent Conjunctions (APA Style)
-                        </h3>
-                    </div>
-                    <div class="bg-slate-900 p-6 overflow-x-auto">
-                        <pre
-                            class="font-mono text-sm text-slate-300 leading-relaxed"
-                        >
-<span class="text-indigo-400">options</span>:
-  <span class="text-primary">contributors</span>:
-    <span class="text-primary">and</span>: <span class="text-emerald-400">!mode-dependent</span>
-      <span class="text-primary">integral</span>: <span class="text-emerald-400">text</span>      <span class="text-slate-500"># "Smith and Jones (2024)"</span>
-      <span class="text-primary">non-integral</span>: <span class="text-emerald-400">symbol</span>  <span class="text-slate-500"># "(Smith & Jones, 2024)"</span></pre>
-                    </div>
-                </div>
-
-                <div class="border-b border-slate-200">
-                    <div class="px-8 py-4 bg-slate-100">
-                        <h3
-                            class="text-sm font-semibold text-slate-700 uppercase tracking-wide"
-                        >
-                            Template Contexts & Infix Support
-                        </h3>
-                    </div>
-                    <div class="bg-slate-900 p-6 overflow-x-auto">
-                        <pre
-                            class="font-mono text-sm text-slate-300 leading-relaxed"
-                        >
-<span class="text-indigo-400">citation</span>:
-  <span class="text-primary">integral</span>:
-    <span class="text-primary">template</span>:
-      - <span class="text-primary">contributor</span>: <span class="text-emerald-400">author</span>
-      - <span class="text-primary">variable</span>: <span class="text-emerald-400">infix</span>        <span class="text-slate-500"># Renders @smith(argues) as "Smith argues..."</span>
-        <span class="text-primary">prefix</span>: <span class="text-emerald-400">" "</span>
-      - <span class="text-primary">date</span>: <span class="text-emerald-400">issued</span>
-        <span class="text-primary">wrap</span>: <span class="text-emerald-400">parentheses</span>
-        <span class="text-primary">prefix</span>: <span class="text-emerald-400">" "</span></pre>
-                    </div>
-                </div>
-
-                <!-- Visual Output -->
-                <div>
-                    <div class="px-8 py-4 bg-slate-100">
-                        <h3
-                            class="text-sm font-semibold text-slate-700 uppercase tracking-wide"
-                        >
-                            Rendered Examples (Draft Djot Syntax)
-                        </h3>
-                    </div>
-                    <div class="p-6 bg-white">
-                        <div class="grid gap-4">
-                            <div class="border-l-4 border-primary pl-4">
-                                <div class="text-xs font-semibold text-slate-500 uppercase mb-1">Narrative with Infix</div>
-                                <div class="font-mono text-xs text-slate-400 mb-1">Source: @kuhn1962(notes that)[p. 10]</div>
-                                <div class="font-mono text-sm text-slate-900">Kuhn notes that (1962, p. 10)</div>
-                            </div>
-                            <div class="border-l-4 border-emerald-500 pl-4">
-                                <div class="text-xs font-semibold text-slate-500 uppercase mb-1">Narrative (Multiple Authors)</div>
-                                <div class="font-mono text-xs text-slate-400 mb-1">Source: @weinberg1971</div>
-                                <div class="font-mono text-sm text-slate-900">Weinberg and Freedman (1971)</div>
-                            </div>
-                            <div class="border-l-4 border-indigo-500 pl-4">
-                                <div class="text-xs font-semibold text-slate-500 uppercase mb-1">Parenthetical (APA Conjunction)</div>
-                                <div class="font-mono text-xs text-slate-400 mb-1">Source: [@weinberg1971]</div>
-                                <div class="font-mono text-sm text-slate-900">(Weinberg & Freedman, 1971)</div>
-                            </div>
-                            <div class="border-l-4 border-rose-500 pl-4">
-                                <div class="text-xs font-semibold text-slate-500 uppercase mb-1">Multi-cite (Parenthetical)</div>
-                                <div class="font-mono text-xs text-slate-400 mb-1">Source: [@kuhn1962; @weinberg1971]</div>
-                                <div class="font-mono text-sm text-slate-900">(Kuhn, 1962; Weinberg & Freedman, 1971)</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </article>
-
             <!-- Options-Level Presets -->
             <article
                 id="options-presets"
@@ -996,61 +807,6 @@
                 </div>
             </article>
 
-            <!-- Document Processing -->
-            <article
-                id="document-processing"
-                class="example-card rounded-xl overflow-hidden shadow-sm scroll-mt-24"
-            >
-                <div class="p-8 bg-slate-50 border-b border-slate-200">
-                    <div class="flex items-center gap-3 mb-4">
-                        <div
-                            class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary"
-                        >
-                            <span class="material-icons">description</span>
-                        </div>
-                        <h2 class="text-2xl font-bold text-slate-900">
-                            Document Processing
-                        </h2>
-                    </div>
-                    <p class="text-slate-600 leading-relaxed mb-6">
-                        CSLN can process full documents by extracting citations using a high-performance 
-                        <code class="text-xs bg-slate-200 px-1 rounded">winnow</code> parser. It supports 
-                        the <strong class="text-slate-900">draft Djot citation syntax</strong>, including multi-cites and narrative (integral) modes.
-                    </p>
-                </div>
-
-                <div class="p-6 bg-white">
-                    <div class="grid gap-6">
-                        <!-- Djot Input -->
-                        <div class="border-l-4 border-slate-300 pl-4">
-                            <div
-                                class="text-xs font-semibold text-slate-500 uppercase mb-1"
-                            >
-                                Djot Input (paper.djot)
-                            </div>
-                            <div class="bg-slate-900 rounded p-3 overflow-x-auto mt-1">
-                                <pre class="font-mono text-xs text-slate-300 leading-relaxed">
-According to @kuhn1962[p. 10], revolutions are...
-Multi-cite: [see ;@kuhn1962; @watson1953, chapter: 2].
-Structured: [@kuhn1962, section: 5].</pre>
-                            </div>
-                        </div>
-
-                        <!-- Rendered Output -->
-                        <div class="border-l-4 border-emerald-500 pl-4">
-                            <div
-                                class="text-xs font-semibold text-slate-500 uppercase mb-1"
-                            >
-                                Rendered Output (Plain Text)
-                            </div>
-                            <div class="font-mono text-sm text-slate-900 mt-1">
-                                According to Kuhn (1962, p. 10), revolutions are...<br/>
-                                Multi-cite: (see Kuhn, 1962; Watson & Crick, 1953, ch. 2).
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </article>
         </section>
 
         <!-- Footer -->
