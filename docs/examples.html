@@ -933,6 +933,61 @@
                     </div>
                 </div>
             </article>
+
+            <!-- Document Processing -->
+            <article
+                id="document-processing"
+                class="example-card rounded-xl overflow-hidden shadow-sm scroll-mt-24"
+            >
+                <div class="p-8 bg-slate-50 border-b border-slate-200">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div
+                            class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary"
+                        >
+                            <span class="material-icons">description</span>
+                        </div>
+                        <h2 class="text-2xl font-bold text-slate-900">
+                            Document Processing (Djot)
+                        </h2>
+                    </div>
+                    <p class="text-slate-600 leading-relaxed mb-6">
+                        CSLN can process full documents by extracting citations using a high-performance 
+                        <code class="text-xs bg-slate-200 px-1 rounded">winnow</code> parser. It supports 
+                        the proposed Djot citation syntax, including multi-cites and narrative modes.
+                    </p>
+                </div>
+
+                <div class="p-6 bg-white">
+                    <div class="grid gap-6">
+                        <!-- Djot Input -->
+                        <div class="border-l-4 border-slate-300 pl-4">
+                            <div
+                                class="text-xs font-semibold text-slate-500 uppercase mb-1"
+                            >
+                                Djot Input (paper.djot)
+                            </div>
+                            <div class="bg-slate-900 rounded p-3 overflow-x-auto mt-1">
+                                <pre class="font-mono text-xs text-slate-300 leading-relaxed">
+According to @kuhn1962[p. 10]{.cite}, revolutions are...
+Multi-cite: [see ;@kuhn1962; @watson1953, ch. 2]{.cite}.</pre>
+                            </div>
+                        </div>
+
+                        <!-- Rendered Output -->
+                        <div class="border-l-4 border-emerald-500 pl-4">
+                            <div
+                                class="text-xs font-semibold text-slate-500 uppercase mb-1"
+                            >
+                                Rendered Output (Plain Text)
+                            </div>
+                            <div class="font-mono text-sm text-slate-900 mt-1">
+                                According to Kuhn (1962, p. 10), revolutions are...<br/>
+                                Multi-cite: (see Kuhn, 1962; Watson & Crick, 1953, ch. 2).
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </article>
         </section>
 
         <!-- Footer -->
