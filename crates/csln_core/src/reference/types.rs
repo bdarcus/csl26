@@ -328,6 +328,7 @@ pub enum RefDate {
 /// A legal case (court decision).
 #[derive(Debug, Deserialize, Serialize, Clone, JsonSchema, PartialEq)]
 #[serde(rename_all = "kebab-case")]
+#[serde(deny_unknown_fields)]
 pub struct LegalCase {
     pub id: Option<RefID>,
     /// Case name (e.g., "Brown v. Board of Education")
@@ -355,6 +356,7 @@ pub struct LegalCase {
 /// A statute or legislative act.
 #[derive(Debug, Deserialize, Serialize, Clone, JsonSchema, PartialEq)]
 #[serde(rename_all = "kebab-case")]
+#[serde(deny_unknown_fields)]
 pub struct Statute {
     pub id: Option<RefID>,
     /// Statute name (e.g., "Civil Rights Act of 1964")
@@ -380,6 +382,7 @@ pub struct Statute {
 /// An international treaty or agreement.
 #[derive(Debug, Deserialize, Serialize, Clone, JsonSchema, PartialEq)]
 #[serde(rename_all = "kebab-case")]
+#[serde(deny_unknown_fields)]
 pub struct Treaty {
     pub id: Option<RefID>,
     /// Treaty name (e.g., "Treaty of Versailles")
@@ -405,6 +408,7 @@ pub struct Treaty {
 /// A legislative or administrative hearing.
 #[derive(Debug, Deserialize, Serialize, Clone, JsonSchema, PartialEq)]
 #[serde(rename_all = "kebab-case")]
+#[serde(deny_unknown_fields)]
 pub struct Hearing {
     pub id: Option<RefID>,
     /// Hearing title
@@ -426,6 +430,7 @@ pub struct Hearing {
 /// An administrative regulation.
 #[derive(Debug, Deserialize, Serialize, Clone, JsonSchema, PartialEq)]
 #[serde(rename_all = "kebab-case")]
+#[serde(deny_unknown_fields)]
 pub struct Regulation {
     pub id: Option<RefID>,
     /// Regulation title
@@ -451,6 +456,7 @@ pub struct Regulation {
 /// A legal brief or filing.
 #[derive(Debug, Deserialize, Serialize, Clone, JsonSchema, PartialEq)]
 #[serde(rename_all = "kebab-case")]
+#[serde(deny_unknown_fields)]
 pub struct Brief {
     pub id: Option<RefID>,
     /// Brief title or case name

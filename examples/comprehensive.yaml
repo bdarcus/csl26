@@ -10,8 +10,9 @@ references:
         given: Thomas S.
     title: The Structure of Scientific Revolutions
     issued: "1962"
-    publisher: University of Chicago Press
-    publisher-place: Chicago
+    publisher:
+      name: University of Chicago Press
+      location: Chicago
 
   # 2. Journal Article with multiple authors
   - id: watson1953
@@ -42,7 +43,8 @@ references:
     container-title: Modern Citation Systems
     issued: "2010"
     page: 45-67
-    publisher: Academic Press
+    publisher:
+      name: Academic Press
 
   # 4. Legal Case (APA style)
   - id: brown1954
@@ -57,7 +59,7 @@ references:
   - id: who2020
     type: report
     author:
-      - literal: World Health Organization
+      - name: World Health Organization
     title: COVID-19 Situation Report
     issued: "2020-05"
     number: "114"
@@ -96,4 +98,5 @@ references:
     # Scoped title
     title+ja: 海辺のカフカ
     issued: "2002"
-    publisher: Shinchosha
+    publisher:
+      name: Shinchosha

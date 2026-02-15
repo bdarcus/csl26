@@ -49,6 +49,8 @@ fn test_contributor_values() {
         locale: &locale,
         context: RenderContext::Citation,
         mode: csln_core::citation::CitationMode::NonIntegral,
+        locator: None,
+        locator_label: None,
     };
     let reference = make_reference();
     let hints = ProcHints::default();
@@ -80,6 +82,8 @@ fn test_date_values() {
         locale: &locale,
         context: RenderContext::Citation,
         mode: csln_core::citation::CitationMode::NonIntegral,
+        locator: None,
+        locator_label: None,
     };
     let reference = make_reference();
     let hints = ProcHints::default();
@@ -107,6 +111,8 @@ fn test_et_al() {
         locale: &locale,
         context: RenderContext::Citation,
         mode: csln_core::citation::CitationMode::NonIntegral,
+        locator: None,
+        locator_label: None,
     };
     let hints = ProcHints::default();
 
@@ -228,6 +234,8 @@ fn test_et_al_delimiter_never() {
         locale: &locale,
         context: RenderContext::Citation,
         mode: csln_core::citation::CitationMode::NonIntegral,
+        locator: None,
+        locator_label: None,
     };
     let hints = ProcHints::default();
 
@@ -277,6 +285,8 @@ fn test_et_al_delimiter_always() {
         locale: &locale,
         context: RenderContext::Citation,
         mode: csln_core::citation::CitationMode::NonIntegral,
+        locator: None,
+        locator_label: None,
     };
     let hints = ProcHints::default();
 
@@ -392,6 +402,8 @@ fn test_template_list_suppression() {
         locale: &locale,
         context: RenderContext::Citation,
         mode: csln_core::citation::CitationMode::NonIntegral,
+        locator: None,
+        locator_label: None,
     };
     let reference = Reference::from(LegacyReference {
         id: "multi".to_string(),
@@ -436,6 +448,8 @@ fn test_et_al_use_last() {
         locale: &locale,
         context: RenderContext::Citation,
         mode: csln_core::citation::CitationMode::NonIntegral,
+        locator: None,
+        locator_label: None,
     };
     let hints = ProcHints::default();
 
@@ -481,6 +495,8 @@ fn test_et_al_use_last_overlap() {
         locale: &locale,
         context: RenderContext::Citation,
         mode: csln_core::citation::CitationMode::NonIntegral,
+        locator: None,
+        locator_label: None,
     };
     let hints = ProcHints::default();
 
@@ -519,6 +535,8 @@ fn test_title_hyperlink() {
         locale: &locale,
         context: RenderContext::Citation,
         mode: csln_core::citation::CitationMode::NonIntegral,
+        locator: None,
+        locator_label: None,
     };
     let hints = ProcHints::default();
 
@@ -558,6 +576,8 @@ fn test_title_hyperlink_url_fallback() {
         locale: &locale,
         context: RenderContext::Citation,
         mode: csln_core::citation::CitationMode::NonIntegral,
+        locator: None,
+        locator_label: None,
     };
     let hints = ProcHints::default();
 
@@ -596,6 +616,8 @@ fn test_variable_hyperlink() {
         locale: &locale,
         context: RenderContext::Bibliography,
         mode: csln_core::citation::CitationMode::NonIntegral,
+        locator: None,
+        locator_label: None,
     };
     let hints = ProcHints::default();
 
@@ -652,6 +674,8 @@ fn test_editor_label_format() {
             locale: &locale,
             context: RenderContext::Bibliography,
             mode: csln_core::citation::CitationMode::NonIntegral,
+            locator: None,
+            locator_label: None,
         };
         let values = component.values(&reference, &hints, &options).unwrap();
         // Assuming locale for "editor" verb is "edited by"
@@ -668,6 +692,8 @@ fn test_editor_label_format() {
             locale: &locale,
             context: RenderContext::Bibliography,
             mode: csln_core::citation::CitationMode::NonIntegral,
+            locator: None,
+            locator_label: None,
         };
         let values = component.values(&reference, &hints, &options).unwrap();
         // Assuming locale for "editor" short is "Ed."
@@ -684,6 +710,8 @@ fn test_editor_label_format() {
             locale: &locale,
             context: RenderContext::Bibliography,
             mode: csln_core::citation::CitationMode::NonIntegral,
+            locator: None,
+            locator_label: None,
         };
         let values = component.values(&reference, &hints, &options).unwrap();
         // Assuming locale for "editor" long is "editor"
@@ -700,6 +728,8 @@ fn test_term_values() {
         locale: &locale,
         context: RenderContext::Bibliography,
         mode: csln_core::citation::CitationMode::NonIntegral,
+        locator: None,
+        locator_label: None,
     };
     let reference = make_reference();
     let hints = ProcHints::default();
@@ -725,6 +755,8 @@ fn test_template_list_term_suppression() {
         locale: &locale,
         context: RenderContext::Bibliography,
         mode: csln_core::citation::CitationMode::NonIntegral,
+        locator: None,
+        locator_label: None,
     };
     // Reference with no editor
     let reference = make_reference();
@@ -761,6 +793,8 @@ fn test_date_fallback() {
         locale: &locale,
         context: RenderContext::Bibliography,
         mode: csln_core::citation::CitationMode::NonIntegral,
+        locator: None,
+        locator_label: None,
     };
     // Reference with NO issued date
     let reference = Reference::from(LegacyReference {
@@ -808,6 +842,8 @@ fn test_strip_periods_global_config() {
         locale: &locale,
         context: RenderContext::Bibliography,
         mode: csln_core::citation::CitationMode::NonIntegral,
+        locator: None,
+        locator_label: None,
     };
 
     let component = TemplateContributor {
@@ -843,6 +879,8 @@ fn test_strip_periods_component_override() {
         locale: &locale,
         context: RenderContext::Bibliography,
         mode: csln_core::citation::CitationMode::NonIntegral,
+        locator: None,
+        locator_label: None,
     };
 
     // Component overrides global setting
@@ -882,6 +920,8 @@ fn test_strip_periods_no_strip_by_default() {
         locale: &locale,
         context: RenderContext::Bibliography,
         mode: csln_core::citation::CitationMode::NonIntegral,
+        locator: None,
+        locator_label: None,
     };
 
     let component = TemplateContributor {
@@ -917,6 +957,8 @@ fn test_should_strip_periods_precedence() {
         locale: &locale,
         context: RenderContext::Bibliography,
         mode: csln_core::citation::CitationMode::NonIntegral,
+        locator: None,
+        locator_label: None,
     };
 
     // Component override takes precedence
@@ -943,6 +985,8 @@ fn test_should_strip_periods_precedence() {
         locale: &locale,
         context: RenderContext::Bibliography,
         mode: csln_core::citation::CitationMode::NonIntegral,
+        locator: None,
+        locator_label: None,
     };
     assert!(!should_strip_periods(&rendering_default, &options_none));
 }

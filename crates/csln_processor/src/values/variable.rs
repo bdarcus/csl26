@@ -24,9 +24,13 @@ impl ComponentValues for TemplateVariable {
                     if let Some(label_type) = &options.locator_label {
                         // Check if value is plural (contains hyphen, comma, or space)
                         let is_plural = loc.contains('-') || loc.contains(',') || loc.contains(' ');
-                        
+
                         // Look up term from locale
-                        if let Some(term) = options.locale.locator_term(label_type, is_plural, csln_core::locale::TermForm::Short) {
+                        if let Some(term) = options.locale.locator_term(
+                            label_type,
+                            is_plural,
+                            csln_core::locale::TermForm::Short,
+                        ) {
                             format!("{} {}", term, loc)
                         } else {
                             loc.to_string()

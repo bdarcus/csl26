@@ -125,7 +125,7 @@ impl<'a> Renderer<'a> {
         items: &[crate::reference::CitationItem],
         template: &[TemplateComponent],
         mode: &csln_core::citation::CitationMode,
-        intra_delimiter: &str,
+        _intra_delimiter: &str,
     ) -> Result<Vec<String>, ProcessorError>
     where
         F: crate::render::format::OutputFormat<Output = String>,
@@ -202,11 +202,7 @@ impl<'a> Renderer<'a> {
                     item.label.clone(),
                 ) {
                     let item_str = crate::render::citation::citation_to_string_with_format::<F>(
-                        &proc,
-                        None,
-                        None,
-                        None,
-                        None,
+                        &proc, None, None, None, None,
                     );
                     if !item_str.is_empty() {
                         let prefix = item.prefix.as_deref().unwrap_or("");
@@ -248,9 +244,17 @@ impl<'a> Renderer<'a> {
                 let prefix = first_item.prefix.as_deref().unwrap_or("");
                 if !author_part.is_empty() && !year_parts.is_empty() {
                     let joined_years = year_parts.join(", ");
-                    // The intra_delimiter is already applied inside citation_to_string for individual items,
-                    // but here we are manually assembling Author + Years.
-                    let content = format!("{} ({})", author_part, joined_years);
+                    // Format based on citation mode:
+                    // Integral: "Kuhn (1962a, 1962b)" - years in parentheses
+                    // NonIntegral: "Kuhn, 1962a, 1962b" - no inner parens (outer wrap adds them)
+                    let content = match mode {
+                        csln_core::citation::CitationMode::Integral => {
+                            format!("{} ({})", author_part, joined_years)
+                        }
+                        csln_core::citation::CitationMode::NonIntegral => {
+                            format!("{}, {}", author_part, joined_years)
+                        }
+                    };
                     rendered_groups.push(fmt.affix(prefix, content, ""));
                 } else if !author_part.is_empty() {
                     rendered_groups.push(fmt.affix(prefix, author_part, ""));
@@ -369,6 +373,7 @@ impl<'a> Renderer<'a> {
     }
 
     /// Process a template for a reference with citation number.
+    #[allow(clippy::too_many_arguments)]
     pub fn process_template_with_number(
         &self,
         reference: &Reference,
