@@ -1,0 +1,60 @@
+[
+  {
+    "id": "pavlovic2008",
+    "title": "Bicycle with adjustable suspension",
+    "author": {
+      "family": "Pavlovic",
+      "given": "Nebojša"
+    },
+    "number": "7,347,809",
+    "issued": "2008-03-25",
+    "authority": "U.S. Patent and Trademark Office",
+    "jurisdiction": "US",
+    "url": "https://patents.google.com/patent/US7347809B2/en"
+  },
+  {
+    "id": "irino2009",
+    "title": "Chemical and mineral compositions of sediments from ODP Site 127-797",
+    "author": [
+      {
+        "family": "Irino",
+        "given": "Tomohisa"
+      },
+      {
+        "family": "Tada",
+        "given": "Ryuji"
+      }
+    ],
+    "issued": "2009",
+    "publisher": {
+      "literal": "Geological Institute, University of Tokyo"
+    },
+    "doi": "10.1594/PANGAEA.726855",
+    "version": "1.0",
+    "format": "NetCDF"
+  },
+  {
+    "id": "ieee754-2008",
+    "title": "IEEE Standard for Floating-Point Arithmetic",
+    "authority": "IEEE",
+    "number": "754-2008",
+    "issued": "2008-08",
+    "status": "published",
+    "url": "https://doi.org/10.1109/IEEESTD.2008.4610935"
+  },
+  {
+    "id": "rcore2021",
+    "title": "R: A language and environment for statistical computing",
+    "author": {
+      "literal": "R Core Team"
+    },
+    "issued": "2021",
+    "publisher": {
+      "literal": "R Foundation for Statistical Computing"
+    },
+    "version": "4.1.0",
+    "repository": "https://www.R-project.org/",
+    "license": "GPL-2.0",
+    "platform": "cross-platform"
+  }
+]
