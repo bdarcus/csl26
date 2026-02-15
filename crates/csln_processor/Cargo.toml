@@ -1,9 +1,9 @@
 [package]
 name = "csln_processor"
+version.workspace = true
+edition.workspace = true
 authors = ["Bruce D'Arcus <bdarcus@gmail.com>"]
 license = "MPL-2.0"
-version = "0.1.0"
-edition = "2021"
 description = "CSLN citation and bibliography processor"
 
 [lib]

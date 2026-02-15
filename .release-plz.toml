@@ -1,0 +1,27 @@
+# release-plz configuration for automated releases
+# See: https://release-plz.ieni.dev/docs/config
+
+[workspace]
+# Enable automatic changelog updates from Conventional Commits
+changelog_update = true
+
+# Enable git release creation (GitHub Releases)
+git_release_enable = true
+
+# Enable git tag creation (semantic version tags)
+git_tag_enable = true
+
+# Git tag name format (prefixed with 'v')
+git_tag_name = "v{{ version }}"
+
+# Do not publish to crates.io (project-specific decision)
+publish = false
+
+# Release branch (must match workflow trigger)
+branch = "main"
+
+# Changelog path
+changelog_path = "CHANGELOG.md"
+
+# Use conventional commits for changelog generation
+changelog_config = "cliff.toml"
