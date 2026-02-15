@@ -1,0 +1,37 @@
+# Complex Citation Scenarios for CSLN
+# Test these with: csln process examples/comprehensive.yaml styles/apa-7th.yaml -c examples/complex-citations.yaml
+
+# 1. Standard Parenthetical Multi-cite
+- items:
+    - id: kuhn1962
+    - id: watson1953
+  mode: non-integral
+
+# 2. Integral (Narrative) Citation with Locator
+- items:
+    - id: smith2010
+      label: page
+      locator: "52"
+  mode: integral
+
+# 3. Multi-cite with Prefix and Suffix
+- items:
+    - id: brown1954
+    - id: who2020
+  prefix: "see especially "
+  suffix: " for global context"
+
+# 4. Mixed Locators in one citation
+- items:
+    - id: goethe1808
+      label: volume
+      locator: "2"
+    - id: king1963
+      label: page
+      locator: "10-12"
+
+# 5. Integral Multi-cite (e.g. "Kuhn (1962) and Watson (1953)")
+- items:
+    - id: kuhn1962
+    - id: watson1953
+  mode: integral

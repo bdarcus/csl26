@@ -10,7 +10,36 @@ use csl_legacy::csl_json::Reference as LegacyReference;
 use csln_core::reference::InputReference;
 use csln_core::InputBibliography;
 
-use crate::{Bibliography, Reference};
+use crate::{Bibliography, Citation, Reference};
+
+/// Load a list of citations from a file.
+/// Supports CSLN YAML/JSON.
+pub fn load_citations(path: &Path) -> Result<Vec<Citation>, String> {
+    let bytes = fs::read(path).map_err(|e| format!("Error reading citations file: {}", e))?;
+    let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("yaml");
+
+    match ext {
+        "json" => {
+            if let Ok(citations) = serde_json::from_slice::<Vec<Citation>>(&bytes) {
+                return Ok(citations);
+            }
+            if let Ok(citation) = serde_json::from_slice::<Citation>(&bytes) {
+                return Ok(vec![citation]);
+            }
+        }
+        _ => {
+            let content = String::from_utf8_lossy(&bytes);
+            if let Ok(citations) = serde_yaml::from_str::<Vec<Citation>>(&content) {
+                return Ok(citations);
+            }
+            if let Ok(citation) = serde_yaml::from_str::<Citation>(&content) {
+                return Ok(vec![citation]);
+            }
+        }
+    }
+
+    Err("Error parsing citations: could not parse as CSLN Citation(s) (YAML/JSON)".to_string())
+}
 
 /// Load a bibliography from a file given its path.
 /// Supports CSLN YAML/JSON/CBOR and CSL-JSON.

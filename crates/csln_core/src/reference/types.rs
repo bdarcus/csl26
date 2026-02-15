@@ -227,6 +227,8 @@ pub enum SerialComponentType {
 pub struct Serial {
     pub r#type: SerialType,
     pub title: Title,
+    pub editor: Option<Contributor>,
+    pub publisher: Option<Contributor>,
     #[serde(alias = "ISSN")]
     pub issn: Option<String>,
 }

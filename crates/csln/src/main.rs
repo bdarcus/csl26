@@ -3,7 +3,7 @@ use csln_core::locale::RawLocale;
 use csln_core::reference::InputReference;
 use csln_core::{InputBibliography, Locale, Style};
 use csln_processor::{
-    io::load_bibliography,
+    io::{load_bibliography, load_citations},
     render::{djot::Djot, html::Html, plain::PlainText},
     Citation, CitationItem, Processor,
 };
@@ -48,6 +48,10 @@ enum Commands {
         /// Path to the style YAML file
         #[arg(index = 2)]
         style: PathBuf,
+
+        /// Path to the citations file (CSLN YAML/JSON)
+        #[arg(short, long)]
+        citations: Option<PathBuf>,
 
         /// Output format
         #[arg(short, long, value_enum, default_value_t = Format::Plain)]
@@ -160,6 +164,7 @@ fn main() {
         Commands::Process {
             references,
             style,
+            citations,
             format,
             mut bib,
             mut cite,
@@ -229,6 +234,19 @@ fn main() {
                 }
             };
 
+            // Load citations if provided
+            let input_citations = if let Some(ref path) = citations {
+                match load_citations(path) {
+                    Ok(c) => Some(c),
+                    Err(e) => {
+                        eprintln!("{}", e);
+                        std::process::exit(1);
+                    }
+                }
+            } else {
+                None
+            };
+
             // Determine citation keys
             let item_ids = if let Some(ref k) = keys {
                 k.clone()
@@ -253,7 +271,15 @@ fn main() {
                 .unwrap_or_else(|| "unknown".to_string());
 
             if json {
-                print_json(&processor, &style_name, cite, bib, &item_ids, show_keys);
+                print_json(
+                    &processor,
+                    &style_name,
+                    cite,
+                    bib,
+                    &item_ids,
+                    input_citations,
+                    show_keys,
+                );
             } else {
                 match format {
                     Format::Plain => {
@@ -263,6 +289,7 @@ fn main() {
                             cite,
                             bib,
                             &item_ids,
+                            input_citations,
                             show_keys,
                         );
                     }
@@ -273,6 +300,7 @@ fn main() {
                             cite,
                             bib,
                             &item_ids,
+                            input_citations,
                             show_keys,
                         );
                     }
@@ -283,6 +311,7 @@ fn main() {
                             cite,
                             bib,
                             &item_ids,
+                            input_citations,
                             show_keys,
                         );
                     }
@@ -434,6 +463,7 @@ fn print_human<F>(
     show_cite: bool,
     show_bib: bool,
     item_ids: &[String],
+    citations: Option<Vec<Citation>>,
     show_keys: bool,
 ) where
     F: csln_processor::render::format::OutputFormat<Output = String>,
@@ -441,50 +471,74 @@ fn print_human<F>(
     println!("\n=== {} ===\n", style_name);
 
     if show_cite {
-        println!("CITATIONS (Non-Integral):");
-        for id in item_ids {
-            let citation = Citation {
-                id: Some(id.to_string()),
-                items: vec![CitationItem {
-                    id: id.to_string(),
-                    ..Default::default()
-                }],
-                mode: csln_core::citation::CitationMode::NonIntegral,
-                ..Default::default()
-            };
-            match processor.process_citation_with_format::<F>(&citation) {
-                Ok(text) => {
-                    if show_keys {
-                        println!("  [{}] {}", id, text);
-                    } else {
-                        println!("  {}", text);
+        if let Some(cite_list) = citations {
+            println!("CITATIONS (From file):");
+            for (i, citation) in cite_list.iter().enumerate() {
+                match processor.process_citation_with_format::<F>(citation) {
+                    Ok(text) => {
+                        if show_keys {
+                            println!(
+                                "  [{}] {}",
+                                citation.id.as_deref().unwrap_or(&format!("{}", i)),
+                                text
+                            );
+                        } else {
+                            println!("  {}", text);
+                        }
                     }
+                    Err(e) => println!(
+                        "  [{}] ERROR: {}",
+                        citation.id.as_deref().unwrap_or(&format!("{}", i)),
+                        e
+                    ),
                 }
-                Err(e) => println!("  [{}] ERROR: {}", id, e),
             }
-        }
-        println!();
-
-        println!("CITATIONS (Integral):");
-        for id in item_ids {
-            let citation = Citation {
-                id: Some(id.to_string()),
-                items: vec![CitationItem {
-                    id: id.to_string(),
+        } else {
+            println!("CITATIONS (Non-Integral):");
+            for id in item_ids {
+                let citation = Citation {
+                    id: Some(id.to_string()),
+                    items: vec![CitationItem {
+                        id: id.to_string(),
+                        ..Default::default()
+                    }],
+                    mode: csln_core::citation::CitationMode::NonIntegral,
                     ..Default::default()
-                }],
-                mode: csln_core::citation::CitationMode::Integral,
-                ..Default::default()
-            };
-            match processor.process_citation_with_format::<F>(&citation) {
-                Ok(text) => {
-                    if show_keys {
-                        println!("  [{}] {}", id, text);
-                    } else {
-                        println!("  {}", text);
+                };
+                match processor.process_citation_with_format::<F>(&citation) {
+                    Ok(text) => {
+                        if show_keys {
+                            println!("  [{}] {}", id, text);
+                        } else {
+                            println!("  {}", text);
+                        }
                     }
+                    Err(e) => println!("  [{}] ERROR: {}", id, e),
                 }
-                Err(e) => println!("  [{}] ERROR: {}", id, e),
+            }
+            println!();
+
+            println!("CITATIONS (Integral):");
+            for id in item_ids {
+                let citation = Citation {
+                    id: Some(id.to_string()),
+                    items: vec![CitationItem {
+                        id: id.to_string(),
+                        ..Default::default()
+                    }],
+                    mode: csln_core::citation::CitationMode::Integral,
+                    ..Default::default()
+                };
+                match processor.process_citation_with_format::<F>(&citation) {
+                    Ok(text) => {
+                        if show_keys {
+                            println!("  [{}] {}", id, text);
+                        } else {
+                            println!("  {}", text);
+                        }
+                    }
+                    Err(e) => println!("  [{}] ERROR: {}", id, e),
+                }
             }
         }
         println!();
@@ -514,6 +568,7 @@ fn print_json(
     show_cite: bool,
     show_bib: bool,
     item_ids: &[String],
+    citations: Option<Vec<Citation>>,
     _show_keys: bool,
 ) {
     use serde_json::json;
@@ -524,48 +579,61 @@ fn print_json(
     });
 
     if show_cite {
-        let non_integral: Vec<_> = item_ids
-            .iter()
-            .map(|id| {
-                let citation = Citation {
-                    id: Some(id.to_string()),
-                    items: vec![CitationItem {
-                        id: id.to_string(),
-                        ..Default::default()
-                    }],
-                    mode: csln_core::citation::CitationMode::NonIntegral,
-                    ..Default::default()
-                };
-                json!({
-                    "id": id,
-                    "text": processor.process_citation(&citation).unwrap_or_else(|e| e.to_string())
+        if let Some(cite_list) = citations {
+            let rendered: Vec<_> = cite_list
+                .iter()
+                .map(|c| {
+                    json!({
+                        "id": c.id,
+                        "text": processor.process_citation(c).unwrap_or_else(|e| e.to_string())
+                    })
                 })
-            })
-            .collect();
-
-        let integral: Vec<_> = item_ids
-            .iter()
-            .map(|id| {
-                let citation = Citation {
-                    id: Some(id.to_string()),
-                    items: vec![CitationItem {
-                        id: id.to_string(),
+                .collect();
+            result["citations"] = json!(rendered);
+        } else {
+            let non_integral: Vec<_> = item_ids
+                .iter()
+                .map(|id| {
+                    let citation = Citation {
+                        id: Some(id.to_string()),
+                        items: vec![CitationItem {
+                            id: id.to_string(),
+                            ..Default::default()
+                        }],
+                        mode: csln_core::citation::CitationMode::NonIntegral,
                         ..Default::default()
-                    }],
-                    mode: csln_core::citation::CitationMode::Integral,
-                    ..Default::default()
-                };
-                json!({
-                    "id": id,
-                    "text": processor.process_citation(&citation).unwrap_or_else(|e| e.to_string())
+                    };
+                    json!({
+                        "id": id,
+                        "text": processor.process_citation(&citation).unwrap_or_else(|e| e.to_string())
+                    })
                 })
-            })
-            .collect();
+                .collect();
 
-        result["citations"] = json!({
-            "non-integral": non_integral,
-            "integral": integral
-        });
+            let integral: Vec<_> = item_ids
+                .iter()
+                .map(|id| {
+                    let citation = Citation {
+                        id: Some(id.to_string()),
+                        items: vec![CitationItem {
+                            id: id.to_string(),
+                            ..Default::default()
+                        }],
+                        mode: csln_core::citation::CitationMode::Integral,
+                        ..Default::default()
+                    };
+                    json!({
+                        "id": id,
+                        "text": processor.process_citation(&citation).unwrap_or_else(|e| e.to_string())
+                    })
+                })
+                .collect();
+
+            result["citations"] = json!({
+                "non-integral": non_integral,
+                "integral": integral
+            });
+        }
     }
 
     if show_bib {

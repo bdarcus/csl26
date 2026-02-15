@@ -132,6 +132,8 @@ impl From<csl_legacy::csl_json::Reference> for InputReference {
                     parent: Parent::Embedded(Serial {
                         r#type: serial_type,
                         title: parent_title,
+                        editor: None,
+                        publisher: None,
                         issn: legacy.issn,
                     }),
                     url,
@@ -345,6 +347,8 @@ impl InputReference {
                     parent: Parent::Embedded(Serial {
                         r#type: SerialType::AcademicJournal,
                         title: parent_title,
+                        editor: None,
+                        publisher: None,
                         issn: field_str("issn"),
                     }),
                     url: field_str("url").and_then(|u| Url::parse(&u).ok()),

@@ -1,219 +1,99 @@
----
-info:
-  title: Comprehensive CSLN Bibliography Examples
-  author: Bruce D'Arcus
-  description: Covers Humanities, Social Sciences, Hard Sciences, Law, and Edge Cases.
+# Comprehensive CSLN Test Bibliography
+# Exercises various reference types, naming conventions, and complex data scenarios.
+
 references:
-  # --- Humanities ---
-  - id: foucault_discipline
+  # 1. Standard Book
+  - id: kuhn1962
     type: book
-    keywords: [humanities, philosophy, translation]
-    title:
-      main: Discipline and Punish
-      sub: The Birth of the Prison
-    original-title: Surveiller et punir
     author:
-      family: Foucault
-      given: Michel
-    translator:
-      family: Sheridan
-      given: Alan
-    issued: "1977"
-    original-date: "1975"
-    publisher:
-      name: Pantheon Books
-      location: New York
+      - family: Kuhn
+        given: Thomas S.
+    title: The Structure of Scientific Revolutions
+    issued: "1962"
+    publisher: University of Chicago Press
+    publisher-place: Chicago
 
-  - id: austen_pride
-    type: book
-    keywords: [humanities, literature]
-    title: Pride and Prejudice
+  # 2. Journal Article with multiple authors
+  - id: watson1953
+    type: article-journal
     author:
-      family: Austen
-      given: Jane
-    issued: "1813"
-    publisher:
-      name: T. Egerton
-      location: London
-    edition: "1st"
+      - family: Watson
+        given: J. D.
+      - family: Crick
+        given: F. H. C.
+    title: Molecular Structure of Nucleic Acids
+    container-title: Nature
+    issued: "1953-04-25"
+    volume: "171"
+    issue: "4356"
+    page: 737-738
+    doi: 10.1038/171737a0
 
-  - id: met_catalog_2020
-    type: edited-book
-    keywords: [humanities, art-history]
-    title:
-      main: "Making The Met"
-      sub: "1870–2020"
-    editor:
-      family: Bayer
-      given: Andrea
-    publisher:
-      name: The Metropolitan Museum of Art
-      location: New York
-    issued: "2020"
-    isbn: "9781588397096"
-
-  - id: chaucer_canterbury
-    type: book
-    keywords: [humanities, literature, medieval]
-    title: The Canterbury Tales
-    author:
-      family: Chaucer
-      given: Geoffrey
-    issued: "1387~"
-    note: Written circa 1387.
-
-  # --- Social Sciences ---
-  - id: berger_luckmann
-    type: book
-    keywords: [social-sciences, sociology]
-    title: The Social Construction of Reality
-    author:
-      - family: Berger
-        given: Peter
-        suffix: L.
-      - family: Luckmann
-        given: Thomas
-    issued: "1966"
-    publisher:
-      name: Anchor Books
-      location: New York
-
-  - id: pew_social_media
-    type: report
-    keywords: [social-sciences, internet]
-    title: Social Media Use in 2021
-    author:
-      - family: Auxier
-        given: Brooke
-      - family: Anderson
-        given: Monica
-    publisher:
-      name: Pew Research Center
-    issued: "2021-04-07"
-    url: "https://www.pewresearch.org/internet/2021/04/07/social-media-use-in-2021/"
-
-  # --- Hard Sciences ---
-  - id: einstein_relativity
-    type: article
-    keywords: [hard-sciences, physics]
-    title: Zur Elektrodynamik bewegter Körper
-    author:
-      family: Einstein
-      given: Albert
-    issued: "1905"
-    parent:
-      type: academic-journal
-      title: Annalen der Physik
-    volume: 322
-    issue: 10
-    pages: "891-921"
-    doi: "10.1002/andp.19053221004"
-
-  - id: aad_atlas_higgs
-    type: article
-    keywords: [hard-sciences, physics, massive-author-list]
-    title: Observation of a new particle in the search for the Standard Model Higgs boson with the ATLAS detector at the LHC
-    author:
-      - family: Aad
-        given: G.
-      - family: Abajyan
-        given: T.
-      - family: Abbott
-        given: B.
-      - family: Abdallah
-        given: J.
-      - family: Abdel Khalek
-        given: S.
-      - family: Abdelalim
-        given: A. A.
-      - family: Abdinov
-        given: O.
-      - family: Aben
-        given: R.
-      - family: Abi
-        given: B.
-      - name: "The ATLAS Collaboration"
-    issued: "2012"
-    parent:
-      type: academic-journal
-      title: Physics Letters B
-    volume: 716
-    issue: 1
-    pages: "1-29"
-    doi: "10.1016/j.physletb.2012.08.020"
-
-  # --- Conference Proceedings ---
-  - id: vaswani_attention
+  # 3. Chapter in Edited Book
+  - id: smith2010
     type: chapter
-    keywords: [hard-sciences, computer-science, ai]
-    title: Attention Is All You Need
     author:
-      - family: Vaswani
-        given: Ashish
-      - family: Shazeer
-        given: Noam
-      - family: Parmar
-        given: Niki
-      - family: Uszkoreit
-        given: Jakob
+      - family: Smith
+        given: Alice
+    editor:
       - family: Jones
-        given: Llion
-      - family: Gomez
-        given: Aidan
-        suffix: N.
-      - family: Kaiser
-        given: Łukasz
-      - family: Polosukhin
-        given: Illia
-    issued: "2017"
-    parent:
-      type: proceedings
-      title: Advances in Neural Information Processing Systems 30
-      issued: "2017"
-      editor:
-        - family: Guyon
-          given: I.
-        - family: Luxburg
-          given: U.
-          non-dropping-particle: von
-        - family: Bengio
-          given: S.
-      publisher:
-        name: Curran Associates, Inc.
-    pages: "5998-6008"
+        given: Bob
+    title: The Future of CSLN
+    container-title: Modern Citation Systems
+    issued: "2010"
+    page: 45-67
+    publisher: Academic Press
 
-  # --- Law ---
-  - id: brown_v_board
-    type: article
-    keywords: [law]
-    title: Brown v. Board of Education of Topeka
+  # 4. Legal Case (APA style)
+  - id: brown1954
+    type: legal-case
+    title: Brown v. Board of Education
+    container-title: U.S.
     issued: "1954"
-    parent:
-      type: academic-journal
-      title: United States Reports
-    volume: 347
-    pages: "483"
-    note: "347 U.S. 483 (1954)"
+    volume: "347"
+    page: "483"
 
-  # --- Edge Cases ---
-  - id: who_report
+  # 5. Organizational Author
+  - id: who2020
     type: report
-    keywords: [medicine, global-health]
     author:
-      name: World Health Organization
-      location: Geneva
-    title: 
-      main: World Health Statistics 2023
-      sub: Monitoring Health for the SDGs
-    issued: "2023"
-    isbn: "978-92-4-007432-3"
-    url: "https://www.who.int/publications/i/item/9789240074323"
+      - literal: World Health Organization
+    title: COVID-19 Situation Report
+    issued: "2020-05"
+    number: "114"
 
-  - id: economist_editorial
-    type: article
-    keywords: [news, anonymous]
-    title: The global economy
-    issued: "2023-10-01"
-    parent:
-      type: magazine
-      title: The Economist
+  # 6. Name with particles and suffixes
+  - id: goethe1808
+    type: book
+    author:
+      - family: Goethe
+        given: Johann Wolfgang
+        non-dropping-particle: von
+    title: Faust
+    issued: "1808"
+
+  - id: king1963
+    type: speech
+    author:
+      - family: King
+        given: Martin Luther
+        suffix: Jr.
+    title: I Have a Dream
+    issued: "1963-08-28"
+    event-place: Washington, D.C.
+
+  # 7. Multilingual Example (Future-looking schema)
+  - id: murakami2002
+    type: book
+    author:
+      - family: Murakami
+        given: Haruki
+        # Scoped name for Japanese script
+        ja:
+          family: 村上
+          given: 春樹
+    title: Kafka on the Shore
+    # Scoped title
+    title+ja: 海辺のカフカ
+    issued: "2002"
+    publisher: Shinchosha
