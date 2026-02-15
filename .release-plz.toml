@@ -5,6 +5,9 @@
 # Enable automatic changelog updates from Conventional Commits
 changelog_update = true
 
+# Keep all packages at the same version
+update_all_packages = true
+
 # Do not publish to crates.io (project-specific decision)
 publish = false
 
@@ -19,4 +22,4 @@ git_release_enable = false
 name = "csln"
 git_release_enable = true
 git_tag_enable = true
-git_tag_name = "v{{ version }}"
+git_tag_name = "csln-v{{ version }}"
