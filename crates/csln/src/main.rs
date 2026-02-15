@@ -50,7 +50,7 @@ enum Commands {
         style: PathBuf,
 
         /// Path to the citations file (CSLN YAML/JSON)
-        #[arg(short, long)]
+        #[arg(short = 'c', long)]
         citations: Option<PathBuf>,
 
         /// Output format
@@ -66,7 +66,7 @@ enum Commands {
         cite: bool,
 
         /// Specific citation keys to render (comma-separated)
-        #[arg(short, long, value_delimiter = ',')]
+        #[arg(short = 'k', long, value_delimiter = ',')]
         keys: Option<Vec<String>>,
 
         /// Show reference keys/IDs in output (default: false)

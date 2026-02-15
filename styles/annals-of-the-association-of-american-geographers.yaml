@@ -23,19 +23,35 @@ options:
     separator: ". "
   punctuation-in-quote: true
 citation:
-  template:
-    - contributor: author
-      form: short
-      shorten:
-        min: 4
-        use-first: 1
-        and-others: et-al
-        delimiter-precedes-last: contextual
-      and: text
-    - date: issued
-      form: year
-  wrap: parentheses
-  delimiter: " "
+  non-integral:
+    wrap: parentheses
+    template:
+      - contributor: author
+        form: short
+        shorten:
+          min: 4
+          use-first: 1
+          and-others: et-al
+          delimiter-precedes-last: contextual
+        and: text
+      - date: issued
+        form: year
+    delimiter: " "
+  integral:
+    delimiter: " "
+    template:
+      - contributor: author
+        form: short
+        shorten:
+          min: 4
+          use-first: 1
+          and-others: et-al
+          delimiter-precedes-last: contextual
+        and: text
+      - items:
+          - date: issued
+            form: year
+        wrap: parentheses
   multi-cite-delimiter: "; "
 bibliography:
   template:
