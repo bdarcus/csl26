@@ -5,9 +5,6 @@
 # Enable automatic changelog updates from Conventional Commits
 changelog_update = true
 
-# Keep all packages at the same version
-update_all_packages = true
-
 # Do not publish to crates.io (project-specific decision)
 publish = false
 
