@@ -86,7 +86,7 @@ fn parse_parenthetical_citation(input: &mut &str) -> winnow::Result<Citation, Co
     Ok(citation)
 }
 
-/// Parse `@key [locator]` or just `@key`
+/// Parse `@key(infix)[locator]`, `@key(infix)`, `@key[locator]`, or just `@key`
 fn parse_narrative_citation(input: &mut &str) -> winnow::Result<Citation, ContextError> {
     let _: char = '@'.parse_next(input)?;
     let key: &str =
@@ -97,6 +97,19 @@ fn parse_narrative_citation(input: &mut &str) -> winnow::Result<Citation, Contex
         ..Default::default()
     };
 
+    // Try to parse optional infix in parentheses: (infix)
+    let mut input_checkpoint = *input;
+    let infix_res: winnow::Result<&str, ContextError> =
+        parse_citation_infix_parens(&mut input_checkpoint);
+
+    if let Ok(infix_part) = infix_res {
+        *input = input_checkpoint;
+        if !infix_part.is_empty() {
+            item.infix = Some(infix_part.to_string());
+        }
+    }
+
+    // Try to parse optional locator in brackets: [locator]
     let mut input_checkpoint = *input;
     let locator_res: winnow::Result<&str, ContextError> =
         parse_citation_locator_brackets(&mut input_checkpoint);
@@ -122,6 +135,13 @@ fn parse_citation_locator_brackets<'a>(
     let l = take_until(0.., ']').parse_next(input)?;
     let _ = ']'.parse_next(input)?;
     Ok(l)
+}
+
+fn parse_citation_infix_parens<'a>(input: &mut &'a str) -> winnow::Result<&'a str, ContextError> {
+    let _ = '('.parse_next(input)?;
+    let i = take_until(0.., ')').parse_next(input)?;
+    let _ = ')'.parse_next(input)?;
+    Ok(i)
 }
 
 fn parse_citation_content(input: &mut &str) -> winnow::Result<Citation, ContextError> {
@@ -328,5 +348,49 @@ mod tests {
         let (_, _, citation) = &citations[0];
         assert_eq!(citation.items[0].locator, Some("5".to_string()));
         assert_eq!(citation.items[0].label, Some(LocatorType::Section));
+    }
+
+    #[test]
+    fn test_parse_infix_citation() {
+        let parser = WinnowCitationParser;
+        let content = "@smith(argues that x)";
+        let citations = parser.parse_citations(content);
+
+        assert_eq!(citations.len(), 1);
+        let (_, _, citation) = &citations[0];
+        assert_eq!(citation.mode, CitationMode::Integral);
+        assert_eq!(citation.items.len(), 1);
+        assert_eq!(citation.items[0].id, "smith");
+        assert_eq!(citation.items[0].infix, Some("argues that x".to_string()));
+    }
+
+    #[test]
+    fn test_parse_infix_with_locator() {
+        let parser = WinnowCitationParser;
+        let content = "@smith(argues that x)[23]";
+        let citations = parser.parse_citations(content);
+
+        assert_eq!(citations.len(), 1);
+        let (_, _, citation) = &citations[0];
+        assert_eq!(citation.mode, CitationMode::Integral);
+        assert_eq!(citation.items.len(), 1);
+        assert_eq!(citation.items[0].id, "smith");
+        assert_eq!(citation.items[0].infix, Some("argues that x".to_string()));
+        assert_eq!(citation.items[0].locator, Some("23".to_string()));
+        assert_eq!(citation.items[0].label, Some(LocatorType::Page));
+    }
+
+    #[test]
+    fn test_parse_infix_with_structured_locator() {
+        let parser = WinnowCitationParser;
+        let content = "@jones(notes that y)[chapter: 5]";
+        let citations = parser.parse_citations(content);
+
+        assert_eq!(citations.len(), 1);
+        let (_, _, citation) = &citations[0];
+        assert_eq!(citation.items[0].id, "jones");
+        assert_eq!(citation.items[0].infix, Some("notes that y".to_string()));
+        assert_eq!(citation.items[0].locator, Some("5".to_string()));
+        assert_eq!(citation.items[0].label, Some(LocatorType::Chapter));
     }
 }

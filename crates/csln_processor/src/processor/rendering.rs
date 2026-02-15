@@ -246,10 +246,20 @@ impl<'a> Renderer<'a> {
                     let joined_years = year_parts.join(", ");
                     // Format based on citation mode:
                     // Integral: "Kuhn (1962a, 1962b)" - years in parentheses
+                    //   With infix: "Kuhn argues (1962)" - infix between author and year
                     // NonIntegral: "Kuhn, 1962a, 1962b" - no inner parens (outer wrap adds them)
                     let content = match mode {
                         csln_core::citation::CitationMode::Integral => {
-                            format!("{} ({})", author_part, joined_years)
+                            // Check for infix (only applies to single-item citations)
+                            if group.len() == 1 {
+                                if let Some(infix) = &first_item.infix {
+                                    format!("{} {} ({})", author_part, infix, joined_years)
+                                } else {
+                                    format!("{} ({})", author_part, joined_years)
+                                }
+                            } else {
+                                format!("{} ({})", author_part, joined_years)
+                            }
                         }
                         csln_core::citation::CitationMode::NonIntegral => {
                             format!("{}, {}", author_part, joined_years)
