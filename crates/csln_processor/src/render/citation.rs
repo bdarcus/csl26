@@ -36,7 +36,7 @@ pub fn citation_to_string_with_format<F: OutputFormat<Output = String>>(
         }
     }
 
-    let delim = delimiter.unwrap_or(", ");
+    let delim = delimiter.unwrap_or("");
 
     let content = if parts.len() > 1 {
         let mut result = String::new();

@@ -312,6 +312,10 @@ pub struct RenderOptions<'a> {
     pub locale: &'a Locale,
     pub context: RenderContext,
     pub mode: csln_core::citation::CitationMode,
+    /// Optional locator value (e.g. "42")
+    pub locator: Option<&'a str>,
+    /// Optional locator label (e.g. page, section)
+    pub locator_label: Option<csln_core::citation::LocatorType>,
 }
 
 /// Trait for extracting values from template components.

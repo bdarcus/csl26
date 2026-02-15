@@ -3,6 +3,7 @@ info:
   id: https://www.zotero.org/styles/apa-7th-csln
   link: https://apastyle.apa.org/
 options:
+  processing: author-date
   substitute:
     contributor-role-form: short
     template:
@@ -25,16 +26,21 @@ citation:
   non-integral:
     wrap: parentheses
     template:
-    - contributor: author
-      form: short
-      shorten:
-        min: 3
-        use-first: 1
-        and-others: et-al
-        delimiter-precedes-last: contextual
-      and: symbol
-    - date: issued
-      form: year
+    - items:
+      - contributor: author
+        form: short
+        shorten:
+          min: 3
+          use-first: 1
+          and-others: et-al
+          delimiter-precedes-last: contextual
+        and: symbol
+      - date: issued
+        form: year
+      delimiter: ", "
+    - variable: locator
+      prefix: ", "
+    delimiter: ""
   delimiter: ", "
   multi-cite-delimiter: "; "
   integral:
@@ -48,8 +54,12 @@ citation:
           and-others: et-al
           delimiter-precedes-last: contextual
         and: symbol
-      - date: issued
-        form: year
+      - items:
+        - date: issued
+          form: year
+        - variable: locator
+          prefix: ", "
+        delimiter: ""
         wrap: parentheses
 bibliography:
   template:

@@ -18,7 +18,24 @@ impl ComponentValues for TemplateVariable {
             SimpleVariable::PublisherPlace => reference.publisher_place(),
             SimpleVariable::Genre => reference.genre(),
             SimpleVariable::Abstract => reference.abstract_text(),
-            SimpleVariable::Locator => None, // PIN support handled separately in process_citation
+            SimpleVariable::Locator => {
+                // If we have a locator value in options, use it
+                options.locator.map(|loc| {
+                    if let Some(label_type) = &options.locator_label {
+                        // Check if value is plural (contains hyphen, comma, or space)
+                        let is_plural = loc.contains('-') || loc.contains(',') || loc.contains(' ');
+                        
+                        // Look up term from locale
+                        if let Some(term) = options.locale.locator_term(label_type, is_plural, csln_core::locale::TermForm::Short) {
+                            format!("{} {}", term, loc)
+                        } else {
+                            loc.to_string()
+                        }
+                    } else {
+                        loc.to_string()
+                    }
+                })
+            }
             _ => None,
         };
 

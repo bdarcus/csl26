@@ -79,6 +79,8 @@ impl<'a> Renderer<'a> {
                 RenderContext::Citation,
                 mode.clone(),
                 citation_number,
+                item.locator.as_deref(),
+                item.label.clone(),
             ) {
                 let item_str = crate::render::citation::citation_to_string_with_format::<F>(
                     &proc,
@@ -196,13 +198,15 @@ impl<'a> Renderer<'a> {
                     RenderContext::Citation,
                     mode.clone(),
                     citation_number,
+                    item.locator.as_deref(),
+                    item.label.clone(),
                 ) {
                     let item_str = crate::render::citation::citation_to_string_with_format::<F>(
                         &proc,
                         None,
                         None,
                         None,
-                        Some(intra_delimiter),
+                        None,
                     );
                     if !item_str.is_empty() {
                         let prefix = item.prefix.as_deref().unwrap_or("");
@@ -244,7 +248,9 @@ impl<'a> Renderer<'a> {
                 let prefix = first_item.prefix.as_deref().unwrap_or("");
                 if !author_part.is_empty() && !year_parts.is_empty() {
                     let joined_years = year_parts.join(", ");
-                    let content = format!("{}{}{}", author_part, intra_delimiter, joined_years);
+                    // The intra_delimiter is already applied inside citation_to_string for individual items,
+                    // but here we are manually assembling Author + Years.
+                    let content = format!("{} ({})", author_part, joined_years);
                     rendered_groups.push(fmt.affix(prefix, content, ""));
                 } else if !author_part.is_empty() {
                     rendered_groups.push(fmt.affix(prefix, author_part, ""));
@@ -268,6 +274,8 @@ impl<'a> Renderer<'a> {
             locale: self.locale,
             context: RenderContext::Citation,
             mode: mode.clone(),
+            locator: None,
+            locator_label: None,
         };
 
         // Use short form for citations
@@ -353,6 +361,8 @@ impl<'a> Renderer<'a> {
             locale: self.locale,
             context: RenderContext::Bibliography,
             mode: csln_core::citation::CitationMode::NonIntegral,
+            locator: None,
+            locator_label: None,
         };
 
         self.process_template_with_number_internal(reference, template_ref, options, entry_number)
@@ -366,12 +376,16 @@ impl<'a> Renderer<'a> {
         context: RenderContext,
         mode: csln_core::citation::CitationMode,
         citation_number: usize,
+        locator: Option<&str>,
+        locator_label: Option<csln_core::citation::LocatorType>,
     ) -> Option<ProcTemplate> {
         let options = RenderOptions {
             config: self.config,
             locale: self.locale,
             context,
             mode,
+            locator,
+            locator_label,
         };
         self.process_template_with_number_internal(reference, template, options, citation_number)
     }
@@ -499,6 +513,10 @@ pub fn get_variable_key(component: &TemplateComponent) -> Option<String> {
             let ctx = context_suffix(&d.rendering);
             Some(format!("date:{:?}{}", d.date, ctx))
         }
+        TemplateComponent::Variable(v) => {
+            let ctx = context_suffix(&v.rendering);
+            Some(format!("variable:{:?}{}", v.variable, ctx))
+        }
         TemplateComponent::Title(t) => {
             let ctx = context_suffix(&t.rendering);
             Some(format!("title:{:?}{}", t.title, ctx))
@@ -506,10 +524,6 @@ pub fn get_variable_key(component: &TemplateComponent) -> Option<String> {
         TemplateComponent::Number(n) => {
             let ctx = context_suffix(&n.rendering);
             Some(format!("number:{:?}{}", n.number, ctx))
-        }
-        TemplateComponent::Variable(v) => {
-            let ctx = context_suffix(&v.rendering);
-            Some(format!("variable:{:?}{}", v.variable, ctx))
         }
         TemplateComponent::List(_) => None, // Lists contain multiple variables, not deduplicated
         _ => None,                          // Future component types

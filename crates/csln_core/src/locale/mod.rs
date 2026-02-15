@@ -126,6 +126,54 @@ impl Locale {
             },
         );
 
+        locators.insert(
+            LocatorType::Chapter,
+            LocatorTerm {
+                long: Some(SingularPlural {
+                    singular: "chapter".into(),
+                    plural: "chapters".into(),
+                }),
+                short: Some(SingularPlural {
+                    singular: "ch.".into(),
+                    plural: "chs.".into(),
+                }),
+                symbol: None,
+            },
+        );
+
+        locators.insert(
+            LocatorType::Volume,
+            LocatorTerm {
+                long: Some(SingularPlural {
+                    singular: "volume".into(),
+                    plural: "volumes".into(),
+                }),
+                short: Some(SingularPlural {
+                    singular: "vol.".into(),
+                    plural: "vols.".into(),
+                }),
+                symbol: None,
+            },
+        );
+
+        locators.insert(
+            LocatorType::Section,
+            LocatorTerm {
+                long: Some(SingularPlural {
+                    singular: "section".into(),
+                    plural: "sections".into(),
+                }),
+                short: Some(SingularPlural {
+                    singular: "sec.".into(),
+                    plural: "secs.".into(),
+                }),
+                symbol: Some(SingularPlural {
+                    singular: "§".into(),
+                    plural: "§§".into(),
+                }),
+            },
+        );
+
         Self {
             locale: "en-US".into(),
             dates: DateTerms::en_us(),
