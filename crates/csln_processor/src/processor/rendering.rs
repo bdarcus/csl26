@@ -41,13 +41,30 @@ impl<'a> Renderer<'a> {
         &self,
         mode: &csln_core::citation::CitationMode,
     ) -> bool {
-        matches!(mode, csln_core::citation::CitationMode::Integral)
-            && self
-                .config
-                .processing
-                .as_ref()
-                .map(|p| matches!(p, csln_core::options::Processing::Numeric))
-                .unwrap_or(false)
+        if !matches!(mode, csln_core::citation::CitationMode::Integral) {
+            return false;
+        }
+
+        let is_numeric = self
+            .config
+            .processing
+            .as_ref()
+            .map(|p| matches!(p, csln_core::options::Processing::Numeric))
+            .unwrap_or(false);
+
+        if !is_numeric {
+            return false;
+        }
+
+        // If the style provides an explicit integral template, use it instead of the hardcoded default.
+        let has_explicit_integral = self
+            .style
+            .citation
+            .as_ref()
+            .map(|cs| cs.integral.is_some())
+            .unwrap_or(false);
+
+        !has_explicit_integral
     }
 
     /// Ensure suffix has proper spacing (add space if suffix doesn't start with
