@@ -1,4 +1,4 @@
-# CSL Next (CSLN)
+# CSLN
 
 **A next-generation citation styling system for the scholarly ecosystem.**
 
