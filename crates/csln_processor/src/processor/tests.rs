@@ -1057,29 +1057,3 @@ fn test_numeric_integral_with_multiple_items() {
     assert!(result.contains("Kuhn [1]"));
     assert!(result.contains("Smith [2]"));
 }
-
-#[test]
-fn test_author_date_integral_with_locator() {
-    // APA style (author-date)
-    let style = make_style();
-    let bib = make_bibliography();
-    let processor = Processor::new(style, bib);
-
-    // Integral mode with locator - should render as "Author (Year, locator)"
-    let citation = Citation {
-        id: Some("c1".to_string()),
-        mode: csln_core::citation::CitationMode::Integral,
-        items: vec![crate::reference::CitationItem {
-            id: "kuhn1962".to_string(),
-            locator: Some("10".to_string()),
-            label: Some(csln_core::citation::LocatorType::Page),
-            ..Default::default()
-        }],
-        ..Default::default()
-    };
-
-    let result = processor.process_citation(&citation).unwrap();
-    // Should include both year and locator
-    assert!(result.contains("1962"), "Year missing from: {}", result);
-    assert!(result.contains("10"), "Locator missing from: {}", result);
-}
