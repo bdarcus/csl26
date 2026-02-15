@@ -1,8 +1,11 @@
 # Testing CSLN Document Processing
 
-This is a test document using Pandoc-style citations.
+This is a test document using the proposed Djot citation syntax.
 
-According to @kuhn1962, scientific revolutions are non-cumulative developmental episodes. 
-Multiple authors also contributed to this field [@watson1953].
+Multi-cite with prefix and locator: [see ;@kuhn1962; @watson1953, ch. 2]{.cite}.
 
-We can also refer to chapters [@smith2010] and legal cases [@brown1954].
+Narrative with locator: @kuhn1962[p. 10]{.cite} argues...
+
+Simple parenthetical: [@watson1953]{.cite}.
+
+Another multi-cite: [compare @smith2010, p. 45; @brown1954 for context]{.cite}.

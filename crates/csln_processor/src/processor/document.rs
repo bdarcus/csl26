@@ -7,9 +7,13 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 
 use crate::processor::Processor;
 use crate::render::format::OutputFormat;
-use crate::Citation;
-use regex::Regex;
-use csln_core::citation::CitationMode;
+use crate::{Citation, CitationItem};
+use csln_core::citation::{CitationMode, LocatorType};
+use winnow::ascii::space0;
+use winnow::combinator::{alt, opt, repeat};
+use winnow::error::ContextError;
+use winnow::prelude::*;
+use winnow::token::{take_until, take_while};
 
 /// A trait for document parsers that can identify citations.
 pub trait CitationParser {
@@ -18,57 +22,170 @@ pub trait CitationParser {
     fn parse_citations(&self, content: &str) -> Vec<(usize, usize, Citation)>;
 }
 
-/// A simple regex-based parser for Pandoc-style citations: `[@key]` and `@key`.
-pub struct RegexCitationParser {
-    parenthetical_regex: Regex,
-    narrative_regex: Regex,
-}
+/// A parser for Djot citations using winnow.
+/// Syntax: `[prefix @key1; @key2, locator suffix]{.cite}` or `@key[locator]{.cite}`
+pub struct WinnowCitationParser;
 
-impl Default for RegexCitationParser {
+impl Default for WinnowCitationParser {
     fn default() -> Self {
-        Self {
-            parenthetical_regex: Regex::new(r"\[@(?P<key>[^\]\s]+)\]").unwrap(),
-            // Narrative: @key (must not be preceded by alphanumeric to avoid emails)
-            narrative_regex: Regex::new(r"(?P<prefix>^|\s)@(?P<key>[a-zA-Z0-9_-]+)").unwrap(),
-        }
+        Self
     }
 }
 
-impl CitationParser for RegexCitationParser {
+impl CitationParser for WinnowCitationParser {
     fn parse_citations(&self, content: &str) -> Vec<(usize, usize, Citation)> {
         let mut results = Vec::new();
+        let mut input = content;
+        let mut offset = 0;
 
-        // Find parenthetical [@key]
-        for cap in self.parenthetical_regex.captures_iter(content) {
-            let m = cap.get(0).unwrap();
-            let key = cap.name("key").unwrap().as_str();
-            results.push((m.start(), m.end(), Citation::simple(key)));
+        while !input.is_empty() {
+            let next_bracket = input.find('[');
+            let next_at = input.find('@');
+
+            let start_pos = match (next_bracket, next_at) {
+                (Some(b), Some(a)) => std::cmp::min(b, a),
+                (Some(b), None) => b,
+                (None, Some(a)) => a,
+                (None, None) => break,
+            };
+
+            let potential = &input[start_pos..];
+            let mut p_input = potential;
+
+            if let Ok(citation) = parse_any_citation(&mut p_input) {
+                let consumed = potential.len() - p_input.len();
+                let end_pos = start_pos + consumed;
+                results.push((offset + start_pos, offset + end_pos, citation));
+
+                let shift = end_pos;
+                input = &input[shift..];
+                offset += shift;
+            } else {
+                let shift = start_pos + 1;
+                input = &input[shift..];
+                offset += shift;
+            }
         }
 
-        // Find narrative @key
-        for cap in self.narrative_regex.captures_iter(content) {
-            let full_match = cap.get(0).unwrap();
-            let prefix = cap.name("prefix").unwrap();
-            let key = cap.name("key").unwrap().as_str();
-
-            let mut citation = Citation::simple(key);
-            citation.mode = CitationMode::Integral;
-
-            // The match includes the prefix (space/start), but we only want to replace the @key part
-            let start = full_match.start() + prefix.as_str().len();
-            results.push((start, full_match.end(), citation));
-        }
-
-        // Sort by start index
-        results.sort_by_key(|r| r.0);
         results
     }
 }
 
+fn parse_any_citation(input: &mut &str) -> winnow::Result<Citation, ContextError> {
+    alt((parse_parenthetical_citation, parse_narrative_citation)).parse_next(input)
+}
+
+fn parse_parenthetical_citation(input: &mut &str) -> winnow::Result<Citation, ContextError> {
+    let _ = '['.parse_next(input)?;
+    let citation = parse_citation_content.parse_next(input)?;
+    let _ = ']'.parse_next(input)?;
+    let _ = space0.parse_next(input)?;
+    let _ = alt(("{.cite}", "{class=\"cite\"}")).parse_next(input)?;
+    Ok(citation)
+}
+
+fn parse_narrative_citation(input: &mut &str) -> winnow::Result<Citation, ContextError> {
+    let _: char = '@'.parse_next(input)?;
+    let key: &str =
+        take_while(1.., |c: char| c.is_alphanumeric() || c == '_' || c == '-').parse_next(input)?;
+
+    let mut item = CitationItem {
+        id: key.to_string(),
+        ..Default::default()
+    };
+
+    let mut input_checkpoint = *input;
+    let locator_res: winnow::Result<&str, ContextError> = parse_citation_attribute_brackets(&mut input_checkpoint);
+
+    let mut citation = Citation::default();
+    citation.mode = CitationMode::Integral;
+
+    if let Ok(locator_part) = locator_res {
+        *input = input_checkpoint;
+        apply_locator_to_item(&mut item, locator_part);
+    }
+
+    citation.items.push(item);
+    Ok(citation)
+}
+
+fn parse_citation_attribute_brackets<'a>(input: &mut &'a str) -> winnow::Result<&'a str, ContextError> {
+    let _ = '['.parse_next(input)?;
+    let l = take_until(0.., ']').parse_next(input)?;
+    let _ = ']'.parse_next(input)?;
+    let _ = space0.parse_next(input)?;
+    let _ = alt(("{.cite}", "{class=\"cite\"}")).parse_next(input)?;
+    Ok(l)
+}
+
+fn parse_citation_content(input: &mut &str) -> winnow::Result<Citation, ContextError> {
+    let mut citation = Citation::default();
+
+    // Global Prefix: everything before first @
+    let prefix_part: &str = take_until(0.., "@").parse_next(input)?;
+    if !prefix_part.is_empty() {
+        let trimmed = prefix_part.trim_end_matches(';').trim_start_matches(' ');
+        if !trimmed.is_empty() {
+            citation.prefix = Some(trimmed.to_string());
+        }
+    }
+
+    let items: Vec<CitationItem> = repeat(1.., parse_citation_item).parse_next(input)?;
+    citation.items = items;
+
+    // Global Suffix: anything remaining before ]
+    let suffix_part: &str = take_while(0.., |c: char| c != ']').parse_next(input)?;
+    if !suffix_part.is_empty() {
+        citation.suffix = Some(suffix_part.to_string());
+    }
+
+    Ok(citation)
+}
+
+fn parse_citation_item(input: &mut &str) -> winnow::Result<CitationItem, ContextError> {
+    let _ = space0.parse_next(input)?;
+    let _: char = '@'.parse_next(input)?;
+    let key: &str =
+        take_while(1.., |c: char| c.is_alphanumeric() || c == '_' || c == '-').parse_next(input)?;
+
+    let mut item = CitationItem {
+        id: key.to_string(),
+        ..Default::default()
+    };
+
+    let after_key: &str = take_while(0.., |c: char| c != ';' && c != ']').parse_next(input)?;
+
+    if let Some(comma_pos) = after_key.find(',') {
+        let locator_part = after_key[comma_pos + 1..].trim();
+        apply_locator_to_item(&mut item, locator_part);
+    }
+
+    let _ = opt(';').parse_next(input)?;
+    let _ = space0.parse_next(input)?;
+
+    Ok(item)
+}
+
+fn apply_locator_to_item(item: &mut CitationItem, locator_str: &str) {
+    let lp = locator_str.trim();
+    if let Some(space_pos) = lp.find(' ') {
+        let label_str = lp[..space_pos].trim_end_matches('.');
+        let value = &lp[space_pos + 1..];
+
+        item.label = match label_str {
+            "p" | "page" | "pp" => Some(LocatorType::Page),
+            "vol" | "volume" => Some(LocatorType::Volume),
+            "ch" | "chap" | "chapter" => Some(LocatorType::Chapter),
+            "sec" | "section" => Some(LocatorType::Section),
+            _ => Some(LocatorType::Page),
+        };
+        item.locator = Some(value.to_string());
+    } else if !lp.is_empty() {
+        item.locator = Some(lp.to_string());
+    }
+}
+
 impl Processor {
-    /// Process a full document by identifying and rendering citations.
-    /// Returns the document content with citations replaced by their rendered forms,
-    /// followed by the bibliography.
     pub fn process_document<P, F>(&self, content: &str, parser: &P) -> String
     where
         P: CitationParser,
@@ -77,43 +194,41 @@ impl Processor {
         let mut result = String::new();
         let mut last_idx = 0;
         let citations = parser.parse_citations(content);
-        let mut cited_ids = std::collections::HashSet::new();
 
         for (start, end, citation) in citations {
-            // Add content before citation
             result.push_str(&content[last_idx..start]);
-
-            // Track IDs for bibliography
-            for item in &citation.items {
-                cited_ids.insert(item.id.clone());
-            }
-
-            // Render citation
             match self.process_citation_with_format::<F>(&citation) {
                 Ok(rendered) => result.push_str(&rendered),
-                Err(_) => result.push_str(&content[start..end]), // Fallback to raw on error
+                Err(_) => result.push_str(&content[start..end]),
             }
-
             last_idx = end;
         }
 
-        // Add remaining content
         result.push_str(&content[last_idx..]);
-
-        // Append bibliography
-        let bib_header = "
-
-# Bibliography
-
-";
-        result.push_str(bib_header);
-
-        // Filter bibliography to only cited items
-        // TODO: In a real document processor, we'd want to preserve the full bibliography
-        // or filter based on citations. For now, we process all references.
+        result.push_str("\n\n# Bibliography\n\n");
         let bib_content = self.render_bibliography_with_format::<F>();
         result.push_str(&bib_content);
-
         result
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_complex_djot_citation() {
+        let parser = WinnowCitationParser::default();
+        let content = "[see ;@kuhn1962; @watson1953, ch. 2]{.cite}";
+        let citations = parser.parse_citations(content);
+        
+        assert_eq!(citations.len(), 1);
+        let (_, _, citation) = &citations[0];
+        assert_eq!(citation.prefix, Some("see ".to_string()));
+        assert_eq!(citation.items.len(), 2);
+        assert_eq!(citation.items[0].id, "kuhn1962");
+        assert_eq!(citation.items[1].id, "watson1953");
+        assert_eq!(citation.items[1].locator, Some("2".to_string()));
+        assert_eq!(citation.items[1].label, Some(LocatorType::Chapter));
     }
 }

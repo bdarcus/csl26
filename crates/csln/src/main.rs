@@ -4,7 +4,7 @@ use csln_core::reference::InputReference;
 use csln_core::{InputBibliography, Locale, Style};
 use csln_processor::{
     io::{load_bibliography, load_citations},
-    processor::document::{CitationParser, RegexCitationParser},
+    processor::document::{CitationParser, WinnowCitationParser},
     render::{djot::Djot, html::Html, plain::PlainText},
     Citation, CitationItem, Processor,
 };
@@ -459,7 +459,7 @@ fn main() {
                 Processor::new(style_obj, bibliography)
             };
 
-            let parser = RegexCitationParser::default();
+            let parser = WinnowCitationParser::default();
 
             let output = match format {
                 Format::Plain => processor.process_document::<_, PlainText>(&doc_content, &parser),
