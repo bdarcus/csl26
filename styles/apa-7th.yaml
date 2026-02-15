@@ -53,7 +53,7 @@ citation:
           use-first: 1
           and-others: et-al
           delimiter-precedes-last: contextual
-        and: symbol
+        and: text
       - items:
         - date: issued
           form: year
