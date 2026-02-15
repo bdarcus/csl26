@@ -50,5 +50,20 @@
     "author": [{"family": "Jones", "given": "Sarah"}],
     "issued": {"date-parts": [[2015]]},
     "publisher": "University Press"
+  },
+  {
+    "id": "doe2020",
+    "type": "article-journal",
+    "title": "A Silent Work",
+    "author": [{"family": "Doe", "given": "John"}],
+    "issued": {"date-parts": [[2020]]},
+    "container-title": "Journal of Silence"
+  },
+  {
+    "id": "bird1987",
+    "type": "book",
+    "title": "Hidden Birds",
+    "author": [{"family": "Bird", "given": "Charlie"}],
+    "issued": {"date-parts": [[1987]]}
   }
 ]

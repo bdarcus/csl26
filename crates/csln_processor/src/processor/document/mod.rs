@@ -7,6 +7,9 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 
 pub mod djot;
 
+#[cfg(test)]
+mod tests;
+
 use crate::processor::Processor;
 use crate::Citation;
 
@@ -62,7 +65,7 @@ impl Processor {
 
 ",
         );
-        let bib_content = self.render_bibliography_with_format::<F>();
+        let bib_content = self.render_grouped_bibliography_with_format::<F>();
         result.push_str(&bib_content);
 
         // Convert to HTML if requested

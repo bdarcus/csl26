@@ -963,9 +963,8 @@ fn test_numeric_integral_citation_author_year() {
     };
 
     let result = processor.process_citation(&citation).unwrap();
-    // For numeric+integral, expect author + citation number wrapped in parentheses
-    // The citation spec has wrap: Parentheses, so output is "(" + "Kuhn [1]" + ")"
-    assert_eq!(result, "(Kuhn [1])");
+    // For numeric+integral, expect author + citation number (no outer parens)
+    assert_eq!(result, "Kuhn [1]");
 }
 
 #[test]
@@ -1056,4 +1055,72 @@ fn test_numeric_integral_with_multiple_items() {
     // Should render both as author + citation number
     assert!(result.contains("Kuhn [1]"));
     assert!(result.contains("Smith [2]"));
+}
+
+#[test]
+fn test_citation_visibility_modifiers() {
+    use csln_core::citation::CitationMode;
+    use csln_core::citation::ItemVisibility;
+
+    let style = make_style();
+    let bib = make_bibliography();
+    let processor = Processor::new(style, bib);
+
+    // 1. Suppress Author
+    let cit_suppress = Citation {
+        items: vec![crate::reference::CitationItem {
+            id: "kuhn1962".to_string(),
+            visibility: ItemVisibility::SuppressAuthor,
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+    let res_suppress = processor.process_citation(&cit_suppress).unwrap();
+    // Default APA style: (Kuhn, 1962). Suppress Author: (1962).
+    assert_eq!(res_suppress, "(1962)");
+
+    // 2. Author Only (Integral)
+    let cit_author = Citation {
+        mode: CitationMode::Integral,
+        items: vec![crate::reference::CitationItem {
+            id: "kuhn1962".to_string(),
+            visibility: ItemVisibility::AuthorOnly,
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+    let res_author = processor.process_citation(&cit_author).unwrap();
+    // Author Only in integral mode: Kuhn
+    assert_eq!(res_author, "Kuhn");
+
+    // 3. Hidden (nocite)
+    let cit_hidden = Citation {
+        items: vec![crate::reference::CitationItem {
+            id: "kuhn1962".to_string(),
+            visibility: ItemVisibility::Hidden,
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+    let res_hidden = processor.process_citation(&cit_hidden).unwrap();
+    assert_eq!(res_hidden, "");
+
+    // 4. Mixed visibility
+    let cit_mixed = Citation {
+        items: vec![
+            crate::reference::CitationItem {
+                id: "kuhn1962".to_string(),
+                ..Default::default()
+            },
+            crate::reference::CitationItem {
+                id: "kuhn1962".to_string(),
+                visibility: ItemVisibility::Hidden,
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    };
+    let res_mixed = processor.process_citation(&cit_mixed).unwrap();
+    // One is hidden, only one Kuhn shows
+    assert_eq!(res_mixed, "(Kuhn, 1962)");
 }

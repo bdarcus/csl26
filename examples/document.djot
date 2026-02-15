@@ -29,3 +29,15 @@ Infix allows narrative text to be part of the citation, ensuring proper author n
 @brown1954(notes) the importance of context.
 
 According to @watson1953(foundational work on), the structure is critical.
+
+## Visibility Modifiers
+
+Suppress author: [-@kuhn1962] renders as (1962).
+
+Author only: +@kuhn1962 argues that ... renders as Kuhn argues that ...
+
+{ % nocite %}
+Silent citation (nocite): !@doe2020. This item will not appear in the text at all, but will be added to the "Additional Reading" section of the bibliography.
+
+Visible + Silent: [@kuhn1962; !@bird1987] renders as (Kuhn, 1962). Kuhn appears in the main bibliography, while Bird is moved to "Additional Reading".
+

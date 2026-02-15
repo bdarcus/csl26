@@ -37,7 +37,8 @@ use csln_core::locale::Locale;
 use csln_core::options::Config;
 use csln_core::template::WrapPunctuation;
 use csln_core::Style;
-use std::collections::HashMap;
+use std::cell::RefCell;
+use std::collections::{HashMap, HashSet};
 
 use self::disambiguation::Disambiguator;
 use self::matching::Matcher;
@@ -60,7 +61,11 @@ pub struct Processor {
     /// Pre-calculated processing hints.
     pub hints: HashMap<String, ProcHints>,
     /// Citation numbers assigned to references (for numeric styles).
-    pub citation_numbers: std::cell::RefCell<HashMap<String, usize>>,
+    pub citation_numbers: RefCell<HashMap<String, usize>>,
+    /// IDs of items that were cited in a visible way.
+    pub cited_ids: RefCell<HashSet<String>>,
+    /// IDs of items that were cited only silently (nocite).
+    pub silent_ids: RefCell<HashSet<String>>,
 }
 
 impl Default for Processor {
@@ -71,11 +76,12 @@ impl Default for Processor {
             locale: Locale::en_us(),
             default_config: Config::default(),
             hints: HashMap::new(),
-            citation_numbers: std::cell::RefCell::new(HashMap::new()),
+            citation_numbers: RefCell::new(HashMap::new()),
+            cited_ids: RefCell::new(HashSet::new()),
+            silent_ids: RefCell::new(HashSet::new()),
         }
     }
 }
-
 /// Processed output containing citations and bibliography.
 #[derive(Debug, Default)]
 pub struct ProcessedReferences {
@@ -99,7 +105,9 @@ impl Processor {
             locale,
             default_config: Config::default(),
             hints: HashMap::new(),
-            citation_numbers: std::cell::RefCell::new(HashMap::new()),
+            citation_numbers: RefCell::new(HashMap::new()),
+            cited_ids: RefCell::new(HashSet::new()),
+            silent_ids: RefCell::new(HashSet::new()),
         };
 
         // Pre-calculate hints for disambiguation
@@ -268,6 +276,10 @@ impl Processor {
 
         let content = rendered_groups.join(inter_delimiter);
 
+        if content.is_empty() {
+            return Ok(String::new());
+        }
+
         // Get wrap/prefix/suffix from citation spec
         let wrap = effective_spec.wrap.as_ref();
         let prefix = effective_spec.prefix.as_deref();
@@ -278,12 +290,25 @@ impl Processor {
         let citation_suffix = citation.suffix.as_deref().unwrap_or("");
 
         // Apply wrap or prefix/suffix
-        let (open, close) = match wrap {
-            Some(WrapPunctuation::Parentheses) => ("(", ")"),
-            Some(WrapPunctuation::Brackets) => ("[", "]"),
-            Some(WrapPunctuation::Quotes) => ("\u{201C}", "\u{201D}"),
-            _ => (prefix.unwrap_or(""), suffix.unwrap_or("")),
+        let (open, close) = if matches!(citation.mode, csln_core::citation::CitationMode::Integral)
+        {
+            ("", "")
+        } else {
+            match wrap {
+                Some(WrapPunctuation::Parentheses) => ("(", ")"),
+                Some(WrapPunctuation::Brackets) => ("[", "]"),
+                Some(WrapPunctuation::Quotes) => ("\u{201C}", "\u{201D}"),
+                _ => (prefix.unwrap_or(""), suffix.unwrap_or("")),
+            }
         };
+
+        // If it was integral mode, we might still want the spec prefix/suffix
+        let (spec_open, spec_close) =
+            if matches!(citation.mode, csln_core::citation::CitationMode::Integral) {
+                (prefix.unwrap_or(""), suffix.unwrap_or(""))
+            } else {
+                ("", "")
+            };
 
         // Ensure citation-level suffix has proper spacing
         let formatted_suffix =
@@ -294,8 +319,8 @@ impl Processor {
             };
 
         Ok(format!(
-            "{}{}{}{}{}",
-            open, citation_prefix, content, formatted_suffix, close
+            "{}{}{}{}{}{}{}",
+            spec_open, open, citation_prefix, content, formatted_suffix, close, spec_close
         ))
     }
 
@@ -368,6 +393,15 @@ impl Processor {
     where
         F: crate::render::format::OutputFormat<Output = String>,
     {
+        // Track cited IDs
+        for item in &citation.items {
+            if matches!(item.visibility, csln_core::citation::ItemVisibility::Hidden) {
+                self.silent_ids.borrow_mut().insert(item.id.clone());
+            } else {
+                self.cited_ids.borrow_mut().insert(item.id.clone());
+            }
+        }
+
         // Resolve the effective citation spec
         let default_spec = csln_core::CitationSpec::default();
         let effective_spec = self
@@ -474,5 +508,56 @@ impl Processor {
     /// Render the bibliography to a string.
     pub fn render_bibliography(&self) -> String {
         self.render_bibliography_with_format::<crate::render::plain::PlainText>()
+    }
+
+    /// Render the bibliography with grouping for uncited (nocite) items.
+    pub fn render_grouped_bibliography_with_format<F>(&self) -> String
+    where
+        F: crate::render::format::OutputFormat<Output = String>,
+    {
+        let processed = self.process_references();
+        let fmt = F::default();
+
+        let cited_ids = self.cited_ids.borrow();
+        let silent_ids = self.silent_ids.borrow();
+
+        // Items cited visibly
+        let cited_entries: Vec<ProcEntry> = processed
+            .bibliography
+            .iter()
+            .filter(|e| cited_ids.contains(&e.id))
+            .cloned()
+            .collect();
+
+        // Items only cited silently (nocite) AND not cited visibly anywhere else
+        let uncited_entries: Vec<ProcEntry> = processed
+            .bibliography
+            .iter()
+            .filter(|e| !cited_ids.contains(&e.id) && silent_ids.contains(&e.id))
+            .cloned()
+            .collect();
+
+        let mut result = String::new();
+
+        if !cited_entries.is_empty() {
+            result.push_str(&crate::render::refs_to_string_with_format::<F>(
+                cited_entries,
+            ));
+        }
+
+        if !uncited_entries.is_empty() {
+            // Add spacing between groups
+            if !result.is_empty() {
+                result.push_str("\n\n");
+            }
+
+            // Simple hardcoded heading for now as requested
+            result.push_str("# Additional Reading\n\n");
+            result.push_str(&crate::render::refs_to_string_with_format::<F>(
+                uncited_entries,
+            ));
+        }
+
+        fmt.finish(result)
     }
 }

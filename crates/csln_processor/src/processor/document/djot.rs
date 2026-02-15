@@ -7,7 +7,7 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 
 use super::CitationParser;
 use crate::{Citation, CitationItem};
-use csln_core::citation::{CitationMode, LocatorType};
+use csln_core::citation::{CitationMode, ItemVisibility, LocatorType};
 use winnow::ascii::space0;
 use winnow::combinator::{alt, opt, repeat};
 use winnow::error::ContextError;
@@ -24,6 +24,16 @@ impl Default for DjotParser {
     }
 }
 
+fn parse_visibility_modifier(input: &mut &str) -> winnow::Result<ItemVisibility, ContextError> {
+    let modifier: Option<char> = opt(alt(('-', '+', '!'))).parse_next(input)?;
+    match modifier {
+        Some('-') => Ok(ItemVisibility::SuppressAuthor),
+        Some('+') => Ok(ItemVisibility::AuthorOnly),
+        Some('!') => Ok(ItemVisibility::Hidden),
+        _ => Ok(ItemVisibility::Default),
+    }
+}
+
 impl CitationParser for DjotParser {
     fn parse_citations(&self, content: &str) -> Vec<(usize, usize, Citation)> {
         let mut results = Vec::new();
@@ -33,8 +43,17 @@ impl CitationParser for DjotParser {
         while !input.is_empty() {
             let next_bracket = input.find('[');
             let next_at = input.find('@');
+            let start_at = next_at.map(|idx| {
+                if idx > 0 {
+                    let prev = input.as_bytes()[idx - 1] as char;
+                    if prev == '-' || prev == '+' || prev == '!' {
+                        return idx - 1;
+                    }
+                }
+                idx
+            });
 
-            let start_pos = match (next_bracket, next_at) {
+            let start_pos = match (next_bracket, start_at) {
                 (Some(b), Some(a)) => std::cmp::min(b, a),
                 (Some(b), None) => b,
                 (None, Some(a)) => a,
@@ -80,12 +99,14 @@ fn parse_parenthetical_citation(input: &mut &str) -> winnow::Result<Citation, Co
 
 /// Parse `@key(infix)[locator]`, `@key(infix)`, `@key[locator]`, or just `@key`
 fn parse_narrative_citation(input: &mut &str) -> winnow::Result<Citation, ContextError> {
+    let visibility = parse_visibility_modifier.parse_next(input)?;
     let _: char = '@'.parse_next(input)?;
     let key: &str =
         take_while(1.., |c: char| c.is_alphanumeric() || c == '_' || c == '-').parse_next(input)?;
 
     let mut item = CitationItem {
         id: key.to_string(),
+        visibility,
         ..Default::default()
     };
 
@@ -139,10 +160,23 @@ fn parse_citation_infix_parens<'a>(input: &mut &'a str) -> winnow::Result<&'a st
 fn parse_citation_content(input: &mut &str) -> winnow::Result<Citation, ContextError> {
     let mut citation = Citation::default();
 
-    // Global Prefix: everything before first @
+    // Global Prefix: everything before first citation item
+    let checkpoint = *input;
     let prefix_part: &str = take_until(0.., "@").parse_next(input)?;
+    let mut final_prefix = prefix_part;
+
+    // If the prefix ends with a visibility modifier, it belongs to the first item
     if !prefix_part.is_empty() {
-        let trimmed = prefix_part.trim_end_matches(';').trim_start_matches(' ');
+        let last = prefix_part.as_bytes()[prefix_part.len() - 1] as char;
+        if last == '-' || last == '+' || last == '!' {
+            final_prefix = &prefix_part[..prefix_part.len() - 1];
+            // Move input back so it starts with the modifier
+            *input = &checkpoint[final_prefix.len()..];
+        }
+    }
+
+    if !final_prefix.is_empty() {
+        let trimmed = final_prefix.trim_end_matches(';').trim_start_matches(' ');
         if !trimmed.is_empty() {
             citation.prefix = Some(trimmed.to_string());
         }
@@ -162,12 +196,14 @@ fn parse_citation_content(input: &mut &str) -> winnow::Result<Citation, ContextE
 
 fn parse_citation_item(input: &mut &str) -> winnow::Result<CitationItem, ContextError> {
     let _ = space0.parse_next(input)?;
+    let visibility = parse_visibility_modifier.parse_next(input)?;
     let _: char = '@'.parse_next(input)?;
     let key: &str =
         take_while(1.., |c: char| c.is_alphanumeric() || c == '_' || c == '-').parse_next(input)?;
 
     let mut item = CitationItem {
         id: key.to_string(),
+        visibility,
         ..Default::default()
     };
 
@@ -380,5 +416,42 @@ mod tests {
         assert_eq!(citation.mode, CitationMode::Integral);
         assert_eq!(citation.items[0].id, "brown1954");
         assert_eq!(citation.items[0].infix, Some("notes".to_string()));
+    }
+
+    #[test]
+    fn test_parse_suppress_author() {
+        let parser = DjotParser;
+        let content = "[-@kuhn1962]";
+        let citations = parser.parse_citations(content);
+
+        assert_eq!(citations.len(), 1);
+        let (_, _, citation) = &citations[0];
+        assert_eq!(citation.items[0].id, "kuhn1962");
+        assert_eq!(citation.items[0].visibility, ItemVisibility::SuppressAuthor);
+    }
+
+    #[test]
+    fn test_parse_author_only() {
+        let parser = DjotParser;
+        let content = "+@kuhn1962";
+        let citations = parser.parse_citations(content);
+
+        assert_eq!(citations.len(), 1);
+        let (_, _, citation) = &citations[0];
+        assert_eq!(citation.mode, CitationMode::Integral);
+        assert_eq!(citation.items[0].id, "kuhn1962");
+        assert_eq!(citation.items[0].visibility, ItemVisibility::AuthorOnly);
+    }
+
+    #[test]
+    fn test_parse_hidden_nocite() {
+        let parser = DjotParser;
+        let content = "!@kuhn1962";
+        let citations = parser.parse_citations(content);
+
+        assert_eq!(citations.len(), 1);
+        let (_, _, citation) = &citations[0];
+        assert_eq!(citation.items[0].id, "kuhn1962");
+        assert_eq!(citation.items[0].visibility, ItemVisibility::Hidden);
     }
 }
