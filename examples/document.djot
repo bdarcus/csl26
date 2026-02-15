@@ -1,0 +1,8 @@
+# Testing CSLN Document Processing
+
+This is a test document using Pandoc-style citations.
+
+According to @kuhn1962, scientific revolutions are non-cumulative developmental episodes. 
+Multiple authors also contributed to this field [@watson1953].
+
+We can also refer to chapters [@smith2010] and legal cases [@brown1954].

@@ -48,9 +48,8 @@ citation:
           and-others: et-al
           delimiter-precedes-last: contextual
         and: symbol
-      - items:
-          - date: issued
-            form: year
+      - date: issued
+        form: year
         wrap: parentheses
 bibliography:
   template:

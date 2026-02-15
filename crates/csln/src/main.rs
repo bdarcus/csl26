@@ -4,6 +4,7 @@ use csln_core::reference::InputReference;
 use csln_core::{InputBibliography, Locale, Style};
 use csln_processor::{
     io::{load_bibliography, load_citations},
+    processor::document::{CitationParser, RegexCitationParser},
     render::{djot::Djot, html::Html, plain::PlainText},
     Citation, CitationItem, Processor,
 };
@@ -103,6 +104,24 @@ enum Commands {
     Tree {
         /// Path to the style YAML/JSON file
         path: PathBuf,
+    },
+    /// Process a full document
+    Doc {
+        /// Path to the document file
+        #[arg(index = 1)]
+        document: PathBuf,
+
+        /// Path to the references file
+        #[arg(index = 2)]
+        references: PathBuf,
+
+        /// Path to the style YAML file
+        #[arg(index = 3)]
+        style: PathBuf,
+
+        /// Output format
+        #[arg(short, long, value_enum, default_value_t = Format::Plain)]
+        format: Format,
     },
 }
 
@@ -412,6 +431,43 @@ fn main() {
         Commands::Tree { path: _ } => {
             eprintln!("The 'tree' command is not yet implemented.");
             std::process::exit(1);
+        }
+        Commands::Doc {
+            document,
+            references,
+            style,
+            format,
+        } => {
+            // Load style
+            let style_bytes = fs::read(&style).expect("Failed to read style");
+            let style_obj: Style = serde_yaml::from_slice(&style_bytes).expect("Failed to parse style");
+
+            // Load bibliography
+            let bibliography = load_bibliography(&references).expect("Failed to load bibliography");
+
+            // Load document
+            let doc_content = fs::read_to_string(&document).expect("Failed to read document");
+
+            // Determine locales directory
+            let locales_dir = find_locales_dir(style.to_str().unwrap_or("."));
+
+            // Create processor
+            let processor = if let Some(ref locale_id) = style_obj.info.default_locale {
+                let locale = Locale::load(locale_id, &locales_dir);
+                Processor::with_locale(style_obj, bibliography, locale)
+            } else {
+                Processor::new(style_obj, bibliography)
+            };
+
+            let parser = RegexCitationParser::default();
+
+            let output = match format {
+                Format::Plain => processor.process_document::<_, PlainText>(&doc_content, &parser),
+                Format::Html => processor.process_document::<_, Html>(&doc_content, &parser),
+                Format::Djot => processor.process_document::<_, Djot>(&doc_content, &parser),
+            };
+
+            println!("{}", output);
         }
     }
 }

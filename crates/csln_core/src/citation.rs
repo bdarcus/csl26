@@ -55,6 +55,19 @@ pub struct Citation {
     pub items: Vec<CitationItem>,
 }
 
+impl Citation {
+    /// Create a simple citation for a single ID.
+    pub fn simple(id: &str) -> Self {
+        Self {
+            items: vec![CitationItem {
+                id: id.to_string(),
+                ..Default::default()
+            }],
+            ..Default::default()
+        }
+    }
+}
+
 /// Helper for skip_serializing_if on mode field.
 fn is_default_mode(mode: &CitationMode) -> bool {
     *mode == CitationMode::NonIntegral

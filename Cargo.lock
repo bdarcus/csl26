@@ -330,6 +330,7 @@ dependencies = [
  "csln_core",
  "csln_edtf",
  "indexmap",
+ "regex",
  "serde",
  "serde_cbor",
  "serde_json",

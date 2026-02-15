@@ -21,6 +21,7 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 //! This is tracked via `rendered_vars` in `process_template()`.
 
 pub mod disambiguation;
+pub mod document;
 pub mod matching;
 pub mod rendering;
 pub mod sorting;
