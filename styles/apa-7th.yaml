@@ -22,7 +22,9 @@ options:
     separator: ". "
   punctuation-in-quote: true
 citation:
-  template:
+  non-integral:
+    wrap: parentheses
+    template:
     - contributor: author
       form: short
       shorten:
@@ -33,9 +35,23 @@ citation:
       and: symbol
     - date: issued
       form: year
-  wrap: parentheses
   delimiter: ", "
   multi-cite-delimiter: "; "
+  integral:
+    delimiter: " "
+    template:
+      - contributor: author
+        form: short
+        shorten:
+          min: 3
+          use-first: 1
+          and-others: et-al
+          delimiter-precedes-last: contextual
+        and: symbol
+      - items:
+          - date: issued
+            form: year
+        wrap: parentheses
 bibliography:
   template:
     - contributor: author

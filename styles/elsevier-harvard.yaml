@@ -35,6 +35,21 @@ citation:
       form: year
   wrap: parentheses
   multi-cite-delimiter: "; "
+  integral:
+    delimiter: " "
+    template:
+      - contributor: author
+        form: short
+        shorten:
+          min: 3
+          use-first: 1
+          and-others: et-al
+          delimiter-precedes-last: contextual
+        and: text
+      - items:
+          - date: issued
+            form: year
+        wrap: parentheses
 bibliography:
   template:
     - contributor: author

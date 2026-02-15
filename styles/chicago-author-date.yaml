@@ -49,12 +49,12 @@ citation:
             form: year
             fallback:
               - term: no-date
-        delimiter: comma
+        delimiter: space
       - variable: locator
         prefix: ", "
 
   integral:
-    wrap: none
+    delimiter: " "
     template:
       - contributor: author
         form: short
@@ -65,9 +65,7 @@ citation:
               - term: no-date
           - variable: locator
             prefix: ", "
-        delimiter: ""
         wrap: parentheses
-        prefix: " "
 
 bibliography:
   options:
