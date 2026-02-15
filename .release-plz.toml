@@ -5,11 +5,18 @@
 # Enable automatic changelog updates from Conventional Commits
 changelog_update = true
 
-# Enable git release creation (GitHub Releases)
-git_release_enable = true
-
 # Do not publish to crates.io (project-specific decision)
 publish = false
 
 # Allow dirty working directory (CI artifact handling)
 allow_dirty = true
+
+# Disable per-package releases - we want a single workspace release
+git_release_enable = false
+
+# Only create release for the main binary
+[[package]]
+name = "csln"
+git_release_enable = true
+git_tag_enable = true
+git_tag_name = "v{{ version }}"
