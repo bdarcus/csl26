@@ -4,7 +4,7 @@
     "type": "book",
     "title": "The Structure of Scientific Revolutions",
     "author": [{"family": "Kuhn", "given": "Thomas S."}],
-    "issued": {"raw": "1962"},
+    "issued": {"date-parts": [[1962]]},
     "publisher": "University of Chicago Press"
   },
   {
@@ -19,7 +19,7 @@
     "volume": "171",
     "issue": "4356",
     "page": "737-738",
-    "issued": {"raw": "1953"},
+    "issued": {"date-parts": [[1953]]},
     "DOI": "10.1038/171737a0"
   },
   {
@@ -30,7 +30,7 @@
     "container-title": "Modern Citation Systems",
     "editor": [{"family": "Jones", "given": "Bob"}],
     "page": "45-67",
-    "issued": {"raw": "2010"},
+    "issued": {"date-parts": [[2010]]},
     "publisher": "Academic Press"
   },
   {
@@ -41,14 +41,14 @@
     "container-title": "Journal of Important Research",
     "volume": "12",
     "page": "100-150",
-    "issued": {"raw": "1954"}
+    "issued": {"date-parts": [[1954]]}
   },
   {
     "id": "jones2015",
     "type": "book",
     "title": "Contemporary Analysis",
     "author": [{"family": "Jones", "given": "Sarah"}],
-    "issued": {"raw": "2015"},
+    "issued": {"date-parts": [[2015]]},
     "publisher": "University Press"
   }
 ]
