@@ -13,17 +13,19 @@ You are a **Lead Systems Architect and Principal Rust Engineer** for the CSL Nex
 ### Project-Specific Requirements
 
 **Mandatory Pre-Commit Checks:**
-Before ANY commit (`git commit`), you MUST run:
+Before committing changes that affect Rust code (`.rs` files, `Cargo.toml`, `Cargo.lock`), you MUST run:
 ```bash
 cargo fmt && cargo clippy --all-targets --all-features -- -D warnings && cargo test
 ```
 
-These checks are non-negotiable quality gates:
+These checks are non-negotiable quality gates for Rust changes:
 - `cargo fmt` - Code formatting (CI will fail without this)
 - `cargo clippy` - Zero-tolerance linting
 - `cargo test` - All tests must pass
 
 **If ANY check fails, DO NOT commit. Fix the issues first.**
+
+**For documentation-only or style-only changes** (`.md` files, `.yaml` files in `styles/`), these checks are NOT required.
 
 **Commit Message Requirements:**
 - Follow Conventional Commits format: `type(scope): subject`
@@ -501,18 +503,20 @@ We use a specific issue template for Domain Experts to provide semantic context.
 
 ### Mandatory Pre-Commit Checks
 
-**CRITICAL: Before EVERY commit to main, you MUST run:**
+**CRITICAL: Before committing Rust code changes (`.rs` files, `Cargo.toml`, `Cargo.lock`) to main, you MUST run:**
 
 ```bash
 cargo fmt && cargo clippy --all-targets --all-features -- -D warnings && cargo test
 ```
 
-These checks are non-negotiable:
+These checks are non-negotiable for Rust changes:
 1. **`cargo fmt`** - Format code (CI will fail without this)
 2. **`cargo clippy`** - Zero tolerance for warnings
 3. **`cargo test`** - All tests must pass
 
 **If ANY check fails, DO NOT commit. Fix the issues first.**
+
+**For documentation-only or style-only changes** (`.md` files, `.yaml` files in `styles/`), these checks are NOT required.
 
 ### Commit Message Guidelines
 
@@ -526,7 +530,7 @@ Follow these conventions for all commits:
 - **No Escaped Backticks**: Never escape backticks (e.g., write `code` not \`code\`).
 - **No Co-Authored-By**: Do NOT include `Co-Authored-By` footers in AI-authored commit messages.
 
-Example:
+Example (Rust code change):
 ```bash
 cargo fmt && cargo clippy && cargo test && \
 git add -A && git commit -m "fix(migrate): prevent duplicate list variables
@@ -536,6 +540,14 @@ List components and standalone components, adding suppress overrides
 to prevent duplication in rendered output.
 
 Refs: csl26-6whe, #127"
+```
+
+Example (documentation-only change):
+```bash
+git add -A && git commit -m "docs: clarify migration strategy
+
+Update MIGRATION_STRATEGY_ANALYSIS.md to reflect hybrid approach
+findings from APA 7th validation testing."
 ```
 
 ### When to Use Feature Branches (Optional)
@@ -552,8 +564,10 @@ For normal bug fixes, small features, and refactoring, commit directly to main.
 **Standard (direct to main):**
 ```bash
 # 1. Make changes
-# 2. Run pre-commit checks and commit
+# 2. If Rust code changed: run pre-commit checks and commit
 cargo fmt && cargo clippy && cargo test && git add -A && git commit -m "fix: your message"
+# 2. If docs/styles only: commit directly
+git add -A && git commit -m "docs: your message"
 # 3. Push to main
 git push origin main
 ```
@@ -563,7 +577,7 @@ git push origin main
 # 1. Create checkpoint branch
 git checkout -b feat/major-change
 # 2. Make changes
-# 3. Run pre-commit checks and commit
+# 3. If Rust code changed: run pre-commit checks and commit
 cargo fmt && cargo clippy && cargo test && git add -A && git commit -m "feat: your message"
 # 4. Push branch
 git push -u origin feat/major-change
