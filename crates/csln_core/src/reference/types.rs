@@ -85,6 +85,7 @@ impl Default for MultilingualString {
 /// A monograph, such as a book or a report, is a monolithic work published or produced as a complete entity.
 #[derive(Debug, Deserialize, Serialize, Clone, JsonSchema, PartialEq)]
 #[serde(rename_all = "kebab-case")]
+#[serde(deny_unknown_fields)]
 pub struct Monograph {
     pub id: Option<RefID>,
     pub r#type: MonographType,
@@ -125,6 +126,7 @@ pub enum MonographType {
 /// A collection of works, such as an anthology or proceedings.
 #[derive(Debug, Deserialize, Serialize, Clone, JsonSchema, PartialEq)]
 #[serde(rename_all = "kebab-case")]
+#[serde(deny_unknown_fields)]
 pub struct Collection {
     pub id: Option<RefID>,
     pub r#type: CollectionType,
@@ -157,6 +159,7 @@ pub enum CollectionType {
 /// A component of a larger monograph, such as a chapter in a book.
 #[derive(Debug, Deserialize, Serialize, Clone, JsonSchema, PartialEq)]
 #[serde(rename_all = "kebab-case")]
+#[serde(deny_unknown_fields)]
 pub struct CollectionComponent {
     pub id: Option<RefID>,
     pub r#type: MonographComponentType,
@@ -190,6 +193,7 @@ pub enum MonographComponentType {
 /// The parent serial is referenced by its ID.
 #[derive(Debug, Deserialize, Serialize, Clone, JsonSchema, PartialEq)]
 #[serde(rename_all = "kebab-case")]
+#[serde(deny_unknown_fields)]
 pub struct SerialComponent {
     pub id: Option<RefID>,
     pub r#type: SerialComponentType,
@@ -480,6 +484,7 @@ pub struct Brief {
 /// A classic work (Aristotle, Bible, etc.) with standard citation forms.
 #[derive(Debug, Deserialize, Serialize, Clone, JsonSchema, PartialEq)]
 #[serde(rename_all = "kebab-case")]
+#[serde(deny_unknown_fields)]
 pub struct Classic {
     pub id: Option<RefID>,
     /// Work title (e.g., "Nicomachean Ethics")
@@ -507,6 +512,7 @@ pub struct Classic {
 /// A patent.
 #[derive(Debug, Deserialize, Serialize, Clone, JsonSchema, PartialEq)]
 #[serde(rename_all = "kebab-case")]
+#[serde(deny_unknown_fields)]
 pub struct Patent {
     pub id: Option<RefID>,
     /// Patent title
@@ -538,6 +544,7 @@ pub struct Patent {
 /// A research dataset.
 #[derive(Debug, Deserialize, Serialize, Clone, JsonSchema, PartialEq)]
 #[serde(rename_all = "kebab-case")]
+#[serde(deny_unknown_fields)]
 pub struct Dataset {
     pub id: Option<RefID>,
     /// Dataset title
@@ -569,6 +576,7 @@ pub struct Dataset {
 /// A technical standard or specification.
 #[derive(Debug, Deserialize, Serialize, Clone, JsonSchema, PartialEq)]
 #[serde(rename_all = "kebab-case")]
+#[serde(deny_unknown_fields)]
 pub struct Standard {
     pub id: Option<RefID>,
     /// Standard title
@@ -594,6 +602,7 @@ pub struct Standard {
 /// Software or source code.
 #[derive(Debug, Deserialize, Serialize, Clone, JsonSchema, PartialEq)]
 #[serde(rename_all = "kebab-case")]
+#[serde(deny_unknown_fields)]
 pub struct Software {
     pub id: Option<RefID>,
     /// Software title

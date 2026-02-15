@@ -225,9 +225,9 @@ pub struct TemplateContributor {
     /// Type-specific rendering overrides.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub overrides: Option<HashMap<String, Rendering>>,
-    /// Unknown fields captured for forward compatibility.
-    #[serde(flatten)]
-    pub _extra: HashMap<String, serde_json::Value>,
+    /// Custom user-defined fields for extensions.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub custom: Option<HashMap<String, serde_json::Value>>,
 }
 
 /// Name display order.
@@ -318,9 +318,9 @@ pub struct TemplateDate {
     /// Type-specific rendering overrides.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub overrides: Option<HashMap<String, Rendering>>,
-    /// Unknown fields captured for forward compatibility.
-    #[serde(flatten)]
-    pub _extra: HashMap<String, serde_json::Value>,
+    /// Custom user-defined fields for extensions.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub custom: Option<HashMap<String, serde_json::Value>>,
 }
 
 /// Date variables.
@@ -361,9 +361,9 @@ pub struct TemplateTitle {
     /// Type-specific rendering overrides.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub overrides: Option<HashMap<String, Rendering>>,
-    /// Unknown fields captured for forward compatibility.
-    #[serde(flatten)]
-    pub _extra: HashMap<String, serde_json::Value>,
+    /// Custom user-defined fields for extensions.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub custom: Option<HashMap<String, serde_json::Value>>,
 }
 
 /// Types of titles.
@@ -406,9 +406,9 @@ pub struct TemplateNumber {
     /// Type-specific rendering overrides.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub overrides: Option<HashMap<String, Rendering>>,
-    /// Unknown fields captured for forward compatibility.
-    #[serde(flatten)]
-    pub _extra: HashMap<String, serde_json::Value>,
+    /// Custom user-defined fields for extensions.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub custom: Option<HashMap<String, serde_json::Value>>,
 }
 
 /// Number variables.
@@ -511,9 +511,9 @@ pub struct TemplateTerm {
     /// Type-specific rendering overrides.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub overrides: Option<HashMap<String, Rendering>>,
-    /// Unknown fields captured for forward compatibility.
-    #[serde(flatten)]
-    pub _extra: HashMap<String, serde_json::Value>,
+    /// Custom user-defined fields for extensions.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub custom: Option<HashMap<String, serde_json::Value>>,
 }
 
 /// A list component for grouping multiple items with a delimiter.
@@ -528,9 +528,9 @@ pub struct TemplateList {
     /// Type-specific rendering overrides.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub overrides: Option<HashMap<String, Rendering>>,
-    /// Unknown fields captured for forward compatibility.
-    #[serde(flatten)]
-    pub _extra: HashMap<String, serde_json::Value>,
+    /// Custom user-defined fields for extensions.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub custom: Option<HashMap<String, serde_json::Value>>,
 }
 
 /// Delimiter punctuation options.

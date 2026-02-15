@@ -45,7 +45,7 @@ fn test_document_html_output_contains_heading() {
                     rendering: Rendering::default(),
                     links: None,
                     overrides: None,
-                    _extra: Default::default(),
+                    custom: None,
                 }),
                 TemplateComponent::Date(TemplateDate {
                     date: TDateVar::Issued,
@@ -139,7 +139,7 @@ fn test_document_djot_output_unmodified() {
                     rendering: Rendering::default(),
                     links: None,
                     overrides: None,
-                    _extra: Default::default(),
+                    custom: None,
                 }),
                 TemplateComponent::Date(TemplateDate {
                     date: TDateVar::Issued,

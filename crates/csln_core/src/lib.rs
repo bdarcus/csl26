@@ -39,9 +39,9 @@ pub struct InputBibliography {
     pub info: Option<InputBibliographyInfo>,
     /// The list of references.
     pub references: Vec<reference::InputReference>,
-    /// Unknown fields captured for forward compatibility.
-    #[serde(flatten)]
-    pub _extra: HashMap<String, serde_json::Value>,
+    /// Custom user-defined fields for extensions.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub custom: Option<HashMap<String, serde_json::Value>>,
 }
 
 /// Metadata for an input bibliography.
@@ -81,9 +81,9 @@ pub struct Style {
     /// Bibliography specification.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub bibliography: Option<BibliographySpec>,
-    /// Unknown fields captured for forward compatibility.
-    #[serde(flatten)]
-    pub _extra: HashMap<String, serde_json::Value>,
+    /// Custom user-defined fields for extensions.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub custom: Option<HashMap<String, serde_json::Value>>,
 }
 
 fn default_version() -> String {
@@ -171,9 +171,9 @@ pub struct CitationSpec {
     /// Overrides fields from the main citation spec when mode is NonIntegral.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub non_integral: Option<Box<CitationSpec>>,
-    /// Unknown fields captured for forward compatibility.
-    #[serde(flatten)]
-    pub _extra: HashMap<String, serde_json::Value>,
+    /// Custom user-defined fields for extensions.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub custom: Option<HashMap<String, serde_json::Value>>,
 }
 
 impl CitationSpec {
@@ -259,9 +259,9 @@ pub struct BibliographySpec {
     /// names (e.g., "chapter", "article-journal").
     #[serde(skip_serializing_if = "Option::is_none")]
     pub type_templates: Option<HashMap<String, Template>>,
-    /// Unknown fields captured for forward compatibility.
-    #[serde(flatten)]
-    pub _extra: HashMap<String, serde_json::Value>,
+    /// Custom user-defined fields for extensions.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub custom: Option<HashMap<String, serde_json::Value>>,
 }
 
 impl BibliographySpec {
@@ -416,36 +416,26 @@ bibliography:
     }
 
     #[test]
-    fn test_style_forward_compatibility() {
+    fn test_style_custom_fields() {
         let yaml = r#"
 version: "1.1"
 info:
-  title: Future Style
-future-option: true
-citation:
-  template:
-    - contributor: author
-      form: long
-      future-modifier: bold
+  title: Custom Fields Test
+custom:
+  my-extension: true
+  author-tool: "StyleAuthor v2.0"
 "#;
         let style: Style = serde_yaml::from_str(yaml).unwrap();
         assert_eq!(style.version, "1.1");
+        let custom = style.custom.as_ref().unwrap();
         assert_eq!(
-            style._extra.get("future-option").unwrap(),
+            custom.get("my-extension").unwrap(),
             &serde_json::Value::Bool(true)
         );
-
-        let citation = style.citation.as_ref().unwrap();
-        let citation_template = citation.resolve_template().unwrap();
-        match &citation_template[0] {
-            template::TemplateComponent::Contributor(c) => {
-                assert_eq!(
-                    c._extra.get("future-modifier").unwrap(),
-                    &serde_json::Value::String("bold".to_string())
-                );
-            }
-            _ => panic!("Expected Contributor"),
-        }
+        assert_eq!(
+            custom.get("author-tool").unwrap(),
+            &serde_json::Value::String("StyleAuthor v2.0".to_string())
+        );
 
         // Round-trip test
         let round_tripped = serde_yaml::to_string(&style).unwrap();
@@ -454,8 +444,8 @@ citation:
                 || round_tripped.contains("version: \"1.1\"")
                 || round_tripped.contains("version: '1.1'")
         );
-        assert!(round_tripped.contains("future-option: true"));
-        assert!(round_tripped.contains("future-modifier: bold"));
+        assert!(round_tripped.contains("my-extension: true"));
+        assert!(round_tripped.contains("author-tool:"));
     }
 
     #[test]

@@ -201,10 +201,10 @@ See **[docs/architecture/MIGRATION_STRATEGY_ANALYSIS.md](./docs/architecture/MIG
 - **Forward/Backward Compatibility**: We must ensure that a style written in 2026 works in 2030, and ideally, that a newer style degrades gracefully in an older engine.
 - **Schema Evolution**: Utilize Serde's `#[serde(default)]` and `#[serde(flatten)]` to handle unknown or new fields gracefully. Implement a versioning strategy within the Rust types to allow for non-breaking extensions to the specification.
 
-**Strategy: Permissive Runtime, Strict Linter**
-1. **Explicit Versioning**: Add a `version` field to the top-level Style struct.
-2. **Graceful Degradation**: Do NOT use `deny_unknown_fields`. Use `#[serde(flatten)]` to capture unknown fields in a private map (`_extra`) to preserve them during round-trip editing.
-3. **Strict Linting**: The runtime processor ignores extra fields, but `csln_analyze` (and language servers) must report them as warnings or errors to catch typos.
+**Strategy: Strict Typing with Explicit Extensions**
+1. **Explicit Versioning**: Styles include a `version` field for unambiguous schema identification.
+2. **Strict Validation**: All types use `deny_unknown_fields` to catch typos and invalid fields at parse time.
+3. **Explicit Extension Points**: Styles use explicit `custom: Option<HashMap<String, serde_json::Value>>` fields for user-defined metadata and extensions.
 4. **Extension via Defaults**: All new features must be `Option<T>` with `#[serde(default)]`.
 
 **Graceful Degradation for Multilingual Data**

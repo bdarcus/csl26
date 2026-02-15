@@ -63,9 +63,9 @@ pub struct TitlesConfig {
     /// Default formatting for all titles.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub default: Option<TitleRendering>,
-    /// Unknown fields captured for forward compatibility.
-    #[serde(flatten)]
-    pub _extra: HashMap<String, serde_json::Value>,
+    /// Custom user-defined fields for extensions.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub custom: Option<HashMap<String, serde_json::Value>>,
 }
 
 /// Rendering options for titles.

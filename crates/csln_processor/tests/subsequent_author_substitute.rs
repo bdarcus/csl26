@@ -46,7 +46,7 @@ fn make_style_with_substitute(substitute: Option<String>) -> Style {
                     rendering: Rendering::default(),
                     links: None,
                     overrides: None,
-                    _extra: Default::default(),
+                    custom: None,
                 }),
                 TemplateComponent::Date(TemplateDate {
                     date: TDateVar::Issued,

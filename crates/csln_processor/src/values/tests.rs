@@ -66,7 +66,7 @@ fn test_contributor_values() {
         rendering: Default::default(),
         links: None,
         overrides: None,
-        _extra: Default::default(),
+        custom: None,
     };
 
     let values = component.values(&reference, &hints, &options).unwrap();
@@ -95,7 +95,7 @@ fn test_date_values() {
         rendering: Default::default(),
         links: None,
         overrides: None,
-        _extra: Default::default(),
+        custom: None,
     };
 
     let values = component.values(&reference, &hints, &options).unwrap();
@@ -138,7 +138,7 @@ fn test_et_al() {
         rendering: Default::default(),
         links: None,
         overrides: None,
-        _extra: Default::default(),
+        custom: None,
     };
 
     let values = component.values(&reference, &hints, &options).unwrap();
@@ -257,7 +257,7 @@ fn test_et_al_delimiter_never() {
         rendering: Default::default(),
         links: None,
         overrides: None,
-        _extra: Default::default(),
+        custom: None,
     };
 
     let values = component.values(&reference, &hints, &options).unwrap();
@@ -308,7 +308,7 @@ fn test_et_al_delimiter_always() {
         rendering: Default::default(),
         links: None,
         overrides: None,
-        _extra: Default::default(),
+        custom: None,
     };
 
     let values = component.values(&reference, &hints, &options).unwrap();
@@ -738,7 +738,7 @@ fn test_term_values() {
         term: GeneralTerm::In,
         form: Some(TermForm::Long),
         overrides: None,
-        _extra: Default::default(),
+        custom: None,
         ..Default::default()
     };
 
@@ -767,7 +767,7 @@ fn test_template_list_term_suppression() {
             TemplateComponent::Term(TemplateTerm {
                 term: GeneralTerm::In,
                 overrides: None,
-                _extra: Default::default(),
+                custom: None,
                 ..Default::default()
             }),
             TemplateComponent::Contributor(TemplateContributor {

@@ -54,9 +54,9 @@ pub struct DateConfig {
     /// Marker for open-ended ranges (e.g., "–present"). None uses locale default.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub open_range_marker: Option<String>,
-    /// Unknown fields captured for forward compatibility.
-    #[serde(flatten)]
-    pub _extra: HashMap<String, serde_json::Value>,
+    /// Custom user-defined fields for extensions.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub custom: Option<HashMap<String, serde_json::Value>>,
 }
 
 fn default_range_delimiter() -> String {
@@ -71,7 +71,7 @@ impl Default for DateConfig {
             approximation_marker: Some("ca. ".to_string()),
             range_delimiter: default_range_delimiter(),
             open_range_marker: None,
-            _extra: HashMap::new(),
+            custom: None,
         }
     }
 }

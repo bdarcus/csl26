@@ -162,13 +162,13 @@ The engine is built for dual-mode operation:
 - **Batch**: High-throughput CLI for build systems (like Pandoc)
 - **Interactive**: Low-latency JSON server mode for reference managers (like Zotero). Supports binary formats (CBOR) to minimize startup latency.
 
-### 7. Stability & Forward Compatibility
+### 7. Stability & Type Safety
 
-CSLN is built for a long-lived ecosystem:
+CSLN is built for a long-lived ecosystem with strict type safety:
 - **Explicit Versioning**: Styles include a `version` field for unambiguous schema identification.
-- **Permissive Runtime**: The engine ignores unknown fields, allowing older versions of the processor to run newer styles gracefully.
-- **Round-trip Safety**: Unknown fields are captured during parsing and preserved during serialization, ensuring no data loss when editing with different tool versions.
-- **Strict Linting**: While the runtime is permissive, development tools (like `csln_analyze`) are strict, catching typos and deprecated fields.
+- **Strict Validation**: The engine uses `deny_unknown_fields` to catch typos and invalid fields at parse time, providing clear error messages.
+- **Explicit Extension Points**: Styles can use explicit `custom` fields for user-defined metadata and extensions, making the intent clear.
+- **Type-Safe Schema**: Rust's type system ensures styles are validated at parse time, preventing runtime errors from malformed data.
 
 ## Project Status
 

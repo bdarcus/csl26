@@ -550,7 +550,7 @@ mod tests {
             fallback: None,
             links: None,
             overrides: None,
-            _extra: std::collections::HashMap::new(),
+            custom: None,
         });
 
         // Same date with prefix
@@ -564,7 +564,7 @@ mod tests {
             fallback: None,
             links: None,
             overrides: None,
-            _extra: std::collections::HashMap::new(),
+            custom: None,
         });
 
         // Same date with suffix
@@ -578,7 +578,7 @@ mod tests {
             fallback: None,
             links: None,
             overrides: None,
-            _extra: std::collections::HashMap::new(),
+            custom: None,
         });
 
         let key1 = get_variable_key(&date1);

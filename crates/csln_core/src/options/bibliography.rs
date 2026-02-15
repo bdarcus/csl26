@@ -35,9 +35,9 @@ pub struct BibliographyConfig {
     /// Set to true to suppress the period (APA 7th, Bluebook style).
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub suppress_period_after_url: bool,
-    /// Unknown fields captured for forward compatibility.
-    #[serde(flatten)]
-    pub _extra: HashMap<String, serde_json::Value>,
+    /// Custom user-defined fields for extensions.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub custom: Option<HashMap<String, serde_json::Value>>,
 }
 
 /// Rules for subsequent author substitution.

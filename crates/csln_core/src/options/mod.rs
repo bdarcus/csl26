@@ -98,9 +98,9 @@ pub struct Config {
     /// Strip trailing periods from terms, labels, and abbreviated dates.
     #[serde(skip_serializing_if = "Option::is_none", rename = "strip-periods")]
     pub strip_periods: Option<bool>,
-    /// Unknown fields captured for forward compatibility.
-    #[serde(flatten)]
-    pub _extra: HashMap<String, serde_json::Value>,
+    /// Custom user-defined fields for extensions.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub custom: Option<HashMap<String, serde_json::Value>>,
 }
 
 /// Page range formatting options.

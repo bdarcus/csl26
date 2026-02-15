@@ -4,8 +4,9 @@ Working on the **CSLN data model** — types, schemas, and the specification its
 
 ## Philosophy
 - **Code-First**: Rust structs and enums are the source of truth for the schema.
-- **Permissive Runtime, Strict Linter**: Processor ignores unknown fields; `csln_analyze` reports them as warnings.
+- **Strict Validation**: All types use `deny_unknown_fields` to catch typos and invalid fields at parse time.
 - **Extension via Defaults**: New features use `Option<T>` with `#[serde(default)]`.
+- **Explicit Extensions**: User-defined metadata uses explicit `custom` fields.
 
 ## Key Crate: `csln_core`
 | Module | Responsibility |
@@ -19,9 +20,10 @@ Working on the **CSLN data model** — types, schemas, and the specification its
 ## Serde Conventions
 - `#[serde(rename_all = "kebab-case")]` — YAML/JSON field naming
 - `#[non_exhaustive]` — extensible enums
-- `#[serde(deny_unknown_fields)]` — on untagged enum variants to prevent misparse
+- `#[serde(deny_unknown_fields)]` — strict validation on all types
 - `Option<T>` + `skip_serializing_if` — optional fields
-- `#[serde(flatten)]` — inline rendering options and `_extra` map for round-trip preservation
+- `#[serde(flatten)]` — inline rendering options (NOT for unknown field capture)
+- `custom: Option<HashMap<String, serde_json::Value>>` — explicit extension fields
 
 ## Three-Tier Options
 ```

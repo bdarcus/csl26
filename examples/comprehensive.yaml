@@ -1,102 +1,70 @@
 # Comprehensive CSLN Test Bibliography
-# Exercises various reference types, naming conventions, and complex data scenarios.
+# Uses proper CSLN reference types with correct field requirements
 
 references:
-  # 1. Standard Book
+  # 1. Monograph (Book)
   - id: kuhn1962
     type: book
+    title: The Structure of Scientific Revolutions
     author:
       - family: Kuhn
         given: Thomas S.
-    title: The Structure of Scientific Revolutions
     issued: "1962"
     publisher:
       name: University of Chicago Press
-      location: Chicago
 
-  # 2. Journal Article with multiple authors
+  # 2. SerialComponent (Journal Article)
   - id: watson1953
-    type: article-journal
+    type: article
+    title: Molecular Structure of Nucleic Acids
     author:
       - family: Watson
         given: J. D.
       - family: Crick
         given: F. H. C.
-    title: Molecular Structure of Nucleic Acids
-    container-title: Nature
     issued: "1953-04-25"
+    parent:
+      type: academic-journal
+      title: Nature
     volume: "171"
     issue: "4356"
-    page: 737-738
+    pages: "737-738"
     doi: 10.1038/171737a0
 
-  # 3. Chapter in Edited Book
+  # 3. CollectionComponent (Book Chapter)
   - id: smith2010
     type: chapter
+    title: The Future of CSLN
     author:
       - family: Smith
         given: Alice
-    editor:
-      - family: Jones
-        given: Bob
-    title: The Future of CSLN
-    container-title: Modern Citation Systems
     issued: "2010"
-    page: 45-67
-    publisher:
-      name: Academic Press
+    parent:
+      type: edited-book
+      title: Modern Citation Systems
+      editor:
+        - family: Jones
+          given: Bob
+      issued: "2010"
+      publisher:
+        name: Academic Press
+    pages: "45-67"
 
-  # 4. Legal Case (APA style)
-  - id: brown1954
-    type: legal-case
-    title: Brown v. Board of Education
-    container-title: U.S.
-    issued: "1954"
-    volume: "347"
-    page: "483"
-
-  # 5. Organizational Author
-  - id: who2020
-    type: report
-    author:
-      - name: World Health Organization
-    title: COVID-19 Situation Report
-    issued: "2020-05"
-    number: "114"
-
-  # 6. Name with particles and suffixes
-  - id: goethe1808
+  # 4. Monograph with original-date and keywords (for test verification)
+  - id: foucault_discipline
     type: book
+    title: Discipline and Punish
     author:
-      - family: Goethe
-        given: Johann Wolfgang
-        non-dropping-particle: von
-    title: Faust
-    issued: "1808"
-
-  - id: king1963
-    type: speech
-    author:
-      - family: King
-        given: Martin Luther
-        suffix: Jr.
-    title: I Have a Dream
-    issued: "1963-08-28"
-    event-place: Washington, D.C.
-
-  # 7. Multilingual Example (Future-looking schema)
-  - id: murakami2002
-    type: book
-    author:
-      - family: Murakami
-        given: Haruki
-        # Scoped name for Japanese script
-        ja:
-          family: 村上
-          given: 春樹
-    title: Kafka on the Shore
-    # Scoped title
-    title+ja: 海辺のカフカ
-    issued: "2002"
+      - family: Foucault
+        given: Michel
+    translator:
+      - family: Sheridan
+        given: Alan
+    issued: "1977"
+    original-date: "1975"
     publisher:
-      name: Shinchosha
+      name: Pantheon Books
+    keywords:
+      - humanities
+      - translation
+      - philosophy
