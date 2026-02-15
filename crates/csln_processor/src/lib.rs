@@ -72,6 +72,7 @@ pub mod render;
 pub mod values;
 
 pub use error::ProcessorError;
+pub use processor::document::DocumentFormat;
 pub use processor::{ProcessedReferences, Processor};
 pub use reference::{Bibliography, Citation, CitationItem, Reference};
 pub use render::{citation_to_string, refs_to_string, ProcTemplate, ProcTemplateComponent};

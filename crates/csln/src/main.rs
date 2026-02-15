@@ -6,7 +6,7 @@ use csln_processor::{
     io::{load_bibliography, load_citations},
     processor::document::WinnowCitationParser,
     render::{djot::Djot, html::Html, plain::PlainText},
-    Citation, CitationItem, Processor,
+    Citation, CitationItem, DocumentFormat, Processor,
 };
 use schemars::schema_for;
 use serde::Serialize;
@@ -462,10 +462,22 @@ fn main() {
 
             let parser = WinnowCitationParser;
 
+            let doc_format = match format {
+                Format::Plain => DocumentFormat::Plain,
+                Format::Html => DocumentFormat::Html,
+                Format::Djot => DocumentFormat::Djot,
+            };
+
             let output = match format {
-                Format::Plain => processor.process_document::<_, PlainText>(&doc_content, &parser),
-                Format::Html => processor.process_document::<_, Html>(&doc_content, &parser),
-                Format::Djot => processor.process_document::<_, Djot>(&doc_content, &parser),
+                Format::Plain => {
+                    processor.process_document::<_, PlainText>(&doc_content, &parser, doc_format)
+                }
+                Format::Html => {
+                    processor.process_document::<_, Html>(&doc_content, &parser, doc_format)
+                }
+                Format::Djot => {
+                    processor.process_document::<_, Djot>(&doc_content, &parser, doc_format)
+                }
             };
 
             println!("{}", output);
