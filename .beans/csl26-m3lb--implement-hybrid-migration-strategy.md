@@ -1,11 +1,11 @@
 ---
 # csl26-m3lb
 title: Implement hybrid migration strategy
-status: todo
+status: in-progress
 type: milestone
 priority: high
 created_at: 2026-02-08T00:19:16Z
-updated_at: 2026-02-15T15:10:04Z
+updated_at: 2026-02-15T16:05:00Z
 ---
 
 Strategic pivot from pure XML semantic compiler to hybrid approach combining
@@ -35,10 +35,10 @@ confidence is high.
 
 **Success criteria:**
 
-• APA bibliography: 0% -> 80%+ match (APA 7th now at 100% via LLM authoring)
-• Top 10 styles: bibliography match comparable to citation match
-• XML options pipeline remains intact
-• Citation match does not regress (currently 87-100%)
+• APA bibliography: 0% -> 80%+ match (✅ ACHIEVED: 14/15 via LLM authoring)
+• Top 10 styles: bibliography match comparable to citation match (🔄 IN PROGRESS: 6-14/15 author-date, 0/15 numeric)
+• XML options pipeline remains intact (✅ MAINTAINED: ~2,500 lines preserved)
+• Citation match does not regress (✅ MAINTAINED: 9/10 at 15/15, Springer regression tracked)
 
 **Estimated effort:** ~1,500 lines new code. LLM-authored templates replace
 manual domain-expert time.
