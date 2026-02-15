@@ -1,7 +1,7 @@
 [package]
 name = "csln_edtf"
-version = "0.1.0"
-edition = "2024"
+version.workspace = true
+edition.workspace = true
 description = "A modern EDTF (Extended Date/Time Format) parser built with winnow."
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/csl-next/csl26"
