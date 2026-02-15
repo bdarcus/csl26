@@ -312,6 +312,8 @@ pub struct RenderOptions<'a> {
     pub locale: &'a Locale,
     pub context: RenderContext,
     pub mode: csln_core::citation::CitationMode,
+    /// Visibility modifier for this item.
+    pub visibility: csln_core::citation::ItemVisibility,
     /// Optional locator value (e.g. "42")
     pub locator: Option<&'a str>,
     /// Optional locator label (e.g. page, section)

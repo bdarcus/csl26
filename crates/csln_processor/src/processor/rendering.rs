@@ -93,6 +93,7 @@ impl<'a> Renderer<'a> {
             locale: self.locale,
             context: RenderContext::Citation,
             mode: csln_core::citation::CitationMode::Integral,
+            visibility: item.visibility,
             locator: item.locator.as_deref(),
             locator_label: item.label.clone(),
             infix: item.infix.as_deref(),
@@ -153,6 +154,11 @@ impl<'a> Renderer<'a> {
         let use_author_year = self.should_render_author_year_for_numeric_integral(mode);
 
         for item in items {
+            // Skip hidden items (nocite)
+            if matches!(item.visibility, csln_core::citation::ItemVisibility::Hidden) {
+                continue;
+            }
+
             let reference = self
                 .bibliography
                 .get(&item.id)
@@ -182,6 +188,7 @@ impl<'a> Renderer<'a> {
                     template,
                     RenderContext::Citation,
                     mode.clone(),
+                    item.visibility,
                     citation_number,
                     item.locator.as_deref(),
                     item.label.clone(),
@@ -232,7 +239,7 @@ impl<'a> Renderer<'a> {
         items: &[crate::reference::CitationItem],
         template: &[TemplateComponent],
         mode: &csln_core::citation::CitationMode,
-        _intra_delimiter: &str,
+        intra_delimiter: &str,
     ) -> Result<Vec<String>, ProcessorError>
     where
         F: crate::render::format::OutputFormat<Output = String>,
@@ -243,6 +250,11 @@ impl<'a> Renderer<'a> {
         let mut groups: Vec<Vec<&CitationItem>> = Vec::new();
 
         for item in items {
+            // Skip hidden items (nocite)
+            if matches!(item.visibility, csln_core::citation::ItemVisibility::Hidden) {
+                continue;
+            }
+
             let reference = self.bibliography.get(&item.id);
             let author_key = reference
                 .and_then(|r| r.author())
@@ -304,13 +316,18 @@ impl<'a> Renderer<'a> {
                     template,
                     RenderContext::Citation,
                     mode.clone(),
+                    item.visibility,
                     citation_number,
                     item.locator.as_deref(),
                     item.label.clone(),
                     item.infix.as_deref(),
                 ) {
                     let item_str = crate::render::citation::citation_to_string_with_format::<F>(
-                        &proc, None, None, None, None,
+                        &proc,
+                        None,
+                        None,
+                        None,
+                        Some(intra_delimiter),
                     );
                     if !item_str.is_empty() {
                         let prefix = item.prefix.as_deref().unwrap_or("");
@@ -394,6 +411,7 @@ impl<'a> Renderer<'a> {
             locale: self.locale,
             context: RenderContext::Citation,
             mode: mode.clone(),
+            visibility: csln_core::citation::ItemVisibility::Default,
             locator: None,
             locator_label: None,
             infix: None,
@@ -482,6 +500,7 @@ impl<'a> Renderer<'a> {
             locale: self.locale,
             context: RenderContext::Bibliography,
             mode: csln_core::citation::CitationMode::NonIntegral,
+            visibility: csln_core::citation::ItemVisibility::Default,
             locator: None,
             locator_label: None,
             infix: None,
@@ -498,6 +517,7 @@ impl<'a> Renderer<'a> {
         template: &[TemplateComponent],
         context: RenderContext,
         mode: csln_core::citation::CitationMode,
+        visibility: csln_core::citation::ItemVisibility,
         citation_number: usize,
         locator: Option<&str>,
         locator_label: Option<csln_core::citation::LocatorType>,
@@ -508,6 +528,7 @@ impl<'a> Renderer<'a> {
             locale: self.locale,
             context,
             mode,
+            visibility,
             locator,
             locator_label,
             infix,
@@ -522,6 +543,14 @@ impl<'a> Renderer<'a> {
         options: RenderOptions<'_>,
         citation_number: usize,
     ) -> Option<ProcTemplate> {
+        // If hidden, return None immediately (nocite)
+        if matches!(
+            options.visibility,
+            csln_core::citation::ItemVisibility::Hidden
+        ) {
+            return None;
+        }
+
         let default_hint = ProcHints::default();
         let base_hint = self
             .hints

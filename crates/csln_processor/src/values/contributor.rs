@@ -14,6 +14,14 @@ impl ComponentValues for TemplateContributor {
         hints: &ProcHints,
         options: &RenderOptions<'_>,
     ) -> Option<ProcValues> {
+        // Apply visibility filter
+        if matches!(
+            options.visibility,
+            csln_core::citation::ItemVisibility::SuppressAuthor
+        ) {
+            return None;
+        }
+
         // Resolve effective rendering options (base merged with type-specific override)
         let mut effective_rendering = self.rendering.clone();
         if let Some(overrides) = &self.overrides {

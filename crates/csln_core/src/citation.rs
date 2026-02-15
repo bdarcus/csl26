@@ -30,6 +30,21 @@ pub enum CitationMode {
     NonIntegral,
 }
 
+/// Visibility modifier for a citation item.
+#[derive(Debug, Clone, Copy, Default, Deserialize, Serialize, PartialEq, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+pub enum ItemVisibility {
+    /// Show both author and year (default).
+    #[default]
+    Default,
+    /// Suppress the author name: "(2020)".
+    SuppressAuthor,
+    /// Show only the author name: "Smith".
+    AuthorOnly,
+    /// Hidden from output, but included in bibliography (nocite).
+    Hidden,
+}
+
 /// A citation containing one or more references.
 #[derive(Debug, Clone, Default, Deserialize, Serialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
@@ -73,6 +88,11 @@ fn is_default_mode(mode: &CitationMode) -> bool {
     *mode == CitationMode::NonIntegral
 }
 
+/// Helper for skip_serializing_if on visibility field.
+fn is_default_visibility(visibility: &ItemVisibility) -> bool {
+    *visibility == ItemVisibility::Default
+}
+
 /// Locator types for pinpoint citations.
 #[derive(Debug, Clone, Default, Deserialize, Serialize, PartialEq, Eq, Hash, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
@@ -103,6 +123,9 @@ pub enum LocatorType {
 pub struct CitationItem {
     /// The reference ID (citekey).
     pub id: String,
+    /// Visibility modifier for this item.
+    #[serde(default, skip_serializing_if = "is_default_visibility")]
+    pub visibility: ItemVisibility,
     /// Locator type (page, chapter, etc.)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub label: Option<LocatorType>,

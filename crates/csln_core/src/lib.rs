@@ -17,7 +17,7 @@ pub mod template;
 // Embedded templates for priority styles (APA, Chicago, Vancouver, IEEE, Harvard)
 pub mod embedded;
 
-pub use citation::{Citation, CitationItem, CitationMode, Citations, LocatorType};
+pub use citation::{Citation, CitationItem, CitationMode, Citations, ItemVisibility, LocatorType};
 pub use legacy::{
     AndTerm, ConditionBlock, CslnInfo, CslnLocale, CslnNode, CslnStyle, DateBlock, DateForm,
     DateOptions, DatePartForm, DateParts, DelimiterPrecedes, ElseIfBranch, EtAlOptions,

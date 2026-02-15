@@ -9,6 +9,14 @@ impl ComponentValues for TemplateTitle {
         _hints: &ProcHints,
         options: &RenderOptions<'_>,
     ) -> Option<ProcValues> {
+        // Apply visibility filter
+        if matches!(
+            options.visibility,
+            csln_core::citation::ItemVisibility::AuthorOnly
+        ) {
+            return None;
+        }
+
         let binding = reference.ref_type();
 
         // Get the raw title based on type
