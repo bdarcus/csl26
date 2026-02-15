@@ -93,6 +93,8 @@
                 <a class="text-sm font-medium hover:text-primary transition-colors text-slate-600"
                     href="#features">Features</a>
                 <a class="text-sm font-medium hover:text-primary transition-colors text-slate-600"
+                    href="#roadmap">Roadmap</a>
+                <a class="text-sm font-medium hover:text-primary transition-colors text-slate-600"
                     href="examples.html">Examples</a>
                 <a class="text-sm font-medium hover:text-primary transition-colors text-slate-600"
                     href="https://github.com/bdarcus/csl26">GitHub</a>
@@ -394,6 +396,97 @@
         </div>
     </section>
 
+    <!-- Roadmap Section -->
+    <section class="py-24 px-6 border-t border-slate-200" id="roadmap">
+        <div class="max-w-7xl mx-auto">
+            <div class="text-center mb-16">
+                <h2 class="text-3xl md:text-4xl font-bold text-slate-900 mb-4">Project Roadmap</h2>
+                <p class="text-slate-500">The path toward a production-grade, multi-platform citation engine.</p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                
+                <!-- Numeric Styles -->
+                <div class="p-6 rounded-xl border border-slate-100 bg-white">
+                    <div class="flex items-center gap-3 mb-4">
+                        <span class="w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center">
+                            <span class="material-icons text-sm">check_circle</span>
+                        </span>
+                        <h3 class="font-bold text-slate-900">Numeric Styles (Tier 3)</h3>
+                    </div>
+                    <p class="text-sm text-slate-500 mb-4">Finalizing support for IEEE, Nature, and Elsevier Vancouver styles with precise year positioning and superscript handling.</p>
+                    <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                        <div class="bg-emerald-500 h-full w-3/4"></div>
+                    </div>
+                    <p class="text-[10px] font-mono text-slate-400 mt-2 text-right">75% Complete</p>
+                </div>
+
+                <!-- WASM Support -->
+                <div class="p-6 rounded-xl border border-slate-100 bg-white">
+                    <div class="flex items-center gap-3 mb-4">
+                        <span class="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center">
+                            <span class="material-icons text-sm">settings_input_component</span>
+                        </span>
+                        <h3 class="font-bold text-slate-900">WASM Integration</h3>
+                    </div>
+                    <p class="text-sm text-slate-500 mb-4">WebAssembly bindings for seamless integration into Zotero, browser-based editors, and web publishing platforms.</p>
+                    <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                        <div class="bg-primary h-full w-1/4"></div>
+                    </div>
+                    <p class="text-[10px] font-mono text-slate-400 mt-2 text-right">Planning Phase</p>
+                </div>
+
+                <!-- Legal Citations -->
+                <div class="p-6 rounded-xl border border-slate-100 bg-white">
+                    <div class="flex items-center gap-3 mb-4">
+                        <span class="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center">
+                            <span class="material-icons text-sm">gavel</span>
+                        </span>
+                        <h3 class="font-bold text-slate-900">Legal Citations</h3>
+                    </div>
+                    <p class="text-sm text-slate-500 mb-4">Two-tier architecture supporting core legal types for academics and specialist features for Bluebook/OSCOLA.</p>
+                    <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                        <div class="bg-primary h-full w-1/5"></div>
+                    </div>
+                    <p class="text-[10px] font-mono text-slate-400 mt-2 text-right">Active Research</p>
+                </div>
+
+                <!-- Advanced Sorting -->
+                <div class="p-6 rounded-xl border border-slate-100 bg-white">
+                    <div class="flex items-center gap-3 mb-4">
+                        <span class="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center">
+                            <span class="material-icons text-sm">sort_by_alpha</span>
+                        </span>
+                        <h3 class="font-bold text-slate-900">Advanced Sorting</h3>
+                    </div>
+                    <p class="text-sm text-slate-500">Flexible sorting templates (nyt, ynt) and locale-aware collation for multi-language bibliographies.</p>
+                </div>
+
+                <!-- Pluggable Renderers -->
+                <div class="p-6 rounded-xl border border-slate-100 bg-white">
+                    <div class="flex items-center gap-3 mb-4">
+                        <span class="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center">
+                            <span class="material-icons text-sm">picture_as_pdf</span>
+                        </span>
+                        <h3 class="font-bold text-slate-900">LaTeX & Typst Output</h3>
+                    </div>
+                    <p class="text-sm text-slate-500">Native renderers for high-fidelity PDF publishing workflows, bypassing HTML intermediaries.</p>
+                </div>
+
+                <!-- Interactive Mode -->
+                <div class="p-6 rounded-xl border border-slate-100 bg-white">
+                    <div class="flex items-center gap-3 mb-4">
+                        <span class="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center">
+                            <span class="material-icons text-sm">bolt</span>
+                        </span>
+                        <h3 class="font-bold text-slate-900">Interactive Server Mode</h3>
+                    </div>
+                    <p class="text-sm text-slate-500">A high-performance JSON server for real-time citation rendering in GUI-based writing tools.</p>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
     <!-- Footer -->
     <footer class="py-12 px-6 border-t border-slate-200 bg-white">
         <div class="max-w-7xl mx-auto">
@@ -406,6 +499,7 @@
                 </div>
                 <div class="flex gap-8 text-sm font-medium text-slate-500">
                     <a class="hover:text-primary transition-colors" href="https://github.com/bdarcus/csl26">GitHub</a>
+                    <a class="hover:text-primary transition-colors" href="#roadmap">Roadmap</a>
                     <a class="hover:text-primary transition-colors" href="examples.html">Examples</a>
                     <a class="hover:text-primary transition-colors" href="https://github.com/bdarcus/style-hub">Styles Registry</a>
                 </div>
