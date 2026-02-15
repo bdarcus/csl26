@@ -261,7 +261,7 @@ pub enum Parent<T> {
 #[serde(untagged)]
 pub enum ParentReference {
     Monograph(Box<Monograph>),
-    Serial(Serial),
+    Serial(Box<Serial>),
 }
 
 /// A title can be a single string, a structured title, or a multilingual title.

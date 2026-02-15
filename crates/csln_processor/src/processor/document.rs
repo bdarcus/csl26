@@ -95,10 +95,13 @@ fn parse_narrative_citation(input: &mut &str) -> winnow::Result<Citation, Contex
     };
 
     let mut input_checkpoint = *input;
-    let locator_res: winnow::Result<&str, ContextError> = parse_citation_attribute_brackets(&mut input_checkpoint);
+    let locator_res: winnow::Result<&str, ContextError> =
+        parse_citation_attribute_brackets(&mut input_checkpoint);
 
-    let mut citation = Citation::default();
-    citation.mode = CitationMode::Integral;
+    let mut citation = Citation {
+        mode: CitationMode::Integral,
+        ..Default::default()
+    };
 
     if let Ok(locator_part) = locator_res {
         *input = input_checkpoint;
@@ -109,7 +112,9 @@ fn parse_narrative_citation(input: &mut &str) -> winnow::Result<Citation, Contex
     Ok(citation)
 }
 
-fn parse_citation_attribute_brackets<'a>(input: &mut &'a str) -> winnow::Result<&'a str, ContextError> {
+fn parse_citation_attribute_brackets<'a>(
+    input: &mut &'a str,
+) -> winnow::Result<&'a str, ContextError> {
     let _ = '['.parse_next(input)?;
     let l = take_until(0.., ']').parse_next(input)?;
     let _ = ']'.parse_next(input)?;
@@ -218,10 +223,10 @@ mod tests {
 
     #[test]
     fn test_parse_complex_djot_citation() {
-        let parser = WinnowCitationParser::default();
+        let parser = WinnowCitationParser;
         let content = "[see ;@kuhn1962; @watson1953, ch. 2]{.cite}";
         let citations = parser.parse_citations(content);
-        
+
         assert_eq!(citations.len(), 1);
         let (_, _, citation) = &citations[0];
         assert_eq!(citation.prefix, Some("see ".to_string()));

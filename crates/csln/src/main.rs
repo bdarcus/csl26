@@ -4,7 +4,7 @@ use csln_core::reference::InputReference;
 use csln_core::{InputBibliography, Locale, Style};
 use csln_processor::{
     io::{load_bibliography, load_citations},
-    processor::document::{CitationParser, WinnowCitationParser},
+    processor::document::WinnowCitationParser,
     render::{djot::Djot, html::Html, plain::PlainText},
     Citation, CitationItem, Processor,
 };
@@ -440,7 +440,8 @@ fn main() {
         } => {
             // Load style
             let style_bytes = fs::read(&style).expect("Failed to read style");
-            let style_obj: Style = serde_yaml::from_slice(&style_bytes).expect("Failed to parse style");
+            let style_obj: Style =
+                serde_yaml::from_slice(&style_bytes).expect("Failed to parse style");
 
             // Load bibliography
             let bibliography = load_bibliography(&references).expect("Failed to load bibliography");
@@ -459,7 +460,7 @@ fn main() {
                 Processor::new(style_obj, bibliography)
             };
 
-            let parser = WinnowCitationParser::default();
+            let parser = WinnowCitationParser;
 
             let output = match format {
                 Format::Plain => processor.process_document::<_, PlainText>(&doc_content, &parser),
