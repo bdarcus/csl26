@@ -684,9 +684,9 @@
                 </div>
             </article>
 
-            <!-- Contextual Logic & Presets -->
+            <!-- Advanced Citations: Narrative, Infix & Conjunctions -->
             <article
-                id="context-presets"
+                id="advanced-citations"
                 class="example-card rounded-xl overflow-hidden shadow-sm scroll-mt-24"
             >
                 <div class="p-8 bg-slate-50 border-b border-slate-200">
@@ -697,33 +697,92 @@
                             <span class="material-icons">auto_awesome</span>
                         </div>
                         <h2 class="text-2xl font-bold text-slate-900">
-                            Context & Presets
+                            Advanced Citations
                         </h2>
                     </div>
                     <p class="text-slate-600 leading-relaxed mb-6">
-                        CSLN supports "presets" (reusable style foundations) and
-                        distinct templates for narrative (integral) vs.
-                        parenthetical (non-integral) citations.
+                        CSLN supports sophisticated citation patterns, including
+                        narrative (integral) vs. parenthetical (non-integral) 
+                        modes, mid-citation "infix" text, and context-aware 
+                        conjunctions (e.g., APA's "and" vs. "&").
                     </p>
                 </div>
-                <div class="bg-slate-900 p-6 overflow-x-auto">
-                    <pre
-                        class="font-mono text-sm text-slate-300 leading-relaxed"
-                    >
+
+                <!-- Mode-Dependent Conjunctions -->
+                <div class="border-b border-slate-200">
+                    <div class="px-8 py-4 bg-slate-100">
+                        <h3
+                            class="text-sm font-semibold text-slate-700 uppercase tracking-wide"
+                        >
+                            Mode-Dependent Conjunctions (APA Style)
+                        </h3>
+                    </div>
+                    <div class="bg-slate-900 p-6 overflow-x-auto">
+                        <pre
+                            class="font-mono text-sm text-slate-300 leading-relaxed"
+                        >
+<span class="text-indigo-400">options</span>:
+  <span class="text-primary">contributors</span>:
+    <span class="text-primary">and</span>: <span class="text-emerald-400">!mode-dependent</span>
+      <span class="text-primary">integral</span>: <span class="text-emerald-400">text</span>      <span class="text-slate-500"># "Smith and Jones (2024)"</span>
+      <span class="text-primary">non-integral</span>: <span class="text-emerald-400">symbol</span>  <span class="text-slate-500"># "(Smith & Jones, 2024)"</span></pre>
+                    </div>
+                </div>
+
+                <!-- Template Contexts & Infix -->
+                <div class="border-b border-slate-200">
+                    <div class="px-8 py-4 bg-slate-100">
+                        <h3
+                            class="text-sm font-semibold text-slate-700 uppercase tracking-wide"
+                        >
+                            Template Contexts & Infix Support
+                        </h3>
+                    </div>
+                    <div class="bg-slate-900 p-6 overflow-x-auto">
+                        <pre
+                            class="font-mono text-sm text-slate-300 leading-relaxed"
+                        >
 <span class="text-indigo-400">citation</span>:
-  <span class="text-primary">use-preset</span>: <span class="text-emerald-400">apa</span>
-  <span class="text-primary">integral</span>:      <span class="text-slate-500"># Narrative: Smith (2024)</span>
+  <span class="text-primary">integral</span>:
     <span class="text-primary">template</span>:
       - <span class="text-primary">contributor</span>: <span class="text-emerald-400">author</span>
+      - <span class="text-primary">variable</span>: <span class="text-emerald-400">infix</span>        <span class="text-slate-500"># Renders @smith(argues) as "Smith (argues)..."</span>
+        <span class="text-primary">prefix</span>: <span class="text-emerald-400">" "</span>
+        <span class="text-primary">wrap</span>: <span class="text-emerald-400">parentheses</span>
       - <span class="text-primary">date</span>: <span class="text-emerald-400">issued</span>
         <span class="text-primary">wrap</span>: <span class="text-emerald-400">parentheses</span>
-        <span class="text-primary">prefix</span>: <span class="text-emerald-400">" "</span>
-  <span class="text-primary">non-integral</span>:  <span class="text-slate-500"># Parenthetical: (Smith, 2024)</span>
-    <span class="text-primary">wrap</span>: <span class="text-emerald-400">parentheses</span>
-    <span class="text-primary">template</span>:
-      - <span class="text-primary">contributor</span>: <span class="text-emerald-400">author</span>
-      - <span class="text-primary">date</span>: <span class="text-emerald-400">issued</span>
-      <span class="text-primary">delimiter</span>: <span class="text-emerald-400">comma</span></pre>
+        <span class="text-primary">prefix</span>: <span class="text-emerald-400">" "</span></pre>
+                    </div>
+                </div>
+
+                <!-- Visual Output -->
+                <div>
+                    <div class="px-8 py-4 bg-slate-100">
+                        <h3
+                            class="text-sm font-semibold text-slate-700 uppercase tracking-wide"
+                        >
+                            Rendered Examples
+                        </h3>
+                    </div>
+                    <div class="p-6 bg-white">
+                        <div class="grid gap-4">
+                            <div class="border-l-4 border-primary pl-4">
+                                <div class="text-xs font-semibold text-slate-500 uppercase mb-1">Narrative with Infix</div>
+                                <div class="font-mono text-xs text-slate-400 mb-1">Source: @smith(argues that x)[23]</div>
+                                <div class="font-mono text-sm text-slate-900">Smith (argues that x) (2024, p. 23)</div>
+                            </div>
+                            <div class="border-l-4 border-emerald-500 pl-4">
+                                <div class="text-xs font-semibold text-slate-500 uppercase mb-1">Narrative (Multiple Authors)</div>
+                                <div class="font-mono text-xs text-slate-400 mb-1">Source: @smith and @jones</div>
+                                <div class="font-mono text-sm text-slate-900">Smith and Jones (2024)</div>
+                            </div>
+                            <div class="border-l-4 border-indigo-500 pl-4">
+                                <div class="text-xs font-semibold text-slate-500 uppercase mb-1">Parenthetical (APA Conjunction)</div>
+                                <div class="font-mono text-xs text-slate-400 mb-1">Source: [@smith; @jones]</div>
+                                <div class="font-mono text-sm text-slate-900">(Smith & Jones, 2024)</div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </article>
 
