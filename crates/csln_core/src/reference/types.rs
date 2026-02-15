@@ -495,3 +495,65 @@ pub struct Classic {
     pub note: Option<String>,
     pub keywords: Option<Vec<String>>,
 }
+
+/// A patent.
+#[derive(Debug, Deserialize, Serialize, Clone, JsonSchema, PartialEq)]
+#[serde(rename_all = "kebab-case")]
+pub struct Patent {
+    pub id: Option<RefID>,
+    /// Patent title
+    pub title: Title,
+    /// Inventor(s)
+    pub author: Option<Contributor>,
+    /// Assignee (patent holder)
+    pub assignee: Option<Contributor>,
+    /// Patent number (e.g., "U.S. Patent No. 7,347,809")
+    pub number: String,
+    /// Application number
+    pub application_number: Option<String>,
+    /// Filing date
+    pub filing_date: Option<EdtfString>,
+    /// Issue/grant date
+    pub issued: EdtfString,
+    /// Jurisdiction (e.g., "US", "EP", "JP")
+    pub jurisdiction: Option<String>,
+    /// Patent office (e.g., "U.S. Patent and Trademark Office")
+    pub authority: Option<String>,
+    #[serde(alias = "URL")]
+    pub url: Option<Url>,
+    pub accessed: Option<EdtfString>,
+    pub language: Option<LangID>,
+    pub note: Option<String>,
+    pub keywords: Option<Vec<String>>,
+}
+
+/// A research dataset.
+#[derive(Debug, Deserialize, Serialize, Clone, JsonSchema, PartialEq)]
+#[serde(rename_all = "kebab-case")]
+pub struct Dataset {
+    pub id: Option<RefID>,
+    /// Dataset title
+    pub title: Title,
+    /// Dataset author(s)/creator(s)
+    pub author: Option<Contributor>,
+    /// Publication/release date
+    pub issued: EdtfString,
+    /// Publisher or repository (e.g., "Zenodo", "Dryad")
+    pub publisher: Option<Contributor>,
+    /// Version number
+    pub version: Option<String>,
+    /// File format (e.g., "CSV", "NetCDF", "HDF5")
+    pub format: Option<String>,
+    /// Dataset size (e.g., "2.4 GB", "150,000 records")
+    pub size: Option<String>,
+    /// Repository or archive name
+    pub repository: Option<String>,
+    #[serde(alias = "DOI")]
+    pub doi: Option<String>,
+    #[serde(alias = "URL")]
+    pub url: Option<Url>,
+    pub accessed: Option<EdtfString>,
+    pub language: Option<LangID>,
+    pub note: Option<String>,
+    pub keywords: Option<Vec<String>>,
+}

@@ -53,6 +53,10 @@ pub enum InputReference {
     Brief(Box<Brief>),
     /// A classic work with standard citation forms.
     Classic(Box<Classic>),
+    /// A patent.
+    Patent(Box<Patent>),
+    /// A research dataset.
+    Dataset(Box<Dataset>),
 }
 
 impl InputReference {
@@ -70,6 +74,8 @@ impl InputReference {
             InputReference::Regulation(r) => r.id.clone(),
             InputReference::Brief(r) => r.id.clone(),
             InputReference::Classic(r) => r.id.clone(),
+            InputReference::Patent(r) => r.id.clone(),
+            InputReference::Dataset(r) => r.id.clone(),
         }
     }
 
@@ -82,6 +88,8 @@ impl InputReference {
             InputReference::Treaty(r) => r.author.clone(),
             InputReference::Brief(r) => r.author.clone(),
             InputReference::Classic(r) => r.author.clone(),
+            InputReference::Patent(r) => r.author.clone(),
+            InputReference::Dataset(r) => r.author.clone(),
             _ => None,
         }
     }
@@ -124,6 +132,7 @@ impl InputReference {
             }
             InputReference::Collection(r) => r.publisher.clone(),
             InputReference::Classic(r) => r.publisher.clone(),
+            InputReference::Dataset(r) => r.publisher.clone(),
             _ => None,
         }
     }
@@ -142,6 +151,8 @@ impl InputReference {
             InputReference::Regulation(r) => Some(r.title.clone()),
             InputReference::Brief(r) => Some(r.title.clone()),
             InputReference::Classic(r) => Some(r.title.clone()),
+            InputReference::Patent(r) => Some(r.title.clone()),
+            InputReference::Dataset(r) => Some(r.title.clone()),
         }
     }
 
@@ -159,6 +170,8 @@ impl InputReference {
             InputReference::Regulation(r) => Some(r.issued.clone()),
             InputReference::Brief(r) => Some(r.issued.clone()),
             InputReference::Classic(r) => Some(r.issued.clone()),
+            InputReference::Patent(r) => Some(r.issued.clone()),
+            InputReference::Dataset(r) => Some(r.issued.clone()),
         }
     }
 
@@ -169,6 +182,7 @@ impl InputReference {
             InputReference::CollectionComponent(r) => r.doi.clone(),
             InputReference::SerialComponent(r) => r.doi.clone(),
             InputReference::LegalCase(r) => r.doi.clone(),
+            InputReference::Dataset(r) => r.doi.clone(),
             _ => None,
         }
     }
@@ -187,6 +201,8 @@ impl InputReference {
             InputReference::Regulation(r) => r.url.clone(),
             InputReference::Brief(r) => r.url.clone(),
             InputReference::Classic(r) => r.url.clone(),
+            InputReference::Patent(r) => r.url.clone(),
+            InputReference::Dataset(r) => r.url.clone(),
         }
     }
 
@@ -201,6 +217,7 @@ impl InputReference {
             InputReference::SerialComponent(_) => None,
             InputReference::Collection(r) => r.publisher.as_ref().and_then(|c| c.location()),
             InputReference::Classic(r) => r.publisher.as_ref().and_then(|c| c.location()),
+            InputReference::Dataset(r) => r.publisher.as_ref().and_then(|c| c.location()),
             _ => None,
         }
     }
@@ -216,6 +233,7 @@ impl InputReference {
             InputReference::SerialComponent(_) => None,
             InputReference::Collection(r) => r.publisher.as_ref().and_then(|c| c.name()),
             InputReference::Classic(r) => r.publisher.as_ref().and_then(|c| c.name()),
+            InputReference::Dataset(r) => r.publisher.as_ref().and_then(|c| c.name()),
             _ => None,
         }
     }
@@ -357,6 +375,8 @@ impl InputReference {
             InputReference::Regulation(r) => r.accessed.clone(),
             InputReference::Brief(r) => r.accessed.clone(),
             InputReference::Classic(r) => r.accessed.clone(),
+            InputReference::Patent(r) => r.accessed.clone(),
+            InputReference::Dataset(r) => r.accessed.clone(),
         }
     }
 
@@ -401,6 +421,8 @@ impl InputReference {
             InputReference::Regulation(r) => r.keywords.clone(),
             InputReference::Brief(r) => r.keywords.clone(),
             InputReference::Classic(r) => r.keywords.clone(),
+            InputReference::Patent(r) => r.keywords.clone(),
+            InputReference::Dataset(r) => r.keywords.clone(),
         }
     }
 
@@ -418,6 +440,8 @@ impl InputReference {
             InputReference::Regulation(r) => r.language.clone(),
             InputReference::Brief(r) => r.language.clone(),
             InputReference::Classic(r) => r.language.clone(),
+            InputReference::Patent(r) => r.language.clone(),
+            InputReference::Dataset(r) => r.language.clone(),
         }
     }
 
@@ -435,6 +459,8 @@ impl InputReference {
             InputReference::Regulation(r) => r.id = Some(id),
             InputReference::Brief(r) => r.id = Some(id),
             InputReference::Classic(r) => r.id = Some(id),
+            InputReference::Patent(r) => r.id = Some(id),
+            InputReference::Dataset(r) => r.id = Some(id),
         }
     }
 
@@ -473,6 +499,8 @@ impl InputReference {
             InputReference::Regulation(_) => "regulation".to_string(),
             InputReference::Brief(_) => "brief".to_string(),
             InputReference::Classic(_) => "classic".to_string(),
+            InputReference::Patent(_) => "patent".to_string(),
+            InputReference::Dataset(_) => "dataset".to_string(),
         }
     }
 }
