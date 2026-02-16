@@ -1,7 +1,7 @@
 ---
 # csl26-t1kn
 title: Per-group disambiguation
-status: todo
+status: complete
 type: task
 priority: normal
 created_at: 2026-02-16T14:06:48Z

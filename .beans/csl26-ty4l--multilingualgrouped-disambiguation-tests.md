@@ -1,7 +1,7 @@
 ---
 # csl26-ty4l
 title: Multilingual/grouped disambiguation tests
-status: todo
+status: complete
 type: task
 priority: high
 created_at: 2026-02-16T14:06:53Z

@@ -217,3 +217,13 @@ Persistent identifiers (ORCID, DOI, ISBN) serve identity verification and linkin
 2. **Display mismatch**: Readers see "Smith, J." vs "Smith, John" in text, not ORCIDs
 
 PIDs remain valuable for metadata quality and cross-referencing, but disambiguation operates on rendered output strings.
+
+## 6. Grouped Disambiguation
+
+In complex multilingual bibliographies, a single global disambiguation scope can lead to confusing year suffixes. CSLN enables localized disambiguation within bibliography groups.
+
+### 6.1 Logic
+
+- **Scope Control:** Use `disambiguate: locally` on a group to restart year suffix assignment.
+- **Sorting Consistency:** Disambiguation keys follow the specific `sort` rules of the group (e.g., using `given-family` order for Vietnamese groups).
+- **Multilingual Keys:** Disambiguator utilizes `Locale` to generate keys that are consistent with the scripts and name orders used within the group.
