@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0](https://github.com/bdarcus/csl26/releases/tag/csln-v0.4.0) - 2026-02-16
+
+### Added
+
+- *(processor)* add HTML output for Djot document processing
+- *(processor)* implement WinnowCitationParser for Djot syntax
+- *(processor)* add document-level processing prototype
+- *(cli)* support complex citation models as input
+- *(cli)* add --show-keys flag to process command
+- implement schema generation, validation
+- add CBOR binary format support and conversion tool
+- *(cli)* merge process and validate into csln
+
+### Fixed
+
+- remove per-crate changelogs and configure single release
+- *(locale)* handle nested Forms in role term extraction
+
+### Other
+
+- release v0.3.0 ([#168](https://github.com/bdarcus/csl26/pull/168))
+- release v0.3.0
+- add automated code versioning
+- *(processor)* modularize document processing
+- final clippy fixes and document processing polish
+- *(cli)* use explicit short flags and fix annals citation
+- *(cli)* csln-processor -> csln process
+
 ## [0.3.0](https://github.com/bdarcus/csl26/releases/tag/csln-v0.3.0) - 2026-02-15
 
 ### Added
