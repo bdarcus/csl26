@@ -65,6 +65,7 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 //! ```
 
 pub mod error;
+pub mod grouping;
 pub mod io;
 pub mod processor;
 pub mod reference;

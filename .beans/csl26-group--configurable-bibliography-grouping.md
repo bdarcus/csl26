@@ -5,7 +5,7 @@ status: in-progress
 type: feature
 priority: normal
 created_at: 2026-02-15T00:00:00Z
-updated_at: 2026-02-16T01:03:57Z
+updated_at: 2026-02-16T01:05:04Z
 ---
 
 Implement configurable bibliography grouping system.
@@ -38,3 +38,6 @@ Based on comprehensive architectural analysis in BIBLIOGRAPHY_GROUPING.md design
 - Backward compatible (omitting groups field produces flat bibliography)
 
 See docs/architecture/design/BIBLIOGRAPHY_GROUPING.md for full design.
+
+Phase 1 complete ✅: Schema extension in csln_core committed (f58f013).
+Starting Phase 2: Selector logic implementation.
