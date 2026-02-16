@@ -390,7 +390,7 @@ fn main() {
                 if stem.contains("bib") || stem.contains("ref") {
                     DataType::Bib
                 } else if stem.contains("cite") || stem.contains("citation") {
-                    DataType::Citation
+                    DataType::Citations
                 } else if stem.len() == 5 && stem.contains('-') {
                     // e.g. en-US
                     DataType::Locale
@@ -422,7 +422,7 @@ fn main() {
                     let out_bytes = serialize_any(&locale, output_ext);
                     fs::write(&output, out_bytes).expect("Failed to write output");
                 }
-                DataType::Citation => {
+                DataType::Citations => {
                     let citations: csln_core::citation::Citations =
                         deserialize_any(&input_bytes, input_ext);
                     let out_bytes = serialize_any(&citations, output_ext);
