@@ -3,12 +3,14 @@ SPDX-License-Identifier: MPL-2.0
 SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 */
 
+#[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 /// Substitution rules for missing author data.
-#[derive(Debug, PartialEq, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(untagged)]
 pub enum SubstituteConfig {
     /// A named preset (e.g., "standard", "editor-first", "title-first").
@@ -34,7 +36,8 @@ impl SubstituteConfig {
 }
 
 /// Explicit substitution configuration.
-#[derive(Debug, PartialEq, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub struct Substitute {
     /// Form to use for contributor roles when substituting.
@@ -63,7 +66,8 @@ impl Default for Substitute {
 }
 
 /// Fields that can be used as author substitutes.
-#[derive(Debug, PartialEq, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "lowercase")]
 pub enum SubstituteKey {
     Editor,

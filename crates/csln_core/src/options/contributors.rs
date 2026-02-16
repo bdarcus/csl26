@@ -3,6 +3,7 @@ SPDX-License-Identifier: MPL-2.0
 SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 */
 
+#[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -11,7 +12,8 @@ use std::collections::HashMap;
 ///
 /// Allows styles to write `contributors: apa` as shorthand, or provide
 /// full explicit configuration with field-level overrides.
-#[derive(Debug, PartialEq, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(untagged)]
 pub enum ContributorConfigEntry {
     /// A named preset (e.g., "apa", "chicago", "vancouver", "springer").
@@ -37,7 +39,8 @@ impl ContributorConfigEntry {
 }
 
 /// Contributor formatting configuration.
-#[derive(Debug, Default, PartialEq, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Default, PartialEq, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub struct ContributorConfig {
     /// When to display a contributor's name in sort order.
@@ -125,7 +128,8 @@ impl ContributorConfig {
 }
 
 /// Format for editor labels.
-#[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub enum EditorLabelFormat {
     /// "edited by John Doe"
@@ -137,7 +141,8 @@ pub enum EditorLabelFormat {
 }
 
 /// Options for demoting non-dropping particles.
-#[derive(Debug, Default, Deserialize, Serialize, Clone, Copy, PartialEq, JsonSchema)]
+#[derive(Debug, Default, Deserialize, Serialize, Clone, Copy, PartialEq)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub enum DemoteNonDroppingParticle {
     Never,
@@ -147,7 +152,8 @@ pub enum DemoteNonDroppingParticle {
 }
 
 /// When to display names in sort order (family-first).
-#[derive(Debug, Default, Deserialize, Serialize, Clone, Copy, PartialEq, JsonSchema)]
+#[derive(Debug, Default, Deserialize, Serialize, Clone, Copy, PartialEq)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "lowercase")]
 pub enum DisplayAsSort {
     All,
@@ -157,7 +163,8 @@ pub enum DisplayAsSort {
 }
 
 /// Conjunction options between contributors.
-#[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq, JsonSchema)]
+#[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub enum AndOptions {
@@ -183,7 +190,8 @@ pub enum AndOptions {
 }
 
 /// Role display options.
-#[derive(Debug, Default, PartialEq, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Default, PartialEq, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub struct RoleOptions {
     /// Contributor roles for which to omit the role description.
@@ -204,7 +212,8 @@ pub struct RoleOptions {
 }
 
 /// Rendering options for contributor roles.
-#[derive(Debug, Default, PartialEq, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Default, PartialEq, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub struct RoleRendering {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -235,7 +244,8 @@ impl RoleRendering {
 }
 
 /// When to use delimiter before last contributor.
-#[derive(Debug, Default, Deserialize, Serialize, Clone, Copy, PartialEq, JsonSchema)]
+#[derive(Debug, Default, Deserialize, Serialize, Clone, Copy, PartialEq)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub enum DelimiterPrecedesLast {
     AfterInvertedName,
@@ -246,7 +256,8 @@ pub enum DelimiterPrecedesLast {
 }
 
 /// Et al. / list shortening options.
-#[derive(Debug, PartialEq, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub struct ShortenListOptions {
     /// Minimum number of names to trigger shortening.
@@ -277,7 +288,8 @@ impl Default for ShortenListOptions {
 }
 
 /// How to render "and others" / et al.
-#[derive(Debug, Default, PartialEq, Clone, Copy, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Default, PartialEq, Clone, Copy, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub enum AndOtherOptions {
     #[default]

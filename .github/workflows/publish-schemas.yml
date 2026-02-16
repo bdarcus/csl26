@@ -1,0 +1,58 @@
+name: Publish JSON Schemas
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'crates/csln_core/**'
+      - 'crates/csln/**'
+      - '.github/workflows/publish-schemas.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Generate Schemas
+        run: |
+          mkdir -p public/schemas
+          # Build and run the schema command
+          cargo run --release --features schema -- schema --out-dir public/schemas
+          
+          # Create an index.html so the page isn't empty
+          cat <<EOF > public/index.html
+          <!DOCTYPE html>
+          <html>
+          <head><title>CSLN JSON Schemas</title></head>
+          <body>
+            <h1>CSLN JSON Schemas</h1>
+            <ul>
+              <li><a href="schemas/style.json">Style Schema</a></li>
+              <li><a href="schemas/bib.json">Bibliography Schema</a></li>
+              <li><a href="schemas/locale.json">Locale Schema</a></li>
+              <li><a href="schemas/citation.json">Citation Schema</a></li>
+            </ul>
+            <p>Last updated: $(date)</p>
+          </body>
+          </html>
+          EOF
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./public
+          force_orphan: true

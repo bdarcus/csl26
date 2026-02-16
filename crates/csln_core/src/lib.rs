@@ -1,3 +1,5 @@
+#[cfg(feature = "schema")]
+#[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -36,7 +38,8 @@ pub use presets::{ContributorPreset, DatePreset, SubstitutePreset, TitlePreset};
 pub use template::TemplateComponent;
 
 /// A collection of bibliographic references with optional metadata.
-#[derive(Debug, Default, Deserialize, Serialize, JsonSchema, Clone)]
+#[derive(Debug, Default, Deserialize, Serialize, Clone)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub struct InputBibliography {
     /// Bibliography metadata.
@@ -50,7 +53,8 @@ pub struct InputBibliography {
 }
 
 /// Metadata for an input bibliography.
-#[derive(Debug, Default, Deserialize, Serialize, JsonSchema, Clone)]
+#[derive(Debug, Default, Deserialize, Serialize, Clone)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub struct InputBibliographyInfo {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -66,7 +70,8 @@ pub type Template = Vec<TemplateComponent>;
 ///
 /// This is the target schema for CSLN, featuring declarative options
 /// and simple template components instead of procedural conditionals.
-#[derive(Debug, Default, Deserialize, Serialize, JsonSchema, Clone)]
+#[derive(Debug, Default, Deserialize, Serialize, Clone)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub struct Style {
     /// Style schema version.
@@ -99,7 +104,8 @@ fn default_version() -> String {
 ///
 /// These reference battle-tested templates for common citation styles.
 /// See `csln_core::embedded` for the actual template implementations.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub enum TemplatePreset {
     /// APA 7th edition (author-date)
@@ -139,7 +145,8 @@ impl TemplatePreset {
 }
 
 /// Citation specification.
-#[derive(Debug, Deserialize, Serialize, JsonSchema, Clone, Default)]
+#[derive(Debug, Deserialize, Serialize, Clone, Default)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub struct CitationSpec {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -247,7 +254,8 @@ impl CitationSpec {
 }
 
 /// Bibliography specification.
-#[derive(Debug, Deserialize, Serialize, JsonSchema, Clone, Default)]
+#[derive(Debug, Deserialize, Serialize, Clone, Default)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub struct BibliographySpec {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -291,7 +299,8 @@ impl BibliographySpec {
 }
 
 /// Style metadata.
-#[derive(Debug, Default, Deserialize, Serialize, JsonSchema, Clone)]
+#[derive(Debug, Default, Deserialize, Serialize, Clone)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub struct StyleInfo {
     #[serde(skip_serializing_if = "Option::is_none")]

@@ -28,12 +28,14 @@ pub use processing::{
 pub use substitute::{Substitute, SubstituteConfig, SubstituteKey};
 
 use crate::template::DelimiterPunctuation;
+#[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 /// Top-level style configuration.
-#[derive(Debug, Default, PartialEq, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Default, PartialEq, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub struct Config {
     /// Substitution rules for missing data.
@@ -104,7 +106,8 @@ pub struct Config {
 }
 
 /// Page range formatting options.
-#[derive(Debug, Default, PartialEq, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Default, PartialEq, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub enum PageRangeFormat {
@@ -126,7 +129,8 @@ pub mod titles;
 pub use titles::{TitleRendering, TitlesConfig};
 
 /// Structured link options.
-#[derive(Debug, Default, PartialEq, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Default, PartialEq, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub struct LinksConfig {
     /// Link value to the item's DOI.
@@ -144,7 +148,8 @@ pub struct LinksConfig {
 }
 
 /// Link target options.
-#[derive(Debug, PartialEq, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub enum LinkTarget {
     Url,
@@ -155,7 +160,8 @@ pub enum LinkTarget {
 }
 
 /// Link anchor options.
-#[derive(Debug, PartialEq, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub enum LinkAnchor {
     /// Link the title component.

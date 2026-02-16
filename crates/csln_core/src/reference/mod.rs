@@ -17,6 +17,7 @@ mod tests;
 #[cfg(test)]
 mod multilingual_tests;
 
+#[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use url::Url;
@@ -26,7 +27,8 @@ pub use self::date::EdtfString;
 pub use self::types::*;
 
 /// The Reference model.
-#[derive(Debug, Deserialize, Serialize, Clone, JsonSchema, PartialEq)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(untagged)]
 pub enum InputReference {
     /// A monograph, such as a book or a report, is a monolithic work published or produced as a complete entity.

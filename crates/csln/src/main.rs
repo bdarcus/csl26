@@ -8,6 +8,7 @@ use csln_processor::{
     render::{djot::Djot, html::Html, plain::PlainText},
     Citation, CitationItem, DocumentFormat, Processor,
 };
+#[cfg(feature = "schema")]
 use schemars::schema_for;
 use serde::Serialize;
 use std::fs;
@@ -31,6 +32,7 @@ enum DataType {
 #[derive(Subcommand)]
 enum Commands {
     /// Generate JSON schema for CSLN models
+    #[cfg(feature = "schema")]
     Schema {
         /// Data type (style, bib, locale, citation)
         #[arg(index = 1, value_enum)]
@@ -146,6 +148,7 @@ fn main() {
     let cli = Cli::parse();
 
     match cli.command {
+        #[cfg(feature = "schema")]
         Commands::Schema { r#type, out_dir } => {
             if let Some(dir) = out_dir {
                 fs::create_dir_all(&dir).expect("Failed to create output directory");

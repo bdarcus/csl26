@@ -9,6 +9,7 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 //! to the processor. Citations reference entries in the bibliography and
 //! can include locators, prefixes, suffixes, and mode information.
 
+#[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -18,7 +19,8 @@ pub type Citations = Vec<Citation>;
 /// Citation mode for author-date styles.
 ///
 /// Determines how the author name is rendered relative to the citation.
-#[derive(Debug, Clone, Default, Deserialize, Serialize, PartialEq, JsonSchema)]
+#[derive(Debug, Clone, Default, Deserialize, Serialize, PartialEq)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub enum CitationMode {
     /// Author inline in text: "Smith (2020) argues..."
@@ -31,7 +33,8 @@ pub enum CitationMode {
 }
 
 /// Visibility modifier for a citation item.
-#[derive(Debug, Clone, Copy, Default, Deserialize, Serialize, PartialEq, JsonSchema)]
+#[derive(Debug, Clone, Copy, Default, Deserialize, Serialize, PartialEq)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub enum ItemVisibility {
     /// Show both author and year (default).
@@ -46,7 +49,8 @@ pub enum ItemVisibility {
 }
 
 /// A citation containing one or more references.
-#[derive(Debug, Clone, Default, Deserialize, Serialize, JsonSchema)]
+#[derive(Debug, Clone, Default, Deserialize, Serialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub struct Citation {
     /// The citation ID (optional, for tracking).
@@ -94,7 +98,8 @@ fn is_default_visibility(visibility: &ItemVisibility) -> bool {
 }
 
 /// Locator types for pinpoint citations.
-#[derive(Debug, Clone, Default, Deserialize, Serialize, PartialEq, Eq, Hash, JsonSchema)]
+#[derive(Debug, Clone, Default, Deserialize, Serialize, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub enum LocatorType {
     Book,
@@ -118,7 +123,8 @@ pub enum LocatorType {
 }
 
 /// A single citation item referencing a bibliography entry.
-#[derive(Debug, Clone, Default, Deserialize, Serialize, JsonSchema)]
+#[derive(Debug, Clone, Default, Deserialize, Serialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub struct CitationItem {
     /// The reference ID (citekey).

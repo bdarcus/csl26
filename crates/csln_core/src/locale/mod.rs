@@ -14,6 +14,7 @@ pub mod types;
 use crate::citation::LocatorType;
 use crate::template::ContributorRole;
 pub use raw::{RawLocale, RawTermValue};
+#[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -23,7 +24,8 @@ pub use types::*;
 pub type MonthList = Vec<String>;
 
 /// A locale definition containing language-specific terms and formatting rules.
-#[derive(Debug, Default, Deserialize, Serialize, Clone, JsonSchema)]
+#[derive(Debug, Default, Deserialize, Serialize, Clone)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub struct Locale {
     /// The locale identifier (e.g., "en-US", "de-DE").

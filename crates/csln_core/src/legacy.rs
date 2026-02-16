@@ -4,6 +4,7 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 */
 
 use crate::locale::{GeneralTerm, TermForm};
+#[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -13,7 +14,8 @@ use std::collections::HashMap;
 // These will be deprecated once migration is complete
 // ============================================================================
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Hash)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub enum ItemType {
     Article,
@@ -55,7 +57,8 @@ pub enum ItemType {
     Standard,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Hash)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub enum Variable {
     Author,
@@ -132,7 +135,8 @@ pub enum Variable {
     YearSuffix,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub struct CslnStyle {
     pub info: CslnInfo,
@@ -141,18 +145,21 @@ pub struct CslnStyle {
     pub bibliography: Vec<CslnNode>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct CslnLocale {
     pub terms: HashMap<String, String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct CslnInfo {
     pub title: String,
     pub id: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(tag = "type", rename_all = "kebab-case")]
 pub enum CslnNode {
     Text { value: String },
@@ -164,7 +171,8 @@ pub enum CslnNode {
     Term(TermBlock),
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct TermBlock {
     pub term: GeneralTerm,
     pub form: TermForm,
@@ -173,7 +181,8 @@ pub struct TermBlock {
     pub source_order: Option<usize>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct VariableBlock {
     pub variable: Variable,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -186,7 +195,8 @@ pub struct VariableBlock {
     pub source_order: Option<usize>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct GroupBlock {
     pub children: Vec<CslnNode>,
     pub delimiter: Option<String>,
@@ -196,7 +206,8 @@ pub struct GroupBlock {
     pub source_order: Option<usize>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct ConditionBlock {
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub if_item_type: Vec<ItemType>,
@@ -210,7 +221,8 @@ pub struct ConditionBlock {
 }
 
 /// An else-if branch in a condition block, capturing type or variable conditions.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct ElseIfBranch {
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub if_item_type: Vec<ItemType>,
@@ -219,7 +231,8 @@ pub struct ElseIfBranch {
     pub children: Vec<CslnNode>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct LabelOptions {
     pub variable: Variable,
     pub form: LabelForm,
@@ -228,7 +241,8 @@ pub struct LabelOptions {
     pub formatting: FormattingOptions,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub enum LabelForm {
     Long,
@@ -238,7 +252,8 @@ pub enum LabelForm {
     VerbShort,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct DateBlock {
     pub variable: Variable,
     #[serde(flatten)]
@@ -249,7 +264,8 @@ pub struct DateBlock {
     pub source_order: Option<usize>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct NamesBlock {
     pub variable: Variable,
     #[serde(flatten)]
@@ -260,7 +276,8 @@ pub struct NamesBlock {
     pub source_order: Option<usize>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub struct NamesOptions {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -285,7 +302,8 @@ pub struct NamesOptions {
     pub substitute: Vec<Variable>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub enum NameMode {
     Long,
@@ -293,14 +311,16 @@ pub enum NameMode {
     Count,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub enum AndTerm {
     Text,
     Symbol,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub enum DelimiterPrecedes {
     Contextual,
@@ -309,7 +329,8 @@ pub enum DelimiterPrecedes {
     Never,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub enum NameAsSortOrder {
     First,
@@ -317,7 +338,8 @@ pub enum NameAsSortOrder {
 }
 
 /// Configuration for et-al abbreviation in names.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub struct EtAlOptions {
     /// Minimum number of names to trigger abbreviation.
@@ -333,14 +355,16 @@ pub struct EtAlOptions {
     pub formatting: FormattingOptions,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub struct EtAlSubsequent {
     pub min: u8,
     pub use_first: u8,
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub struct DateOptions {
     pub form: Option<DateForm>,
@@ -354,14 +378,16 @@ pub struct DateOptions {
     pub day_form: Option<DatePartForm>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub enum DateForm {
     Text,
     Numeric,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub enum DateParts {
     Year,
@@ -369,7 +395,8 @@ pub enum DateParts {
     YearMonthDay,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub enum DatePartForm {
     Numeric,
@@ -379,7 +406,8 @@ pub enum DatePartForm {
     Short,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub struct FormattingOptions {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -402,7 +430,8 @@ pub struct FormattingOptions {
     pub strip_periods: Option<bool>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub enum FontStyle {
     Normal,
@@ -410,14 +439,16 @@ pub enum FontStyle {
     Oblique,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub enum FontVariant {
     Normal,
     SmallCaps,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub enum FontWeight {
     Normal,
@@ -425,14 +456,16 @@ pub enum FontWeight {
     Light,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub enum TextDecoration {
     None,
     Underline,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub enum VerticalAlign {
     Baseline,

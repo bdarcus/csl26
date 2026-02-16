@@ -1,5 +1,6 @@
 use crate::reference::contributor::Contributor;
 use crate::reference::date::EdtfString;
+#[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -11,7 +12,8 @@ pub type RefID = String;
 pub type LangID = String;
 
 /// A value that could be either a number or a string.
-#[derive(Clone, Debug, PartialEq, Eq, JsonSchema, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(untagged)]
 pub enum NumOrStr {
     /// It's a number!
@@ -30,7 +32,8 @@ impl Display for NumOrStr {
 }
 
 /// A string that can be represented in multiple languages and scripts.
-#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, JsonSchema)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(untagged)]
 pub enum MultilingualString {
     Simple(String),
@@ -38,7 +41,8 @@ pub enum MultilingualString {
 }
 
 /// Complex multilingual representation with original, transliterations, and translations.
-#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, JsonSchema)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub struct MultilingualComplex {
     /// The text in its original script.
@@ -83,7 +87,8 @@ impl Default for MultilingualString {
 }
 
 /// A monograph, such as a book or a report, is a monolithic work published or produced as a complete entity.
-#[derive(Debug, Deserialize, Serialize, Clone, JsonSchema, PartialEq)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 #[serde(deny_unknown_fields)]
 pub struct Monograph {
@@ -111,7 +116,8 @@ pub struct Monograph {
     pub original_title: Option<Title>,
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone, JsonSchema, PartialEq)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub enum MonographType {
@@ -124,7 +130,8 @@ pub enum MonographType {
 }
 
 /// A collection of works, such as an anthology or proceedings.
-#[derive(Debug, Deserialize, Serialize, Clone, JsonSchema, PartialEq)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 #[serde(deny_unknown_fields)]
 pub struct Collection {
@@ -146,7 +153,8 @@ pub struct Collection {
 }
 
 /// Types of collections.
-#[derive(Debug, Deserialize, Serialize, Clone, JsonSchema, PartialEq)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub enum CollectionType {
@@ -157,7 +165,8 @@ pub enum CollectionType {
 }
 
 /// A component of a larger monograph, such as a chapter in a book.
-#[derive(Debug, Deserialize, Serialize, Clone, JsonSchema, PartialEq)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 #[serde(deny_unknown_fields)]
 pub struct CollectionComponent {
@@ -181,7 +190,8 @@ pub struct CollectionComponent {
 }
 
 /// Types of monograph components.
-#[derive(Debug, Deserialize, Serialize, Clone, JsonSchema, PartialEq)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub enum MonographComponentType {
@@ -191,7 +201,8 @@ pub enum MonographComponentType {
 
 /// A component of a larger serial publication; for example a journal or newspaper article.
 /// The parent serial is referenced by its ID.
-#[derive(Debug, Deserialize, Serialize, Clone, JsonSchema, PartialEq)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 #[serde(deny_unknown_fields)]
 pub struct SerialComponent {
@@ -217,7 +228,8 @@ pub struct SerialComponent {
 }
 
 /// Types of serial components.
-#[derive(Debug, Deserialize, Serialize, Clone, JsonSchema, PartialEq)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub enum SerialComponentType {
     Article,
@@ -226,7 +238,8 @@ pub enum SerialComponentType {
 }
 
 /// A serial publication (journal, magazine, etc.).
-#[derive(Debug, Deserialize, Serialize, Clone, JsonSchema, PartialEq)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub struct Serial {
     pub r#type: SerialType,
@@ -238,7 +251,8 @@ pub struct Serial {
 }
 
 /// Types of serial publications.
-#[derive(Debug, Deserialize, Serialize, Clone, JsonSchema, PartialEq)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub enum SerialType {
@@ -253,7 +267,8 @@ pub enum SerialType {
 }
 
 /// A parent reference (either embedded or by ID).
-#[derive(Debug, Deserialize, Serialize, Clone, JsonSchema, PartialEq)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(untagged)]
 pub enum Parent<T> {
     Embedded(T),
@@ -261,7 +276,8 @@ pub enum Parent<T> {
 }
 
 /// A parent reference (either Monograph or Serial).
-#[derive(Debug, Deserialize, Serialize, Clone, JsonSchema, PartialEq)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(untagged)]
 pub enum ParentReference {
     Monograph(Box<Monograph>),
@@ -269,7 +285,8 @@ pub enum ParentReference {
 }
 
 /// A title can be a single string, a structured title, or a multilingual title.
-#[derive(Debug, Deserialize, Serialize, Clone, JsonSchema, PartialEq)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(untagged)]
 pub enum Title {
     /// A title in a single language.
@@ -287,7 +304,8 @@ pub enum Title {
 }
 
 /// Where title parts are meaningful, use this struct; CSLN processors will not parse title strings.
-#[derive(Debug, Deserialize, Serialize, Clone, JsonSchema, PartialEq)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub struct StructuredTitle {
     pub full: Option<String>,
@@ -296,7 +314,8 @@ pub struct StructuredTitle {
 }
 
 /// The subtitle can either be a string, as is the common case, or a vector of strings.
-#[derive(Debug, Deserialize, Serialize, Clone, JsonSchema, PartialEq)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(untagged)]
 pub enum Subtitle {
     String(String),
@@ -330,7 +349,8 @@ pub enum RefDate {
 }
 
 /// A legal case (court decision).
-#[derive(Debug, Deserialize, Serialize, Clone, JsonSchema, PartialEq)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 #[serde(deny_unknown_fields)]
 pub struct LegalCase {
@@ -358,7 +378,8 @@ pub struct LegalCase {
 }
 
 /// A statute or legislative act.
-#[derive(Debug, Deserialize, Serialize, Clone, JsonSchema, PartialEq)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 #[serde(deny_unknown_fields)]
 pub struct Statute {
@@ -384,7 +405,8 @@ pub struct Statute {
 }
 
 /// An international treaty or agreement.
-#[derive(Debug, Deserialize, Serialize, Clone, JsonSchema, PartialEq)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 #[serde(deny_unknown_fields)]
 pub struct Treaty {
@@ -410,7 +432,8 @@ pub struct Treaty {
 }
 
 /// A legislative or administrative hearing.
-#[derive(Debug, Deserialize, Serialize, Clone, JsonSchema, PartialEq)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 #[serde(deny_unknown_fields)]
 pub struct Hearing {
@@ -432,7 +455,8 @@ pub struct Hearing {
 }
 
 /// An administrative regulation.
-#[derive(Debug, Deserialize, Serialize, Clone, JsonSchema, PartialEq)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 #[serde(deny_unknown_fields)]
 pub struct Regulation {
@@ -458,7 +482,8 @@ pub struct Regulation {
 }
 
 /// A legal brief or filing.
-#[derive(Debug, Deserialize, Serialize, Clone, JsonSchema, PartialEq)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 #[serde(deny_unknown_fields)]
 pub struct Brief {
@@ -482,7 +507,8 @@ pub struct Brief {
 }
 
 /// A classic work (Aristotle, Bible, etc.) with standard citation forms.
-#[derive(Debug, Deserialize, Serialize, Clone, JsonSchema, PartialEq)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 #[serde(deny_unknown_fields)]
 pub struct Classic {
@@ -510,7 +536,8 @@ pub struct Classic {
 }
 
 /// A patent.
-#[derive(Debug, Deserialize, Serialize, Clone, JsonSchema, PartialEq)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 #[serde(deny_unknown_fields)]
 pub struct Patent {
@@ -542,7 +569,8 @@ pub struct Patent {
 }
 
 /// A research dataset.
-#[derive(Debug, Deserialize, Serialize, Clone, JsonSchema, PartialEq)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 #[serde(deny_unknown_fields)]
 pub struct Dataset {
@@ -574,7 +602,8 @@ pub struct Dataset {
 }
 
 /// A technical standard or specification.
-#[derive(Debug, Deserialize, Serialize, Clone, JsonSchema, PartialEq)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 #[serde(deny_unknown_fields)]
 pub struct Standard {
@@ -600,7 +629,8 @@ pub struct Standard {
 }
 
 /// Software or source code.
-#[derive(Debug, Deserialize, Serialize, Clone, JsonSchema, PartialEq)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 #[serde(deny_unknown_fields)]
 pub struct Software {

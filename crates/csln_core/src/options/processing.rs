@@ -3,11 +3,13 @@ SPDX-License-Identifier: MPL-2.0
 SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 */
 
+#[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 /// Processing mode for citation/bibliography generation.
-#[derive(Debug, Default, PartialEq, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Default, PartialEq, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub enum Processing {
@@ -19,7 +21,8 @@ pub enum Processing {
 }
 
 /// Custom processing configuration.
-#[derive(Debug, Default, PartialEq, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Default, PartialEq, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub struct ProcessingCustom {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -78,7 +81,8 @@ impl Processing {
 }
 
 /// Disambiguation settings.
-#[derive(Debug, PartialEq, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub struct Disambiguation {
     pub names: bool,
@@ -98,7 +102,8 @@ impl Default for Disambiguation {
 }
 
 /// Sorting configuration.
-#[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq, JsonSchema)]
+#[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub struct Sort {
     /// Shorten name lists for sorting the same as for display.
@@ -112,7 +117,8 @@ pub struct Sort {
 }
 
 /// A single sort specification.
-#[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq, JsonSchema)]
+#[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub struct SortSpec {
     pub key: SortKey,
@@ -125,7 +131,8 @@ fn default_ascending() -> bool {
 }
 
 /// Available sort keys.
-#[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq, JsonSchema)]
+#[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub enum SortKey {
@@ -138,7 +145,8 @@ pub enum SortKey {
 }
 
 /// Grouping configuration for bibliography.
-#[derive(Debug, PartialEq, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub struct Group {
     pub template: Vec<SortKey>,

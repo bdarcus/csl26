@@ -3,12 +3,14 @@ SPDX-License-Identifier: MPL-2.0
 SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 */
 
+#[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 /// Multilingual rendering options.
-#[derive(Debug, Default, PartialEq, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Default, PartialEq, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub struct MultilingualConfig {
     /// Preferred rendering mode for titles.
@@ -26,7 +28,8 @@ pub struct MultilingualConfig {
 }
 
 /// Rendering modes for multilingual content.
-#[derive(Debug, PartialEq, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub enum MultilingualMode {
     /// Use original script.
@@ -41,7 +44,8 @@ pub enum MultilingualMode {
 }
 
 /// Configuration for specific scripts.
-#[derive(Debug, Default, PartialEq, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Default, PartialEq, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub struct ScriptConfig {
     /// Whether to use native ordering for this script (e.g., FamilyGiven for CJK).

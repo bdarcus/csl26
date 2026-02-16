@@ -4,6 +4,7 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 */
 
 use crate::options::localization::MonthFormat;
+#[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -12,7 +13,8 @@ use std::collections::HashMap;
 ///
 /// Allows styles to write `dates: long` as shorthand, or provide
 /// full explicit configuration with field-level overrides.
-#[derive(Debug, PartialEq, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(untagged)]
 pub enum DateConfigEntry {
     /// A named preset (e.g., "long", "short", "numeric", "iso").
@@ -38,7 +40,8 @@ impl DateConfigEntry {
 }
 
 /// Date formatting configuration.
-#[derive(Debug, PartialEq, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub struct DateConfig {
     pub month: MonthFormat,

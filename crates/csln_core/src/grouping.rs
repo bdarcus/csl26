@@ -1,3 +1,4 @@
+#[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -24,7 +25,8 @@ use crate::Template;
 ///         - key: author
 ///           sort-order: given-family
 /// ```
-#[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub struct BibliographyGroup {
     /// Unique identifier for this group.
@@ -53,7 +55,8 @@ pub struct BibliographyGroup {
 ///
 /// All specified conditions must match (AND logic).
 /// Use the `not` field for negation-based fallback groups.
-#[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub struct GroupSelector {
     /// Match references by type.
@@ -76,7 +79,8 @@ pub struct GroupSelector {
 }
 
 /// Type-based selector.
-#[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(untagged)]
 pub enum TypeSelector {
     /// Match a single type.
@@ -86,7 +90,8 @@ pub enum TypeSelector {
 }
 
 /// Citation status filter.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, JsonSchema)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub enum CitedStatus {
     /// Match only references cited in the document.
@@ -98,7 +103,8 @@ pub enum CitedStatus {
 }
 
 /// Field value matcher.
-#[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(untagged)]
 pub enum FieldMatcher {
     /// Match exact field value.
@@ -112,7 +118,8 @@ pub enum FieldMatcher {
 ///
 /// Sorting follows a template of sort keys, applied in order.
 /// The first key is the primary sort, second is the tiebreaker, etc.
-#[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub struct GroupSort {
     /// Ordered list of sort keys to apply.
@@ -120,7 +127,8 @@ pub struct GroupSort {
 }
 
 /// A single sort key in a group sorting template.
-#[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub struct GroupSortKey {
     /// The field or variable to sort by.
@@ -149,7 +157,8 @@ fn default_true() -> bool {
 }
 
 /// Sort key selector.
-#[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub enum SortKey {
     /// Sort by reference type.
@@ -166,7 +175,8 @@ pub enum SortKey {
 }
 
 /// Name sorting order for culturally appropriate collation.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, JsonSchema)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub enum NameSortOrder {
     /// Family name first (Western convention).

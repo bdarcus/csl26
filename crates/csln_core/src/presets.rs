@@ -31,6 +31,7 @@ use crate::options::{
     AndOptions, ContributorConfig, DateConfig, DelimiterPrecedesLast, DisplayAsSort, MonthFormat,
     ShortenListOptions, Substitute, SubstituteKey, TitleRendering, TitlesConfig,
 };
+#[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -40,7 +41,8 @@ use std::collections::HashMap;
 /// Each preset encodes the contributor formatting conventions for a major citation
 /// style or style family. Use doc comments to describe the visual behavior so
 /// style authors can choose the right preset without knowing style guide names.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub enum ContributorPreset {
@@ -145,7 +147,8 @@ impl ContributorPreset {
 /// Each preset defines how dates are displayed in citations and bibliographies,
 /// including month format, EDTF uncertainty/approximation markers, and range
 /// delimiters.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub enum DatePreset {
@@ -194,7 +197,8 @@ impl DatePreset {
 /// Each preset defines how different types of titles (articles, books, journals)
 /// are formatted. Presets typically differ in whether titles are quoted, italicized,
 /// or plain.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub enum TitlePreset {
@@ -261,7 +265,8 @@ impl TitlePreset {
 /// These presets define the order in which fields are tried when the primary
 /// author is missing. Most styles follow the standard order, but some have
 /// variations.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub enum SubstitutePreset {

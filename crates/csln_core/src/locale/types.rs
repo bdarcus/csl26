@@ -3,11 +3,13 @@ SPDX-License-Identifier: MPL-2.0
 SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 */
 
+#[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 /// Form for term lookup.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub enum TermForm {
     Long,
     Short,
@@ -17,7 +19,8 @@ pub enum TermForm {
 }
 
 /// A list of general terms for citation formatting.
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub enum GeneralTerm {
     #[default]
@@ -42,7 +45,8 @@ pub enum GeneralTerm {
 }
 
 /// General terms used in citations and bibliographies.
-#[derive(Debug, Default, Deserialize, Serialize, Clone, JsonSchema)]
+#[derive(Debug, Default, Deserialize, Serialize, Clone)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub struct Terms {
     /// The word "and" (e.g., "Smith and Jones").
@@ -113,7 +117,8 @@ impl Terms {
 }
 
 /// A simple term with long and short forms.
-#[derive(Debug, Default, Deserialize, Serialize, Clone, JsonSchema)]
+#[derive(Debug, Default, Deserialize, Serialize, Clone)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct SimpleTerm {
     /// The long form of the term.
     pub long: String,
@@ -122,7 +127,8 @@ pub struct SimpleTerm {
 }
 
 /// Terms for contributor roles.
-#[derive(Debug, Default, Deserialize, Serialize, Clone, JsonSchema)]
+#[derive(Debug, Default, Deserialize, Serialize, Clone)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct ContributorTerm {
     /// Singular form (editor, translator).
     pub singular: SimpleTerm,
@@ -133,7 +139,8 @@ pub struct ContributorTerm {
 }
 
 /// Terms for locators (page, chapter, etc.).
-#[derive(Debug, Default, Deserialize, Serialize, Clone, JsonSchema)]
+#[derive(Debug, Default, Deserialize, Serialize, Clone)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct LocatorTerm {
     /// Long form (e.g., page/pages).
     #[serde(default)]
@@ -147,7 +154,8 @@ pub struct LocatorTerm {
 }
 
 /// A term with singular and plural forms.
-#[derive(Debug, Default, Deserialize, Serialize, Clone, JsonSchema)]
+#[derive(Debug, Default, Deserialize, Serialize, Clone)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct SingularPlural {
     /// Singular form.
     pub singular: String,
@@ -156,7 +164,8 @@ pub struct SingularPlural {
 }
 
 /// Date-related terms.
-#[derive(Debug, Default, Deserialize, Serialize, Clone, JsonSchema)]
+#[derive(Debug, Default, Deserialize, Serialize, Clone)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct DateTerms {
     /// Month names.
     #[serde(default)]
@@ -190,7 +199,8 @@ impl DateTerms {
 }
 
 /// Month name lists.
-#[derive(Debug, Default, Deserialize, Serialize, Clone, JsonSchema)]
+#[derive(Debug, Default, Deserialize, Serialize, Clone)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct MonthNames {
     /// Full month names.
     pub long: Vec<String>,

@@ -1,12 +1,14 @@
 use crate::locale::MonthList;
 use crate::reference::types::RefDate;
 use csln_edtf::{Day, Edtf, MonthOrSeason};
+#[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
 /// An EDTF string.
-#[derive(Debug, Deserialize, Serialize, Clone, Default, JsonSchema, PartialEq)]
+#[derive(Debug, Deserialize, Serialize, Clone, Default, PartialEq)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct EdtfString(pub String);
 
 impl EdtfString {
