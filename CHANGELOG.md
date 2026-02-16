@@ -7,12 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.4.0] - 2026-02-16
+## [0.5.0] - 2026-02-16
 
 ### Features
 - Configurable bibliography grouping with per-group sorting
+- Two-tier legal citation support (Bluebook-style cases, statutes, treaties)
+- Per-group disambiguation logic (local vs global suffix scopes)
+- Advanced selector predicate logic (type, field, and negation)
+
+## [0.4.0] - 2026-02-16
+
+### Features
 - Automated versioning infrastructure with release-plz
 - Two-track versioning strategy (code + schema)
+- Initial infrastructure for type-addition policy
 
 ## [0.3.0] - 2026-02-15
 
