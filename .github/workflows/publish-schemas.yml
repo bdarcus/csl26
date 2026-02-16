@@ -11,11 +11,9 @@ on:
 
 permissions:
   contents: write
-  pages: write
-  id-token: write
 
 jobs:
-  build-and-deploy:
+  generate-and-commit:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -28,31 +26,11 @@ jobs:
 
       - name: Generate Schemas
         run: |
-          mkdir -p public/schemas
-          # Build and run the schema command
-          cargo run --release --features schema -- schema --out-dir public/schemas
-          
-          # Create an index.html so the page isn't empty
-          cat <<EOF > public/index.html
-          <!DOCTYPE html>
-          <html>
-          <head><title>CSLN JSON Schemas</title></head>
-          <body>
-            <h1>CSLN JSON Schemas</h1>
-            <ul>
-              <li><a href="schemas/style.json">Style Schema</a></li>
-              <li><a href="schemas/bib.json">Bibliography Schema</a></li>
-              <li><a href="schemas/locale.json">Locale Schema</a></li>
-              <li><a href="schemas/citations.json">Citations Schema</a></li>
-            </ul>
-            <p>Last updated: $(date)</p>
-          </body>
-          </html>
-          EOF
+          mkdir -p docs/schemas
+          cargo run --release --bin csln --features schema -- schema --out-dir docs/schemas
 
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
+      - name: Commit updated schemas
+        uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./public
-          force_orphan: true
+          commit_message: "docs: update JSON schemas"
+          file_pattern: 'docs/schemas/*.json'
