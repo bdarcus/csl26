@@ -3,7 +3,7 @@
 
 [workspace]
 # Enable automatic changelog updates from Conventional Commits
-changelog_update = true
+changelog_update = false
 
 # Do not publish to crates.io (project-specific decision)
 publish = false
@@ -17,6 +17,8 @@ git_release_enable = false
 # Only create release for the main binary
 [[package]]
 name = "csln"
+changelog_update = true
+changelog_path = "../../CHANGELOG.md"
 git_release_enable = true
 git_tag_enable = true
-git_tag_name = "csln-v{{ version }}"
+git_tag_name = "v{{ version }}"
