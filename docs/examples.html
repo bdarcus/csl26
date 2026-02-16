@@ -807,6 +807,119 @@ Structured: [@kuhn1962, section: 5].</pre>
                 </div>
             </article>
 
+            <!-- Bibliography Grouping -->
+            <article
+                id="bibliography-grouping"
+                class="example-card rounded-xl overflow-hidden shadow-sm scroll-mt-24"
+            >
+                <div class="p-8 bg-slate-50 border-b border-slate-200">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div
+                            class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary"
+                        >
+                            <span class="material-icons">library_books</span>
+                        </div>
+                        <h2 class="text-2xl font-bold text-slate-900">
+                            Bibliography Grouping
+                        </h2>
+                    </div>
+                    <p class="text-slate-600 leading-relaxed mb-6">
+                        Divide bibliographies into labeled sections with distinct sorting rules. Essential for legal hierarchies (Bluebook) and multilingual bibliographies (culturally appropriate name ordering).
+                    </p>
+                </div>
+
+                <div class="p-6 bg-white">
+                    <div class="grid gap-6">
+                        <!-- Legal Hierarchy Example -->
+                        <div class="border-l-4 border-indigo-500 pl-4">
+                            <div
+                                class="text-xs font-semibold text-slate-500 uppercase mb-2"
+                            >
+                                Legal Hierarchy (Type-Based Grouping)
+                            </div>
+                            <div
+                                class="bg-slate-900 rounded p-4 overflow-x-auto mt-1"
+                            >
+                                <pre
+                                    class="font-mono text-xs text-slate-300 leading-relaxed"
+                                ><span class="text-indigo-400">bibliography</span>:
+  <span class="text-primary">groups</span>:
+    - <span class="text-primary">id</span>: <span class="text-emerald-400">primary-legal</span>
+      <span class="text-primary">heading</span>: <span class="text-emerald-400">"Primary Sources"</span>
+      <span class="text-primary">selector</span>:
+        <span class="text-primary">type</span>: [<span class="text-emerald-400">legal-case, statute, treaty</span>]
+      <span class="text-primary">sort</span>:
+        <span class="text-primary">template</span>:
+          - <span class="text-primary">key</span>: <span class="text-emerald-400">type</span>
+            <span class="text-primary">order</span>: [<span class="text-emerald-400">legal-case, statute, treaty</span>]
+          - <span class="text-primary">key</span>: <span class="text-emerald-400">issued</span></pre>
+                            </div>
+                            <p class="text-xs text-slate-500 mt-2">
+                                Explicit type ordering ensures legal-case appears before statute, regardless of alphabetical content.
+                            </p>
+                        </div>
+
+                        <!-- Multilingual Example -->
+                        <div class="border-l-4 border-purple-500 pl-4">
+                            <div
+                                class="text-xs font-semibold text-slate-500 uppercase mb-2"
+                            >
+                                Multilingual (Per-Group Name Ordering)
+                            </div>
+                            <div
+                                class="bg-slate-900 rounded p-4 overflow-x-auto mt-1"
+                            >
+                                <pre
+                                    class="font-mono text-xs text-slate-300 leading-relaxed"
+                                ><span class="text-indigo-400">bibliography</span>:
+  <span class="text-primary">groups</span>:
+    - <span class="text-primary">id</span>: <span class="text-emerald-400">vietnamese</span>
+      <span class="text-primary">heading</span>: <span class="text-emerald-400">"Tài liệu tiếng Việt"</span>
+      <span class="text-primary">selector</span>:
+        <span class="text-primary">field</span>:
+          <span class="text-primary">language</span>: <span class="text-emerald-400">vi</span>
+      <span class="text-primary">sort</span>:
+        <span class="text-primary">template</span>:
+          - <span class="text-primary">key</span>: <span class="text-emerald-400">author</span>
+            <span class="text-primary">sort-order</span>: <span class="text-emerald-400">given-family</span>  <span class="text-slate-500"># Vietnamese convention</span>
+
+    - <span class="text-primary">id</span>: <span class="text-emerald-400">western</span>
+      <span class="text-primary">heading</span>: <span class="text-emerald-400">"Western Sources"</span>
+      <span class="text-primary">selector</span>:
+        <span class="text-primary">not</span>:
+          <span class="text-primary">field</span>:
+            <span class="text-primary">language</span>: <span class="text-emerald-400">vi</span>
+      <span class="text-primary">sort</span>:
+        <span class="text-primary">template</span>:
+          - <span class="text-primary">key</span>: <span class="text-emerald-400">author</span>
+            <span class="text-primary">sort-order</span>: <span class="text-emerald-400">family-given</span>  <span class="text-slate-500"># Western convention</span></pre>
+                            </div>
+                            <p class="text-xs text-slate-500 mt-2">
+                                Vietnamese names use given-family ordering, Western names use family-given ordering.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-slate-50 p-6 border-t border-slate-200">
+                    <div class="flex items-start gap-3">
+                        <div
+                            class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary flex-shrink-0 mt-1"
+                        >
+                            <span class="material-icons text-sm"
+                                >lightbulb</span
+                            >
+                        </div>
+                        <div class="text-sm text-slate-600 leading-relaxed">
+                            <strong class="text-slate-900"
+                                >Key Features:</strong
+                            >
+                            First-match semantics prevent duplication. Selectors support type matching, field matching (language, keywords), citation status (visible/silent), and negation for fallback groups. See <a href="https://github.com/bdarcus/csl26/blob/main/docs/architecture/design/BIBLIOGRAPHY_GROUPING.md" class="text-primary hover:underline">design document</a> for full details.
+                        </div>
+                    </div>
+                </div>
+            </article>
+
         </section>
 
         <!-- Footer -->
