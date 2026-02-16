@@ -3,118 +3,173 @@ SPDX-License-Identifier: MPL-2.0
 SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 */
 
-//! Native CSLN disambiguation tests using Rust structs.
+//! CSLN disambiguation tests using pure CSLN types.
 //!
 //! These tests validate the three core disambiguation strategies without
-//! JSON parsing overhead. All test data is defined as native Rust types.
+//! JSON parsing overhead or legacy CSL JSON conversion. All test data is
+//! defined using CSLN Rust types.
 //!
 //! 1. Year suffix (a, b, c, ..., z, aa, ab, ...)
 //! 2. Name expansion (showing additional authors beyond et-al)
 //! 3. Given name expansion (initials or full names for conflicting surnames)
 
-use csl_legacy::csl_json::{DateVariable, Name, Reference as LegacyReference};
 use csln_core::{
     citation::{Citation, CitationItem, CitationMode},
+    reference::{
+        Contributor, ContributorList, EdtfString, InputReference as Reference, Monograph,
+        MonographType, MultilingualString, Parent, Serial, SerialComponent, SerialComponentType,
+        SerialType, StructuredName, Title,
+    },
     CitationSpec, Style, StyleInfo,
 };
-use csln_processor::{reference::Reference, Processor};
+use csln_processor::Processor;
 
 // --- Helper Functions for Test Data Construction ---
 
-/// Create a LegacyReference for a book with minimal fields.
-fn make_book(id: &str, family: &str, given: &str, year: i32, title: &str) -> LegacyReference {
-    LegacyReference {
-        id: id.to_string(),
-        ref_type: "book".to_string(),
-        author: Some(vec![Name {
-            family: Some(family.to_string()),
-            given: Some(given.to_string()),
+/// Create a native Reference for a book with minimal fields.
+fn make_book(id: &str, family: &str, given: &str, year: i32, title: &str) -> Reference {
+    Reference::Monograph(Box::new(Monograph {
+        id: Some(id.to_string()),
+        r#type: MonographType::Book,
+        title: Title::Single(title.to_string()),
+        author: Some(Contributor::StructuredName(StructuredName {
+            family: MultilingualString::Simple(family.to_string()),
+            given: MultilingualString::Simple(given.to_string()),
             ..Default::default()
-        }]),
-        issued: Some(DateVariable {
-            date_parts: Some(vec![vec![year]]),
-            ..Default::default()
-        }),
-        title: Some(title.to_string()),
-        ..Default::default()
-    }
+        })),
+        editor: None,
+        translator: None,
+        issued: EdtfString(year.to_string()),
+        publisher: None,
+        url: None,
+        accessed: None,
+        language: None,
+        note: None,
+        isbn: None,
+        doi: None,
+        edition: None,
+        genre: None,
+        keywords: None,
+        original_date: None,
+        original_title: None,
+    }))
 }
 
-/// Create a LegacyReference with multiple authors.
+/// Create a native Reference with multiple authors.
 fn make_book_multi_author(
     id: &str,
     authors: Vec<(&str, &str)>,
     year: i32,
     title: &str,
-) -> LegacyReference {
-    LegacyReference {
-        id: id.to_string(),
-        ref_type: "book".to_string(),
-        author: Some(
-            authors
-                .into_iter()
-                .map(|(family, given)| Name {
-                    family: Some(family.to_string()),
-                    given: Some(given.to_string()),
-                    ..Default::default()
-                })
-                .collect(),
-        ),
-        issued: Some(DateVariable {
-            date_parts: Some(vec![vec![year]]),
-            ..Default::default()
-        }),
-        title: Some(title.to_string()),
-        ..Default::default()
-    }
+) -> Reference {
+    let author_list: Vec<Contributor> = authors
+        .into_iter()
+        .map(|(family, given)| {
+            Contributor::StructuredName(StructuredName {
+                family: MultilingualString::Simple(family.to_string()),
+                given: MultilingualString::Simple(given.to_string()),
+                ..Default::default()
+            })
+        })
+        .collect();
+
+    Reference::Monograph(Box::new(Monograph {
+        id: Some(id.to_string()),
+        r#type: MonographType::Book,
+        title: Title::Single(title.to_string()),
+        author: Some(Contributor::ContributorList(ContributorList(author_list))),
+        editor: None,
+        translator: None,
+        issued: EdtfString(year.to_string()),
+        publisher: None,
+        url: None,
+        accessed: None,
+        language: None,
+        note: None,
+        isbn: None,
+        doi: None,
+        edition: None,
+        genre: None,
+        keywords: None,
+        original_date: None,
+        original_title: None,
+    }))
 }
 
-/// Create a LegacyReference for an article-journal.
-fn make_article(id: &str, family: &str, given: &str, year: i32, title: &str) -> LegacyReference {
-    LegacyReference {
-        id: id.to_string(),
-        ref_type: "article-journal".to_string(),
-        author: Some(vec![Name {
-            family: Some(family.to_string()),
-            given: Some(given.to_string()),
+/// Create a native Reference for an article-journal.
+fn make_article(id: &str, family: &str, given: &str, year: i32, title: &str) -> Reference {
+    Reference::SerialComponent(Box::new(SerialComponent {
+        id: Some(id.to_string()),
+        r#type: SerialComponentType::Article,
+        title: Some(Title::Single(title.to_string())),
+        author: Some(Contributor::StructuredName(StructuredName {
+            family: MultilingualString::Simple(family.to_string()),
+            given: MultilingualString::Simple(given.to_string()),
             ..Default::default()
-        }]),
-        issued: Some(DateVariable {
-            date_parts: Some(vec![vec![year]]),
-            ..Default::default()
+        })),
+        translator: None,
+        issued: EdtfString(year.to_string()),
+        parent: Parent::Embedded(Serial {
+            r#type: SerialType::AcademicJournal,
+            title: Title::Single(String::new()),
+            editor: None,
+            publisher: None,
+            issn: None,
         }),
-        title: Some(title.to_string()),
-        ..Default::default()
-    }
+        url: None,
+        accessed: None,
+        language: None,
+        note: None,
+        doi: None,
+        pages: None,
+        volume: None,
+        issue: None,
+        keywords: None,
+    }))
 }
 
-/// Create a LegacyReference for an article-journal with multiple authors.
+/// Create a native Reference for an article-journal with multiple authors.
 fn make_article_multi_author(
     id: &str,
     authors: Vec<(&str, &str)>,
     year: i32,
     title: &str,
-) -> LegacyReference {
-    LegacyReference {
-        id: id.to_string(),
-        ref_type: "article-journal".to_string(),
-        author: Some(
-            authors
-                .into_iter()
-                .map(|(family, given)| Name {
-                    family: Some(family.to_string()),
-                    given: Some(given.to_string()),
-                    ..Default::default()
-                })
-                .collect(),
-        ),
-        issued: Some(DateVariable {
-            date_parts: Some(vec![vec![year]]),
-            ..Default::default()
+) -> Reference {
+    let author_list: Vec<Contributor> = authors
+        .into_iter()
+        .map(|(family, given)| {
+            Contributor::StructuredName(StructuredName {
+                family: MultilingualString::Simple(family.to_string()),
+                given: MultilingualString::Simple(given.to_string()),
+                ..Default::default()
+            })
+        })
+        .collect();
+
+    Reference::SerialComponent(Box::new(SerialComponent {
+        id: Some(id.to_string()),
+        r#type: SerialComponentType::Article,
+        title: Some(Title::Single(title.to_string())),
+        author: Some(Contributor::ContributorList(ContributorList(author_list))),
+        translator: None,
+        issued: EdtfString(year.to_string()),
+        parent: Parent::Embedded(Serial {
+            r#type: SerialType::AcademicJournal,
+            title: Title::Single(String::new()),
+            editor: None,
+            publisher: None,
+            issn: None,
         }),
-        title: Some(title.to_string()),
-        ..Default::default()
-    }
+        url: None,
+        accessed: None,
+        language: None,
+        note: None,
+        doi: None,
+        pages: None,
+        volume: None,
+        issue: None,
+        keywords: None,
+    }))
 }
 
 // --- Test Execution Helpers ---
@@ -130,7 +185,7 @@ fn make_article_multi_author(
 /// `run_test_case_native_with_options()` instead.
 ///
 /// **Parameters**:
-/// - `input`: Vector of LegacyReference structs
+/// - `input`: Vector of native Reference structs
 /// - `citation_items`: Nested vector of citation item IDs (batches)
 /// - `expected`: Expected rendered output string
 /// - `mode`: Either "citation" (process citations) or "bibliography" (render full bibliography)
@@ -143,7 +198,7 @@ fn make_article_multi_author(
 /// run_test_case_native(&input, &citation_items, expected, "citation");
 /// ```
 fn run_test_case_native(
-    input: &[LegacyReference],
+    input: &[Reference],
     citation_items: &[Vec<&str>],
     expected: &str,
     mode: &str,
@@ -170,13 +225,13 @@ fn run_test_case_native(
 ///
 /// **Workflow**:
 /// 1. Builds an author-date style with the specified disambiguation flags
-/// 2. Converts LegacyReference structs into the processor's bibliography
+/// 2. Converts native Reference structs into the processor's bibliography
 /// 3. For citation mode: processes each citation batch and collects results
 /// 4. For bibliography mode: processes citations if provided, then renders full bibliography
 /// 5. Compares actual output against expected string (trimmed, line-by-line)
 ///
 /// **Parameters**:
-/// - `input`: Slice of LegacyReference structs
+/// - `input`: Slice of native Reference structs
 /// - `citation_items`: Nested slice of citation item IDs (batches of string slices)
 /// - `expected`: Expected output string
 /// - `mode`: "citation" or "bibliography"
@@ -201,7 +256,7 @@ fn run_test_case_native(
 /// Trims both expected and actual, then compares line-by-line. Logs both values
 /// for debugging via println! before assertion.
 fn run_test_case_native_with_options(
-    input: &[LegacyReference],
+    input: &[Reference],
     citation_items: &[Vec<&str>],
     expected: &str,
     mode: &str,
@@ -220,10 +275,12 @@ fn run_test_case_native_with_options(
         et_al_use_first,
     );
 
-    // Convert LegacyReference to InputReference
+    // Build bibliography from native references
     let mut bibliography = indexmap::IndexMap::new();
     for item in input.iter() {
-        bibliography.insert(item.id.clone(), Reference::from(item.clone()));
+        if let Some(id) = item.id() {
+            bibliography.insert(id, item.clone());
+        }
     }
 
     let processor = Processor::new(style, bibliography);
