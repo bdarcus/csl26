@@ -511,27 +511,153 @@ impl Processor {
     }
 
     /// Render the bibliography with grouping for uncited (nocite) items.
+    ///
+    /// If `style.bibliography.groups` is defined, uses configurable grouping
+    /// with per-group sorting. Otherwise, falls back to hardcoded cited/uncited
+    /// grouping for backward compatibility.
     pub fn render_grouped_bibliography_with_format<F>(&self) -> String
     where
         F: crate::render::format::OutputFormat<Output = String>,
     {
         let processed = self.process_references();
-        let fmt = F::default();
 
+        // Check if style defines custom groups
+        if let Some(bib_spec) = &self.style.bibliography {
+            if let Some(groups) = &bib_spec.groups {
+                return self.render_with_custom_groups::<F>(&processed.bibliography, groups);
+            }
+        }
+
+        // Fallback to hardcoded cited/uncited grouping
+        self.render_with_legacy_grouping::<F>(&processed.bibliography)
+    }
+
+    /// Render bibliography with configurable groups.
+    fn render_with_custom_groups<F>(
+        &self,
+        bibliography: &[ProcEntry],
+        groups: &[csln_core::BibliographyGroup],
+    ) -> String
+    where
+        F: crate::render::format::OutputFormat<Output = String>,
+    {
+        use crate::grouping::{GroupSorter, SelectorEvaluator};
+        use std::collections::HashSet;
+
+        let fmt = F::default();
+        let cited_ids = self.cited_ids.borrow();
+        let silent_ids = self.silent_ids.borrow();
+
+        let evaluator = SelectorEvaluator::new(&cited_ids, &silent_ids);
+        let sorter = GroupSorter::new(&self.locale);
+
+        let mut assigned: HashSet<String> = HashSet::new();
+        let mut result = String::new();
+
+        for group in groups {
+            // Find items matching this group's selector
+            let matching_entries: Vec<&ProcEntry> = bibliography
+                .iter()
+                .filter(|entry| !assigned.contains(&entry.id))
+                .filter(|entry| {
+                    // Get the reference for selector evaluation
+                    if let Some(reference) = self.bibliography.get(&entry.id) {
+                        evaluator.matches(reference, &group.selector)
+                    } else {
+                        false
+                    }
+                })
+                .collect();
+
+            if matching_entries.is_empty() {
+                continue;
+            }
+
+            // Mark as assigned (first-match semantics)
+            for entry in &matching_entries {
+                assigned.insert(entry.id.clone());
+            }
+
+            // Sort using per-group or global sort
+            let sorted_entries = if let Some(sort_spec) = &group.sort {
+                // Per-group sorting
+                let refs_with_entries: Vec<(&Reference, &ProcEntry)> = matching_entries
+                    .iter()
+                    .filter_map(|entry| {
+                        self.bibliography
+                            .get(&entry.id)
+                            .map(|reference| (reference, *entry))
+                    })
+                    .collect();
+
+                // Sort references, keeping track of their entries
+                let sorted_refs: Vec<&Reference> =
+                    refs_with_entries.iter().map(|(r, _)| *r).collect();
+                let sorted_refs = sorter.sort_references(sorted_refs, sort_spec);
+
+                // Map back to entries in sorted order
+                sorted_refs
+                    .into_iter()
+                    .filter_map(|r| {
+                        refs_with_entries
+                            .iter()
+                            .find(|(ref_r, _)| ref_r.id() == r.id())
+                            .map(|(_, entry)| *entry)
+                    })
+                    .collect()
+            } else {
+                // Use global bibliography sort (already sorted by process_references)
+                matching_entries
+            };
+
+            // Add group heading
+            if !result.is_empty() {
+                result.push_str("\n\n");
+            }
+            if let Some(heading) = &group.heading {
+                result.push_str(&format!("# {}\n\n", heading));
+            }
+
+            // Render entries
+            let entries_vec: Vec<ProcEntry> = sorted_entries.into_iter().cloned().collect();
+            result.push_str(&crate::render::refs_to_string_with_format::<F>(entries_vec));
+        }
+
+        // Fallback for ungrouped items
+        let unassigned: Vec<ProcEntry> = bibliography
+            .iter()
+            .filter(|e| !assigned.contains(&e.id))
+            .cloned()
+            .collect();
+
+        if !unassigned.is_empty() {
+            if !result.is_empty() {
+                result.push_str("\n\n");
+            }
+            result.push_str(&crate::render::refs_to_string_with_format::<F>(unassigned));
+        }
+
+        fmt.finish(result)
+    }
+
+    /// Legacy hardcoded cited/uncited grouping.
+    fn render_with_legacy_grouping<F>(&self, bibliography: &[ProcEntry]) -> String
+    where
+        F: crate::render::format::OutputFormat<Output = String>,
+    {
+        let fmt = F::default();
         let cited_ids = self.cited_ids.borrow();
         let silent_ids = self.silent_ids.borrow();
 
         // Items cited visibly
-        let cited_entries: Vec<ProcEntry> = processed
-            .bibliography
+        let cited_entries: Vec<ProcEntry> = bibliography
             .iter()
             .filter(|e| cited_ids.contains(&e.id))
             .cloned()
             .collect();
 
         // Items only cited silently (nocite) AND not cited visibly anywhere else
-        let uncited_entries: Vec<ProcEntry> = processed
-            .bibliography
+        let uncited_entries: Vec<ProcEntry> = bibliography
             .iter()
             .filter(|e| !cited_ids.contains(&e.id) && silent_ids.contains(&e.id))
             .cloned()
