@@ -145,6 +145,62 @@
 
         <!-- Examples Grid -->
         <section class="max-w-6xl mx-auto px-6 pb-24 grid gap-12">
+            <!-- Document Processing -->
+            <article
+                id="document-processing"
+                class="example-card rounded-xl overflow-hidden shadow-sm scroll-mt-24"
+            >
+                <div class="p-8 bg-slate-50 border-b border-slate-200">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div
+                            class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary"
+                        >
+                            <span class="material-icons">description</span>
+                        </div>
+                        <h2 class="text-2xl font-bold text-slate-900">
+                            Document Processing
+                        </h2>
+                    </div>
+                    <p class="text-slate-600 leading-relaxed mb-6">
+                        CSLN can process full documents by extracting citations using a high-performance 
+                        <code class="text-xs bg-slate-200 px-1 rounded">winnow</code> parser. It supports 
+                        the <strong class="text-slate-900">draft Djot citation syntax</strong>, including multi-cites and narrative (integral) modes.
+                    </p>
+                </div>
+
+                <div class="p-6 bg-white">
+                    <div class="grid gap-6">
+                        <!-- Djot Input -->
+                        <div class="border-l-4 border-slate-300 pl-4">
+                            <div
+                                class="text-xs font-semibold text-slate-500 uppercase mb-1"
+                            >
+                                Djot Input (paper.djot)
+                            </div>
+                            <div class="bg-slate-900 rounded p-3 overflow-x-auto mt-1">
+                                <pre class="font-mono text-xs text-slate-300 leading-relaxed">
+According to @kuhn1962[p. 10], revolutions are...
+Multi-cite: [see ;@kuhn1962; @watson1953, chapter: 2].
+Structured: [@kuhn1962, section: 5].</pre>
+                            </div>
+                        </div>
+
+                        <!-- Rendered Output -->
+                        <div class="border-l-4 border-emerald-500 pl-4">
+                            <div
+                                class="text-xs font-semibold text-slate-500 uppercase mb-1"
+                            >
+                                Rendered Output (Plain Text)
+                            </div>
+                            <div class="font-mono text-sm text-slate-900 mt-1">
+                                According to Kuhn (1962, p. 10), revolutions are...<br/>
+                                Multi-cite: (see Kuhn, 1962; Watson & Crick, 1953, ch. 2).
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </article>
+
             <!-- Advanced Citations: Narrative, Infix & Conjunctions -->
             <article
                 id="advanced-citations"
@@ -250,9 +306,9 @@
                 </div>
             </article>
 
-            <!-- Document Processing -->
+            <!-- Bibliography Grouping -->
             <article
-                id="document-processing"
+                id="bibliography-grouping"
                 class="example-card rounded-xl overflow-hidden shadow-sm scroll-mt-24"
             >
                 <div class="p-8 bg-slate-50 border-b border-slate-200">
@@ -260,53 +316,108 @@
                         <div
                             class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary"
                         >
-                            <span class="material-icons">description</span>
+                            <span class="material-icons">library_books</span>
                         </div>
                         <h2 class="text-2xl font-bold text-slate-900">
-                            Document Processing
+                            Bibliography Grouping
                         </h2>
                     </div>
                     <p class="text-slate-600 leading-relaxed mb-6">
-                        CSLN can process full documents by extracting citations using a high-performance 
-                        <code class="text-xs bg-slate-200 px-1 rounded">winnow</code> parser. It supports 
-                        the <strong class="text-slate-900">draft Djot citation syntax</strong>, including multi-cites and narrative (integral) modes.
+                        Divide bibliographies into labeled sections with distinct sorting rules. Essential for legal hierarchies (Bluebook) and multilingual bibliographies (culturally appropriate name ordering).
                     </p>
                 </div>
 
                 <div class="p-6 bg-white">
                     <div class="grid gap-6">
-                        <!-- Djot Input -->
-                        <div class="border-l-4 border-slate-300 pl-4">
+                        <!-- Legal Hierarchy Example -->
+                        <div class="border-l-4 border-indigo-500 pl-4">
                             <div
-                                class="text-xs font-semibold text-slate-500 uppercase mb-1"
+                                class="text-xs font-semibold text-slate-500 uppercase mb-2"
                             >
-                                Djot Input (paper.djot)
+                                Legal Hierarchy (Type-Based Grouping)
                             </div>
-                            <div class="bg-slate-900 rounded p-3 overflow-x-auto mt-1">
-                                <pre class="font-mono text-xs text-slate-300 leading-relaxed">
-According to @kuhn1962[p. 10], revolutions are...
-Multi-cite: [see ;@kuhn1962; @watson1953, chapter: 2].
-Structured: [@kuhn1962, section: 5].</pre>
+                            <div
+                                class="bg-slate-900 rounded p-4 overflow-x-auto mt-1"
+                            >
+                                <pre
+                                    class="font-mono text-xs text-slate-300 leading-relaxed"
+                                ><span class="text-indigo-400">bibliography</span>:
+  <span class="text-primary">groups</span>:
+    - <span class="text-primary">id</span>: <span class="text-emerald-400">primary-legal</span>
+      <span class="text-primary">heading</span>: <span class="text-emerald-400">"Primary Sources"</span>
+      <span class="text-primary">selector</span>:
+        <span class="text-primary">type</span>: [<span class="text-emerald-400">legal-case, statute, treaty</span>]
+      <span class="text-primary">sort</span>:
+        <span class="text-primary">template</span>:
+          - <span class="text-primary">key</span>: <span class="text-emerald-400">type</span>
+            <span class="text-primary">order</span>: [<span class="text-emerald-400">legal-case, statute, treaty</span>]
+          - <span class="text-primary">key</span>: <span class="text-emerald-400">issued</span></pre>
                             </div>
+                            <p class="text-xs text-slate-500 mt-2">
+                                Explicit type ordering ensures legal-case appears before statute, regardless of alphabetical content.
+                            </p>
                         </div>
 
-                        <!-- Rendered Output -->
-                        <div class="border-l-4 border-emerald-500 pl-4">
+                        <!-- Multilingual Example -->
+                        <div class="border-l-4 border-purple-500 pl-4">
                             <div
-                                class="text-xs font-semibold text-slate-500 uppercase mb-1"
+                                class="text-xs font-semibold text-slate-500 uppercase mb-2"
                             >
-                                Rendered Output (Plain Text)
+                                Multilingual (Per-Group Name Ordering)
                             </div>
-                            <div class="font-mono text-sm text-slate-900 mt-1">
-                                According to Kuhn (1962, p. 10), revolutions are...<br/>
-                                Multi-cite: (see Kuhn, 1962; Watson & Crick, 1953, ch. 2).
+                            <div
+                                class="bg-slate-900 rounded p-4 overflow-x-auto mt-1"
+                            >
+                                <pre
+                                    class="font-mono text-xs text-slate-300 leading-relaxed"
+                                ><span class="text-indigo-400">bibliography</span>:
+  <span class="text-primary">groups</span>:
+    - <span class="text-primary">id</span>: <span class="text-emerald-400">vietnamese</span>
+      <span class="text-primary">heading</span>: <span class="text-emerald-400">"Tài liệu tiếng Việt"</span>
+      <span class="text-primary">selector</span>:
+        <span class="text-primary">field</span>:
+          <span class="text-primary">language</span>: <span class="text-emerald-400">vi</span>
+      <span class="text-primary">sort</span>:
+        <span class="text-primary">template</span>:
+          - <span class="text-primary">key</span>: <span class="text-emerald-400">author</span>
+            <span class="text-primary">sort-order</span>: <span class="text-emerald-400">given-family</span>  <span class="text-slate-500"># Vietnamese convention</span>
+
+    - <span class="text-primary">id</span>: <span class="text-emerald-400">western</span>
+      <span class="text-primary">heading</span>: <span class="text-emerald-400">"Western Sources"</span>
+      <span class="text-primary">selector</span>:
+        <span class="text-primary">not</span>:
+          <span class="text-primary">field</span>:
+            <span class="text-primary">language</span>: <span class="text-emerald-400">vi</span>
+      <span class="text-primary">sort</span>:
+        <span class="text-primary">template</span>:
+          - <span class="text-primary">key</span>: <span class="text-emerald-400">author</span>
+            <span class="text-primary">sort-order</span>: <span class="text-emerald-400">family-given</span>  <span class="text-slate-500"># Western convention</span></pre>
                             </div>
+                            <p class="text-xs text-slate-500 mt-2">
+                                Vietnamese names use given-family ordering, Western names use family-given ordering.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-slate-50 p-6 border-t border-slate-200">
+                    <div class="flex items-start gap-3">
+                        <div
+                            class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary flex-shrink-0 mt-1"
+                        >
+                            <span class="material-icons text-sm"
+                                >lightbulb</span
+                            >
+                        </div>
+                        <div class="text-sm text-slate-600 leading-relaxed">
+                            <strong class="text-slate-900"
+                                >Key Features:</strong
+                            >
+                            First-match semantics prevent duplication. Selectors support type matching, field matching (language, keywords), citation status (visible/silent), and negation for fallback groups. See <a href="https://github.com/bdarcus/csl26/blob/main/docs/architecture/design/BIBLIOGRAPHY_GROUPING.md" class="text-primary hover:underline">design document</a> for full details.
                         </div>
                     </div>
                 </div>
             </article>
-
-            <!-- Advanced Dates -->
 
             <!-- Multilingual Support -->
             <article
@@ -487,6 +598,134 @@ Structured: [@kuhn1962, section: 5].</pre>
                 </div>
             </article>
 
+            <!-- Advanced Dates -->
+            <article
+                id="advanced-dates"
+                class="example-card rounded-xl overflow-hidden shadow-sm scroll-mt-24"
+            >
+                <div class="p-8 bg-slate-50 border-b border-slate-200">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div
+                            class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary"
+                        >
+                            <span class="material-icons">event</span>
+                        </div>
+                        <h2 class="text-2xl font-bold text-slate-900">
+                            Advanced Dates
+                        </h2>
+                    </div>
+                    <p class="text-slate-600 leading-relaxed mb-6">
+                        CSLN supports native <strong class="text-slate-900">EDTF (Extended Date/Time Format)</strong> 
+                        for handling complex historical ranges, uncertain or approximate dates, 
+                        and seasons.
+                    </p>
+                </div>
+
+                <div class="p-6 bg-white">
+                    <div class="grid gap-8">
+                        <!-- Date Ranges -->
+                        <div class="border-l-4 border-primary pl-4">
+                            <div class="text-xs font-semibold text-slate-500 uppercase mb-2">Date Intervals (Level 0)</div>
+                            <div class="bg-slate-900 rounded p-4 overflow-x-auto mt-1">
+                                <pre class="font-mono text-xs text-slate-300 leading-relaxed"><span class="text-indigo-400">issued</span>: <span class="text-emerald-400">"2023-05/2024-06"</span>  <span class="text-slate-500"># Closed interval</span>
+<span class="text-indigo-400">issued</span>: <span class="text-emerald-400">"2023-05/.."</span>        <span class="text-slate-500"># Open start</span>
+<span class="text-indigo-400">issued</span>: <span class="text-emerald-400">"../2023-05"</span>        <span class="text-slate-500"># Open end</span></pre>
+                            </div>
+                        </div>
+
+                        <!-- Uncertain & Approximate -->
+                        <div class="border-l-4 border-emerald-500 pl-4">
+                            <div class="text-xs font-semibold text-slate-500 uppercase mb-2">Uncertain & Approximate (Level 1)</div>
+                            <div class="bg-slate-900 rounded p-4 overflow-x-auto mt-1">
+                                <pre class="font-mono text-xs text-slate-300 leading-relaxed"><span class="text-indigo-400">issued</span>: <span class="text-emerald-400">"2004?"</span>              <span class="text-slate-500"># Uncertain year (2004?)</span>
+<span class="text-indigo-400">issued</span>: <span class="text-emerald-400">"2004~"</span>              <span class="text-slate-500"># Approximate year (ca. 2004)</span>
+<span class="text-indigo-400">issued</span>: <span class="text-emerald-400">"2004%"</span>              <span class="text-slate-500"># Uncertain & approximate</span>
+<span class="text-indigo-400">issued</span>: <span class="text-emerald-400">"2004-06-11?"</span>        <span class="text-slate-500"># Uncertain day only</span></pre>
+                            </div>
+                        </div>
+
+                        <!-- Seasons -->
+                        <div class="border-l-4 border-indigo-500 pl-4">
+                            <div class="text-xs font-semibold text-slate-500 uppercase mb-2">Seasons (Level 1)</div>
+                            <div class="bg-slate-900 rounded p-4 overflow-x-auto mt-1">
+                                <pre class="font-mono text-xs text-slate-300 leading-relaxed"><span class="text-indigo-400">issued</span>: <span class="text-emerald-400">"2023-21"</span>           <span class="text-slate-500"># Spring 2023</span>
+<span class="text-indigo-400">issued</span>: <span class="text-emerald-400">"2023-22"</span>           <span class="text-slate-500"># Summer 2023</span>
+<span class="text-indigo-400">issued</span>: <span class="text-emerald-400">"2023-23"</span>           <span class="text-slate-500"># Autumn 2023</span>
+<span class="text-indigo-400">issued</span>: <span class="text-emerald-400">"2023-24"</span>           <span class="text-slate-500"># Winter 2023</span></pre>
+                            </div>
+                        </div>
+
+                        <!-- Unspecified Digits -->
+                        <div class="border-l-4 border-rose-500 pl-4">
+                            <div class="text-xs font-semibold text-slate-500 uppercase mb-2">Unspecified Digits (Level 1)</div>
+                            <div class="bg-slate-900 rounded p-4 overflow-x-auto mt-1">
+                                <pre class="font-mono text-xs text-slate-300 leading-relaxed"><span class="text-indigo-400">issued</span>: <span class="text-emerald-400">"199u"</span>              <span class="text-slate-500"># Some time in the 1990s</span>
+<span class="text-indigo-400">issued</span>: <span class="text-emerald-400">"2004-uu-uu"</span>        <span class="text-slate-500"># Some time in 2004 (month/day unknown)</span></pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-slate-50 p-6 border-t border-slate-200">
+                    <div class="flex items-start gap-3">
+                        <div
+                            class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary flex-shrink-0 mt-1"
+                        >
+                            <span class="material-icons text-sm">history_edu</span>
+                        </div>
+                        <div class="text-sm text-slate-600 leading-relaxed">
+                            <strong class="text-slate-900">Fidelity First:</strong>
+                            Unlike CSL 1.0's structured date objects, CSLN uses EDTF strings as the primary exchange format, ensuring that semantic nuances like "approximate" or "unspecified" are preserved and can be localized by the processor according to the style's locale.
+                        </div>
+                    </div>
+                </div>
+            </article>
+
+            <!-- Options-Level Presets -->
+            <article
+                id="options-presets"
+                class="example-card rounded-xl overflow-hidden shadow-sm scroll-mt-24"
+            >
+                <div class="p-8 bg-slate-50 border-b border-slate-200">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div
+                            class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary"
+                        >
+                            <span class="material-icons">tune</span>
+                        </div>
+                        <h2 class="text-2xl font-bold text-slate-900">
+                            Options-Level Presets
+                        </h2>
+                    </div>
+                    <p class="text-slate-600 leading-relaxed mb-6">
+                        Common configuration patterns for contributors, dates,
+                        and titles can be expressed as a single preset name
+                        instead of spelling out every field. Mix preset
+                        shorthand with explicit overrides for maximum clarity
+                        and concision.
+                    </p>
+                </div>
+                <div class="bg-slate-900 p-6 overflow-x-auto">
+                    <pre
+                        class="font-mono text-sm text-slate-300 leading-relaxed"
+                    >
+<span class="text-slate-500"># Named presets replace verbose config blocks</span>
+<span class="text-indigo-400">options</span>:
+  <span class="text-primary">contributors</span>:            <span class="text-slate-500"># Explicit config (verbose)</span>
+    <span class="text-primary">display-as-sort</span>: <span class="text-emerald-400">all</span>
+    <span class="text-primary">initialize-with</span>: <span class="text-emerald-400">". "</span>
+    <span class="text-primary">delimiter</span>: <span class="text-emerald-400">", "</span>
+    <span class="text-primary">and</span>: <span class="text-emerald-400">symbol</span>
+  <span class="text-primary">dates</span>: <span class="text-emerald-400">long</span>              <span class="text-slate-500"># Preset shorthand</span>
+  <span class="text-primary">titles</span>: <span class="text-emerald-400">apa</span>             <span class="text-slate-500"># Preset shorthand</span>
+
+<span class="text-slate-500"># Available presets:</span>
+<span class="text-slate-500">#   contributors: apa | chicago | harvard | springer | vancouver</span>
+<span class="text-slate-500">#   dates:        long | short | numeric | iso</span>
+<span class="text-slate-500">#   titles:       apa | chicago | humanities | ieee | scientific</span></pre>
+                </div>
+            </article>
+
             <!-- Title Formatting & Declarative Links -->
             <article
                 id="titles-links"
@@ -600,112 +839,6 @@ Structured: [@kuhn1962, section: 5].</pre>
                 </div>
             </article>
 
-            <!-- Options-Level Presets -->
-            <article
-                id="options-presets"
-                class="example-card rounded-xl overflow-hidden shadow-sm scroll-mt-24"
-            >
-                <div class="p-8 bg-slate-50 border-b border-slate-200">
-                    <div class="flex items-center gap-3 mb-4">
-                        <div
-                            class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary"
-                        >
-                            <span class="material-icons">tune</span>
-                        </div>
-                        <h2 class="text-2xl font-bold text-slate-900">
-                            Options-Level Presets
-                        </h2>
-                    </div>
-                    <p class="text-slate-600 leading-relaxed mb-6">
-                        Common configuration patterns for contributors, dates,
-                        and titles can be expressed as a single preset name
-                        instead of spelling out every field. Mix preset
-                        shorthand with explicit overrides for maximum clarity
-                        and concision.
-                    </p>
-                </div>
-                <div class="bg-slate-900 p-6 overflow-x-auto">
-                    <pre
-                        class="font-mono text-sm text-slate-300 leading-relaxed"
-                    >
-<span class="text-slate-500"># Named presets replace verbose config blocks</span>
-<span class="text-indigo-400">options</span>:
-  <span class="text-primary">contributors</span>:            <span class="text-slate-500"># Explicit config (verbose)</span>
-    <span class="text-primary">display-as-sort</span>: <span class="text-emerald-400">all</span>
-    <span class="text-primary">initialize-with</span>: <span class="text-emerald-400">". "</span>
-    <span class="text-primary">delimiter</span>: <span class="text-emerald-400">", "</span>
-    <span class="text-primary">and</span>: <span class="text-emerald-400">symbol</span>
-  <span class="text-primary">dates</span>: <span class="text-emerald-400">long</span>              <span class="text-slate-500"># Preset shorthand</span>
-  <span class="text-primary">titles</span>: <span class="text-emerald-400">apa</span>             <span class="text-slate-500"># Preset shorthand</span>
-
-<span class="text-slate-500"># Available presets:</span>
-<span class="text-slate-500">#   contributors: apa | chicago | harvard | springer | vancouver</span>
-<span class="text-slate-500">#   dates:        long | short | numeric | iso</span>
-<span class="text-slate-500">#   titles:       apa | chicago | humanities | ieee | scientific</span></pre>
-                </div>
-            </article>
-
-            <!-- Binary Performance -->
-            <article
-                id="binary-performance"
-                class="example-card rounded-xl overflow-hidden shadow-sm scroll-mt-24"
-            >
-                <div class="p-8 bg-slate-50 border-b border-slate-200">
-                    <div class="flex items-center gap-3 mb-4">
-                        <div
-                            class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary"
-                        >
-                            <span class="material-icons">speed</span>
-                        </div>
-                        <h2 class="text-2xl font-bold text-slate-900">
-                            Binary Performance (CBOR)
-                        </h2>
-                    </div>
-                    <p class="text-slate-600 leading-relaxed mb-6">
-                        For production environments, CSLN styles and
-                        bibliographies can be compiled into binary CBOR (Concise
-                        Binary Object Representation) for near-instant loading.
-                    </p>
-                </div>
-                <div class="p-8 bg-white">
-                    <div class="grid md:grid-cols-2 gap-8">
-                        <div>
-                            <h4
-                                class="font-bold text-slate-900 mb-3 text-sm uppercase tracking-wider"
-                            >
-                                Compilation
-                            </h4>
-                            <div
-                                class="bg-slate-900 rounded-lg p-4 font-mono text-xs text-slate-300"
-                            >
-                                <span class="text-primary">$</span> csln convert
-                                apa.yaml --output apa.cbor
-                            </div>
-                            <p class="text-xs text-slate-500 mt-2 italic">
-                                Reduces parse time by up to 90% for large
-                                styles.
-                            </p>
-                        </div>
-                        <div>
-                            <h4
-                                class="font-bold text-slate-900 mb-3 text-sm uppercase tracking-wider"
-                            >
-                                Processing
-                            </h4>
-                            <div
-                                class="bg-slate-900 rounded-lg p-4 font-mono text-xs text-slate-300"
-                            >
-                                <span class="text-primary">$</span> csln process
-                                data.cbor style.cbor
-                            </div>
-                            <p class="text-xs text-slate-500 mt-2 italic">
-                                Full binary pipeline for maximum throughput.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            </article>
-
             <!-- Output Formats -->
             <article
                 id="output-formats"
@@ -807,9 +940,9 @@ Structured: [@kuhn1962, section: 5].</pre>
                 </div>
             </article>
 
-            <!-- Bibliography Grouping -->
+            <!-- Binary Performance -->
             <article
-                id="bibliography-grouping"
+                id="binary-performance"
                 class="example-card rounded-xl overflow-hidden shadow-sm scroll-mt-24"
             >
                 <div class="p-8 bg-slate-50 border-b border-slate-200">
@@ -817,104 +950,52 @@ Structured: [@kuhn1962, section: 5].</pre>
                         <div
                             class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary"
                         >
-                            <span class="material-icons">library_books</span>
+                            <span class="material-icons">speed</span>
                         </div>
                         <h2 class="text-2xl font-bold text-slate-900">
-                            Bibliography Grouping
+                            Binary Performance (CBOR)
                         </h2>
                     </div>
                     <p class="text-slate-600 leading-relaxed mb-6">
-                        Divide bibliographies into labeled sections with distinct sorting rules. Essential for legal hierarchies (Bluebook) and multilingual bibliographies (culturally appropriate name ordering).
+                        For production environments, CSLN styles and
+                        bibliographies can be compiled into binary CBOR (Concise
+                        Binary Object Representation) for near-instant loading.
                     </p>
                 </div>
-
-                <div class="p-6 bg-white">
-                    <div class="grid gap-6">
-                        <!-- Legal Hierarchy Example -->
-                        <div class="border-l-4 border-indigo-500 pl-4">
-                            <div
-                                class="text-xs font-semibold text-slate-500 uppercase mb-2"
+                <div class="p-8 bg-white">
+                    <div class="grid md:grid-cols-2 gap-8">
+                        <div>
+                            <h4
+                                class="font-bold text-slate-900 mb-3 text-sm uppercase tracking-wider"
                             >
-                                Legal Hierarchy (Type-Based Grouping)
-                            </div>
+                                Compilation
+                            </h4>
                             <div
-                                class="bg-slate-900 rounded p-4 overflow-x-auto mt-1"
+                                class="bg-slate-900 rounded-lg p-4 font-mono text-xs text-slate-300"
                             >
-                                <pre
-                                    class="font-mono text-xs text-slate-300 leading-relaxed"
-                                ><span class="text-indigo-400">bibliography</span>:
-  <span class="text-primary">groups</span>:
-    - <span class="text-primary">id</span>: <span class="text-emerald-400">primary-legal</span>
-      <span class="text-primary">heading</span>: <span class="text-emerald-400">"Primary Sources"</span>
-      <span class="text-primary">selector</span>:
-        <span class="text-primary">type</span>: [<span class="text-emerald-400">legal-case, statute, treaty</span>]
-      <span class="text-primary">sort</span>:
-        <span class="text-primary">template</span>:
-          - <span class="text-primary">key</span>: <span class="text-emerald-400">type</span>
-            <span class="text-primary">order</span>: [<span class="text-emerald-400">legal-case, statute, treaty</span>]
-          - <span class="text-primary">key</span>: <span class="text-emerald-400">issued</span></pre>
+                                <span class="text-primary">$</span> csln convert
+                                apa.yaml --output apa.cbor
                             </div>
-                            <p class="text-xs text-slate-500 mt-2">
-                                Explicit type ordering ensures legal-case appears before statute, regardless of alphabetical content.
+                            <p class="text-xs text-slate-500 mt-2 italic">
+                                Reduces parse time by up to 90% for large
+                                styles.
                             </p>
                         </div>
-
-                        <!-- Multilingual Example -->
-                        <div class="border-l-4 border-purple-500 pl-4">
-                            <div
-                                class="text-xs font-semibold text-slate-500 uppercase mb-2"
+                        <div>
+                            <h4
+                                class="font-bold text-slate-900 mb-3 text-sm uppercase tracking-wider"
                             >
-                                Multilingual (Per-Group Name Ordering)
-                            </div>
+                                Processing
+                            </h4>
                             <div
-                                class="bg-slate-900 rounded p-4 overflow-x-auto mt-1"
+                                class="bg-slate-900 rounded-lg p-4 font-mono text-xs text-slate-300"
                             >
-                                <pre
-                                    class="font-mono text-xs text-slate-300 leading-relaxed"
-                                ><span class="text-indigo-400">bibliography</span>:
-  <span class="text-primary">groups</span>:
-    - <span class="text-primary">id</span>: <span class="text-emerald-400">vietnamese</span>
-      <span class="text-primary">heading</span>: <span class="text-emerald-400">"Tài liệu tiếng Việt"</span>
-      <span class="text-primary">selector</span>:
-        <span class="text-primary">field</span>:
-          <span class="text-primary">language</span>: <span class="text-emerald-400">vi</span>
-      <span class="text-primary">sort</span>:
-        <span class="text-primary">template</span>:
-          - <span class="text-primary">key</span>: <span class="text-emerald-400">author</span>
-            <span class="text-primary">sort-order</span>: <span class="text-emerald-400">given-family</span>  <span class="text-slate-500"># Vietnamese convention</span>
-
-    - <span class="text-primary">id</span>: <span class="text-emerald-400">western</span>
-      <span class="text-primary">heading</span>: <span class="text-emerald-400">"Western Sources"</span>
-      <span class="text-primary">selector</span>:
-        <span class="text-primary">not</span>:
-          <span class="text-primary">field</span>:
-            <span class="text-primary">language</span>: <span class="text-emerald-400">vi</span>
-      <span class="text-primary">sort</span>:
-        <span class="text-primary">template</span>:
-          - <span class="text-primary">key</span>: <span class="text-emerald-400">author</span>
-            <span class="text-primary">sort-order</span>: <span class="text-emerald-400">family-given</span>  <span class="text-slate-500"># Western convention</span></pre>
+                                <span class="text-primary">$</span> csln process
+                                data.cbor style.cbor
                             </div>
-                            <p class="text-xs text-slate-500 mt-2">
-                                Vietnamese names use given-family ordering, Western names use family-given ordering.
+                            <p class="text-xs text-slate-500 mt-2 italic">
+                                Full binary pipeline for maximum throughput.
                             </p>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="bg-slate-50 p-6 border-t border-slate-200">
-                    <div class="flex items-start gap-3">
-                        <div
-                            class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary flex-shrink-0 mt-1"
-                        >
-                            <span class="material-icons text-sm"
-                                >lightbulb</span
-                            >
-                        </div>
-                        <div class="text-sm text-slate-600 leading-relaxed">
-                            <strong class="text-slate-900"
-                                >Key Features:</strong
-                            >
-                            First-match semantics prevent duplication. Selectors support type matching, field matching (language, keywords), citation status (visible/silent), and negation for fallback groups. See <a href="https://github.com/bdarcus/csl26/blob/main/docs/architecture/design/BIBLIOGRAPHY_GROUPING.md" class="text-primary hover:underline">design document</a> for full details.
                         </div>
                     </div>
                 </div>
