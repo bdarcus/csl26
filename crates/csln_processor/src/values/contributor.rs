@@ -503,19 +503,31 @@ pub fn format_names(
     let shorten = shorten_override.or_else(|| config.and_then(|c| c.shorten.as_ref()));
 
     let (first_names, use_et_al, last_names) = if let Some(opts) = shorten {
-        let use_first = hints.min_names_to_show.unwrap_or(opts.use_first as usize);
-        if names.len() >= opts.min as usize
-            || (hints.min_names_to_show.is_some() && names.len() > 1)
-        {
-            if use_first >= names.len() {
+        // Phase 3: Et-al Disambiguation Logic
+        // When min_names_to_show is set (name expansion disambiguation),
+        // determine effective threshold for et-al application.
+        let effective_min = if let Some(expanded) = hints.min_names_to_show {
+            // Name expansion disambiguation: show at least 'expanded' names.
+            // If normal et-al threshold is met, apply et-al but show 'expanded' names.
+            expanded.max(opts.use_first as usize)
+        } else {
+            // Normal mode: use standard et-al threshold
+            opts.use_first as usize
+        };
+
+        // Apply et-al only if the list exceeds the minimum threshold
+        if names.len() >= opts.min as usize {
+            if effective_min >= names.len() {
+                // Show all names (no et-al)
                 (names.iter().collect::<Vec<_>>(), false, Vec::new())
             } else {
+                // Apply et-al with effective minimum shown
                 let first: Vec<&crate::reference::FlatName> =
-                    names.iter().take(use_first).collect();
+                    names.iter().take(effective_min).collect();
                 let last: Vec<&crate::reference::FlatName> = if let Some(ul) = opts.use_last {
                     // Show ul last names. Ensure no overlap with first names.
                     let take_last = ul as usize;
-                    let skip = std::cmp::max(use_first, names.len().saturating_sub(take_last));
+                    let skip = std::cmp::max(effective_min, names.len().saturating_sub(take_last));
                     names.iter().skip(skip).collect()
                 } else {
                     Vec::new()
@@ -523,6 +535,7 @@ pub fn format_names(
                 (first, true, last)
             }
         } else {
+            // Below et-al threshold: show all names
             (names.iter().collect::<Vec<_>>(), false, Vec::new())
         }
     } else {

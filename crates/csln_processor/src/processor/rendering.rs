@@ -452,8 +452,7 @@ impl<'a> Renderer<'a> {
                     .unwrap_or(false);
 
                 if use_suffix {
-                    crate::values::int_to_letter((hints.group_index % 26) as u32)
-                        .unwrap_or_default()
+                    crate::values::int_to_letter(hints.group_index as u32).unwrap_or_default()
                 } else {
                     String::new()
                 }

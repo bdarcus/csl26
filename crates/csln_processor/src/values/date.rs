@@ -181,7 +181,7 @@ impl ComponentValues for TemplateDate {
                 .unwrap_or(false);
 
             if use_suffix {
-                int_to_letter((hints.group_index % 26) as u32)
+                int_to_letter(hints.group_index as u32)
             } else {
                 None
             }
@@ -208,5 +208,38 @@ pub fn int_to_letter(n: u32) -> Option<String> {
     if n == 0 {
         return None;
     }
-    char::from_u32(n + 96).map(|c| c.to_string())
+
+    let mut result = String::new();
+    let mut num = n - 1;
+
+    loop {
+        result.push((b'a' + (num % 26) as u8) as char);
+        if num < 26 {
+            break;
+        }
+        num = num / 26 - 1;
+    }
+
+    Some(result.chars().rev().collect())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_int_to_letter() {
+        // Test basic single-letter conversions (1-26)
+        assert_eq!(int_to_letter(1), Some("a".to_string()));
+        assert_eq!(int_to_letter(2), Some("b".to_string()));
+        assert_eq!(int_to_letter(26), Some("z".to_string()));
+
+        // Test double-letter conversions (27+)
+        assert_eq!(int_to_letter(27), Some("aa".to_string()));
+        assert_eq!(int_to_letter(52), Some("az".to_string()));
+        assert_eq!(int_to_letter(53), Some("ba".to_string()));
+
+        // Test zero returns None
+        assert_eq!(int_to_letter(0), None);
+    }
 }

@@ -4,6 +4,41 @@ use csln_core::options::Config;
 use std::collections::{HashMap, HashSet};
 
 /// Handles disambiguation logic for author-date citations.
+///
+/// Disambiguation resolves ambiguities when multiple references produce
+/// identical rendered strings. The processor applies strategies in cascade:
+///
+/// 1. **Name expansion** (`disambiguate-add-names`): If et-al is triggered
+///    in the base citation, try expanding the author list to differentiate
+///    references with same first author and year.
+///
+/// 2. **Given name expansion** (`disambiguate-add-givenname`): Add initials
+///    or full given names to author list to resolve remaining collisions
+///    (e.g., "Smith, John" vs "Smith, Jane").
+///
+/// 3. **Combined expansion**: Try showing both more names AND given names
+///    to maximize differentiation before falling back to year suffix.
+///
+/// 4. **Year suffix fallback** (`disambiguate-add-year-suffix`): If above
+///    strategies fail, append letters (a, b, c, ..., z, aa, ab, ...) to
+///    the year. Sorting is deterministic by reference title (lowercase).
+///
+/// ## Algorithm Overview
+///
+/// - References are grouped by author-year key (e.g., "smith:2020")
+/// - For each group with 2+ collisions, strategies are applied in order
+/// - Once a strategy resolves ambiguity, higher-priority strategies skip
+/// - Year suffix assignment is deterministic by title sort order
+///
+/// ## Output
+///
+/// Returns `ProcHints` for each reference containing:
+/// - `group_index`: Position within collision group (1-indexed)
+/// - `group_length`: Total references in collision group
+/// - `group_key`: Author-year key used for grouping
+/// - `disamb_condition`: Whether year suffix should be applied
+/// - `expand_given_names`: Whether to show given names/initials
+/// - `min_names_to_show`: Minimum author count for name expansion
 pub struct Disambiguator<'a> {
     bibliography: &'a Bibliography,
     config: &'a Config,
@@ -17,7 +52,39 @@ impl<'a> Disambiguator<'a> {
         }
     }
 
-    /// Calculate processing hints for disambiguation.
+    /// Calculate processing hints for disambiguation across all references.
+    ///
+    /// This is a single-pass algorithm that:
+    /// 1. Groups references by author-year collision key
+    /// 2. For each group with multiple references, applies disambiguation
+    ///    strategies in cascade order
+    /// 3. Returns pre-calculated hints for the renderer
+    ///
+    /// ## Cascade Order
+    ///
+    /// For each collision group:
+    /// - Try expanding author list (et-al → full names)
+    /// - Try adding given names/initials
+    /// - Try combined approach (more names + given names)
+    /// - Fall back to year suffix (a, b, c, ...)
+    ///
+    /// ## Performance
+    ///
+    /// - O(n) for grouping, where n = number of references
+    /// - O(g²) for collision detection within each group g
+    /// - Total: O(n + Σ(g²)) where typical g << n
+    ///
+    /// ## Example
+    ///
+    /// Input bibliography:
+    /// - Smith, John (2020) - "Article A"
+    /// - Smith, Jane (2020) - "Article B"
+    /// - Brown, Tom (2020) - "Article C"
+    ///
+    /// Output hints:
+    /// - "smith-john-2020": { expand_given_names: true, group_length: 2 }
+    /// - "smith-jane-2020": { expand_given_names: true, group_length: 2 }
+    /// - "brown-tom-2020": { } (no collision)
     pub fn calculate_hints(&self) -> HashMap<String, ProcHints> {
         let mut hints = HashMap::new();
 
