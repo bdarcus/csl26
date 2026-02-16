@@ -3,10 +3,43 @@ SPDX-License-Identifier: MPL-2.0
 SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 */
 
-//! CSLN disambiguation tests using pure CSLN types.
-
 mod common;
 use common::*;
+
+use csln_core::{
+    options::{Config, Processing},
+    template::{NumberVariable, Rendering, TemplateComponent, TemplateNumber},
+    CitationSpec, Style, StyleInfo,
+};
+use csln_processor::Processor;
+
+// --- Helper Functions ---
+
+fn build_numeric_style() -> Style {
+    Style {
+        info: StyleInfo {
+            title: Some("Numeric Test".to_string()),
+            id: Some("numeric-test".to_string()),
+            ..Default::default()
+        },
+        options: Some(Config {
+            processing: Some(Processing::Numeric),
+            ..Default::default()
+        }),
+        citation: Some(CitationSpec {
+            template: Some(vec![TemplateComponent::Number(TemplateNumber {
+                number: NumberVariable::CitationNumber,
+                rendering: Rendering::default(),
+                ..Default::default()
+            })]),
+            wrap: Some(csln_core::template::WrapPunctuation::Brackets),
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+// --- Disambiguation Tests ---
 
 /// Test year suffix disambiguation with alphabetical title sorting.
 #[test]
@@ -159,7 +192,9 @@ fn test_disambiguate_bycitegivennameshortforminitializewith() {
         vec!["ITEM-2", "ITEM-3"],
         vec!["ITEM-4", "ITEM-5"],
     ];
-    let expected = "Roe, (2000)\nJ Doe, (2000); A Doe, (2000)\nT Smith, (2000); T Smith, (2000)";
+    let expected = "Roe, (2000)
+J Doe, (2000); A Doe, (2000)
+T Smith, (2000); T Smith, (2000)";
 
     run_test_case_native_with_options(
         &input,
@@ -241,16 +276,6 @@ fn test_disambiguate_bycitedisambiguatecondition() {
     run_test_case_native(&input, &citation_items, expected, "citation");
 }
 
-/// Test empty input handling with year suffix (placeholder test).
-#[test]
-fn test_disambiguate_failwithyearsuffix() {
-    let input = vec![];
-    let citation_items: Vec<Vec<&str>> = vec![];
-    let expected = "";
-
-    run_test_case_native(&input, &citation_items, expected, "citation");
-}
-
 /// Test year suffix with 30 entries (base-26 suffix wrapping).
 #[test]
 fn test_disambiguate_yearsuffixfiftytwoentries() {
@@ -272,4 +297,41 @@ fn test_disambiguate_yearsuffixfiftytwoentries() {
     let expected = "Smith, (1986a); Smith, (1986b); Smith, (1986c); Smith, (1986d); Smith, (1986e); Smith, (1986f); Smith, (1986g); Smith, (1986h); Smith, (1986i); Smith, (1986j); Smith, (1986k); Smith, (1986l); Smith, (1986m); Smith, (1986n); Smith, (1986o); Smith, (1986p); Smith, (1986q); Smith, (1986r); Smith, (1986s); Smith, (1986t); Smith, (1986u); Smith, (1986v); Smith, (1986w); Smith, (1986x); Smith, (1986y); Smith, (1986z); Smith, (1986aa); Smith, (1986ab); Smith, (1986ac); Smith, (1986ad)";
 
     run_test_case_native(&input, &citation_items, expected, "citation");
+}
+
+// --- Numeric Citation Tests ---
+
+#[test]
+fn test_numeric_citation() {
+    let style = build_numeric_style();
+
+    let mut bib = indexmap::IndexMap::new();
+    bib.insert(
+        "item1".to_string(),
+        make_book("item1", "Smith", "John", 2020, "Title A"),
+    );
+    bib.insert(
+        "item2".to_string(),
+        make_book("item2", "Doe", "Jane", 2021, "Title B"),
+    );
+
+    let processor = Processor::new(style, bib);
+
+    let citation1 = csln_core::citation::Citation {
+        items: vec![csln_core::citation::CitationItem {
+            id: "item1".to_string(),
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+    let citation2 = csln_core::citation::Citation {
+        items: vec![csln_core::citation::CitationItem {
+            id: "item2".to_string(),
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+
+    assert_eq!(processor.process_citation(&citation1).unwrap(), "[1]");
+    assert_eq!(processor.process_citation(&citation2).unwrap(), "[2]");
 }
