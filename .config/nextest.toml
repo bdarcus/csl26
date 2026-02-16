@@ -1,3 +1,4 @@
+# Default profile for local development
 [profile.default]
 # Enable JUnit XML output for CI integration
 junit.path = "target/junit.xml"
@@ -15,18 +16,6 @@ slow-timeout = { period = "30s", terminate-after = "300s" }
 # Display output configuration
 verbose-output = false
 capture-output = true
-
-[scripts]
-# Script to run before all tests
-pre-run = ""
-
-# Script to run after all tests
-post-run = ""
-
-# This profile is used by default
-[profile.default]
-junit.path = "target/junit.xml"
-test-threads = "num-cpus"
 
 # For CI environments, use a more verbose profile
 [profile.ci]
