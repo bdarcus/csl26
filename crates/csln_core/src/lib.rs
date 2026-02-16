@@ -1,5 +1,4 @@
 #[cfg(feature = "schema")]
-#[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
