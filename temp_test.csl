@@ -1,0 +1,31 @@
+<style 
+      xmlns="http://purl.org/net/xbiblio/csl"
+      class="note"
+      version="1.0">
+  <info>
+    <id />
+    <title />
+    <updated>2009-08-10T04:49:00+09:00</updated>
+  </info>
+  <macro name="date">
+    <date variable="issued">
+      <date-part name="year" />
+    </date>
+    <text suffix="!" variable="year-suffix" />
+  </macro>
+  <citation 
+         disambiguate-add-year-suffix="true">
+    <layout delimiter="; ">
+      <text macro="date" />
+    </layout>
+  </citation>
+  <bibliography>
+    <sort>
+      <key variable="issued" />
+      <key variable="title" />
+    </sort>
+    <layout>
+      <text value="Ignore me" />
+    </layout>
+  </bibliography>
+</style>
