@@ -26,9 +26,6 @@ jobs:
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
 
-      - name: Install cargo-nextest
-        run: cargo install cargo-nextest
-
       - name: Check formatting
         run: cargo fmt --all -- --check
 
@@ -39,11 +36,4 @@ jobs:
         run: cargo build --verbose
 
       - name: Run tests
-        run: cargo nextest run --verbose
-
-      - name: Upload JUnit XML
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: junit-results
-          path: target/junit.xml
+        run: cargo test --verbose
