@@ -203,6 +203,20 @@ impl InputReference {
         }
     }
 
+    /// Return the note.
+    pub fn note(&self) -> Option<String> {
+        match self {
+            InputReference::Monograph(r) => r.note.clone(),
+            InputReference::CollectionComponent(r) => r.note.clone(),
+            InputReference::SerialComponent(r) => r.note.clone(),
+            InputReference::LegalCase(r) => r.note.clone(),
+            InputReference::Statute(r) => r.note.clone(),
+            InputReference::Treaty(r) => r.note.clone(),
+            InputReference::Standard(r) => r.note.clone(),
+            _ => None,
+        }
+    }
+
     /// Return the URL.
     pub fn url(&self) -> Option<Url> {
         match self {
