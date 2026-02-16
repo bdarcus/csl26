@@ -1,0 +1,73 @@
+references:
+  # Vietnamese references (language: vi)
+  # In Vietnamese, family names come first: Nguyễn Văn A
+  # Sorting should be by given name in Vietnamese convention
+
+  - id: nguyen2020
+    type: book  # MonographType::Book
+    title: Lịch sử Việt Nam
+    author:
+      - family: Nguyễn
+        given: Văn A
+    issued: "2020"
+    publisher:
+      name: Nhà xuất bản Giáo dục
+    language: vi
+
+  - id: tran2019
+    type: book  # MonographType::Book
+    title: Văn hóa truyền thống
+    author:
+      - family: Trần
+        given: Thị B
+    issued: "2019"
+    publisher:
+      name: Nhà xuất bản Văn hóa
+    language: vi
+
+  - id: le2021
+    type: book  # MonographType::Book
+    title: Kinh tế Việt Nam
+    author:
+      - family: Lê
+        given: Hoàng C
+    issued: "2021"
+    publisher:
+      name: Nhà xuất bản Thống kê
+    language: vi
+
+  # Western references (language: en or unspecified)
+  # Sorting should be by family name (Smith, Jones)
+
+  - id: smith2020
+    type: book  # MonographType::Book
+    title: Vietnamese History
+    author:
+      - family: Smith
+        given: John
+    issued: "2020"
+    publisher:
+      name: Oxford University Press
+    language: en
+
+  - id: jones2019
+    type: book  # MonographType::Book
+    title: Southeast Asian Culture
+    author:
+      - family: Jones
+        given: Mary
+    issued: "2019"
+    publisher:
+      name: Cambridge University Press
+    language: en
+
+  - id: brown2021
+    type: book  # MonographType::Book
+    title: Economic Development
+    author:
+      - family: Brown
+        given: David
+    issued: "2021"
+    publisher:
+      name: MIT Press
+    language: en

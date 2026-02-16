@@ -1,0 +1,60 @@
+info:
+  id: multilingual-academic
+  title: Multilingual Academic Citation (Juris-M Style)
+  description: >
+    Demonstrates per-group sorting for multilingual bibliographies.
+    Vietnamese references use given-family ordering, Western
+    references use family-given ordering.
+  default-locale: en-US
+
+options:
+  processing: author-date
+
+citation:
+  layout:
+    template:
+      - contributor: author
+        form: short
+      - date: issued
+        form: year
+        prefix: " "
+
+bibliography:
+  groups:
+    - id: vietnamese
+      heading: "Tài liệu tiếng Việt"
+      selector:
+        field:
+          language: vi
+      sort:
+        template:
+          - key: author
+            ascending: true
+            sort-order: given-family  # Vietnamese convention
+          - key: issued
+            ascending: false
+
+    - id: western
+      heading: "Western Sources"
+      selector:
+        not:
+          field:
+            language: vi
+      sort:
+        template:
+          - key: author
+            ascending: true
+            sort-order: family-given  # Western convention
+          - key: issued
+            ascending: false
+
+  template:
+    - contributor: author
+      form: long
+    - date: issued
+      form: year
+      wrap: parentheses
+      prefix: " "
+    - title: primary
+      emph: true
+      prefix: ". "
