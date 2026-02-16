@@ -1,11 +1,11 @@
 ---
 # csl26-rztf
 title: Implement disambiguation test coverage from CSL suite
-status: complete
+status: completed
 type: feature
 priority: high
 created_at: 2026-02-16T08:22:16Z
-updated_at: 2026-02-16T09:37:23Z
+updated_at: 2026-02-16T09:41:26Z
 ---
 
 **Context**: Disambiguation is implemented but needs comprehensive test coverage from CSL suite.
