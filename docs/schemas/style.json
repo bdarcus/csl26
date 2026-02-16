@@ -210,6 +210,17 @@
         "selector"
       ],
       "properties": {
+        "disambiguate": {
+          "description": "Optional disambiguation scope. - `globally` (default): Year suffixes are assigned across the whole bibliography. - `locally`: Year suffixes are assigned independently within this group.",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/DisambiguationScope"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "heading": {
           "description": "Optional heading to display above this group. Omit for no heading (e.g., fallback group).",
           "type": [
@@ -278,6 +289,17 @@
           "anyOf": [
             {
               "$ref": "#/definitions/Config"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "sort": {
+          "description": "Optional global bibliography sorting specification.\n\nWhen present, used for sorting the flat bibliography or as default for groups that don't specify their own sort.",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/GroupSort"
             },
             {
               "type": "null"
@@ -876,6 +898,25 @@
           "type": "boolean"
         }
       }
+    },
+    "DisambiguationScope": {
+      "description": "Scope for disambiguation (e.g., year suffix assignment).",
+      "oneOf": [
+        {
+          "description": "Disambiguate across all items in the bibliography.",
+          "type": "string",
+          "enum": [
+            "globally"
+          ]
+        },
+        {
+          "description": "Disambiguate only within the current group.",
+          "type": "string",
+          "enum": [
+            "locally"
+          ]
+        }
+      ]
     },
     "DisplayAsSort": {
       "description": "When to display names in sort order (family-first).",
