@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CSLN | Interactive HTML Demo</title>
   <link rel="stylesheet" href="assets/csln-interactive.css">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
   <style>
     body {
       font-family: system-ui, -apple-system, sans-serif;
@@ -20,6 +21,12 @@
       margin-bottom: 3rem;
       padding-bottom: 1rem;
     }
+    .nav-links {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
     .back-link {
       display: inline-flex;
       align-items: center;
@@ -27,7 +34,22 @@
       color: #2a94d6;
       text-decoration: none;
       font-weight: 500;
-      margin-bottom: 1rem;
+    }
+    .config-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: #666;
+      text-decoration: none;
+      font-size: 0.9rem;
+      padding: 0.4rem 0.8rem;
+      border-radius: 4px;
+      background: #eee;
+      transition: all 0.2s;
+    }
+    .config-link:hover {
+      background: #e2e2e2;
+      color: #333;
     }
     .controls {
       background: #f5f2eb;
@@ -61,7 +83,13 @@
 </head>
 <body>
 
-  <a href="index.html" class="back-link">← Back to Home</a>
+  <nav class="nav-links">
+    <a href="index.html" class="back-link">← Back to Home</a>
+    <a href="examples.html#web-interactivity" class="config-link">
+      <span class="material-icons" style="font-size: 1rem;">settings</span>
+      View Configuration
+    </a>
+  </nav>
 
   <header>
     <h1>CSLN Interactive HTML</h1>
