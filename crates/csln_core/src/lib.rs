@@ -271,6 +271,12 @@ pub struct BibliographySpec {
     /// names (e.g., "chapter", "article-journal").
     #[serde(skip_serializing_if = "Option::is_none")]
     pub type_templates: Option<HashMap<String, Template>>,
+    /// Optional global bibliography sorting specification.
+    ///
+    /// When present, used for sorting the flat bibliography or as default
+    /// for groups that don't specify their own sort.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sort: Option<grouping::GroupSort>,
     /// Optional bibliography grouping specification.
     ///
     /// When present, divides the bibliography into labeled sections with

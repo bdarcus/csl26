@@ -372,6 +372,17 @@ impl Processor {
 
     /// Sort references according to style instructions.
     pub fn sort_references<'a>(&self, references: Vec<&'a Reference>) -> Vec<&'a Reference> {
+        // Use global bibliography sort spec if present
+        if let Some(sort_spec) = self
+            .style
+            .bibliography
+            .as_ref()
+            .and_then(|b| b.sort.as_ref())
+        {
+            let sorter = crate::grouping::GroupSorter::new(&self.locale);
+            return sorter.sort_references(references, sort_spec);
+        }
+
         let sorter = Sorter::new(self.get_config(), &self.locale);
         sorter.sort_references(references)
     }
@@ -379,7 +390,20 @@ impl Processor {
     /// Calculate processing hints for disambiguation.
     pub fn calculate_hints(&self) -> HashMap<String, ProcHints> {
         let config = self.get_config();
-        let disambiguator = Disambiguator::new(&self.bibliography, config);
+
+        // Use global bibliography sort spec if present for year-suffix sorting
+        let bib_sort = self
+            .style
+            .bibliography
+            .as_ref()
+            .and_then(|b| b.sort.as_ref());
+
+        let disambiguator = if let Some(sort_spec) = bib_sort {
+            Disambiguator::with_group_sort(&self.bibliography, config, &self.locale, sort_spec)
+        } else {
+            Disambiguator::new(&self.bibliography, config, &self.locale)
+        };
+
         disambiguator.calculate_hints()
     }
 
@@ -568,6 +592,7 @@ impl Processor {
         F: crate::render::format::OutputFormat<Output = String>,
     {
         use crate::grouping::{GroupSorter, SelectorEvaluator};
+        use csln_core::grouping::DisambiguationScope;
         use std::collections::HashSet;
 
         let fmt = F::default();
@@ -582,58 +607,101 @@ impl Processor {
 
         for group in groups {
             // Find items matching this group's selector
-            let matching_entries: Vec<&ProcEntry> = bibliography
+            let matching_refs: Vec<&Reference> = bibliography
                 .iter()
                 .filter(|entry| !assigned.contains(&entry.id))
-                .filter(|entry| {
-                    // Get the reference for selector evaluation
-                    if let Some(reference) = self.bibliography.get(&entry.id) {
-                        evaluator.matches(reference, &group.selector)
-                    } else {
-                        false
-                    }
+                .filter_map(|entry| {
+                    self.bibliography
+                        .get(&entry.id)
+                        .filter(|reference| evaluator.matches(reference, &group.selector))
                 })
                 .collect();
 
-            if matching_entries.is_empty() {
+            if matching_refs.is_empty() {
                 continue;
             }
 
             // Mark as assigned (first-match semantics)
-            for entry in &matching_entries {
-                assigned.insert(entry.id.clone());
+            for r in &matching_refs {
+                if let Some(id) = r.id() {
+                    assigned.insert(id);
+                }
             }
 
             // Sort using per-group or global sort
-            let sorted_entries = if let Some(sort_spec) = &group.sort {
-                // Per-group sorting
-                let refs_with_entries: Vec<(&Reference, &ProcEntry)> = matching_entries
-                    .iter()
-                    .filter_map(|entry| {
-                        self.bibliography
-                            .get(&entry.id)
-                            .map(|reference| (reference, *entry))
-                    })
-                    .collect();
+            let sorted_refs = if let Some(sort_spec) = &group.sort {
+                sorter.sort_references(matching_refs, sort_spec)
+            } else {
+                // references in `matching_refs` are in original global-sort order
+                matching_refs
+            };
 
-                // Sort references, keeping track of their entries
-                let sorted_refs: Vec<&Reference> =
-                    refs_with_entries.iter().map(|(r, _)| *r).collect();
-                let sorted_refs = sorter.sort_references(sorted_refs, sort_spec);
+            // Handle local disambiguation if requested
+            let local_hints = if matches!(group.disambiguate, Some(DisambiguationScope::Locally)) {
+                let mut group_bib = Bibliography::new();
+                for r in &sorted_refs {
+                    group_bib.insert(r.id().unwrap_or_default(), (*r).clone());
+                }
+                let disambiguator = if let Some(sort_spec) = &group.sort {
+                    Disambiguator::with_group_sort(
+                        &group_bib,
+                        self.get_config(),
+                        &self.locale,
+                        sort_spec,
+                    )
+                } else {
+                    Disambiguator::new(&group_bib, self.get_config(), &self.locale)
+                };
+                Some(disambiguator.calculate_hints())
+            } else {
+                None
+            };
 
-                // Map back to entries in sorted order
+            // Re-render entries if local hints or local template is present
+            let entries_vec: Vec<ProcEntry> = if local_hints.is_some() || group.template.is_some() {
+                let hints = local_hints.as_ref().unwrap_or(&self.hints);
+                let bib_config = self.get_bibliography_config();
+
+                // Create a local style if we have a group-specific template
+                let effective_style = if let Some(group_template) = &group.template {
+                    let mut local_style = self.style.clone();
+                    if let Some(bib_spec) = local_style.bibliography.as_mut() {
+                        bib_spec.template = Some(group_template.clone());
+                    }
+                    std::borrow::Cow::Owned(local_style)
+                } else {
+                    std::borrow::Cow::Borrowed(&self.style)
+                };
+
+                let renderer = Renderer::new(
+                    &effective_style,
+                    &self.bibliography,
+                    &self.locale,
+                    &bib_config,
+                    hints,
+                    &self.citation_numbers,
+                );
+
                 sorted_refs
                     .into_iter()
-                    .filter_map(|r| {
-                        refs_with_entries
-                            .iter()
-                            .find(|(ref_r, _)| ref_r.id() == r.id())
-                            .map(|(_, entry)| *entry)
+                    .enumerate()
+                    .map(|(i, r)| ProcEntry {
+                        id: r.id().unwrap_or_default(),
+                        template: renderer
+                            .process_bibliography_entry(r, i + 1)
+                            .unwrap_or_default(),
+                        metadata: self.extract_metadata(r),
                     })
                     .collect()
             } else {
-                // Use global bibliography sort (already sorted by process_references)
-                matching_entries
+                // Use pre-rendered entries in sorted order
+                sorted_refs
+                    .into_iter()
+                    .filter_map(|r| {
+                        let id = r.id()?;
+                        bibliography.iter().find(|e| e.id == id).cloned()
+                    })
+                    .collect()
             };
 
             // Add group heading
@@ -645,7 +713,6 @@ impl Processor {
             }
 
             // Render entries
-            let entries_vec: Vec<ProcEntry> = sorted_entries.into_iter().cloned().collect();
             result.push_str(&crate::render::refs_to_string_with_format::<F>(entries_vec));
         }
 

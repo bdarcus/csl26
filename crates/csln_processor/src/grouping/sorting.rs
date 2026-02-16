@@ -212,13 +212,19 @@ mod tests {
         Locale::en_us()
     }
 
-    fn make_reference(id: &str, ref_type: &str, author_family: &str, year: i32) -> Reference {
+    fn make_reference(
+        id: &str,
+        ref_type: &str,
+        author_family: &str,
+        title: &str,
+        year: i32,
+    ) -> Reference {
         let json = serde_json::json!({
             "id": id,
             "type": ref_type,
             "author": [{"family": author_family, "given": "Test"}],
             "issued": {"date-parts": [[year]]},
-            "title": "Test Title",
+            "title": title,
             "container-title": "Test Container",
         });
         let legacy: csl_legacy::csl_json::Reference = serde_json::from_value(json).unwrap();
@@ -231,10 +237,10 @@ mod tests {
         let sorter = GroupSorter::new(&locale);
 
         // Use standard CSL JSON types for testing
-        let journal = make_reference("r1", "article-journal", "Smith", 1990);
-        let magazine = make_reference("r2", "article-magazine", "Jones", 2000);
-        let newspaper = make_reference("r3", "article-newspaper", "Brown", 1985);
-        let book = make_reference("r4", "book", "Davis", 1995);
+        let journal = make_reference("r1", "article-journal", "Smith", "Title J", 1990);
+        let magazine = make_reference("r2", "article-magazine", "Jones", "Title M", 2000);
+        let newspaper = make_reference("r3", "article-newspaper", "Brown", "Title N", 1985);
+        let book = make_reference("r4", "book", "Davis", "Title B", 1995);
 
         let mut refs = vec![&book, &newspaper, &journal, &magazine];
 
@@ -265,9 +271,9 @@ mod tests {
         let locale = make_locale();
         let sorter = GroupSorter::new(&locale);
 
-        let smith = make_reference("r1", "book", "Smith", 2000);
-        let jones = make_reference("r2", "book", "Jones", 2000);
-        let brown = make_reference("r3", "book", "Brown", 2000);
+        let smith = make_reference("r1", "book", "Smith", "Title", 2000);
+        let jones = make_reference("r2", "book", "Jones", "Title", 2000);
+        let brown = make_reference("r3", "book", "Brown", "Title", 2000);
 
         let mut refs = vec![&smith, &jones, &brown];
 
@@ -293,9 +299,9 @@ mod tests {
         let locale = make_locale();
         let sorter = GroupSorter::new(&locale);
 
-        let old = make_reference("r1", "book", "Smith", 1990);
-        let new = make_reference("r2", "book", "Jones", 2020);
-        let mid = make_reference("r3", "book", "Brown", 2005);
+        let old = make_reference("r1", "book", "Smith", "Title", 1990);
+        let new = make_reference("r2", "book", "Jones", "Title", 2020);
+        let mid = make_reference("r3", "book", "Brown", "Title", 2005);
 
         let mut refs = vec![&old, &new, &mid];
 
@@ -321,9 +327,9 @@ mod tests {
         let locale = make_locale();
         let sorter = GroupSorter::new(&locale);
 
-        let smith2020 = make_reference("r1", "book", "Smith", 2020);
-        let smith2010 = make_reference("r2", "book", "Smith", 2010);
-        let jones2020 = make_reference("r3", "book", "Jones", 2020);
+        let smith2020 = make_reference("r1", "book", "Smith", "Title", 2020);
+        let smith2010 = make_reference("r2", "book", "Smith", "Title", 2010);
+        let jones2020 = make_reference("r3", "book", "Jones", "Title", 2020);
 
         let mut refs = vec![&smith2020, &jones2020, &smith2010];
 
@@ -350,5 +356,68 @@ mod tests {
         assert_eq!(refs[0].id().unwrap(), "r3"); // Jones 2020
         assert_eq!(refs[1].id().unwrap(), "r1"); // Smith 2020
         assert_eq!(refs[2].id().unwrap(), "r2"); // Smith 2010
+    }
+
+    #[test]
+    fn test_legal_citation_sort() {
+        let locale = make_locale();
+        let sorter = GroupSorter::new(&locale);
+
+        let case_a = make_reference("r1", "legal-case", "", "Doe v. Smith", 1990);
+        let case_b = make_reference("r2", "legal-case", "", "Brown v. Board", 1954);
+
+        let mut refs = vec![&case_a, &case_b];
+
+        let sort_spec = GroupSort {
+            template: vec![
+                GroupSortKey {
+                    key: GroupSortKeyType::Title, // Case name
+                    ascending: true,
+                    order: None,
+                    sort_order: None,
+                },
+                GroupSortKey {
+                    key: GroupSortKeyType::Issued,
+                    ascending: true,
+                    order: None,
+                    sort_order: None,
+                },
+            ],
+        };
+
+        refs = sorter.sort_references(refs, &sort_spec);
+        assert_eq!(refs[0].id().unwrap(), "r2"); // Brown v. Board
+    }
+
+    #[test]
+    fn test_legal_hierarchy_sort() {
+        let locale = make_locale();
+        let sorter = GroupSorter::new(&locale);
+
+        let statute = make_reference("r1", "statute", "", "Clean Air Act", 1970);
+        let case = make_reference("r2", "legal-case", "", "Roe v. Wade", 1973);
+        let treaty = make_reference("r3", "treaty", "", "Paris Agreement", 2015);
+
+        let mut refs = vec![&treaty, &case, &statute];
+
+        let sort_spec = GroupSort {
+            template: vec![GroupSortKey {
+                key: GroupSortKeyType::RefType,
+                ascending: true,
+                order: Some(vec![
+                    "legal-case".to_string(),
+                    "statute".to_string(),
+                    "treaty".to_string(),
+                ]),
+                sort_order: None,
+            }],
+        };
+
+        refs = sorter.sort_references(refs, &sort_spec);
+
+        // Hierarchy: case, statute, treaty
+        assert_eq!(refs[0].id().unwrap(), "r2");
+        assert_eq!(refs[1].id().unwrap(), "r1");
+        assert_eq!(refs[2].id().unwrap(), "r3");
     }
 }
