@@ -8,21 +8,22 @@ junit.store-success-output = false
 test-threads = "num-cpus"
 
 # Disable retries for deterministic results
-retries = { backoff = "exponential", count = 0 }
+retries = 0
 
 # Show test timing information
-slow-timeout = { period = "30s", terminate-after = "300s" }
+slow-timeout = { period = "30s", terminate-after = 10 }
 
 # Display output configuration
-verbose-output = false
-capture-output = true
+status-level = "pass"
+success-output = "never"
+failure-output = "immediate"
 
 # For CI environments, use a more verbose profile
 [profile.ci]
-# In CI, disable per-test stdout capture for better debugging
-capture-output = false
-# Enable all output
-verbose-output = true
+# Show all test output immediately for better debugging
+status-level = "all"
+success-output = "immediate"
+failure-output = "immediate"
 # Fail fast on first error
 fail-fast = true
 junit.path = "target/junit.xml"
@@ -32,7 +33,8 @@ test-threads = "num-cpus"
 # For rapid local development
 [profile.quick]
 # Use fewer threads for faster turnaround on smaller machines
-test-threads = "2"
-# Don't capture output (faster)
-capture-output = false
-verbose-output = false
+test-threads = 2
+# Show failures only for faster feedback
+status-level = "fail"
+success-output = "never"
+failure-output = "immediate"
