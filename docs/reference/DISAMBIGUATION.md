@@ -110,7 +110,37 @@ Smith, J. (1985)
 All-names (after disambiguation):
 Smith, John (1980)
 Smith, Jane (1985)
+Smith, Jane (1985)
 ```
+
+## Group-Aware Disambiguation
+
+CSLN supports advanced disambiguation controls within bibliography groups. This is essential for legal bibliographies or multilingual works where local sorting rules must drive year suffix assignment.
+
+### Group-Aware Sorting
+
+When a `BibliographyGroup` defines a custom `sort`, the `Disambiguator` respects that sort order for year suffix assignment (e.g., 2020a, 2020b). This ensures suffixes follow the logic of the group (like Case Name) rather than the default global sort.
+
+### Localized Suffixes
+
+The `disambiguate: locally` option allows a group to perform disambiguation independently of the rest of the bibliography.
+
+- **Scenario:** A legal style may want suffixes in the "Cases" group to start from "a" even if those same years were used in the "Books" group.
+- **Behavior:** Suffix sequences reset at the start of the group.
+
+```yaml
+groups:
+  - id: cases
+    heading: "Cases"
+    disambiguate: locally
+    sort:
+      template:
+        - key: title  # Sort cases by name
+```
+
+### Locale-Aware Collation
+
+Disambiguation is culturally aware. By passing a `Locale` to the disambiguator, CSLN ensures that name matching and sorting follow locale-specific rules (e.g., handling of particles, diacritics, and transliterations in keys).
 
 ## Combined Strategies
 

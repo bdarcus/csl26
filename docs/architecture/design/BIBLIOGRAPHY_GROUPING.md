@@ -108,6 +108,15 @@ pub struct BibliographyGroup {
     /// Optional per-group template override
     #[serde(skip_serializing_if = "Option::is_none")]
     pub template: Option<Template>,
+
+    /// Optional disambiguation scope
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub disambiguate: Option<DisambiguationScope>,
+}
+
+pub enum DisambiguationScope {
+    Globally,  // Default: cross-group suffixes
+    Locally,   // Reset suffixes within this group
 }
 
 pub struct GroupSelector {
