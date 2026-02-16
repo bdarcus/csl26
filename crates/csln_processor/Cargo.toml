@@ -27,6 +27,8 @@ jotdown = "0.5"
 
 [dev-dependencies]
 criterion = { version = "0.5", features = ["html_reports"] }
+csln_migrate = { path = "../csln_migrate" }
+roxmltree = "0.20"
 
 [[bench]]
 name = "rendering"
