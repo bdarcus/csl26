@@ -78,17 +78,27 @@ For systems programmers contributing directly to the Rust codebase:
 
 ### Before Submitting a PR
 
-1. Run pre-commit checks:
+1. Install nextest for faster parallel test execution (optional but recommended):
+   ```bash
+   cargo install cargo-nextest
+   ```
+
+2. Run pre-commit checks:
+   ```bash
+   cargo fmt && cargo clippy --all-targets --all-features -- -D warnings && cargo nextest run
+   ```
+
+   If nextest is not installed, fall back to:
    ```bash
    cargo fmt && cargo clippy --all-targets --all-features -- -D warnings && cargo test
    ```
 
-2. Verify against oracle (for rendering changes):
+3. Verify against oracle (for rendering changes):
    ```bash
    node scripts/oracle.js styles-legacy/apa.csl
    ```
 
-3. Follow [Conventional Commits](https://www.conventionalcommits.org/) format:
+4. Follow [Conventional Commits](https://www.conventionalcommits.org/) format:
    ```
    type(scope): lowercase subject
 

@@ -1,0 +1,49 @@
+[profile.default]
+# Enable JUnit XML output for CI integration
+junit.path = "target/junit.xml"
+junit.store-success-output = false
+
+# Default parallel execution (auto-detect CPU count)
+test-threads = "num-cpus"
+
+# Disable retries for deterministic results
+retries = { backoff = "exponential", count = 0 }
+
+# Show test timing information
+slow-timeout = { period = "30s", terminate-after = "300s" }
+
+# Display output configuration
+verbose-output = false
+capture-output = true
+
+[scripts]
+# Script to run before all tests
+pre-run = ""
+
+# Script to run after all tests
+post-run = ""
+
+# This profile is used by default
+[profile.default]
+junit.path = "target/junit.xml"
+test-threads = "num-cpus"
+
+# For CI environments, use a more verbose profile
+[profile.ci]
+# In CI, disable per-test stdout capture for better debugging
+capture-output = false
+# Enable all output
+verbose-output = true
+# Fail fast on first error
+fail-fast = true
+junit.path = "target/junit.xml"
+junit.store-success-output = false
+test-threads = "num-cpus"
+
+# For rapid local development
+[profile.quick]
+# Use fewer threads for faster turnaround on smaller machines
+test-threads = "2"
+# Don't capture output (faster)
+capture-output = false
+verbose-output = false

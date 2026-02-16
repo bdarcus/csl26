@@ -15,13 +15,21 @@ You are a **Lead Systems Architect and Principal Rust Engineer** for the CSL Nex
 **Mandatory Pre-Commit Checks:**
 Before committing changes that affect Rust code (`.rs` files, `Cargo.toml`, `Cargo.lock`), you MUST run:
 ```bash
-cargo fmt && cargo clippy --all-targets --all-features -- -D warnings && cargo test
+cargo fmt && cargo clippy --all-targets --all-features -- -D warnings && cargo nextest run
 ```
 
 These checks are non-negotiable quality gates for Rust changes:
 - `cargo fmt` - Code formatting (CI will fail without this)
 - `cargo clippy` - Zero-tolerance linting
-- `cargo test` - All tests must pass
+- `cargo nextest run` - All tests must pass (parallel execution with JUnit reporting)
+
+**Fallback to cargo test:**
+If `cargo nextest` is not installed, use `cargo test` instead:
+```bash
+cargo fmt && cargo clippy --all-targets --all-features -- -D warnings && cargo test
+```
+
+To install nextest: `cargo install cargo-nextest`
 
 **If ANY check fails, DO NOT commit. Fix the issues first.**
 
@@ -448,7 +456,10 @@ Specialized expertise is available via the following skills in `.claude/skills/`
 See **[docs/RENDERING_WORKFLOW.md](./docs/RENDERING_WORKFLOW.md)** for detailed workflow guide.
 
 ```bash
-# Run all tests
+# Run all tests (parallel execution with nextest)
+cargo nextest run
+
+# Run tests with fallback if nextest not installed
 cargo test
 
 # Recommended workflow test (structured oracle + batch impact)
@@ -532,7 +543,7 @@ Follow these conventions for all commits:
 
 Example (Rust code change):
 ```bash
-cargo fmt && cargo clippy && cargo test && \
+cargo fmt && cargo clippy && cargo nextest run && \
 git add -A && git commit -m "fix(migrate): prevent duplicate list variables
 
 Add post-processing step to detect variables appearing in both
@@ -565,7 +576,7 @@ For normal bug fixes, small features, and refactoring, commit directly to main.
 ```bash
 # 1. Make changes
 # 2. If Rust code changed: run pre-commit checks and commit
-cargo fmt && cargo clippy && cargo test && git add -A && git commit -m "fix: your message"
+cargo fmt && cargo clippy && cargo nextest run && git add -A && git commit -m "fix: your message"
 # 2. If docs/styles only: commit directly
 git add -A && git commit -m "docs: your message"
 # 3. Push to main
@@ -578,7 +589,7 @@ git push origin main
 git checkout -b feat/major-change
 # 2. Make changes
 # 3. If Rust code changed: run pre-commit checks and commit
-cargo fmt && cargo clippy && cargo test && git add -A && git commit -m "feat: your message"
+cargo fmt && cargo clippy && cargo nextest run && git add -A && git commit -m "feat: your message"
 # 4. Push branch
 git push -u origin feat/major-change
 # 5. Optionally create PR for review, or merge locally and push to main
