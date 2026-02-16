@@ -43,9 +43,14 @@ Display full bean contents including body and metadata.
 ```
 Create a new bean.
 
-**Types:** task (default), bug, feature, milestone, epic
+**Types:** task (default), bug, feature, milestone, epic (only these 5 are valid)
 **Priorities:** critical, high, normal (default), low, deferred
 **Statuses:** todo (default), in-progress, draft, completed, scrapped
+
+**Note:** For categorization beyond core types (e.g., tech-debt, refactor), use `--tag` instead:
+```
+/beans create "Title" --type task --tag tech-debt --tag refactor
+```
 
 **Examples:**
 - `/beans create "Fix parser bug" --type bug --priority critical`
