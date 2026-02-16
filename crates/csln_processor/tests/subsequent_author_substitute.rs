@@ -1,4 +1,11 @@
-use csl_legacy::csl_json::{DateVariable, Name, Reference as LegacyReference};
+/*
+SPDX-License-Identifier: MPL-2.0
+SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
+*/
+
+mod common;
+use common::*;
+
 use csln_core::{
     options::{BibliographyConfig, Config, ContributorConfig, Processing},
     template::{
@@ -7,7 +14,6 @@ use csln_core::{
     },
     BibliographySpec, Style, StyleInfo,
 };
-use csln_processor::reference::Reference;
 use csln_processor::Processor;
 
 fn make_style_with_substitute(substitute: Option<String>) -> Style {
@@ -38,16 +44,7 @@ fn make_style_with_substitute(substitute: Option<String>) -> Style {
                 TemplateComponent::Contributor(TemplateContributor {
                     contributor: ContributorRole::Author,
                     form: ContributorForm::Long,
-                    label: None,
-                    name_order: None,
-                    delimiter: None,
-                    sort_separator: None,
-                    shorten: None,
-                    and: None,
-                    rendering: Rendering::default(),
-                    links: None,
-                    overrides: None,
-                    custom: None,
+                    ..Default::default()
                 }),
                 TemplateComponent::Date(TemplateDate {
                     date: TDateVar::Issued,
@@ -67,26 +64,11 @@ fn test_subsequent_author_substitute() {
     let style = make_style_with_substitute(Some("———".to_string()));
 
     let mut bib = indexmap::IndexMap::new();
-    bib.insert(
-        "ref1".to_string(),
-        Reference::from(LegacyReference {
-            id: "ref1".to_string(),
-            ref_type: "book".to_string(),
-            author: Some(vec![Name::new("Smith", "John")]),
-            issued: Some(DateVariable::year(2020)),
-            ..Default::default()
-        }),
-    );
-    bib.insert(
-        "ref2".to_string(),
-        Reference::from(LegacyReference {
-            id: "ref2".to_string(),
-            ref_type: "book".to_string(),
-            author: Some(vec![Name::new("Smith", "John")]),
-            issued: Some(DateVariable::year(2021)),
-            ..Default::default()
-        }),
-    );
+    let ref1 = make_book("ref1", "Smith", "John", 2020, "Book A");
+    let ref2 = make_book("ref2", "Smith", "John", 2021, "Book B");
+
+    bib.insert("ref1".to_string(), ref1);
+    bib.insert("ref2".to_string(), ref2);
 
     let processor = Processor::new(style, bib);
     let result = processor.render_bibliography();
@@ -102,26 +84,11 @@ fn test_no_substitute_if_different() {
     let style = make_style_with_substitute(Some("———".to_string()));
 
     let mut bib = indexmap::IndexMap::new();
-    bib.insert(
-        "ref1".to_string(),
-        Reference::from(LegacyReference {
-            id: "ref1".to_string(),
-            ref_type: "book".to_string(),
-            author: Some(vec![Name::new("Smith", "John")]),
-            issued: Some(DateVariable::year(2020)),
-            ..Default::default()
-        }),
-    );
-    bib.insert(
-        "ref2".to_string(),
-        Reference::from(LegacyReference {
-            id: "ref2".to_string(),
-            ref_type: "book".to_string(),
-            author: Some(vec![Name::new("Doe", "Jane")]),
-            issued: Some(DateVariable::year(2021)),
-            ..Default::default()
-        }),
-    );
+    let ref1 = make_book("ref1", "Smith", "John", 2020, "Book A");
+    let ref2 = make_book("ref2", "Doe", "Jane", 2021, "Book B");
+
+    bib.insert("ref1".to_string(), ref1);
+    bib.insert("ref2".to_string(), ref2);
 
     let processor = Processor::new(style, bib);
     let result = processor.render_bibliography();

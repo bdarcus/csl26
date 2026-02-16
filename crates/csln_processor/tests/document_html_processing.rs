@@ -1,4 +1,11 @@
-use csl_legacy::csl_json::{DateVariable, Name, Reference as LegacyReference};
+/*
+SPDX-License-Identifier: MPL-2.0
+SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
+*/
+
+mod common;
+use common::*;
+
 use csln_core::{
     options::{BibliographyConfig, Config, Processing},
     template::{
@@ -9,7 +16,6 @@ use csln_core::{
 };
 use csln_processor::{
     processor::document::{djot::DjotParser, DocumentFormat},
-    reference::Reference,
     Processor,
 };
 
@@ -37,16 +43,7 @@ fn test_document_html_output_contains_heading() {
                 TemplateComponent::Contributor(TemplateContributor {
                     contributor: ContributorRole::Author,
                     form: ContributorForm::Long,
-                    label: None,
-                    name_order: None,
-                    delimiter: None,
-                    sort_separator: None,
-                    shorten: None,
-                    and: None,
-                    rendering: Rendering::default(),
-                    links: None,
-                    overrides: None,
-                    custom: None,
+                    ..Default::default()
                 }),
                 TemplateComponent::Date(TemplateDate {
                     date: TDateVar::Issued,
@@ -62,17 +59,14 @@ fn test_document_html_output_contains_heading() {
 
     // Create a bibliography with one reference
     let mut bibliography = indexmap::IndexMap::new();
-    bibliography.insert(
-        "kuhn1962".to_string(),
-        Reference::from(LegacyReference {
-            id: "kuhn1962".to_string(),
-            ref_type: "book".to_string(),
-            author: Some(vec![Name::new("Kuhn", "Thomas S.")]),
-            title: Some("The Structure of Scientific Revolutions".to_string()),
-            issued: Some(DateVariable::year(1962)),
-            ..Default::default()
-        }),
+    let kuhn = make_book(
+        "kuhn1962",
+        "Kuhn",
+        "Thomas S.",
+        1962,
+        "The Structure of Scientific Revolutions",
     );
+    bibliography.insert("kuhn1962".to_string(), kuhn);
 
     // Create processor
     let processor = Processor::new(style, bibliography);
@@ -132,16 +126,7 @@ fn test_document_djot_output_unmodified() {
                 TemplateComponent::Contributor(TemplateContributor {
                     contributor: ContributorRole::Author,
                     form: ContributorForm::Long,
-                    label: None,
-                    name_order: None,
-                    delimiter: None,
-                    sort_separator: None,
-                    shorten: None,
-                    and: None,
-                    rendering: Rendering::default(),
-                    links: None,
-                    overrides: None,
-                    custom: None,
+                    ..Default::default()
                 }),
                 TemplateComponent::Date(TemplateDate {
                     date: TDateVar::Issued,
@@ -157,17 +142,8 @@ fn test_document_djot_output_unmodified() {
 
     // Create a bibliography
     let mut bibliography = indexmap::IndexMap::new();
-    bibliography.insert(
-        "ref1".to_string(),
-        Reference::from(LegacyReference {
-            id: "ref1".to_string(),
-            ref_type: "book".to_string(),
-            author: Some(vec![Name::new("Author", "Name")]),
-            title: Some("Title".to_string()),
-            issued: Some(DateVariable::year(2020)),
-            ..Default::default()
-        }),
-    );
+    let ref1 = make_book("ref1", "Author", "Name", 2020, "Title");
+    bibliography.insert("ref1".to_string(), ref1);
 
     let processor = Processor::new(style, bibliography);
     let document = "Document with citation [@ref1].";

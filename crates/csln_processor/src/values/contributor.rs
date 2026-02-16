@@ -54,7 +54,7 @@ impl ComponentValues for TemplateContributor {
                 .multilingual
                 .as_ref()
                 .and_then(|m| m.preferred_script.as_ref());
-            let locale_str = "en"; // TODO: get from options.locale
+            let locale_str = &options.locale.locale;
 
             crate::values::resolve_multilingual_name(&contrib, mode, preferred_script, locale_str)
         } else {
@@ -86,7 +86,7 @@ impl ComponentValues for TemplateContributor {
                                 .multilingual
                                 .as_ref()
                                 .and_then(|m| m.preferred_script.as_ref());
-                            let locale_str = "en"; // TODO: get from options.locale
+                            let locale_str = &options.locale.locale;
 
                             let names_vec = crate::values::resolve_multilingual_name(
                                 &editors,
@@ -213,7 +213,7 @@ impl ComponentValues for TemplateContributor {
                                 .multilingual
                                 .as_ref()
                                 .and_then(|m| m.preferred_script.as_ref());
-                            let locale_str = "en"; // TODO: get from options.locale
+                            let locale_str = &options.locale.locale;
 
                             let names_vec = crate::values::resolve_multilingual_name(
                                 &translators,
