@@ -5,7 +5,7 @@ status: in-progress
 type: feature
 priority: normal
 created_at: 2026-02-15T00:00:00Z
-updated_at: 2026-02-16T01:05:04Z
+updated_at: 2026-02-16T01:11:58Z
 ---
 
 Implement configurable bibliography grouping system.
@@ -41,3 +41,7 @@ See docs/architecture/design/BIBLIOGRAPHY_GROUPING.md for full design.
 
 Phase 1 complete ✅: Schema extension in csln_core committed (f58f013).
 Starting Phase 2: Selector logic implementation.
+
+Phase 2 complete ✅: Selector evaluation logic (8 tests passing).
+
+Starting Phase 3: Group sorting implementation.

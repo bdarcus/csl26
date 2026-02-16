@@ -9,5 +9,7 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 //! labeled groups with distinct sorting rules.
 
 pub mod selector;
+pub mod sorting;
 
 pub use selector::SelectorEvaluator;
+pub use sorting::GroupSorter;
