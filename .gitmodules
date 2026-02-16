@@ -1,3 +1,6 @@
 [submodule "styles"]
 	path = styles-legacy
 	url = https://github.com/citation-style-language/styles.git
+[submodule "tests/csl-test-suite"]
+	path = tests/csl-test-suite
+	url = https://github.com/citation-style-language/test-suite.git
