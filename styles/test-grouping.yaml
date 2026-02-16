@@ -1,0 +1,26 @@
+info:
+  id: test-grouping
+  title: Test Grouping
+  default-locale: en-US
+
+options:
+  processing: note
+
+citation:
+  layout:
+    template:
+      - title: primary
+
+bibliography:
+  groups:
+    - id: all
+      heading: "All References"
+      selector:
+        cited: any
+
+  template:
+    - title: primary
+    - date: issued
+      form: year
+      wrap: parentheses
+      prefix: " "

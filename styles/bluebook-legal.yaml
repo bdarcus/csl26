@@ -1,0 +1,62 @@
+info:
+  id: bluebook-legal
+  title: Bluebook Legal Citation (Simplified)
+  description: >
+    Demonstrates bibliography grouping with legal type hierarchy
+    following Bluebook conventions. Primary sources (cases, statutes,
+    treaties) are grouped separately with type-based ordering.
+  default-locale: en-US
+
+options:
+  processing: note
+
+citation:
+  layout:
+    template:
+      - contributor: author
+        form: short
+      - title: primary
+        form: short
+
+bibliography:
+  groups:
+    - id: primary-legal
+      heading: "Primary Sources"
+      selector:
+        type:
+          - legal-case
+          - statute
+          - treaty
+      sort:
+        template:
+          - key: type
+            ascending: true
+            order:
+              - legal-case
+              - statute
+              - treaty
+          - key: issued
+            ascending: true
+
+    - id: secondary
+      heading: "Secondary Sources"
+      selector:
+        not:
+          type:
+            - legal-case
+            - statute
+            - treaty
+      sort:
+        template:
+          - key: author
+            ascending: true
+            sort-order: family-given
+          - key: issued
+            ascending: false
+
+  template:
+    - title: primary
+    - date: issued
+      form: year
+      wrap: parentheses
+      prefix: " "

@@ -1,0 +1,20 @@
+info:
+  id: test-no-grouping
+  title: Test No Grouping
+  default-locale: en-US
+
+options:
+  processing: note
+
+citation:
+  layout:
+    template:
+      - title: primary
+
+bibliography:
+  template:
+    - title: primary
+    - date: issued
+      form: year
+      wrap: parentheses
+      prefix: " "
