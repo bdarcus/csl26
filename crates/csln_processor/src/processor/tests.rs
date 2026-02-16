@@ -1124,3 +1124,119 @@ fn test_citation_visibility_modifiers() {
     // One is hidden, only one Kuhn shows
     assert_eq!(res_mixed, "(Kuhn, 1962)");
 }
+
+#[test]
+fn test_bibliography_per_group_disambiguation() {
+    use csln_core::grouping::{
+        BibliographyGroup, DisambiguationScope, FieldMatcher, GroupSelector,
+    };
+
+    let mut style = make_style();
+
+    // Configure two groups, each with its own disambiguation scope
+    style.bibliography.as_mut().unwrap().groups = Some(vec![
+        BibliographyGroup {
+            id: "group1".to_string(),
+            heading: Some("Group 1".to_string()),
+            selector: GroupSelector {
+                field: Some({
+                    let mut map = HashMap::new();
+                    map.insert("note".to_string(), FieldMatcher::Exact("g1".to_string()));
+                    map
+                }),
+                ..Default::default()
+            },
+            sort: None,
+            template: None,
+            disambiguate: Some(DisambiguationScope::Locally),
+        },
+        BibliographyGroup {
+            id: "group2".to_string(),
+            heading: Some("Group 2".to_string()),
+            selector: GroupSelector {
+                field: Some({
+                    let mut map = HashMap::new();
+                    map.insert("note".to_string(), FieldMatcher::Exact("g2".to_string()));
+                    map
+                }),
+                ..Default::default()
+            },
+            sort: None,
+            template: None,
+            disambiguate: Some(DisambiguationScope::Locally),
+        },
+    ]);
+
+    // Set up references that would normally disambiguate globally
+    let mut bib = Bibliography::new();
+    // Two Kuhn 1962 in Group 1
+    bib.insert(
+        "r1".to_string(),
+        Reference::from(LegacyReference {
+            id: "r1".to_string(),
+            author: Some(vec![Name::new("Kuhn", "Thomas")]),
+            issued: Some(DateVariable::year(1962)),
+            title: Some("B title".to_string()),
+            note: Some("g1".to_string()),
+            ..Default::default()
+        }),
+    );
+    bib.insert(
+        "r2".to_string(),
+        Reference::from(LegacyReference {
+            id: "r2".to_string(),
+            author: Some(vec![Name::new("Kuhn", "Thomas")]),
+            issued: Some(DateVariable::year(1962)),
+            title: Some("A title".to_string()),
+            note: Some("g1".to_string()),
+            ..Default::default()
+        }),
+    );
+    // Same name/year in Group 2 - should RESTART suffixes if locally disambiguated
+    bib.insert(
+        "r3".to_string(),
+        Reference::from(LegacyReference {
+            id: "r3".to_string(),
+            author: Some(vec![Name::new("Kuhn", "Thomas")]),
+            issued: Some(DateVariable::year(1962)),
+            title: Some("C title".to_string()),
+            note: Some("g2".to_string()),
+            ..Default::default()
+        }),
+    );
+    bib.insert(
+        "r4".to_string(),
+        Reference::from(LegacyReference {
+            id: "r4".to_string(),
+            author: Some(vec![Name::new("Kuhn", "Thomas")]),
+            issued: Some(DateVariable::year(1962)),
+            title: Some("D title".to_string()),
+            note: Some("g2".to_string()),
+            ..Default::default()
+        }),
+    );
+
+    // Ensure year-suffix is enabled in style
+    style.options.as_mut().unwrap().processing = Some(csln_core::options::Processing::Custom(
+        csln_core::options::ProcessingCustom {
+            disambiguate: Some(csln_core::options::Disambiguation {
+                year_suffix: true,
+                ..Default::default()
+            }),
+            ..Default::default()
+        },
+    ));
+
+    let processor = Processor::new(style, bib);
+    let result =
+        processor.render_grouped_bibliography_with_format::<crate::render::plain::PlainText>();
+
+    assert!(result.contains("Group 2"));
+    // Group 2 should have its own 1962a and 1962b
+    let count_a = result.matches("1962a").count();
+    assert_eq!(
+        count_a, 2,
+        "1962a should appear in both groups if disambiguated locally. Output: {}",
+        result
+    );
+}

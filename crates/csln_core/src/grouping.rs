@@ -25,7 +25,7 @@ use crate::Template;
 ///         - key: author
 ///           sort-order: given-family
 /// ```
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize, Default)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub struct BibliographyGroup {
@@ -49,13 +49,31 @@ pub struct BibliographyGroup {
     /// Falls back to global bibliography template if omitted.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub template: Option<Template>,
+
+    /// Optional disambiguation scope.
+    /// - `globally` (default): Year suffixes are assigned across the whole bibliography.
+    /// - `locally`: Year suffixes are assigned independently within this group.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub disambiguate: Option<DisambiguationScope>,
+}
+
+/// Scope for disambiguation (e.g., year suffix assignment).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, Default)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+#[serde(rename_all = "kebab-case")]
+pub enum DisambiguationScope {
+    /// Disambiguate across all items in the bibliography.
+    #[default]
+    Globally,
+    /// Disambiguate only within the current group.
+    Locally,
 }
 
 /// Selector predicate for matching references to groups.
 ///
 /// All specified conditions must match (AND logic).
 /// Use the `not` field for negation-based fallback groups.
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize, Default)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub struct GroupSelector {

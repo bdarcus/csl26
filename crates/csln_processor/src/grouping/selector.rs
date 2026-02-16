@@ -110,6 +110,10 @@ impl<'a> SelectorEvaluator<'a> {
                 let lang = reference.language().unwrap_or_default();
                 self.matches_field_value(&lang, matcher)
             }
+            "note" => {
+                let note = reference.note().unwrap_or_default();
+                self.matches_field_value(&note, matcher)
+            }
             // Future: support for keywords, custom metadata
             _ => false,
         }

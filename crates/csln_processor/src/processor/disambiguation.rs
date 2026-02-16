@@ -3,6 +3,10 @@ use crate::values::ProcHints;
 use csln_core::options::Config;
 use std::collections::{HashMap, HashSet};
 
+use crate::grouping::GroupSorter;
+use csln_core::grouping::GroupSort;
+use csln_core::locale::Locale;
+
 /// Handles disambiguation logic for author-date citations.
 ///
 /// Disambiguation resolves ambiguities when multiple references produce
@@ -42,13 +46,31 @@ use std::collections::{HashMap, HashSet};
 pub struct Disambiguator<'a> {
     bibliography: &'a Bibliography,
     config: &'a Config,
+    locale: &'a Locale,
+    group_sort: Option<&'a GroupSort>,
 }
 
 impl<'a> Disambiguator<'a> {
-    pub fn new(bibliography: &'a Bibliography, config: &'a Config) -> Self {
+    pub fn new(bibliography: &'a Bibliography, config: &'a Config, locale: &'a Locale) -> Self {
         Self {
             bibliography,
             config,
+            locale,
+            group_sort: None,
+        }
+    }
+
+    pub fn with_group_sort(
+        bibliography: &'a Bibliography,
+        config: &'a Config,
+        locale: &'a Locale,
+        group_sort: &'a GroupSort,
+    ) -> Self {
+        Self {
+            bibliography,
+            config,
+            locale,
+            group_sort: Some(group_sort),
         }
     }
 
@@ -203,22 +225,28 @@ impl<'a> Disambiguator<'a> {
         len: usize,
         expand_names: bool,
     ) {
-        // Sort group by title for consistent suffix assignment (a, b, c...)
-        // This matches citeproc-js behavior where suffixes are alphabetical by title
-        let mut sorted_group: Vec<&Reference> = group.to_vec();
-        sorted_group.sort_by(|a, b| {
-            let a_title = a
-                .title()
-                .map(|t| t.to_string())
-                .unwrap_or_default()
-                .to_lowercase();
-            let b_title = b
-                .title()
-                .map(|t| t.to_string())
-                .unwrap_or_default()
-                .to_lowercase();
-            a_title.cmp(&b_title)
-        });
+        let sorted_group = if let Some(sort_spec) = self.group_sort {
+            // Use GroupSorter for per-group ordering
+            let sorter = GroupSorter::new(self.locale);
+            sorter.sort_references(group.to_vec(), sort_spec)
+        } else {
+            // Fallback to title sorting (default behavior)
+            let mut sorted: Vec<&Reference> = group.to_vec();
+            sorted.sort_by(|a, b| {
+                let a_title = a
+                    .title()
+                    .map(|t| t.to_string())
+                    .unwrap_or_default()
+                    .to_lowercase();
+                let b_title = b
+                    .title()
+                    .map(|t| t.to_string())
+                    .unwrap_or_default()
+                    .to_lowercase();
+                a_title.cmp(&b_title)
+            });
+            sorted
+        };
 
         for (i, reference) in sorted_group.iter().enumerate() {
             hints.insert(
@@ -364,5 +392,81 @@ impl<'a> Disambiguator<'a> {
             .unwrap_or_default();
 
         format!("{}:{}", author_key, year)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use csln_core::grouping::{GroupSort, GroupSortKey, SortKey};
+    use csln_core::reference::{
+        Contributor, EdtfString, InputReference as Reference, Monograph, MonographType,
+        MultilingualString, StructuredName, Title,
+    };
+
+    fn make_ref(id: &str, family: &str, title: &str, year: i32) -> Reference {
+        Reference::Monograph(Box::new(Monograph {
+            id: Some(id.to_string()),
+            r#type: MonographType::Book,
+            title: Title::Single(title.to_string()),
+            author: Some(Contributor::StructuredName(StructuredName {
+                family: MultilingualString::Simple(family.to_string()),
+                given: MultilingualString::Simple("Test".to_string()),
+                suffix: None,
+                dropping_particle: None,
+                non_dropping_particle: None,
+            })),
+            editor: None,
+            translator: None,
+            issued: EdtfString(year.to_string()),
+            publisher: None,
+            url: None,
+            accessed: None,
+            language: None,
+            note: None,
+            isbn: None,
+            doi: None,
+            edition: None,
+            genre: None,
+            keywords: None,
+            original_date: None,
+            original_title: None,
+        }))
+    }
+
+    #[test]
+    fn test_group_aware_year_suffix_sort() {
+        let r1 = make_ref("r1", "Smith", "Beta", 2020);
+        let r2 = make_ref("r2", "Smith", "Alpha", 2020);
+
+        let mut bib = Bibliography::new();
+        bib.insert("r1".to_string(), r1);
+        bib.insert("r2".to_string(), r2);
+
+        let config = Config::default();
+        let locale = Locale::en_us();
+
+        // 1. Default sorting (by title): r2 (Alpha) should be 'a', r1 (Beta) should be 'b'
+        let disamb_default = Disambiguator::new(&bib, &config, &locale);
+        let hints_default = disamb_default.calculate_hints();
+
+        assert_eq!(hints_default.get("r2").unwrap().group_index, 1);
+        assert_eq!(hints_default.get("r1").unwrap().group_index, 2);
+
+        // 2. Custom group sort: Sort by title descending -> r1 (Beta) should be 'a', r2 (Alpha) should be 'b'
+        let sort_spec = GroupSort {
+            template: vec![GroupSortKey {
+                key: SortKey::Title,
+                ascending: false,
+                order: None,
+                sort_order: None,
+            }],
+        };
+
+        let disamb_custom = Disambiguator::with_group_sort(&bib, &config, &locale, &sort_spec);
+        let hints_custom = disamb_custom.calculate_hints();
+
+        assert_eq!(hints_custom.get("r1").unwrap().group_index, 1);
+        assert_eq!(hints_custom.get("r2").unwrap().group_index, 2);
     }
 }
