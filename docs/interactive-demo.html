@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSLN | Interactive HTML Demo</title>
+  <link rel="stylesheet" href="assets/csln-interactive.css">
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 2rem;
+      background: #fdfbf7;
+    }
+    header {
+      border-bottom: 2px solid #eee;
+      margin-bottom: 3rem;
+      padding-bottom: 1rem;
+    }
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: #2a94d6;
+      text-decoration: none;
+      font-weight: 500;
+      margin-bottom: 1rem;
+    }
+    .controls {
+      background: #f5f2eb;
+      padding: 1rem;
+      border-radius: 8px;
+      margin-bottom: 2rem;
+      display: flex;
+      gap: 1rem;
+      align-items: center;
+    }
+    .demo-container {
+      transition: all 0.3s ease;
+    }
+    h1 { margin-bottom: 0.5rem; }
+    .subtitle { color: #666; font-size: 1.1rem; }
+    
+    /* Layout toggles */
+    .btn {
+      padding: 0.5rem 1rem;
+      border: 1px solid #ddd;
+      background: white;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .btn.active {
+      background: #0066cc;
+      color: white;
+      border-color: #0066cc;
+    }
+  </style>
+</head>
+<body>
+
+  <a href="index.html" class="back-link">← Back to Home</a>
+
+  <header>
+    <h1>CSLN Interactive HTML</h1>
+    <p class="subtitle">Progressive enhancement for web-based citations and bibliographies.</p>
+  </header>
+
+  <div class="controls">
+    <span>Layout:</span>
+    <button class="btn active" id="btn-classic">Classic (Bottom)</button>
+    <button class="btn" id="btn-sidebar">Modern Sidebar</button>
+  </div>
+
+  <div id="demo-root" class="demo-container">
+    <article class="content">
+      <h2>The Paradigm Shift in Citation</h2>
+      <p>
+        The study of scientific history reveals that knowledge does not accumulate linearly. 
+        Instead, as <span class="csln-citation" data-ref="kuhn1962">Kuhn (1962)</span> argued, science 
+        proceeds through revolutionary breaks with the past. This conceptual framework has 
+        significant implications for how we attribute ideas.
+      </p>
+      
+      <p>
+        Recent developments in digital typography allow for more interactive engagement with 
+        source materials. For instance, when citing multiple works 
+        <span class="csln-citation" data-ref="smith2020 doe2023">(Doe, 2023; Smith, 2020)</span>, 
+        readers benefit from instant previews and bidirectional navigation.
+      </p>
+
+      <p>
+        Interactivity is not merely a "gorgeus enhancement" but a functional necessity for 
+        large documents. As noted in the CSLN vision, we aim for "Total Stability" and 
+        "Explicit over Magic" <span class="csln-citation" data-ref="csln2026">(CSLN, 2026)</span>.
+      </p>
+      
+      <p>
+        Further research by <span class="csln-citation" data-ref="smith2020">Smith (2020)</span> 
+        confirms that sidebar bibliographies improve readability for note-style documents 
+        by keeping references in context with the text.
+      </p>
+    </article>
+
+    <section class="csln-bibliography">
+      <h3>References</h3>
+      
+      <div class="csln-entry" id="ref-csln2026" 
+           data-author="CSLN Team" data-year="2026" data-title="CSL Next: A Declarative Future for Citations">
+        <span class="csln-author">CSLN Team.</span> 
+        <span class="csln-date">(2026).</span> 
+        <span class="csln-title">CSL Next: A Declarative Future for Citations.</span> 
+        <span class="csln-publisher">GitHub.</span>
+      </div>
+
+      <div class="csln-entry" id="ref-doe2023" 
+           data-author="Doe" data-year="2023" data-title="Digital Humanities and Interactive Scholarly Communication">
+        <span class="csln-author">Doe, J.</span> 
+        <span class="csln-date">(2023).</span> 
+        <span class="csln-title">Digital Humanities and Interactive Scholarly Communication.</span> 
+        <span class="csln-container-title">Journal of Electronic Publishing,</span> 
+        <span class="csln-volume">26</span>(1), 
+        <span class="csln-pages">45-67</span>.
+      </div>
+
+      <div class="csln-entry" id="ref-kuhn1962" 
+           data-author="Kuhn" data-year="1962" data-title="The Structure of Scientific Revolutions">
+        <span class="csln-author">Kuhn, T. S.</span> 
+        <span class="csln-date">(1962).</span> 
+        <span class="csln-title">The Structure of Scientific Revolutions.</span> 
+        <span class="csln-publisher">University of Chicago Press.</span>
+      </div>
+
+      <div class="csln-entry" id="ref-smith2020" 
+           data-author="Smith" data-year="2020" data-title="Modern Web Standards for Academic Writing">
+        <span class="csln-author">Smith, A.</span> 
+        <span class="csln-date">(2020).</span> 
+        <span class="csln-title">Modern Web Standards for Academic Writing.</span> 
+        <span class="csln-publisher">Web Press.</span>
+      </div>
+    </section>
+  </div>
+
+  <script src="assets/csln-interactive.js"></script>
+  <script>
+    const root = document.getElementById('demo-root');
+    const btnClassic = document.getElementById('btn-classic');
+    const btnSidebar = document.getElementById('btn-sidebar');
+
+    btnClassic.addEventListener('click', () => {
+      root.classList.remove('csln-with-sidebar');
+      btnClassic.classList.add('active');
+      btnSidebar.classList.remove('active');
+    });
+
+    btnSidebar.addEventListener('click', () => {
+      root.classList.add('csln-with-sidebar');
+      btnSidebar.classList.add('active');
+      btnClassic.classList.remove('active');
+    });
+  </script>
+</body>
+</html>

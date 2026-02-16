@@ -172,12 +172,13 @@ impl<'a> Renderer<'a> {
                 if !item_str.is_empty() {
                     let prefix = item.prefix.as_deref().unwrap_or("");
                     let suffix = item.suffix.as_deref().unwrap_or("");
-                    if !prefix.is_empty() || !suffix.is_empty() {
+                    let content = if !prefix.is_empty() || !suffix.is_empty() {
                         let spaced_suffix = self.ensure_suffix_spacing(suffix);
-                        rendered_items.push(fmt.affix(prefix, item_str, &spaced_suffix));
+                        fmt.affix(prefix, item_str, &spaced_suffix)
                     } else {
-                        rendered_items.push(item_str);
-                    }
+                        item_str
+                    };
+                    rendered_items.push(fmt.citation(vec![item.id.clone()], content));
                 }
             } else {
                 // Standard rendering: use template with citation number
@@ -204,12 +205,13 @@ impl<'a> Renderer<'a> {
                     if !item_str.is_empty() {
                         let prefix = item.prefix.as_deref().unwrap_or("");
                         let suffix = item.suffix.as_deref().unwrap_or("");
-                        if !prefix.is_empty() || !suffix.is_empty() {
+                        let content = if !prefix.is_empty() || !suffix.is_empty() {
                             let spaced_suffix = self.ensure_suffix_spacing(suffix);
-                            rendered_items.push(fmt.affix(prefix, item_str, &spaced_suffix));
+                            fmt.affix(prefix, item_str, &spaced_suffix)
                         } else {
-                            rendered_items.push(item_str);
-                        }
+                            item_str
+                        };
+                        rendered_items.push(fmt.citation(vec![item.id.clone()], content));
                     }
                 }
             }
@@ -332,12 +334,13 @@ impl<'a> Renderer<'a> {
                     if !item_str.is_empty() {
                         let prefix = item.prefix.as_deref().unwrap_or("");
                         let suffix = item.suffix.as_deref().unwrap_or("");
-                        if !prefix.is_empty() || !suffix.is_empty() {
+                        let content = if !prefix.is_empty() || !suffix.is_empty() {
                             let spaced_suffix = self.ensure_suffix_spacing(suffix);
-                            rendered_groups.push(fmt.affix(prefix, item_str, &spaced_suffix));
+                            fmt.affix(prefix, item_str, &spaced_suffix)
                         } else {
-                            rendered_groups.push(item_str);
-                        }
+                            item_str
+                        };
+                        rendered_groups.push(fmt.citation(vec![item.id.clone()], content));
                     }
                 }
             } else {
@@ -388,9 +391,11 @@ impl<'a> Renderer<'a> {
                             format!("{}, {}", author_part, joined_years)
                         }
                     };
-                    rendered_groups.push(fmt.affix(prefix, content, ""));
+                    let ids: Vec<String> = group.iter().map(|item| item.id.clone()).collect();
+                    rendered_groups.push(fmt.citation(ids, fmt.affix(prefix, content, "")));
                 } else if !author_part.is_empty() {
-                    rendered_groups.push(fmt.affix(prefix, author_part, ""));
+                    let ids: Vec<String> = group.iter().map(|item| item.id.clone()).collect();
+                    rendered_groups.push(fmt.citation(ids, fmt.affix(prefix, author_part, "")));
                 }
             }
         }

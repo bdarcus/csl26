@@ -64,6 +64,11 @@ pub trait OutputFormat: Default + Clone {
     /// Examples include "csln-title", "csln-author", "csln-doi".
     fn semantic(&self, class: &str, content: Self::Output) -> Self::Output;
 
+    /// Render a full citation container with one or more reference IDs.
+    fn citation(&self, _ids: Vec<String>, content: Self::Output) -> Self::Output {
+        content
+    }
+
     /// Hyperlink the content to a URL.
     fn link(&self, url: &str, content: Self::Output) -> Self::Output;
 
@@ -82,7 +87,24 @@ pub trait OutputFormat: Default + Clone {
     /// Render a single bibliography entry with its unique identifier and optional link.
     ///
     /// The default implementation just returns the content.
-    fn entry(&self, _id: &str, content: Self::Output, _url: Option<&str>) -> Self::Output {
+    fn entry(
+        &self,
+        _id: &str,
+        content: Self::Output,
+        _url: Option<&str>,
+        _metadata: &ProcEntryMetadata,
+    ) -> Self::Output {
         content
     }
+}
+
+/// Metadata for a processed bibliography entry, used for interactivity.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct ProcEntryMetadata {
+    /// Rendered primary author(s) string.
+    pub author: Option<String>,
+    /// Rendered year string.
+    pub year: Option<String>,
+    /// Rendered title string.
+    pub title: Option<String>,
 }

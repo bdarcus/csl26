@@ -35,6 +35,8 @@ pub struct ProcEntry {
     pub id: String,
     /// The processed template components.
     pub template: ProcTemplate,
+    /// Metadata for interactivity (tooltips, etc.)
+    pub metadata: super::format::ProcEntryMetadata,
 }
 
 use super::format::OutputFormat;

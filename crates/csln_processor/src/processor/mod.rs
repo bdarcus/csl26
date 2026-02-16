@@ -198,8 +198,9 @@ impl Processor {
                 }
 
                 bibliography.push(ProcEntry {
-                    id: ref_id,
+                    id: ref_id.clone(),
                     template: proc,
+                    metadata: self.extract_metadata(reference),
                 });
                 prev_reference = Some(reference);
             }
@@ -208,6 +209,31 @@ impl Processor {
         ProcessedReferences {
             bibliography,
             citations: None,
+        }
+    }
+
+    /// Extract basic metadata for interactivity.
+    fn extract_metadata(&self, reference: &Reference) -> crate::render::format::ProcEntryMetadata {
+        use crate::render::format::ProcEntryMetadata;
+        use crate::values::RenderOptions;
+
+        let options = RenderOptions {
+            config: self.get_config(),
+            locale: &self.locale,
+            context: crate::values::RenderContext::Bibliography,
+            mode: csln_core::citation::CitationMode::NonIntegral,
+            visibility: csln_core::citation::ItemVisibility::Default,
+            locator: None,
+            locator_label: None,
+            infix: None,
+        };
+
+        ProcEntryMetadata {
+            author: reference
+                .author()
+                .map(|a| crate::values::format_contributors_short(&a.to_names_vec(), &options)),
+            year: reference.issued().map(|i| i.year().to_string()),
+            title: reference.title().map(|t| t.to_string()),
         }
     }
 

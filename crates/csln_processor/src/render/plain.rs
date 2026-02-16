@@ -80,7 +80,13 @@ impl OutputFormat for PlainText {
         content
     }
 
-    fn entry(&self, _id: &str, content: Self::Output, _url: Option<&str>) -> Self::Output {
+    fn entry(
+        &self,
+        _id: &str,
+        content: Self::Output,
+        _url: Option<&str>,
+        _metadata: &super::format::ProcEntryMetadata,
+    ) -> Self::Output {
         content
     }
 }
