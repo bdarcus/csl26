@@ -52,4 +52,13 @@ Starting Phase 4: Processor integration.
 
 Phase 4 complete ✅: Processor integration (custom groups + legacy fallback).
 
-Phases 1-4 complete. Ready for use case validation (Phases 5-6).
+Starting Phase 5: Legal use case validation.
+
+Phase 5 in progress: Legal hierarchy infrastructure created (style + fixtures).
+Pending: Integration tests for citation-aware grouping.
+
+Note: CLI testing reveals that bibliography grouping requires citation
+data (cited_ids/silent_ids) to be populated via document processing.
+Direct `csln process` command doesn't provide citations, so all
+references fall into ungrouped fallback. Need integration tests that
+use process_document() API for proper validation.
