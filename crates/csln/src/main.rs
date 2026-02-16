@@ -26,7 +26,7 @@ enum DataType {
     Style,
     Bib,
     Locale,
-    Citation,
+    Citations,
 }
 
 #[derive(Subcommand)]
@@ -34,7 +34,7 @@ enum Commands {
     /// Generate JSON schema for CSLN models
     #[cfg(feature = "schema")]
     Schema {
-        /// Data type (style, bib, locale, citation)
+        /// Data type (style, bib, locale, citations)
         #[arg(index = 1, value_enum)]
         r#type: Option<DataType>,
 
@@ -156,14 +156,14 @@ fn main() {
                     (DataType::Style, "style.json"),
                     (DataType::Bib, "bib.json"),
                     (DataType::Locale, "locale.json"),
-                    (DataType::Citation, "citation.json"),
+                    (DataType::Citations, "citations.json"),
                 ];
                 for (t, filename) in types {
                     let schema = match t {
                         DataType::Style => schema_for!(Style),
                         DataType::Bib => schema_for!(InputBibliography),
                         DataType::Locale => schema_for!(RawLocale),
-                        DataType::Citation => schema_for!(Citation),
+                        DataType::Citations => schema_for!(csln_core::Citations),
                     };
                     let path = dir.join(filename);
                     fs::write(&path, serde_json::to_string_pretty(&schema).unwrap())
@@ -175,7 +175,7 @@ fn main() {
                     DataType::Style => schema_for!(Style),
                     DataType::Bib => schema_for!(InputBibliography),
                     DataType::Locale => schema_for!(RawLocale),
-                    DataType::Citation => schema_for!(Citation),
+                    DataType::Citations => schema_for!(csln_core::Citations),
                 };
                 println!("{}", serde_json::to_string_pretty(&schema).unwrap());
             } else {

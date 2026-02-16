@@ -43,7 +43,7 @@ jobs:
               <li><a href="schemas/style.json">Style Schema</a></li>
               <li><a href="schemas/bib.json">Bibliography Schema</a></li>
               <li><a href="schemas/locale.json">Locale Schema</a></li>
-              <li><a href="schemas/citation.json">Citation Schema</a></li>
+              <li><a href="schemas/citations.json">Citations Schema</a></li>
             </ul>
             <p>Last updated: $(date)</p>
           </body>
