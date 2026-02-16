@@ -6,7 +6,7 @@
 
 ## Overview
 
-This document defines the architecture for configurable bibliography grouping in CSL Next. The design enables styles to divide bibliographies into labeled sections with distinct sorting rules, addressing use cases from legal citations (type-based hierarchies) to multilingual bibliographies (culturally-appropriate name sorting).
+This document defines the architecture for configurable bibliography grouping in CSL Next. The design enables styles to divide bibliographies into labeled sections with distinct sorting rules, addressing use cases from legal citations (type-based hierarchies) and multilingual bibliographies to primary/secondary source divisions in historical scholarship.
 
 ## Problem Statement
 
@@ -14,7 +14,8 @@ Current implementation provides only basic hardcoded support for separating visi
 
 1. **Legal Hierarchy (The Bluebook):** Type-based grouping with rigid ordering (Constitutions → Statutes → Cases) that ignores alphabetical content
 2. **Multilingual Grouping (Juris-M):** Language-based grouping with distinct sorting logic per group (Vietnamese by given-name, English by family-name)
-3. **Topical Groupings:** Custom field-based grouping (keywords, reference types, custom metadata)
+3. **Primary/Secondary Source Divisions:** Common in historical and humanities scholarship, where primary documents must be listed separately from secondary literature.
+4. **Topical Groupings:** Custom field-based grouping (keywords, reference types, custom metadata)
 
 The critical requirement is **per-group sorting** - a simple "group then sort" approach fails when different groups require different collation rules.
 
