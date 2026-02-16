@@ -160,7 +160,12 @@ pub fn refs_to_string_with_format<F: OutputFormat<Output = String>>(
                 }
             });
 
-        rendered_entries.push(fmt.entry(&entry.id, entry_output, entry_url.as_deref()));
+        rendered_entries.push(fmt.entry(
+            &entry.id,
+            entry_output,
+            entry_url.as_deref(),
+            &entry.metadata,
+        ));
     }
 
     fmt.finish(fmt.bibliography(rendered_entries))
@@ -270,6 +275,7 @@ mod tests {
         let entries = vec![ProcEntry {
             id: "id1".to_string(),
             template: vec![c1, c2],
+            metadata: crate::render::format::ProcEntryMetadata::default(),
         }];
         let result = refs_to_string(entries);
         assert_eq!(result, "Publisher1. Place");
@@ -324,6 +330,7 @@ mod tests {
         let entries = vec![ProcEntry {
             id: "id1".to_string(),
             template: vec![c1, c2],
+            metadata: crate::render::format::ProcEntryMetadata::default(),
         }];
         let result = refs_to_string(entries);
         assert_eq!(result, "(Eds.), Title");
@@ -343,6 +350,7 @@ mod tests {
         let entries = vec![ProcEntry {
             id: "ref-1".to_string(),
             template: vec![c1],
+            metadata: crate::render::format::ProcEntryMetadata::default(),
         }];
 
         let result = refs_to_string_with_format::<Html>(entries);
@@ -408,6 +416,7 @@ mod tests {
         let entries = vec![ProcEntry {
             id: "hawking1988".to_string(),
             template: vec![c1, c2],
+            metadata: crate::render::format::ProcEntryMetadata::default(),
         }];
         let result = refs_to_string(entries);
         // The comma from author's suffix should be preserved

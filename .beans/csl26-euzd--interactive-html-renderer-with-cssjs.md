@@ -1,7 +1,7 @@
 ---
 # csl26-euzd
 title: Interactive HTML Renderer with CSS/JS
-status: todo
+status: completed
 type: feature
 priority: normal
 created_at: 2026-02-16T03:03:36Z

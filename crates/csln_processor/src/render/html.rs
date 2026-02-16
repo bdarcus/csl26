@@ -82,6 +82,17 @@ impl OutputFormat for Html {
         format!(r#"<span class="{}">{}</span>"#, class, content)
     }
 
+    fn citation(&self, ids: Vec<String>, content: Self::Output) -> Self::Output {
+        if content.is_empty() {
+            return content;
+        }
+        let ids_str = ids.join(" ");
+        format!(
+            r#"<span class="csln-citation" data-ref="{}">{}</span>"#,
+            ids_str, content
+        )
+    }
+
     fn link(&self, url: &str, content: Self::Output) -> Self::Output {
         if content.is_empty() {
             return content;
@@ -102,16 +113,30 @@ impl OutputFormat for Html {
         )
     }
 
-    fn entry(&self, id: &str, content: Self::Output, url: Option<&str>) -> Self::Output {
+    fn entry(
+        &self,
+        id: &str,
+        content: Self::Output,
+        url: Option<&str>,
+        metadata: &super::format::ProcEntryMetadata,
+    ) -> Self::Output {
         let content = if let Some(u) = url {
             self.link(u, content)
         } else {
             content
         };
-        format!(
-            r#"<div class="csln-entry" id="{}">{}</div>"#,
-            self.format_id(id),
-            content
-        )
+
+        let mut attrs = format!(r#"id="{}""#, self.format_id(id));
+        if let Some(author) = &metadata.author {
+            attrs.push_str(&format!(r#" data-author="{}""#, author));
+        }
+        if let Some(year) = &metadata.year {
+            attrs.push_str(&format!(r#" data-year="{}""#, year));
+        }
+        if let Some(title) = &metadata.title {
+            attrs.push_str(&format!(r#" data-title="{}""#, title));
+        }
+
+        format!(r#"<div class="csln-entry" {}>{}</div>"#, attrs, content)
     }
 }
