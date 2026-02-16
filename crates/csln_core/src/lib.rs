@@ -7,6 +7,7 @@ pub use renderer::Renderer;
 
 // New CSLN schema modules
 pub mod citation;
+pub mod grouping;
 pub mod legacy;
 pub mod locale;
 pub mod options;
@@ -18,6 +19,10 @@ pub mod template;
 pub mod embedded;
 
 pub use citation::{Citation, CitationItem, CitationMode, Citations, ItemVisibility, LocatorType};
+pub use grouping::{
+    BibliographyGroup, CitedStatus, FieldMatcher, GroupSelector, GroupSort, GroupSortKey,
+    NameSortOrder, SortKey, TypeSelector,
+};
 pub use legacy::{
     AndTerm, ConditionBlock, CslnInfo, CslnLocale, CslnNode, CslnStyle, DateBlock, DateForm,
     DateOptions, DatePartForm, DateParts, DelimiterPrecedes, ElseIfBranch, EtAlOptions,
@@ -259,6 +264,15 @@ pub struct BibliographySpec {
     /// names (e.g., "chapter", "article-journal").
     #[serde(skip_serializing_if = "Option::is_none")]
     pub type_templates: Option<HashMap<String, Template>>,
+    /// Optional bibliography grouping specification.
+    ///
+    /// When present, divides the bibliography into labeled sections with
+    /// optional per-group sorting. Items match the first group whose selector
+    /// evaluates to true (first-match semantics). Omit for flat bibliography.
+    ///
+    /// See `BibliographyGroup` for examples.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub groups: Option<Vec<grouping::BibliographyGroup>>,
     /// Custom user-defined fields for extensions.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub custom: Option<HashMap<String, serde_json::Value>>,
@@ -517,5 +531,48 @@ citation:
             }
             _ => panic!("Expected Variable"),
         }
+    }
+
+    #[test]
+    fn test_bibliography_with_groups() {
+        let yaml = r#"
+info:
+  title: Grouped Bibliography Test
+bibliography:
+  template:
+    - contributor: author
+      form: long
+  groups:
+    - id: vietnamese
+      heading: "Tài liệu tiếng Việt"
+      selector:
+        field:
+          language: vi
+      sort:
+        template:
+          - key: author
+            sort-order: given-family
+    - id: other
+      selector:
+        not:
+          field:
+            language: vi
+"#;
+        let style: Style = serde_yaml::from_str(yaml).unwrap();
+        let bib = style.bibliography.unwrap();
+
+        assert!(bib.groups.is_some());
+        let groups = bib.groups.unwrap();
+        assert_eq!(groups.len(), 2);
+
+        // First group
+        assert_eq!(groups[0].id, "vietnamese");
+        assert_eq!(groups[0].heading.as_ref().unwrap(), "Tài liệu tiếng Việt");
+        assert!(groups[0].sort.is_some());
+
+        // Second group (fallback with negation)
+        assert_eq!(groups[1].id, "other");
+        assert!(groups[1].heading.is_none());
+        assert!(groups[1].selector.not.is_some());
     }
 }
