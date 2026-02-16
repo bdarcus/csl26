@@ -17,4 +17,4 @@ Formalize the LLM-driven style authoring workflow validated during APA 7th creat
 * Template: .claude/skills/styleauthor/templates/style-spec.md - style specification template
 * Patterns: .claude/skills/styleauthor/templates/common-patterns.yaml - reusable YAML snippets
 * Updated CLAUDE.md with skill reference
-* Updated PERSONAS.md with LLM-assisted authoring sub-persona
+* Updated docs/architecture/PERSONAS.md with LLM-assisted authoring sub-persona

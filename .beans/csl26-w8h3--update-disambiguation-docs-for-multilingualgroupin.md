@@ -13,7 +13,7 @@ blocked_by:
 Phase 5: Documentation updates for multilingual and grouped disambiguation.
 
 Files:
-- docs/DISAMBIGUATION.md
+- docs/reference/DISAMBIGUATION.md
 - docs/architecture/MULTILINGUAL.md
 - docs/architecture/design/BIBLIOGRAPHY_GROUPING.md
 

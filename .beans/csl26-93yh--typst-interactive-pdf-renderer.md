@@ -99,7 +99,7 @@ The renderer accepts CSLN-processed citations/bibliographies and embeds them int
 
 * Issue #105 (pluggable renderers)
 * Issue #155 (hyperlink configuration)
-* PRIOR_ART.md (citeproc-rs/jotdown renderer trait pattern)
+*docs/architecture/PRIOR_ART.md (citeproc-rs/jotdown renderer trait pattern)
 * CLAUDE.md hybrid processing goals (batch + interactive modes)
 
 ## Estimated Complexity

@@ -184,22 +184,22 @@
 ### 2026-02-15: Hybrid Migration Strategy Validated
 **Decision:** Use XML options + output-driven templates + LLM authoring
 **Rationale:** XML excels at options (87-100% cit), fails at templates (0% bib). LLM authoring achieves 14/15 bibliography for APA.
-**Refs:** docs/architecture/MIGRATION_STRATEGY_ANALYSIS.md, bean csl26-m3lb
+**Refs:** ./architecture/MIGRATION_STRATEGY_ANALYSIS.md, bean csl26-m3lb
 
 ### 2026-02-08: Defer Note Styles to Phase 3
 **Decision:** Focus author-date (40% corpus) then numeric (20% corpus) before note (2% corpus)
 **Rationale:** Maximize coverage with proven approach before tackling position tracking complexity.
-**Refs:** docs/STYLE_PRIORITY.md, bean csl26-5t6s
+**Refs:** ./../reference/STYLE_PRIORITY.md, bean csl26-5t6s
 
 ### 2026-02-08: Type System Architecture Finalized
 **Decision:** Hybrid model (structural for academic, flat for legal/domain-specific)
 **Rationale:** Balances data efficiency with style clarity using 4-factor test.
-**Refs:** docs/architecture/design/TYPE_SYSTEM_ARCHITECTURE.md, docs/architecture/design/TYPE_ADDITION_POLICY.md
+**Refs:** ./architecture/design/TYPE_SYSTEM_ARCHITECTURE.md, ./architecture/design/TYPE_ADDITION_POLICY.md
 
 ## References
 
-- **Architecture Docs:** docs/architecture/
-- **Bean Tracker:** .beans/
-- **Style Priority:** docs/STYLE_PRIORITY.md
-- **Migration Analysis:** docs/architecture/MIGRATION_STRATEGY_ANALYSIS.md
-- **Workflow Guide:** docs/RENDERING_WORKFLOW.md
+- **Architecture Docs:** ./architecture/
+- **Bean Tracker:** ../.beans/
+- **Style Priority:** ./../reference/STYLE_PRIORITY.md
+- **Migration Analysis:** ./architecture/MIGRATION_STRATEGY_ANALYSIS.md
+- **Workflow Guide:** ./../guides/RENDERING_WORKFLOW.md

@@ -24,4 +24,4 @@ Goals:
 - Where possible, hoist punctuation to parent delimiter attributes
 - Ensures migrated CSLN styles work across multilingual rendering modes
 
-Refs: STYLE_PRIORITY.md, docs/RENDERING_WORKFLOW.md, Frank Bennett CSL-M guidance
+Refs: STYLE_PRIORITY.md, docs/guides/RENDERING_WORKFLOW.md, Frank Bennett CSL-M guidance

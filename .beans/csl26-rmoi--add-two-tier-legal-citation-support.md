@@ -23,7 +23,7 @@ For academics citing legal materials in APA/Chicago/MLA
 Status: Awaiting review (architectural decision needed)
 
 **Expanded Scope - biblatex Compatibility Types: ✅ COMPLETED**
-Based on TYPE_ADDITION_POLICY.md and CURRENT_TYPE_AUDIT.md
+Based on docs/architecture/TYPE_ADDITION_POLICY.md and docs/architecture/CURRENT_TYPE_AUDIT.md
 
 * ✅ Patent (high-priority) - inventor, number, authority, jurisdiction
 * ✅ Dataset (high-priority) - DOI, publisher, version, format
@@ -57,14 +57,14 @@ For lawyers using Bluebook/ALWD
 Same reference type, different template complexity.
 
 **References:**
-* CSL-M legal extensions (PRIOR_ART.md)
+* CSL-M legal extensions (docs/architecture/PRIOR_ART.md)
 * CLAUDE.md Feature Roadmap (Medium priority)
 * Domain Expert persona legal checklist
 
 **Deliverables:**
 * ✅ Architecture doc: docs/architecture/design/LEGAL_CITATIONS.md
 * ✅ Architecture doc: docs/architecture/design/TYPE_SYSTEM_ARCHITECTURE.md
-* ✅ Architecture doc: docs/architecture/design/TYPE_ADDITION_POLICY.md
+* ✅ Architecture doc: docs/architecture/design/docs/architecture/TYPE_ADDITION_POLICY.md
 * ✅ Current types audit: docs/architecture/CURRENT_TYPE_AUDIT.md
 * ✅ Core legal types in csln_core/src/reference/types.rs (7 types)
 * ✅ Scientific types in csln_core/src/reference/types.rs (4 types)

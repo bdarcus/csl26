@@ -34,7 +34,7 @@ flat types (JournalArticle, MagazineArticle, LegalCase), or hybrid?
 
 **Documentation:**
 ✅ TYPE_SYSTEM_ARCHITECTURE.md - full analysis, recommendation
-✅ TYPE_ADDITION_POLICY.md - active policy with decision criteria
+✅docs/architecture/TYPE_ADDITION_POLICY.md - active policy with decision criteria
 ✅ CLAUDE.md - updated with policy links
 
 **Impact:**
@@ -47,6 +47,6 @@ flat types (JournalArticle, MagazineArticle, LegalCase), or hybrid?
 
 **References:**
 - TYPE_SYSTEM_ARCHITECTURE.md
-- TYPE_ADDITION_POLICY.md
+-docs/architecture/TYPE_ADDITION_POLICY.md
 - biblatex (31 flat types) - better prior art than CSL 1.0 hierarchy
 - Legal citations: csl26-rmoi, PR #164

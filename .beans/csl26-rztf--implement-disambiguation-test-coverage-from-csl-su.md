@@ -33,7 +33,7 @@ Add --mode flag to update_disambiguation_tests.py
 4. Create crates/csln_processor/tests/disambiguation_native.rs for processor-only tests
 5. Extract ~10-15 edge cases: year suffix baseline, name expansion priority, given name expansion, combined strategies, missing author fallback
 6. Mark with #[ignore] initially
-7. Document in docs/DISAMBIGUATION.md
+7. Document in docs/reference/DISAMBIGUATION.md
 
 **Assumptions for @builder**:
 - CSLN types implement Serialize (confirmed)
@@ -45,4 +45,4 @@ Add --mode flag to update_disambiguation_tests.py
 **Files**:
 - MODIFY: tests/fixtures/update_disambiguation_tests.py
 - CREATE: crates/csln_processor/tests/disambiguation_native.rs
-- CREATE: docs/DISAMBIGUATION.md
+- CREATE: docs/reference/DISAMBIGUATION.md

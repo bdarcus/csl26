@@ -67,4 +67,4 @@ Invoke via:
 
 These 10 styles cover ~60% of dependent styles (4,792/7,987). Combined with the working XML options pipeline, this should achieve high bibliography match rates.
 
-Refs: docs/TIER_STATUS.md, docs/ROADMAP.md
+Refs: docs/TIER_STATUS.md, docs/architecture/ROADMAP.md

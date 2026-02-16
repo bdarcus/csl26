@@ -483,8 +483,8 @@ The CSLN approach separates "what to render" (templates) from "how to render" (o
 
 ## References
 
-- [PRIOR_ART.md](../.agent/PRIOR_ART.md) - Presets concept (Issue #89)
-- [STYLE_PRIORITY.md](../docs/STYLE_PRIORITY.md) - Parent style analysis
-- [CLAUDE.md](../CLAUDE.md) - "Explicit over magic" principle
+- [PRIOR_ART.md](../PRIOR_ART.md) - Presets concept (Issue #89)
+- [STYLE_PRIORITY.md](../../STYLE_PRIORITY.md) - Parent style analysis
+- [CLAUDE.md](../../../CLAUDE.md) - "Explicit over magic" principle
 - Issue #89: Presets proposal
 - biblatex manual: Option layering architecture

@@ -29,4 +29,4 @@ Integration:
 - Works with server mode (real-time processing)
 - Supports round-trip editing (preserve structure)
 
-Refs: csln#105 (pluggable renderers), csln#86 (Djot), PRIOR_ART.md (citeproc-rs/jotdown)
+Refs: csln#105 (pluggable renderers), csln#86 (Djot),docs/architecture/PRIOR_ART.md (citeproc-rs/jotdown)

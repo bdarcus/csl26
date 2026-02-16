@@ -27,7 +27,7 @@ Focus:
 
 This guide should build on these resources, providing a human-readable narrative for style authors who may not use LLM tooling.
 
-Target audience: Style authors from PERSONAS.md
+Target audience: Style authors from docs/architecture/PERSONAS.md
 Output: docs/guides/style-authoring.md
 Effort: 1 week
 

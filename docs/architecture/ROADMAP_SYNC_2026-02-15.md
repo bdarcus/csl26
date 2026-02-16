@@ -34,7 +34,7 @@
 
 ### 2. New Strategic Document
 
-**docs/ROADMAP.md** (Created)
+**../ROADMAP.md** (Created)
 
 Comprehensive roadmap tracking:
 
@@ -104,7 +104,7 @@ APA 14/15 is a single data point. Elsevier Harvard (8/15) and Chicago (6/15) sho
 - ✅ csl26-o3ek: Updated with conversion status and phased plan
 - ✅ csl26-m3lb: Updated with achievement tracking
 - ✅ csl26-gidg: Updated with concrete metrics and blockers
-- ✅ docs/ROADMAP.md: Created strategic tracking document
+- ✅ ../ROADMAP.md: Created strategic tracking document
 
 ### Short-Term (Phase 1 Execution)
 1. Iterate APA to 15/15 bibliography (currently 14/15)
@@ -122,6 +122,6 @@ APA 14/15 is a single data point. Elsevier Harvard (8/15) and Chicago (6/15) sho
 ## References
 
 - **Beans Updated:** csl26-o3ek, csl26-m3lb, csl26-gidg
-- **New Docs:** docs/ROADMAP.md
-- **Existing Docs:** docs/STYLE_PRIORITY.md
+- **New Docs:** ../ROADMAP.md
+- **Existing Docs:** ../../reference/STYLE_PRIORITY.md
 - **Analysis Source:** Deep plan output from 2026-02-15 /dplan session

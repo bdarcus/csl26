@@ -155,7 +155,7 @@ The disambiguation system is fully integrated:
 - Cascading fallback strategies
 - Full test coverage for common CSL 1.0 scenarios
 
-Test file: `crates/csln_processor/tests/citations.rs`
+Test file: `../crates/csln_processor/tests/citations.rs`
 
 ## Performance Characteristics
 

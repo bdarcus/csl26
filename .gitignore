@@ -30,5 +30,13 @@ tasks-backup-*/
 .gemini/
 GEMINI.md
 
+# Temporary development files
+debug.log
+f.md
+temp_*.csl
+*.log
+migrated_*.yaml
+*.yaml.bk
+
 # Benchmark baselines (local-only performance tracking)
 .bench-baselines/

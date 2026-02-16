@@ -12,7 +12,7 @@ blocking:
 
 Implement year suffix rendering in date templates.
 
-**Implementation**: See DISAMBIGUATION_IMPLEMENTATION_PLAN.md Phase 2
+**Implementation**: See docs/architecture/DISAMBIGUATION_IMPLEMENTATION_PLAN.md Phase 2
 
 **Tasks**:
 1. Add int_to_letter() converter (0→'a', 25→'z', 26→'aa')

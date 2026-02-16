@@ -18,6 +18,9 @@ Before committing changes that affect Rust code (`.rs` files, `Cargo.toml`, `Car
 cargo fmt && cargo clippy --all-targets --all-features -- -D warnings && cargo nextest run
 ```
 
+**Planning Documents:**
+All planning documents, implementation plans, and architectural designs MUST be placed in `docs/architecture/`. DO NOT put new planning markdown files in the project root.
+
 These checks are non-negotiable quality gates for Rust changes:
 - `cargo fmt` - Code formatting (CI will fail without this)
 - `cargo clippy` - Zero-tolerance linting
@@ -453,7 +456,7 @@ Specialized expertise is available via the following skills in `.claude/skills/`
 
 ## Test Commands
 
-See **[docs/RENDERING_WORKFLOW.md](./docs/RENDERING_WORKFLOW.md)** for detailed workflow guide.
+See **[docs/guides/RENDERING_WORKFLOW.md](./docs/guides/RENDERING_WORKFLOW.md)** for detailed workflow guide.
 
 ```bash
 # Run all tests (parallel execution with nextest)
@@ -564,7 +567,7 @@ Example (documentation-only change):
 ```bash
 git add -A && git commit -m "docs: clarify migration strategy
 
-Update MIGRATION_STRATEGY_ANALYSIS.md to reflect hybrid approach
+Update [MIGRATION_STRATEGY_ANALYSIS.md](./docs/architecture/MIGRATION_STRATEGY_ANALYSIS.md) to reflect hybrid approach
 findings from APA 7th validation testing."
 ```
 
@@ -645,7 +648,7 @@ At that point, restore the "NEVER commit to main" rule.
 
 **Important**: Do not over-optimize for any single style. Test changes against multiple parent styles to avoid regressions.
 
-See **[docs/STYLE_PRIORITY.md](./docs/STYLE_PRIORITY.md)** for detailed impact analysis based on dependent style counts.
+See **[docs/reference/STYLE_PRIORITY.md](./docs/reference/STYLE_PRIORITY.md)** for detailed impact analysis based on dependent style counts.
 
 ### Top Parent Styles by Impact
 

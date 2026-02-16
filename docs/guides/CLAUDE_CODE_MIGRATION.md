@@ -22,7 +22,7 @@ This project has been migrated to use Claude Code native tasks for work tracking
 
 **After:**
 ```
-docs/architecture/
+./architecture/
   ├── PERSONAS.md
   ├── PRIOR_ART.md
   └── design/
@@ -38,7 +38,7 @@ CLAUDE.md          # Standalone project instructions
 **Before:** TODO items scattered across:
 - `.agent/todo/*.md` files
 - GitHub issues
-- `docs/TIER*_PLAN.md` files
+- `./TIER*_PLAN.md` files
 
 **After:** All work tracked as native Claude tasks:
 - Use `TaskList` to see all tasks

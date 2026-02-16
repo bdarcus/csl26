@@ -12,7 +12,7 @@ blocking:
 
 Integrate Disambiguator::calculate_hints() into Processor::process_citation().
 
-**Implementation**: See DISAMBIGUATION_IMPLEMENTATION_PLAN.md Phase 1
+**Implementation**: See docs/architecture/DISAMBIGUATION_IMPLEMENTATION_PLAN.md Phase 1
 
 **Tasks**:
 1. Add disambiguator field to ProcessorState

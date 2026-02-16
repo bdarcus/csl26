@@ -12,4 +12,4 @@ Add preferred-transliteration field to MultilingualConfig supporting priority li
 
 Implement matching algorithm (exact BCP 47 → script prefix → fallback).
 
-Refs: expert feedback on transliteration methods, MULTILINGUAL.md Section 1.3
+Refs: expert feedback on transliteration methods,docs/architecture/MULTILINGUAL.md Section 1.3

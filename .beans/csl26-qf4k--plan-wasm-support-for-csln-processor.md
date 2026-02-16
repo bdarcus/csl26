@@ -19,7 +19,7 @@ Goals:
 - Design pluggable renderer integration for HTML output
 
 References:
-- citeproc-rs WASM implementation patterns (PRIOR_ART.md)
+- citeproc-rs WASM implementation patterns (docs/architecture/PRIOR_ART.md)
 - Issue #105: Pluggable output formats
 - Web-based style editor requirements (STYLE_EDITOR_VISION.md)
 

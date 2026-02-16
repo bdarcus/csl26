@@ -18,7 +18,7 @@ csln convert styles/apa-7th.yaml --output styles/apa-7th.cbor
 csln process references.json styles/apa-7th.yaml --format html
 
 # Test a single style (default: structured diff)
-node scripts/oracle.js styles-legacy/apa.csl
+node ../scripts/oracle.js styles-legacy/apa.csl
 ```
 
 ## Hybrid Migration Strategy
@@ -70,7 +70,7 @@ When fixing rendering issues, follow this process:
 Start with the structured oracle to see component-level differences:
 
 ```bash
-node scripts/oracle.js styles-legacy/apa.csl
+node ../scripts/oracle.js styles-legacy/apa.csl
 ```
 
 This shows you **which specific components** differ between citeproc-js (oracle) and CSLN, not just that the strings are different.
@@ -93,7 +93,7 @@ This tells you:
 Run the workflow test to see if this is a style-specific issue or systemic:
 
 ```bash
-./scripts/workflow-test.sh styles-legacy/apa.csl
+./../scripts/workflow-test.sh styles-legacy/apa.csl
 ```
 
 This runs:
@@ -128,20 +128,20 @@ This project uses a tri-agent specialist model to achieve high-fidelity renderin
 2.  **@styleplan**: Converts the architectural design into a technical build plan with actionable tasks and exact code snippets for the builder.
 3.  **@styleauthor**: Executes the implementation (Haiku) using the hand-authoring loop.
 
-**Workflow**: Run `./scripts/prep-migration.sh <style>` and use the specialized agents to hand-author the CSLN template.
+**Workflow**: Run `./../scripts/prep-migration.sh <style>` and use the specialized agents to hand-author the CSLN template.
 
 #### Systemic Issues (affects Tier 3/4 styles)
-→ Fix in `crates/csln_processor/`
+→ Fix in `../crates/csln_processor/`
 - Example: Year parentheses missing across all author-date styles.
 - Look in: `rendering.rs`, `bibliography.rs`, date formatting logic.
 
 #### Style-Specific Issues (Tier 3/4)
 → Fix in migration logic or style YAML
 - Example: APA uses "Vol." prefix, IEEE doesn't.
-- Check: `crates/csln_migrate/`, generated YAML overrides.
+- Check: `../crates/csln_migrate/`, generated YAML overrides.
 
 #### Migration Issues (CSL → YAML conversion wrong)
-→ Fix in `crates/csln_migrate/`
+→ Fix in `../crates/csln_migrate/`
 - Example: Variable ends up in wrong template section.
 - **Migration Debugger** (planned): `csln_migrate --debug-variable VAR` will show provenance tracking.
 
@@ -240,7 +240,7 @@ When debugging unexpectedly different output between citations and bibliography,
 Re-run the workflow test:
 
 ```bash
-./scripts/workflow-test.sh styles-legacy/apa.csl
+./../scripts/workflow-test.sh styles-legacy/apa.csl
 ```
 
 Check that:
@@ -259,10 +259,10 @@ After significant fixes, update the baseline (regression detection planned):
 
 ```bash
 # Planned: Save baseline after milestone
-node scripts/oracle-batch-aggregate.js styles-legacy/ --top 20 --save baselines/baseline-$(date +%F).json
+node ../scripts/oracle-batch-aggregate.js styles-legacy/ --top 20 --save baselines/baseline-$(date +%F).json
 
 # Planned: Compare against baseline to detect regressions
-node scripts/oracle-batch-aggregate.js styles-legacy/ --top 20 --compare baselines/baseline-2026-02-06.json
+node ../scripts/oracle-batch-aggregate.js styles-legacy/ --top 20 --compare baselines/baseline-2026-02-06.json
 ```
 
 This will catch regressions immediately (e.g., "APA: 15/15 → 14/15 - ITEM-3 now failing").
@@ -294,8 +294,8 @@ Bibliography Entry ITEM-2:
 
 **Example usage:**
 ```bash
-node scripts/oracle.js styles-legacy/apa.csl
-node scripts/oracle.js styles-legacy/chicago-author-date.csl --verbose
+node ../scripts/oracle.js styles-legacy/apa.csl
+node ../scripts/oracle.js styles-legacy/chicago-author-date.csl --verbose
 ```
 
 ### `oracle-simple.js` (String Comparison - LEGACY)
@@ -306,7 +306,7 @@ node scripts/oracle.js styles-legacy/chicago-author-date.csl --verbose
 
 **Example usage:**
 ```bash
-node scripts/oracle-simple.js styles-legacy/apa.csl
+node ../scripts/oracle-simple.js styles-legacy/apa.csl
 ```
 
 ### `oracle-batch-aggregate.js` (Multi-Style Impact)
@@ -318,13 +318,13 @@ node scripts/oracle-simple.js styles-legacy/apa.csl
 **Example usage:**
 ```bash
 # Test top 10 styles
-node scripts/oracle-batch-aggregate.js styles-legacy/ --top 10
+node ../scripts/oracle-batch-aggregate.js styles-legacy/ --top 10
 
 # Test all author-date styles (may be slow)
-node scripts/oracle-batch-aggregate.js styles-legacy/ --format author-date
+node ../scripts/oracle-batch-aggregate.js styles-legacy/ --format author-date
 
 # JSON output for scripting
-node scripts/oracle-batch-aggregate.js styles-legacy/ --top 20 --json
+node ../scripts/oracle-batch-aggregate.js styles-legacy/ --top 20 --json
 ```
 
 **Output interpretation:**
@@ -347,9 +347,9 @@ Bibliography: 3/5 passing
 
 **Example usage:**
 ```bash
-./scripts/workflow-test.sh styles-legacy/apa.csl
-./scripts/workflow-test.sh styles-legacy/ieee.csl --json
-./scripts/workflow-test.sh styles-legacy/nature.csl --top 20
+./../scripts/workflow-test.sh styles-legacy/apa.csl
+./../scripts/workflow-test.sh styles-legacy/ieee.csl --json
+./../scripts/workflow-test.sh styles-legacy/nature.csl --top 20
 ```
 
 ### `prep-migration.sh` (Agent Context Prep)
@@ -363,7 +363,7 @@ Bibliography: 3/5 passing
 
 **Example usage**:
 ```bash
-./scripts/prep-migration.sh styles-legacy/apa.csl
+./../scripts/prep-migration.sh styles-legacy/apa.csl
 ```
 Then, copy the output and provide it to the `@styleauthor` agent to begin the iterative authoring process.
 
@@ -523,7 +523,7 @@ When a variable ends up in the wrong place or has wrong formatting, trace throug
 
 3. **Compare with oracle:**
    ```bash
-   node scripts/oracle.js styles-legacy/apa.csl --verbose
+   node ../scripts/oracle.js styles-legacy/apa.csl --verbose
    ```
 
 **Future (Task #24):** Use migration debugger:
@@ -551,13 +551,13 @@ When running many tests:
 
 ```bash
 # Test only citations (faster)
-node scripts/oracle.js styles-legacy/apa.csl --cite
+node ../scripts/oracle.js styles-legacy/apa.csl --cite
 
 # Test only bibliography
-node scripts/oracle.js styles-legacy/apa.csl --bib
+node ../scripts/oracle.js styles-legacy/apa.csl --bib
 
 # Limit batch analysis
-node scripts/oracle-batch-aggregate.js styles-legacy/ --top 5
+node ../scripts/oracle-batch-aggregate.js styles-legacy/ --top 5
 ```
 
 ## Troubleshooting
@@ -567,7 +567,7 @@ node scripts/oracle-batch-aggregate.js styles-legacy/ --top 5
 Make sure you're running from project root or scripts directory:
 ```bash
 cd /Users/brucedarcus/Code/csl26
-node scripts/oracle.js styles-legacy/apa.csl
+node ../scripts/oracle.js styles-legacy/apa.csl
 ```
 
 ### "Style not found"
@@ -575,17 +575,17 @@ node scripts/oracle.js styles-legacy/apa.csl
 Check style path relative to current directory:
 ```bash
 # From project root
-node scripts/oracle.js styles-legacy/apa.csl
+node ../scripts/oracle.js styles-legacy/apa.csl
 
-# From scripts/
+# From ../scripts/
 node oracle.js ../styles-legacy/apa.csl
 ```
 
 ### "Locale not found"
 
-Oracle scripts need locale files in scripts/ directory:
+Oracle scripts need locale files in ../scripts/ directory:
 ```bash
-ls scripts/locales-*.xml
+ls ../scripts/locales-*.xml
 # Should show: locales-en-US.xml, etc.
 ```
 
@@ -609,7 +609,7 @@ This means the component extraction is incomplete. The structured oracle only ch
 ## Related Documentation
 
 - **[WORKFLOW_ANALYSIS.md](./WORKFLOW_ANALYSIS.md)**: Detailed analysis of bottlenecks and improvement plan
-- **[STYLE_PRIORITY.md](./STYLE_PRIORITY.md)**: Which styles to prioritize based on dependent counts
+- **[../reference/STYLE_PRIORITY.md](./../reference/STYLE_PRIORITY.md)**: Which styles to prioritize based on dependent counts
 - **[TEST_STRATEGY.md](./architecture/design/TEST_STRATEGY.md)**: Oracle vs CSLN-native testing approach
 - **[CLAUDE.md](../CLAUDE.md)**: Test commands and autonomous workflow whitelist
 
@@ -624,16 +624,16 @@ csln_migrate styles-legacy/apa.csl --debug-variable volume
 ### Phase 3: Regression Detection (Task #25)
 ```bash
 # Save baseline
-node scripts/oracle-batch-aggregate.js styles-legacy/ --top 20 --json > baselines/baseline-2026-02-05.json
+node ../scripts/oracle-batch-aggregate.js styles-legacy/ --top 20 --json > baselines/baseline-2026-02-05.json
 
 # Compare against baseline
-node scripts/oracle-batch-aggregate.js styles-legacy/ --top 20 --compare baselines/baseline-2026-02-05.json
+node ../scripts/oracle-batch-aggregate.js styles-legacy/ --top 20 --compare baselines/baseline-2026-02-05.json
 # Output: "Regression: APA 15/15 → 14/15 (ITEM-3 now failing)"
 ```
 
 ### Phase 4: Test Data Generator (Task #26)
 ```bash
-node scripts/generate-test-item.js
+node ../scripts/generate-test-item.js
 # Interactive prompt to add new reference types to test fixtures
 ```
 
@@ -642,6 +642,6 @@ node scripts/generate-test-item.js
 If this guide doesn't answer your question:
 
 1. Check the [WORKFLOW_ANALYSIS.md](./WORKFLOW_ANALYSIS.md) for deeper technical details
-2. Look at existing oracle script source code in `scripts/`
+2. Look at existing oracle script source code in `../scripts/`
 3. Run with `--verbose` flag for more diagnostic output
 4. Check task list for known gaps (e.g., Task #11, #14, #24-26)

@@ -12,7 +12,7 @@ blocking:
 
 Implement et-al expansion for disambiguation.
 
-**Implementation**: See DISAMBIGUATION_IMPLEMENTATION_PLAN.md Phase 3
+**Implementation**: See docs/architecture/DISAMBIGUATION_IMPLEMENTATION_PLAN.md Phase 3
 
 **Tasks**:
 1. Update contributor renderer to check hints.min_names_to_show

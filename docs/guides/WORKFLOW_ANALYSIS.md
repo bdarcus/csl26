@@ -258,7 +258,7 @@ Ordering: Placed after container-title by reorder_serial_components()
 ## Related Documentation
 
 - **[RENDERING_WORKFLOW.md](./RENDERING_WORKFLOW.md)**: Step-by-step agent workflow guide
-- **[STYLE_PRIORITY.md](./STYLE_PRIORITY.md)**: Parent style impact ranking
+- **[../reference/STYLE_PRIORITY.md](./../reference/STYLE_PRIORITY.md)**: Parent style impact ranking
 
 ## Conclusion
 

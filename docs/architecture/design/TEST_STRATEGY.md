@@ -8,7 +8,7 @@
 - Test fixtures use CSL JSON format (what citeproc-js expects)
 - Compare CSLN output against citeproc-js (the oracle)
 - Located: `tests/fixtures/references-expanded.json`
-- Test harness: `scripts/oracle-e2e.js`
+- Test harness: `../../../scripts/oracle-e2e.js`
 
 **Limitations**:
 - Cannot test CSLN-specific features beyond CSL 1.0

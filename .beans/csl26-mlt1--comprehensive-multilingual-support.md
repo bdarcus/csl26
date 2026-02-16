@@ -16,7 +16,7 @@ Status:
 * ✅ Input Support: CSL-JSON and BibLaTeX conversion updated with `language` field support.
 * ✅ Verification: Comprehensive deserialization and merging tests added.
 * ✅ Expert Feedback Integration: BCP 47 variant tags for transliteration methods, disambiguation via displayed strings (not PIDs).
-* ✅ Documentation: MULTILINGUAL.md Section 1.3 (transliteration methods), Section 5 (disambiguation strategy), tests for multiple transliteration methods.
+* ✅ Documentation:docs/architecture/MULTILINGUAL.md Section 1.3 (transliteration methods), Section 5 (disambiguation strategy), tests for multiple transliteration methods.
 * ✅ Project Integration: Added Multilingual Support principle to CLAUDE.md Development Principles.
 * ⏳ Processor Logic (csl26-mlt2): Implement value resolution and script-aware ordering in `csln_processor`.
 * ⏳ Sorting (future): Integrate ICU4X for UCA-based locale-aware sorting.

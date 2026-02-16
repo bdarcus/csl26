@@ -81,7 +81,7 @@ Tracks reach 1.0 independently based on their own stability criteria:
 
 ### Current Schema Version
 
-Check the default schema version in `crates/csln_core/src/lib.rs`:
+Check the default schema version in `../crates/csln_core/src/lib.rs`:
 
 ```rust
 fn default_version() -> String {
@@ -113,21 +113,21 @@ All style files inherit this default unless explicitly overridden in YAML.
 
 ### Bumping Schema Version
 
-Use the `scripts/bump-schema.sh` script to update the schema version:
+Use the `../scripts/bump-schema.sh` script to update the schema version:
 
 ```bash
 # Bump to new schema version
-./scripts/bump-schema.sh 1.1.0
+./../scripts/bump-schema.sh 1.1.0
 
 # What it does:
 # 1. Updates default_version() in csln_core/src/lib.rs
 # 2. Validates all styles parse correctly with new version
-# 3. Updates docs/SCHEMA_VERSIONING.md with timestamp
+# 3. Updates ./SCHEMA_VERSIONING.md with timestamp
 # 4. Creates git tag: schema-v1.1.0
 ```
 
 **Manual process:**
-1. Update `default_version()` in `crates/csln_core/src/lib.rs`
+1. Update `default_version()` in `../crates/csln_core/src/lib.rs`
 2. Run `cargo test` to ensure all styles parse
 3. Update this file with schema changelog entry
 4. Commit with message: `chore(schema): bump schema version to X.Y.Z`
@@ -206,4 +206,4 @@ A: Use explicit `version` field in style YAML. Processor will fail gracefully wi
 - [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 - [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 - [release-plz Documentation](https://release-plz.ieni.dev/)
-- [git-cliff Configuration](https://git-cliff.org/docs/configuration)
+- [git-cliff Configuration](https://git-cliff.org/./configuration)

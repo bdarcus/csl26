@@ -2,7 +2,7 @@
 
 **Status:** Planning phase
 **Created:** 2026-02-16
-**Related:** docs/DISAMBIGUATION.md, docs/architecture/MULTILINGUAL.md, docs/architecture/design/BIBLIOGRAPHY_GROUPING.md
+**Related:** ../DISAMBIGUATION.md, ./MULTILINGUAL.md, ./design/BIBLIOGRAPHY_GROUPING.md
 
 ## Executive Summary
 
@@ -205,7 +205,7 @@ for group in &grouped_refs {
 ### Phase 1: Multilingual Disambiguation Keys
 
 **Files:**
-- `crates/csln_processor/src/processor/disambiguation.rs`
+- `../../crates/csln_processor/src/processor/disambiguation.rs`
 
 **Tasks:**
 1. Add `render_name_for_disambiguation()` method
@@ -220,7 +220,7 @@ for group in &grouped_refs {
 ### Phase 2: Group-Aware Sorting
 
 **Files:**
-- `crates/csln_processor/src/processor/disambiguation.rs`
+- `../../crates/csln_processor/src/processor/disambiguation.rs`
 
 **Tasks:**
 1. Add `group_sort` field to Disambiguator struct
@@ -236,7 +236,7 @@ for group in &grouped_refs {
 ### Phase 3: Per-Group Disambiguation
 
 **Files:**
-- `crates/csln_processor/src/render/bibliography.rs`
+- `../../crates/csln_processor/src/render/bibliography.rs`
 
 **Tasks:**
 1. Modify `render_grouped()` to run disambiguation per group
@@ -251,8 +251,8 @@ for group in &grouped_refs {
 ### Phase 4: Test Coverage
 
 **Test Files:**
-- `crates/csln_processor/tests/citations.rs` - Primary target for disambiguation tests
-- `crates/csln_processor/tests/i18n.rs` - Multilingual-specific tests
+- `../../crates/csln_processor/tests/citations.rs` - Primary target for disambiguation tests
+- `../../crates/csln_processor/tests/i18n.rs` - Multilingual-specific tests
 
 **Test Scenarios:**
 
@@ -277,9 +277,9 @@ for group in &grouped_refs {
 ### Phase 5: Documentation
 
 **Files:**
-- `docs/DISAMBIGUATION.md`
-- `docs/architecture/MULTILINGUAL.md`
-- `docs/architecture/design/BIBLIOGRAPHY_GROUPING.md`
+- `../DISAMBIGUATION.md`
+- `./MULTILINGUAL.md`
+- `./design/BIBLIOGRAPHY_GROUPING.md`
 
 **Updates:**
 1. Document multilingual disambiguation behavior with examples

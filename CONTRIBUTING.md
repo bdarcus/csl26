@@ -128,7 +128,7 @@ For pull requests:
 
 1. All pre-commit checks must pass
 2. Oracle verification validates rendering correctness (if applicable)
-3. Maintainers review for design alignment with [PERSONAS.md](.agent/PERSONAS.md)
+3. Maintainers review for design alignment with [PERSONAS.md](./docs/architecture/PERSONAS.md)
 
 This is an AI-first workflow, so expect feedback emphasizing clarity, explicitness, and modularity.
 

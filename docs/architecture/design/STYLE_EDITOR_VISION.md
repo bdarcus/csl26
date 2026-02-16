@@ -96,8 +96,8 @@ GET  /examples/:field       # Field-specific references
 
 - [Issue #28: MakeCSL Vision](https://github.com/bdarcus/csln/issues/28)
 - [Style Editor Repository](https://github.com/bdarcus/style-editor) - The web platform companion to this repository
-- [PERSONAS.md](.agent/PERSONAS.md) - stakeholder alignment
-- [options.rs](crates/csln_core/src/options.rs) - configuration model
+- [PERSONAS.md](../PERSONAS.md) - stakeholder alignment
+- [options.rs](../../../crates/csln_core/src/options.rs) - configuration model
 
 ---
 

@@ -2,7 +2,7 @@
 
 **Status:** Phases 1-4 complete, 4/11 tests passing (36% success rate)
 **Branch:** `fix/disambiguation`
-**Test Suite:** 11 native tests in `crates/csln_processor/tests/citations.rs`
+**Test Suite:** 11 native tests in `../../crates/csln_processor/tests/citations.rs`
 
 ## Executive Summary
 
@@ -20,7 +20,7 @@ Current status: **4/11 tests passing** (36% success rate). The remaining 7 tests
 ## Phase 1: Foundation - Citation Rendering Integration ✅ COMPLETE
 
 ### Task 1.1: Wire Disambiguator into Processor::process_citation ✅
-**File:** `crates/csln_processor/src/processor/rendering.rs`
+**File:** `../../crates/csln_processor/src/processor/rendering.rs`
 **Status:** COMPLETE
 
 **Implementation:**
@@ -37,8 +37,8 @@ Current status: **4/11 tests passing** (36% success rate). The remaining 7 tests
 
 ### Task 1.2: Pass Hints Through Rendering Chain ✅
 **Files:**
-- `crates/csln_processor/src/render/citation.rs`
-- `crates/csln_processor/src/render/component.rs`
+- `../../crates/csln_processor/src/render/citation.rs`
+- `../../crates/csln_processor/src/render/component.rs`
 
 **Status:** COMPLETE
 
@@ -57,7 +57,7 @@ Current status: **4/11 tests passing** (36% success rate). The remaining 7 tests
 ## Phase 2: Year Suffix Implementation ✅ COMPLETE
 
 ### Task 2.1: Year Suffix Generation (Letter Sequence) ✅
-**File:** `crates/csln_processor/src/values/date.rs`
+**File:** `../../crates/csln_processor/src/values/date.rs`
 **Status:** COMPLETE
 
 **Implementation:**
@@ -73,7 +73,7 @@ Current status: **4/11 tests passing** (36% success rate). The remaining 7 tests
 ---
 
 ### Task 2.2: Year Suffix Rendering in Date Component ✅
-**File:** `crates/csln_processor/src/values/date.rs`
+**File:** `../../crates/csln_processor/src/values/date.rs`
 **Status:** COMPLETE
 
 **Implementation:**
@@ -94,7 +94,7 @@ Current status: **4/11 tests passing** (36% success rate). The remaining 7 tests
 ---
 
 ### Task 2.3: Year Suffix Sorting ✅
-**File:** `crates/csln_processor/src/processor/disambiguation.rs`
+**File:** `../../crates/csln_processor/src/processor/disambiguation.rs`
 **Status:** COMPLETE
 
 **Implementation:**
@@ -112,7 +112,7 @@ Current status: **4/11 tests passing** (36% success rate). The remaining 7 tests
 ## Phase 3: Name Expansion (Et-al Disambiguation) ✅ COMPLETE
 
 ### Task 3.1: Et-al Rendering Respect Hints ✅
-**File:** `crates/csln_processor/src/values/contributor.rs`
+**File:** `../../crates/csln_processor/src/values/contributor.rs`
 **Status:** COMPLETE
 
 **Implementation:**
@@ -128,7 +128,7 @@ Current status: **4/11 tests passing** (36% success rate). The remaining 7 tests
 ---
 
 ### Task 3.2: Name Expansion Detection ✅
-**File:** `crates/csln_processor/src/processor/disambiguation.rs`
+**File:** `../../crates/csln_processor/src/processor/disambiguation.rs`
 **Status:** COMPLETE
 
 **Implementation:**
@@ -146,7 +146,7 @@ Current status: **4/11 tests passing** (36% success rate). The remaining 7 tests
 ## Phase 4: Given Name Expansion ✅ COMPLETE
 
 ### Task 4.1: Given Name Rendering ✅
-**File:** `crates/csln_processor/src/values/contributor.rs`
+**File:** `../../crates/csln_processor/src/values/contributor.rs`
 **Status:** COMPLETE
 
 **Implementation:**
@@ -166,7 +166,7 @@ Current status: **4/11 tests passing** (36% success rate). The remaining 7 tests
 ---
 
 ### Task 4.2: Given Name Disambiguation Logic ✅
-**File:** `crates/csln_processor/src/processor/disambiguation.rs`
+**File:** `../../crates/csln_processor/src/processor/disambiguation.rs`
 **Status:** COMPLETE
 
 **Implementation:**
@@ -242,19 +242,19 @@ For each failing test:
 ## Phase 6: Cleanup & Migration
 
 ### Task 6.1: Remove Obsolete CSL XML Tests
-**File:** `crates/csln_processor/src/disambiguation_csl.rs`
+**File:** `../../crates/csln_processor/src/disambiguation_csl.rs`
 **Status:** COMPLETE
 
 The file `disambiguation_csl.rs` (historical) contained obsolete CSL XML test infrastructure and has been removed. All testing is now done via native CSLN tests in the `citations` functional target.
 
 **Action:**
-- Deleted `crates/csln_processor/src/disambiguation_csl.rs`
+- Deleted `../../crates/csln_processor/src/disambiguation_csl.rs`
 - Verify no other files import from this module
 
 ---
 
 ### Task 6.2: Migrate Test Data to Rust Structs
-**File:** `crates/csln_processor/tests/citations.rs`
+**File:** `../../crates/csln_processor/tests/citations.rs`
 **Status:** IN PROGRESS
 
 Currently, tests use JSON string inputs for bibliography data. These should be gradually migrated to native Rust structs for better type safety and IDE support.
@@ -271,7 +271,7 @@ Currently, tests use JSON string inputs for bibliography data. These should be g
 ## Phase 7: Documentation
 
 ### Task 7.1: Update DISAMBIGUATION.md
-**File:** `docs/DISAMBIGUATION.md`
+**File:** `../DISAMBIGUATION.md`
 **Status:** PENDING
 
 **Updates Needed:**

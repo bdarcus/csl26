@@ -215,7 +215,7 @@ export enum WasmErrorKind {
 1. Create @csln/processor-wasm package structure
 2. Add package.json with TypeScript types
 3. Set up automated publishing (GitHub Actions)
-4. Write integration guide (docs/WASM_INTEGRATION.md)
+4. Write integration guide (../../WASM_INTEGRATION.md)
 5. Publish to npm registry
 
 ### Phase 5: Verification (1 week)
@@ -293,8 +293,8 @@ WASM support should be implemented when **any** of these conditions are met:
 - **citeproc-rs WASM** - PRIOR_ART.md Section 5.5 (WASM-first architecture)
 - **jotdown renderer** - PRIOR_ART.md #105 (trait-based output abstraction)
 - **STYLE_EDITOR_VISION.md** - Requires /preview/citation and /preview/bibliography endpoints (#159)
-- **wasm-bindgen Guide** - https://rustwasm.github.io/docs/wasm-bindgen/
-- **wasm-pack** - https://rustwasm.github.io/docs/wasm-pack/
+- **wasm-bindgen Guide** - https://rustwasm.github.io/../../wasm-bindgen/
+- **wasm-pack** - https://rustwasm.github.io/../../wasm-pack/
 
 ## Open Questions
 
@@ -324,7 +324,7 @@ WASM support should be implemented when **any** of these conditions are met:
 
 **Tier 4 (npm Package):**
 - [ ] @csln/processor-wasm published to npm
-- [ ] Integration guide complete (docs/WASM_INTEGRATION.md)
+- [ ] Integration guide complete (../../WASM_INTEGRATION.md)
 - [ ] Automated publishing via GitHub Actions
 
 **Tier 5 (Verification):**

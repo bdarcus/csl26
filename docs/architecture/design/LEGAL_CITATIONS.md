@@ -313,8 +313,8 @@ Obergefell v. Hodges, 135 S. Ct. 2584, 2604, 192 L. Ed. 2d 609 (2015).
    - Test with complex legal fixtures (parallel citations, hereinafter)
 
 6. **Documentation:**
-   - `docs/LEGAL_CITATIONS.md` - User guide for legal citations
-   - `docs/examples/legal-citations.md` - Academic vs legal specialist examples
+   - `../../LEGAL_CITATIONS.md` - User guide for legal citations
+   - `../../examples/legal-citations.md` - Academic vs legal specialist examples
 
 ## Compliance with Project Principles
 

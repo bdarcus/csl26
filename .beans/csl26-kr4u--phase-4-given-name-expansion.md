@@ -12,7 +12,7 @@ blocking:
 
 Implement given name/initial expansion for disambiguation.
 
-**Implementation**: See DISAMBIGUATION_IMPLEMENTATION_PLAN.md Phase 4
+**Implementation**: See docs/architecture/DISAMBIGUATION_IMPLEMENTATION_PLAN.md Phase 4
 
 **Tasks**:
 1. Update name formatter to check hints.expand_given_names

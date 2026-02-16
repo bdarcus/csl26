@@ -2,7 +2,7 @@
 
 ## Context
 
-Bean `csl26-rh2u` and the broader epic `csl26-ifiw` track a fundamental problem: the template compiler produces bibliography templates with wrong component ordering, duplicate/missing components, and incorrect suppress logic. Current results: **87-100% citation match, 0% bibliography match** across all top parent styles. The template compiler (`crates/csln_migrate/src/template_compiler/mod.rs`, 2,077 lines) is the bottleneck.
+Bean `csl26-rh2u` and the broader epic `csl26-ifiw` track a fundamental problem: the template compiler produces bibliography templates with wrong component ordering, duplicate/missing components, and incorrect suppress logic. Current results: **87-100% citation match, 0% bibliography match** across all top parent styles. The template compiler (`../../crates/csln_migrate/src/template_compiler/mod.rs`, 2,077 lines) is the bottleneck.
 
 **Design origin:** CSL 1.0 was designed with XSLT - a side-effect-free language where nodes are processed in document order and macro calls are simple substitutions. This means the XML node order in the layout IS the rendering order. The challenge is not node ordering itself, but that macros like `source` contain `choose/if/else` branches creating different component sequences for different reference types (e.g., journals get container-title + volume(issue) + pages, while chapters get editor + container-title + pages). Flattening these type-specific branches into one declarative template with overrides is the core difficulty.
 
@@ -65,11 +65,11 @@ Bean `csl26-rh2u` and the broader epic `csl26-ifiw` track a fundamental problem:
 
 ## Approach C: Hand-Authoring High-Impact Styles
 
-**How it works:** A human (or LLM-assisted human) reads the style guide and hand-authors CSLN YAML templates, using the existing `examples/apa-style.yaml` as a model. This approach targets the top 10 parent styles covering 60% of dependent styles.
+**How it works:** A human (or LLM-assisted human) reads the style guide and hand-authors CSLN YAML templates, using the existing `../../examples/apa-style.yaml` as a model. This approach targets the top 10 parent styles covering 60% of dependent styles.
 
 ### Pros
 
-1. **Proven to work** - `examples/apa-style.yaml` already exists: 11 components, correct ordering, proper type-specific overrides, correct delimiters. This is the gold standard.
+1. **Proven to work** - `../../examples/apa-style.yaml` already exists: 11 components, correct ordering, proper type-specific overrides, correct delimiters. This is the gold standard.
 2. **Highest fidelity** - A knowledgeable author understands the intent behind a style guide, not just observed output. They can handle edge cases, locale terms, and rare types correctly.
 3. **No infrastructure dependency** - No need for oracle.js hardening, expanded test fixtures, or citeproc-js inference runs.
 4. **Directly produces the target format** - The CSLN template model was designed to be human-readable and human-writable.
@@ -104,7 +104,7 @@ The critical insight is that these approaches fail at *different things*:
 
 1. **Keep the XML pipeline for OPTIONS** - The options extractor, preset detector, locale handling, and processing mode detection all work. This is ~2,500 lines of solid code that does not need replacement.
 
-2. **Hand-author templates for the top 5-10 parent styles** - Starting from `examples/apa-style.yaml` as a model, use style guides and oracle verification to produce gold-standard templates. This covers 60% of dependent styles with the highest confidence.
+2. **Hand-author templates for the top 5-10 parent styles** - Starting from `../../examples/apa-style.yaml` as a model, use style guides and oracle verification to produce gold-standard templates. This covers 60% of dependent styles with the highest confidence.
 
 3. **Build output-driven template inference for the next tier** - For parent styles beyond the top 10, use citeproc-js output + input data cross-referencing to generate template structure. This requires hardening oracle.js first.
 
@@ -145,7 +145,7 @@ The critical insight is that these approaches fail at *different things*:
 
 ## Validation Results (2026-02-08)
 
-The output-driven template inferrer (`scripts/lib/template-inferrer.js`) was implemented and tested against 6 major parent styles. Results validate the hybrid approach.
+The output-driven template inferrer (`../../scripts/lib/template-inferrer.js`) was implemented and tested against 6 major parent styles. Results validate the hybrid approach.
 
 ### What the inferrer demonstrated
 
@@ -171,7 +171,7 @@ The output-driven template inferrer (`scripts/lib/template-inferrer.js`) was imp
 
 Several Approach B cons identified in the original analysis have been mitigated:
 
-- **Con #2 (Parser fragility)**: The component parser was rewritten with exact field-aware matching, multi-field scoring for reference lookup, and digit-boundary guards for numeric fields. See `scripts/lib/component-parser.js`.
+- **Con #2 (Parser fragility)**: The component parser was rewritten with exact field-aware matching, multi-field scoring for reference lookup, and digit-boundary guards for numeric fields. See `../../scripts/lib/component-parser.js`.
 - **Con #6 (Delimiter and formatting inference)**: Delimiter consensus uses filtered voting across all entry pairs. Formatting detection parses raw HTML output from citeproc-js to identify `<i>` tags and quote characters. Both work reliably.
 - **Con #8 (Non-deterministic)**: With sufficient entries per type (3+), the consensus-based approach produces stable results across runs.
 
@@ -196,22 +196,22 @@ The inferrer validates that **the hard problem (template structure) is better so
 
 ### Future application: visual style creation
 
-The same output-driven approach could power a visual style editor where users provide example formatted entries (by pasting, uploading, or modifying pre-selected reference data) and the system infers a CSLN template. The component parser and template inferrer already perform the core task: given structured reference data and a formatted string, derive component ordering, delimiters, formatting, and type-specific behavior. This aligns with the progressive-refinement UI described in `docs/architecture/design/STYLE_EDITOR_VISION.md` and would allow style creation without requiring knowledge of any style language.
+The same output-driven approach could power a visual style editor where users provide example formatted entries (by pasting, uploading, or modifying pre-selected reference data) and the system infers a CSLN template. The component parser and template inferrer already perform the core task: given structured reference data and a formatted string, derive component ordering, delimiters, formatting, and type-specific behavior. This aligns with the progressive-refinement UI described in `./design/STYLE_EDITOR_VISION.md` and would allow style creation without requiring knowledge of any style language.
 
 ---
 
 ## Files Referenced
 
-- `crates/csln_migrate/src/template_compiler/mod.rs` - Current template compiler (2,077 lines), the bottleneck
-- `crates/csln_migrate/src/lib.rs` - MacroInliner with macro expansion logic
-- `crates/csln_migrate/src/upsampler.rs` - CslNode to CslnNode conversion (works well)
-- `crates/csln_migrate/src/options_extractor/` - Options pipeline (works well, keep)
-- `crates/csln_core/src/template.rs` - CSLN template model (target schema)
-- `scripts/oracle.js` - Oracle comparison test
-- `scripts/lib/component-parser.js` - Hardened component parser with field-aware matching
-- `scripts/lib/template-inferrer.js` - Output-driven template inference engine
-- `scripts/infer-template.js` - CLI wrapper for template inference
-- `examples/apa-style.yaml` - Hand-authored APA style (gold standard, 11 components)
-- `tests/fixtures/references-expanded.json` - Test fixture (28 items, 12+ types)
-- `.beans/csl26-rh2u--preserve-macro-call-order-from-csl-10-during-parsi.md` - The triggering bean
-- `.beans/csl26-m3lb--implement-hybrid-migration-strategy.md` - Implementation milestone
+- `../../crates/csln_migrate/src/template_compiler/mod.rs` - Current template compiler (2,077 lines), the bottleneck
+- `../../crates/csln_migrate/src/lib.rs` - MacroInliner with macro expansion logic
+- `../../crates/csln_migrate/src/upsampler.rs` - CslNode to CslnNode conversion (works well)
+- `../../crates/csln_migrate/src/options_extractor/` - Options pipeline (works well, keep)
+- `../../crates/csln_core/src/template.rs` - CSLN template model (target schema)
+- `../../scripts/oracle.js` - Oracle comparison test
+- `../../scripts/lib/component-parser.js` - Hardened component parser with field-aware matching
+- `../../scripts/lib/template-inferrer.js` - Output-driven template inference engine
+- `../../scripts/infer-template.js` - CLI wrapper for template inference
+- `../../examples/apa-style.yaml` - Hand-authored APA style (gold standard, 11 components)
+- `../../tests/fixtures/references-expanded.json` - Test fixture (28 items, 12+ types)
+- `../../.beans/csl26-rh2u--preserve-macro-call-order-from-csl-10-during-parsi.md` - The triggering bean
+- `../../.beans/csl26-m3lb--implement-hybrid-migration-strategy.md` - Implementation milestone

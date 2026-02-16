@@ -438,7 +438,7 @@ See full decision criteria, flowchart, and examples in [TYPE_ADDITION_POLICY.md]
 
 ## Implementation
 
-**Type Addition Policy:** [docs/architecture/TYPE_ADDITION_POLICY.md](./TYPE_ADDITION_POLICY.md)
+**Type Addition Policy:** [../TYPE_ADDITION_POLICY.md](./TYPE_ADDITION_POLICY.md)
 
 **Current Type Audit:**
 - ✅ SerialComponent types conform to policy (parent-child efficiency)

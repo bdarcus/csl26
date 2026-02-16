@@ -8,9 +8,9 @@ created_at: 2026-02-16T12:18:06Z
 updated_at: 2026-02-16T13:17:15Z
 ---
 
-Complete 7-phase disambiguation implementation per DISAMBIGUATION_IMPLEMENTATION_PLAN.md
+Complete 7-phase disambiguation implementation per docs/architecture/DISAMBIGUATION_IMPLEMENTATION_PLAN.md
 
-**Plan Document**: DISAMBIGUATION_IMPLEMENTATION_PLAN.md
+**Plan Document**:docs/architecture/DISAMBIGUATION_IMPLEMENTATION_PLAN.md
 
 **Phases**:
 1. Wire Disambiguator into Processor (csl26-m6zd)

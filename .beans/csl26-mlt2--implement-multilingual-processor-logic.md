@@ -17,4 +17,4 @@ Implement resolve_multilingual_string and resolve_multilingual_name in csln_proc
 
 Add integration tests with multilingual reference data.
 
-Refs: MULTILINGUAL.md Section 3, csl26-mlt1, Frank Bennett CSL-M guidance
+Refs:docs/architecture/MULTILINGUAL.md Section 3, csl26-mlt1, Frank Bennett CSL-M guidance
