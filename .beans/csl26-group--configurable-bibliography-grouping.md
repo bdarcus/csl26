@@ -5,7 +5,7 @@ status: in-progress
 type: feature
 priority: normal
 created_at: 2026-02-15T00:00:00Z
-updated_at: 2026-02-16T01:20:34Z
+updated_at: 2026-02-16T15:50:00Z
 ---
 
 Implement configurable bibliography grouping system.
