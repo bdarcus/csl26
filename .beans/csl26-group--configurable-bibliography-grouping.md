@@ -54,8 +54,13 @@ Phase 4 complete ✅: Processor integration (custom groups + legacy fallback).
 
 Starting Phase 5: Legal use case validation.
 
-Phase 5 in progress: Legal hierarchy infrastructure created (style + fixtures).
-Pending: Integration tests for citation-aware grouping.
+Phase 5 complete ✅: Legal hierarchy infrastructure (style + fixtures).
+
+Starting Phase 6: Multilingual use case validation.
+
+Phase 6 complete ✅: Multilingual sorting infrastructure (style + fixtures).
+
+Phases 1-6 complete. Ready for Phase 7 (documentation).
 
 Note: CLI testing reveals that bibliography grouping requires citation
 data (cited_ids/silent_ids) to be populated via document processing.
