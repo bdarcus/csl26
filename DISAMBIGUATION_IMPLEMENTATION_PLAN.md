@@ -2,7 +2,7 @@
 
 **Status:** Phases 1-4 complete, 4/11 tests passing (36% success rate)
 **Branch:** `fix/disambiguation`
-**Test Suite:** 11 native tests in `crates/csln_processor/tests/disambiguation_native.rs`
+**Test Suite:** 11 native tests in `crates/csln_processor/tests/citations.rs`
 
 ## Executive Summary
 
@@ -243,18 +243,18 @@ For each failing test:
 
 ### Task 6.1: Remove Obsolete CSL XML Tests
 **File:** `crates/csln_processor/src/disambiguation_csl.rs`
-**Status:** PENDING
+**Status:** COMPLETE
 
-The file `disambiguation_csl.rs` contains obsolete CSL XML test infrastructure and should be removed entirely. All testing is now done via native CSLN tests in `disambiguation_native.rs`.
+The file `disambiguation_csl.rs` (historical) contained obsolete CSL XML test infrastructure and has been removed. All testing is now done via native CSLN tests in the `citations` functional target.
 
 **Action:**
-- Delete `crates/csln_processor/src/disambiguation_csl.rs`
+- Deleted `crates/csln_processor/src/disambiguation_csl.rs`
 - Verify no other files import from this module
 
 ---
 
 ### Task 6.2: Migrate Test Data to Rust Structs
-**File:** `crates/csln_processor/tests/disambiguation_native.rs`
+**File:** `crates/csln_processor/tests/citations.rs`
 **Status:** IN PROGRESS
 
 Currently, tests use JSON string inputs for bibliography data. These should be gradually migrated to native Rust structs for better type safety and IDE support.

@@ -123,5 +123,5 @@ APA 14/15 is a single data point. Elsevier Harvard (8/15) and Chicago (6/15) sho
 
 - **Beans Updated:** csl26-o3ek, csl26-m3lb, csl26-gidg
 - **New Docs:** docs/ROADMAP.md
-- **Existing Docs:** docs/TIER_STATUS.md, docs/STYLE_PRIORITY.md
+- **Existing Docs:** docs/STYLE_PRIORITY.md
 - **Analysis Source:** Deep plan output from 2026-02-15 /dplan session

@@ -132,13 +132,11 @@ citation:
 
 ## Test Coverage
 
-Disambiguation behavior is verified against the CSL Test Suite:
+Disambiguation behavior is verified through functional integration tests in the `csln_processor` crate:
 
-### Integration Tests (`disambiguation_csl.rs`)
+### Functional Tests (`citations` target)
 
-Tests parse CSL 1.0 XML, migrate to CSLN, and verify output against
-expected strings. Coverage includes 11 representative test cases:
-
+Tests verify disambiguation logic including:
 - Year suffix collation and sorting
 - Name expansion interactions with et-al
 - Given name disambiguation by-cite and all-names rules
@@ -147,30 +145,17 @@ expected strings. Coverage includes 11 representative test cases:
 **Run:**
 
 ```bash
-cargo test --test disambiguation_csl -- --ignored
+cargo nextest run --test citations
 ```
 
-### Native Tests (`disambiguation_native.rs`)
-
-Tests use pre-compiled CSLN structures, skipping XML migration.
-These verify disambiguation logic independent of the migration layer.
-
-**Status:** ✅ COMPLETE - All 11 tests passing (100% success rate)
-
-The disambiguation system is fully implemented and integrated:
+The disambiguation system is fully integrated:
 - Year suffix rendering (a-z, aa-az wrapping for 26+ items)
 - Et-al expansion based on disambiguation needs
 - Given name/initial expansion for conflicting surnames
 - Cascading fallback strategies
-- Full test coverage with comprehensive documentation
+- Full test coverage for common CSL 1.0 scenarios
 
-Test file: `crates/csln_processor/tests/disambiguation.rs`
-
-**Run:**
-
-```bash
-cargo test --test disambiguation_native -- --ignored
-```
+Test file: `crates/csln_processor/tests/citations.rs`
 
 ## Performance Characteristics
 

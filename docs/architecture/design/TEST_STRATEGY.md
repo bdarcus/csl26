@@ -14,6 +14,21 @@
 - Cannot test CSLN-specific features beyond CSL 1.0
 - Constrained by CSL JSON schema
 
+## Integration Test Organization
+
+Integration tests for the `csln_processor` crate are organized into functional targets to allow for focused testing:
+
+- **citations**: Citation rendering, disambiguation, and group logic.
+- **bibliography**: Bibliography rendering, sorting, and author substitution.
+- **metadata**: Name parsing, contributor extraction, and date normalization.
+- **i18n**: Locale-specific terms, date formatting, and translation resolution.
+- **document**: Full document processing and semantic output.
+
+To run a specific target:
+```bash
+cargo nextest run --test citations
+```
+
 ## Future: CSLN-Native Tests
 
 **Purpose**: Test features that go beyond CSL 1.0

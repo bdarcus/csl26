@@ -251,9 +251,8 @@ for group in &grouped_refs {
 ### Phase 4: Test Coverage
 
 **Test Files:**
-- `crates/csln_processor/tests/disambiguation.rs`
-- `crates/csln_processor/tests/multilingual_disambiguation.rs` (new)
-- `crates/csln_processor/tests/grouped_disambiguation.rs` (new)
+- `crates/csln_processor/tests/citations.rs` - Primary target for disambiguation tests
+- `crates/csln_processor/tests/i18n.rs` - Multilingual-specific tests
 
 **Test Scenarios:**
 
@@ -271,7 +270,7 @@ for group in &grouped_refs {
 4. Suffix stability across group boundaries
 
 **Acceptance Criteria:**
-- All existing 11 tests pass (no regressions)
+- All existing tests pass in `cargo nextest run --test citations` (no regressions)
 - 5 new multilingual disambiguation tests pass
 - 3 new grouped disambiguation tests pass
 

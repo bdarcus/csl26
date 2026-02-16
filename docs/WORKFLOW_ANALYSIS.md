@@ -258,7 +258,6 @@ Ordering: Placed after container-title by reorder_serial_components()
 ## Related Documentation
 
 - **[RENDERING_WORKFLOW.md](./RENDERING_WORKFLOW.md)**: Step-by-step agent workflow guide
-- **[TIER_STATUS.md](./TIER_STATUS.md)**: Current fidelity status by tier
 - **[STYLE_PRIORITY.md](./STYLE_PRIORITY.md)**: Parent style impact ranking
 
 ## Conclusion

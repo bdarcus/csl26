@@ -200,7 +200,6 @@
 
 - **Architecture Docs:** docs/architecture/
 - **Bean Tracker:** .beans/
-- **Tier Status:** docs/TIER_STATUS.md
 - **Style Priority:** docs/STYLE_PRIORITY.md
 - **Migration Analysis:** docs/architecture/MIGRATION_STRATEGY_ANALYSIS.md
 - **Workflow Guide:** docs/RENDERING_WORKFLOW.md

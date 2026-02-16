@@ -459,6 +459,13 @@ See **[docs/RENDERING_WORKFLOW.md](./docs/RENDERING_WORKFLOW.md)** for detailed 
 # Run all tests (parallel execution with nextest)
 cargo nextest run
 
+# Run specific functional test targets
+cargo nextest run --test citations      # Citation rendering & disambiguation
+cargo nextest run --test bibliography   # Bibliography rendering & sorting
+cargo nextest run --test metadata       # Contributor & date extraction
+cargo nextest run --test i18n           # Locale & translation logic
+cargo nextest run --test document       # Full document processing
+
 # Run tests with fallback if nextest not installed
 cargo test
 

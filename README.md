@@ -355,6 +355,10 @@ git clone https://github.com/bdarcus/csl26
 cd csl26
 cargo build --workspace
 cargo test --workspace
+
+# Run functional integration tests for the processor
+cargo nextest run --test citations
+cargo nextest run --test bibliography
 ```
 
 ### Running the Processor

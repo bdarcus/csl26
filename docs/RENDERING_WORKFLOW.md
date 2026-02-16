@@ -246,7 +246,12 @@ Re-run the workflow test:
 Check that:
 1. ✅ The specific issue is fixed (structured oracle shows match)
 2. ✅ No regressions in batch analysis (other styles still pass)
-3. ✅ Rust tests still pass (`cargo test`)
+3. ✅ Rust functional tests still pass:
+   ```bash
+   cargo nextest run --test citations
+   cargo nextest run --test bibliography
+   ```
+   Or run all tests: `cargo test`
 
 ### Step 6: Track Progress
 
