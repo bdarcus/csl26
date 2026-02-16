@@ -402,6 +402,37 @@ Structured: [@kuhn1962, section: 5].</pre>
                                 Vietnamese names use given-family ordering, Western names use family-given ordering.
                             </p>
                         </div>
+
+                        <!-- Localized Disambiguation Example -->
+                        <div class="border-l-4 border-amber-500 pl-4">
+                            <div
+                                class="text-xs font-semibold text-slate-500 uppercase mb-2"
+                            >
+                                Localized Disambiguation (Per-Group Year Suffixes)
+                            </div>
+                            <div
+                                class="bg-slate-900 rounded p-4 overflow-x-auto mt-1"
+                            >
+                                <pre
+                                    class="font-mono text-xs text-slate-300 leading-relaxed"
+                                ><span class="text-indigo-400">bibliography</span>:
+  <span class="text-primary">groups</span>:
+    - <span class="text-primary">id</span>: <span class="text-emerald-400">cited</span>
+      <span class="text-primary">heading</span>: <span class="text-emerald-400">"Cited Works"</span>
+      <span class="text-primary">disambiguate</span>: <span class="text-emerald-400">locally</span>  <span class="text-slate-500"># Reset suffixes for this group</span>
+      <span class="text-primary">selector</span>:
+        <span class="text-primary">status</span>: <span class="text-emerald-400">visible</span>
+
+    - <span class="text-primary">id</span>: <span class="text-emerald-400">reading</span>
+      <span class="text-primary">heading</span>: <span class="text-emerald-400">"Further Reading"</span>
+      <span class="text-primary">disambiguate</span>: <span class="text-emerald-400">locally</span>  <span class="text-slate-500"># Start fresh from "a"</span>
+      <span class="text-primary">selector</span>:
+        <span class="text-primary">status</span>: <span class="text-emerald-400">silent</span></pre>
+                            </div>
+                            <p class="text-xs text-slate-500 mt-2">
+                                Isolating disambiguation prevents collisions across bibliography sections, allowing independent suffix assignment in each group.
+                            </p>
+                        </div>
                     </div>
                 </div>
 
