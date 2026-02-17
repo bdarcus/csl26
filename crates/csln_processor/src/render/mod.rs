@@ -11,7 +11,7 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 //!
 //! ## Modules
 //! - [`format`]: Defines the core [`OutputFormat`] trait.
-//! - [`plain`], [`html`], [`djot`]: Concrete renderer implementations.
+//! - [`plain`], [`html`], [`djot`], [`latex`]: Concrete renderer implementations.
 //! - [`component`]: Logic for rendering individual template components.
 //! - [`citation`]: Logic for joining components into full citations.
 //! - [`bibliography`]: Logic for rendering bibliographies.
@@ -22,6 +22,7 @@ pub mod component;
 pub mod djot;
 pub mod format;
 pub mod html;
+pub mod latex;
 pub mod plain;
 
 #[cfg(test)]

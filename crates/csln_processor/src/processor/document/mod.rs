@@ -29,6 +29,8 @@ pub enum DocumentFormat {
     Djot,
     /// HTML output.
     Html,
+    /// LaTeX output.
+    Latex,
 }
 
 impl Processor {
@@ -58,20 +60,20 @@ impl Processor {
         }
 
         result.push_str(&content[last_idx..]);
-        result.push_str(
-            "
 
-# Bibliography
+        let bib_heading = match format {
+            DocumentFormat::Latex => "\n\n\\section*{Bibliography}\n\n",
+            _ => "\n\n# Bibliography\n\n",
+        };
+        result.push_str(bib_heading);
 
-",
-        );
         let bib_content = self.render_grouped_bibliography_with_format::<F>();
         result.push_str(&bib_content);
 
         // Convert to HTML if requested
         match format {
             DocumentFormat::Html => self::djot::djot_to_html(&result),
-            DocumentFormat::Djot | DocumentFormat::Plain => result,
+            DocumentFormat::Djot | DocumentFormat::Plain | DocumentFormat::Latex => result,
         }
     }
 }
