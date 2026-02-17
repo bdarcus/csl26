@@ -1090,8 +1090,22 @@ fn test_citation_visibility_modifiers() {
         ..Default::default()
     };
     let res_author = processor.process_citation(&cit_author).unwrap();
-    // Author Only in integral mode: Kuhn
-    assert_eq!(res_author, "Kuhn");
+    // Author Only in integral mode for author-date styles: Kuhn (1962)
+    assert_eq!(res_author, "Kuhn (1962)");
+
+    // 2b. Author Only (Non-Integral)
+    let cit_author_non = Citation {
+        mode: CitationMode::NonIntegral,
+        items: vec![crate::reference::CitationItem {
+            id: "kuhn1962".to_string(),
+            visibility: ItemVisibility::AuthorOnly,
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+    let res_author_non = processor.process_citation(&cit_author_non).unwrap();
+    // Author Only in parenthetical mode: Kuhn
+    assert_eq!(res_author_non, "Kuhn");
 
     // 3. Hidden (nocite)
     let cit_hidden = Citation {

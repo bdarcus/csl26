@@ -283,7 +283,7 @@ impl Processor {
         );
 
         // Group adjacent items by author for author-date styles
-        let rendered_groups = if is_author_date && citation.items.len() > 1 {
+        let rendered_groups = if is_author_date {
             renderer.render_grouped_citation(
                 &citation.items,
                 template,
@@ -317,6 +317,10 @@ impl Processor {
 
         // Apply wrap or prefix/suffix
         let (open, close) = if matches!(citation.mode, csln_core::citation::CitationMode::Integral)
+            || citation
+                .items
+                .iter()
+                .any(|i| matches!(i.visibility, csln_core::citation::ItemVisibility::AuthorOnly))
         {
             ("", "")
         } else {
@@ -489,7 +493,7 @@ impl Processor {
         );
 
         // Process group components
-        let rendered_groups = if is_author_date && citation.items.len() > 1 {
+        let rendered_groups = if is_author_date {
             renderer.render_grouped_citation_with_format::<F>(
                 &citation.items,
                 template,
@@ -543,8 +547,13 @@ impl Processor {
             } else {
                 output
             }
-        } else if *wrap != WrapPunctuation::None {
-            // Non-integral mode: apply wrap
+        } else if *wrap != WrapPunctuation::None
+            && !citation
+                .items
+                .iter()
+                .any(|i| matches!(i.visibility, csln_core::citation::ItemVisibility::AuthorOnly))
+        {
+            // Non-integral mode: apply wrap, UNLESS we have AuthorOnly visibility
             fmt.wrap_punctuation(wrap, output)
         } else if !spec_prefix.is_empty() || !spec_suffix.is_empty() {
             fmt.affix(spec_prefix, output, spec_suffix)

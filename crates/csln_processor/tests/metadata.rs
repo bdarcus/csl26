@@ -27,7 +27,7 @@ fn build_name_style(form: ContributorForm, shorten: Option<ShortenListOptions>) 
             ..Default::default()
         },
         options: Some(Config {
-            processing: Some(Processing::AuthorDate),
+            processing: Some(Processing::Numeric),
             contributors: Some(ContributorConfig {
                 shorten,
                 ..Default::default()
@@ -54,7 +54,7 @@ fn build_date_style(form: DateForm) -> Style {
             ..Default::default()
         },
         options: Some(Config {
-            processing: Some(Processing::AuthorDate),
+            processing: Some(Processing::Numeric),
             ..Default::default()
         }),
         citation: Some(CitationSpec {

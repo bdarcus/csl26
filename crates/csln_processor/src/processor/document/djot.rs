@@ -185,6 +185,11 @@ fn parse_citation_content(input: &mut &str) -> winnow::Result<Citation, ContextE
     let items: Vec<CitationItem> = repeat(1.., parse_citation_item).parse_next(input)?;
     citation.items = items;
 
+    // If any item has AuthorOnly visibility, this is an integral/narrative citation
+    if citation.items.iter().any(|i| matches!(i.visibility, ItemVisibility::AuthorOnly)) {
+        citation.mode = CitationMode::Integral;
+    }
+
     // Global Suffix: anything remaining before ]
     let suffix_part: &str = take_while(0.., |c: char| c != ']').parse_next(input)?;
     if !suffix_part.is_empty() {

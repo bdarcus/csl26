@@ -241,7 +241,7 @@ impl<'a> Renderer<'a> {
         items: &[crate::reference::CitationItem],
         template: &[TemplateComponent],
         mode: &csln_core::citation::CitationMode,
-        intra_delimiter: &str,
+        _intra_delimiter: &str,
     ) -> Result<Vec<String>, ProcessorError>
     where
         F: crate::render::format::OutputFormat<Output = String>,
@@ -304,99 +304,81 @@ impl<'a> Renderer<'a> {
         let fmt = F::default();
 
         for group in groups {
-            if group.len() == 1 {
-                let item = group[0];
+            let first_item = group[0];
+            let first_ref = self
+                .bibliography
+                .get(&first_item.id)
+                .ok_or_else(|| ProcessorError::ReferenceNotFound(first_item.id.clone()))?;
+
+            let author_part = self.render_author_for_grouping(first_ref, template, mode);
+
+            let mut year_parts = Vec::new();
+            for item in &group {
                 let reference = self
                     .bibliography
                     .get(&item.id)
                     .ok_or_else(|| ProcessorError::ReferenceNotFound(item.id.clone()))?;
 
-                let citation_number = self.get_or_assign_citation_number(&item.id);
-
-                if let Some(proc) = self.process_template_with_number(
-                    reference,
-                    template,
-                    RenderContext::Citation,
-                    mode.clone(),
-                    item.visibility,
-                    citation_number,
-                    item.locator.as_deref(),
-                    item.label.clone(),
-                    item.infix.as_deref(),
-                ) {
-                    let item_str = crate::render::citation::citation_to_string_with_format::<F>(
-                        &proc,
-                        None,
-                        None,
-                        None,
-                        Some(intra_delimiter),
-                    );
-                    if !item_str.is_empty() {
-                        let prefix = item.prefix.as_deref().unwrap_or("");
-                        let suffix = item.suffix.as_deref().unwrap_or("");
-                        let content = if !prefix.is_empty() || !suffix.is_empty() {
-                            let spaced_suffix = self.ensure_suffix_spacing(suffix);
-                            fmt.affix(prefix, item_str, &spaced_suffix)
-                        } else {
-                            item_str
-                        };
-                        rendered_groups.push(fmt.citation(vec![item.id.clone()], content));
+                let year_part = self.render_year_for_grouping(reference);
+                if !year_part.is_empty() {
+                    let suffix = item.suffix.as_deref().unwrap_or("");
+                    if !suffix.is_empty() {
+                        let spaced_suffix = self.ensure_suffix_spacing(suffix);
+                        year_parts.push(fmt.affix("", year_part, &spaced_suffix));
+                    } else {
+                        year_parts.push(year_part);
                     }
                 }
-            } else {
-                let first_item = group[0];
-                let first_ref = self
-                    .bibliography
-                    .get(&first_item.id)
-                    .ok_or_else(|| ProcessorError::ReferenceNotFound(first_item.id.clone()))?;
+            }
 
-                let author_part = self.render_author_for_grouping(first_ref, template, mode);
-
-                let mut year_parts = Vec::new();
-                for item in &group {
-                    let reference = self
-                        .bibliography
-                        .get(&item.id)
-                        .ok_or_else(|| ProcessorError::ReferenceNotFound(item.id.clone()))?;
-
-                    let year_part = self.render_year_for_grouping(reference);
-                    if !year_part.is_empty() {
-                        let suffix = item.suffix.as_deref().unwrap_or("");
-                        if !suffix.is_empty() {
-                            let spaced_suffix = self.ensure_suffix_spacing(suffix);
-                            year_parts.push(fmt.affix("", year_part, &spaced_suffix));
-                        } else {
-                            year_parts.push(year_part);
-                        }
-                    }
-                }
-
-                let prefix = first_item.prefix.as_deref().unwrap_or("");
-                if !author_part.is_empty() && !year_parts.is_empty() {
-                    let joined_years = year_parts.join(", ");
-                    // Format based on citation mode:
-                    // Integral: "Kuhn (1962a, 1962b)" - years in parentheses
-                    //   With infix: "Kuhn argues (1962)" - infix between author and year
-                    // NonIntegral: "Kuhn, 1962a, 1962b" - no inner parens (outer wrap adds them)
-                    let content = match mode {
-                        csln_core::citation::CitationMode::Integral => {
-                            // Check for infix (only applies to first item if authors match)
+            let prefix = first_item.prefix.as_deref().unwrap_or("");
+            if !author_part.is_empty() && !year_parts.is_empty() {
+                let joined_years = year_parts.join(", ");
+                // Format based on citation mode:
+                // Integral: "Kuhn (1962a, 1962b)" - years in parentheses
+                //   With infix: "Kuhn argues (1962)" - infix between author and year
+                // NonIntegral: "Kuhn, 1962a, 1962b" - no inner parens (outer wrap adds them)
+                let content = match mode {
+                    csln_core::citation::CitationMode::Integral => {
+                        // Check for visibility overrides
+                        if matches!(first_item.visibility, csln_core::citation::ItemVisibility::AuthorOnly) {
+                            // Narrative: Kuhn (1962)
                             if let Some(infix) = &first_item.infix {
                                 format!("{} {} ({})", author_part, infix, joined_years)
                             } else {
                                 format!("{} ({})", author_part, joined_years)
                             }
+                        } else if matches!(first_item.visibility, csln_core::citation::ItemVisibility::SuppressAuthor) {
+                            // Should theoretically not happen in narrative mode, but handle gracefully
+                            format!("({})", joined_years)
+                        } else {
+                            // Default narrative: Kuhn (1962)
+                            format!("{} ({})", author_part, joined_years)
                         }
-                        csln_core::citation::CitationMode::NonIntegral => {
+                    }
+                    csln_core::citation::CitationMode::NonIntegral => {
+                        if matches!(first_item.visibility, csln_core::citation::ItemVisibility::AuthorOnly) {
+                            // Parenthetical AuthorOnly: Kuhn
+                            author_part
+                        } else if matches!(first_item.visibility, csln_core::citation::ItemVisibility::SuppressAuthor) {
+                            // Parenthetical SuppressAuthor: 1962
+                            joined_years
+                        } else {
+                            // Default parenthetical: Kuhn, 1962
                             format!("{}, {}", author_part, joined_years)
                         }
-                    };
-                    let ids: Vec<String> = group.iter().map(|item| item.id.clone()).collect();
-                    rendered_groups.push(fmt.citation(ids, fmt.affix(prefix, content, "")));
-                } else if !author_part.is_empty() {
-                    let ids: Vec<String> = group.iter().map(|item| item.id.clone()).collect();
-                    rendered_groups.push(fmt.citation(ids, fmt.affix(prefix, author_part, "")));
-                }
+                    }
+                };
+                let ids: Vec<String> = group.iter().map(|item| item.id.clone()).collect();
+                rendered_groups.push(fmt.citation(ids, fmt.affix(prefix, content, "")));
+            } else if !author_part.is_empty() {
+                let ids: Vec<String> = group.iter().map(|item| item.id.clone()).collect();
+                rendered_groups.push(fmt.citation(ids, fmt.affix(prefix, author_part, "")));
+            } else if !year_parts.is_empty() {
+                // Year-only case (SuppressAuthor)
+                let content = year_parts.join(", ");
+                let ids: Vec<String> = group.iter().map(|item| item.id.clone()).collect();
+                rendered_groups.push(fmt.citation(ids, fmt.affix(prefix, content, "")));
             }
         }
 
@@ -424,7 +406,12 @@ impl<'a> Renderer<'a> {
 
         // Use short form for citations
         if let Some(authors) = reference.author() {
-            crate::values::format_contributors_short(&authors.to_names_vec(), &options)
+            let mode = self.config.multilingual.as_ref().and_then(|m| m.name_mode.as_ref());
+            let preferred_script = self.config.multilingual.as_ref().and_then(|m| m.preferred_script.as_ref());
+            let locale_str = &self.locale.locale;
+
+            let names_vec = crate::values::resolve_multilingual_name(&authors, mode, preferred_script, locale_str);
+            crate::values::format_contributors_short(&names_vec, &options)
         } else {
             String::new()
         }
