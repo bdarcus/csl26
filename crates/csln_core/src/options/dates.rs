@@ -42,7 +42,7 @@ impl DateConfigEntry {
 /// Date formatting configuration.
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
 pub struct DateConfig {
     pub month: MonthFormat,
     /// Marker for uncertain dates (e.g., "?" or "uncertain"). None suppresses display.

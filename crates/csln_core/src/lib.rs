@@ -71,7 +71,7 @@ pub type Template = Vec<TemplateComponent>;
 /// and simple template components instead of procedural conditionals.
 #[derive(Debug, Default, Deserialize, Serialize, Clone)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
 pub struct Style {
     /// Style schema version.
     #[serde(default = "default_version")]
@@ -146,7 +146,7 @@ impl TemplatePreset {
 /// Citation specification.
 #[derive(Debug, Deserialize, Serialize, Clone, Default)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
 pub struct CitationSpec {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub options: Option<Config>,
@@ -255,7 +255,7 @@ impl CitationSpec {
 /// Bibliography specification.
 #[derive(Debug, Deserialize, Serialize, Clone, Default)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
 pub struct BibliographySpec {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub options: Option<Config>,

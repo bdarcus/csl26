@@ -41,7 +41,7 @@ impl TitlesConfigEntry {
 /// Title formatting configuration by title type.
 #[derive(Debug, Default, PartialEq, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
 pub struct TitlesConfig {
     /// Mapping of reference types to title categories.
     /// Category keys: monograph, periodical, component.
@@ -74,7 +74,7 @@ pub struct TitlesConfig {
 /// Rendering options for titles.
 #[derive(Debug, Default, PartialEq, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
 pub struct TitleRendering {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub emph: Option<bool>,

@@ -38,7 +38,7 @@ impl SubstituteConfig {
 /// Explicit substitution configuration.
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
 pub struct Substitute {
     /// Form to use for contributor roles when substituting.
     #[serde(skip_serializing_if = "Option::is_none")]

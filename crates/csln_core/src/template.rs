@@ -50,7 +50,7 @@ use std::collections::HashMap;
 /// Rather than nesting under a `rendering:` key.
 #[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-#[serde(rename_all = "kebab-case", default)]
+#[serde(rename_all = "kebab-case", default, deny_unknown_fields)]
 pub struct Rendering {
     /// Render in italics/emphasis.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -234,7 +234,7 @@ pub enum LabelPlacement {
 /// A contributor component for rendering names.
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Default)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
 pub struct TemplateContributor {
     /// Which contributor role to render (author, editor, etc.).
     pub contributor: ContributorRole,
@@ -350,7 +350,7 @@ impl ContributorRole {
 /// A date component for rendering dates.
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Default)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
 pub struct TemplateDate {
     pub date: DateVariable,
     pub form: DateForm,
@@ -398,7 +398,7 @@ pub enum DateForm {
 /// A title component.
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Default)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
 pub struct TemplateTitle {
     pub title: TitleType,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -444,7 +444,7 @@ pub enum TitleForm {
 /// A number component (volume, issue, pages, etc.).
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Default)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
 pub struct TemplateNumber {
     pub number: NumberVariable,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -553,12 +553,17 @@ pub enum SimpleVariable {
     Scale,
     Version,
     Locator,
+    Infix,
+    Authority,
+    Reporter,
+    Page,
+    Volume,
 }
 
 /// A term component for rendering locale-specific text.
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Default)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
 pub struct TemplateTerm {
     /// Which term to render.
     pub term: GeneralTerm,
@@ -578,7 +583,7 @@ pub struct TemplateTerm {
 /// A list component for grouping multiple items with a delimiter.
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Default)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
 pub struct TemplateList {
     pub items: Vec<TemplateComponent>,
     #[serde(skip_serializing_if = "Option::is_none")]

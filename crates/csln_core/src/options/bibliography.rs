@@ -11,7 +11,7 @@ use std::collections::HashMap;
 /// Bibliography-specific configuration.
 #[derive(Debug, Default, PartialEq, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
 pub struct BibliographyConfig {
     /// String to substitute for repeating authors (e.g., "———").
     #[serde(skip_serializing_if = "Option::is_none")]

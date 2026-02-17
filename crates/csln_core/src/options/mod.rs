@@ -36,7 +36,7 @@ use std::collections::HashMap;
 /// Top-level style configuration.
 #[derive(Debug, Default, PartialEq, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
 pub struct Config {
     /// Substitution rules for missing data.
     #[serde(skip_serializing_if = "Option::is_none")]
