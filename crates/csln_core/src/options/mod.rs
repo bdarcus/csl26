@@ -57,6 +57,7 @@ pub struct Config {
         deserialize_with = "deserialize_contributor_config",
         default
     )]
+    #[cfg_attr(feature = "schema", schemars(with = "Option<ContributorConfigEntry>"))]
     pub contributors: Option<ContributorConfig>,
     /// Date formatting defaults. Accepts a preset name (e.g., "long")
     /// or explicit configuration.
@@ -65,6 +66,7 @@ pub struct Config {
         deserialize_with = "deserialize_date_config",
         default
     )]
+    #[cfg_attr(feature = "schema", schemars(with = "Option<DateConfigEntry>"))]
     pub dates: Option<DateConfig>,
     /// Title formatting defaults. Accepts a preset name (e.g., "apa")
     /// or explicit configuration.
@@ -73,6 +75,7 @@ pub struct Config {
         deserialize_with = "deserialize_titles_config",
         default
     )]
+    #[cfg_attr(feature = "schema", schemars(with = "Option<TitlesConfigEntry>"))]
     pub titles: Option<crate::options::titles::TitlesConfig>,
     /// Page range formatting (expanded, minimal, chicago).
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -126,7 +129,7 @@ pub enum PageRangeFormat {
 
 pub mod titles;
 
-pub use titles::{TitleRendering, TitlesConfig};
+pub use titles::{TitleRendering, TitlesConfig, TitlesConfigEntry};
 
 /// Structured link options.
 #[derive(Debug, Default, PartialEq, Clone, Serialize, Deserialize)]

@@ -496,7 +496,7 @@
           "description": "Contributor formatting defaults. Accepts a preset name (e.g., \"apa\") or explicit configuration.",
           "anyOf": [
             {
-              "$ref": "#/definitions/ContributorConfig"
+              "$ref": "#/definitions/ContributorConfigEntry"
             },
             {
               "type": "null"
@@ -515,7 +515,7 @@
           "description": "Date formatting defaults. Accepts a preset name (e.g., \"long\") or explicit configuration.",
           "anyOf": [
             {
-              "$ref": "#/definitions/DateConfig"
+              "$ref": "#/definitions/DateConfigEntry"
             },
             {
               "type": "null"
@@ -611,7 +611,7 @@
           "description": "Title formatting defaults. Accepts a preset name (e.g., \"apa\") or explicit configuration.",
           "anyOf": [
             {
-              "$ref": "#/definitions/TitlesConfig"
+              "$ref": "#/definitions/TitlesConfigEntry"
             },
             {
               "type": "null"
@@ -763,6 +763,27 @@
       },
       "additionalProperties": false
     },
+    "ContributorConfigEntry": {
+      "description": "Contributor config: either a preset name or explicit configuration.\n\nAllows styles to write `contributors: apa` as shorthand, or provide full explicit configuration with field-level overrides.",
+      "anyOf": [
+        {
+          "description": "A named preset (e.g., \"apa\", \"chicago\", \"vancouver\", \"springer\").",
+          "allOf": [
+            {
+              "$ref": "#/definitions/ContributorPreset"
+            }
+          ]
+        },
+        {
+          "description": "Explicit contributor configuration.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/ContributorConfig"
+            }
+          ]
+        }
+      ]
+    },
     "ContributorForm": {
       "description": "How to render contributor names.",
       "type": "string",
@@ -771,6 +792,53 @@
         "short",
         "verb",
         "verb-short"
+      ]
+    },
+    "ContributorPreset": {
+      "description": "Contributor formatting presets.\n\nEach preset encodes the contributor formatting conventions for a major citation style or style family. Use doc comments to describe the visual behavior so style authors can choose the right preset without knowing style guide names.",
+      "oneOf": [
+        {
+          "description": "First author family-first, \"&\" symbol, et al. after 20 authors, initials with period-space, comma before \"&\". Example: \"Smith, J. D., & Jones, M. K.\"",
+          "type": "string",
+          "enum": [
+            "apa"
+          ]
+        },
+        {
+          "description": "First author family-first, \"and\" text, contextual serial comma, full given names (no initials). Example: \"Smith, John D., and Mary K. Jones\"",
+          "type": "string",
+          "enum": [
+            "chicago"
+          ]
+        },
+        {
+          "description": "All authors family-first, no conjunction, compact initials (no period/space), et al. after 6 of 7+. Example: \"Smith JD, Jones MK, Brown AB\"",
+          "type": "string",
+          "enum": [
+            "vancouver"
+          ]
+        },
+        {
+          "description": "Given-first format, \"and\" text, initials with period-space, comma before \"and\". Example: \"J. D. Smith, M. K. Jones, and A. B. Brown\"",
+          "type": "string",
+          "enum": [
+            "ieee"
+          ]
+        },
+        {
+          "description": "All authors family-first, \"and\" text, compact initials (period, no space), comma before \"and\". Example: \"Smith, J.D., Jones, M.K., and Brown, A.B.\"",
+          "type": "string",
+          "enum": [
+            "harvard"
+          ]
+        },
+        {
+          "description": "All authors family-first, no conjunction, compact initials (no period/space), space sort-separator, et al. after 3 of 5+. Example: \"Smith JD, Jones MK, Brown AB\"",
+          "type": "string",
+          "enum": [
+            "springer"
+          ]
+        }
       ]
     },
     "ContributorRole": {
@@ -843,6 +911,27 @@
       },
       "additionalProperties": false
     },
+    "DateConfigEntry": {
+      "description": "Date config: either a preset name or explicit configuration.\n\nAllows styles to write `dates: long` as shorthand, or provide full explicit configuration with field-level overrides.",
+      "anyOf": [
+        {
+          "description": "A named preset (e.g., \"long\", \"short\", \"numeric\", \"iso\").",
+          "allOf": [
+            {
+              "$ref": "#/definitions/DatePreset"
+            }
+          ]
+        },
+        {
+          "description": "Explicit date configuration.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/DateConfig"
+            }
+          ]
+        }
+      ]
+    },
     "DateForm": {
       "description": "Date rendering forms.",
       "type": "string",
@@ -851,6 +940,39 @@
         "year-month",
         "full",
         "month-day"
+      ]
+    },
+    "DatePreset": {
+      "description": "Date formatting presets.\n\nEach preset defines how dates are displayed in citations and bibliographies, including month format, EDTF uncertainty/approximation markers, and range delimiters.",
+      "oneOf": [
+        {
+          "description": "Long month names, EDTF markers, en-dash ranges. Example: \"January 15, 2024\", \"ca. 2024\", \"2024?\"",
+          "type": "string",
+          "enum": [
+            "long"
+          ]
+        },
+        {
+          "description": "Short month names, EDTF markers, en-dash ranges. Example: \"Jan 15, 2024\"",
+          "type": "string",
+          "enum": [
+            "short"
+          ]
+        },
+        {
+          "description": "Numeric months, EDTF markers, en-dash ranges. Example: \"1/15/2024\"",
+          "type": "string",
+          "enum": [
+            "numeric"
+          ]
+        },
+        {
+          "description": "ISO 8601 numeric format, no EDTF markers. Example: \"2024-01-15\"",
+          "type": "string",
+          "enum": [
+            "iso"
+          ]
+        }
       ]
     },
     "DateVariable": {
@@ -3195,6 +3317,46 @@
         "long"
       ]
     },
+    "TitlePreset": {
+      "description": "Title formatting presets.\n\nEach preset defines how different types of titles (articles, books, journals) are formatted. Presets typically differ in whether titles are quoted, italicized, or plain.",
+      "oneOf": [
+        {
+          "description": "APA style: article titles plain, book/journal titles italic. Example: Article title. *Book Title*. *Journal Title*.",
+          "type": "string",
+          "enum": [
+            "apa"
+          ]
+        },
+        {
+          "description": "Chicago style: article titles quoted, book/journal titles italic. Example: \"Article Title.\" *Book Title*. *Journal Title*.",
+          "type": "string",
+          "enum": [
+            "chicago"
+          ]
+        },
+        {
+          "description": "IEEE style: article titles quoted, book/journal titles italic. Example: \"Article title,\" *Book Title*. *Journal Title*.",
+          "type": "string",
+          "enum": [
+            "ieee"
+          ]
+        },
+        {
+          "description": "Humanities style: monographs, periodicals, and serials all italic, articles plain. Common in geography, history, and social sciences. Example: Article title. *Book Title*. *Journal Title*. *Series Title*.",
+          "type": "string",
+          "enum": [
+            "humanities"
+          ]
+        },
+        {
+          "description": "Scientific/Vancouver style: all titles plain (no formatting). Example: Article title. Book title. Journal title.",
+          "type": "string",
+          "enum": [
+            "scientific"
+          ]
+        }
+      ]
+    },
     "TitleRendering": {
       "description": "Rendering options for titles.",
       "type": "object",
@@ -3351,6 +3513,27 @@
         }
       },
       "additionalProperties": false
+    },
+    "TitlesConfigEntry": {
+      "description": "Title config: either a preset name or explicit configuration.\n\nAllows styles to write `titles: apa` as shorthand, or provide full explicit configuration with field-level overrides.",
+      "anyOf": [
+        {
+          "description": "A named preset (e.g., \"apa\", \"chicago\", \"humanities\", \"scientific\").",
+          "allOf": [
+            {
+              "$ref": "#/definitions/TitlePreset"
+            }
+          ]
+        },
+        {
+          "description": "Explicit title configuration.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/TitlesConfig"
+            }
+          ]
+        }
+      ]
     },
     "TypeSelector": {
       "description": "Type-based selector.",
