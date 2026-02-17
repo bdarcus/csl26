@@ -20,21 +20,21 @@ The processor includes a native parser for Djot documents that supports a rich c
 
 ### Narrative (Integral) Citations
 
-Narrative citations are integrated into the text flow using the `+` modifier. For numeric styles, these render as **Author [1]**.
-
-| Syntax | Description | Example |
-|--------|-------------|---------|
-| `[+@key]` | Explicit narrative | Smith (2023) |
-
-### Visibility Modifiers
-
-Modifiers appear immediately before the `@` symbol.
-
-| Modifier | Description | Syntax | Result (Non-Integral) | Result (Integral) |
-|----------|-------------|--------|-----------------------|-------------------|
-| `-` | Suppress Author | `[-@key]` | (2023) | (2023) |
-| `+` | Integral / Narrative | `[+@key]` | Smith (2023) | Smith (2023) |
-| `!` | Hidden (Nocite) | `[!@key]` | *bibliography only* | *bibliography only* |
+ Narrative citations are integrated into the text flow using the `+` mode modifier. For numeric styles, these render as **Author [1]**.
+ 
+ | Syntax | Description | Example |
+ |--------|-------------|---------|
+ | `[+@key]` | Explicit narrative | Smith (2023) |
+ 
+ ### Modifiers
+ 
+ Modifiers appear immediately before the `@` symbol.
+ 
+ | Modifier | Type | Description | Syntax | Result (Non-Integral) | Result (Integral) |
+ |----------|------|-------------|--------|-----------------------|-------------------|
+ | `-` | Visibility | Suppress Author | `[-@key]` | (2023) | (2023) |
+ | `+` | Mode | Integral / Narrative | `[+@key]` | Smith (2023) | Smith (2023) |
+ | `!` | Visibility | Hidden (Nocite) | `[!@key]` | *bibliography only* | *bibliography only* |
 
 ### Locators (Pinpoints)
 

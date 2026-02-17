@@ -104,22 +104,25 @@ impl<'a> Renderer<'a> {
 
         // Render author in short form
         let author_part = if let Some(authors) = reference.author() {
-            crate::values::resolve_multilingual_name(
+            let mode = self
+                .config
+                .multilingual
+                .as_ref()
+                .and_then(|m| m.name_mode.as_ref());
+            let preferred_script = self
+                .config
+                .multilingual
+                .as_ref()
+                .and_then(|m| m.preferred_script.as_ref());
+            let locale_str = &self.locale.locale;
+
+            let names_vec = crate::values::resolve_multilingual_name(
                 &authors,
-                self.config
-                    .multilingual
-                    .as_ref()
-                    .and_then(|m| m.name_mode.as_ref()),
-                self.config
-                    .multilingual
-                    .as_ref()
-                    .and_then(|m| m.preferred_script.as_ref()),
-                &self.locale.locale,
+                mode,
+                preferred_script,
+                locale_str,
             );
-            crate::values::format_contributors_short(
-                &reference.author().unwrap().to_names_vec(),
-                &options,
-            )
+            crate::values::format_contributors_short(&names_vec, &options)
         } else {
             String::new()
         };
@@ -284,8 +287,7 @@ impl<'a> Renderer<'a> {
             // Check if this item has the same author as the previous group
             let should_group = if let Some(last_group) = groups.last() {
                 if let Some(last_item) = last_group.last() {
-                    let last_ref = self.bibliography.get(&last_item.id);
-                    let last_key = last_ref
+                    let last_author_key = self.bibliography.get(&last_item.id)
                         .and_then(|r| r.author())
                         .map(|authors| {
                             authors
@@ -296,7 +298,7 @@ impl<'a> Renderer<'a> {
                                 .join("|")
                         })
                         .unwrap_or_default();
-                    author_key == last_key && item.prefix.is_none() && !author_key.is_empty()
+                    author_key == last_author_key && item.prefix.is_none() && !author_key.is_empty()
                 } else {
                     false
                 }

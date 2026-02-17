@@ -360,4 +360,14 @@ mod tests {
         assert_eq!(citation.items[0].id, "kuhn1962");
         assert_eq!(citation.items[0].visibility, ItemVisibility::Hidden);
     }
+
+    #[test]
+    fn test_parse_semicolon_without_citation() {
+        let parser = DjotParser;
+        let content = "[foo; bar]";
+        let citations = parser.parse_citations(content);
+
+        // Should not parse as a citation if no '@' keys are present
+        assert_eq!(citations.len(), 0);
+    }
 }

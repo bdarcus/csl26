@@ -54,7 +54,7 @@ impl ComponentValues for TemplateTitle {
                         .multilingual
                         .as_ref()
                         .and_then(|ml| ml.preferred_script.as_ref());
-                    let locale_str = "en"; // TODO: get from options.locale
+                    let locale_str = options.locale.locale.as_str();
 
                     let complex =
                         csln_core::reference::types::MultilingualString::Complex(m.clone());
