@@ -123,13 +123,6 @@
             </div>
         </div>
         <div class="max-w-4xl mx-auto text-center relative z-10">
-            <!--
-            <div
-                class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-mono mb-6">
-                <span class="flex h-2 w-2 rounded-full bg-primary animate-pulse"></span>
-                v1.0.0-beta.1 is now live
-            </div>
-            -->
             <h1 class="text-6xl md:text-8xl font-mono font-bold tracking-tight text-slate-900 mb-6">
                 CSL<span class="text-primary">N</span>
             </h1>
@@ -325,8 +318,22 @@
                     </div>
                     <h3 class="text-xl font-bold text-slate-900 mb-3">Pluggable Output</h3>
                     <p class="text-slate-500 leading-relaxed text-sm">
-                        Generate semantic output in Plain Text, HTML, or Djot with future LaTeX and Typst support
-                        planned.
+                        Generate semantic output in Plain Text, HTML, Djot, or LaTeX. High-fidelity PDF publishing
+                        workflows via native LaTeX escaping.
+                    </p>
+                </a>
+
+                <!-- Universal C-FFI -->
+                <a href="https://github.com/bdarcus/csl26/tree/main/bindings"
+                    class="feature-card p-8 rounded-xl border border-slate-200 transition-all group block">
+                    <div
+                        class="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center text-primary mb-6 group-hover:bg-primary group-hover:text-white transition-colors">
+                        <span class="material-icons">settings_input_component</span>
+                    </div>
+                    <h3 class="text-xl font-bold text-slate-900 mb-3">Universal C-FFI</h3>
+                    <p class="text-slate-500 leading-relaxed text-sm">
+                        Seamlessly integrate the Rust core into Python, Node.js, or Lua. Powering LuaLaTeX workflows
+                        with near-instant rendering.
                     </p>
                 </a>
 
@@ -405,7 +412,22 @@
                             </div>
                         </div>
 
-                        <!-- Example 1c (Document) -->
+                        <!-- Example 1c (LaTeX) -->
+                        <div>
+                            <h4 class="font-bold text-slate-900 mb-2">Process for LaTeX (Native Escaping)</h4>
+                            <div class="bg-slate-900 rounded-lg p-4 flex items-center justify-between group border border-slate-700 shadow-md">
+                                <code class="font-mono text-sm text-slate-300">
+                                    <span class="text-primary">$</span> csln process paper.json apa.yaml <span class="text-emerald-400">--format latex</span>
+                                </code>
+                                <button class="text-slate-500 hover:text-white transition-colors"
+                                    onclick="navigator.clipboard.writeText('csln process paper.json apa.yaml --format latex')"
+                                    title="Copy to clipboard">
+                                    <span class="material-icons text-base">content_copy</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Example 1d (Document) -->
                         <div>
                             <h4 class="font-bold text-slate-900 mb-2">Process full document (Djot draft syntax)</h4>
                             <div class="bg-slate-900 rounded-lg p-4 flex items-center justify-between group border border-slate-700 shadow-md">
@@ -433,37 +455,6 @@
                                     <span class="material-icons text-base">content_copy</span>
                                 </button>
                             </div>
-                        </div>
-
-                        <!-- Example 3 -->
-                        <div>
-                            <h4 class="font-bold text-slate-900 mb-2">Validate your style</h4>
-                            <div class="bg-slate-900 rounded-lg p-4 flex items-center justify-between group border border-slate-700 shadow-md">
-                                <code class="font-mono text-sm text-slate-300">
-                                    <span class="text-primary">$</span> csln validate styles/my-custom-style.yaml
-                                </code>
-                                <button class="text-slate-500 hover:text-white transition-colors"
-                                    onclick="navigator.clipboard.writeText('csln validate styles/my-custom-style.yaml')"
-                                    title="Copy to clipboard">
-                                    <span class="material-icons text-base">content_copy</span>
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Example 4 -->
-                        <div>
-                            <h4 class="font-bold text-slate-900 mb-2">Generate schemas (Developer Tool)</h4>
-                            <div class="bg-slate-900 rounded-lg p-4 flex items-center justify-between group border border-slate-700 shadow-md">
-                                <code class="font-mono text-sm text-slate-300">
-                                    <span class="text-primary">$</span> cargo run --features schema -- schema --out-dir ./schemas
-                                </code>
-                                <button class="text-slate-500 hover:text-white transition-colors"
-                                    onclick="navigator.clipboard.writeText('cargo run --features schema -- schema --out-dir ./schemas')"
-                                    title="Copy to clipboard">
-                                    <span class="material-icons text-base">content_copy</span>
-                                </button>
-                            </div>
-                            <p class="text-slate-400 text-[10px] mt-2 font-mono">Note: Requires <code class="bg-slate-200 text-slate-700 px-1 rounded">--features schema</code>; primarily for core developers.</p>
                         </div>
                     </div>
                 </div>
@@ -516,20 +507,20 @@
                     <p class="text-[10px] font-mono text-slate-400 mt-2 text-right">75% Complete</p>
                 </div>
 
-                <!-- WASM Support -->
+                <!-- C-FFI & Bindings -->
                 <div class="p-6 rounded-xl border border-slate-100 bg-white">
                     <div class="flex items-center gap-3 mb-4">
-                        <span class="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center">
-                            <span class="material-icons text-sm">settings_input_component</span>
+                        <span
+                            class="w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center">
+                            <span class="material-icons text-sm">check_circle</span>
                         </span>
-                        <h3 class="font-bold text-slate-900">WASM Integration</h3>
+                        <h3 class="font-bold text-slate-900">C-FFI & Lua Bindings</h3>
                     </div>
-                    <p class="text-sm text-slate-500 mb-4">WebAssembly bindings for seamless integration into Zotero,
-                        browser-based editors, and web publishing platforms.</p>
+                    <p class="text-sm text-slate-500 mb-4">Universal FFI bridge for cross-language integration. Native support for LuaJIT and LuaLaTeX workflows is now live.</p>
                     <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
-                        <div class="bg-primary h-full w-1/4"></div>
+                        <div class="bg-emerald-500 h-full w-full"></div>
                     </div>
-                    <p class="text-[10px] font-mono text-slate-400 mt-2 text-right">Planning Phase</p>
+                    <p class="text-[10px] font-mono text-slate-400 mt-2 text-right">100% Complete</p>
                 </div>
 
                 <!-- Legal Citations -->
@@ -569,13 +560,18 @@
                 <!-- Pluggable Renderers -->
                 <div class="p-6 rounded-xl border border-slate-100 bg-white">
                     <div class="flex items-center gap-3 mb-4">
-                        <span class="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center">
-                            <span class="material-icons text-sm">picture_as_pdf</span>
+                        <span
+                            class="w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center">
+                            <span class="material-icons text-sm">check_circle</span>
                         </span>
                         <h3 class="font-bold text-slate-900">LaTeX & Typst Output</h3>
                     </div>
-                    <p class="text-sm text-slate-500">Native renderers for high-fidelity PDF publishing workflows,
-                        bypassing HTML intermediaries.</p>
+                    <p class="text-sm text-slate-500 mb-4">Native renderers for high-fidelity PDF publishing
+                        workflows. LaTeX support is now live; Typst is under development.</p>
+                    <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                        <div class="bg-emerald-500 h-full w-4/5"></div>
+                    </div>
+                    <p class="text-[10px] font-mono text-slate-400 mt-2 text-right">80% Complete</p>
                 </div>
 
                 <!-- Interactive Mode -->
