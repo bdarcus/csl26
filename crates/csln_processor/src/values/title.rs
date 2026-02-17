@@ -9,12 +9,12 @@ use csln_core::reference::Parent;
 use csln_core::template::{TemplateTitle, TitleType};
 
 impl ComponentValues for TemplateTitle {
-    fn values(
+    fn values<F: crate::render::format::OutputFormat<Output = String>>(
         &self,
         reference: &Reference,
         _hints: &ProcHints,
         options: &RenderOptions<'_>,
-    ) -> Option<ProcValues> {
+    ) -> Option<ProcValues<F::Output>> {
         // Get the raw title based on type and template requirement
         let raw_title = match self.title {
             TitleType::Primary => reference.title(),
@@ -83,6 +83,7 @@ impl ComponentValues for TemplateTitle {
                 suffix: None,
                 url,
                 substituted_key: None,
+                pre_formatted: false,
             }
         })
     }

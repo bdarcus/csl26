@@ -86,12 +86,16 @@ impl<'a> Renderer<'a> {
     }
 
     /// Render author + citation number for numeric integral citations.
-    fn render_author_year_for_numeric_integral(
+    fn render_author_year_for_numeric_integral_with_format<F>(
         &self,
         reference: &Reference,
         item: &crate::reference::CitationItem,
         citation_number: usize,
-    ) -> String {
+    ) -> String
+    where
+        F: crate::render::format::OutputFormat<Output = String>,
+    {
+        let fmt = F::default();
         let options = RenderOptions {
             config: self.config,
             locale: self.locale,
@@ -122,7 +126,9 @@ impl<'a> Renderer<'a> {
                 preferred_script,
                 locale_str,
             );
-            crate::values::format_contributors_short(&names_vec, &options)
+            fmt.text(&crate::values::format_contributors_short(
+                &names_vec, &options,
+            ))
         } else {
             String::new()
         };
@@ -134,6 +140,20 @@ impl<'a> Renderer<'a> {
             // Fallback: just citation number if no author
             format!("[{}]", citation_number)
         }
+    }
+
+    #[allow(dead_code)]
+    fn render_author_year_for_numeric_integral(
+        &self,
+        reference: &Reference,
+        item: &crate::reference::CitationItem,
+        citation_number: usize,
+    ) -> String {
+        self.render_author_year_for_numeric_integral_with_format::<crate::render::plain::PlainText>(
+            reference,
+            item,
+            citation_number,
+        )
     }
 
     /// Render citation items without grouping.
@@ -177,8 +197,11 @@ impl<'a> Renderer<'a> {
             if use_author_year {
                 // Numeric integral: render author + citation number
                 let citation_number = self.get_or_assign_citation_number(&item.id);
-                let item_str =
-                    self.render_author_year_for_numeric_integral(reference, item, citation_number);
+                let item_str = self.render_author_year_for_numeric_integral_with_format::<F>(
+                    reference,
+                    item,
+                    citation_number,
+                );
                 if !item_str.is_empty() {
                     let prefix = item.prefix.as_deref().unwrap_or("");
                     let suffix = item.suffix.as_deref().unwrap_or("");
@@ -222,7 +245,7 @@ impl<'a> Renderer<'a> {
                     (template, intra_delimiter)
                 };
 
-                if let Some(proc) = self.process_template_with_number(
+                if let Some(proc) = self.process_template_with_number_with_format::<F>(
                     reference,
                     effective_template,
                     RenderContext::Citation,
@@ -366,7 +389,7 @@ impl<'a> Renderer<'a> {
                 if let Some(template) = spec.template.as_ref() {
                     // Narrative mode with explicit template (e.g., APA 7th)
                     let citation_number = self.get_or_assign_citation_number(&first_item.id);
-                    if let Some(proc) = self.process_template_with_number(
+                    if let Some(proc) = self.process_template_with_number_with_format::<F>(
                         first_ref,
                         template,
                         RenderContext::Citation,
@@ -411,7 +434,8 @@ impl<'a> Renderer<'a> {
             }
 
             // Fallback to default hardcoded grouping (or if no integral template)
-            let author_part = self.render_author_for_grouping(first_ref, template, mode);
+            let author_part =
+                self.render_author_for_grouping_with_format::<F>(first_ref, template, mode);
 
             let mut year_parts = Vec::new();
             for item in &group {
@@ -420,7 +444,7 @@ impl<'a> Renderer<'a> {
                     .get(&item.id)
                     .ok_or_else(|| ProcessorError::ReferenceNotFound(item.id.clone()))?;
 
-                let year_part = self.render_year_for_grouping(reference);
+                let year_part = self.render_year_for_grouping_with_format::<F>(reference);
                 if !year_part.is_empty() {
                     let suffix = item.suffix.as_deref().unwrap_or("");
                     if !suffix.is_empty() {
@@ -507,12 +531,16 @@ impl<'a> Renderer<'a> {
     }
 
     /// Render just the author part for citation grouping.
-    fn render_author_for_grouping(
+    fn render_author_for_grouping_with_format<F>(
         &self,
         reference: &Reference,
         _template: &[TemplateComponent],
         mode: &csln_core::citation::CitationMode,
-    ) -> String {
+    ) -> String
+    where
+        F: crate::render::format::OutputFormat<Output = String>,
+    {
+        let fmt = F::default();
         // For grouping, we need the short author form
         let options = RenderOptions {
             config: self.config,
@@ -544,14 +572,32 @@ impl<'a> Renderer<'a> {
                 preferred_script,
                 locale_str,
             );
-            crate::values::format_contributors_short(&names_vec, &options)
+            fmt.text(&crate::values::format_contributors_short(
+                &names_vec, &options,
+            ))
         } else {
             String::new()
         }
     }
 
+    #[allow(dead_code)]
+    fn render_author_for_grouping(
+        &self,
+        reference: &Reference,
+        template: &[TemplateComponent],
+        mode: &csln_core::citation::CitationMode,
+    ) -> String {
+        self.render_author_for_grouping_with_format::<crate::render::plain::PlainText>(
+            reference, template, mode,
+        )
+    }
+
     /// Render just the year part (with suffix) for citation grouping.
-    fn render_year_for_grouping(&self, reference: &Reference) -> String {
+    fn render_year_for_grouping_with_format<F>(&self, reference: &Reference) -> String
+    where
+        F: crate::render::format::OutputFormat<Output = String>,
+    {
+        let fmt = F::default();
         let hints = self
             .hints
             .get(&reference.id().unwrap_or_default())
@@ -584,9 +630,14 @@ impl<'a> Renderer<'a> {
             } else {
                 String::new()
             };
-            return format!("{}{}", year, suffix);
+            return fmt.text(&format!("{}{}", year, suffix));
         }
         String::new()
+    }
+
+    #[allow(dead_code)]
+    fn render_year_for_grouping(&self, reference: &Reference) -> String {
+        self.render_year_for_grouping_with_format::<crate::render::plain::PlainText>(reference)
     }
 
     /// Get the citation number for a reference, assigning one if not yet cited.
@@ -602,6 +653,21 @@ impl<'a> Renderer<'a> {
         reference: &Reference,
         entry_number: usize,
     ) -> Option<ProcTemplate> {
+        self.process_bibliography_entry_with_format::<crate::render::plain::PlainText>(
+            reference,
+            entry_number,
+        )
+    }
+
+    /// Process a bibliography entry with specific format.
+    pub fn process_bibliography_entry_with_format<F>(
+        &self,
+        reference: &Reference,
+        entry_number: usize,
+    ) -> Option<ProcTemplate>
+    where
+        F: crate::render::format::OutputFormat<Output = String>,
+    {
         let bib_spec = self.style.bibliography.as_ref()?;
 
         // Resolve default template (handles preset vs explicit)
@@ -629,7 +695,12 @@ impl<'a> Renderer<'a> {
             locator_label: None,
         };
 
-        self.process_template_with_number_internal(reference, template_ref, options, entry_number)
+        self.process_template_with_number_internal_with_format::<F>(
+            reference,
+            template_ref,
+            options,
+            entry_number,
+        )
     }
 
     /// Process a template for a reference with citation number.
@@ -645,6 +716,34 @@ impl<'a> Renderer<'a> {
         locator: Option<&str>,
         locator_label: Option<csln_core::citation::LocatorType>,
     ) -> Option<ProcTemplate> {
+        self.process_template_with_number_with_format::<crate::render::plain::PlainText>(
+            reference,
+            template,
+            context,
+            mode,
+            visibility,
+            citation_number,
+            locator,
+            locator_label,
+        )
+    }
+
+    /// Process a template for a reference with citation number and specific format.
+    #[allow(clippy::too_many_arguments)]
+    pub fn process_template_with_number_with_format<F>(
+        &self,
+        reference: &Reference,
+        template: &[TemplateComponent],
+        context: RenderContext,
+        mode: csln_core::citation::CitationMode,
+        visibility: csln_core::citation::ItemVisibility,
+        citation_number: usize,
+        locator: Option<&str>,
+        locator_label: Option<csln_core::citation::LocatorType>,
+    ) -> Option<ProcTemplate>
+    where
+        F: crate::render::format::OutputFormat<Output = String>,
+    {
         let options = RenderOptions {
             config: self.config,
             locale: self.locale,
@@ -654,9 +753,15 @@ impl<'a> Renderer<'a> {
             locator,
             locator_label,
         };
-        self.process_template_with_number_internal(reference, template, options, citation_number)
+        self.process_template_with_number_internal_with_format::<F>(
+            reference,
+            template,
+            options,
+            citation_number,
+        )
     }
 
+    #[allow(dead_code)]
     fn process_template_with_number_internal(
         &self,
         reference: &Reference,
@@ -664,6 +769,24 @@ impl<'a> Renderer<'a> {
         options: RenderOptions<'_>,
         citation_number: usize,
     ) -> Option<ProcTemplate> {
+        self.process_template_with_number_internal_with_format::<crate::render::plain::PlainText>(
+            reference,
+            template,
+            options,
+            citation_number,
+        )
+    }
+
+    fn process_template_with_number_internal_with_format<F>(
+        &self,
+        reference: &Reference,
+        template: &[TemplateComponent],
+        options: RenderOptions<'_>,
+        citation_number: usize,
+    ) -> Option<ProcTemplate>
+    where
+        F: crate::render::format::OutputFormat<Output = String>,
+    {
         let default_hint = ProcHints::default();
         let base_hint = self
             .hints
@@ -697,8 +820,8 @@ impl<'a> Renderer<'a> {
                     }
                 }
 
-                // Extract value from reference
-                let mut values = component.values(reference, &hint, &options)?;
+                // Extract value from reference using the requested format
+                let mut values = component.values::<F>(reference, &hint, &options)?;
                 if values.value.is_empty() {
                     return None;
                 }
@@ -731,6 +854,7 @@ impl<'a> Renderer<'a> {
                     url: values.url,
                     ref_type: Some(reference.ref_type().to_string()),
                     config: Some(options.config.clone()),
+                    pre_formatted: values.pre_formatted,
                 })
             })
             .collect();
@@ -744,11 +868,25 @@ impl<'a> Renderer<'a> {
 
     /// Apply the substitution string to the primary contributor component.
     pub fn apply_author_substitution(&self, proc: &mut ProcTemplate, substitute: &str) {
+        self.apply_author_substitution_with_format::<crate::render::plain::PlainText>(
+            proc, substitute,
+        );
+    }
+
+    /// Apply the substitution string to the primary contributor component with specific format.
+    pub fn apply_author_substitution_with_format<F>(
+        &self,
+        proc: &mut ProcTemplate,
+        substitute: &str,
+    ) where
+        F: crate::render::format::OutputFormat<Output = String>,
+    {
         if let Some(component) = proc
             .iter_mut()
             .find(|c| matches!(c.template_component, TemplateComponent::Contributor(_)))
         {
-            component.value = substitute.to_string();
+            let fmt = F::default();
+            component.value = fmt.text(substitute);
         }
     }
 }

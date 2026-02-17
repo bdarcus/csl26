@@ -76,6 +76,7 @@ mod tests {
                 ref_type: None,
                 config: None,
                 url: None,
+                pre_formatted: false,
             },
             ProcTemplateComponent {
                 template_component: TemplateComponent::Date(TemplateDate {
@@ -90,6 +91,7 @@ mod tests {
                 ref_type: None,
                 config: None,
                 url: None,
+                pre_formatted: false,
             },
         ];
 

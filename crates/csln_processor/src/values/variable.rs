@@ -3,12 +3,12 @@ use crate::values::{ComponentValues, ProcHints, ProcValues, RenderOptions};
 use csln_core::template::{SimpleVariable, TemplateVariable};
 
 impl ComponentValues for TemplateVariable {
-    fn values(
+    fn values<F: crate::render::format::OutputFormat<Output = String>>(
         &self,
         reference: &Reference,
         _hints: &ProcHints,
         options: &RenderOptions<'_>,
-    ) -> Option<ProcValues> {
+    ) -> Option<ProcValues<F::Output>> {
         let value = match self.variable {
             SimpleVariable::Doi => reference.doi(),
             SimpleVariable::Url => reference.url().map(|u| u.to_string()),
@@ -81,6 +81,7 @@ impl ComponentValues for TemplateVariable {
                 suffix: None,
                 url,
                 substituted_key: None,
+                pre_formatted: false,
             }
         })
     }

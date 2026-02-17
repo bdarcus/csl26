@@ -8,12 +8,13 @@ use csln_core::options::{
 use csln_core::template::{ContributorForm, ContributorRole, TemplateContributor};
 
 impl ComponentValues for TemplateContributor {
-    fn values(
+    fn values<F: crate::render::format::OutputFormat<Output = String>>(
         &self,
         reference: &Reference,
         hints: &ProcHints,
         options: &RenderOptions<'_>,
-    ) -> Option<ProcValues> {
+    ) -> Option<ProcValues<F::Output>> {
+        let fmt = F::default();
         // Resolve effective rendering options (base merged with type-specific override)
         let mut effective_rendering = self.rendering.clone();
         if let Some(overrides) = &self.overrides {
@@ -161,7 +162,8 @@ impl ComponentValues for TemplateContributor {
                                                     } else {
                                                         term.to_string()
                                                     };
-                                                format!(" ({})", term_str)
+                                                // Escaping needed here because we are building a complex string
+                                                fmt.text(&format!(" ({})", term_str))
                                             })
                                     })
                                 } else {
@@ -176,13 +178,14 @@ impl ComponentValues for TemplateContributor {
                                 );
 
                                 return Some(ProcValues {
-                                    value: formatted,
+                                    value: fmt.text(&formatted),
                                     prefix: None,
                                     suffix,
                                     url,
                                     // Mark editor as rendered to suppress explicit editor component
                                     // Use the same key format as get_variable_key() for consistency
                                     substituted_key: Some("contributor:Editor".to_string()),
+                                    pre_formatted: true,
                                 });
                             }
                         }
@@ -194,9 +197,9 @@ impl ComponentValues for TemplateContributor {
                             // - In CITATIONS: quote the title per CSL conventions
                             // - In BIBLIOGRAPHY: use title as-is (it will be styled normally)
                             let value = if options.context == RenderContext::Citation {
-                                format!("\u{201C}{}\u{201D}", title_str) // Curly quotes
+                                fmt.quote(fmt.text(&title_str))
                             } else {
-                                title_str
+                                fmt.text(&title_str)
                             };
 
                             // Check if links should be applied to substituted title
@@ -213,6 +216,7 @@ impl ComponentValues for TemplateContributor {
                                 suffix: None,
                                 url,
                                 substituted_key: Some("title:Primary".to_string()),
+                                pre_formatted: true,
                             });
                         }
                     }
@@ -257,11 +261,12 @@ impl ComponentValues for TemplateContributor {
                                 );
 
                                 return Some(ProcValues {
-                                    value: formatted,
+                                    value: fmt.text(&formatted),
                                     prefix: None,
-                                    suffix: Some(" (Trans.)".to_string()),
+                                    suffix: Some(fmt.text(" (Trans.)")),
                                     url,
                                     substituted_key: None,
+                                    pre_formatted: true,
                                 });
                             }
                         }
@@ -290,22 +295,6 @@ impl ComponentValues for TemplateContributor {
                 .name_order
                 .as_ref()
         });
-
-        // Resolve effective rendering options (base merged with type-specific override)
-        let mut effective_rendering = self.rendering.clone();
-        if let Some(overrides) = &self.overrides {
-            use csln_core::template::ComponentOverride;
-            // Apply "all" wildcard override first
-            if let Some(ComponentOverride::Rendering(all_override)) = overrides.get("all") {
-                effective_rendering.merge(all_override);
-            }
-            // Then apply specific type override
-            if let Some(ComponentOverride::Rendering(type_override)) =
-                overrides.get(&reference.ref_type())
-            {
-                effective_rendering.merge(type_override);
-            }
-        }
 
         let formatted = format_names(
             &names_vec,
@@ -344,8 +333,8 @@ impl ComponentValues for TemplateContributor {
 
             // Apply placement
             match label_config.placement {
-                LabelPlacement::Prefix => (term_text.map(|t| format!("{} ", t)), None),
-                LabelPlacement::Suffix => (None, term_text.map(|t| format!(" {}", t))),
+                LabelPlacement::Prefix => (term_text.map(|t| fmt.text(&format!("{} ", t))), None),
+                LabelPlacement::Suffix => (None, term_text.map(|t| fmt.text(&format!(" {}", t)))),
             }
         } else {
             // Fall back to global editor_label_format configuration
@@ -377,7 +366,7 @@ impl ComponentValues for TemplateContributor {
                                     } else {
                                         t.to_string()
                                     };
-                                    format!("{} ", term_str)
+                                    fmt.text(&format!("{} ", term_str))
                                 }),
                                 None,
                             )
@@ -399,7 +388,7 @@ impl ComponentValues for TemplateContributor {
                                     } else {
                                         t.to_string()
                                     };
-                                    format!(" ({})", term_str)
+                                    fmt.text(&format!(" ({})", term_str))
                                 }),
                             )
                         }
@@ -419,7 +408,7 @@ impl ComponentValues for TemplateContributor {
                                     } else {
                                         t.to_string()
                                     };
-                                    format!(", {}", term_str)
+                                    fmt.text(&format!(", {}", term_str))
                                 }),
                             )
                         }
@@ -446,7 +435,7 @@ impl ComponentValues for TemplateContributor {
                                 } else {
                                     t.to_string()
                                 };
-                                format!("{} ", term_str)
+                                fmt.text(&format!("{} ", term_str))
                             }),
                             None,
                         )
@@ -471,7 +460,7 @@ impl ComponentValues for TemplateContributor {
                                 } else {
                                     t.to_string()
                                 };
-                                format!(" ({})", term_str)
+                                fmt.text(&format!(" ({})", term_str))
                             }),
                         )
                     }
@@ -480,8 +469,16 @@ impl ComponentValues for TemplateContributor {
             }
         };
 
+        // If we have labels, the value is pre-formatted
+        let is_pre_formatted = role_prefix.is_some() || role_suffix.is_some();
+        let final_value = if is_pre_formatted {
+            fmt.text(&formatted)
+        } else {
+            formatted
+        };
+
         Some(ProcValues {
-            value: formatted,
+            value: final_value,
             prefix: role_prefix,
             suffix: role_suffix,
             url: crate::values::resolve_effective_url(
@@ -491,6 +488,7 @@ impl ComponentValues for TemplateContributor {
                 csln_core::options::LinkAnchor::Component, // Contributors only link if explicit or whole-component
             ),
             substituted_key: None,
+            pre_formatted: is_pre_formatted,
         })
     }
 }

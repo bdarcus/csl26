@@ -266,9 +266,9 @@ pub fn resolve_effective_url(
 
 /// Processed values ready for rendering.
 #[derive(Debug, Clone, Default)]
-pub struct ProcValues {
+pub struct ProcValues<T = String> {
     /// The primary formatted value.
-    pub value: String,
+    pub value: T,
     /// Optional prefix to prepend.
     pub prefix: Option<String>,
     /// Optional suffix to append.
@@ -278,6 +278,8 @@ pub struct ProcValues {
     /// Variable key that was substituted (e.g., "title:Primary" when title replaces author).
     /// Used to prevent duplicate rendering per CSL variable-once rule.
     pub substituted_key: Option<String>,
+    /// Whether the value is already pre-formatted.
+    pub pre_formatted: bool,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -322,29 +324,29 @@ pub struct RenderOptions<'a> {
 
 /// Trait for extracting values from template components.
 pub trait ComponentValues {
-    fn values(
+    fn values<F: crate::render::format::OutputFormat<Output = String>>(
         &self,
         reference: &Reference,
         hints: &ProcHints,
         options: &RenderOptions<'_>,
-    ) -> Option<ProcValues>;
+    ) -> Option<ProcValues<F::Output>>;
 }
 
 impl ComponentValues for TemplateComponent {
-    fn values(
+    fn values<F: crate::render::format::OutputFormat<Output = String>>(
         &self,
         reference: &Reference,
         hints: &ProcHints,
         options: &RenderOptions<'_>,
-    ) -> Option<ProcValues> {
+    ) -> Option<ProcValues<F::Output>> {
         match self {
-            TemplateComponent::Contributor(c) => c.values(reference, hints, options),
-            TemplateComponent::Date(d) => d.values(reference, hints, options),
-            TemplateComponent::Title(t) => t.values(reference, hints, options),
-            TemplateComponent::Number(n) => n.values(reference, hints, options),
-            TemplateComponent::Variable(v) => v.values(reference, hints, options),
-            TemplateComponent::List(l) => l.values(reference, hints, options),
-            TemplateComponent::Term(t) => t.values(reference, hints, options),
+            TemplateComponent::Contributor(c) => c.values::<F>(reference, hints, options),
+            TemplateComponent::Date(d) => d.values::<F>(reference, hints, options),
+            TemplateComponent::Title(t) => t.values::<F>(reference, hints, options),
+            TemplateComponent::Number(n) => n.values::<F>(reference, hints, options),
+            TemplateComponent::Variable(v) => v.values::<F>(reference, hints, options),
+            TemplateComponent::List(l) => l.values::<F>(reference, hints, options),
+            TemplateComponent::Term(t) => t.values::<F>(reference, hints, options),
             _ => None,
         }
     }

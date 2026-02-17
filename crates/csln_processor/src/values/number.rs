@@ -4,12 +4,13 @@ use csln_core::locale::TermForm;
 use csln_core::template::{NumberVariable, TemplateNumber};
 
 impl ComponentValues for TemplateNumber {
-    fn values(
+    fn values<F: crate::render::format::OutputFormat<Output = String>>(
         &self,
         reference: &Reference,
         hints: &ProcHints,
         options: &RenderOptions<'_>,
-    ) -> Option<ProcValues> {
+    ) -> Option<ProcValues<F::Output>> {
+        let fmt = F::default();
         use csln_core::template::LabelForm;
 
         let value = match self.number {
@@ -46,7 +47,7 @@ impl ComponentValues for TemplateNumber {
                                 } else {
                                     t.to_string()
                                 };
-                            format!("{} ", term_str)
+                            fmt.text(&format!("{} ", term_str))
                         })
                 } else {
                     None
@@ -66,6 +67,7 @@ impl ComponentValues for TemplateNumber {
                     csln_core::options::LinkAnchor::Component,
                 ),
                 substituted_key: None,
+                pre_formatted: false,
             }
         })
     }

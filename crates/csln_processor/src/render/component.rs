@@ -23,6 +23,8 @@ pub struct ProcTemplateComponent {
     pub ref_type: Option<String>,
     /// Optional global configuration.
     pub config: Option<Config>,
+    /// Whether the value is already pre-formatted (e.g. from a List or substitution).
+    pub pre_formatted: bool,
 }
 
 /// A processed template (list of rendered components).
@@ -48,11 +50,17 @@ pub fn render_component(component: &ProcTemplateComponent) -> String {
 }
 
 /// Render a single component using a specific output format.
-pub fn render_component_with_format<F: OutputFormat>(
+pub fn render_component_with_format<F: OutputFormat<Output = String>>(
     component: &ProcTemplateComponent,
 ) -> F::Output {
-    let fmt = F::default();
+    render_component_with_format_and_renderer::<F>(component, &F::default())
+}
 
+/// Render a single component using a specific output format and an existing renderer instance.
+pub fn render_component_with_format_and_renderer<F: OutputFormat<Output = String>>(
+    component: &ProcTemplateComponent,
+    fmt: &F,
+) -> F::Output {
     // Get merged rendering (global config + local settings + overrides)
     let rendering = get_effective_rendering(component);
 
@@ -67,7 +75,13 @@ pub fn render_component_with_format<F: OutputFormat>(
     let inner_suffix = rendering.inner_suffix.as_deref().unwrap_or_default();
     let wrap = rendering.wrap.as_ref().unwrap_or(&WrapPunctuation::None);
 
-    let mut output = fmt.text(&component.value);
+    let mut output = if component.pre_formatted {
+        // If already pre-formatted (e.g. from a List), don't escape again.
+        // We just need to convert the String back to Output (which is String here).
+        fmt.join(vec![component.value.clone()], "")
+    } else {
+        fmt.text(&component.value)
+    };
 
     // Order of application:
     // 1. Text styles (emph, strong, etc.)

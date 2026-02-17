@@ -3,12 +3,13 @@ use crate::values::{ComponentValues, ProcHints, ProcValues, RenderOptions};
 use csln_core::template::{DateForm, DateVariable as TemplateDateVar, TemplateDate};
 
 impl ComponentValues for TemplateDate {
-    fn values(
+    fn values<F: crate::render::format::OutputFormat<Output = String>>(
         &self,
         reference: &Reference,
         hints: &ProcHints,
         options: &RenderOptions<'_>,
-    ) -> Option<ProcValues> {
+    ) -> Option<ProcValues<F::Output>> {
+        let fmt = F::default();
         let date_opt: Option<EdtfString> = match self.date {
             TemplateDateVar::Issued => reference.issued(),
             TemplateDateVar::Accessed => reference.accessed(),
@@ -19,7 +20,7 @@ impl ComponentValues for TemplateDate {
             // Handle fallback if date is missing
             if let Some(fallbacks) = &self.fallback {
                 for component in fallbacks {
-                    if let Some(values) = component.values(reference, hints, options) {
+                    if let Some(values) = component.values::<F>(reference, hints, options) {
                         return Some(values);
                     }
                 }
@@ -173,7 +174,7 @@ impl ComponentValues for TemplateDate {
                 .unwrap_or(false);
 
             if use_suffix {
-                int_to_letter(hints.group_index as u32)
+                int_to_letter(hints.group_index as u32).map(|s| fmt.text(&s))
             } else {
                 None
             }
@@ -192,6 +193,7 @@ impl ComponentValues for TemplateDate {
                 csln_core::options::LinkAnchor::Component,
             ),
             substituted_key: None,
+            pre_formatted: false,
         })
     }
 }

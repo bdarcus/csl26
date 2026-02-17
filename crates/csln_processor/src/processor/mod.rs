@@ -188,7 +188,16 @@ impl Processor {
                     if let Some(prev) = prev_reference {
                         // Check if primary contributor matches
                         if self.contributors_match(prev, reference) {
-                            self.apply_author_substitution(&mut proc, sub_string);
+                            let bib_config = self.get_bibliography_config();
+                            let renderer = Renderer::new(
+                                &self.style,
+                                &self.bibliography,
+                                &self.locale,
+                                &bib_config,
+                                &self.hints,
+                                &self.citation_numbers,
+                            );
+                            renderer.apply_author_substitution(&mut proc, sub_string);
                         }
                     }
                 }
@@ -426,8 +435,76 @@ impl Processor {
     where
         F: crate::render::format::OutputFormat<Output = String>,
     {
-        let processed = self.process_references();
-        crate::render::refs_to_string_with_format::<F>(processed.bibliography)
+        let sorted_refs = self.sort_references(self.bibliography.values().collect());
+        let mut bibliography: Vec<ProcEntry> = Vec::new();
+        let mut prev_reference: Option<&Reference> = None;
+
+        let bib_config = self.get_config().bibliography.as_ref();
+        let substitute = bib_config.and_then(|c| c.subsequent_author_substitute.as_ref());
+
+        for (index, reference) in sorted_refs.iter().enumerate() {
+            let ref_id = reference.id().unwrap_or_default();
+            let entry_number = self
+                .citation_numbers
+                .borrow()
+                .get(&ref_id)
+                .copied()
+                .unwrap_or(index + 1);
+
+            if let Some(mut proc) =
+                self.process_bibliography_entry_with_format::<F>(reference, entry_number)
+            {
+                if let Some(sub_string) = substitute {
+                    if let Some(prev) = prev_reference {
+                        if self.contributors_match(prev, reference) {
+                            let bib_config = self.get_bibliography_config();
+                            let renderer = Renderer::new(
+                                &self.style,
+                                &self.bibliography,
+                                &self.locale,
+                                &bib_config,
+                                &self.hints,
+                                &self.citation_numbers,
+                            );
+                            renderer
+                                .apply_author_substitution_with_format::<F>(&mut proc, sub_string);
+                        }
+                    }
+                }
+
+                bibliography.push(ProcEntry {
+                    id: ref_id.clone(),
+                    template: proc,
+                    metadata: self.extract_metadata(reference),
+                });
+                prev_reference = Some(reference);
+            }
+        }
+
+        crate::render::refs_to_string_with_format::<F>(bibliography)
+    }
+
+    /// Process a bibliography entry with specific format.
+    pub fn process_bibliography_entry_with_format<F>(
+        &self,
+        reference: &Reference,
+        entry_number: usize,
+    ) -> Option<ProcTemplate>
+    where
+        F: crate::render::format::OutputFormat<Output = String>,
+    {
+        // Use bibliography-specific merged config
+        let bib_config = self.get_bibliography_config();
+
+        let renderer = Renderer::new(
+            &self.style,
+            &self.bibliography,
+            &self.locale,
+            &bib_config,
+            &self.hints,
+            &self.citation_numbers,
+        );
+        renderer.process_bibliography_entry_with_format::<F>(reference, entry_number)
     }
 
     /// Render a citation to a string using a specific format.

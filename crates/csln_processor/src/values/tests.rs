@@ -1,5 +1,6 @@
 use super::*;
 use crate::reference::Reference;
+use crate::render::plain::PlainText;
 use csl_legacy::csl_json::{DateVariable, Name, Reference as LegacyReference};
 use csln_core::locale::{GeneralTerm, Locale, TermForm};
 use csln_core::options::*;
@@ -71,7 +72,9 @@ fn test_contributor_values() {
         custom: None,
     };
 
-    let values = component.values(&reference, &hints, &options).unwrap();
+    let values = component
+        .values::<PlainText>(&reference, &hints, &options)
+        .unwrap();
     assert_eq!(values.value, "Kuhn");
 }
 
@@ -101,7 +104,9 @@ fn test_date_values() {
         custom: None,
     };
 
-    let values = component.values(&reference, &hints, &options).unwrap();
+    let values = component
+        .values::<PlainText>(&reference, &hints, &options)
+        .unwrap();
     assert_eq!(values.value, "1962");
 }
 
@@ -146,7 +151,9 @@ fn test_et_al() {
         custom: None,
     };
 
-    let values = component.values(&reference, &hints, &options).unwrap();
+    let values = component
+        .values::<PlainText>(&reference, &hints, &options)
+        .unwrap();
     assert_eq!(values.value, "LeCun et al.");
 }
 
@@ -267,7 +274,9 @@ fn test_et_al_delimiter_never() {
         custom: None,
     };
 
-    let values = component.values(&reference, &hints, &options).unwrap();
+    let values = component
+        .values::<PlainText>(&reference, &hints, &options)
+        .unwrap();
     // With "never", no comma before et al.
     assert_eq!(values.value, "Smith et al.");
 }
@@ -320,7 +329,9 @@ fn test_et_al_delimiter_always() {
         custom: None,
     };
 
-    let values = component.values(&reference, &hints, &options).unwrap();
+    let values = component
+        .values::<PlainText>(&reference, &hints, &options)
+        .unwrap();
     // With "always", comma before et al.
     assert_eq!(values.value, "Smith, et al.");
 }
@@ -436,7 +447,7 @@ fn test_template_list_suppression() {
         ..Default::default()
     };
 
-    let values = component.values(&reference, &hints, &options);
+    let values = component.values::<PlainText>(&reference, &hints, &options);
     assert!(values.is_none());
 }
 
@@ -482,7 +493,9 @@ fn test_et_al_use_last() {
         ..Default::default()
     };
 
-    let values = component.values(&reference, &hints, &options).unwrap();
+    let values = component
+        .values::<PlainText>(&reference, &hints, &options)
+        .unwrap();
     // first name (LeCun) + ellipsis + last name (Hinton)
     assert_eq!(values.value, "LeCun … Hinton");
 }
@@ -530,7 +543,9 @@ fn test_et_al_use_last_overlap() {
         ..Default::default()
     };
 
-    let values = component.values(&reference, &hints, &options).unwrap();
+    let values = component
+        .values::<PlainText>(&reference, &hints, &options)
+        .unwrap();
     // use_first(2) + use_last(2) = 4 >= 3 names, so show first 2 + ellipsis + last 1
     // Alpha & Beta … Gamma (skip=max(2, 3-2)=2, so last 1 name)
     assert_eq!(values.value, "Alpha & Beta … Gamma");
@@ -571,7 +586,9 @@ fn test_title_hyperlink() {
         ..Default::default()
     };
 
-    let values = component.values(&reference, &hints, &options).unwrap();
+    let values = component
+        .values::<PlainText>(&reference, &hints, &options)
+        .unwrap();
     assert_eq!(
         values.url,
         Some("https://doi.org/10.1001/example".to_string())
@@ -614,7 +631,9 @@ fn test_title_hyperlink_url_fallback() {
         ..Default::default()
     };
 
-    let values = component.values(&reference, &hints, &options).unwrap();
+    let values = component
+        .values::<PlainText>(&reference, &hints, &options)
+        .unwrap();
     // Falls back to URL when DOI is absent
     assert_eq!(values.url, Some("https://example.com/resource".to_string()));
 }
@@ -654,7 +673,9 @@ fn test_variable_hyperlink() {
         ..Default::default()
     };
 
-    let values = component.values(&reference, &hints, &options).unwrap();
+    let values = component
+        .values::<PlainText>(&reference, &hints, &options)
+        .unwrap();
     assert_eq!(values.value, "MIT Press");
     assert_eq!(values.url, Some("https://doi.org/10.1234/pub".to_string()));
 }
@@ -693,7 +714,9 @@ fn test_editor_label_format() {
             locator: None,
             locator_label: None,
         };
-        let values = component.values(&reference, &hints, &options).unwrap();
+        let values = component
+            .values::<PlainText>(&reference, &hints, &options)
+            .unwrap();
         // Assuming locale for "editor" verb is "edited by"
         assert_eq!(values.prefix, Some("edited by ".to_string()));
     }
@@ -712,7 +735,9 @@ fn test_editor_label_format() {
             locator: None,
             locator_label: None,
         };
-        let values = component.values(&reference, &hints, &options).unwrap();
+        let values = component
+            .values::<PlainText>(&reference, &hints, &options)
+            .unwrap();
         // Assuming locale for "editor" short is "Ed."
         assert_eq!(values.suffix, Some(" (Ed.)".to_string()));
     }
@@ -731,7 +756,9 @@ fn test_editor_label_format() {
             locator: None,
             locator_label: None,
         };
-        let values = component.values(&reference, &hints, &options).unwrap();
+        let values = component
+            .values::<PlainText>(&reference, &hints, &options)
+            .unwrap();
         // Assuming locale for "editor" long is "editor"
         assert_eq!(values.suffix, Some(", editor".to_string()));
     }
@@ -761,7 +788,9 @@ fn test_term_values() {
         ..Default::default()
     };
 
-    let values = component.values(&reference, &hints, &options).unwrap();
+    let values = component
+        .values::<PlainText>(&reference, &hints, &options)
+        .unwrap();
     assert_eq!(values.value, "in");
 }
 
@@ -799,7 +828,7 @@ fn test_template_list_term_suppression() {
         ..Default::default()
     };
 
-    let values = component.values(&reference, &hints, &options);
+    let values = component.values::<PlainText>(&reference, &hints, &options);
     // Should be None because only the term "In" would render, and it's suppressed if no content-bearing items are present
     assert!(values.is_none());
 }
@@ -838,7 +867,9 @@ fn test_date_fallback() {
         ..Default::default()
     };
 
-    let values = component.values(&reference, &hints, &options).unwrap();
+    let values = component
+        .values::<PlainText>(&reference, &hints, &options)
+        .unwrap();
     assert_eq!(values.value, "n.d.");
 }
 
@@ -874,7 +905,9 @@ fn test_strip_periods_global_config() {
         ..Default::default()
     };
 
-    let values = component.values(&reference, &hints, &options).unwrap();
+    let values = component
+        .values::<PlainText>(&reference, &hints, &options)
+        .unwrap();
     // Should have "(Ed)" instead of "(Ed.)" due to strip_periods
     assert!(values.suffix.is_some());
     assert_eq!(values.suffix.as_ref().unwrap(), " (Ed)");
@@ -917,7 +950,9 @@ fn test_strip_periods_component_override() {
         ..Default::default()
     };
 
-    let values = component.values(&reference, &hints, &options).unwrap();
+    let values = component
+        .values::<PlainText>(&reference, &hints, &options)
+        .unwrap();
     // Should strip periods because component overrides global
     assert!(values.suffix.is_some());
     assert_eq!(values.suffix.as_ref().unwrap(), " (Ed)");
@@ -954,7 +989,9 @@ fn test_strip_periods_no_strip_by_default() {
         ..Default::default()
     };
 
-    let values = component.values(&reference, &hints, &options).unwrap();
+    let values = component
+        .values::<PlainText>(&reference, &hints, &options)
+        .unwrap();
     // Should preserve periods by default
     assert!(values.suffix.is_some());
     assert_eq!(values.suffix.as_ref().unwrap(), " (Ed.)");

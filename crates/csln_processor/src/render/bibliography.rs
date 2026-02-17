@@ -251,6 +251,7 @@ mod tests {
             ref_type: None,
             config: Some(config.clone()),
             url: None,
+            pre_formatted: false,
         };
 
         let c2 = ProcTemplateComponent {
@@ -270,6 +271,7 @@ mod tests {
             ref_type: None,
             config: Some(config),
             url: None,
+            pre_formatted: false,
         };
 
         let entries = vec![ProcEntry {
@@ -311,6 +313,7 @@ mod tests {
             ref_type: None,
             config: Some(config.clone()),
             url: None,
+            pre_formatted: false,
         };
 
         let c2 = ProcTemplateComponent {
@@ -325,6 +328,7 @@ mod tests {
             ref_type: None,
             config: Some(config),
             url: None,
+            pre_formatted: false,
         };
 
         let entries = vec![ProcEntry {
@@ -394,6 +398,7 @@ mod tests {
             ref_type: None,
             config: Some(config.clone()),
             url: None,
+            pre_formatted: false,
         };
 
         let c2 = ProcTemplateComponent {
@@ -411,6 +416,7 @@ mod tests {
             ref_type: None,
             config: Some(config),
             url: None,
+            pre_formatted: false,
         };
 
         let entries = vec![ProcEntry {

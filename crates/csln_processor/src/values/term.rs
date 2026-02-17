@@ -9,12 +9,12 @@ use csln_core::locale::TermForm;
 use csln_core::template::TemplateTerm;
 
 impl ComponentValues for TemplateTerm {
-    fn values(
+    fn values<F: crate::render::format::OutputFormat<Output = String>>(
         &self,
         _reference: &Reference,
         _hints: &ProcHints,
         options: &RenderOptions<'_>,
-    ) -> Option<ProcValues> {
+    ) -> Option<ProcValues<F::Output>> {
         let form = self.form.unwrap_or(TermForm::Long);
         let mut value = options
             .locale
@@ -32,6 +32,7 @@ impl ComponentValues for TemplateTerm {
         } else {
             Some(ProcValues {
                 value,
+                pre_formatted: false,
                 ..Default::default()
             })
         }
