@@ -287,7 +287,9 @@ impl<'a> Renderer<'a> {
             // Check if this item has the same author as the previous group
             let should_group = if let Some(last_group) = groups.last() {
                 if let Some(last_item) = last_group.last() {
-                    let last_author_key = self.bibliography.get(&last_item.id)
+                    let last_author_key = self
+                        .bibliography
+                        .get(&last_item.id)
                         .and_then(|r| r.author())
                         .map(|authors| {
                             authors

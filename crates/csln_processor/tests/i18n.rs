@@ -492,13 +492,12 @@ fn test_multilingual_rendering_combined() {
 fn test_multilingual_rendering_numeric_integral_translated() {
     let mut style = build_ml_style(MultilingualMode::Translated, None);
     style.options.as_mut().unwrap().processing = Some(Processing::Numeric);
-    style.citation.as_mut().unwrap().template = Some(vec![
-        TemplateComponent::Contributor(TemplateContributor {
+    style.citation.as_mut().unwrap().template =
+        Some(vec![TemplateComponent::Contributor(TemplateContributor {
             contributor: ContributorRole::Author,
             form: ContributorForm::Short,
             ..Default::default()
-        }),
-    ]);
+        })]);
 
     let mut bib = indexmap::IndexMap::new();
     let mut translations = HashMap::new();
@@ -513,36 +512,38 @@ fn test_multilingual_rendering_numeric_integral_translated() {
 
     bib.insert(
         "item1".to_string(),
-        csln_core::reference::InputReference::Monograph(Box::new(csln_core::reference::Monograph {
-            id: Some("item1".to_string()),
-            r#type: csln_core::reference::MonographType::Book,
-            title: csln_core::reference::Title::Single("War and Peace".to_string()),
-            author: Some(Contributor::Multilingual(MultilingualName {
-                original: StructuredName {
-                    family: MultilingualString::Simple("Толстой".to_string()),
-                    given: MultilingualString::Simple("Лев".to_string()),
-                    ..Default::default()
-                },
-                lang: Some("ru".to_string()),
-                transliterations: HashMap::new(),
-                translations,
-            })),
-            editor: None,
-            translator: None,
-            issued: csln_core::reference::EdtfString("1869".to_string()),
-            publisher: None,
-            url: None,
-            accessed: None,
-            language: None,
-            note: None,
-            isbn: None,
-            doi: None,
-            edition: None,
-            genre: None,
-            keywords: None,
-            original_date: None,
-            original_title: None,
-        })),
+        csln_core::reference::InputReference::Monograph(Box::new(
+            csln_core::reference::Monograph {
+                id: Some("item1".to_string()),
+                r#type: csln_core::reference::MonographType::Book,
+                title: csln_core::reference::Title::Single("War and Peace".to_string()),
+                author: Some(Contributor::Multilingual(MultilingualName {
+                    original: StructuredName {
+                        family: MultilingualString::Simple("Толстой".to_string()),
+                        given: MultilingualString::Simple("Лев".to_string()),
+                        ..Default::default()
+                    },
+                    lang: Some("ru".to_string()),
+                    transliterations: HashMap::new(),
+                    translations,
+                })),
+                editor: None,
+                translator: None,
+                issued: csln_core::reference::EdtfString("1869".to_string()),
+                publisher: None,
+                url: None,
+                accessed: None,
+                language: None,
+                note: None,
+                isbn: None,
+                doi: None,
+                edition: None,
+                genre: None,
+                keywords: None,
+                original_date: None,
+                original_title: None,
+            },
+        )),
     );
 
     let processor = Processor::new(style, bib);
@@ -555,5 +556,8 @@ fn test_multilingual_rendering_numeric_integral_translated() {
         ..Default::default()
     };
 
-    assert_eq!(processor.process_citation(&citation).unwrap(), "Tolstoy [1]");
+    assert_eq!(
+        processor.process_citation(&citation).unwrap(),
+        "Tolstoy [1]"
+    );
 }
