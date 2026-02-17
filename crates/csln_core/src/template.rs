@@ -518,7 +518,7 @@ pub enum LabelForm {
 /// A simple variable component (DOI, ISBN, URL, etc.).
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Default)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
 pub struct TemplateVariable {
     pub variable: SimpleVariable,
     #[serde(flatten)]
@@ -529,9 +529,9 @@ pub struct TemplateVariable {
     /// Type-specific rendering overrides. Use `suppress: true` to hide for certain types.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub overrides: Option<HashMap<String, ComponentOverride>>,
-    /// Unknown fields captured for forward compatibility.
-    #[serde(flatten)]
-    pub _extra: HashMap<String, serde_json::Value>,
+    /// Custom user-defined fields for extensions.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub custom: Option<HashMap<String, serde_json::Value>>,
 }
 
 /// Simple string variables.

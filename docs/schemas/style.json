@@ -477,6 +477,27 @@
         }
       ]
     },
+    "ComponentOverride": {
+      "description": "Type-specific rendering overrides for components.",
+      "anyOf": [
+        {
+          "description": "A full component replacement for specific reference types.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/TemplateComponent"
+            }
+          ]
+        },
+        {
+          "description": "Simple rendering options override.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Rendering"
+            }
+          ]
+        }
+      ]
+    },
     "Config": {
       "description": "Top-level style configuration.",
       "type": "object",
@@ -2351,7 +2372,7 @@
             "null"
           ],
           "additionalProperties": {
-            "$ref": "#/definitions/Rendering"
+            "$ref": "#/definitions/ComponentOverride"
           }
         },
         "prefix": {
@@ -2513,7 +2534,7 @@
             "null"
           ],
           "additionalProperties": {
-            "$ref": "#/definitions/Rendering"
+            "$ref": "#/definitions/ComponentOverride"
           }
         },
         "prefix": {
@@ -2645,7 +2666,7 @@
             "null"
           ],
           "additionalProperties": {
-            "$ref": "#/definitions/Rendering"
+            "$ref": "#/definitions/ComponentOverride"
           }
         },
         "prefix": {
@@ -2795,7 +2816,7 @@
             "null"
           ],
           "additionalProperties": {
-            "$ref": "#/definitions/Rendering"
+            "$ref": "#/definitions/ComponentOverride"
           }
         },
         "prefix": {
@@ -2962,7 +2983,7 @@
             "null"
           ],
           "additionalProperties": {
-            "$ref": "#/definitions/Rendering"
+            "$ref": "#/definitions/ComponentOverride"
           }
         },
         "prefix": {
@@ -3107,7 +3128,7 @@
             "null"
           ],
           "additionalProperties": {
-            "$ref": "#/definitions/Rendering"
+            "$ref": "#/definitions/ComponentOverride"
           }
         },
         "prefix": {
@@ -3183,6 +3204,14 @@
         "variable"
       ],
       "properties": {
+        "custom": {
+          "description": "Custom user-defined fields for extensions.",
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": true
+        },
         "emph": {
           "description": "Render in italics/emphasis.",
           "type": [
@@ -3229,7 +3258,7 @@
             "null"
           ],
           "additionalProperties": {
-            "$ref": "#/definitions/Rendering"
+            "$ref": "#/definitions/ComponentOverride"
           }
         },
         "prefix": {
@@ -3296,7 +3325,7 @@
           ]
         }
       },
-      "additionalProperties": true
+      "additionalProperties": false
     },
     "TermForm": {
       "description": "Form for term lookup.",
