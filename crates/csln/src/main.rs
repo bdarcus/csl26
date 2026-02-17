@@ -5,12 +5,13 @@ use csln_core::{InputBibliography, Locale, Style};
 use csln_processor::{
     io::{load_bibliography, load_citations},
     processor::document::djot::DjotParser,
-    render::{djot::Djot, html::Html, plain::PlainText},
+    render::{djot::Djot, html::Html, latex::Latex, plain::PlainText},
     Citation, CitationItem, DocumentFormat, Processor,
 };
 #[cfg(feature = "schema")]
 use schemars::schema_for;
 use serde::Serialize;
+use std::error::Error;
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -132,6 +133,7 @@ enum Format {
     Plain,
     Html,
     Djot,
+    Latex,
 }
 
 impl std::fmt::Display for Format {
@@ -140,18 +142,26 @@ impl std::fmt::Display for Format {
             Format::Plain => write!(f, "plain"),
             Format::Html => write!(f, "html"),
             Format::Djot => write!(f, "djot"),
+            Format::Latex => write!(f, "latex"),
         }
     }
 }
 
 fn main() {
+    if let Err(e) = run() {
+        eprintln!("\nError: {}", e);
+        std::process::exit(1);
+    }
+}
+
+fn run() -> Result<(), Box<dyn Error>> {
     let cli = Cli::parse();
 
     match cli.command {
         #[cfg(feature = "schema")]
         Commands::Schema { r#type, out_dir } => {
             if let Some(dir) = out_dir {
-                fs::create_dir_all(&dir).expect("Failed to create output directory");
+                fs::create_dir_all(&dir)?;
                 let types = [
                     (DataType::Style, "style.json"),
                     (DataType::Bib, "bib.json"),
@@ -166,8 +176,7 @@ fn main() {
                         DataType::Citations => schema_for!(csln_core::Citations),
                     };
                     let path = dir.join(filename);
-                    fs::write(&path, serde_json::to_string_pretty(&schema).unwrap())
-                        .expect("Failed to write schema file");
+                    fs::write(&path, serde_json::to_string_pretty(&schema)?)?;
                 }
                 println!("Schemas exported to {}", dir.display());
             } else if let Some(t) = r#type {
@@ -177,10 +186,9 @@ fn main() {
                     DataType::Locale => schema_for!(RawLocale),
                     DataType::Citations => schema_for!(csln_core::Citations),
                 };
-                println!("{}", serde_json::to_string_pretty(&schema).unwrap());
+                println!("{}", serde_json::to_string_pretty(&schema)?);
             } else {
-                eprintln!("Error: specify a type (style, bib, locale, citation) or --out-dir");
-                std::process::exit(1);
+                return Err("Specify a type (style, bib, locale, citation) or --out-dir".into());
             }
         }
         Commands::Process {
@@ -202,38 +210,13 @@ fn main() {
             }
 
             // Load style
-            let style_bytes = match fs::read(&style) {
-                Ok(bytes) => bytes,
-                Err(e) => {
-                    eprintln!("Error reading style: {}", e);
-                    std::process::exit(1);
-                }
-            };
-
+            let style_bytes = fs::read(&style)?;
             let style_ext = style.extension().and_then(|e| e.to_str()).unwrap_or("yaml");
 
             let mut style_obj: Style = match style_ext {
-                "cbor" => match serde_cbor::from_slice(&style_bytes) {
-                    Ok(s) => s,
-                    Err(e) => {
-                        eprintln!("Error parsing CBOR style: {}", e);
-                        std::process::exit(1);
-                    }
-                },
-                "json" => match serde_json::from_slice(&style_bytes) {
-                    Ok(s) => s,
-                    Err(e) => {
-                        eprintln!("Error parsing JSON style: {}", e);
-                        std::process::exit(1);
-                    }
-                },
-                _ => match serde_yaml::from_slice(&style_bytes) {
-                    Ok(s) => s,
-                    Err(e) => {
-                        eprintln!("Error parsing YAML style: {}", e);
-                        std::process::exit(1);
-                    }
-                },
+                "cbor" => serde_cbor::from_slice(&style_bytes)?,
+                "json" => serde_json::from_slice(&style_bytes)?,
+                _ => serde_yaml::from_slice(&style_bytes)?,
             };
 
             if no_semantics {
@@ -248,23 +231,11 @@ fn main() {
             }
 
             // Load bibliography
-            let bibliography = match load_bibliography(&references) {
-                Ok(b) => b,
-                Err(e) => {
-                    eprintln!("{}", e);
-                    std::process::exit(1);
-                }
-            };
+            let bibliography = load_bibliography(&references)?;
 
             // Load citations if provided
             let input_citations = if let Some(ref path) = citations {
-                match load_citations(path) {
-                    Ok(c) => Some(c),
-                    Err(e) => {
-                        eprintln!("{}", e);
-                        std::process::exit(1);
-                    }
-                }
+                Some(load_citations(path)?)
             } else {
                 None
             };
@@ -305,7 +276,7 @@ fn main() {
             } else {
                 match format {
                     Format::Plain => {
-                        print_human::<PlainText>(
+                        print_human_safe::<PlainText>(
                             &processor,
                             &style_name,
                             cite,
@@ -316,7 +287,7 @@ fn main() {
                         );
                     }
                     Format::Html => {
-                        print_human::<Html>(
+                        print_human_safe::<Html>(
                             &processor,
                             &style_name,
                             cite,
@@ -327,7 +298,18 @@ fn main() {
                         );
                     }
                     Format::Djot => {
-                        print_human::<Djot>(
+                        print_human_safe::<Djot>(
+                            &processor,
+                            &style_name,
+                            cite,
+                            bib,
+                            &item_ids,
+                            input_citations,
+                            show_keys,
+                        );
+                    }
+                    Format::Latex => {
+                        print_human_safe::<Latex>(
                             &processor,
                             &style_name,
                             cite,
@@ -341,14 +323,7 @@ fn main() {
             }
         }
         Commands::Validate { path } => {
-            let bytes = match fs::read(&path) {
-                Ok(b) => b,
-                Err(e) => {
-                    eprintln!("Error reading file: {}", e);
-                    std::process::exit(1);
-                }
-            };
-
+            let bytes = fs::read(&path)?;
             let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("yaml");
 
             // Try parsing as Style
@@ -366,10 +341,7 @@ fn main() {
 
             match res {
                 Ok(_) => println!("Reference style is valid."),
-                Err(e) => {
-                    eprintln!("Validation failed: {}", e);
-                    std::process::exit(1);
-                }
+                Err(e) => return Err(format!("Validation failed: {}", e).into()),
             }
         }
         Commands::Convert {
@@ -377,7 +349,7 @@ fn main() {
             output,
             r#type,
         } => {
-            let input_bytes = fs::read(&input).expect("Failed to read input file");
+            let input_bytes = fs::read(&input)?;
             let input_ext = input.extension().and_then(|e| e.to_str()).unwrap_or("yaml");
             let output_ext = output
                 .extension()
@@ -401,12 +373,12 @@ fn main() {
 
             match data_type {
                 DataType::Style => {
-                    let style: Style = deserialize_any(&input_bytes, input_ext);
-                    let out_bytes = serialize_any(&style, output_ext);
-                    fs::write(&output, out_bytes).expect("Failed to write output");
+                    let style: Style = deserialize_any(&input_bytes, input_ext)?;
+                    let out_bytes = serialize_any(&style, output_ext)?;
+                    fs::write(&output, out_bytes)?;
                 }
                 DataType::Bib => {
-                    let bib_obj = load_bibliography(&input).expect("Failed to load bibliography");
+                    let bib_obj = load_bibliography(&input)?;
                     // Convert internal Bibliography (IndexMap) back to InputBibliography
                     let references: Vec<InputReference> =
                         bib_obj.into_iter().map(|(_, r)| r).collect();
@@ -414,26 +386,25 @@ fn main() {
                         references,
                         ..Default::default()
                     };
-                    let out_bytes = serialize_any(&input_bib, output_ext);
-                    fs::write(&output, out_bytes).expect("Failed to write output");
+                    let out_bytes = serialize_any(&input_bib, output_ext)?;
+                    fs::write(&output, out_bytes)?;
                 }
                 DataType::Locale => {
-                    let locale: RawLocale = deserialize_any(&input_bytes, input_ext);
-                    let out_bytes = serialize_any(&locale, output_ext);
-                    fs::write(&output, out_bytes).expect("Failed to write output");
+                    let locale: RawLocale = deserialize_any(&input_bytes, input_ext)?;
+                    let out_bytes = serialize_any(&locale, output_ext)?;
+                    fs::write(&output, out_bytes)?;
                 }
                 DataType::Citations => {
                     let citations: csln_core::citation::Citations =
-                        deserialize_any(&input_bytes, input_ext);
-                    let out_bytes = serialize_any(&citations, output_ext);
-                    fs::write(&output, out_bytes).expect("Failed to write output");
+                        deserialize_any(&input_bytes, input_ext)?;
+                    let out_bytes = serialize_any(&citations, output_ext)?;
+                    fs::write(&output, out_bytes)?;
                 }
             }
             println!("Converted {} to {}", input.display(), output.display());
         }
         Commands::Tree { path: _ } => {
-            eprintln!("The 'tree' command is not yet implemented.");
-            std::process::exit(1);
+            return Err("The 'tree' command is not yet implemented.".into());
         }
         Commands::Doc {
             document,
@@ -442,15 +413,14 @@ fn main() {
             format,
         } => {
             // Load style
-            let style_bytes = fs::read(&style).expect("Failed to read style");
-            let style_obj: Style =
-                serde_yaml::from_slice(&style_bytes).expect("Failed to parse style");
+            let style_bytes = fs::read(&style)?;
+            let style_obj: Style = serde_yaml::from_slice(&style_bytes)?;
 
             // Load bibliography
-            let bibliography = load_bibliography(&references).expect("Failed to load bibliography");
+            let bibliography = load_bibliography(&references)?;
 
             // Load document
-            let doc_content = fs::read_to_string(&document).expect("Failed to read document");
+            let doc_content = fs::read_to_string(&document)?;
 
             // Determine locales directory
             let locales_dir = find_locales_dir(style.to_str().unwrap_or("."));
@@ -469,6 +439,7 @@ fn main() {
                 Format::Plain => DocumentFormat::Plain,
                 Format::Html => DocumentFormat::Html,
                 Format::Djot => DocumentFormat::Djot,
+                Format::Latex => DocumentFormat::Latex,
             };
 
             let output = match format {
@@ -481,11 +452,15 @@ fn main() {
                 Format::Djot => {
                     processor.process_document::<_, Djot>(&doc_content, &parser, doc_format)
                 }
+                Format::Latex => {
+                    processor.process_document::<_, Latex>(&doc_content, &parser, doc_format)
+                }
             };
 
             println!("{}", output);
         }
     }
+    Ok(())
 }
 
 fn find_locales_dir(style_path: &str) -> PathBuf {
@@ -505,27 +480,50 @@ fn find_locales_dir(style_path: &str) -> PathBuf {
     PathBuf::from(".")
 }
 
-fn deserialize_any<T: serde::de::DeserializeOwned>(bytes: &[u8], ext: &str) -> T {
+fn deserialize_any<T: serde::de::DeserializeOwned>(
+    bytes: &[u8],
+    ext: &str,
+) -> Result<T, Box<dyn Error>> {
     match ext {
-        "yaml" | "yml" => serde_yaml::from_slice(bytes).expect("Failed to parse YAML"),
-        "json" => serde_json::from_slice(bytes).expect("Failed to parse JSON"),
-        "cbor" => serde_cbor::from_slice(bytes).expect("Failed to parse CBOR"),
-        _ => serde_yaml::from_slice(bytes).expect("Failed to parse YAML (fallback)"),
+        "yaml" | "yml" => Ok(serde_yaml::from_slice(bytes)?),
+        "json" => Ok(serde_json::from_slice(bytes)?),
+        "cbor" => Ok(serde_cbor::from_slice(bytes)?),
+        _ => Ok(serde_yaml::from_slice(bytes)?),
     }
 }
 
-fn serialize_any<T: Serialize>(obj: &T, ext: &str) -> Vec<u8> {
+fn serialize_any<T: Serialize>(obj: &T, ext: &str) -> Result<Vec<u8>, Box<dyn Error>> {
     match ext {
-        "yaml" | "yml" => serde_yaml::to_string(obj)
-            .expect("Failed to serialize YAML")
-            .into_bytes(),
-        "json" => serde_json::to_string_pretty(obj)
-            .expect("Failed to serialize JSON")
-            .into_bytes(),
-        "cbor" => serde_cbor::to_vec(obj).expect("Failed to serialize CBOR"),
-        _ => serde_yaml::to_string(obj)
-            .expect("Failed to serialize YAML (fallback)")
-            .into_bytes(),
+        "yaml" | "yml" => Ok(serde_yaml::to_string(obj)?.into_bytes()),
+        "json" => Ok(serde_json::to_string_pretty(obj)?.into_bytes()),
+        "cbor" => Ok(serde_cbor::to_vec(obj)?),
+        _ => Ok(serde_yaml::to_string(obj)?.into_bytes()),
+    }
+}
+
+fn print_human_safe<F>(
+    processor: &Processor,
+    style_name: &str,
+    show_cite: bool,
+    show_bib: bool,
+    item_ids: &[String],
+    citations: Option<Vec<Citation>>,
+    show_keys: bool,
+) where
+    F: csln_processor::render::format::OutputFormat<Output = String> + Send + Sync + 'static,
+{
+    use std::panic;
+
+    let result = panic::catch_unwind(panic::AssertUnwindSafe(|| {
+        print_human::<F>(
+            processor, style_name, show_cite, show_bib, item_ids, citations, show_keys,
+        );
+    }));
+
+    if result.is_err() {
+        eprintln!("\nError: The processor encountered a critical error during rendering.");
+        eprintln!("This is likely due to an unexpected character or data structure in the style or bibliography.");
+        eprintln!("Please report this issue with the style and data used.");
     }
 }
 
