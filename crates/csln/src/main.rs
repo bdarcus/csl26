@@ -616,18 +616,20 @@ fn print_human<F>(
 
     if show_bib {
         println!("BIBLIOGRAPHY:");
-        let processed = processor.process_references();
-        for entry in processed.bibliography {
-            // Render this single entry
-            let text = csln_processor::render::refs_to_string_with_format::<F>(vec![entry.clone()]);
-            let trimmed = text.trim();
-            if !trimmed.is_empty() {
-                if show_keys {
+        if show_keys {
+            let processed = processor.process_references();
+            for entry in processed.bibliography {
+                // Render this single entry
+                let text =
+                    csln_processor::render::refs_to_string_with_format::<F>(vec![entry.clone()]);
+                let trimmed = text.trim();
+                if !trimmed.is_empty() {
                     println!("  [{}] {}", entry.id, trimmed);
-                } else {
-                    println!("  {}", trimmed);
                 }
             }
+        } else {
+            let text = processor.render_bibliography_with_format::<F>();
+            println!("{}", text);
         }
     }
 }

@@ -79,4 +79,24 @@ impl OutputFormat for Latex {
     fn link(&self, url: &str, content: Self::Output) -> Self::Output {
         format!(r"\href{{{}}}{{{}}}", url, content)
     }
+
+    fn bibliography(&self, entries: Vec<Self::Output>) -> Self::Output {
+        format!(
+            "\\begin{{thebibliography}}{{}}\n{}\n\\end{{thebibliography}}",
+            self.join(entries, "\n")
+        )
+    }
+
+    fn entry(
+        &self,
+        _id: &str,
+        content: Self::Output,
+        _url: Option<&str>,
+        _metadata: &super::format::ProcEntryMetadata,
+    ) -> Self::Output {
+        // In LaTeX, entries in thebibliography use \bibitem
+        // For now, we use a simple \bibitem without the ID as the label
+        // We might want to use the actual ID in the future for cross-referencing
+        format!("\\bibitem{{{}}} {}", _id, content)
+    }
 }
