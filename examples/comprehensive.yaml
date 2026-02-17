@@ -1,6 +1,9 @@
+# yaml-language-server: $schema=https://bdarcus.github.io/csl26/schemas/bib.json
+# yaml-language-server: $schema=https://bdarcus.github.io/csl26/schemas/bib.json
 # Comprehensive CSLN Test Bibliography
 # Uses proper CSLN reference types with correct field requirements
-
+info:
+  description: CSLN Test Bibliography
 references:
   # 1. Monograph (Book)
   - id: kuhn1962

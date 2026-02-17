@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=https://bdarcus.github.io/csl26/schemas/style.json
 version: '0.2.0'
 info:
   title: Elsevier - NLM/Vancouver (citation-sequence)

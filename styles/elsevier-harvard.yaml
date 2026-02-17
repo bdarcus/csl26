@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=https://bdarcus.github.io/csl26/schemas/style.json
 info:
   title: Elsevier (author-date/Harvard, with titles)
   id: http://www.zotero.org/styles/elsevier-harvard

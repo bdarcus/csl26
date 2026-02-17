@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=https://bdarcus.github.io/csl26/schemas/style.json
 info:
   id: bluebook-legal
   title: Bluebook Legal Citation (Simplified)

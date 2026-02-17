@@ -14,21 +14,9 @@ Another multi-cite: [compare @smith2010, page: 45; @brown1954 for context].
 
 ## Integral Citations
 
-Basic integral: @kuhn1962 argues ..., @watson1953 that ...
+Basic integral: [+@kuhn1962] argues ..., @watson1953 that ...
 
-Integral with locator: @kuhn1962[p. 10] argues...
-
-## Integral Citations with Infix
-
-Infix allows narrative text to be part of the citation, ensuring proper author name formatting:
-
-@smith2010(argues that x) is a fundamental principle.
-
-@jones2015(suggests that y)[ch. 3] provides evidence.
-
-@brown1954(notes) the importance of context.
-
-According to @watson1953(foundational work on), the structure is critical.
+Integral with locator: [+@kuhn1962, p. 10] argues...
 
 ## Visibility Modifiers
 
