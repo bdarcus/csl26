@@ -318,6 +318,8 @@ pub struct RenderOptions<'a> {
     pub locator: Option<&'a str>,
     /// Optional locator label (e.g. page, section)
     pub locator_label: Option<csln_core::citation::LocatorType>,
+    /// Optional infix text for narrative citations.
+    pub infix: Option<&'a str>,
 }
 
 /// Trait for extracting values from template components.

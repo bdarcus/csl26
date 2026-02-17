@@ -1,69 +1,60 @@
-[
-  {
+{
+  "kuhn1962": {
     "id": "kuhn1962",
-    "type": "book",
+    "type": "article-journal",
     "title": "The Structure of Scientific Revolutions",
-    "author": [{"family": "Kuhn", "given": "Thomas S."}],
-    "issued": {"date-parts": [[1962]]},
-    "publisher": "University of Chicago Press"
+    "author": [{ "family": "Kuhn", "given": "Thomas S." }],
+    "issued": { "date-parts": [[1962]] },
+    "container-title": "International Encyclopedia of Unified Science",
+    "volume": "2",
+    "issue": "2",
+    "publisher": "University of Chicago Press",
+    "DOI": "10.1234/example"
   },
-  {
+  "watson1953": {
     "id": "watson1953",
     "type": "article-journal",
-    "title": "Molecular Structure of Nucleic Acids",
+    "title": "Molecular Structure of Nucleic Acids: A Structure for Deoxyribose Nucleic Acid",
     "author": [
-      {"family": "Watson", "given": "James D."},
-      {"family": "Crick", "given": "Francis H. C."}
+      { "family": "Watson", "given": "James D." },
+      { "family": "Crick", "given": "Francis H. C." }
     ],
+    "issued": { "date-parts": [[1953, 4, 25]] },
     "container-title": "Nature",
     "volume": "171",
     "issue": "4356",
-    "page": "737-738",
-    "issued": {"date-parts": [[1953]]},
-    "DOI": "10.1038/171737a0"
+    "page": "737-738"
   },
-  {
+  "smith2010": {
     "id": "smith2010",
-    "type": "chapter",
-    "title": "The Future of CSLN",
-    "author": [{"family": "Smith", "given": "Alice"}],
-    "container-title": "Modern Citation Systems",
-    "editor": [{"family": "Jones", "given": "Bob"}],
-    "page": "45-67",
-    "issued": {"date-parts": [[2010]]},
+    "type": "book",
+    "title": "A Great Book",
+    "author": [{ "family": "Smith", "given": "John" }],
+    "issued": { "date-parts": [[2010]] },
     "publisher": "Academic Press"
   },
-  {
+  "brown1954": {
     "id": "brown1954",
-    "type": "article-journal",
-    "title": "Some Classic Work",
-    "author": [{"family": "Brown", "given": "Robert"}],
-    "container-title": "Journal of Important Research",
-    "volume": "12",
-    "page": "100-150",
-    "issued": {"date-parts": [[1954]]}
-  },
-  {
-    "id": "jones2015",
     "type": "book",
-    "title": "Contemporary Analysis",
-    "author": [{"family": "Jones", "given": "Sarah"}],
-    "issued": {"date-parts": [[2015]]},
-    "publisher": "University Press"
+    "title": "Another Book",
+    "author": [{ "family": "Brown", "given": "Mary" }],
+    "issued": { "date-parts": [[1954]] },
+    "publisher": "Oxford University Press"
   },
-  {
+  "doe2020": {
     "id": "doe2020",
     "type": "article-journal",
-    "title": "A Silent Work",
-    "author": [{"family": "Doe", "given": "John"}],
-    "issued": {"date-parts": [[2020]]},
+    "title": "Silent Paper",
+    "author": [{ "family": "Doe", "given": "Jane" }],
+    "issued": { "date-parts": [[2020]] },
     "container-title": "Journal of Silence"
   },
-  {
+  "bird1987": {
     "id": "bird1987",
     "type": "book",
-    "title": "Hidden Birds",
-    "author": [{"family": "Bird", "given": "Charlie"}],
-    "issued": {"date-parts": [[1987]]}
+    "title": "Ornithology",
+    "author": [{ "family": "Bird", "given": "Arthur" }],
+    "issued": { "date-parts": [[1987]] },
+    "publisher": "Nature Press"
   }
-]
+}

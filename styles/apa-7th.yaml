@@ -27,7 +27,6 @@ citation:
   non-integral:
     wrap: parentheses
     template:
-    - items:
       - contributor: author
         form: short
         shorten:
@@ -38,10 +37,8 @@ citation:
         and: symbol
       - date: issued
         form: year
-      delimiter: ", "
-    - variable: locator
-      prefix: ", "
-    delimiter: ""
+      - variable: locator
+        prefix: ", "
   delimiter: ", "
   multi-cite-delimiter: "; "
   integral:

@@ -37,38 +37,7 @@ pub fn citation_to_string_with_format<F: OutputFormat<Output = String>>(
     }
 
     let delim = delimiter.unwrap_or("");
-
-    let content = if parts.len() > 1 {
-        let mut result = String::new();
-        for (i, part) in parts.iter().enumerate() {
-            if i > 0 {
-                let prev = &parts[i - 1];
-                if prev.ends_with('\u{201D}') || prev.ends_with('"') {
-                    result.pop();
-                    let delim_trimmed = delim.trim();
-                    if prev.ends_with('\u{201D}') {
-                        result.push_str(delim_trimmed);
-                        result.push('\u{201D}');
-                        if !delim.is_empty() {
-                            result.push(' ');
-                        }
-                    } else {
-                        result.push_str(delim_trimmed);
-                        result.push('"');
-                        if !delim.is_empty() {
-                            result.push(' ');
-                        }
-                    }
-                } else {
-                    result.push_str(delim);
-                }
-            }
-            result.push_str(part);
-        }
-        result
-    } else {
-        parts.join(delim)
-    };
+    let content = parts.join(delim);
 
     let (open, close) = match wrap {
         Some(WrapPunctuation::Parentheses) => ("(", ")"),

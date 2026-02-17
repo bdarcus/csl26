@@ -52,7 +52,7 @@ fn build_ml_style(name_mode: MultilingualMode, preferred_script: Option<String>)
                     ..Default::default()
                 }),
             ]),
-            delimiter: Some(" ".to_string()),
+            delimiter: Some(", ".to_string()),
             ..Default::default()
         }),
         ..Default::default()

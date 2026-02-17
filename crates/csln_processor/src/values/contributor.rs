@@ -31,7 +31,16 @@ impl ComponentValues for TemplateContributor {
         }
 
         let contributor = match self.contributor {
-            ContributorRole::Author => reference.author(),
+            ContributorRole::Author => {
+                if matches!(
+                    options.visibility,
+                    csln_core::citation::ItemVisibility::SuppressAuthor
+                ) {
+                    None
+                } else {
+                    reference.author()
+                }
+            }
             ContributorRole::Editor => reference.editor(),
             ContributorRole::Translator => reference.translator(),
             _ => None,
@@ -55,6 +64,17 @@ impl ComponentValues for TemplateContributor {
         } else {
             Vec::new()
         };
+
+        // If author is suppressed, don't attempt substitution or formatting
+        if names_vec.is_empty()
+            && matches!(self.contributor, ContributorRole::Author)
+            && matches!(
+                options.visibility,
+                csln_core::citation::ItemVisibility::SuppressAuthor
+            )
+        {
+            return None;
+        }
 
         // Handle substitution if author is empty
         if names_vec.is_empty() && matches!(self.contributor, ContributorRole::Author) {

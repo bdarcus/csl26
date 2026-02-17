@@ -18,6 +18,7 @@ impl ComponentValues for TemplateVariable {
             SimpleVariable::PublisherPlace => reference.publisher_place(),
             SimpleVariable::Genre => reference.genre(),
             SimpleVariable::Abstract => reference.abstract_text(),
+            SimpleVariable::Infix => options.infix.map(|s| s.to_string()),
             SimpleVariable::Locator => {
                 // If we have a locator value in options, use it
                 options.locator.map(|loc| {

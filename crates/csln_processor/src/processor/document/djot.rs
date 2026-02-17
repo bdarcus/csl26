@@ -185,6 +185,16 @@ fn parse_citation_item_no_integral(input: &mut &str) -> winnow::Result<CitationI
         ..Default::default()
     };
 
+    let _ = space0.parse_next(input)?;
+
+    // Optional infix in parentheses: `(infix text)`
+    if let Some('(') = input.chars().next() {
+        let _ = '('.parse_next(input)?;
+        let infix: &str = take_until(0.., ')').parse_next(input)?;
+        let _ = ')'.parse_next(input)?;
+        item.infix = Some(infix.to_string());
+    }
+
     // Only consume text after key if there's a comma. Otherwise,
     // leave remaining text for the global suffix parser.
     let checkpoint = *input;
@@ -230,8 +240,14 @@ fn parse_hybrid_locators(item: &mut CitationItem, locator_str: &str) {
             let label_str = lp[..space_pos].trim_end_matches('.');
             let value = &lp[space_pos + 1..];
 
-            item.label = map_label_str(label_str);
-            item.locator = Some(value.to_string());
+            if let Some(lt) = map_label_str(label_str) {
+                item.label = Some(lt);
+                item.locator = Some(value.to_string());
+            } else {
+                // Not a known label, treat whole string as locator (default to page)
+                item.label = Some(LocatorType::Page);
+                item.locator = Some(lp.to_string());
+            }
         } else {
             // No label, assume page
             item.label = Some(LocatorType::Page);
@@ -251,7 +267,7 @@ fn map_label_str(s: &str) -> Option<LocatorType> {
         "note" | "n" => Some(LocatorType::Note),
         "part" => Some(LocatorType::Part),
         "col" | "column" => Some(LocatorType::Column),
-        _ => Some(LocatorType::Page),
+        _ => None,
     }
 }
 
@@ -359,6 +375,19 @@ mod tests {
         let (_, _, citation) = &citations[0];
         assert_eq!(citation.items[0].id, "kuhn1962");
         assert_eq!(citation.items[0].visibility, ItemVisibility::Hidden);
+    }
+
+    #[test]
+    fn test_parse_infix() {
+        let parser = DjotParser;
+        let content = "[+@kuhn1962 (argues)]";
+        let citations = parser.parse_citations(content);
+
+        assert_eq!(citations.len(), 1);
+        let (_, _, citation) = &citations[0];
+        assert_eq!(citation.mode, CitationMode::Integral);
+        assert_eq!(citation.items[0].id, "kuhn1962");
+        assert_eq!(citation.items[0].infix, Some("argues".to_string()));
     }
 
     #[test]

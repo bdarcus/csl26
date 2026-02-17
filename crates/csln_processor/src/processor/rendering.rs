@@ -100,6 +100,7 @@ impl<'a> Renderer<'a> {
             visibility: item.visibility,
             locator: item.locator.as_deref(),
             locator_label: item.label.clone(),
+            infix: item.infix.as_deref(),
         };
 
         // Render author in short form
@@ -187,9 +188,17 @@ impl<'a> Renderer<'a> {
                 if !item_str.is_empty() {
                     let prefix = item.prefix.as_deref().unwrap_or("");
                     let suffix = item.suffix.as_deref().unwrap_or("");
+
+                    let formatted_prefix =
+                        if !prefix.is_empty() && !prefix.ends_with(char::is_whitespace) {
+                            format!("{} ", prefix)
+                        } else {
+                            prefix.to_string()
+                        };
+
                     let content = if !prefix.is_empty() || !suffix.is_empty() {
                         let spaced_suffix = self.ensure_suffix_spacing(suffix);
-                        fmt.affix(prefix, item_str, &spaced_suffix)
+                        fmt.affix(&formatted_prefix, item_str, &spaced_suffix)
                     } else {
                         item_str
                     };
@@ -208,6 +217,7 @@ impl<'a> Renderer<'a> {
                     citation_number,
                     item.locator.as_deref(),
                     item.label.clone(),
+                    item.infix.as_deref(),
                 ) {
                     let item_str = crate::render::citation::citation_to_string_with_format::<F>(
                         &proc,
@@ -219,9 +229,17 @@ impl<'a> Renderer<'a> {
                     if !item_str.is_empty() {
                         let prefix = item.prefix.as_deref().unwrap_or("");
                         let suffix = item.suffix.as_deref().unwrap_or("");
+
+                        let formatted_prefix =
+                            if !prefix.is_empty() && !prefix.ends_with(char::is_whitespace) {
+                                format!("{} ", prefix)
+                            } else {
+                                prefix.to_string()
+                            };
+
                         let content = if !prefix.is_empty() || !suffix.is_empty() {
                             let spaced_suffix = self.ensure_suffix_spacing(suffix);
-                            fmt.affix(prefix, item_str, &spaced_suffix)
+                            fmt.affix(&formatted_prefix, item_str, &spaced_suffix)
                         } else {
                             item_str
                         };
@@ -255,7 +273,7 @@ impl<'a> Renderer<'a> {
         items: &[crate::reference::CitationItem],
         template: &[TemplateComponent],
         mode: &csln_core::citation::CitationMode,
-        _intra_delimiter: &str,
+        intra_delimiter: &str,
     ) -> Result<Vec<String>, ProcessorError>
     where
         F: crate::render::format::OutputFormat<Output = String>,
@@ -325,6 +343,64 @@ impl<'a> Renderer<'a> {
                 .get(&first_item.id)
                 .ok_or_else(|| ProcessorError::ReferenceNotFound(first_item.id.clone()))?;
 
+            // If we have an explicit integral template and we're in integral mode,
+            // we should try to use it.
+            let integral_template = if matches!(mode, csln_core::citation::CitationMode::Integral) {
+                self.style
+                    .citation
+                    .as_ref()
+                    .and_then(|cs| cs.integral.as_ref())
+                    .and_then(|cs| cs.template.as_ref())
+            } else {
+                None
+            };
+
+            if let Some(template) = integral_template {
+                // Narrative mode with explicit template (e.g., APA 7th)
+                let citation_number = self.get_or_assign_citation_number(&first_item.id);
+                if let Some(proc) = self.process_template_with_number(
+                    first_ref,
+                    template,
+                    RenderContext::Citation,
+                    mode.clone(),
+                    first_item.visibility,
+                    citation_number,
+                    first_item.locator.as_deref(),
+                    first_item.label.clone(),
+                    first_item.infix.as_deref(),
+                ) {
+                    let item_str = crate::render::citation::citation_to_string_with_format::<F>(
+                        &proc,
+                        None,
+                        None,
+                        None,
+                        Some(intra_delimiter),
+                    );
+
+                    let ids: Vec<String> = group.iter().map(|item| item.id.clone()).collect();
+                    let prefix = first_item.prefix.as_deref().unwrap_or("");
+                    let suffix = first_item.suffix.as_deref().unwrap_or("");
+
+                    let formatted_prefix =
+                        if !prefix.is_empty() && !prefix.ends_with(char::is_whitespace) {
+                            format!("{} ", prefix)
+                        } else {
+                            prefix.to_string()
+                        };
+
+                    let content = if !prefix.is_empty() || !suffix.is_empty() {
+                        let spaced_suffix = self.ensure_suffix_spacing(suffix);
+                        fmt.affix(&formatted_prefix, item_str, &spaced_suffix)
+                    } else {
+                        item_str
+                    };
+
+                    rendered_groups.push(fmt.citation(ids, content));
+                    continue;
+                }
+            }
+
+            // Fallback to default hardcoded grouping (or if no integral template)
             let author_part = self.render_author_for_grouping(first_ref, template, mode);
 
             let mut year_parts = Vec::new();
@@ -348,7 +424,7 @@ impl<'a> Renderer<'a> {
 
             let prefix = first_item.prefix.as_deref().unwrap_or("");
             if !author_part.is_empty() && !year_parts.is_empty() {
-                let joined_years = year_parts.join(", ");
+                let joined_years = year_parts.join(intra_delimiter);
                 // Format based on citation mode:
                 // Integral: "Kuhn (1962a, 1962b)" - years in parentheses
                 // NonIntegral: "Kuhn, 1962a, 1962b" - no inner parens (outer wrap adds them)
@@ -375,20 +451,45 @@ impl<'a> Renderer<'a> {
                             joined_years
                         } else {
                             // Default parenthetical: Kuhn, 1962
-                            format!("{}, {}", author_part, joined_years)
+                            format!("{}{}{}", author_part, intra_delimiter, joined_years)
                         }
                     }
                 };
                 let ids: Vec<String> = group.iter().map(|item| item.id.clone()).collect();
-                rendered_groups.push(fmt.citation(ids, fmt.affix(prefix, content, "")));
+
+                let formatted_prefix =
+                    if !prefix.is_empty() && !prefix.ends_with(char::is_whitespace) {
+                        format!("{} ", prefix)
+                    } else {
+                        prefix.to_string()
+                    };
+
+                rendered_groups.push(fmt.citation(ids, fmt.affix(&formatted_prefix, content, "")));
             } else if !author_part.is_empty() {
                 let ids: Vec<String> = group.iter().map(|item| item.id.clone()).collect();
-                rendered_groups.push(fmt.citation(ids, fmt.affix(prefix, author_part, "")));
+
+                let formatted_prefix =
+                    if !prefix.is_empty() && !prefix.ends_with(char::is_whitespace) {
+                        format!("{} ", prefix)
+                    } else {
+                        prefix.to_string()
+                    };
+
+                rendered_groups
+                    .push(fmt.citation(ids, fmt.affix(&formatted_prefix, author_part, "")));
             } else if !year_parts.is_empty() {
                 // Year-only case (SuppressAuthor)
-                let content = year_parts.join(", ");
+                let content = year_parts.join(intra_delimiter);
                 let ids: Vec<String> = group.iter().map(|item| item.id.clone()).collect();
-                rendered_groups.push(fmt.citation(ids, fmt.affix(prefix, content, "")));
+
+                let formatted_prefix =
+                    if !prefix.is_empty() && !prefix.ends_with(char::is_whitespace) {
+                        format!("{} ", prefix)
+                    } else {
+                        prefix.to_string()
+                    };
+
+                rendered_groups.push(fmt.citation(ids, fmt.affix(&formatted_prefix, content, "")));
             }
         }
 
@@ -411,6 +512,7 @@ impl<'a> Renderer<'a> {
             visibility: csln_core::citation::ItemVisibility::Default,
             locator: None,
             locator_label: None,
+            infix: None,
         };
 
         // Use short form for citations
@@ -516,6 +618,7 @@ impl<'a> Renderer<'a> {
             visibility: csln_core::citation::ItemVisibility::Default,
             locator: None,
             locator_label: None,
+            infix: None,
         };
 
         self.process_template_with_number_internal(reference, template_ref, options, entry_number)
@@ -533,6 +636,7 @@ impl<'a> Renderer<'a> {
         citation_number: usize,
         locator: Option<&str>,
         locator_label: Option<csln_core::citation::LocatorType>,
+        infix: Option<&str>,
     ) -> Option<ProcTemplate> {
         let options = RenderOptions {
             config: self.config,
@@ -542,6 +646,7 @@ impl<'a> Renderer<'a> {
             visibility,
             locator,
             locator_label,
+            infix,
         };
         self.process_template_with_number_internal(reference, template, options, citation_number)
     }

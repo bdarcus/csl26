@@ -225,6 +225,7 @@ impl Processor {
             visibility: csln_core::citation::ItemVisibility::Default,
             locator: None,
             locator_label: None,
+            infix: None,
         };
 
         ProcEntryMetadata {
@@ -464,6 +465,12 @@ impl Processor {
         let template = template_vec.as_slice();
 
         let intra_delimiter = effective_spec.delimiter.as_deref().unwrap_or(", ");
+        let renderer_delimiter = if intra_delimiter == "none" || intra_delimiter.is_empty() {
+            ""
+        } else {
+            intra_delimiter
+        };
+
         let inter_delimiter = effective_spec
             .multi_cite_delimiter
             .as_deref()
@@ -493,14 +500,14 @@ impl Processor {
                 &citation.items,
                 template,
                 &citation.mode,
-                intra_delimiter,
+                renderer_delimiter,
             )?
         } else {
             renderer.render_ungrouped_citation_with_format::<F>(
                 &citation.items,
                 template,
                 &citation.mode,
-                intra_delimiter,
+                renderer_delimiter,
             )?
         };
 
@@ -511,8 +518,15 @@ impl Processor {
         let citation_prefix = citation.prefix.as_deref().unwrap_or("");
         let citation_suffix = citation.suffix.as_deref().unwrap_or("");
 
-        // Ensure proper spacing before suffix
-        let spaced_suffix =
+        // Ensure proper spacing for prefix/suffix
+        let formatted_prefix =
+            if !citation_prefix.is_empty() && !citation_prefix.ends_with(char::is_whitespace) {
+                format!("{} ", citation_prefix)
+            } else {
+                citation_prefix.to_string()
+            };
+
+        let formatted_suffix =
             if !citation_suffix.is_empty() && !citation_suffix.starts_with(char::is_whitespace) {
                 format!(" {}", citation_suffix)
             } else {
@@ -520,7 +534,7 @@ impl Processor {
             };
 
         let output = if !citation_prefix.is_empty() || !citation_suffix.is_empty() {
-            fmt.affix(citation_prefix, content, &spaced_suffix)
+            fmt.affix(&formatted_prefix, content, &formatted_suffix)
         } else {
             content
         };
