@@ -15,14 +15,6 @@ impl ComponentValues for TemplateTerm {
         _hints: &ProcHints,
         options: &RenderOptions<'_>,
     ) -> Option<ProcValues> {
-        // Apply visibility filter
-        if matches!(
-            options.visibility,
-            csln_core::citation::ItemVisibility::AuthorOnly
-        ) {
-            return None;
-        }
-
         let form = self.form.unwrap_or(TermForm::Long);
         let mut value = options
             .locale

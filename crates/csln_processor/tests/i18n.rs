@@ -430,10 +430,7 @@ fn test_multilingual_rendering_original() {
         ..Default::default()
     };
 
-    assert_eq!(
-        processor.process_citation(&citation).unwrap(),
-        "太郎 東京 2020"
-    );
+    assert_eq!(processor.process_citation(&citation).unwrap(), "東京, 2020");
 }
 
 #[test]
@@ -459,7 +456,7 @@ fn test_multilingual_rendering_transliterated() {
 
     assert_eq!(
         processor.process_citation(&citation).unwrap(),
-        "Taro Tokyo 2020"
+        "Tokyo, 2020"
     );
 }
 
@@ -487,6 +484,80 @@ fn test_multilingual_rendering_combined() {
     // Note: Combined mode for names is currently transliterated only in resolve_multilingual_name
     assert_eq!(
         processor.process_citation(&citation).unwrap(),
-        "Taro Tokyo 2020"
+        "Tokyo, 2020"
+    );
+}
+
+#[test]
+fn test_multilingual_rendering_numeric_integral_translated() {
+    let mut style = build_ml_style(MultilingualMode::Translated, None);
+    style.options.as_mut().unwrap().processing = Some(Processing::Numeric);
+    style.citation.as_mut().unwrap().template =
+        Some(vec![TemplateComponent::Contributor(TemplateContributor {
+            contributor: ContributorRole::Author,
+            form: ContributorForm::Short,
+            ..Default::default()
+        })]);
+
+    let mut bib = indexmap::IndexMap::new();
+    let mut translations = HashMap::new();
+    translations.insert(
+        "en-US".to_string(),
+        StructuredName {
+            family: MultilingualString::Simple("Tolstoy".to_string()),
+            given: MultilingualString::Simple("Leo".to_string()),
+            ..Default::default()
+        },
+    );
+
+    bib.insert(
+        "item1".to_string(),
+        csln_core::reference::InputReference::Monograph(Box::new(
+            csln_core::reference::Monograph {
+                id: Some("item1".to_string()),
+                r#type: csln_core::reference::MonographType::Book,
+                title: csln_core::reference::Title::Single("War and Peace".to_string()),
+                author: Some(Contributor::Multilingual(MultilingualName {
+                    original: StructuredName {
+                        family: MultilingualString::Simple("Толстой".to_string()),
+                        given: MultilingualString::Simple("Лев".to_string()),
+                        ..Default::default()
+                    },
+                    lang: Some("ru".to_string()),
+                    transliterations: HashMap::new(),
+                    translations,
+                })),
+                editor: None,
+                translator: None,
+                issued: csln_core::reference::EdtfString("1869".to_string()),
+                publisher: None,
+                url: None,
+                accessed: None,
+                language: None,
+                note: None,
+                isbn: None,
+                doi: None,
+                edition: None,
+                genre: None,
+                keywords: None,
+                original_date: None,
+                original_title: None,
+            },
+        )),
+    );
+
+    let processor = Processor::new(style, bib);
+    let citation = csln_core::citation::Citation {
+        mode: csln_core::citation::CitationMode::Integral,
+        items: vec![csln_core::citation::CitationItem {
+            id: "item1".to_string(),
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+
+    assert_eq!(
+        processor.process_citation(&citation).unwrap(),
+        "Tolstoy [1]"
     );
 }

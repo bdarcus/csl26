@@ -10,14 +10,6 @@ impl ComponentValues for TemplateNumber {
         hints: &ProcHints,
         options: &RenderOptions<'_>,
     ) -> Option<ProcValues> {
-        // Apply visibility filter
-        if matches!(
-            options.visibility,
-            csln_core::citation::ItemVisibility::AuthorOnly
-        ) {
-            return None;
-        }
-
         use csln_core::template::LabelForm;
 
         let value = match self.number {

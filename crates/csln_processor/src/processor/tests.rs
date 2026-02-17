@@ -1079,19 +1079,19 @@ fn test_citation_visibility_modifiers() {
     // Default APA style: (Kuhn, 1962). Suppress Author: (1962).
     assert_eq!(res_suppress, "(1962)");
 
-    // 2. Author Only (Integral)
-    let cit_author = Citation {
+    // 2. Integral Citation
+    let cit_integral = Citation {
         mode: CitationMode::Integral,
         items: vec![crate::reference::CitationItem {
             id: "kuhn1962".to_string(),
-            visibility: ItemVisibility::AuthorOnly,
+            visibility: ItemVisibility::Default,
             ..Default::default()
         }],
         ..Default::default()
     };
-    let res_author = processor.process_citation(&cit_author).unwrap();
-    // Author Only in integral mode: Kuhn
-    assert_eq!(res_author, "Kuhn");
+    let res_integral = processor.process_citation(&cit_integral).unwrap();
+    // Integral mode for author-date styles: Kuhn (1962)
+    assert_eq!(res_integral, "Kuhn (1962)");
 
     // 3. Hidden (nocite)
     let cit_hidden = Citation {

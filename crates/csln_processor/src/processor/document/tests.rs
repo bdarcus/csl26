@@ -89,7 +89,7 @@ fn test_bibliography_grouping() {
     let processor = Processor::new(style, bib);
     let parser = DjotParser;
 
-    let content = "Visible citation: [@item1]. Silent: !@item2";
+    let content = "Visible citation: [@item1]. Silent: [!@item2]";
     let result =
         processor.process_document::<_, PlainText>(content, &parser, DocumentFormat::Plain);
 
@@ -167,7 +167,7 @@ fn test_visible_wins_over_silent() {
     let parser = DjotParser;
 
     // Item 2 is cited both visibly and silently
-    let content = "Visible: [@item2]. Silent: !@item2";
+    let content = "Visible: [@item2]. Silent: [!@item2]";
     let result =
         processor.process_document::<_, PlainText>(content, &parser, DocumentFormat::Plain);
 

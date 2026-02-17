@@ -225,7 +225,6 @@ impl Processor {
             visibility: csln_core::citation::ItemVisibility::Default,
             locator: None,
             locator_label: None,
-            infix: None,
         };
 
         ProcEntryMetadata {
@@ -283,7 +282,7 @@ impl Processor {
         );
 
         // Group adjacent items by author for author-date styles
-        let rendered_groups = if is_author_date && citation.items.len() > 1 {
+        let rendered_groups = if is_author_date {
             renderer.render_grouped_citation(
                 &citation.items,
                 template,
@@ -489,7 +488,7 @@ impl Processor {
         );
 
         // Process group components
-        let rendered_groups = if is_author_date && citation.items.len() > 1 {
+        let rendered_groups = if is_author_date {
             renderer.render_grouped_citation_with_format::<F>(
                 &citation.items,
                 template,

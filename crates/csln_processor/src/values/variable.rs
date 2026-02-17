@@ -9,14 +9,6 @@ impl ComponentValues for TemplateVariable {
         _hints: &ProcHints,
         options: &RenderOptions<'_>,
     ) -> Option<ProcValues> {
-        // Apply visibility filter
-        if matches!(
-            options.visibility,
-            csln_core::citation::ItemVisibility::AuthorOnly
-        ) {
-            return None;
-        }
-
         let value = match self.variable {
             SimpleVariable::Doi => reference.doi(),
             SimpleVariable::Url => reference.url().map(|u| u.to_string()),
@@ -48,7 +40,6 @@ impl ComponentValues for TemplateVariable {
                     }
                 })
             }
-            SimpleVariable::Infix => options.infix.map(|s| s.to_string()),
             _ => None,
         };
 

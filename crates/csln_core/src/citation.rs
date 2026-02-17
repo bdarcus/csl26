@@ -42,8 +42,6 @@ pub enum ItemVisibility {
     Default,
     /// Suppress the author name: "(2020)".
     SuppressAuthor,
-    /// Show only the author name: "Smith".
-    AuthorOnly,
     /// Hidden from output, but included in bibliography (nocite).
     Hidden,
 }
@@ -138,9 +136,6 @@ pub struct CitationItem {
     /// Locator value (e.g., "42-45" for pages)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub locator: Option<String>,
-    /// Infix text between author and year in integral citations
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub infix: Option<String>,
     /// Prefix text before this item
     #[serde(skip_serializing_if = "Option::is_none")]
     pub prefix: Option<String>,
