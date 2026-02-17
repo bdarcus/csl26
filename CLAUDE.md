@@ -328,31 +328,28 @@ Different types of changes require different levels of verification to maintain 
 
 **Hot paths:** citation rendering, bibliography processing, style parsing, name formatting, date formatting, substitution logic
 
-### Benchmark Workflow (Optional, for Performance Work)
+### Benchmark Workflow (Required for Performance/Refactor Work)
 
-Benchmarks are **opt-in** for performance-sensitive changes. Do NOT add them to pre-commit checks.
+Benchmarks are **required** for performance-sensitive changes and hot-path refactors. Use the provided helper script to automate comparison.
 
 ```bash
-# 1. Capture baseline
-cargo bench --bench rendering > .bench-baselines/baseline-$(date +%Y%m%d).txt
+# 1. Capture baseline (on main or before changes)
+./scripts/bench-check.sh baseline
 
 # 2. Make performance changes
 # ... implement optimization ...
 
 # 3. Compare after changes
-cargo bench --bench rendering > .bench-baselines/after-$(date +%Y%m%d).txt
+./scripts/bench-check.sh baseline after
 
-# 4. Manual comparison (install critcmp: cargo install critcmp)
-critcmp .bench-baselines/baseline-*.txt .bench-baselines/after-*.txt
-
-# 5. Include relevant deltas in commit message body
+# 4. Include relevant deltas in commit message body
 ```
 
 **Available benchmarks:**
 - `cargo bench --bench rendering` - Citation/bibliography processing (APA-focused)
 - `cargo bench --bench formats` - YAML/JSON/CBOR deserialization
 
-Baseline files are stored in `.bench-baselines/` (gitignored, local-only).
+Baseline files are stored in `.bench-baselines/` (gitignored, local-only). Use `critcmp` for manual comparisons if needed.
 
 ## Current Status
 
