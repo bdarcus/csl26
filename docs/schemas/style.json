@@ -462,13 +462,6 @@
           ]
         },
         {
-          "description": "Match only nocite references (silent citations).",
-          "type": "string",
-          "enum": [
-            "silent"
-          ]
-        },
-        {
           "description": "Match all references regardless of citation status.",
           "type": "string",
           "enum": [
@@ -1961,7 +1954,6 @@
         "scale",
         "version",
         "locator",
-        "infix",
         "authority",
         "reporter",
         "page",

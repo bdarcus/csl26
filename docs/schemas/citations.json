@@ -71,13 +71,6 @@
           "description": "The reference ID (citekey).",
           "type": "string"
         },
-        "infix": {
-          "description": "Narrative text to insert between author and year (for integral citations)",
-          "type": [
-            "string",
-            "null"
-          ]
-        },
         "label": {
           "description": "Locator type (page, chapter, etc.)",
           "anyOf": [
@@ -154,13 +147,6 @@
           "type": "string",
           "enum": [
             "suppress-author"
-          ]
-        },
-        {
-          "description": "Hidden from output, but included in bibliography (nocite).",
-          "type": "string",
-          "enum": [
-            "hidden"
           ]
         }
       ]
