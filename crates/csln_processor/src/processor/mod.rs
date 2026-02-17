@@ -315,7 +315,8 @@ impl Processor {
         let citation_suffix = citation.suffix.as_deref().unwrap_or("");
 
         // Apply wrap or prefix/suffix
-        let (open, close) = if matches!(citation.mode, csln_core::citation::CitationMode::Integral) {
+        let (open, close) = if matches!(citation.mode, csln_core::citation::CitationMode::Integral)
+        {
             ("", "")
         } else {
             match wrap {

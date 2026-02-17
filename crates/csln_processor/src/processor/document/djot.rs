@@ -85,19 +85,21 @@ fn parse_parenthetical_citation(input: &mut &str) -> winnow::Result<Citation, Co
 
 fn parse_citation_content(input: &mut &str) -> winnow::Result<Citation, ContextError> {
     let mut citation = Citation::default();
-    
+
     // Consume everything up to the closing bracket
     let inner: &str = take_until(0.., ']').parse_next(input)?;
-    
+
     // Check if the content is likely using the new explicit delimiter syntax: prefix ; item ; suffix
     if inner.contains(';') {
         let parts: Vec<&str> = inner.split(';').collect();
         let mut item_indices = Vec::new();
         let mut detected_integral = false;
-        
+
         for (i, part) in parts.iter().enumerate() {
             let mut part_input = part.trim_start();
-            let is_integral = parse_integral_modifier.parse_next(&mut part_input).unwrap_or(false);
+            let is_integral = parse_integral_modifier
+                .parse_next(&mut part_input)
+                .unwrap_or(false);
             if is_integral {
                 detected_integral = true;
             }
@@ -123,7 +125,9 @@ fn parse_citation_content(input: &mut &str) -> winnow::Result<Citation, ContextE
             // Extract items
             for &idx in &item_indices {
                 let mut item_input = parts[idx].trim();
-                let is_integral = parse_integral_modifier.parse_next(&mut item_input).unwrap_or(false);
+                let is_integral = parse_integral_modifier
+                    .parse_next(&mut item_input)
+                    .unwrap_or(false);
                 if is_integral {
                     detected_integral = true;
                 }
@@ -140,7 +144,7 @@ fn parse_citation_content(input: &mut &str) -> winnow::Result<Citation, ContextE
                     citation.suffix = Some(trimmed.to_string());
                 }
             }
-            
+
             if detected_integral {
                 citation.mode = CitationMode::Integral;
             }
@@ -157,7 +161,8 @@ fn parse_citation_content(input: &mut &str) -> winnow::Result<Citation, ContextE
             detected_integral = true;
         }
         parse_citation_item_no_integral(input)
-    }).parse_next(&mut inner_input)?;
+    })
+    .parse_next(&mut inner_input)?;
     citation.items = items;
 
     if detected_integral {

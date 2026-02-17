@@ -430,10 +430,7 @@ fn test_multilingual_rendering_original() {
         ..Default::default()
     };
 
-    assert_eq!(
-        processor.process_citation(&citation).unwrap(),
-        "東京, 2020"
-    );
+    assert_eq!(processor.process_citation(&citation).unwrap(), "東京, 2020");
 }
 
 #[test]
