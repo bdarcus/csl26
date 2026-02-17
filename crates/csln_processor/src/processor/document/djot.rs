@@ -9,13 +9,13 @@ use super::CitationParser;
 use crate::{Citation, CitationItem};
 use csln_core::citation::{CitationMode, ItemVisibility, LocatorType};
 use winnow::ascii::space0;
-use winnow::combinator::{alt, opt, repeat};
+use winnow::combinator::{opt, repeat};
 use winnow::error::ContextError;
 use winnow::prelude::*;
 use winnow::token::{take_until, take_while};
 
 /// A parser for Djot citations using winnow.
-/// Syntax: `[prefix ; @key1; @key2 ; suffix]`
+/// Syntax: `[@key]`, `[+@key]`, or `[-@key]`. Multi-cites: `[@key1; @key2]`.
 pub struct DjotParser;
 
 impl Default for DjotParser {
@@ -25,10 +25,9 @@ impl Default for DjotParser {
 }
 
 fn parse_visibility_modifier(input: &mut &str) -> winnow::Result<ItemVisibility, ContextError> {
-    let modifier: Option<char> = opt(alt(('-', '!'))).parse_next(input)?;
+    let modifier: Option<char> = opt('-').parse_next(input)?;
     match modifier {
         Some('-') => Ok(ItemVisibility::SuppressAuthor),
-        Some('!') => Ok(ItemVisibility::Hidden),
         _ => Ok(ItemVisibility::Default),
     }
 }
@@ -85,86 +84,26 @@ fn parse_parenthetical_citation(input: &mut &str) -> winnow::Result<Citation, Co
 
 fn parse_citation_content(input: &mut &str) -> winnow::Result<Citation, ContextError> {
     let mut citation = Citation::default();
+    let mut detected_integral = false;
 
-    // Consume everything up to the closing bracket
+    // Split by semicolon for multiple items
     let inner: &str = take_until(0.., ']').parse_next(input)?;
 
-    // Check if the content is likely using the new explicit delimiter syntax: prefix ; item ; suffix
-    if inner.contains(';') {
-        let parts: Vec<&str> = inner.split(';').collect();
-        let mut item_indices = Vec::new();
-        let mut detected_integral = false;
-
-        for (i, part) in parts.iter().enumerate() {
-            let mut part_input = part.trim_start();
-            let is_integral = parse_integral_modifier
-                .parse_next(&mut part_input)
-                .unwrap_or(false);
-            if is_integral {
-                detected_integral = true;
-            }
-            let _ = parse_visibility_modifier.parse_next(&mut part_input).ok();
-            if part_input.starts_with('@') {
-                item_indices.push(i);
-            }
-        }
-
-        if !item_indices.is_empty() {
-            let first_idx = item_indices[0];
-            let last_idx = *item_indices.last().unwrap();
-
-            // Extract prefix: everything before the first item part
-            if first_idx > 0 {
-                let prefix_str = parts[..first_idx].join(";");
-                let trimmed = prefix_str.trim();
-                if !trimmed.is_empty() {
-                    citation.prefix = Some(trimmed.to_string());
-                }
-            }
-
-            // Extract items
-            for &idx in &item_indices {
-                let mut item_input = parts[idx].trim();
-                let is_integral = parse_integral_modifier
-                    .parse_next(&mut item_input)
-                    .unwrap_or(false);
-                if is_integral {
-                    detected_integral = true;
-                }
-                if let Ok(item) = parse_citation_item_no_integral(&mut item_input) {
-                    citation.items.push(item);
-                }
-            }
-
-            // Extract suffix: everything after the last item part
-            if last_idx < parts.len() - 1 {
-                let suffix_str = parts[last_idx + 1..].join(";");
-                let trimmed = suffix_str.trim();
-                if !trimmed.is_empty() {
-                    citation.suffix = Some(trimmed.to_string());
-                }
-            }
-
-            if detected_integral {
-                citation.mode = CitationMode::Integral;
-            }
-            return Ok(citation);
-        }
-    }
-
-    // Fallback: parse multiple items without explicit global affixes
-    let mut inner_input = inner;
-    let mut detected_integral = false;
+    // Basic item parsing: items are separated by semicolons
     let items: Vec<CitationItem> = repeat(1.., |input: &mut &str| {
+        let _ = space0.parse_next(input)?;
         let is_integral = parse_integral_modifier.parse_next(input).unwrap_or(false);
         if is_integral {
             detected_integral = true;
         }
-        parse_citation_item_no_integral(input)
+        let item = parse_citation_item_no_integral(input)?;
+        let _ = opt(';').parse_next(input)?;
+        let _ = space0.parse_next(input)?;
+        Ok(item)
     })
-    .parse_next(&mut inner_input)?;
-    citation.items = items;
+    .parse_next(&mut inner.trim())?;
 
+    citation.items = items;
     if detected_integral {
         citation.mode = CitationMode::Integral;
     }
@@ -174,7 +113,7 @@ fn parse_citation_content(input: &mut &str) -> winnow::Result<Citation, ContextE
 
 fn parse_citation_item_no_integral(input: &mut &str) -> winnow::Result<CitationItem, ContextError> {
     let _ = space0.parse_next(input)?;
-    let visibility = parse_visibility_modifier.parse_next(input)?;
+    let visibility = parse_visibility_modifier(input)?;
     let _: char = '@'.parse_next(input)?;
     let key: &str =
         take_while(1.., |c: char| c.is_alphanumeric() || c == '_' || c == '-').parse_next(input)?;
@@ -187,16 +126,8 @@ fn parse_citation_item_no_integral(input: &mut &str) -> winnow::Result<CitationI
 
     let _ = space0.parse_next(input)?;
 
-    // Optional infix in parentheses: `(infix text)`
-    if let Some('(') = input.chars().next() {
-        let _ = '('.parse_next(input)?;
-        let infix: &str = take_until(0.., ')').parse_next(input)?;
-        let _ = ')'.parse_next(input)?;
-        item.infix = Some(infix.to_string());
-    }
-
     // Only consume text after key if there's a comma. Otherwise,
-    // leave remaining text for the global suffix parser.
+    // leave remaining text for the multi-cite separator.
     let checkpoint = *input;
     let after_key: &str = take_while(0.., |c: char| c != ';' && c != ']').parse_next(input)?;
 
@@ -207,9 +138,6 @@ fn parse_citation_item_no_integral(input: &mut &str) -> winnow::Result<CitationI
         // No comma found: don't consume the text, restore position
         *input = checkpoint;
     }
-
-    let _ = opt(';').parse_next(input)?;
-    let _ = space0.parse_next(input)?;
 
     Ok(item)
 }
@@ -282,14 +210,13 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_parse_complex_djot_citation() {
+    fn test_parse_multi_cite_with_locators() {
         let parser = DjotParser;
-        let content = "[see ; @kuhn1962; @watson1953, ch. 2]";
+        let content = "[@kuhn1962; @watson1953, ch. 2]";
         let citations = parser.parse_citations(content);
 
         assert_eq!(citations.len(), 1);
         let (_, _, citation) = &citations[0];
-        assert_eq!(citation.prefix, Some("see".to_string()));
         assert_eq!(citation.items.len(), 2);
         assert_eq!(citation.items[0].id, "kuhn1962");
         assert_eq!(citation.items[1].id, "watson1953");
@@ -307,22 +234,6 @@ mod tests {
         let (_, _, citation) = &citations[0];
         assert_eq!(citation.items[0].locator, Some("5".to_string()));
         assert_eq!(citation.items[0].label, Some(LocatorType::Section));
-    }
-
-    #[test]
-    fn test_parse_multi_cite_with_suffix() {
-        let parser = DjotParser;
-        let content = "[compare ; @smith2010, page: 45; @brown1954; for context]";
-        let citations = parser.parse_citations(content);
-
-        assert_eq!(citations.len(), 1, "Should parse one citation");
-        let (_, _, citation) = &citations[0];
-        assert_eq!(citation.prefix, Some("compare".to_string()));
-        assert_eq!(citation.items.len(), 2);
-        assert_eq!(citation.items[0].id, "smith2010");
-        assert_eq!(citation.items[0].locator, Some("45".to_string()));
-        assert_eq!(citation.items[1].id, "brown1954");
-        assert_eq!(citation.suffix, Some("for context".to_string()));
     }
 
     #[test]
@@ -348,46 +259,6 @@ mod tests {
         assert_eq!(citation.mode, CitationMode::Integral);
         assert_eq!(citation.items[0].id, "kuhn1962");
         assert_eq!(citation.items[0].visibility, ItemVisibility::Default);
-    }
-
-    #[test]
-    fn test_parse_global_affixes_modern() {
-        let parser = DjotParser;
-        let content = "[see ; @doe99; @smith00; and references therein]";
-        let citations = parser.parse_citations(content);
-
-        assert_eq!(citations.len(), 1);
-        let (_, _, citation) = &citations[0];
-        assert_eq!(citation.prefix, Some("see".to_string()));
-        assert_eq!(citation.items.len(), 2);
-        assert_eq!(citation.items[0].id, "doe99");
-        assert_eq!(citation.items[1].id, "smith00");
-        assert_eq!(citation.suffix, Some("and references therein".to_string()));
-    }
-
-    #[test]
-    fn test_parse_hidden_nocite() {
-        let parser = DjotParser;
-        let content = "[!@kuhn1962]";
-        let citations = parser.parse_citations(content);
-
-        assert_eq!(citations.len(), 1);
-        let (_, _, citation) = &citations[0];
-        assert_eq!(citation.items[0].id, "kuhn1962");
-        assert_eq!(citation.items[0].visibility, ItemVisibility::Hidden);
-    }
-
-    #[test]
-    fn test_parse_infix() {
-        let parser = DjotParser;
-        let content = "[+@kuhn1962 (argues)]";
-        let citations = parser.parse_citations(content);
-
-        assert_eq!(citations.len(), 1);
-        let (_, _, citation) = &citations[0];
-        assert_eq!(citation.mode, CitationMode::Integral);
-        assert_eq!(citation.items[0].id, "kuhn1962");
-        assert_eq!(citation.items[0].infix, Some("argues".to_string()));
     }
 
     #[test]

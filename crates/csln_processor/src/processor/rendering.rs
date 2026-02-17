@@ -100,7 +100,6 @@ impl<'a> Renderer<'a> {
             visibility: item.visibility,
             locator: item.locator.as_deref(),
             locator_label: item.label.clone(),
-            infix: item.infix.as_deref(),
         };
 
         // Render author in short form
@@ -170,11 +169,6 @@ impl<'a> Renderer<'a> {
         let use_author_year = self.should_render_author_year_for_numeric_integral(mode);
 
         for item in items {
-            // Skip hidden items (nocite)
-            if matches!(item.visibility, csln_core::citation::ItemVisibility::Hidden) {
-                continue;
-            }
-
             let reference = self
                 .bibliography
                 .get(&item.id)
@@ -208,23 +202,42 @@ impl<'a> Renderer<'a> {
                 // Standard rendering: use template with citation number
                 let citation_number = self.get_or_assign_citation_number(&item.id);
 
+                // Check for integral mode specific template
+                let integral_spec = if matches!(mode, csln_core::citation::CitationMode::Integral) {
+                    self.style
+                        .citation
+                        .as_ref()
+                        .and_then(|cs| cs.integral.as_ref())
+                } else {
+                    None
+                };
+
+                let (effective_template, effective_delim) = if let Some(spec) = integral_spec {
+                    if let Some(t) = spec.template.as_ref() {
+                        (t.as_slice(), spec.delimiter.as_deref().unwrap_or(" "))
+                    } else {
+                        (template, intra_delimiter)
+                    }
+                } else {
+                    (template, intra_delimiter)
+                };
+
                 if let Some(proc) = self.process_template_with_number(
                     reference,
-                    template,
+                    effective_template,
                     RenderContext::Citation,
                     mode.clone(),
                     item.visibility,
                     citation_number,
                     item.locator.as_deref(),
                     item.label.clone(),
-                    item.infix.as_deref(),
                 ) {
                     let item_str = crate::render::citation::citation_to_string_with_format::<F>(
                         &proc,
                         None,
                         None,
                         None,
-                        Some(intra_delimiter),
+                        Some(effective_delim),
                     );
                     if !item_str.is_empty() {
                         let prefix = item.prefix.as_deref().unwrap_or("");
@@ -284,11 +297,6 @@ impl<'a> Renderer<'a> {
         let mut groups: Vec<Vec<&CitationItem>> = Vec::new();
 
         for item in items {
-            // Skip hidden items (nocite)
-            if matches!(item.visibility, csln_core::citation::ItemVisibility::Hidden) {
-                continue;
-            }
-
             let reference = self.bibliography.get(&item.id);
             let author_key = reference
                 .and_then(|r| r.author())
@@ -345,58 +353,60 @@ impl<'a> Renderer<'a> {
 
             // If we have an explicit integral template and we're in integral mode,
             // we should try to use it.
-            let integral_template = if matches!(mode, csln_core::citation::CitationMode::Integral) {
+            let integral_spec = if matches!(mode, csln_core::citation::CitationMode::Integral) {
                 self.style
                     .citation
                     .as_ref()
                     .and_then(|cs| cs.integral.as_ref())
-                    .and_then(|cs| cs.template.as_ref())
             } else {
                 None
             };
 
-            if let Some(template) = integral_template {
-                // Narrative mode with explicit template (e.g., APA 7th)
-                let citation_number = self.get_or_assign_citation_number(&first_item.id);
-                if let Some(proc) = self.process_template_with_number(
-                    first_ref,
-                    template,
-                    RenderContext::Citation,
-                    mode.clone(),
-                    first_item.visibility,
-                    citation_number,
-                    first_item.locator.as_deref(),
-                    first_item.label.clone(),
-                    first_item.infix.as_deref(),
-                ) {
-                    let item_str = crate::render::citation::citation_to_string_with_format::<F>(
-                        &proc,
-                        None,
-                        None,
-                        None,
-                        Some(intra_delimiter),
-                    );
+            if let Some(spec) = integral_spec {
+                if let Some(template) = spec.template.as_ref() {
+                    // Narrative mode with explicit template (e.g., APA 7th)
+                    let citation_number = self.get_or_assign_citation_number(&first_item.id);
+                    if let Some(proc) = self.process_template_with_number(
+                        first_ref,
+                        template,
+                        RenderContext::Citation,
+                        mode.clone(),
+                        first_item.visibility,
+                        citation_number,
+                        first_item.locator.as_deref(),
+                        first_item.label.clone(),
+                    ) {
+                        // Use integral-specific delimiter, defaulting to space for narrative
+                        let integral_delimiter = spec.delimiter.as_deref().unwrap_or(" ");
+                        let item_str = crate::render::citation::citation_to_string_with_format::<F>(
+                            &proc,
+                            None,
+                            None,
+                            None,
+                            Some(integral_delimiter),
+                        );
 
-                    let ids: Vec<String> = group.iter().map(|item| item.id.clone()).collect();
-                    let prefix = first_item.prefix.as_deref().unwrap_or("");
-                    let suffix = first_item.suffix.as_deref().unwrap_or("");
+                        let ids: Vec<String> = group.iter().map(|item| item.id.clone()).collect();
+                        let prefix = first_item.prefix.as_deref().unwrap_or("");
+                        let suffix = first_item.suffix.as_deref().unwrap_or("");
 
-                    let formatted_prefix =
-                        if !prefix.is_empty() && !prefix.ends_with(char::is_whitespace) {
-                            format!("{} ", prefix)
+                        let formatted_prefix =
+                            if !prefix.is_empty() && !prefix.ends_with(char::is_whitespace) {
+                                format!("{} ", prefix)
+                            } else {
+                                prefix.to_string()
+                            };
+
+                        let content = if !prefix.is_empty() || !suffix.is_empty() {
+                            let spaced_suffix = self.ensure_suffix_spacing(suffix);
+                            fmt.affix(&formatted_prefix, item_str, &spaced_suffix)
                         } else {
-                            prefix.to_string()
+                            item_str
                         };
 
-                    let content = if !prefix.is_empty() || !suffix.is_empty() {
-                        let spaced_suffix = self.ensure_suffix_spacing(suffix);
-                        fmt.affix(&formatted_prefix, item_str, &spaced_suffix)
-                    } else {
-                        item_str
-                    };
-
-                    rendered_groups.push(fmt.citation(ids, content));
-                    continue;
+                        rendered_groups.push(fmt.citation(ids, content));
+                        continue;
+                    }
                 }
             }
 
@@ -512,7 +522,6 @@ impl<'a> Renderer<'a> {
             visibility: csln_core::citation::ItemVisibility::Default,
             locator: None,
             locator_label: None,
-            infix: None,
         };
 
         // Use short form for citations
@@ -618,7 +627,6 @@ impl<'a> Renderer<'a> {
             visibility: csln_core::citation::ItemVisibility::Default,
             locator: None,
             locator_label: None,
-            infix: None,
         };
 
         self.process_template_with_number_internal(reference, template_ref, options, entry_number)
@@ -636,7 +644,6 @@ impl<'a> Renderer<'a> {
         citation_number: usize,
         locator: Option<&str>,
         locator_label: Option<csln_core::citation::LocatorType>,
-        infix: Option<&str>,
     ) -> Option<ProcTemplate> {
         let options = RenderOptions {
             config: self.config,
@@ -646,7 +653,6 @@ impl<'a> Renderer<'a> {
             visibility,
             locator,
             locator_label,
-            infix,
         };
         self.process_template_with_number_internal(reference, template, options, citation_number)
     }
@@ -658,14 +664,6 @@ impl<'a> Renderer<'a> {
         options: RenderOptions<'_>,
         citation_number: usize,
     ) -> Option<ProcTemplate> {
-        // If hidden, return None immediately (nocite)
-        if matches!(
-            options.visibility,
-            csln_core::citation::ItemVisibility::Hidden
-        ) {
-            return None;
-        }
-
         let default_hint = ProcHints::default();
         let base_hint = self
             .hints

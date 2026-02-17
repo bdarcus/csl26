@@ -4,25 +4,18 @@ This is a test document using the proposed Djot citation syntax.
 
 ## Parenthetical Citations
 
-Multi-cite with global prefix and locator: [see ; @kuhn1962; @watson1953, ch. 2].
+Multi-cite with locator: [@kuhn1962; @watson1953, ch. 2].
 
 Structured locator: [@kuhn1962, section: 5].
 
 Simple parenthetical: [@watson1953].
 
-Another multi-cite with global affixes: [compare ; @smith2010, page: 45; @brown1954 ; for context].
-
 ## Integral Citations
 
 Basic integral: [+@kuhn1962] argues ..., [+@watson1953] that ...
-
-Integral with infix: [+@kuhn1962 (argues)] that scientific revolutions...
 
 Integral with locator: [+@kuhn1962, p. 10] argues...
 
 ## Visibility Modifiers
 
 Suppress author: [-@kuhn1962].
-
-{ % nocite %}
-Silent citation (nocite): [!@doe2020]. This item will not appear in the text at all, but will be added to the "Additional Reading" section of the bibliography.

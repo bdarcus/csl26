@@ -1092,37 +1092,6 @@ fn test_citation_visibility_modifiers() {
     let res_integral = processor.process_citation(&cit_integral).unwrap();
     // Integral mode for author-date styles: Kuhn (1962)
     assert_eq!(res_integral, "Kuhn (1962)");
-
-    // 3. Hidden (nocite)
-    let cit_hidden = Citation {
-        items: vec![crate::reference::CitationItem {
-            id: "kuhn1962".to_string(),
-            visibility: ItemVisibility::Hidden,
-            ..Default::default()
-        }],
-        ..Default::default()
-    };
-    let res_hidden = processor.process_citation(&cit_hidden).unwrap();
-    assert_eq!(res_hidden, "");
-
-    // 4. Mixed visibility
-    let cit_mixed = Citation {
-        items: vec![
-            crate::reference::CitationItem {
-                id: "kuhn1962".to_string(),
-                ..Default::default()
-            },
-            crate::reference::CitationItem {
-                id: "kuhn1962".to_string(),
-                visibility: ItemVisibility::Hidden,
-                ..Default::default()
-            },
-        ],
-        ..Default::default()
-    };
-    let res_mixed = processor.process_citation(&cit_mixed).unwrap();
-    // One is hidden, only one Kuhn shows
-    assert_eq!(res_mixed, "(Kuhn, 1962)");
 }
 
 #[test]

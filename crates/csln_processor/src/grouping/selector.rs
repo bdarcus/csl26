@@ -21,8 +21,6 @@ use crate::reference::Reference;
 pub struct SelectorEvaluator<'a> {
     /// IDs of references cited visibly in the document.
     cited_ids: &'a HashSet<String>,
-    /// IDs of references cited silently (nocite).
-    silent_ids: &'a HashSet<String>,
 }
 
 impl<'a> SelectorEvaluator<'a> {
@@ -31,11 +29,9 @@ impl<'a> SelectorEvaluator<'a> {
     /// # Arguments
     ///
     /// * `cited_ids` - Set of reference IDs cited visibly
-    /// * `silent_ids` - Set of reference IDs cited silently (nocite)
-    pub fn new(cited_ids: &'a HashSet<String>, silent_ids: &'a HashSet<String>) -> Self {
+    pub fn new(cited_ids: &'a HashSet<String>) -> Self {
         Self {
             cited_ids,
-            silent_ids,
         }
     }
 
@@ -90,7 +86,6 @@ impl<'a> SelectorEvaluator<'a> {
         let id = reference.id().unwrap_or_default();
         match cited {
             CitedStatus::Visible => self.cited_ids.contains(&id),
-            CitedStatus::Silent => self.silent_ids.contains(&id),
             CitedStatus::Any => true,
         }
     }
@@ -149,8 +144,7 @@ mod tests {
     #[test]
     fn test_type_selector_single() {
         let cited_ids = HashSet::new();
-        let silent_ids = HashSet::new();
-        let evaluator = SelectorEvaluator::new(&cited_ids, &silent_ids);
+        let evaluator = SelectorEvaluator::new(&cited_ids);
 
         let selector = GroupSelector {
             ref_type: Some(TypeSelector::Single("article-journal".to_string())),
@@ -169,8 +163,7 @@ mod tests {
     #[test]
     fn test_type_selector_multiple() {
         let cited_ids = HashSet::new();
-        let silent_ids = HashSet::new();
-        let evaluator = SelectorEvaluator::new(&cited_ids, &silent_ids);
+        let evaluator = SelectorEvaluator::new(&cited_ids);
 
         let selector = GroupSelector {
             ref_type: Some(TypeSelector::Multiple(vec![
@@ -196,8 +189,7 @@ mod tests {
     fn test_cited_status_visible() {
         let mut cited_ids = HashSet::new();
         cited_ids.insert("r1".to_string());
-        let silent_ids = HashSet::new();
-        let evaluator = SelectorEvaluator::new(&cited_ids, &silent_ids);
+        let evaluator = SelectorEvaluator::new(&cited_ids);
 
         let selector = GroupSelector {
             ref_type: None,
@@ -214,31 +206,9 @@ mod tests {
     }
 
     #[test]
-    fn test_cited_status_silent() {
-        let cited_ids = HashSet::new();
-        let mut silent_ids = HashSet::new();
-        silent_ids.insert("r2".to_string());
-        let evaluator = SelectorEvaluator::new(&cited_ids, &silent_ids);
-
-        let selector = GroupSelector {
-            ref_type: None,
-            cited: Some(CitedStatus::Silent),
-            field: None,
-            not: None,
-        };
-
-        let cited = make_reference("r1", "book", None);
-        let silent = make_reference("r2", "book", None);
-
-        assert!(!evaluator.matches(&cited, &selector));
-        assert!(evaluator.matches(&silent, &selector));
-    }
-
-    #[test]
     fn test_field_language_exact() {
         let cited_ids = HashSet::new();
-        let silent_ids = HashSet::new();
-        let evaluator = SelectorEvaluator::new(&cited_ids, &silent_ids);
+        let evaluator = SelectorEvaluator::new(&cited_ids);
 
         let mut fields = std::collections::HashMap::new();
         fields.insert(
@@ -263,8 +233,7 @@ mod tests {
     #[test]
     fn test_field_language_multiple() {
         let cited_ids = HashSet::new();
-        let silent_ids = HashSet::new();
-        let evaluator = SelectorEvaluator::new(&cited_ids, &silent_ids);
+        let evaluator = SelectorEvaluator::new(&cited_ids);
 
         let mut fields = std::collections::HashMap::new();
         fields.insert(
@@ -291,8 +260,7 @@ mod tests {
     #[test]
     fn test_negation() {
         let cited_ids = HashSet::new();
-        let silent_ids = HashSet::new();
-        let evaluator = SelectorEvaluator::new(&cited_ids, &silent_ids);
+        let evaluator = SelectorEvaluator::new(&cited_ids);
 
         let mut fields = std::collections::HashMap::new();
         fields.insert(
@@ -325,8 +293,7 @@ mod tests {
     fn test_combined_and_logic() {
         let mut cited_ids = HashSet::new();
         cited_ids.insert("r1".to_string());
-        let silent_ids = HashSet::new();
-        let evaluator = SelectorEvaluator::new(&cited_ids, &silent_ids);
+        let evaluator = SelectorEvaluator::new(&cited_ids);
 
         let mut fields = std::collections::HashMap::new();
         fields.insert(

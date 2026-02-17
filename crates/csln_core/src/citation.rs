@@ -42,8 +42,6 @@ pub enum ItemVisibility {
     Default,
     /// Suppress the author name: "(2020)".
     SuppressAuthor,
-    /// Hidden from output, but included in bibliography (nocite).
-    Hidden,
 }
 
 /// A citation containing one or more references.
@@ -142,9 +140,6 @@ pub struct CitationItem {
     /// Suffix text after this item
     #[serde(skip_serializing_if = "Option::is_none")]
     pub suffix: Option<String>,
-    /// Narrative text to insert between author and year (for integral citations)
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub infix: Option<String>,
 }
 
 #[cfg(test)]

@@ -52,7 +52,6 @@ citation:
           and-others: et-al
           delimiter-precedes-last: contextual
         and: text
-      - variable: infix
       - items:
         - date: issued
           form: year

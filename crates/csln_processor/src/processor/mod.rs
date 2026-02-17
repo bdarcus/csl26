@@ -64,8 +64,6 @@ pub struct Processor {
     pub citation_numbers: RefCell<HashMap<String, usize>>,
     /// IDs of items that were cited in a visible way.
     pub cited_ids: RefCell<HashSet<String>>,
-    /// IDs of items that were cited only silently (nocite).
-    pub silent_ids: RefCell<HashSet<String>>,
 }
 
 impl Default for Processor {
@@ -78,7 +76,6 @@ impl Default for Processor {
             hints: HashMap::new(),
             citation_numbers: RefCell::new(HashMap::new()),
             cited_ids: RefCell::new(HashSet::new()),
-            silent_ids: RefCell::new(HashSet::new()),
         }
     }
 }
@@ -107,7 +104,6 @@ impl Processor {
             hints: HashMap::new(),
             citation_numbers: RefCell::new(HashMap::new()),
             cited_ids: RefCell::new(HashSet::new()),
-            silent_ids: RefCell::new(HashSet::new()),
         };
 
         // Pre-calculate hints for disambiguation
@@ -225,7 +221,6 @@ impl Processor {
             visibility: csln_core::citation::ItemVisibility::Default,
             locator: None,
             locator_label: None,
-            infix: None,
         };
 
         ProcEntryMetadata {
@@ -445,11 +440,7 @@ impl Processor {
     {
         // Track cited IDs
         for item in &citation.items {
-            if matches!(item.visibility, csln_core::citation::ItemVisibility::Hidden) {
-                self.silent_ids.borrow_mut().insert(item.id.clone());
-            } else {
-                self.cited_ids.borrow_mut().insert(item.id.clone());
-            }
+            self.cited_ids.borrow_mut().insert(item.id.clone());
         }
 
         // Resolve the effective citation spec
@@ -610,9 +601,8 @@ impl Processor {
 
         let fmt = F::default();
         let cited_ids = self.cited_ids.borrow();
-        let silent_ids = self.silent_ids.borrow();
 
-        let evaluator = SelectorEvaluator::new(&cited_ids, &silent_ids);
+        let evaluator = SelectorEvaluator::new(&cited_ids);
         let sorter = GroupSorter::new(&self.locale);
 
         let mut assigned: HashSet<String> = HashSet::new();
@@ -753,7 +743,6 @@ impl Processor {
     {
         let fmt = F::default();
         let cited_ids = self.cited_ids.borrow();
-        let silent_ids = self.silent_ids.borrow();
 
         // Items cited visibly
         let cited_entries: Vec<ProcEntry> = bibliography
@@ -762,31 +751,11 @@ impl Processor {
             .cloned()
             .collect();
 
-        // Items only cited silently (nocite) AND not cited visibly anywhere else
-        let uncited_entries: Vec<ProcEntry> = bibliography
-            .iter()
-            .filter(|e| !cited_ids.contains(&e.id) && silent_ids.contains(&e.id))
-            .cloned()
-            .collect();
-
         let mut result = String::new();
 
         if !cited_entries.is_empty() {
             result.push_str(&crate::render::refs_to_string_with_format::<F>(
                 cited_entries,
-            ));
-        }
-
-        if !uncited_entries.is_empty() {
-            // Add spacing between groups
-            if !result.is_empty() {
-                result.push_str("\n\n");
-            }
-
-            // Simple hardcoded heading for now as requested
-            result.push_str("# Additional Reading\n\n");
-            result.push_str(&crate::render::refs_to_string_with_format::<F>(
-                uncited_entries,
             ));
         }
 

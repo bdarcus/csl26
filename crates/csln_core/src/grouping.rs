@@ -114,8 +114,6 @@ pub enum TypeSelector {
 pub enum CitedStatus {
     /// Match only references cited in the document.
     Visible,
-    /// Match only nocite references (silent citations).
-    Silent,
     /// Match all references regardless of citation status.
     Any,
 }
