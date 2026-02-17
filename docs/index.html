@@ -378,52 +378,92 @@
                         <!-- Example 1 -->
                         <div>
                             <h4 class="font-bold text-slate-900 mb-2">Process a bibliography (HTML)</h4>
-                            <div class="bg-slate-900 rounded-lg p-4 font-mono text-sm text-slate-300 shadow-md">
-                                <span class="text-primary">$</span> csln process paper.json apa.yaml <span
-                                    class="text-emerald-400">--format html</span>
+                            <div class="bg-slate-900 rounded-lg p-4 flex items-center justify-between group border border-slate-700 shadow-md">
+                                <code class="font-mono text-sm text-slate-300">
+                                    <span class="text-primary">$</span> csln process paper.json apa.yaml <span class="text-emerald-400">--format html</span>
+                                </code>
+                                <button class="text-slate-500 hover:text-white transition-colors"
+                                    onclick="navigator.clipboard.writeText('csln process paper.json apa.yaml --format html')"
+                                    title="Copy to clipboard">
+                                    <span class="material-icons text-base">content_copy</span>
+                                </button>
                             </div>
                         </div>
 
                         <!-- Example 1b (Djot) -->
                         <div>
                             <h4 class="font-bold text-slate-900 mb-2">Process for static sites (Djot)</h4>
-                            <div class="bg-slate-900 rounded-lg p-4 font-mono text-sm text-slate-300 shadow-md">
-                                <span class="text-primary">$</span> csln process paper.json apa.yaml <span
-                                    class="text-emerald-400">--format djot</span>
+                            <div class="bg-slate-900 rounded-lg p-4 flex items-center justify-between group border border-slate-700 shadow-md">
+                                <code class="font-mono text-sm text-slate-300">
+                                    <span class="text-primary">$</span> csln process paper.json apa.yaml <span class="text-emerald-400">--format djot</span>
+                                </code>
+                                <button class="text-slate-500 hover:text-white transition-colors"
+                                    onclick="navigator.clipboard.writeText('csln process paper.json apa.yaml --format djot')"
+                                    title="Copy to clipboard">
+                                    <span class="material-icons text-base">content_copy</span>
+                                </button>
                             </div>
                         </div>
 
                         <!-- Example 1c (Document) -->
                         <div>
                             <h4 class="font-bold text-slate-900 mb-2">Process full document (Djot draft syntax)</h4>
-                            <div class="bg-slate-900 rounded-lg p-4 font-mono text-sm text-slate-300 shadow-md">
-                                <span class="text-primary">$</span> csln doc paper.djot refs.json apa.yaml
+                            <div class="bg-slate-900 rounded-lg p-4 flex items-center justify-between group border border-slate-700 shadow-md">
+                                <code class="font-mono text-sm text-slate-300">
+                                    <span class="text-primary">$</span> csln doc paper.djot refs.json apa.yaml
+                                </code>
+                                <button class="text-slate-500 hover:text-white transition-colors"
+                                    onclick="navigator.clipboard.writeText('csln doc paper.djot refs.json apa.yaml')"
+                                    title="Copy to clipboard">
+                                    <span class="material-icons text-base">content_copy</span>
+                                </button>
                             </div>
                         </div>
 
                         <!-- Example 2 -->
                         <div>
                             <h4 class="font-bold text-slate-900 mb-2">Convert to binary (Performance Mode)</h4>
-                            <div class="bg-slate-900 rounded-lg p-4 font-mono text-sm text-slate-300 shadow-md">
-                                <span class="text-primary">$</span> csln convert styles/apa.yaml --output
-                                styles/apa.cbor
+                            <div class="bg-slate-900 rounded-lg p-4 flex items-center justify-between group border border-slate-700 shadow-md">
+                                <code class="font-mono text-sm text-slate-300">
+                                    <span class="text-primary">$</span> csln convert styles/apa.yaml --output styles/apa.cbor
+                                </code>
+                                <button class="text-slate-500 hover:text-white transition-colors"
+                                    onclick="navigator.clipboard.writeText('csln convert styles/apa.yaml --output styles/apa.cbor')"
+                                    title="Copy to clipboard">
+                                    <span class="material-icons text-base">content_copy</span>
+                                </button>
                             </div>
                         </div>
 
                         <!-- Example 3 -->
                         <div>
                             <h4 class="font-bold text-slate-900 mb-2">Validate your style</h4>
-                            <div class="bg-slate-900 rounded-lg p-4 font-mono text-sm text-slate-300 shadow-md">
-                                <span class="text-primary">$</span> csln validate styles/my-custom-style.yaml
+                            <div class="bg-slate-900 rounded-lg p-4 flex items-center justify-between group border border-slate-700 shadow-md">
+                                <code class="font-mono text-sm text-slate-300">
+                                    <span class="text-primary">$</span> csln validate styles/my-custom-style.yaml
+                                </code>
+                                <button class="text-slate-500 hover:text-white transition-colors"
+                                    onclick="navigator.clipboard.writeText('csln validate styles/my-custom-style.yaml')"
+                                    title="Copy to clipboard">
+                                    <span class="material-icons text-base">content_copy</span>
+                                </button>
                             </div>
                         </div>
 
                         <!-- Example 4 -->
                         <div>
-                            <h4 class="font-bold text-slate-900 mb-2">Generate schemas</h4>
-                            <div class="bg-slate-900 rounded-lg p-4 font-mono text-sm text-slate-300 shadow-md">
-                                <span class="text-primary">$</span> csln schema --out-dir ./schemas
+                            <h4 class="font-bold text-slate-900 mb-2">Generate schemas (Developer Tool)</h4>
+                            <div class="bg-slate-900 rounded-lg p-4 flex items-center justify-between group border border-slate-700 shadow-md">
+                                <code class="font-mono text-sm text-slate-300">
+                                    <span class="text-primary">$</span> cargo run --features schema -- schema --out-dir ./schemas
+                                </code>
+                                <button class="text-slate-500 hover:text-white transition-colors"
+                                    onclick="navigator.clipboard.writeText('cargo run --features schema -- schema --out-dir ./schemas')"
+                                    title="Copy to clipboard">
+                                    <span class="material-icons text-base">content_copy</span>
+                                </button>
                             </div>
+                            <p class="text-slate-400 text-[10px] mt-2 font-mono">Note: Requires <code class="bg-slate-200 text-slate-700 px-1 rounded">--features schema</code>; primarily for core developers.</p>
                         </div>
                     </div>
                 </div>
@@ -620,8 +660,15 @@
                     To get real-time validation and autocomplete in editors with YAML language server support (like VS Code with the Red Hat YAML extension, Helix, Zed), 
                     add this comment as the first line of your YAML file:
                 </p>
-                <div class="bg-slate-900 rounded-lg p-4 font-mono text-xs text-slate-300 shadow-md overflow-x-auto">
-                    <span class="text-slate-500"># yaml-language-server: $schema=https://bdarcus.github.io/csl26/schemas/style.json</span>
+                <div class="bg-slate-900 rounded-lg p-4 flex items-center justify-between group border border-slate-700 shadow-md">
+                    <code class="font-mono text-xs text-slate-300">
+                        <span class="text-slate-500"># yaml-language-server: $schema=https://bdarcus.github.io/csl26/schemas/style.json</span>
+                    </code>
+                    <button class="text-slate-500 hover:text-white transition-colors"
+                        onclick="navigator.clipboard.writeText('# yaml-language-server: $schema=https://bdarcus.github.io/csl26/schemas/style.json')"
+                        title="Copy to clipboard">
+                        <span class="material-icons text-base">content_copy</span>
+                    </button>
                 </div>
                 <p class="text-[10px] text-slate-400 mt-4 font-mono italic">
                     Note: Replace <code class="text-slate-600 px-0.5 rounded">style.json</code> with 
