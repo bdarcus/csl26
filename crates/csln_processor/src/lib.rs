@@ -61,7 +61,7 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 //!     ..Default::default()
 //! };
 //! let result = processor.process_citation(&citation).unwrap();
-//! assert_eq!(result, "(Kuhn,  1962)");
+//! assert_eq!(result, "(Kuhn, 1962)");
 //! ```
 
 pub mod error;

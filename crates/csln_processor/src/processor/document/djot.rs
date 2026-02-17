@@ -25,13 +25,17 @@ impl Default for DjotParser {
 }
 
 fn parse_visibility_modifier(input: &mut &str) -> winnow::Result<ItemVisibility, ContextError> {
-    let modifier: Option<char> = opt(alt(('-', '+', '!'))).parse_next(input)?;
+    let modifier: Option<char> = opt(alt(('-', '!'))).parse_next(input)?;
     match modifier {
         Some('-') => Ok(ItemVisibility::SuppressAuthor),
-        Some('+') => Ok(ItemVisibility::AuthorOnly),
         Some('!') => Ok(ItemVisibility::Hidden),
         _ => Ok(ItemVisibility::Default),
     }
+}
+
+fn parse_integral_modifier(input: &mut &str) -> winnow::Result<bool, ContextError> {
+    let modifier: Option<char> = opt('+').parse_next(input)?;
+    Ok(modifier.is_some())
 }
 
 impl CitationParser for DjotParser {
@@ -99,6 +103,7 @@ fn parse_parenthetical_citation(input: &mut &str) -> winnow::Result<Citation, Co
 
 /// Parse `@key[locator]`, or just `@key`
 fn parse_narrative_citation(input: &mut &str) -> winnow::Result<Citation, ContextError> {
+    let is_integral = parse_integral_modifier.parse_next(input)?;
     let visibility = parse_visibility_modifier.parse_next(input)?;
     let _: char = '@'.parse_next(input)?;
     let key: &str =
@@ -116,7 +121,7 @@ fn parse_narrative_citation(input: &mut &str) -> winnow::Result<Citation, Contex
         parse_citation_locator_brackets(&mut input_checkpoint);
 
     let mut citation = Citation {
-        mode: CitationMode::Integral,
+        mode: if is_integral { CitationMode::Integral } else { CitationMode::Integral }, // Narrative shorthand is ALWAYS integral
         ..Default::default()
     };
 
@@ -140,17 +145,22 @@ fn parse_citation_locator_brackets<'a>(
 
 fn parse_citation_content(input: &mut &str) -> winnow::Result<Citation, ContextError> {
     let mut citation = Citation::default();
-
+    
     // Consume everything up to the closing bracket
     let inner: &str = take_until(0.., ']').parse_next(input)?;
-
+    
     // Check if the content is likely using the new explicit delimiter syntax: prefix ; item ; suffix
     if inner.contains(';') {
         let parts: Vec<&str> = inner.split(';').collect();
         let mut item_indices = Vec::new();
-
+        let mut detected_integral = false;
+        
         for (i, part) in parts.iter().enumerate() {
             let mut part_input = part.trim_start();
+            let is_integral = parse_integral_modifier.parse_next(&mut part_input).unwrap_or(false);
+            if is_integral {
+                detected_integral = true;
+            }
             let _ = parse_visibility_modifier.parse_next(&mut part_input).ok();
             if part_input.starts_with('@') {
                 item_indices.push(i);
@@ -173,7 +183,11 @@ fn parse_citation_content(input: &mut &str) -> winnow::Result<Citation, ContextE
             // Extract items
             for &idx in &item_indices {
                 let mut item_input = parts[idx].trim();
-                if let Ok(item) = parse_citation_item.parse_next(&mut item_input) {
+                let is_integral = parse_integral_modifier.parse_next(&mut item_input).unwrap_or(false);
+                if is_integral {
+                    detected_integral = true;
+                }
+                if let Ok(item) = parse_citation_item_no_integral(&mut item_input) {
                     citation.items.push(item);
                 }
             }
@@ -186,13 +200,8 @@ fn parse_citation_content(input: &mut &str) -> winnow::Result<Citation, ContextE
                     citation.suffix = Some(trimmed.to_string());
                 }
             }
-
-            // If any item has AuthorOnly visibility, this is an integral/narrative citation
-            if citation
-                .items
-                .iter()
-                .any(|i| matches!(i.visibility, ItemVisibility::AuthorOnly))
-            {
+            
+            if detected_integral {
                 citation.mode = CitationMode::Integral;
             }
             return Ok(citation);
@@ -201,22 +210,24 @@ fn parse_citation_content(input: &mut &str) -> winnow::Result<Citation, ContextE
 
     // Fallback: parse multiple items without explicit global affixes
     let mut inner_input = inner;
-    let items: Vec<CitationItem> = repeat(1.., parse_citation_item).parse_next(&mut inner_input)?;
+    let mut detected_integral = false;
+    let items: Vec<CitationItem> = repeat(1.., |input: &mut &str| {
+        let is_integral = parse_integral_modifier.parse_next(input).unwrap_or(false);
+        if is_integral {
+            detected_integral = true;
+        }
+        parse_citation_item_no_integral(input)
+    }).parse_next(&mut inner_input)?;
     citation.items = items;
 
-    // If any item has AuthorOnly visibility, this is an integral/narrative citation
-    if citation
-        .items
-        .iter()
-        .any(|i| matches!(i.visibility, ItemVisibility::AuthorOnly))
-    {
+    if detected_integral {
         citation.mode = CitationMode::Integral;
     }
 
     Ok(citation)
 }
 
-fn parse_citation_item(input: &mut &str) -> winnow::Result<CitationItem, ContextError> {
+fn parse_citation_item_no_integral(input: &mut &str) -> winnow::Result<CitationItem, ContextError> {
     let _ = space0.parse_next(input)?;
     let visibility = parse_visibility_modifier.parse_next(input)?;
     let _: char = '@'.parse_next(input)?;
@@ -381,7 +392,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_author_only() {
+    fn test_parse_integral_citation() {
         let parser = DjotParser;
         let content = "+@kuhn1962";
         let citations = parser.parse_citations(content);
@@ -390,7 +401,20 @@ mod tests {
         let (_, _, citation) = &citations[0];
         assert_eq!(citation.mode, CitationMode::Integral);
         assert_eq!(citation.items[0].id, "kuhn1962");
-        assert_eq!(citation.items[0].visibility, ItemVisibility::AuthorOnly);
+        assert_eq!(citation.items[0].visibility, ItemVisibility::Default);
+    }
+
+    #[test]
+    fn test_parse_bracketed_integral_citation() {
+        let parser = DjotParser;
+        let content = "[+@kuhn1962]";
+        let citations = parser.parse_citations(content);
+
+        assert_eq!(citations.len(), 1);
+        let (_, _, citation) = &citations[0];
+        assert_eq!(citation.mode, CitationMode::Integral);
+        assert_eq!(citation.items[0].id, "kuhn1962");
+        assert_eq!(citation.items[0].visibility, ItemVisibility::Default);
     }
 
     #[test]

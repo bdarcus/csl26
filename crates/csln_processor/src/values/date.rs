@@ -9,15 +9,6 @@ impl ComponentValues for TemplateDate {
         hints: &ProcHints,
         options: &RenderOptions<'_>,
     ) -> Option<ProcValues> {
-        // Apply visibility filter: suppress only if not in integral mode
-        if matches!(
-            options.visibility,
-            csln_core::citation::ItemVisibility::AuthorOnly
-        ) && options.mode != csln_core::citation::CitationMode::Integral
-        {
-            return None;
-        }
-
         let date_opt: Option<EdtfString> = match self.date {
             TemplateDateVar::Issued => reference.issued(),
             TemplateDateVar::Accessed => reference.accessed(),

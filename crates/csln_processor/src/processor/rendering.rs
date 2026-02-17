@@ -72,12 +72,23 @@ impl<'a> Renderer<'a> {
     fn ensure_suffix_spacing(&self, suffix: &str) -> String {
         if suffix.is_empty() {
             String::new()
-        } else if suffix.starts_with(char::is_whitespace) {
-            // Already has leading space or whitespace
+        } else if suffix.starts_with(char::is_whitespace) || suffix.starts_with(',') || suffix.starts_with(';') || suffix.starts_with('.') {
+            // Already has leading space or punctuation
             suffix.to_string()
         } else {
             // Add space before suffix to separate from content
             format!(" {}", suffix)
+        }
+    }
+
+    /// Ensure prefix has proper spacing (add space after prefix if it doesn't end with whitespace).
+    fn ensure_prefix_spacing(&self, prefix: &str) -> String {
+        if prefix.is_empty() {
+            String::new()
+        } else if prefix.ends_with(char::is_whitespace) {
+            prefix.to_string()
+        } else {
+            format!("{} ", prefix)
         }
     }
 
@@ -100,7 +111,8 @@ impl<'a> Renderer<'a> {
 
         // Render author in short form
         let author_part = if let Some(authors) = reference.author() {
-            crate::values::format_contributors_short(&authors.to_names_vec(), &options)
+            crate::values::resolve_multilingual_name(&authors, self.config.multilingual.as_ref().and_then(|m| m.name_mode.as_ref()), self.config.multilingual.as_ref().and_then(|m| m.preferred_script.as_ref()), &self.locale.locale);
+            crate::values::format_contributors_short(&reference.author().unwrap().to_names_vec(), &options)
         } else {
             String::new()
         };
@@ -334,12 +346,6 @@ impl<'a> Renderer<'a> {
                         // Check for visibility overrides
                         if matches!(
                             first_item.visibility,
-                            csln_core::citation::ItemVisibility::AuthorOnly
-                        ) {
-                            // Narrative: Kuhn (1962)
-                            format!("{} ({})", author_part, joined_years)
-                        } else if matches!(
-                            first_item.visibility,
                             csln_core::citation::ItemVisibility::SuppressAuthor
                         ) {
                             // Should theoretically not happen in narrative mode, but handle gracefully
@@ -352,19 +358,13 @@ impl<'a> Renderer<'a> {
                     csln_core::citation::CitationMode::NonIntegral => {
                         if matches!(
                             first_item.visibility,
-                            csln_core::citation::ItemVisibility::AuthorOnly
-                        ) {
-                            // Parenthetical AuthorOnly: Kuhn
-                            author_part
-                        } else if matches!(
-                            first_item.visibility,
                             csln_core::citation::ItemVisibility::SuppressAuthor
                         ) {
                             // Parenthetical SuppressAuthor: 1962
                             joined_years
                         } else {
-                            // Default parenthetical: Kuhn,  1962
-                            format!("{},  {}", author_part, joined_years)
+                            // Default parenthetical: Kuhn, 1962
+                            format!("{}, {}", author_part, joined_years)
                         }
                     }
                 };

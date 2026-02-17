@@ -1,5 +1,11 @@
+/*
+SPDX-License-Identifier: MPL-2.0
+SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
+*/
+
 use crate::reference::Reference;
 use crate::values::{ComponentValues, ProcHints, ProcValues, RenderOptions};
+use csln_core::reference::Parent;
 use csln_core::template::{TemplateTitle, TitleType};
 
 impl ComponentValues for TemplateTitle {
@@ -9,48 +15,25 @@ impl ComponentValues for TemplateTitle {
         _hints: &ProcHints,
         options: &RenderOptions<'_>,
     ) -> Option<ProcValues> {
-        // Apply visibility filter: suppress only if not in integral mode
-        if matches!(
-            options.visibility,
-            csln_core::citation::ItemVisibility::AuthorOnly
-        ) && options.mode != csln_core::citation::CitationMode::Integral
-        {
-            return None;
-        }
-
-        let binding = reference.ref_type();
-
-        // Get the raw title based on type
+        // Get the raw title based on type and template requirement
         let raw_title = match self.title {
             TitleType::Primary => reference.title(),
-            TitleType::ParentSerial => {
-                if matches!(
-                    binding.as_str(),
-                    "article-journal"
-                        | "article-magazine"
-                        | "article-newspaper"
-                        | "article"
-                        | "paper-conference"
-                ) {
-                    reference.container_title()
-                } else {
-                    None
-                }
+            TitleType::ParentSerial => match reference {
+                Reference::SerialComponent(r) => match &r.parent {
+                    Parent::Embedded(p) => Some(&p.title),
+                    _ => None,
+                },
+                _ => None,
             }
-            TitleType::ParentMonograph => {
-                if matches!(
-                    binding.as_str(),
-                    "chapter"
-                        | "paper-conference"
-                        | "entry"
-                        | "entry-dictionary"
-                        | "entry-encyclopedia"
-                ) {
-                    reference.container_title()
-                } else {
-                    None
-                }
+            .cloned(),
+            TitleType::ParentMonograph => match reference {
+                Reference::CollectionComponent(r) => match &r.parent {
+                    Parent::Embedded(p) => p.title.as_ref(),
+                    _ => None,
+                },
+                _ => None,
             }
+            .cloned(),
             _ => None,
         };
 
@@ -86,7 +69,7 @@ impl ComponentValues for TemplateTitle {
             }
         });
 
-        value.filter(|s| !s.is_empty()).map(|value| {
+        value.filter(|s: &String| !s.is_empty()).map(|value| {
             use csln_core::options::LinkAnchor;
             let url = crate::values::resolve_effective_url(
                 self.links.as_ref(),

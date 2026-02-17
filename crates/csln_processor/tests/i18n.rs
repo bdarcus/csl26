@@ -432,7 +432,7 @@ fn test_multilingual_rendering_original() {
 
     assert_eq!(
         processor.process_citation(&citation).unwrap(),
-        "東京,  2020"
+        "東京, 2020"
     );
 }
 
@@ -459,7 +459,7 @@ fn test_multilingual_rendering_transliterated() {
 
     assert_eq!(
         processor.process_citation(&citation).unwrap(),
-        "Tokyo,  2020"
+        "Tokyo, 2020"
     );
 }
 
@@ -487,6 +487,6 @@ fn test_multilingual_rendering_combined() {
     // Note: Combined mode for names is currently transliterated only in resolve_multilingual_name
     assert_eq!(
         processor.process_citation(&citation).unwrap(),
-        "Tokyo,  2020"
+        "Tokyo, 2020"
     );
 }

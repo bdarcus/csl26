@@ -34,7 +34,6 @@ Modifiers appear immediately before the `@` symbol.
 | Modifier | Description | Syntax | Result (Non-Integral) | Result (Integral) |
 |----------|-------------|--------|-----------------------|-------------------|
 | `-` | Suppress Author | `[-@key]` | (2023) | (2023) |
-| `+` | Author Only / Integral | `[+@key]` | Smith | Smith (2023) |
 | `!` | Hidden (Nocite) | `[!@key]` | *bibliography only* | *bibliography only* |
 
 ### Locators (Pinpoints)

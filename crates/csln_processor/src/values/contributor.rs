@@ -19,7 +19,6 @@ impl ComponentValues for TemplateContributor {
             options.visibility,
             csln_core::citation::ItemVisibility::SuppressAuthor
         ) {
-            return None;
         }
 
         // Resolve effective rendering options (base merged with type-specific override)

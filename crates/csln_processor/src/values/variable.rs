@@ -9,15 +9,6 @@ impl ComponentValues for TemplateVariable {
         _hints: &ProcHints,
         options: &RenderOptions<'_>,
     ) -> Option<ProcValues> {
-        // Apply visibility filter: suppress only if not in integral mode
-        if matches!(
-            options.visibility,
-            csln_core::citation::ItemVisibility::AuthorOnly
-        ) && options.mode != csln_core::citation::CitationMode::Integral
-        {
-            return None;
-        }
-
         let value = match self.variable {
             SimpleVariable::Doi => reference.doi(),
             SimpleVariable::Url => reference.url().map(|u| u.to_string()),

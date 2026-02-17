@@ -42,8 +42,6 @@ pub enum ItemVisibility {
     Default,
     /// Suppress the author name: "(2020)".
     SuppressAuthor,
-    /// Show only the author name: "Smith".
-    AuthorOnly,
     /// Hidden from output, but included in bibliography (nocite).
     Hidden,
 }

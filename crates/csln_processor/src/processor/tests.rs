@@ -126,7 +126,7 @@ fn test_process_citation() {
     };
 
     let result = processor.process_citation(&citation).unwrap();
-    assert_eq!(result, "(Kuhn,  1962)");
+    assert_eq!(result, "(Kuhn, 1962)");
 }
 
 #[test]
@@ -737,10 +737,10 @@ fn test_citation_grouping_same_author() {
         })
         .unwrap();
 
-    // Should be grouped: "Kuhn,  1962a,  1962b" not "Kuhn,  1962a; Kuhn,  1962b"
+    // Should be grouped: "Kuhn, 1962a, 1962b" not "Kuhn, 1962a; Kuhn, 1962b"
     // Year suffix assigned by title order: "Function..." < "Structure..."
     assert!(
-        result.contains("Kuhn,  1962a, 1962b") || result.contains("Kuhn,  1962b, 1962a"),
+        result.contains("Kuhn, 1962a, 1962b") || result.contains("Kuhn, 1962b, 1962a"),
         "Same-author citations should be grouped. Got: {}",
         result
     );
@@ -1076,36 +1076,22 @@ fn test_citation_visibility_modifiers() {
         ..Default::default()
     };
     let res_suppress = processor.process_citation(&cit_suppress).unwrap();
-    // Default APA style: (Kuhn,  1962). Suppress Author: (1962).
+    // Default APA style: (Kuhn, 1962). Suppress Author: (1962).
     assert_eq!(res_suppress, "(1962)");
 
-    // 2. Author Only (Integral)
-    let cit_author = Citation {
+    // 2. Integral Citation
+    let cit_integral = Citation {
         mode: CitationMode::Integral,
         items: vec![crate::reference::CitationItem {
             id: "kuhn1962".to_string(),
-            visibility: ItemVisibility::AuthorOnly,
+            visibility: ItemVisibility::Default,
             ..Default::default()
         }],
         ..Default::default()
     };
-    let res_author = processor.process_citation(&cit_author).unwrap();
-    // Author Only in integral mode for author-date styles: Kuhn (1962)
-    assert_eq!(res_author, "Kuhn (1962)");
-
-    // 2b. Author Only (Non-Integral)
-    let cit_author_non = Citation {
-        mode: CitationMode::NonIntegral,
-        items: vec![crate::reference::CitationItem {
-            id: "kuhn1962".to_string(),
-            visibility: ItemVisibility::AuthorOnly,
-            ..Default::default()
-        }],
-        ..Default::default()
-    };
-    let res_author_non = processor.process_citation(&cit_author_non).unwrap();
-    // Author Only in parenthetical mode: Kuhn
-    assert_eq!(res_author_non, "Kuhn");
+    let res_integral = processor.process_citation(&cit_integral).unwrap();
+    // Integral mode for author-date styles: Kuhn (1962)
+    assert_eq!(res_integral, "Kuhn (1962)");
 
     // 3. Hidden (nocite)
     let cit_hidden = Citation {
@@ -1136,7 +1122,7 @@ fn test_citation_visibility_modifiers() {
     };
     let res_mixed = processor.process_citation(&cit_mixed).unwrap();
     // One is hidden, only one Kuhn shows
-    assert_eq!(res_mixed, "(Kuhn,  1962)");
+    assert_eq!(res_mixed, "(Kuhn, 1962)");
 }
 
 #[test]

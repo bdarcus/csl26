@@ -315,13 +315,7 @@ impl Processor {
         let citation_suffix = citation.suffix.as_deref().unwrap_or("");
 
         // Apply wrap or prefix/suffix
-        let (open, close) = if matches!(citation.mode, csln_core::citation::CitationMode::Integral)
-            || citation.items.iter().any(|i| {
-                matches!(
-                    i.visibility,
-                    csln_core::citation::ItemVisibility::AuthorOnly
-                )
-            }) {
+        let (open, close) = if matches!(citation.mode, csln_core::citation::CitationMode::Integral) {
             ("", "")
         } else {
             match wrap {
@@ -547,15 +541,8 @@ impl Processor {
             } else {
                 output
             }
-        } else if *wrap != WrapPunctuation::None
-            && !citation.items.iter().any(|i| {
-                matches!(
-                    i.visibility,
-                    csln_core::citation::ItemVisibility::AuthorOnly
-                )
-            })
-        {
-            // Non-integral mode: apply wrap, UNLESS we have AuthorOnly visibility
+        } else if *wrap != WrapPunctuation::None {
+            // Non-integral mode: apply wrap
             fmt.wrap_punctuation(wrap, output)
         } else if !spec_prefix.is_empty() || !spec_suffix.is_empty() {
             fmt.affix(spec_prefix, output, spec_suffix)
