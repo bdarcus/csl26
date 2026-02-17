@@ -145,6 +145,17 @@ pub enum WrapPunctuation {
     None,
 }
 
+/// Type-specific rendering overrides for components.
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+#[serde(untagged)]
+pub enum ComponentOverride {
+    /// A full component replacement for specific reference types.
+    Component(Box<TemplateComponent>),
+    /// Simple rendering options override.
+    Rendering(Rendering),
+}
+
 /// A template component - the building blocks of citation/bibliography templates.
 ///
 /// Each variant handles a specific data type with appropriate formatting options.
@@ -183,7 +194,7 @@ impl TemplateComponent {
     }
 
     /// Get the type-specific rendering overrides for this component.
-    pub fn overrides(&self) -> Option<&HashMap<String, Rendering>> {
+    pub fn overrides(&self) -> Option<&HashMap<String, ComponentOverride>> {
         match self {
             TemplateComponent::Contributor(c) => c.overrides.as_ref(),
             TemplateComponent::Date(d) => d.overrides.as_ref(),
@@ -267,7 +278,7 @@ pub struct TemplateContributor {
     pub links: Option<crate::options::LinksConfig>,
     /// Type-specific rendering overrides.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub overrides: Option<HashMap<String, Rendering>>,
+    pub overrides: Option<HashMap<String, ComponentOverride>>,
     /// Custom user-defined fields for extensions.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub custom: Option<HashMap<String, serde_json::Value>>,
@@ -364,7 +375,7 @@ pub struct TemplateDate {
     pub links: Option<crate::options::LinksConfig>,
     /// Type-specific rendering overrides.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub overrides: Option<HashMap<String, Rendering>>,
+    pub overrides: Option<HashMap<String, ComponentOverride>>,
     /// Custom user-defined fields for extensions.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub custom: Option<HashMap<String, serde_json::Value>>,
@@ -410,7 +421,7 @@ pub struct TemplateTitle {
     pub links: Option<crate::options::LinksConfig>,
     /// Type-specific rendering overrides.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub overrides: Option<HashMap<String, Rendering>>,
+    pub overrides: Option<HashMap<String, ComponentOverride>>,
     /// Custom user-defined fields for extensions.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub custom: Option<HashMap<String, serde_json::Value>>,
@@ -458,7 +469,7 @@ pub struct TemplateNumber {
     pub links: Option<crate::options::LinksConfig>,
     /// Type-specific rendering overrides.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub overrides: Option<HashMap<String, Rendering>>,
+    pub overrides: Option<HashMap<String, ComponentOverride>>,
     /// Custom user-defined fields for extensions.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub custom: Option<HashMap<String, serde_json::Value>>,
@@ -517,7 +528,7 @@ pub struct TemplateVariable {
     pub links: Option<crate::options::LinksConfig>,
     /// Type-specific rendering overrides. Use `suppress: true` to hide for certain types.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub overrides: Option<HashMap<String, Rendering>>,
+    pub overrides: Option<HashMap<String, ComponentOverride>>,
     /// Unknown fields captured for forward compatibility.
     #[serde(flatten)]
     pub _extra: HashMap<String, serde_json::Value>,
@@ -574,7 +585,7 @@ pub struct TemplateTerm {
     pub rendering: Rendering,
     /// Type-specific rendering overrides.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub overrides: Option<HashMap<String, Rendering>>,
+    pub overrides: Option<HashMap<String, ComponentOverride>>,
     /// Custom user-defined fields for extensions.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub custom: Option<HashMap<String, serde_json::Value>>,
@@ -592,7 +603,7 @@ pub struct TemplateList {
     pub rendering: Rendering,
     /// Type-specific rendering overrides.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub overrides: Option<HashMap<String, Rendering>>,
+    pub overrides: Option<HashMap<String, ComponentOverride>>,
     /// Custom user-defined fields for extensions.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub custom: Option<HashMap<String, serde_json::Value>>,

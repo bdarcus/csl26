@@ -229,21 +229,22 @@ pub fn reorder_chapters_for_apa(
                 let overrides = ed
                     .overrides
                     .get_or_insert_with(std::collections::HashMap::new);
+                use csln_core::template::ComponentOverride;
                 overrides.insert(
                     "chapter".to_string(),
-                    csln_core::template::Rendering {
+                    ComponentOverride::Rendering(csln_core::template::Rendering {
                         prefix: Some("In ".to_string()),
                         suffix: Some(", ".to_string()),
                         ..Default::default()
-                    },
+                    }),
                 );
                 overrides.insert(
                     "paper-conference".to_string(),
-                    csln_core::template::Rendering {
+                    ComponentOverride::Rendering(csln_core::template::Rendering {
                         prefix: Some("In ".to_string()),
                         suffix: Some(", ".to_string()),
                         ..Default::default()
-                    },
+                    }),
                 );
             }
         }
@@ -292,13 +293,14 @@ pub fn reorder_chapters_for_chicago(
             if let TemplateComponent::Title(ref mut title) = pm_with_prefix {
                 // Use type-specific override to add "In " prefix and ", " suffix for chapters
                 let mut overrides = title.overrides.clone().unwrap_or_default();
+                use csln_core::template::ComponentOverride;
                 overrides.insert(
                     "chapter".to_string(),
-                    csln_core::template::Rendering {
+                    ComponentOverride::Rendering(csln_core::template::Rendering {
                         prefix: Some("In ".to_string()),
                         suffix: Some(", ".to_string()),
                         ..Default::default()
-                    },
+                    }),
                 );
                 title.overrides = Some(overrides);
             }
@@ -312,12 +314,13 @@ pub fn reorder_chapters_for_chicago(
 
                 // Add override to change suffix for chapters
                 let mut overrides = contrib.overrides.clone().unwrap_or_default();
+                use csln_core::template::ComponentOverride;
                 overrides.insert(
                     "chapter".to_string(),
-                    csln_core::template::Rendering {
+                    ComponentOverride::Rendering(csln_core::template::Rendering {
                         suffix: Some(". ".to_string()),
                         ..Default::default()
-                    },
+                    }),
                 );
                 contrib.overrides = Some(overrides);
             }
@@ -364,13 +367,14 @@ pub fn propagate_list_overrides(components: &mut [TemplateComponent]) {
             for item in items.iter_mut() {
                 if let Some(overrides) = get_component_overrides_mut(item) {
                     if !overrides.contains_key(type_key) {
+                        use csln_core::template::ComponentOverride;
                         // Add the override with suppress: false
                         overrides.insert(
                             type_key.clone(),
-                            Rendering {
+                            ComponentOverride::Rendering(Rendering {
                                 suppress: Some(false),
                                 ..Default::default()
-                            },
+                            }),
                         );
                     }
                 }
@@ -380,7 +384,7 @@ pub fn propagate_list_overrides(components: &mut [TemplateComponent]) {
 
     fn get_component_overrides(
         comp: &TemplateComponent,
-    ) -> Option<&std::collections::HashMap<String, Rendering>> {
+    ) -> Option<&std::collections::HashMap<String, csln_core::template::ComponentOverride>> {
         match comp {
             TemplateComponent::Contributor(c) => c.overrides.as_ref(),
             TemplateComponent::Date(d) => d.overrides.as_ref(),
@@ -393,7 +397,8 @@ pub fn propagate_list_overrides(components: &mut [TemplateComponent]) {
 
     fn get_component_overrides_mut(
         comp: &mut TemplateComponent,
-    ) -> Option<&mut std::collections::HashMap<String, Rendering>> {
+    ) -> Option<&mut std::collections::HashMap<String, csln_core::template::ComponentOverride>>
+    {
         match comp {
             TemplateComponent::Contributor(c) => {
                 if c.overrides.is_none() {
@@ -445,12 +450,13 @@ pub fn unsuppress_for_type(components: &mut [TemplateComponent], item_type: &str
                 let overrides = v
                     .overrides
                     .get_or_insert_with(std::collections::HashMap::new);
+                use csln_core::template::ComponentOverride;
                 overrides.insert(
                     item_type.to_string(),
-                    csln_core::template::Rendering {
+                    ComponentOverride::Rendering(csln_core::template::Rendering {
                         suppress: Some(false),
                         ..Default::default()
-                    },
+                    }),
                 );
             }
             TemplateComponent::List(list) => {

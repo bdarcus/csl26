@@ -229,11 +229,10 @@ pub fn get_effective_rendering(component: &ProcTemplateComponent) -> Rendering {
     // 3. Layer type-specific overrides
     if let Some(ref_type) = &component.ref_type {
         if let Some(overrides) = component.template_component.overrides() {
-            if let Some(type_override) = overrides.get(ref_type) {
-                effective.merge(type_override);
-            } else if let Some(default_override) = overrides.get("default") {
-                // Fall back to "default" key when specific type not found
-                effective.merge(default_override);
+            use csln_core::template::ComponentOverride;
+            let ov = overrides.get(ref_type).or_else(|| overrides.get("default"));
+            if let Some(ComponentOverride::Rendering(r)) = ov {
+                effective.merge(r);
             }
         }
     }

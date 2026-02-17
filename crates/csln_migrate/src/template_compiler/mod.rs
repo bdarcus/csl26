@@ -677,19 +677,22 @@ impl TemplateCompiler {
         let base_rendering = self.get_component_rendering(new_comp);
         let new_overrides = self.get_component_overrides(new_comp);
 
+        use csln_core::template::ComponentOverride;
+
         for item_type in current_types {
             let type_str = self.item_type_to_string(item_type);
-            let mut rendering = new_overrides
+            let mut override_val = new_overrides
                 .as_ref()
                 .and_then(|ovr| ovr.get(&type_str))
                 .cloned()
-                .unwrap_or_else(|| base_rendering.clone());
+                .unwrap_or_else(|| ComponentOverride::Rendering(base_rendering.clone()));
 
-            if rendering.suppress.is_none() || rendering.suppress == Some(true) {
-                rendering.suppress = Some(false);
+            if let ComponentOverride::Rendering(ref mut rendering) = override_val {
+                if rendering.suppress.is_none() || rendering.suppress == Some(true) {
+                    rendering.suppress = Some(false);
+                }
+                self.add_override_to_component(existing, type_str, rendering.clone());
             }
-
-            self.add_override_to_component(existing, type_str, rendering);
         }
     }
 
@@ -902,9 +905,12 @@ impl TemplateCompiler {
         // If component has suppress=true by default, only count types with suppress=false overrides
         if base_rendering.suppress == Some(true) {
             if let Some(ovr) = overrides {
-                for (type_str, rendering) in ovr {
-                    if rendering.suppress != Some(true) {
-                        visible_types.push(type_str);
+                use csln_core::template::ComponentOverride;
+                for (type_str, ov) in ovr {
+                    if let ComponentOverride::Rendering(rendering) = ov {
+                        if rendering.suppress != Some(true) {
+                            visible_types.push(type_str);
+                        }
                     }
                 }
             }
@@ -1511,7 +1517,13 @@ impl TemplateCompiler {
                 Some(
                     var.overrides
                         .iter()
-                        .map(|(t, fmt)| (self.item_type_to_string(t), self.convert_formatting(fmt)))
+                        .map(|(t, fmt)| {
+                            use csln_core::template::ComponentOverride;
+                            (
+                                self.item_type_to_string(t),
+                                ComponentOverride::Rendering(self.convert_formatting(fmt)),
+                            )
+                        })
                         .collect(),
                 )
             };
@@ -1533,7 +1545,13 @@ impl TemplateCompiler {
                 Some(
                     var.overrides
                         .iter()
-                        .map(|(t, fmt)| (self.item_type_to_string(t), self.convert_formatting(fmt)))
+                        .map(|(t, fmt)| {
+                            use csln_core::template::ComponentOverride;
+                            (
+                                self.item_type_to_string(t),
+                                ComponentOverride::Rendering(self.convert_formatting(fmt)),
+                            )
+                        })
                         .collect(),
                 )
             };
@@ -1560,7 +1578,13 @@ impl TemplateCompiler {
                 Some(
                     var.overrides
                         .iter()
-                        .map(|(t, fmt)| (self.item_type_to_string(t), self.convert_formatting(fmt)))
+                        .map(|(t, fmt)| {
+                            use csln_core::template::ComponentOverride;
+                            (
+                                self.item_type_to_string(t),
+                                ComponentOverride::Rendering(self.convert_formatting(fmt)),
+                            )
+                        })
                         .collect(),
                 )
             };
@@ -1832,7 +1856,7 @@ impl TemplateCompiler {
     fn get_component_overrides(
         &self,
         component: &TemplateComponent,
-    ) -> Option<HashMap<String, Rendering>> {
+    ) -> Option<HashMap<String, csln_core::template::ComponentOverride>> {
         match component {
             TemplateComponent::Contributor(c) => c.overrides.clone(),
             TemplateComponent::Date(d) => d.overrides.clone(),
@@ -1857,41 +1881,43 @@ impl TemplateCompiler {
             return;
         }
 
+        use csln_core::template::ComponentOverride;
+
         match component {
             TemplateComponent::Contributor(c) => {
                 c.overrides
                     .get_or_insert_with(HashMap::new)
-                    .insert(type_str, rendering);
+                    .insert(type_str, ComponentOverride::Rendering(rendering));
             }
             TemplateComponent::Date(d) => {
                 d.overrides
                     .get_or_insert_with(HashMap::new)
-                    .insert(type_str, rendering);
+                    .insert(type_str, ComponentOverride::Rendering(rendering));
             }
             TemplateComponent::Term(t) => {
                 t.overrides
                     .get_or_insert_with(HashMap::new)
-                    .insert(type_str, rendering);
+                    .insert(type_str, ComponentOverride::Rendering(rendering));
             }
             TemplateComponent::Number(n) => {
                 n.overrides
                     .get_or_insert_with(HashMap::new)
-                    .insert(type_str, rendering);
+                    .insert(type_str, ComponentOverride::Rendering(rendering));
             }
             TemplateComponent::Title(t) => {
                 t.overrides
                     .get_or_insert_with(HashMap::new)
-                    .insert(type_str, rendering);
+                    .insert(type_str, ComponentOverride::Rendering(rendering));
             }
             TemplateComponent::Variable(v) => {
                 v.overrides
                     .get_or_insert_with(HashMap::new)
-                    .insert(type_str, rendering);
+                    .insert(type_str, ComponentOverride::Rendering(rendering));
             }
             TemplateComponent::List(l) => {
                 l.overrides
                     .get_or_insert_with(HashMap::new)
-                    .insert(type_str, rendering);
+                    .insert(type_str, ComponentOverride::Rendering(rendering));
             }
             _ => {} // Future variants
         }

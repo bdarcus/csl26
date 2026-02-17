@@ -17,12 +17,15 @@ impl ComponentValues for TemplateContributor {
         // Resolve effective rendering options (base merged with type-specific override)
         let mut effective_rendering = self.rendering.clone();
         if let Some(overrides) = &self.overrides {
+            use csln_core::template::ComponentOverride;
             // Apply "all" wildcard override first
-            if let Some(all_override) = overrides.get("all") {
+            if let Some(ComponentOverride::Rendering(all_override)) = overrides.get("all") {
                 effective_rendering.merge(all_override);
             }
             // Then apply specific type override
-            if let Some(type_override) = overrides.get(&reference.ref_type()) {
+            if let Some(ComponentOverride::Rendering(type_override)) =
+                overrides.get(&reference.ref_type())
+            {
                 effective_rendering.merge(type_override);
             }
         }
@@ -271,12 +274,15 @@ impl ComponentValues for TemplateContributor {
         // Resolve effective rendering options (base merged with type-specific override)
         let mut effective_rendering = self.rendering.clone();
         if let Some(overrides) = &self.overrides {
+            use csln_core::template::ComponentOverride;
             // Apply "all" wildcard override first
-            if let Some(all_override) = overrides.get("all") {
+            if let Some(ComponentOverride::Rendering(all_override)) = overrides.get("all") {
                 effective_rendering.merge(all_override);
             }
             // Then apply specific type override
-            if let Some(type_override) = overrides.get(&reference.ref_type()) {
+            if let Some(ComponentOverride::Rendering(type_override)) =
+                overrides.get(&reference.ref_type())
+            {
                 effective_rendering.merge(type_override);
             }
         }
