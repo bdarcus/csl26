@@ -8,6 +8,7 @@ description = "CSLN citation and bibliography processor"
 
 [lib]
 name = "csln_processor"
+crate-type = ["rlib", "cdylib"]
 
 [dependencies]
 csln_core = { path = "../csln_core" }
@@ -24,6 +25,9 @@ clap = { version = "4.4", features = ["derive"] }
 regex = "1.10"
 winnow = "0.7"
 jotdown = "0.5"
+
+[features]
+ffi = []
 
 [dev-dependencies]
 criterion = { version = "0.5", features = ["html_reports"] }

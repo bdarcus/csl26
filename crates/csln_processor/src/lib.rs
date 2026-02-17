@@ -65,6 +65,8 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 //! ```
 
 pub mod error;
+#[cfg(feature = "ffi")]
+pub mod ffi;
 pub mod grouping;
 pub mod io;
 pub mod processor;
