@@ -609,6 +609,27 @@
                     <p class="text-xs text-slate-500">Citation list format.</p>
                 </a>
             </div>
+
+            <!-- IDE Integration Note -->
+            <div class="mt-12 p-6 bg-slate-50 rounded-xl border border-slate-200 max-w-3xl mx-auto text-left">
+                <h4 class="font-bold text-slate-900 mb-3 flex items-center gap-2 text-sm">
+                    <span class="material-icons text-primary text-lg">tips_and_updates</span>
+                    Editor Integration
+                </h4>
+                <p class="text-sm text-slate-600 mb-4">
+                    To get real-time validation and autocomplete in editors with YAML language server support (like VS Code with the Red Hat YAML extension), 
+                    add this comment as the first line of your YAML file:
+                </p>
+                <div class="bg-slate-900 rounded-lg p-4 font-mono text-xs text-slate-300 shadow-md overflow-x-auto">
+                    <span class="text-slate-500"># yaml-language-server: $schema=https://bdarcus.github.io/csl26/schemas/style.json</span>
+                </div>
+                <p class="text-[10px] text-slate-400 mt-4 font-mono italic">
+                    Note: Replace <code class="text-slate-600 px-0.5 rounded">style.json</code> with 
+                    <code class="text-slate-600 px-0.5 rounded">bib.json</code>, 
+                    <code class="text-slate-600 px-0.5 rounded">locale.json</code>, or 
+                    <code class="text-slate-600 px-0.5 rounded">citations.json</code> depending on the file type.
+                </p>
+            </div>
         </div>
     </section>
 
