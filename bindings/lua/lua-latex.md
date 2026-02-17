@@ -9,7 +9,7 @@ The integration follows a "Hybrid Rust-Lua" model:
 2.  **FFI Layer (C)**: A thin C-compatible interface exports the core functions.
 3.  **Lua Binding**: A LuaJIT FFI script loads the shared library and provides a clean Lua API.
 
-## Benefits for LuaLaTeX
+## Benefits
 
 *   **Performance**: Rendering thousands of citations is nearly instantaneous, avoiding the performance bottlenecks of pure-Lua CSL implementations.
 *   **Memory Efficiency**: The Rust processor manages its own state, and Lua only interacts with it through small JSON fragments.
