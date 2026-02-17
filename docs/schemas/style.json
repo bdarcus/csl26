@@ -75,6 +75,7 @@
       "type": "string"
     }
   },
+  "additionalProperties": false,
   "definitions": {
     "AndOptions": {
       "description": "Conjunction options between contributors.",
@@ -200,7 +201,8 @@
           "description": "Whether to suppress the trailing period after URLs/DOIs. Default behavior is to add a period (Chicago, MLA style). Set to true to suppress the period (APA 7th, Bluebook style).",
           "type": "boolean"
         }
-      }
+      },
+      "additionalProperties": false
     },
     "BibliographyGroup": {
       "description": "A bibliography group with selector, optional heading, and per-group sorting.\n\nGroups allow styles to divide bibliographies into labeled sections with distinct sorting rules. Items match the first group whose selector evaluates to true (first-match semantics).\n\n# Examples\n\n```yaml groups: - id: vietnamese heading: \"Tài liệu tiếng Việt\" selector: field: language: vi sort: template: - key: author sort-order: given-family ```",
@@ -340,7 +342,8 @@
             }
           ]
         }
-      }
+      },
+      "additionalProperties": false
     },
     "CitationSpec": {
       "description": "Citation specification.",
@@ -445,7 +448,8 @@
             }
           ]
         }
-      }
+      },
+      "additionalProperties": false
     },
     "CitedStatus": {
       "description": "Citation status filter.",
@@ -625,7 +629,8 @@
             }
           ]
         }
-      }
+      },
+      "additionalProperties": false
     },
     "ContributorConfig": {
       "description": "Contributor formatting configuration.",
@@ -755,7 +760,8 @@
             "null"
           ]
         }
-      }
+      },
+      "additionalProperties": false
     },
     "ContributorForm": {
       "description": "How to render contributor names.",
@@ -834,7 +840,8 @@
             "null"
           ]
         }
-      }
+      },
+      "additionalProperties": false
     },
     "DateForm": {
       "description": "Date rendering forms.",
@@ -1577,7 +1584,8 @@
             }
           ]
         }
-      }
+      },
+      "additionalProperties": false
     },
     "RoleLabel": {
       "description": "Configuration for role labels (e.g., \"eds.\", \"trans.\").",
@@ -1809,7 +1817,12 @@
         "dimensions",
         "scale",
         "version",
-        "locator"
+        "locator",
+        "infix",
+        "authority",
+        "reporter",
+        "page",
+        "volume"
       ]
     },
     "Sort": {
@@ -2013,7 +2026,8 @@
             "$ref": "#/definitions/SubstituteKey"
           }
         }
-      }
+      },
+      "additionalProperties": false
     },
     "SubstituteConfig": {
       "description": "Substitution rules for missing author data.",
@@ -2296,7 +2310,8 @@
             }
           ]
         }
-      }
+      },
+      "additionalProperties": false
     },
     "TemplateDate": {
       "description": "A date component for rendering dates.",
@@ -2439,7 +2454,8 @@
             }
           ]
         }
-      }
+      },
+      "additionalProperties": false
     },
     "TemplateList": {
       "description": "A list component for grouping multiple items with a delimiter.",
@@ -2570,7 +2586,8 @@
             }
           ]
         }
-      }
+      },
+      "additionalProperties": false
     },
     "TemplateNumber": {
       "description": "A number component (volume, issue, pages, etc.).",
@@ -2719,7 +2736,8 @@
             }
           ]
         }
-      }
+      },
+      "additionalProperties": false
     },
     "TemplatePreset": {
       "description": "Available embedded template presets.\n\nThese reference battle-tested templates for common citation styles. See `csln_core::embedded` for the actual template implementations.",
@@ -2893,7 +2911,8 @@
             }
           ]
         }
-      }
+      },
+      "additionalProperties": false
     },
     "TemplateTitle": {
       "description": "A title component.",
@@ -3032,7 +3051,8 @@
             }
           ]
         }
-      }
+      },
+      "additionalProperties": false
     },
     "TemplateVariable": {
       "description": "A simple variable component (DOI, ISBN, URL, etc.).",
@@ -3215,7 +3235,8 @@
             "null"
           ]
         }
-      }
+      },
+      "additionalProperties": false
     },
     "TitleType": {
       "description": "Types of titles.",
@@ -3328,7 +3349,8 @@
             "type": "string"
           }
         }
-      }
+      },
+      "additionalProperties": false
     },
     "TypeSelector": {
       "description": "Type-based selector.",
