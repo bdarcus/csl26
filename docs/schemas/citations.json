@@ -71,13 +71,6 @@
           "description": "The reference ID (citekey).",
           "type": "string"
         },
-        "infix": {
-          "description": "Infix text between author and year in integral citations",
-          "type": [
-            "string",
-            "null"
-          ]
-        },
         "label": {
           "description": "Locator type (page, chapter, etc.)",
           "anyOf": [
@@ -154,13 +147,6 @@
           "type": "string",
           "enum": [
             "suppress-author"
-          ]
-        },
-        {
-          "description": "Show only the author name: \"Smith\".",
-          "type": "string",
-          "enum": [
-            "author-only"
           ]
         },
         {

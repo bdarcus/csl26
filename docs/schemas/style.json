@@ -1809,8 +1809,7 @@
         "dimensions",
         "scale",
         "version",
-        "locator",
-        "infix"
+        "locator"
       ]
     },
     "Sort": {
