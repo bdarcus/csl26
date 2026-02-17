@@ -15,7 +15,7 @@ use winnow::prelude::*;
 use winnow::token::{take_until, take_while};
 
 /// A parser for Djot citations using winnow.
-/// Syntax: `[prefix ; @key1; @key2 ; suffix]` or `@key[locator]`
+/// Syntax: `[prefix ; @key1; @key2 ; suffix]`
 pub struct DjotParser;
 
 impl Default for DjotParser {
@@ -46,29 +46,16 @@ impl CitationParser for DjotParser {
 
         while !input.is_empty() {
             let next_bracket = input.find('[');
-            let next_at = input.find('@');
-            let start_at = next_at.map(|idx| {
-                if idx > 0 {
-                    let prev = input.as_bytes()[idx - 1] as char;
-                    if prev == '-' || prev == '+' || prev == '!' {
-                        return idx - 1;
-                    }
-                }
-                idx
-            });
-
-            let start_pos = match (next_bracket, start_at) {
-                (Some(b), Some(a)) => std::cmp::min(b, a),
-                (Some(b), None) => b,
-                (None, Some(a)) => a,
-                (None, None) => break,
+            let start_pos = match next_bracket {
+                Some(b) => b,
+                None => break,
             };
 
             let potential = &input[start_pos..];
             let mut p_input = potential;
 
-            // Try to parse the citation structure
-            if let Ok(citation) = parse_any_citation(&mut p_input) {
+            // Try to parse the citation structure: [content]
+            if let Ok(citation) = parse_parenthetical_citation(&mut p_input) {
                 let consumed = potential.len() - p_input.len();
                 let end_pos = start_pos + consumed;
                 results.push((offset + start_pos, offset + end_pos, citation));
@@ -88,59 +75,12 @@ impl CitationParser for DjotParser {
     }
 }
 
-/// Parse either parenthetical `[...]` or narrative `@key [...]`
-fn parse_any_citation(input: &mut &str) -> winnow::Result<Citation, ContextError> {
-    alt((parse_parenthetical_citation, parse_narrative_citation)).parse_next(input)
-}
-
 /// Parse `[content]`
 fn parse_parenthetical_citation(input: &mut &str) -> winnow::Result<Citation, ContextError> {
     let _ = '['.parse_next(input)?;
     let citation = parse_citation_content.parse_next(input)?;
     let _ = ']'.parse_next(input)?;
     Ok(citation)
-}
-
-/// Parse `@key[locator]`, or just `@key`
-fn parse_narrative_citation(input: &mut &str) -> winnow::Result<Citation, ContextError> {
-    let is_integral = parse_integral_modifier.parse_next(input)?;
-    let visibility = parse_visibility_modifier.parse_next(input)?;
-    let _: char = '@'.parse_next(input)?;
-    let key: &str =
-        take_while(1.., |c: char| c.is_alphanumeric() || c == '_' || c == '-').parse_next(input)?;
-
-    let mut item = CitationItem {
-        id: key.to_string(),
-        visibility,
-        ..Default::default()
-    };
-
-    // Try to parse optional locator in brackets: [locator]
-    let mut input_checkpoint = *input;
-    let locator_res: winnow::Result<&str, ContextError> =
-        parse_citation_locator_brackets(&mut input_checkpoint);
-
-    let mut citation = Citation {
-        mode: if is_integral { CitationMode::Integral } else { CitationMode::Integral }, // Narrative shorthand is ALWAYS integral
-        ..Default::default()
-    };
-
-    if let Ok(locator_part) = locator_res {
-        *input = input_checkpoint;
-        parse_hybrid_locators(&mut item, locator_part);
-    }
-
-    citation.items.push(item);
-    Ok(citation)
-}
-
-fn parse_citation_locator_brackets<'a>(
-    input: &mut &'a str,
-) -> winnow::Result<&'a str, ContextError> {
-    let _ = '['.parse_next(input)?;
-    let l = take_until(0.., ']').parse_next(input)?;
-    let _ = ']'.parse_next(input)?;
-    Ok(l)
 }
 
 fn parse_citation_content(input: &mut &str) -> winnow::Result<Citation, ContextError> {
@@ -337,21 +277,6 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_narrative_with_locator() {
-        let parser = DjotParser;
-        let content = "@kuhn1962[p. 10]";
-        let citations = parser.parse_citations(content);
-
-        assert_eq!(citations.len(), 1);
-        let (_, _, citation) = &citations[0];
-        assert_eq!(citation.mode, CitationMode::Integral);
-        assert_eq!(citation.items.len(), 1);
-        assert_eq!(citation.items[0].id, "kuhn1962");
-        assert_eq!(citation.items[0].locator, Some("10".to_string()));
-        assert_eq!(citation.items[0].label, Some(LocatorType::Page));
-    }
-
-    #[test]
     fn test_parse_structured_locator() {
         let parser = DjotParser;
         let content = "[@kuhn1962, section: 5]";
@@ -392,19 +317,6 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_integral_citation() {
-        let parser = DjotParser;
-        let content = "+@kuhn1962";
-        let citations = parser.parse_citations(content);
-
-        assert_eq!(citations.len(), 1);
-        let (_, _, citation) = &citations[0];
-        assert_eq!(citation.mode, CitationMode::Integral);
-        assert_eq!(citation.items[0].id, "kuhn1962");
-        assert_eq!(citation.items[0].visibility, ItemVisibility::Default);
-    }
-
-    #[test]
     fn test_parse_bracketed_integral_citation() {
         let parser = DjotParser;
         let content = "[+@kuhn1962]";
@@ -420,21 +332,22 @@ mod tests {
     #[test]
     fn test_parse_global_affixes_modern() {
         let parser = DjotParser;
-        let content = "[see ; @doe99; and references therein]";
+        let content = "[see ; @doe99; @smith00; and references therein]";
         let citations = parser.parse_citations(content);
 
         assert_eq!(citations.len(), 1);
         let (_, _, citation) = &citations[0];
         assert_eq!(citation.prefix, Some("see".to_string()));
-        assert_eq!(citation.items.len(), 1);
+        assert_eq!(citation.items.len(), 2);
         assert_eq!(citation.items[0].id, "doe99");
+        assert_eq!(citation.items[1].id, "smith00");
         assert_eq!(citation.suffix, Some("and references therein".to_string()));
     }
 
     #[test]
     fn test_parse_hidden_nocite() {
         let parser = DjotParser;
-        let content = "!@kuhn1962";
+        let content = "[!@kuhn1962]";
         let citations = parser.parse_citations(content);
 
         assert_eq!(citations.len(), 1);
