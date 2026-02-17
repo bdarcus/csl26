@@ -30,9 +30,7 @@ impl<'a> SelectorEvaluator<'a> {
     ///
     /// * `cited_ids` - Set of reference IDs cited visibly
     pub fn new(cited_ids: &'a HashSet<String>) -> Self {
-        Self {
-            cited_ids,
-        }
+        Self { cited_ids }
     }
 
     /// Evaluate a selector against a reference.

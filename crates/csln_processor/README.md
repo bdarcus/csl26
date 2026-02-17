@@ -30,11 +30,11 @@ The processor includes a native parser for Djot documents that supports a rich c
  
  Modifiers appear immediately before the `@` symbol.
  
- | Modifier | Type | Description | Syntax | Result (Non-Integral) | Result (Integral) |
- |----------|------|-------------|--------|-----------------------|-------------------|
- | `-` | Visibility | Suppress Author | `[-@key]` | (2023) | (2023) |
- | `+` | Mode | Integral / Narrative | `[+@key]` | Smith (2023) | Smith (2023) |
- | `!` | Visibility | Hidden (Nocite) | `[!@key]` | *bibliography only* | *bibliography only* |
+ | Modifier | Type | Description | Syntax | Result  |
+ |----------|------|-------------|--------|---------|
+ | `-` | Visibility | Suppress Author | `[-@key]` | (2023) |
+ | `+` | Mode | Integral / Narrative | `[+@key]`  | Smith (2023) |
+ | `!` | Visibility | Hidden (Nocite) | `[!@key]` | *bibliography only* |
 
 ### Locators (Pinpoints)
 
