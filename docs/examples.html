@@ -893,7 +893,7 @@ Structured: [@kuhn1962, section: 5].</pre>
                     </div>
                     <p class="text-slate-600 leading-relaxed mb-6">
                         CSLN supports multiple output formats with a pluggable
-                        architecture. Generate semantic HTML, flexible Djot for
+                        architecture. Generate semantic HTML, native LaTeX, flexible Djot for
                         static site generators, or clean Plain Text.
                     </p>
                 </div>
@@ -910,6 +910,23 @@ Structured: [@kuhn1962, section: 5].</pre>
                             <div class="font-mono text-sm text-slate-900">
                                 Smith, J. A. (2023). The Future of Citations.
                                 Academic Press.
+                            </div>
+                        </div>
+
+                        <!-- LaTeX -->
+                        <div class="border-l-4 border-indigo-500 pl-4">
+                            <div
+                                class="text-xs font-semibold text-slate-500 uppercase mb-1"
+                            >
+                                Native LaTeX (--format latex)
+                            </div>
+                            <div
+                                class="bg-slate-900 rounded p-3 overflow-x-auto mt-1"
+                            >
+                                <pre
+                                    class="font-mono text-xs text-slate-300 leading-relaxed"
+                                >
+Smith, J. A. (2023). \textit{The Future of Citations}. Academic Press.</pre>
                             </div>
                         </div>
 
@@ -963,14 +980,9 @@ Structured: [@kuhn1962, section: 5].</pre>
                         </div>
                         <div class="text-sm text-slate-600 leading-relaxed">
                             <strong class="text-slate-900"
-                                >Future Roadmap:</strong
+                                >Consistent Rendering:</strong
                             >
-                            The pluggable renderer system is designed to easily
-                            accommodate new targets like
-                            <strong class="text-slate-900">LaTeX</strong> and
-                            <strong class="text-slate-900">Typst</strong>,
-                            providing consistent citation rendering across
-                            different publishing toolchains.
+                            The pluggable renderer system ensures that complex CSL rules (sorting, disambiguation, name formatting) are applied identically regardless of the output target. LaTeX support includes native escaping for TeX special characters.
                         </div>
                     </div>
                 </div>
