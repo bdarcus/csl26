@@ -1,5 +1,4 @@
 # yaml-language-server: $schema=https://bdarcus.github.io/csl26/schemas/bib.json
-# yaml-language-server: $schema=https://bdarcus.github.io/csl26/schemas/bib.json
 # Comprehensive CSLN Test Bibliography
 # Uses proper CSLN reference types with correct field requirements
 info:
