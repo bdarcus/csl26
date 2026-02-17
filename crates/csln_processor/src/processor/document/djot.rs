@@ -15,7 +15,7 @@ use winnow::prelude::*;
 use winnow::token::{take_until, take_while};
 
 /// A parser for Djot citations using winnow.
-/// Syntax: `[prefix @key1; @key2, locator suffix]` or `@key[locator]`
+/// Syntax: `[prefix ; @key1; @key2 ; suffix]` or `@key[locator]`
 pub struct DjotParser;
 
 impl Default for DjotParser {
@@ -97,7 +97,7 @@ fn parse_parenthetical_citation(input: &mut &str) -> winnow::Result<Citation, Co
     Ok(citation)
 }
 
-/// Parse `@key(infix)[locator]`, `@key(infix)`, `@key[locator]`, or just `@key`
+/// Parse `@key[locator]`, or just `@key`
 fn parse_narrative_citation(input: &mut &str) -> winnow::Result<Citation, ContextError> {
     let visibility = parse_visibility_modifier.parse_next(input)?;
     let _: char = '@'.parse_next(input)?;
@@ -109,18 +109,6 @@ fn parse_narrative_citation(input: &mut &str) -> winnow::Result<Citation, Contex
         visibility,
         ..Default::default()
     };
-
-    // Try to parse optional infix in parentheses: (infix)
-    let mut input_checkpoint = *input;
-    let infix_res: winnow::Result<&str, ContextError> =
-        parse_citation_infix_parens(&mut input_checkpoint);
-
-    if let Ok(infix_part) = infix_res {
-        *input = input_checkpoint;
-        if !infix_part.is_empty() {
-            item.infix = Some(infix_part.to_string());
-        }
-    }
 
     // Try to parse optional locator in brackets: [locator]
     let mut input_checkpoint = *input;
@@ -150,50 +138,79 @@ fn parse_citation_locator_brackets<'a>(
     Ok(l)
 }
 
-fn parse_citation_infix_parens<'a>(input: &mut &'a str) -> winnow::Result<&'a str, ContextError> {
-    let _ = '('.parse_next(input)?;
-    let i = take_until(0.., ')').parse_next(input)?;
-    let _ = ')'.parse_next(input)?;
-    Ok(i)
-}
-
 fn parse_citation_content(input: &mut &str) -> winnow::Result<Citation, ContextError> {
     let mut citation = Citation::default();
 
-    // Global Prefix: everything before first citation item
-    let checkpoint = *input;
-    let prefix_part: &str = take_until(0.., "@").parse_next(input)?;
-    let mut final_prefix = prefix_part;
+    // Consume everything up to the closing bracket
+    let inner: &str = take_until(0.., ']').parse_next(input)?;
 
-    // If the prefix ends with a visibility modifier, it belongs to the first item
-    if !prefix_part.is_empty() {
-        let last = prefix_part.as_bytes()[prefix_part.len() - 1] as char;
-        if last == '-' || last == '+' || last == '!' {
-            final_prefix = &prefix_part[..prefix_part.len() - 1];
-            // Move input back so it starts with the modifier
-            *input = &checkpoint[final_prefix.len()..];
+    // Check if the content is likely using the new explicit delimiter syntax: prefix ; item ; suffix
+    if inner.contains(';') {
+        let parts: Vec<&str> = inner.split(';').collect();
+        let mut item_indices = Vec::new();
+
+        for (i, part) in parts.iter().enumerate() {
+            let mut part_input = part.trim_start();
+            let _ = parse_visibility_modifier.parse_next(&mut part_input).ok();
+            if part_input.starts_with('@') {
+                item_indices.push(i);
+            }
+        }
+
+        if !item_indices.is_empty() {
+            let first_idx = item_indices[0];
+            let last_idx = *item_indices.last().unwrap();
+
+            // Extract prefix: everything before the first item part
+            if first_idx > 0 {
+                let prefix_str = parts[..first_idx].join(";");
+                let trimmed = prefix_str.trim();
+                if !trimmed.is_empty() {
+                    citation.prefix = Some(trimmed.to_string());
+                }
+            }
+
+            // Extract items
+            for &idx in &item_indices {
+                let mut item_input = parts[idx].trim();
+                if let Ok(item) = parse_citation_item.parse_next(&mut item_input) {
+                    citation.items.push(item);
+                }
+            }
+
+            // Extract suffix: everything after the last item part
+            if last_idx < parts.len() - 1 {
+                let suffix_str = parts[last_idx + 1..].join(";");
+                let trimmed = suffix_str.trim();
+                if !trimmed.is_empty() {
+                    citation.suffix = Some(trimmed.to_string());
+                }
+            }
+
+            // If any item has AuthorOnly visibility, this is an integral/narrative citation
+            if citation
+                .items
+                .iter()
+                .any(|i| matches!(i.visibility, ItemVisibility::AuthorOnly))
+            {
+                citation.mode = CitationMode::Integral;
+            }
+            return Ok(citation);
         }
     }
 
-    if !final_prefix.is_empty() {
-        let trimmed = final_prefix.trim_end_matches(';').trim_start_matches(' ');
-        if !trimmed.is_empty() {
-            citation.prefix = Some(trimmed.to_string());
-        }
-    }
-
-    let items: Vec<CitationItem> = repeat(1.., parse_citation_item).parse_next(input)?;
+    // Fallback: parse multiple items without explicit global affixes
+    let mut inner_input = inner;
+    let items: Vec<CitationItem> = repeat(1.., parse_citation_item).parse_next(&mut inner_input)?;
     citation.items = items;
 
     // If any item has AuthorOnly visibility, this is an integral/narrative citation
-    if citation.items.iter().any(|i| matches!(i.visibility, ItemVisibility::AuthorOnly)) {
+    if citation
+        .items
+        .iter()
+        .any(|i| matches!(i.visibility, ItemVisibility::AuthorOnly))
+    {
         citation.mode = CitationMode::Integral;
-    }
-
-    // Global Suffix: anything remaining before ]
-    let suffix_part: &str = take_while(0.., |c: char| c != ']').parse_next(input)?;
-    if !suffix_part.is_empty() {
-        citation.suffix = Some(suffix_part.to_string());
     }
 
     Ok(citation)
@@ -295,12 +312,12 @@ mod tests {
     #[test]
     fn test_parse_complex_djot_citation() {
         let parser = DjotParser;
-        let content = "[see ;@kuhn1962; @watson1953, ch. 2]";
+        let content = "[see ; @kuhn1962; @watson1953, ch. 2]";
         let citations = parser.parse_citations(content);
 
         assert_eq!(citations.len(), 1);
         let (_, _, citation) = &citations[0];
-        assert_eq!(citation.prefix, Some("see ".to_string()));
+        assert_eq!(citation.prefix, Some("see".to_string()));
         assert_eq!(citation.items.len(), 2);
         assert_eq!(citation.items[0].id, "kuhn1962");
         assert_eq!(citation.items[1].id, "watson1953");
@@ -336,91 +353,19 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_infix_citation() {
-        let parser = DjotParser;
-        let content = "@smith(argues that x)";
-        let citations = parser.parse_citations(content);
-
-        assert_eq!(citations.len(), 1);
-        let (_, _, citation) = &citations[0];
-        assert_eq!(citation.mode, CitationMode::Integral);
-        assert_eq!(citation.items.len(), 1);
-        assert_eq!(citation.items[0].id, "smith");
-        assert_eq!(citation.items[0].infix, Some("argues that x".to_string()));
-    }
-
-    #[test]
-    fn test_parse_infix_with_locator() {
-        let parser = DjotParser;
-        let content = "@smith(argues that x)[23]";
-        let citations = parser.parse_citations(content);
-
-        assert_eq!(citations.len(), 1);
-        let (_, _, citation) = &citations[0];
-        assert_eq!(citation.mode, CitationMode::Integral);
-        assert_eq!(citation.items.len(), 1);
-        assert_eq!(citation.items[0].id, "smith");
-        assert_eq!(citation.items[0].infix, Some("argues that x".to_string()));
-        assert_eq!(citation.items[0].locator, Some("23".to_string()));
-        assert_eq!(citation.items[0].label, Some(LocatorType::Page));
-    }
-
-    #[test]
-    fn test_parse_infix_with_structured_locator() {
-        let parser = DjotParser;
-        let content = "@jones(notes that y)[chapter: 5]";
-        let citations = parser.parse_citations(content);
-
-        assert_eq!(citations.len(), 1);
-        let (_, _, citation) = &citations[0];
-        assert_eq!(citation.items[0].id, "jones");
-        assert_eq!(citation.items[0].infix, Some("notes that y".to_string()));
-        assert_eq!(citation.items[0].locator, Some("5".to_string()));
-        assert_eq!(citation.items[0].label, Some(LocatorType::Chapter));
-    }
-
-    #[test]
     fn test_parse_multi_cite_with_suffix() {
         let parser = DjotParser;
-        let content = "[compare @smith2010, page: 45; @brown1954 for context]";
+        let content = "[compare ; @smith2010, page: 45; @brown1954; for context]";
         let citations = parser.parse_citations(content);
 
         assert_eq!(citations.len(), 1, "Should parse one citation");
         let (_, _, citation) = &citations[0];
-        assert_eq!(citation.prefix, Some("compare ".to_string()));
+        assert_eq!(citation.prefix, Some("compare".to_string()));
         assert_eq!(citation.items.len(), 2);
         assert_eq!(citation.items[0].id, "smith2010");
         assert_eq!(citation.items[0].locator, Some("45".to_string()));
         assert_eq!(citation.items[1].id, "brown1954");
         assert_eq!(citation.suffix, Some("for context".to_string()));
-    }
-
-    #[test]
-    fn test_parse_narrative_infix_with_chapter() {
-        let parser = DjotParser;
-        let content = "@jones2015(suggests that y)[ch. 3]";
-        let citations = parser.parse_citations(content);
-
-        assert_eq!(citations.len(), 1);
-        let (_, _, citation) = &citations[0];
-        assert_eq!(citation.mode, CitationMode::Integral);
-        assert_eq!(citation.items[0].id, "jones2015");
-        assert_eq!(citation.items[0].infix, Some("suggests that y".to_string()));
-        assert_eq!(citation.items[0].locator, Some("3".to_string()));
-        assert_eq!(citation.items[0].label, Some(LocatorType::Chapter));
-    }
-
-    #[test]
-    fn test_parse_narrative_infix_only() {
-        let parser = DjotParser;
-        let content = "@brown1954(notes)";
-        let citations = parser.parse_citations(content);
-
-        assert_eq!(citations.len(), 1);
-        let (_, _, citation) = &citations[0];
-        assert_eq!(citation.mode, CitationMode::Integral);
-        assert_eq!(citation.items[0].id, "brown1954");
-        assert_eq!(citation.items[0].infix, Some("notes".to_string()));
     }
 
     #[test]
@@ -446,6 +391,20 @@ mod tests {
         assert_eq!(citation.mode, CitationMode::Integral);
         assert_eq!(citation.items[0].id, "kuhn1962");
         assert_eq!(citation.items[0].visibility, ItemVisibility::AuthorOnly);
+    }
+
+    #[test]
+    fn test_parse_global_affixes_modern() {
+        let parser = DjotParser;
+        let content = "[see ; @doe99; and references therein]";
+        let citations = parser.parse_citations(content);
+
+        assert_eq!(citations.len(), 1);
+        let (_, _, citation) = &citations[0];
+        assert_eq!(citation.prefix, Some("see".to_string()));
+        assert_eq!(citation.items.len(), 1);
+        assert_eq!(citation.items[0].id, "doe99");
+        assert_eq!(citation.suffix, Some("and references therein".to_string()));
     }
 
     #[test]

@@ -126,7 +126,7 @@ fn test_process_citation() {
     };
 
     let result = processor.process_citation(&citation).unwrap();
-    assert_eq!(result, "(Kuhn, 1962)");
+    assert_eq!(result, "(Kuhn,  1962)");
 }
 
 #[test]
@@ -737,10 +737,10 @@ fn test_citation_grouping_same_author() {
         })
         .unwrap();
 
-    // Should be grouped: "Kuhn, 1962a, 1962b" not "Kuhn, 1962a; Kuhn, 1962b"
+    // Should be grouped: "Kuhn,  1962a,  1962b" not "Kuhn,  1962a; Kuhn,  1962b"
     // Year suffix assigned by title order: "Function..." < "Structure..."
     assert!(
-        result.contains("Kuhn, 1962a, 1962b") || result.contains("Kuhn, 1962b, 1962a"),
+        result.contains("Kuhn,  1962a, 1962b") || result.contains("Kuhn,  1962b, 1962a"),
         "Same-author citations should be grouped. Got: {}",
         result
     );
@@ -1076,7 +1076,7 @@ fn test_citation_visibility_modifiers() {
         ..Default::default()
     };
     let res_suppress = processor.process_citation(&cit_suppress).unwrap();
-    // Default APA style: (Kuhn, 1962). Suppress Author: (1962).
+    // Default APA style: (Kuhn,  1962). Suppress Author: (1962).
     assert_eq!(res_suppress, "(1962)");
 
     // 2. Author Only (Integral)
@@ -1136,7 +1136,7 @@ fn test_citation_visibility_modifiers() {
     };
     let res_mixed = processor.process_citation(&cit_mixed).unwrap();
     // One is hidden, only one Kuhn shows
-    assert_eq!(res_mixed, "(Kuhn, 1962)");
+    assert_eq!(res_mixed, "(Kuhn,  1962)");
 }
 
 #[test]

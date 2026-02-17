@@ -49,7 +49,6 @@ impl ComponentValues for TemplateVariable {
                     }
                 })
             }
-            SimpleVariable::Infix => options.infix.map(|s| s.to_string()),
             _ => None,
         };
 

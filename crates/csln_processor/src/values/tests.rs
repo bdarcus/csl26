@@ -52,7 +52,6 @@ fn test_contributor_values() {
         visibility: csln_core::citation::ItemVisibility::Default,
         locator: None,
         locator_label: None,
-        infix: None,
     };
     let reference = make_reference();
     let hints = ProcHints::default();
@@ -88,7 +87,6 @@ fn test_date_values() {
         visibility: csln_core::citation::ItemVisibility::Default,
         locator: None,
         locator_label: None,
-        infix: None,
     };
     let reference = make_reference();
     let hints = ProcHints::default();
@@ -119,7 +117,6 @@ fn test_et_al() {
         visibility: csln_core::citation::ItemVisibility::Default,
         locator: None,
         locator_label: None,
-        infix: None,
     };
     let hints = ProcHints::default();
 
@@ -245,7 +242,6 @@ fn test_et_al_delimiter_never() {
         visibility: csln_core::citation::ItemVisibility::Default,
         locator: None,
         locator_label: None,
-        infix: None,
     };
     let hints = ProcHints::default();
 
@@ -299,7 +295,6 @@ fn test_et_al_delimiter_always() {
         visibility: csln_core::citation::ItemVisibility::Default,
         locator: None,
         locator_label: None,
-        infix: None,
     };
     let hints = ProcHints::default();
 
@@ -419,7 +414,6 @@ fn test_template_list_suppression() {
         visibility: csln_core::citation::ItemVisibility::Default,
         locator: None,
         locator_label: None,
-        infix: None,
     };
     let reference = Reference::from(LegacyReference {
         id: "multi".to_string(),
@@ -467,7 +461,6 @@ fn test_et_al_use_last() {
         visibility: csln_core::citation::ItemVisibility::Default,
         locator: None,
         locator_label: None,
-        infix: None,
     };
     let hints = ProcHints::default();
 
@@ -516,7 +509,6 @@ fn test_et_al_use_last_overlap() {
         visibility: csln_core::citation::ItemVisibility::Default,
         locator: None,
         locator_label: None,
-        infix: None,
     };
     let hints = ProcHints::default();
 
@@ -558,7 +550,6 @@ fn test_title_hyperlink() {
         visibility: csln_core::citation::ItemVisibility::Default,
         locator: None,
         locator_label: None,
-        infix: None,
     };
     let hints = ProcHints::default();
 
@@ -601,7 +592,6 @@ fn test_title_hyperlink_url_fallback() {
         visibility: csln_core::citation::ItemVisibility::Default,
         locator: None,
         locator_label: None,
-        infix: None,
     };
     let hints = ProcHints::default();
 
@@ -643,7 +633,6 @@ fn test_variable_hyperlink() {
         visibility: csln_core::citation::ItemVisibility::Default,
         locator: None,
         locator_label: None,
-        infix: None,
     };
     let hints = ProcHints::default();
 
@@ -703,7 +692,6 @@ fn test_editor_label_format() {
             visibility: csln_core::citation::ItemVisibility::Default,
             locator: None,
             locator_label: None,
-            infix: None,
         };
         let values = component.values(&reference, &hints, &options).unwrap();
         // Assuming locale for "editor" verb is "edited by"
@@ -723,7 +711,6 @@ fn test_editor_label_format() {
             visibility: csln_core::citation::ItemVisibility::Default,
             locator: None,
             locator_label: None,
-            infix: None,
         };
         let values = component.values(&reference, &hints, &options).unwrap();
         // Assuming locale for "editor" short is "Ed."
@@ -743,7 +730,6 @@ fn test_editor_label_format() {
             visibility: csln_core::citation::ItemVisibility::Default,
             locator: None,
             locator_label: None,
-            infix: None,
         };
         let values = component.values(&reference, &hints, &options).unwrap();
         // Assuming locale for "editor" long is "editor"
@@ -763,7 +749,6 @@ fn test_term_values() {
         visibility: csln_core::citation::ItemVisibility::Default,
         locator: None,
         locator_label: None,
-        infix: None,
     };
     let reference = make_reference();
     let hints = ProcHints::default();
@@ -792,7 +777,6 @@ fn test_template_list_term_suppression() {
         visibility: csln_core::citation::ItemVisibility::Default,
         locator: None,
         locator_label: None,
-        infix: None,
     };
     // Reference with no editor
     let reference = make_reference();
@@ -832,7 +816,6 @@ fn test_date_fallback() {
         visibility: csln_core::citation::ItemVisibility::Default,
         locator: None,
         locator_label: None,
-        infix: None,
     };
     // Reference with NO issued date
     let reference = Reference::from(LegacyReference {
@@ -883,7 +866,6 @@ fn test_strip_periods_global_config() {
         visibility: csln_core::citation::ItemVisibility::Default,
         locator: None,
         locator_label: None,
-        infix: None,
     };
 
     let component = TemplateContributor {
@@ -922,7 +904,6 @@ fn test_strip_periods_component_override() {
         visibility: csln_core::citation::ItemVisibility::Default,
         locator: None,
         locator_label: None,
-        infix: None,
     };
 
     // Component overrides global setting
@@ -965,7 +946,6 @@ fn test_strip_periods_no_strip_by_default() {
         visibility: csln_core::citation::ItemVisibility::Default,
         locator: None,
         locator_label: None,
-        infix: None,
     };
 
     let component = TemplateContributor {
@@ -1004,7 +984,6 @@ fn test_should_strip_periods_precedence() {
         visibility: csln_core::citation::ItemVisibility::Default,
         locator: None,
         locator_label: None,
-        infix: None,
     };
 
     // Component override takes precedence
@@ -1034,7 +1013,6 @@ fn test_should_strip_periods_precedence() {
         visibility: csln_core::citation::ItemVisibility::Default,
         locator: None,
         locator_label: None,
-        infix: None,
     };
     assert!(!should_strip_periods(&rendering_default, &options_none));
 }

@@ -81,7 +81,7 @@ impl<'a> Renderer<'a> {
         }
     }
 
-    /// Render author + infix (bare) + citation number for numeric integral citations.
+    /// Render author + citation number for numeric integral citations.
     fn render_author_year_for_numeric_integral(
         &self,
         reference: &Reference,
@@ -96,7 +96,6 @@ impl<'a> Renderer<'a> {
             visibility: item.visibility,
             locator: item.locator.as_deref(),
             locator_label: item.label.clone(),
-            infix: item.infix.as_deref(),
         };
 
         // Render author in short form
@@ -106,15 +105,9 @@ impl<'a> Renderer<'a> {
             String::new()
         };
 
-        // Format: "Author infix [N]" or "Author [N]"
+        // Format: "Author [N]"
         if !author_part.is_empty() {
-            if let Some(infix_text) = &item.infix {
-                // Include infix between author and number (bare, no parens)
-                format!("{} {} [{}]", author_part, infix_text, citation_number)
-            } else {
-                // Just author + citation number
-                format!("{} [{}]", author_part, citation_number)
-            }
+            format!("{} [{}]", author_part, citation_number)
         } else {
             // Fallback: just citation number if no author
             format!("[{}]", citation_number)
@@ -165,7 +158,7 @@ impl<'a> Renderer<'a> {
                 .ok_or_else(|| ProcessorError::ReferenceNotFound(item.id.clone()))?;
 
             if use_author_year {
-                // Numeric integral: render author + infix + citation number
+                // Numeric integral: render author + citation number
                 let citation_number = self.get_or_assign_citation_number(&item.id);
                 let item_str =
                     self.render_author_year_for_numeric_integral(reference, item, citation_number);
@@ -193,7 +186,6 @@ impl<'a> Renderer<'a> {
                     citation_number,
                     item.locator.as_deref(),
                     item.label.clone(),
-                    item.infix.as_deref(),
                 ) {
                     let item_str = crate::render::citation::citation_to_string_with_format::<F>(
                         &proc,
@@ -336,19 +328,20 @@ impl<'a> Renderer<'a> {
                 let joined_years = year_parts.join(", ");
                 // Format based on citation mode:
                 // Integral: "Kuhn (1962a, 1962b)" - years in parentheses
-                //   With infix: "Kuhn argues (1962)" - infix between author and year
                 // NonIntegral: "Kuhn, 1962a, 1962b" - no inner parens (outer wrap adds them)
                 let content = match mode {
                     csln_core::citation::CitationMode::Integral => {
                         // Check for visibility overrides
-                        if matches!(first_item.visibility, csln_core::citation::ItemVisibility::AuthorOnly) {
+                        if matches!(
+                            first_item.visibility,
+                            csln_core::citation::ItemVisibility::AuthorOnly
+                        ) {
                             // Narrative: Kuhn (1962)
-                            if let Some(infix) = &first_item.infix {
-                                format!("{} {} ({})", author_part, infix, joined_years)
-                            } else {
-                                format!("{} ({})", author_part, joined_years)
-                            }
-                        } else if matches!(first_item.visibility, csln_core::citation::ItemVisibility::SuppressAuthor) {
+                            format!("{} ({})", author_part, joined_years)
+                        } else if matches!(
+                            first_item.visibility,
+                            csln_core::citation::ItemVisibility::SuppressAuthor
+                        ) {
                             // Should theoretically not happen in narrative mode, but handle gracefully
                             format!("({})", joined_years)
                         } else {
@@ -357,15 +350,21 @@ impl<'a> Renderer<'a> {
                         }
                     }
                     csln_core::citation::CitationMode::NonIntegral => {
-                        if matches!(first_item.visibility, csln_core::citation::ItemVisibility::AuthorOnly) {
+                        if matches!(
+                            first_item.visibility,
+                            csln_core::citation::ItemVisibility::AuthorOnly
+                        ) {
                             // Parenthetical AuthorOnly: Kuhn
                             author_part
-                        } else if matches!(first_item.visibility, csln_core::citation::ItemVisibility::SuppressAuthor) {
+                        } else if matches!(
+                            first_item.visibility,
+                            csln_core::citation::ItemVisibility::SuppressAuthor
+                        ) {
                             // Parenthetical SuppressAuthor: 1962
                             joined_years
                         } else {
-                            // Default parenthetical: Kuhn, 1962
-                            format!("{}, {}", author_part, joined_years)
+                            // Default parenthetical: Kuhn,  1962
+                            format!("{},  {}", author_part, joined_years)
                         }
                     }
                 };
@@ -401,16 +400,28 @@ impl<'a> Renderer<'a> {
             visibility: csln_core::citation::ItemVisibility::Default,
             locator: None,
             locator_label: None,
-            infix: None,
         };
 
         // Use short form for citations
         if let Some(authors) = reference.author() {
-            let mode = self.config.multilingual.as_ref().and_then(|m| m.name_mode.as_ref());
-            let preferred_script = self.config.multilingual.as_ref().and_then(|m| m.preferred_script.as_ref());
+            let mode = self
+                .config
+                .multilingual
+                .as_ref()
+                .and_then(|m| m.name_mode.as_ref());
+            let preferred_script = self
+                .config
+                .multilingual
+                .as_ref()
+                .and_then(|m| m.preferred_script.as_ref());
             let locale_str = &self.locale.locale;
 
-            let names_vec = crate::values::resolve_multilingual_name(&authors, mode, preferred_script, locale_str);
+            let names_vec = crate::values::resolve_multilingual_name(
+                &authors,
+                mode,
+                preferred_script,
+                locale_str,
+            );
             crate::values::format_contributors_short(&names_vec, &options)
         } else {
             String::new()
@@ -494,7 +505,6 @@ impl<'a> Renderer<'a> {
             visibility: csln_core::citation::ItemVisibility::Default,
             locator: None,
             locator_label: None,
-            infix: None,
         };
 
         self.process_template_with_number_internal(reference, template_ref, options, entry_number)
@@ -512,7 +522,6 @@ impl<'a> Renderer<'a> {
         citation_number: usize,
         locator: Option<&str>,
         locator_label: Option<csln_core::citation::LocatorType>,
-        infix: Option<&str>,
     ) -> Option<ProcTemplate> {
         let options = RenderOptions {
             config: self.config,
@@ -522,7 +531,6 @@ impl<'a> Renderer<'a> {
             visibility,
             locator,
             locator_label,
-            infix,
         };
         self.process_template_with_number_internal(reference, template, options, citation_number)
     }

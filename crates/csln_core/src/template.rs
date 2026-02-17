@@ -553,7 +553,6 @@ pub enum SimpleVariable {
     Scale,
     Version,
     Locator,
-    Infix,
 }
 
 /// A term component for rendering locale-specific text.

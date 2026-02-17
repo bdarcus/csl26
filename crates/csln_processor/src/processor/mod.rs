@@ -225,7 +225,6 @@ impl Processor {
             visibility: csln_core::citation::ItemVisibility::Default,
             locator: None,
             locator_label: None,
-            infix: None,
         };
 
         ProcEntryMetadata {
@@ -317,11 +316,12 @@ impl Processor {
 
         // Apply wrap or prefix/suffix
         let (open, close) = if matches!(citation.mode, csln_core::citation::CitationMode::Integral)
-            || citation
-                .items
-                .iter()
-                .any(|i| matches!(i.visibility, csln_core::citation::ItemVisibility::AuthorOnly))
-        {
+            || citation.items.iter().any(|i| {
+                matches!(
+                    i.visibility,
+                    csln_core::citation::ItemVisibility::AuthorOnly
+                )
+            }) {
             ("", "")
         } else {
             match wrap {
@@ -548,10 +548,12 @@ impl Processor {
                 output
             }
         } else if *wrap != WrapPunctuation::None
-            && !citation
-                .items
-                .iter()
-                .any(|i| matches!(i.visibility, csln_core::citation::ItemVisibility::AuthorOnly))
+            && !citation.items.iter().any(|i| {
+                matches!(
+                    i.visibility,
+                    csln_core::citation::ItemVisibility::AuthorOnly
+                )
+            })
         {
             // Non-integral mode: apply wrap, UNLESS we have AuthorOnly visibility
             fmt.wrap_punctuation(wrap, output)
