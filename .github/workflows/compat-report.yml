@@ -29,15 +29,6 @@ jobs:
       - name: Cache Rust
         uses: Swatinem/rust-cache@v2
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Install Node dependencies
-        run: npm install
-        working-directory: scripts
-
       - name: Build Rust workspace
         run: cargo build
 
