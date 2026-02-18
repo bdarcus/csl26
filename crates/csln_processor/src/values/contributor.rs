@@ -2,8 +2,8 @@ use crate::reference::Reference;
 use crate::values::{ComponentValues, ProcHints, ProcValues, RenderContext, RenderOptions};
 use csln_core::locale::TermForm;
 use csln_core::options::{
-    AndOptions, DemoteNonDroppingParticle, DisplayAsSort, EditorLabelFormat, ShortenListOptions,
-    SubstituteKey,
+    AndOptions, AndOtherOptions, DemoteNonDroppingParticle, DisplayAsSort, EditorLabelFormat,
+    ShortenListOptions, SubstituteKey,
 };
 use csln_core::template::{ContributorForm, ContributorRole, TemplateContributor};
 
@@ -536,6 +536,10 @@ pub fn format_names(
     // 2. Else use global config
     let shorten = shorten_override.or_else(|| config.and_then(|c| c.shorten.as_ref()));
 
+    let and_others = shorten
+        .map(|opts| opts.and_others)
+        .unwrap_or(AndOtherOptions::EtAl);
+
     let (first_names, use_et_al, last_names) = if let Some(opts) = shorten {
         // Phase 3: Et-al Disambiguation Logic
         // When min_names_to_show is set (name expansion disambiguation),
@@ -744,10 +748,15 @@ pub fn format_names(
                 }
             };
 
+            let and_others_term = match and_others {
+                AndOtherOptions::EtAl => locale.et_al(),
+                AndOtherOptions::Text => locale.et_al().trim_end_matches('.'),
+            };
+
             if use_delimiter {
-                format!("{}, {}", result, locale.et_al())
+                format!("{}, {}", result, and_others_term)
             } else {
-                format!("{} {}", result, locale.et_al())
+                format!("{} {}", result, and_others_term)
             }
         }
     } else {

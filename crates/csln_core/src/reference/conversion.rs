@@ -32,7 +32,6 @@ impl From<csl_legacy::csl_json::Reference> for InputReference {
             | "post"
             | "post-weblog"
             | "software"
-            | "dataset"
             | "personal_communication"
             | "personal-communication" => {
                 if (legacy.ref_type == "personal_communication"
@@ -87,7 +86,7 @@ impl From<csl_legacy::csl_json::Reference> for InputReference {
                     original_title: None,
                 }))
             }
-            "chapter" | "paper-conference" | "entry-encyclopedia" | "entry-dictionary" => {
+            "chapter" | "paper-conference" | "entry-dictionary" => {
                 let parent_title = legacy
                     .container_title
                     .map(Title::Single)
@@ -141,7 +140,7 @@ impl From<csl_legacy::csl_json::Reference> for InputReference {
                 }))
             }
             "article-journal" | "article" | "article-magazine" | "article-newspaper"
-            | "broadcast" | "motion_picture" => {
+            | "broadcast" | "motion_picture" | "entry-encyclopedia" => {
                 let serial_type = match legacy.ref_type.as_str() {
                     "article-journal" => SerialType::AcademicJournal,
                     "article-magazine" => SerialType::Magazine,
@@ -259,6 +258,28 @@ impl From<csl_legacy::csl_json::Reference> for InputReference {
                 issued,
                 jurisdiction: None,
                 authority: legacy.authority,
+                url,
+                accessed,
+                language,
+                note: note.clone(),
+                keywords: None,
+            })),
+            "dataset" => InputReference::Dataset(Box::new(Dataset {
+                id,
+                title,
+                author: legacy.author.map(Contributor::from),
+                issued,
+                publisher: legacy.publisher.map(|n| {
+                    Contributor::SimpleName(SimpleName {
+                        name: n.into(),
+                        location: legacy.publisher_place,
+                    })
+                }),
+                version: None,
+                format: None,
+                size: None,
+                repository: None,
+                doi,
                 url,
                 accessed,
                 language,

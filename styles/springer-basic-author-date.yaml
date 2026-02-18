@@ -1,4 +1,5 @@
 # yaml-language-server: $schema=https://bdarcus.github.io/csl26/schemas/style.json
+version: "0.2.0"
 info:
   title: Springer - Basic (author-date)
   id: http://www.zotero.org/styles/springer-basic-author-date
@@ -39,13 +40,179 @@ citation:
   delimiter: " "
   multi-cite-delimiter: "; "
 bibliography:
+  type-templates:
+    book:
+      - contributor: author
+        form: long
+        name-order: family-first
+        shorten:
+          min: 5
+          use-first: 3
+          and-others: text
+      - date: issued
+        form: year
+        wrap: parentheses
+        prefix: " "
+      - items:
+          - title: primary
+          - number: edition
+        delimiter: ", "
+        prefix: " "
+      - items:
+          - variable: publisher
+          - variable: publisher-place
+        delimiter: ", "
+        prefix: ". "
+    thesis:
+      - contributor: author
+        form: long
+        name-order: family-first
+        shorten:
+          min: 5
+          use-first: 3
+          and-others: text
+      - date: issued
+        form: year
+        wrap: parentheses
+        prefix: " "
+      - title: primary
+        prefix: " "
+      - items:
+          - variable: genre
+          - variable: publisher
+        delimiter: ", "
+        prefix: ". "
+    webpage:
+      - contributor: author
+        form: long
+        name-order: family-first
+        shorten:
+          min: 5
+          use-first: 3
+          and-others: text
+      - date: issued
+        form: year
+        wrap: parentheses
+        prefix: " "
+      - title: primary
+        prefix: " "
+      - variable: url
+        prefix: ". "
+      - date: accessed
+        form: month-day
+        prefix: ". Accessed "
+      - date: accessed
+        form: year
+        prefix: " "
+    article-magazine:
+      - contributor: author
+        form: long
+        name-order: family-first
+        shorten:
+          min: 5
+          use-first: 3
+          and-others: text
+      - date: issued
+        form: year
+        wrap: parentheses
+        prefix: " "
+      - title: primary
+        prefix: " "
+      - title: parent-serial
+        prefix: ". "
+      - items:
+          - number: volume
+          - number: pages
+            prefix: ""
+        delimiter: ":"
+        prefix: " "
+    entry-encyclopedia:
+      - contributor: author
+        form: long
+        name-order: family-first
+        shorten:
+          min: 5
+          use-first: 3
+          and-others: text
+      - date: issued
+        form: year
+        wrap: parentheses
+        prefix: " "
+      - title: primary
+        prefix: " "
+      - title: parent-serial
+        prefix: ". "
+      - items:
+          - number: volume
+          - number: pages
+            prefix: ""
+        delimiter: ":"
+        prefix: " "
+    dataset:
+      - contributor: author
+        form: long
+        name-order: family-first
+        shorten:
+          min: 5
+          use-first: 3
+          and-others: text
+      - date: issued
+        form: year
+        wrap: parentheses
+        prefix: " "
+      - title: primary
+        prefix: " "
+    report:
+      - contributor: author
+        form: long
+        name-order: family-first
+        shorten:
+          min: 5
+          use-first: 3
+          and-others: text
+      - date: issued
+        form: year
+        wrap: parentheses
+        prefix: " "
+      - title: primary
+        prefix: " "
+      - items:
+          - variable: publisher
+          - variable: publisher-place
+        delimiter: ", "
+        prefix: ". "
+    paper-conference:
+      - contributor: author
+        form: long
+        name-order: family-first
+        shorten:
+          min: 5
+          use-first: 3
+          and-others: text
+      - date: issued
+        form: year
+        wrap: parentheses
+        prefix: " "
+      - title: primary
+        prefix: " "
+      - title: parent-monograph
+        prefix: ". In: "
+      - number: pages
+        prefix: ". pp "
+    legal-case:
+      - date: issued
+        form: year
+        wrap: parentheses
+      - title: primary
+        prefix: " "
   template:
     - contributor: author
       form: long
       name-order: family-first
-      et-al:
+      shorten:
         min: 5
-        use_first: 3
+        use-first: 3
+        and-others: text
     - contributor: editor
       form: long
       name-order: family-first
@@ -68,6 +235,7 @@ bibliography:
           form: long
           name-order: family-first
         - title: parent-monograph
+      delimiter: " "
       overrides:
         chapter: {}
         book:
@@ -78,6 +246,12 @@ bibliography:
     - items:
         - variable: publisher
         - variable: publisher-place
+        - number: pages
+          prefix: "pp "
+          overrides:
+            chapter: {}
+            article-journal:
+              suppress: true
       delimiter: ", "
       overrides:
         article-journal:
@@ -87,22 +261,22 @@ bibliography:
           overrides:
             article-journal:
               prefix: " "
+              suffix: ":"
         - number: issue
           overrides:
             article-journal:
               suppress: true
             article-magazine:
               suppress: true
-      delimiter: ":"
+        - number: pages
+          overrides:
+            article-journal:
+              prefix: ""
+            chapter:
+              suppress: true
+      delimiter: none
       prefix: " "
-    - number: pages
-      prefix: ":"
-      overrides:
-        chapter:
-          prefix: "pp "
-        article-journal:
-          prefix: ":"
     - variable: doi
       overrides:
         article-journal:
-          prefix: https://doi.org/
+          prefix: ". https://doi.org/"
