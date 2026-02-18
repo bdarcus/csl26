@@ -154,6 +154,46 @@ function loadDivergences() {
 }
 
 /**
+ * Detect whether a style is hand-authored or XML-based
+ */
+function detectTemplateSource(styleName) {
+  const projectRoot = path.dirname(__dirname);
+  const stylesDir = path.join(projectRoot, 'styles');
+  if (fs.existsSync(stylesDir)) {
+    const files = fs.readdirSync(stylesDir);
+    const baseName = styleName.replace(/-\d+th$/, '').replace(/-\d+$/, '');
+    if (files.some(f => f.endsWith('.yaml') && (f.includes(styleName) || f.includes(baseName)))) {
+      return 'hand';
+    }
+  }
+  return 'xml';
+}
+
+/**
+ * Compute component match rate from oracle result
+ */
+function computeComponentMatchRate(oracleResult) {
+  if (oracleResult.error || !oracleResult.bibliography) return null;
+
+  let totalMatches = 0;
+  let totalComponents = 0;
+
+  for (const entry of oracleResult.bibliography.entries || []) {
+    if (entry.match) {
+      totalMatches += 11;
+      totalComponents += 11;
+    } else if (entry.components) {
+      const matches = (entry.components.matches || []).length;
+      const diffs = (entry.components.differences || []).length;
+      totalMatches += matches;
+      totalComponents += matches + diffs;
+    }
+  }
+
+  return totalComponents > 0 ? parseFloat((totalMatches / totalComponents).toFixed(3)) : null;
+}
+
+/**
  * Generate compatibility report
  */
 function generateReport(options) {
@@ -196,6 +236,22 @@ function generateReport(options) {
     biblioTotal += bibliography.total || 0;
     biblioPassed += bibliography.passed || 0;
 
+    const templateSource = detectTemplateSource(styleSpec.name);
+    const componentMatchRate = computeComponentMatchRate(oracleResult);
+
+    let statusTier = 'pending';
+    if (oracleResult.error) {
+      statusTier = 'error';
+    } else if (templateSource === 'xml') {
+      statusTier = 'pending';
+    } else if (fidelityScore === 1.0) {
+      statusTier = 'perfect';
+    } else if (fidelityScore > 0) {
+      statusTier = 'partial';
+    } else {
+      statusTier = 'failing';
+    }
+
     styles.push({
       name: styleSpec.name,
       dependents: styleSpec.dependents,
@@ -206,6 +262,11 @@ function generateReport(options) {
       bibliography,
       knownDivergences: divergences[styleSpec.name] || [],
       error: oracleResult.error || null,
+      templateSource,
+      componentMatchRate,
+      statusTier,
+      componentSummary: oracleResult.componentSummary || {},
+      citationEntries: oracleResult.citations ? oracleResult.citations.entries : null,
       oracleDetail: oracleResult.bibliography ? oracleResult.bibliography.entries : null,
     });
   }
@@ -424,34 +485,53 @@ function generateHtmlTable(report) {
 
     const fidelityPct = (style.fidelityScore * 100).toFixed(1);
 
-    let statusBadge = 'badge-pending';
-    let statusText = 'Pending';
+    const statusBadgeMap = {
+      'perfect': 'badge-perfect',
+      'partial': 'badge-partial',
+      'failing': 'badge-failing',
+      'pending': 'badge-pending',
+      'error': 'badge-pending',
+    };
+    const statusTextMap = {
+      'perfect': 'Perfect',
+      'partial': 'Partial',
+      'failing': 'Failing',
+      'pending': 'Pending (XML)',
+      'error': 'Error',
+    };
 
-    if (style.error) {
-      statusText = 'Error';
-      statusBadge = 'badge-pending';
-    } else if (style.fidelityScore === 1) {
-      statusText = 'Perfect';
-      statusBadge = 'badge-perfect';
-    } else if (style.fidelityScore > 0) {
-      statusText = 'Partial';
-      statusBadge = 'badge-partial';
-    } else {
-      statusText = 'Failing';
-      statusBadge = 'badge-failing';
-    }
+    const statusBadge = statusBadgeMap[style.statusTier];
+    const statusText = statusTextMap[style.statusTier];
 
-    const citationBadge = style.citations.passed === style.citations.total && style.citations.total > 0
-      ? 'badge-perfect'
-      : style.citations.passed > 0
-        ? 'badge-partial'
-        : 'badge-failing';
+    const templateBadgeClass = style.templateSource === 'hand' ? 'badge-perfect' : 'badge-pending';
+    const templateText = style.templateSource === 'hand' ? 'hand' : 'xml';
+
+    const citationBadge = style.citations.total === 0
+      ? 'badge-pending'
+      : style.citations.passed === style.citations.total
+        ? 'badge-perfect'
+        : style.citations.passed > 0
+          ? 'badge-partial'
+          : 'badge-failing';
 
     const biblioBadge = style.bibliography.passed === style.bibliography.total && style.bibliography.total > 0
       ? 'badge-perfect'
       : style.bibliography.passed > 0
         ? 'badge-partial'
         : 'badge-failing';
+
+    let componentRateHtml = '—';
+    if (style.componentMatchRate !== null) {
+      const rate = style.componentMatchRate;
+      const pct = (rate * 100).toFixed(0);
+      let componentBadgeClass = 'bg-red-100 text-red-700';
+      if (rate >= 0.9) {
+        componentBadgeClass = 'bg-emerald-100 text-emerald-700';
+      } else if (rate >= 0.7) {
+        componentBadgeClass = 'bg-amber-100 text-amber-700';
+      }
+      componentRateHtml = `<span class="inline-flex items-center px-3 py-1 rounded text-xs font-medium ${componentBadgeClass}">${pct}%</span>`;
+    }
 
     const toggleId = `toggle-${style.name}`;
     const contentId = `content-${style.name}`;
@@ -462,6 +542,11 @@ function generateHtmlTable(report) {
                     <td class="px-6 py-4 text-sm text-slate-600">${style.format}</td>
                     <td class="px-6 py-4 text-sm text-slate-600">${style.dependents}</td>
                     <td class="px-6 py-4">
+                        <span class="inline-flex items-center px-3 py-1 rounded text-xs font-medium ${templateBadgeClass}">
+                            ${templateText}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4">
                         <span class="inline-flex items-center px-3 py-1 rounded text-xs font-medium ${citationBadge}">
                             ${style.citations.passed}/${style.citations.total}
                         </span>
@@ -470,6 +555,9 @@ function generateHtmlTable(report) {
                         <span class="inline-flex items-center px-3 py-1 rounded text-xs font-medium ${biblioBadge}">
                             ${style.bibliography.passed}/${style.bibliography.total}
                         </span>
+                    </td>
+                    <td class="px-6 py-4">
+                        ${componentRateHtml}
                     </td>
                     <td class="px-6 py-4 text-sm font-mono text-slate-600">${fidelityPct}%</td>
                     <td class="px-6 py-4">
@@ -484,7 +572,7 @@ function generateHtmlTable(report) {
                     </td>
                 </tr>
                 <tr class="accordion-content" id="${contentId}">
-                    <td colspan="8" class="px-6 py-4 bg-slate-50">
+                    <td colspan="10" class="px-6 py-4 bg-slate-50">
                         <div class="max-w-4xl">
 ${generateDetailContent(style)}
                         </div>
@@ -504,8 +592,10 @@ ${generateDetailContent(style)}
                             <th class="text-left px-6 py-4 text-xs font-semibold text-slate-700">Style</th>
                             <th class="text-left px-6 py-4 text-xs font-semibold text-slate-700">Format</th>
                             <th class="text-left px-6 py-4 text-xs font-semibold text-slate-700">Dependents</th>
+                            <th class="text-left px-6 py-4 text-xs font-semibold text-slate-700">Template</th>
                             <th class="text-left px-6 py-4 text-xs font-semibold text-slate-700">Citations</th>
                             <th class="text-left px-6 py-4 text-xs font-semibold text-slate-700">Bibliography</th>
+                            <th class="text-left px-6 py-4 text-xs font-semibold text-slate-700">Components</th>
                             <th class="text-left px-6 py-4 text-xs font-semibold text-slate-700">Fidelity</th>
                             <th class="text-left px-6 py-4 text-xs font-semibold text-slate-700">Status</th>
                             <th class="px-6 py-4"></th>
@@ -533,21 +623,71 @@ function generateDetailContent(style) {
 `;
   }
 
-  if (style.knownDivergences && style.knownDivergences.length > 0) {
+  if (style.componentSummary && Object.keys(style.componentSummary).length > 0) {
+    const issues = Object.entries(style.componentSummary)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 8);
     html += `
-                            <div class="p-4 rounded-lg bg-primary/5 border border-primary/20 mb-4">
-                                <div class="text-sm font-semibold text-primary mb-2">CSLN Extensions</div>
+                            <div class="mb-4">
+                                <div class="text-xs font-semibold text-slate-700 mb-2">Top Component Issues</div>
+                                <div class="flex flex-wrap gap-2">
 `;
-    for (const divergence of style.knownDivergences) {
+    for (const [issue, count] of issues) {
       html += `
-                                <div class="text-xs text-slate-700 mb-2">
-                                    <strong>${escapeHtml(divergence.feature)}:</strong> ${escapeHtml(divergence.description)}
-                                </div>
+                                    <span class="px-2 py-1 rounded bg-slate-100 text-slate-600 text-xs font-mono">
+                                        ${escapeHtml(issue)} <span class="font-bold">×${count}</span>
+                                    </span>
 `;
     }
     html += `
+                                </div>
                             </div>
 `;
+  }
+
+  if (style.citationEntries && style.citationEntries.length > 0) {
+    const failedEntries = style.citationEntries.filter(e => !e.match);
+    if (failedEntries.length === 0) {
+      html += `
+                            <div class="mb-4 p-3 rounded bg-emerald-50 border border-emerald-200">
+                                <div class="text-xs font-semibold text-emerald-700">All ${style.citationEntries.length} citations match ✓</div>
+                            </div>
+`;
+    } else {
+      html += `
+                            <div class="mb-4">
+                                <div class="text-xs font-semibold text-slate-900 mb-2">Failed Citations (${failedEntries.length}/${style.citationEntries.length})</div>
+                                <div class="overflow-x-auto">
+                                    <table class="w-full text-xs border-collapse">
+                                        <thead>
+                                            <tr class="border-b border-slate-300 bg-slate-100">
+                                                <th class="text-left px-2 py-1 font-medium text-slate-700">#</th>
+                                                <th class="text-left px-2 py-1 font-medium text-slate-700">Oracle</th>
+                                                <th class="text-left px-2 py-1 font-medium text-slate-700">CSLN</th>
+                                                <th class="text-center px-2 py-1 font-medium text-slate-700">Match</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+`;
+      for (const entry of failedEntries) {
+        const oracleText = entry.oracle ? entry.oracle.substring(0, 100) : '(empty)';
+        const cslnText = entry.csln ? entry.csln.substring(0, 100) : '(empty)';
+        html += `
+                                            <tr class="border-b border-slate-200 hover:bg-slate-50">
+                                                <td class="px-2 py-1 text-slate-600">${escapeHtml(entry.id)}</td>
+                                                <td class="px-2 py-1 font-mono text-slate-600 text-xs" title="${escapeHtml(entry.oracle || '')}">${escapeHtml(oracleText)}</td>
+                                                <td class="px-2 py-1 font-mono text-slate-600 text-xs" title="${escapeHtml(entry.csln || '')}">${escapeHtml(cslnText)}</td>
+                                                <td class="px-2 py-1 text-center font-bold text-red-600">✗</td>
+                                            </tr>
+`;
+      }
+      html += `
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+`;
+    }
   }
 
   if (style.oracleDetail && style.oracleDetail.length > 0) {
@@ -562,6 +702,7 @@ function generateDetailContent(style) {
                                                 <th class="text-left px-2 py-1 font-medium text-slate-700">Oracle</th>
                                                 <th class="text-left px-2 py-1 font-medium text-slate-700">CSLN</th>
                                                 <th class="text-center px-2 py-1 font-medium text-slate-700">Match</th>
+                                                <th class="text-left px-2 py-1 font-medium text-slate-700">Issues</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -572,15 +713,25 @@ function generateDetailContent(style) {
       const matchIcon = entry.match === true ? '✓' : entry.match === false ? '✗' : '–';
       const matchColor = entry.match === true ? 'text-emerald-600' : entry.match === false ? 'text-red-600' : 'text-slate-400';
 
-      const oracleText = entry.oracle ? entry.oracle.substring(0, 80) : '(empty)';
-      const cslnText = entry.csln ? entry.csln.substring(0, 80) : '(empty)';
+      const oracleText = entry.oracle ? entry.oracle.substring(0, 100) : '(empty)';
+      const cslnText = entry.csln ? entry.csln.substring(0, 100) : '(empty)';
+
+      let issuesText = '—';
+      if (!entry.match) {
+        if (entry.issues && entry.issues.length > 0) {
+          issuesText = entry.issues
+            .map(iss => iss.component ? `${iss.component}:${iss.issue}` : iss.issue)
+            .join(', ');
+        }
+      }
 
       html += `
                                             <tr class="border-b border-slate-200 hover:bg-slate-50">
                                                 <td class="px-2 py-1 text-slate-600">${i + 1}</td>
-                                                <td class="px-2 py-1 font-mono text-slate-600" title="${escapeHtml(entry.oracle || '')}">${escapeHtml(oracleText)}</td>
-                                                <td class="px-2 py-1 font-mono text-slate-600" title="${escapeHtml(entry.csln || '')}">${escapeHtml(cslnText)}</td>
+                                                <td class="px-2 py-1 font-mono text-slate-600 text-xs" title="${escapeHtml(entry.oracle || '')}">${escapeHtml(oracleText)}</td>
+                                                <td class="px-2 py-1 font-mono text-slate-600 text-xs" title="${escapeHtml(entry.csln || '')}">${escapeHtml(cslnText)}</td>
                                                 <td class="px-2 py-1 text-center font-bold ${matchColor}">${matchIcon}</td>
+                                                <td class="px-2 py-1 text-slate-600 text-xs font-mono">${escapeHtml(issuesText)}</td>
                                             </tr>
 `;
     }
@@ -589,6 +740,23 @@ function generateDetailContent(style) {
                                         </tbody>
                                     </table>
                                 </div>
+                            </div>
+`;
+  }
+
+  if (style.knownDivergences && style.knownDivergences.length > 0) {
+    html += `
+                            <div class="p-4 rounded-lg bg-primary/5 border border-primary/20 mt-4">
+                                <div class="text-sm font-semibold text-primary mb-2">CSLN Extensions</div>
+`;
+    for (const divergence of style.knownDivergences) {
+      html += `
+                                <div class="text-xs text-slate-700 mb-2">
+                                    <strong>${escapeHtml(divergence.feature)}:</strong> ${escapeHtml(divergence.description)}
+                                </div>
+`;
+    }
+    html += `
                             </div>
 `;
   }

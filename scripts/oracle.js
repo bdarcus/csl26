@@ -295,6 +295,7 @@ const results = {
     total: Object.keys(testItems).length,
     passed: 0,
     failed: 0,
+    entries: [],
   },
   bibliography: {
     total: pairs.length,
@@ -310,11 +311,13 @@ const results = {
 for (const id of Object.keys(testItems)) {
   const oracleCit = normalizeText(oracle.citations[id] || '');
   const cslnCit = normalizeText(csln.citations[id] || '');
-  if (oracleCit === cslnCit) {
+  const match = oracleCit === cslnCit;
+  if (match) {
     results.citations.passed++;
   } else {
     results.citations.failed++;
   }
+  results.citations.entries.push({ id, oracle: oracleCit, csln: cslnCit, match });
 }
 
 // Analyze bibliography entries
