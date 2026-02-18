@@ -5,67 +5,82 @@ status: todo
 type: task
 priority: normal
 created_at: 2026-02-17T22:02:32Z
-updated_at: 2026-02-17T23:00:00Z
+updated_at: 2026-02-18T15:00:00Z
 ---
 
-BoltFFI seems like it might be an interesting solution for this project:
+BoltFFI looks promising as a unifying path for multi-language bindings, especially for TypeScript/WASM plus native targets (Swift/Kotlin). This bean defines a forward-looking plan that keeps current velocity while reducing long-term binding complexity.
 
-https://github.com/boltffi/boltffi
+## Goal
 
-It currently has "full support" for Swift, Kotlin, and Typescript/WASM, with plans
-for Python, C#, and Ruby.
+Establish one minimal, stable Rust binding contract and use it across multiple targets with the least duplicated glue code.
 
-For languages that support it, it will also autogen async support on the other side, which should be valuable for our purposes. From the docs:
+## Current State
 
-> Rust async functions can be exported just like regular functions.
+- Current C ABI lives in `crates/csln_processor/src/ffi.rs` and is used by Lua bindings.
+- `csln_processor` already builds as `cdylib` and `rlib`.
+- WASM support remains a roadmap target.
 
-I just submitted an issue for Lua support:
+## Strategy: Two Lanes
 
-https://github.com/boltffi/boltffi/issues/49
+### Lane A (Baseline): Keep current C ABI
 
-I am thinking it might make for a more integrated but also targeted approach than separate FFI + WASM?
+- Keep existing C/Lua FFI in place during exploration.
+- Treat this as the stability baseline and fallback path.
+- Do not break existing exported symbols or ownership conventions during the spike.
 
-## Planning Analysis
+### Lane B (Expansion): Introduce BoltFFI
 
-### Fit Assessment
+- Add BoltFFI on top of a small shared Rust API contract.
+- Start with one or two high-value targets only (TypeScript/WASM and Swift or Kotlin).
+- Expand only after objective checks pass.
 
-The current FFI layer (`crates/csln/src/ffi.rs`) is ~300 lines of hand-rolled
-`unsafe` C-ABI glue — manual null pointer checks, `CString`/`CStr`
-conversions, and no async support. BoltFFI would replace this with
-macro-annotated Rust that autogenerates type-safe bindings for:
+## Binding API v0 (Shared Contract)
 
-* Swift — Pandoc-adjacent CLI tooling, macOS/iOS citation apps
-* Kotlin — Android/JVM citation managers (Zotero-adjacent)
-* TypeScript/WASM — browser and Node.js consumers (style editor vision)
+Define and freeze a tiny API surface for cross-language bindings:
 
-All three targets appear in the feature roadmap and CLAUDE.md. The async
-export story is directly relevant to the JSON server mode goal ("run as a
-background process to minimize startup latency").
+1. `new(style_json, bib_json) -> handle`
+2. `new_with_locale(style_json, bib_json, locale_json) -> handle`
+3. `render_citation(handle, citation_json, format) -> string/error`
+4. `render_bibliography(handle, format) -> string/error`
+5. `free(handle)`
 
-### Lua Gap
+Notes:
+- Keep async out of v0 unless a concrete workload requires it now.
+- Keep JSON-in/string-out for v0 to minimize cross-language type complexity.
 
-Lua is not yet supported (issue filed: https://github.com/boltffi/boltffi/issues/49).
-The current C-FFI layer must coexist until that resolves. Strategy:
+## Spike Plan (1-2 weeks)
 
-* Retain `ffi.rs` for Lua (C-ABI, cdylib output already configured)
-* Adopt BoltFFI for Swift/Kotlin/WASM targets in parallel
-* Merge or deprecate `ffi.rs` once BoltFFI Lua support ships
+1. Map one existing render path to Binding API v0 for BoltFFI.
+2. Generate bindings for TypeScript/WASM and one native target (Swift or Kotlin).
+3. Build tiny smoke consumers for each target.
+4. Compare behavior against current C ABI baseline on shared fixtures.
 
-The existing `crate-type = ["rlib", "cdylib"]` in Cargo.toml already
-produces the dylib output BoltFFI needs — no build config changes required.
+## Acceptance Gates
 
-### Risks
+BoltFFI path is considered viable only if all pass:
 
-* BoltFFI is early-stage — track issue velocity and API stability before
-  committing to it as the primary bindings layer.
-* Coexistence of two FFI mechanisms adds maintenance surface temporarily.
-* Async export relies on BoltFFI's runtime bridge — verify it integrates
-  with Tokio (our async runtime) before adopting.
+1. Constructor/destructor lifecycle works without leaks or crashes.
+2. String ownership/free semantics are explicit and validated.
+3. Errors are surfaced deterministically (not silent null-only behavior).
+4. One golden citation and one bibliography fixture match baseline output.
+5. Dev workflow is simpler than hand-rolled glue for the tested targets.
 
-### Recommended Next Steps
+## WASM Decision Rule
 
-1. Spike: annotate one csln_processor function with BoltFFI macros and
-   generate Swift + TypeScript bindings. Verify correctness and ergonomics.
-2. Benchmark cold-start overhead vs the hand-rolled C layer.
-3. Track boltffi/boltffi#49 for Lua support ETA.
-4. If spike passes, file a new bean to migrate Swift/Kotlin/WASM targets.
+- If BoltFFI's WASM output integrates cleanly with packaging/runtime expectations, use it.
+- If not, keep WASM as a separate implementation lane while preserving the same Binding API v0 semantics.
+
+## Lua Gap
+
+Lua is not currently a BoltFFI target. Keep C ABI for Lua until support exists (tracked by boltffi/boltffi#49) and migration value is clear.
+
+## Risks
+
+- BoltFFI maturity/API churn may add short-term instability.
+- Running dual lanes increases temporary maintenance cost.
+- Divergence risk if new features bypass Binding API v0 discipline.
+
+## Exit Criteria
+
+- Proceed with broader BoltFFI adoption if spike passes all acceptance gates and reduces net maintenance.
+- Otherwise keep BoltFFI optional, continue C ABI baseline, and revisit after BoltFFI/Lua maturity improves.
