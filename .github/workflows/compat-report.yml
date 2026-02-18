@@ -7,6 +7,7 @@ on:
       - "crates/**"
       - "styles/**"
       - "scripts/**"
+  workflow_dispatch:
 
 jobs:
   report:
