@@ -100,6 +100,22 @@ Use this workflow to improve an existing style based on new language features or
     -   Verify output against reference materials (e.g., style guide examples) or oracle output (if a legacy CSL exists).
     -   Ensure no regressions in existing supported types.
 
+### Targeted Fidelity Mode (Optional)
+
+Use this mode when the user gives a concrete metric target (for example, “get bibliography above 20 matches”).
+
+1.  **Lock Target Metric First**:
+    -   Define the exact pass condition up front (e.g., bibliography `>20`).
+    -   Prioritize only mismatches that affect that metric.
+2.  **Single Oracle Snapshot per Iteration**:
+    -   Run one oracle pass per loop.
+    -   Extract mismatches from saved JSON instead of re-running ad-hoc comparisons.
+3.  **Two-Stage Fix Order**:
+    -   Stage A: style-level `type-templates` / component overrides.
+    -   Stage B: processor or conversion changes only when Stage A stalls.
+4.  **Stop on Target, Then Commit**:
+    -   Once target metric is reached, commit before optional polish to avoid drift.
+
 ---
 
 ## Standard Workflow Phases
