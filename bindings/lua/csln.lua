@@ -19,9 +19,85 @@ ffi.cdef[[
 local CSLN = {}
 CSLN.__index = CSLN
 
--- Load the library (adjust path as needed)
-local lib_path = "target/debug/libcsln_processor.dylib" -- OS-dependent extension
-local lib = ffi.load(lib_path)
+local function is_windows()
+    return jit and jit.os == "Windows"
+end
+
+local function is_macos()
+    return jit and jit.os == "OSX"
+end
+
+local function shared_lib_name()
+    if is_windows() then
+        return "csln_processor.dll"
+    end
+    if is_macos() then
+        return "libcsln_processor.dylib"
+    end
+    return "libcsln_processor.so"
+end
+
+local function resolve_library()
+    local env_path = os.getenv("CSLN_LIB_PATH")
+    local lib_name = shared_lib_name()
+    local candidates = {}
+
+    if env_path and #env_path > 0 then
+        table.insert(candidates, env_path)
+    end
+
+    -- Prefer release builds for normal use, with debug fallback.
+    table.insert(candidates, "target/release/" .. lib_name)
+    table.insert(candidates, "target/debug/" .. lib_name)
+    table.insert(candidates, lib_name)
+
+    local required_symbols = {
+        "csln_processor_new",
+        "csln_processor_free",
+        "csln_render_citation_latex",
+        "csln_render_bibliography_latex",
+        "csln_string_free",
+    }
+    local load_errors = {}
+
+    for _, candidate in ipairs(candidates) do
+        local ok, loaded = pcall(ffi.load, candidate)
+        if ok then
+            local symbols_ok = true
+            local missing = nil
+            for _, symbol in ipairs(required_symbols) do
+                local has_symbol = pcall(function()
+                    return loaded[symbol]
+                end)
+                if not has_symbol then
+                    symbols_ok = false
+                    missing = symbol
+                    break
+                end
+            end
+
+            if symbols_ok then
+                return loaded, candidate
+            end
+            table.insert(load_errors, candidate .. " (missing symbol: " .. tostring(missing) .. ")")
+        else
+            table.insert(load_errors, candidate .. " (" .. tostring(loaded) .. ")")
+        end
+    end
+
+    return nil, candidates, load_errors
+end
+
+local lib, loaded_path, load_errors = resolve_library()
+if lib == nil then
+    error(
+        "Failed to load csln_processor shared library. Tried: "
+            .. table.concat(loaded_path, ", ")
+            .. ". Details: "
+            .. table.concat(load_errors, " | ")
+            .. ". Ensure it is built with: cargo build --package csln_processor --release --features ffi"
+    )
+end
 
 function CSLN.new(style_json, bib_json)
     local self = setmetatable({}, CSLN)
@@ -29,12 +105,15 @@ function CSLN.new(style_json, bib_json)
     if self.ptr == nil then
         return nil, "Failed to initialize CSLN processor"
     end
+    self.ptr = ffi.gc(self.ptr, lib.csln_processor_free)
+    self.lib_path = loaded_path
     return self
 end
 
 function CSLN:free()
     if self.ptr then
-        lib.csln_processor_free(self.ptr)
+        local ptr = ffi.gc(self.ptr, nil)
+        lib.csln_processor_free(ptr)
         self.ptr = nil
     end
 end

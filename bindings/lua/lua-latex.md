@@ -38,6 +38,18 @@ The integration follows a "Hybrid Rust-Lua" model:
     proc:free()
     ```
 
+3.  **Library Resolution**:
+    `bindings/lua/csln.lua` now resolves the shared library in this order:
+    - `CSLN_LIB_PATH` (if set)
+    - `target/release/<platform library>`
+    - `target/debug/<platform library>`
+    - system loader path (bare library name)
+
+    This is Linux-first by default (`libcsln_processor.so` on Linux, `.dylib` on macOS, `.dll` on Windows).
+
+4.  **Memory Management**:
+    The binding attaches a LuaJIT `ffi.gc` finalizer to the native processor pointer, so resources are reclaimed even if `:free()` is not called. Calling `:free()` is still recommended for deterministic cleanup.
+
 ## Comparison with `citeproc-lua`
 
 While `citeproc-lua` is a faithful implementation of CSL 1.0 in pure Lua, CSLN offers:
