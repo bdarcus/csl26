@@ -96,7 +96,7 @@ Use this workflow to improve an existing style based on new language features or
     -   Apply changes to the YAML file.
     -   If improving output, add new overrides or components to handle specific reference types.
 4.  **Test & Verify**:
-    -   Run `cargo run --bin csln-processor -- <style-path>`.
+    -   Run `cargo run --bin csln -- render refs -b examples/comprehensive.yaml -s <style-path>`.
     -   Verify output against reference materials (e.g., style guide examples) or oracle output (if a legacy CSL exists).
     -   Ensure no regressions in existing supported types.
 

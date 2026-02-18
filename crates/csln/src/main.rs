@@ -1,4 +1,4 @@
-use clap::{Parser, Subcommand, ValueEnum};
+use clap::{ArgAction, ArgGroup, Args, Parser, Subcommand, ValueEnum};
 use csln_core::locale::RawLocale;
 use csln_core::reference::InputReference;
 use csln_core::{InputBibliography, Locale, Style};
@@ -6,17 +6,19 @@ use csln_processor::{
     io::{load_bibliography, load_citations},
     processor::document::djot::DjotParser,
     render::{djot::Djot, html::Html, latex::Latex, plain::PlainText},
-    Citation, CitationItem, DocumentFormat, Processor,
+    Bibliography, Citation, CitationItem, DocumentFormat, Processor,
 };
 #[cfg(feature = "schema")]
 use schemars::schema_for;
 use serde::Serialize;
+use std::collections::HashSet;
 use std::error::Error;
+use std::fmt::Write as _;
 use std::fs;
 use std::path::{Path, PathBuf};
 
 #[derive(Parser)]
-#[command(author, version, about, long_about = None)]
+#[command(author, version, about, long_about = None, arg_required_else_help = true)]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
@@ -30,8 +32,60 @@ enum DataType {
     Citations,
 }
 
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum, Debug)]
+enum RenderMode {
+    Bib,
+    Cite,
+    Both,
+}
+
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum, Debug)]
+enum InputFormat {
+    Djot,
+    Markdown,
+}
+
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum, Debug)]
+enum OutputFormat {
+    Plain,
+    Html,
+    Djot,
+    Latex,
+    Typst,
+}
+
+impl std::fmt::Display for OutputFormat {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            OutputFormat::Plain => write!(f, "plain"),
+            OutputFormat::Html => write!(f, "html"),
+            OutputFormat::Djot => write!(f, "djot"),
+            OutputFormat::Latex => write!(f, "latex"),
+            OutputFormat::Typst => write!(f, "typst"),
+        }
+    }
+}
+
 #[derive(Subcommand)]
 enum Commands {
+    /// Render documents or references
+    Render {
+        #[command(subcommand)]
+        command: RenderCommands,
+    },
+
+    /// Validate style, bibliography, and citations files
+    #[command(
+        group = ArgGroup::new("inputs")
+            .required(true)
+            .multiple(true)
+            .args(["style", "bibliography", "citations"])
+    )]
+    Check(CheckArgs),
+
+    /// Convert between CSLN formats (YAML, JSON, CBOR)
+    Convert(ConvertArgs),
+
     /// Generate JSON schema for CSLN models
     #[cfg(feature = "schema")]
     Schema {
@@ -43,108 +97,226 @@ enum Commands {
         #[arg(short, long)]
         out_dir: Option<PathBuf>,
     },
-    /// Process a bibliography and citations
-    Process {
-        /// Path to the references file (CSLN YAML/JSON or CSL-JSON)
-        #[arg(index = 1)]
-        references: PathBuf,
 
-        /// Path to the style YAML file
-        #[arg(index = 2)]
-        style: PathBuf,
+    /// Legacy alias for `render refs`
+    #[command(hide = true)]
+    Process(LegacyProcessArgs),
 
-        /// Path to the citations file (CSLN YAML/JSON)
-        #[arg(short = 'c', long)]
-        citations: Option<PathBuf>,
+    /// Legacy alias for `render doc`
+    #[command(hide = true)]
+    Doc(LegacyDocArgs),
 
-        /// Output format
-        #[arg(short, long, value_enum, default_value_t = Format::Plain)]
-        format: Format,
-
-        /// Show bibliography (default if neither --bib nor --cite is specified)
-        #[arg(long)]
-        bib: bool,
-
-        /// Show citations
-        #[arg(long)]
-        cite: bool,
-
-        /// Specific citation keys to render (comma-separated)
-        #[arg(short = 'k', long, value_delimiter = ',')]
-        keys: Option<Vec<String>>,
-
-        /// Show reference keys/IDs in output (default: false)
-        #[arg(long)]
-        show_keys: bool,
-
-        /// Output as JSON
-        #[arg(long)]
-        json: bool,
-
-        /// Disable semantic classes (HTML spans, Djot attributes)
-        #[arg(long)]
-        no_semantics: bool,
-    },
-    /// Validate a CSLN style file
-    Validate {
-        /// Path to the style YAML/JSON file
-        path: PathBuf,
-    },
-    /// Convert between CSLN formats (YAML, JSON, CBOR)
-    Convert {
-        /// Path to the input file
-        input: PathBuf,
-
-        /// Path to the output file
-        #[arg(short, long)]
-        output: PathBuf,
-
-        /// Data type (style, bib, locale)
-        #[arg(short, long, value_enum)]
-        r#type: Option<DataType>,
-    },
-    /// Show the structure of a CSLN style
-    Tree {
-        /// Path to the style YAML/JSON file
-        path: PathBuf,
-    },
-    /// Process a full document
-    Doc {
-        /// Path to the document file
-        #[arg(index = 1)]
-        document: PathBuf,
-
-        /// Path to the references file
-        #[arg(index = 2)]
-        references: PathBuf,
-
-        /// Path to the style YAML file
-        #[arg(index = 3)]
-        style: PathBuf,
-
-        /// Output format
-        #[arg(short, long, value_enum, default_value_t = Format::Plain)]
-        format: Format,
-    },
+    /// Legacy alias for `check --style`
+    #[command(hide = true)]
+    Validate(LegacyValidateArgs),
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum, Debug)]
-enum Format {
-    Plain,
-    Html,
-    Djot,
-    Latex,
+#[derive(Subcommand)]
+enum RenderCommands {
+    /// Render a full document with citations and bibliography
+    Doc(RenderDocArgs),
+
+    /// Render references/citations directly
+    Refs(RenderRefsArgs),
 }
 
-impl std::fmt::Display for Format {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Format::Plain => write!(f, "plain"),
-            Format::Html => write!(f, "html"),
-            Format::Djot => write!(f, "djot"),
-            Format::Latex => write!(f, "latex"),
-        }
-    }
+#[derive(Args, Debug)]
+struct RenderDocArgs {
+    /// Path to input document
+    #[arg(short = 'i', long)]
+    input: PathBuf,
+
+    /// Path to style file
+    #[arg(short = 's', long)]
+    style: PathBuf,
+
+    /// Path(s) to bibliography input files (repeat for multiple)
+    #[arg(short = 'b', long, required = true, action = ArgAction::Append)]
+    bibliography: Vec<PathBuf>,
+
+    /// Path(s) to citations input files (repeat for multiple)
+    #[arg(short = 'c', long, action = ArgAction::Append)]
+    citations: Vec<PathBuf>,
+
+    /// Input document format
+    #[arg(short = 'I', long = "input-format", value_enum, default_value_t = InputFormat::Djot)]
+    input_format: InputFormat,
+
+    /// Output format
+    #[arg(
+        short = 'O',
+        long = "output-format",
+        value_enum,
+        default_value_t = OutputFormat::Plain
+    )]
+    output_format: OutputFormat,
+
+    /// Write output to file (defaults to stdout)
+    #[arg(short = 'o', long)]
+    output: Option<PathBuf>,
+
+    /// Disable semantic classes (HTML spans, Djot attributes)
+    #[arg(long)]
+    no_semantics: bool,
+}
+
+#[derive(Args, Debug)]
+struct RenderRefsArgs {
+    /// Path(s) to bibliography input files (repeat for multiple)
+    #[arg(short = 'b', long, required = true, action = ArgAction::Append)]
+    bibliography: Vec<PathBuf>,
+
+    /// Path to style file
+    #[arg(short = 's', long)]
+    style: PathBuf,
+
+    /// Path(s) to citations input files (repeat for multiple)
+    #[arg(short = 'c', long, action = ArgAction::Append)]
+    citations: Vec<PathBuf>,
+
+    /// Render mode
+    #[arg(short = 'm', long, value_enum, default_value_t = RenderMode::Both)]
+    mode: RenderMode,
+
+    /// Specific reference keys to render (comma-separated)
+    #[arg(short = 'k', long, value_delimiter = ',')]
+    keys: Option<Vec<String>>,
+
+    /// Show reference keys/IDs in human output
+    #[arg(long)]
+    show_keys: bool,
+
+    /// Output as JSON
+    #[arg(short = 'j', long)]
+    json: bool,
+
+    /// Output format
+    #[arg(
+        short = 'O',
+        long = "output-format",
+        value_enum,
+        default_value_t = OutputFormat::Plain
+    )]
+    output_format: OutputFormat,
+
+    /// Write output to file (defaults to stdout)
+    #[arg(short = 'o', long)]
+    output: Option<PathBuf>,
+
+    /// Disable semantic classes (HTML spans, Djot attributes)
+    #[arg(long)]
+    no_semantics: bool,
+}
+
+#[derive(Args, Debug)]
+struct CheckArgs {
+    /// Path to style file
+    #[arg(short = 's', long)]
+    style: Option<PathBuf>,
+
+    /// Path(s) to bibliography input files (repeat for multiple)
+    #[arg(short = 'b', long, action = ArgAction::Append)]
+    bibliography: Vec<PathBuf>,
+
+    /// Path(s) to citations input files (repeat for multiple)
+    #[arg(short = 'c', long, action = ArgAction::Append)]
+    citations: Vec<PathBuf>,
+
+    /// Output as JSON
+    #[arg(short = 'j', long)]
+    json: bool,
+}
+
+#[derive(Args, Debug)]
+struct ConvertArgs {
+    /// Path to input file
+    #[arg(index = 1)]
+    input: PathBuf,
+
+    /// Path to output file
+    #[arg(short = 'o', long)]
+    output: PathBuf,
+
+    /// Data type (style, bib, locale, citations)
+    #[arg(short = 't', long = "type", value_enum)]
+    r#type: Option<DataType>,
+}
+
+#[derive(Args, Debug)]
+struct LegacyProcessArgs {
+    /// Path to references file
+    #[arg(index = 1)]
+    references: PathBuf,
+
+    /// Path to style file
+    #[arg(index = 2)]
+    style: PathBuf,
+
+    /// Path to citations file
+    #[arg(short = 'c', long)]
+    citations: Option<PathBuf>,
+
+    /// Output format
+    #[arg(short = 'f', long, value_enum, default_value_t = OutputFormat::Plain)]
+    format: OutputFormat,
+
+    /// Show bibliography
+    #[arg(long)]
+    bib: bool,
+
+    /// Show citations
+    #[arg(long)]
+    cite: bool,
+
+    /// Specific citation keys to render (comma-separated)
+    #[arg(short = 'k', long, value_delimiter = ',')]
+    keys: Option<Vec<String>>,
+
+    /// Show reference keys/IDs in output
+    #[arg(long)]
+    show_keys: bool,
+
+    /// Output as JSON
+    #[arg(long)]
+    json: bool,
+
+    /// Disable semantic classes (HTML spans, Djot attributes)
+    #[arg(long)]
+    no_semantics: bool,
+}
+
+#[derive(Args, Debug)]
+struct LegacyDocArgs {
+    /// Path to the document file
+    #[arg(index = 1)]
+    document: PathBuf,
+
+    /// Path to the references file
+    #[arg(index = 2)]
+    references: PathBuf,
+
+    /// Path to the style file
+    #[arg(index = 3)]
+    style: PathBuf,
+
+    /// Output format
+    #[arg(short = 'f', long, value_enum, default_value_t = OutputFormat::Plain)]
+    format: OutputFormat,
+}
+
+#[derive(Args, Debug)]
+struct LegacyValidateArgs {
+    /// Path to style file
+    path: PathBuf,
+}
+
+#[derive(Serialize)]
+struct CheckItem {
+    kind: &'static str,
+    path: String,
+    ok: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    error: Option<String>,
 }
 
 fn main() {
@@ -158,309 +330,453 @@ fn run() -> Result<(), Box<dyn Error>> {
     let cli = Cli::parse();
 
     match cli.command {
+        Commands::Render { command } => match command {
+            RenderCommands::Doc(args) => run_render_doc(args),
+            RenderCommands::Refs(args) => run_render_refs(args),
+        },
+        Commands::Check(args) => run_check(args),
+        Commands::Convert(args) => run_convert(args),
         #[cfg(feature = "schema")]
-        Commands::Schema { r#type, out_dir } => {
-            if let Some(dir) = out_dir {
-                fs::create_dir_all(&dir)?;
-                let types = [
-                    (DataType::Style, "style.json"),
-                    (DataType::Bib, "bib.json"),
-                    (DataType::Locale, "locale.json"),
-                    (DataType::Citations, "citations.json"),
-                ];
-                for (t, filename) in types {
-                    let schema = match t {
-                        DataType::Style => schema_for!(Style),
-                        DataType::Bib => schema_for!(InputBibliography),
-                        DataType::Locale => schema_for!(RawLocale),
-                        DataType::Citations => schema_for!(csln_core::Citations),
-                    };
-                    let path = dir.join(filename);
-                    fs::write(&path, serde_json::to_string_pretty(&schema)?)?;
-                }
-                println!("Schemas exported to {}", dir.display());
-            } else if let Some(t) = r#type {
-                let schema = match t {
-                    DataType::Style => schema_for!(Style),
-                    DataType::Bib => schema_for!(InputBibliography),
-                    DataType::Locale => schema_for!(RawLocale),
-                    DataType::Citations => schema_for!(csln_core::Citations),
-                };
-                println!("{}", serde_json::to_string_pretty(&schema)?);
+        Commands::Schema { r#type, out_dir } => run_schema(r#type, out_dir),
+        Commands::Process(args) => {
+            eprintln!(
+                "Warning: `csln process` is deprecated. Use `csln render refs` with -b/-s flags."
+            );
+            let mode = if args.bib && args.cite {
+                RenderMode::Both
+            } else if args.bib {
+                RenderMode::Bib
+            } else if args.cite {
+                RenderMode::Cite
             } else {
-                return Err("Specify a type (style, bib, locale, citation) or --out-dir".into());
-            }
+                RenderMode::Both
+            };
+            let refs_args = RenderRefsArgs {
+                bibliography: vec![args.references],
+                style: args.style,
+                citations: args.citations.into_iter().collect(),
+                mode,
+                keys: args.keys,
+                show_keys: args.show_keys,
+                json: args.json,
+                output_format: args.format,
+                output: None,
+                no_semantics: args.no_semantics,
+            };
+            run_render_refs(refs_args)
         }
-        Commands::Process {
-            references,
-            style,
-            citations,
-            format,
-            mut bib,
-            mut cite,
-            keys,
-            show_keys,
-            json,
-            no_semantics,
-        } => {
-            // Default behavior: show both if neither is specified
-            if !bib && !cite {
-                bib = true;
-                cite = true;
-            }
-
-            // Load style
-            let style_bytes = fs::read(&style)?;
-            let style_ext = style.extension().and_then(|e| e.to_str()).unwrap_or("yaml");
-
-            let mut style_obj: Style = match style_ext {
-                "cbor" => serde_cbor::from_slice(&style_bytes)?,
-                "json" => serde_json::from_slice(&style_bytes)?,
-                _ => serde_yaml::from_slice(&style_bytes)?,
+        Commands::Doc(args) => {
+            eprintln!("Warning: `csln doc` is deprecated. Use `csln render doc` with -i/-b/-s.");
+            let doc_args = RenderDocArgs {
+                input: args.document,
+                style: args.style,
+                bibliography: vec![args.references],
+                citations: Vec::new(),
+                input_format: InputFormat::Djot,
+                output_format: args.format,
+                output: None,
+                no_semantics: false,
             };
-
-            if no_semantics {
-                if let Some(ref mut options) = style_obj.options {
-                    options.semantic_classes = Some(false);
-                } else {
-                    style_obj.options = Some(csln_core::options::Config {
-                        semantic_classes: Some(false),
-                        ..Default::default()
-                    });
-                }
-            }
-
-            // Load bibliography
-            let bibliography = load_bibliography(&references)?;
-
-            // Load citations if provided
-            let input_citations = if let Some(ref path) = citations {
-                Some(load_citations(path)?)
-            } else {
-                None
-            };
-
-            // Determine citation keys
-            let item_ids = if let Some(ref k) = keys {
-                k.clone()
-            } else {
-                bibliography.keys().cloned().collect()
-            };
-
-            // Determine locales directory
-            let locales_dir = find_locales_dir(style.to_str().unwrap_or("."));
-
-            // Create processor with locale support
-            let processor = if let Some(ref locale_id) = style_obj.info.default_locale {
-                let locale = Locale::load(locale_id, &locales_dir);
-                Processor::with_locale(style_obj, bibliography, locale)
-            } else {
-                Processor::new(style_obj, bibliography)
-            };
-
-            let style_name = style
-                .file_name()
-                .map(|s| s.to_string_lossy().to_string())
-                .unwrap_or_else(|| "unknown".to_string());
-
-            if json {
-                print_json(
-                    &processor,
-                    &style_name,
-                    cite,
-                    bib,
-                    &item_ids,
-                    input_citations,
-                    show_keys,
-                );
-            } else {
-                match format {
-                    Format::Plain => {
-                        print_human_safe::<PlainText>(
-                            &processor,
-                            &style_name,
-                            cite,
-                            bib,
-                            &item_ids,
-                            input_citations,
-                            show_keys,
-                        );
-                    }
-                    Format::Html => {
-                        print_human_safe::<Html>(
-                            &processor,
-                            &style_name,
-                            cite,
-                            bib,
-                            &item_ids,
-                            input_citations,
-                            show_keys,
-                        );
-                    }
-                    Format::Djot => {
-                        print_human_safe::<Djot>(
-                            &processor,
-                            &style_name,
-                            cite,
-                            bib,
-                            &item_ids,
-                            input_citations,
-                            show_keys,
-                        );
-                    }
-                    Format::Latex => {
-                        print_human_safe::<Latex>(
-                            &processor,
-                            &style_name,
-                            cite,
-                            bib,
-                            &item_ids,
-                            input_citations,
-                            show_keys,
-                        );
-                    }
-                }
-            }
+            run_render_doc(doc_args)
         }
-        Commands::Validate { path } => {
-            let bytes = fs::read(&path)?;
-            let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("yaml");
-
-            // Try parsing as Style
-            let res = match ext {
-                "cbor" => serde_cbor::from_slice::<Style>(&bytes)
-                    .map(|_| ())
-                    .map_err(|e| e.to_string()),
-                "json" => serde_json::from_slice::<Style>(&bytes)
-                    .map(|_| ())
-                    .map_err(|e| e.to_string()),
-                _ => serde_yaml::from_slice::<Style>(&bytes)
-                    .map(|_| ())
-                    .map_err(|e| e.to_string()),
-            };
-
-            match res {
-                Ok(_) => println!("Reference style is valid."),
-                Err(e) => return Err(format!("Validation failed: {}", e).into()),
-            }
-        }
-        Commands::Convert {
-            input,
-            output,
-            r#type,
-        } => {
-            let input_bytes = fs::read(&input)?;
-            let input_ext = input.extension().and_then(|e| e.to_str()).unwrap_or("yaml");
-            let output_ext = output
-                .extension()
-                .and_then(|e| e.to_str())
-                .unwrap_or("yaml");
-
-            // Detect data type if not provided
-            let data_type = r#type.unwrap_or_else(|| {
-                let stem = input.file_stem().and_then(|s| s.to_str()).unwrap_or("");
-                if stem.contains("bib") || stem.contains("ref") {
-                    DataType::Bib
-                } else if stem.contains("cite") || stem.contains("citation") {
-                    DataType::Citations
-                } else if stem.len() == 5 && stem.contains('-') {
-                    // e.g. en-US
-                    DataType::Locale
-                } else {
-                    DataType::Style
-                }
-            });
-
-            match data_type {
-                DataType::Style => {
-                    let style: Style = deserialize_any(&input_bytes, input_ext)?;
-                    let out_bytes = serialize_any(&style, output_ext)?;
-                    fs::write(&output, out_bytes)?;
-                }
-                DataType::Bib => {
-                    let bib_obj = load_bibliography(&input)?;
-                    // Convert internal Bibliography (IndexMap) back to InputBibliography
-                    let references: Vec<InputReference> =
-                        bib_obj.into_iter().map(|(_, r)| r).collect();
-                    let input_bib = InputBibliography {
-                        references,
-                        ..Default::default()
-                    };
-                    let out_bytes = serialize_any(&input_bib, output_ext)?;
-                    fs::write(&output, out_bytes)?;
-                }
-                DataType::Locale => {
-                    let locale: RawLocale = deserialize_any(&input_bytes, input_ext)?;
-                    let out_bytes = serialize_any(&locale, output_ext)?;
-                    fs::write(&output, out_bytes)?;
-                }
-                DataType::Citations => {
-                    let citations: csln_core::citation::Citations =
-                        deserialize_any(&input_bytes, input_ext)?;
-                    let out_bytes = serialize_any(&citations, output_ext)?;
-                    fs::write(&output, out_bytes)?;
-                }
-            }
-            println!("Converted {} to {}", input.display(), output.display());
-        }
-        Commands::Tree { path: _ } => {
-            return Err("The 'tree' command is not yet implemented.".into());
-        }
-        Commands::Doc {
-            document,
-            references,
-            style,
-            format,
-        } => {
-            // Load style
-            let style_bytes = fs::read(&style)?;
-            let style_obj: Style = serde_yaml::from_slice(&style_bytes)?;
-
-            // Load bibliography
-            let bibliography = load_bibliography(&references)?;
-
-            // Load document
-            let doc_content = fs::read_to_string(&document)?;
-
-            // Determine locales directory
-            let locales_dir = find_locales_dir(style.to_str().unwrap_or("."));
-
-            // Create processor
-            let processor = if let Some(ref locale_id) = style_obj.info.default_locale {
-                let locale = Locale::load(locale_id, &locales_dir);
-                Processor::with_locale(style_obj, bibliography, locale)
-            } else {
-                Processor::new(style_obj, bibliography)
-            };
-
-            let parser = DjotParser;
-
-            let doc_format = match format {
-                Format::Plain => DocumentFormat::Plain,
-                Format::Html => DocumentFormat::Html,
-                Format::Djot => DocumentFormat::Djot,
-                Format::Latex => DocumentFormat::Latex,
-            };
-
-            let output = match format {
-                Format::Plain => {
-                    processor.process_document::<_, PlainText>(&doc_content, &parser, doc_format)
-                }
-                Format::Html => {
-                    processor.process_document::<_, Html>(&doc_content, &parser, doc_format)
-                }
-                Format::Djot => {
-                    processor.process_document::<_, Djot>(&doc_content, &parser, doc_format)
-                }
-                Format::Latex => {
-                    processor.process_document::<_, Latex>(&doc_content, &parser, doc_format)
-                }
-            };
-
-            println!("{}", output);
+        Commands::Validate(args) => {
+            eprintln!("Warning: `csln validate` is deprecated. Use `csln check --style`.");
+            run_check(CheckArgs {
+                style: Some(args.path),
+                bibliography: Vec::new(),
+                citations: Vec::new(),
+                json: false,
+            })
         }
     }
+}
+
+#[cfg(feature = "schema")]
+fn run_schema(r#type: Option<DataType>, out_dir: Option<PathBuf>) -> Result<(), Box<dyn Error>> {
+    if let Some(dir) = out_dir {
+        fs::create_dir_all(&dir)?;
+        let types = [
+            (DataType::Style, "style.json"),
+            (DataType::Bib, "bib.json"),
+            (DataType::Locale, "locale.json"),
+            (DataType::Citations, "citations.json"),
+        ];
+        for (t, filename) in types {
+            let schema = match t {
+                DataType::Style => schema_for!(Style),
+                DataType::Bib => schema_for!(InputBibliography),
+                DataType::Locale => schema_for!(RawLocale),
+                DataType::Citations => schema_for!(csln_core::Citations),
+            };
+            let path = dir.join(filename);
+            fs::write(&path, serde_json::to_string_pretty(&schema)?)?;
+        }
+        println!("Schemas exported to {}", dir.display());
+        return Ok(());
+    }
+
+    if let Some(t) = r#type {
+        let schema = match t {
+            DataType::Style => schema_for!(Style),
+            DataType::Bib => schema_for!(InputBibliography),
+            DataType::Locale => schema_for!(RawLocale),
+            DataType::Citations => schema_for!(csln_core::Citations),
+        };
+        println!("{}", serde_json::to_string_pretty(&schema)?);
+        return Ok(());
+    }
+
+    Err("Specify a type (style, bib, locale, citation) or --out-dir".into())
+}
+
+fn run_render_doc(args: RenderDocArgs) -> Result<(), Box<dyn Error>> {
+    let style_obj = load_style(&args.style, args.no_semantics)?;
+    let bibliography = load_merged_bibliography(&args.bibliography)?;
+
+    if !args.citations.is_empty() {
+        eprintln!(
+            "Warning: --citations is currently ignored by `render doc`; citations are parsed from the input document."
+        );
+    }
+
+    let locales_dir = find_locales_dir(args.style.to_str().unwrap_or("."));
+    let processor = if let Some(ref locale_id) = style_obj.info.default_locale {
+        let locale = Locale::load(locale_id, &locales_dir);
+        Processor::with_locale(style_obj, bibliography, locale)
+    } else {
+        Processor::new(style_obj, bibliography)
+    };
+
+    let doc_content = fs::read_to_string(&args.input)?;
+    let output = match args.input_format {
+        InputFormat::Djot => render_doc_with_output_format(
+            &processor,
+            &doc_content,
+            args.output_format,
+            DocumentInput::Djot,
+        )?,
+        InputFormat::Markdown => {
+            return Err(
+                "Input format `markdown` is not implemented yet. Use --input-format djot.".into(),
+            )
+        }
+    };
+
+    write_output(&output, args.output.as_ref())
+}
+
+fn run_render_refs(args: RenderRefsArgs) -> Result<(), Box<dyn Error>> {
+    let style_obj = load_style(&args.style, args.no_semantics)?;
+    let bibliography = load_merged_bibliography(&args.bibliography)?;
+
+    let item_ids = if let Some(k) = args.keys.clone() {
+        k
+    } else {
+        bibliography.keys().cloned().collect()
+    };
+
+    let input_citations = if args.citations.is_empty() {
+        None
+    } else {
+        Some(load_merged_citations(&args.citations)?)
+    };
+
+    let locales_dir = find_locales_dir(args.style.to_str().unwrap_or("."));
+    let processor = if let Some(ref locale_id) = style_obj.info.default_locale {
+        let locale = Locale::load(locale_id, &locales_dir);
+        Processor::with_locale(style_obj, bibliography, locale)
+    } else {
+        Processor::new(style_obj, bibliography)
+    };
+
+    let style_name = args
+        .style
+        .file_name()
+        .map(|s| s.to_string_lossy().to_string())
+        .unwrap_or_else(|| "unknown".to_string());
+
+    let output = if args.json {
+        render_refs_json(
+            &processor,
+            &style_name,
+            args.mode,
+            &item_ids,
+            input_citations,
+            args.output_format,
+        )?
+    } else {
+        render_refs_human(
+            &processor,
+            &style_name,
+            args.mode,
+            &item_ids,
+            input_citations,
+            args.show_keys,
+            args.output_format,
+        )?
+    };
+
+    write_output(&output, args.output.as_ref())
+}
+
+fn run_check(args: CheckArgs) -> Result<(), Box<dyn Error>> {
+    let mut checks = Vec::<CheckItem>::new();
+
+    if let Some(style) = args.style {
+        let style_display = style.display().to_string();
+        let status = match load_style(&style, false) {
+            Ok(_) => CheckItem {
+                kind: "style",
+                path: style_display,
+                ok: true,
+                error: None,
+            },
+            Err(e) => CheckItem {
+                kind: "style",
+                path: style_display,
+                ok: false,
+                error: Some(e.to_string()),
+            },
+        };
+        checks.push(status);
+    }
+
+    for path in args.bibliography {
+        let display = path.display().to_string();
+        let status = match load_bibliography(&path) {
+            Ok(_) => CheckItem {
+                kind: "bibliography",
+                path: display,
+                ok: true,
+                error: None,
+            },
+            Err(e) => CheckItem {
+                kind: "bibliography",
+                path: display,
+                ok: false,
+                error: Some(e.to_string()),
+            },
+        };
+        checks.push(status);
+    }
+
+    for path in args.citations {
+        let display = path.display().to_string();
+        let status = match load_citations(&path) {
+            Ok(_) => CheckItem {
+                kind: "citations",
+                path: display,
+                ok: true,
+                error: None,
+            },
+            Err(e) => CheckItem {
+                kind: "citations",
+                path: display,
+                ok: false,
+                error: Some(e.to_string()),
+            },
+        };
+        checks.push(status);
+    }
+
+    if args.json {
+        println!("{}", serde_json::to_string_pretty(&checks)?);
+    } else {
+        for check in &checks {
+            if check.ok {
+                println!("OK   {:<12} {}", check.kind, check.path);
+            } else {
+                println!("FAIL {:<12} {}", check.kind, check.path);
+                if let Some(err) = &check.error {
+                    println!("  -> {}", err);
+                }
+            }
+        }
+    }
+
+    if checks.iter().any(|c| !c.ok) {
+        return Err("One or more checks failed.".into());
+    }
+
     Ok(())
+}
+
+fn run_convert(args: ConvertArgs) -> Result<(), Box<dyn Error>> {
+    let input_bytes = fs::read(&args.input)?;
+    let input_ext = args
+        .input
+        .extension()
+        .and_then(|e| e.to_str())
+        .unwrap_or("yaml");
+    let output_ext = args
+        .output
+        .extension()
+        .and_then(|e| e.to_str())
+        .unwrap_or("yaml");
+
+    let data_type = args.r#type.unwrap_or_else(|| {
+        let stem = args
+            .input
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .unwrap_or("");
+        if stem.contains("bib") || stem.contains("ref") {
+            DataType::Bib
+        } else if stem.contains("cite") || stem.contains("citation") {
+            DataType::Citations
+        } else if stem.len() == 5 && stem.contains('-') {
+            DataType::Locale
+        } else {
+            DataType::Style
+        }
+    });
+
+    match data_type {
+        DataType::Style => {
+            let style: Style = deserialize_any(&input_bytes, input_ext)?;
+            let out_bytes = serialize_any(&style, output_ext)?;
+            fs::write(&args.output, out_bytes)?;
+        }
+        DataType::Bib => {
+            let bib_obj = load_bibliography(&args.input)?;
+            let references: Vec<InputReference> = bib_obj.into_iter().map(|(_, r)| r).collect();
+            let input_bib = InputBibliography {
+                references,
+                ..Default::default()
+            };
+            let out_bytes = serialize_any(&input_bib, output_ext)?;
+            fs::write(&args.output, out_bytes)?;
+        }
+        DataType::Locale => {
+            let locale: RawLocale = deserialize_any(&input_bytes, input_ext)?;
+            let out_bytes = serialize_any(&locale, output_ext)?;
+            fs::write(&args.output, out_bytes)?;
+        }
+        DataType::Citations => {
+            let citations: csln_core::citation::Citations =
+                deserialize_any(&input_bytes, input_ext)?;
+            let out_bytes = serialize_any(&citations, output_ext)?;
+            fs::write(&args.output, out_bytes)?;
+        }
+    }
+
+    println!(
+        "Converted {} to {}",
+        args.input.display(),
+        args.output.display()
+    );
+    Ok(())
+}
+
+enum DocumentInput {
+    Djot,
+}
+
+fn render_doc_with_output_format(
+    processor: &Processor,
+    content: &str,
+    output_format: OutputFormat,
+    input_format: DocumentInput,
+) -> Result<String, Box<dyn Error>> {
+    let doc_format = to_document_format(output_format)?;
+
+    match input_format {
+        DocumentInput::Djot => {
+            let parser = DjotParser;
+            match output_format {
+                OutputFormat::Plain => {
+                    Ok(processor.process_document::<_, PlainText>(content, &parser, doc_format))
+                }
+                OutputFormat::Html => {
+                    Ok(processor.process_document::<_, Html>(content, &parser, doc_format))
+                }
+                OutputFormat::Djot => {
+                    Ok(processor.process_document::<_, Djot>(content, &parser, doc_format))
+                }
+                OutputFormat::Latex => {
+                    Ok(processor.process_document::<_, Latex>(content, &parser, doc_format))
+                }
+                OutputFormat::Typst => Err(
+                    "Output format `typst` is not implemented yet for document rendering.".into(),
+                ),
+            }
+        }
+    }
+}
+
+fn to_document_format(output_format: OutputFormat) -> Result<DocumentFormat, Box<dyn Error>> {
+    match output_format {
+        OutputFormat::Plain => Ok(DocumentFormat::Plain),
+        OutputFormat::Html => Ok(DocumentFormat::Html),
+        OutputFormat::Djot => Ok(DocumentFormat::Djot),
+        OutputFormat::Latex => Ok(DocumentFormat::Latex),
+        OutputFormat::Typst => {
+            Err("Output format `typst` is not implemented yet for document rendering.".into())
+        }
+    }
+}
+
+fn render_refs_human(
+    processor: &Processor,
+    style_name: &str,
+    mode: RenderMode,
+    item_ids: &[String],
+    citations: Option<Vec<Citation>>,
+    show_keys: bool,
+    output_format: OutputFormat,
+) -> Result<String, Box<dyn Error>> {
+    let show_cite = matches!(mode, RenderMode::Cite | RenderMode::Both);
+    let show_bib = matches!(mode, RenderMode::Bib | RenderMode::Both);
+    match output_format {
+        OutputFormat::Plain => print_human_safe::<PlainText>(
+            processor, style_name, show_cite, show_bib, item_ids, citations, show_keys,
+        )
+        .map_err(|e| e.into()),
+        OutputFormat::Html => print_human_safe::<Html>(
+            processor, style_name, show_cite, show_bib, item_ids, citations, show_keys,
+        )
+        .map_err(|e| e.into()),
+        OutputFormat::Djot => print_human_safe::<Djot>(
+            processor, style_name, show_cite, show_bib, item_ids, citations, show_keys,
+        )
+        .map_err(|e| e.into()),
+        OutputFormat::Latex => print_human_safe::<Latex>(
+            processor, style_name, show_cite, show_bib, item_ids, citations, show_keys,
+        )
+        .map_err(|e| e.into()),
+        OutputFormat::Typst => {
+            Err("Output format `typst` is not implemented yet for reference rendering.".into())
+        }
+    }
+}
+
+fn render_refs_json(
+    processor: &Processor,
+    style_name: &str,
+    mode: RenderMode,
+    item_ids: &[String],
+    citations: Option<Vec<Citation>>,
+    output_format: OutputFormat,
+) -> Result<String, Box<dyn Error>> {
+    let show_cite = matches!(mode, RenderMode::Cite | RenderMode::Both);
+    let show_bib = matches!(mode, RenderMode::Bib | RenderMode::Both);
+    match output_format {
+        OutputFormat::Plain => print_json_with_format::<PlainText>(
+            processor, style_name, show_cite, show_bib, item_ids, citations,
+        ),
+        OutputFormat::Html => print_json_with_format::<Html>(
+            processor, style_name, show_cite, show_bib, item_ids, citations,
+        ),
+        OutputFormat::Djot => print_json_with_format::<Djot>(
+            processor, style_name, show_cite, show_bib, item_ids, citations,
+        ),
+        OutputFormat::Latex => print_json_with_format::<Latex>(
+            processor, style_name, show_cite, show_bib, item_ids, citations,
+        ),
+        OutputFormat::Typst => {
+            Err("Output format `typst` is not implemented yet for JSON reference rendering.".into())
+        }
+    }
 }
 
 fn find_locales_dir(style_path: &str) -> PathBuf {
@@ -477,7 +793,66 @@ fn find_locales_dir(style_path: &str) -> PathBuf {
             return candidate.clone();
         }
     }
+
     PathBuf::from(".")
+}
+
+fn load_style(path: &Path, no_semantics: bool) -> Result<Style, Box<dyn Error>> {
+    let bytes = fs::read(path)?;
+    let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("yaml");
+
+    let mut style_obj: Style = match ext {
+        "cbor" => serde_cbor::from_slice(&bytes)?,
+        "json" => serde_json::from_slice(&bytes)?,
+        _ => serde_yaml::from_slice(&bytes)?,
+    };
+
+    if no_semantics {
+        if let Some(ref mut options) = style_obj.options {
+            options.semantic_classes = Some(false);
+        } else {
+            style_obj.options = Some(csln_core::options::Config {
+                semantic_classes: Some(false),
+                ..Default::default()
+            });
+        }
+    }
+
+    Ok(style_obj)
+}
+
+fn load_merged_bibliography(paths: &[PathBuf]) -> Result<Bibliography, Box<dyn Error>> {
+    if paths.is_empty() {
+        return Err("At least one --bibliography file is required.".into());
+    }
+
+    let mut merged = Bibliography::new();
+    for path in paths {
+        let loaded = load_bibliography(path)?;
+        for (id, reference) in loaded {
+            merged.insert(id, reference);
+        }
+    }
+
+    Ok(merged)
+}
+
+fn load_merged_citations(paths: &[PathBuf]) -> Result<Vec<Citation>, Box<dyn Error>> {
+    let mut merged = Vec::new();
+    for path in paths {
+        let loaded = load_citations(path)?;
+        merged.extend(loaded);
+    }
+    Ok(merged)
+}
+
+fn write_output(output: &str, path: Option<&PathBuf>) -> Result<(), Box<dyn Error>> {
+    if let Some(file) = path {
+        fs::write(file, output)?;
+    } else {
+        println!("{}", output);
+    }
+    Ok(())
 }
 
 fn deserialize_any<T: serde::de::DeserializeOwned>(
@@ -509,7 +884,8 @@ fn print_human_safe<F>(
     item_ids: &[String],
     citations: Option<Vec<Citation>>,
     show_keys: bool,
-) where
+) -> Result<String, String>
+where
     F: csln_processor::render::format::OutputFormat<Output = String> + Send + Sync + 'static,
 {
     use std::panic;
@@ -517,13 +893,15 @@ fn print_human_safe<F>(
     let result = panic::catch_unwind(panic::AssertUnwindSafe(|| {
         print_human::<F>(
             processor, style_name, show_cite, show_bib, item_ids, citations, show_keys,
-        );
+        )
     }));
 
-    if result.is_err() {
-        eprintln!("\nError: The processor encountered a critical error during rendering.");
-        eprintln!("This is likely due to an unexpected character or data structure in the style or bibliography.");
-        eprintln!("Please report this issue with the style and data used.");
+    match result {
+        Ok(output) => Ok(output),
+        Err(_) => Err(
+            "The processor encountered a critical error during rendering. Please report this issue with the style and data used."
+                .to_string(),
+        ),
     }
 }
 
@@ -535,36 +913,42 @@ fn print_human<F>(
     item_ids: &[String],
     citations: Option<Vec<Citation>>,
     show_keys: bool,
-) where
+) -> String
+where
     F: csln_processor::render::format::OutputFormat<Output = String>,
 {
-    println!("\n=== {} ===\n", style_name);
+    let mut output = String::new();
+    let _ = writeln!(output, "\n=== {} ===\n", style_name);
 
     if show_cite {
         if let Some(cite_list) = citations {
-            println!("CITATIONS (From file):");
+            let _ = writeln!(output, "CITATIONS (From file):");
             for (i, citation) in cite_list.iter().enumerate() {
                 match processor.process_citation_with_format::<F>(citation) {
                     Ok(text) => {
                         if show_keys {
-                            println!(
+                            let _ = writeln!(
+                                output,
                                 "  [{}] {}",
                                 citation.id.as_deref().unwrap_or(&format!("{}", i)),
                                 text
                             );
                         } else {
-                            println!("  {}", text);
+                            let _ = writeln!(output, "  {}", text);
                         }
                     }
-                    Err(e) => println!(
-                        "  [{}] ERROR: {}",
-                        citation.id.as_deref().unwrap_or(&format!("{}", i)),
-                        e
-                    ),
+                    Err(e) => {
+                        let _ = writeln!(
+                            output,
+                            "  [{}] ERROR: {}",
+                            citation.id.as_deref().unwrap_or(&format!("{}", i)),
+                            e
+                        );
+                    }
                 }
             }
         } else {
-            println!("CITATIONS (Non-Integral):");
+            let _ = writeln!(output, "CITATIONS (Non-Integral):");
             for id in item_ids {
                 let citation = Citation {
                     id: Some(id.to_string()),
@@ -578,17 +962,19 @@ fn print_human<F>(
                 match processor.process_citation_with_format::<F>(&citation) {
                     Ok(text) => {
                         if show_keys {
-                            println!("  [{}] {}", id, text);
+                            let _ = writeln!(output, "  [{}] {}", id, text);
                         } else {
-                            println!("  {}", text);
+                            let _ = writeln!(output, "  {}", text);
                         }
                     }
-                    Err(e) => println!("  [{}] ERROR: {}", id, e),
+                    Err(e) => {
+                        let _ = writeln!(output, "  [{}] ERROR: {}", id, e);
+                    }
                 }
             }
-            println!();
+            let _ = writeln!(output);
 
-            println!("CITATIONS (Integral):");
+            let _ = writeln!(output, "CITATIONS (Integral):");
             for id in item_ids {
                 let citation = Citation {
                     id: Some(id.to_string()),
@@ -602,47 +988,64 @@ fn print_human<F>(
                 match processor.process_citation_with_format::<F>(&citation) {
                     Ok(text) => {
                         if show_keys {
-                            println!("  [{}] {}", id, text);
+                            let _ = writeln!(output, "  [{}] {}", id, text);
                         } else {
-                            println!("  {}", text);
+                            let _ = writeln!(output, "  {}", text);
                         }
                     }
-                    Err(e) => println!("  [{}] ERROR: {}", id, e),
+                    Err(e) => {
+                        let _ = writeln!(output, "  [{}] ERROR: {}", id, e);
+                    }
                 }
             }
         }
-        println!();
+        let _ = writeln!(output);
     }
 
     if show_bib {
-        println!("BIBLIOGRAPHY:");
-        if show_keys {
-            let processed = processor.process_references();
-            for entry in processed.bibliography {
-                // Render this single entry
+        let _ = writeln!(output, "BIBLIOGRAPHY:");
+        let filter: HashSet<&str> = item_ids.iter().map(|id| id.as_str()).collect();
+        let processed = processor.process_references();
+        let mut rendered_entries = Vec::new();
+
+        for entry in processed.bibliography {
+            if filter.contains(entry.id.as_str()) {
                 let text =
                     csln_processor::render::refs_to_string_with_format::<F>(vec![entry.clone()]);
                 let trimmed = text.trim();
                 if !trimmed.is_empty() {
-                    println!("  [{}] {}", entry.id, trimmed);
+                    if show_keys {
+                        rendered_entries.push(format!("  [{}] {}", entry.id, trimmed));
+                    } else {
+                        rendered_entries.push(trimmed.to_string());
+                    }
                 }
             }
-        } else {
-            let text = processor.render_bibliography_with_format::<F>();
-            println!("{}", text);
+        }
+
+        if show_keys {
+            for entry in rendered_entries {
+                let _ = writeln!(output, "{}", entry);
+            }
+        } else if !rendered_entries.is_empty() {
+            let _ = writeln!(output, "{}", rendered_entries.join("\n\n"));
         }
     }
+
+    output
 }
 
-fn print_json(
+fn print_json_with_format<F>(
     processor: &Processor,
     style_name: &str,
     show_cite: bool,
     show_bib: bool,
     item_ids: &[String],
     citations: Option<Vec<Citation>>,
-    _show_keys: bool,
-) {
+) -> Result<String, Box<dyn Error>>
+where
+    F: csln_processor::render::format::OutputFormat<Output = String>,
+{
     use serde_json::json;
 
     let mut result = json!({
@@ -657,7 +1060,9 @@ fn print_json(
                 .map(|c| {
                     json!({
                         "id": c.id,
-                        "text": processor.process_citation(c).unwrap_or_else(|e| e.to_string())
+                        "text": processor
+                            .process_citation_with_format::<F>(c)
+                            .unwrap_or_else(|e| e.to_string())
                     })
                 })
                 .collect();
@@ -677,7 +1082,9 @@ fn print_json(
                     };
                     json!({
                         "id": id,
-                        "text": processor.process_citation(&citation).unwrap_or_else(|e| e.to_string())
+                        "text": processor
+                            .process_citation_with_format::<F>(&citation)
+                            .unwrap_or_else(|e| e.to_string())
                     })
                 })
                 .collect();
@@ -696,7 +1103,9 @@ fn print_json(
                     };
                     json!({
                         "id": id,
-                        "text": processor.process_citation(&citation).unwrap_or_else(|e| e.to_string())
+                        "text": processor
+                            .process_citation_with_format::<F>(&citation)
+                            .unwrap_or_else(|e| e.to_string())
                     })
                 })
                 .collect();
@@ -709,20 +1118,24 @@ fn print_json(
     }
 
     if show_bib {
-        let bib_text = processor.render_bibliography();
-        let entries: Vec<_> = bib_text
-            .split("\n\n")
-            .filter(|s| !s.is_empty())
-            .enumerate()
-            .map(|(i, entry)| {
+        let filter: HashSet<&str> = item_ids.iter().map(|id| id.as_str()).collect();
+        let processed = processor.process_references();
+        let entries: Vec<_> = processed
+            .bibliography
+            .into_iter()
+            .filter(|entry| filter.contains(entry.id.as_str()))
+            .map(|entry| {
+                let text =
+                    csln_processor::render::refs_to_string_with_format::<F>(vec![entry.clone()]);
                 json!({
-                    "id": item_ids.get(i).unwrap_or(&"unknown".to_string()),
-                    "text": entry.trim()
+                    "id": entry.id,
+                    "text": text.trim()
                 })
             })
             .collect();
+
         result["bibliography"] = json!({ "entries": entries });
     }
 
-    println!("{}", serde_json::to_string_pretty(&result).unwrap());
+    Ok(serde_json::to_string_pretty(&result)?)
 }
