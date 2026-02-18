@@ -44,6 +44,11 @@ impl ComponentValues for TemplateContributor {
             }
         }
 
+        // Respect explicit suppression before any contributor substitution logic.
+        if effective_rendering.suppress == Some(true) {
+            return None;
+        }
+
         let contributor = match self.contributor {
             ContributorRole::Author => {
                 if matches!(
@@ -347,7 +352,7 @@ impl ComponentValues for TemplateContributor {
             // Apply placement
             match label_config.placement {
                 LabelPlacement::Prefix => (term_text.map(|t| fmt.text(&format!("{} ", t))), None),
-                LabelPlacement::Suffix => (None, term_text.map(|t| fmt.text(&format!(" {}", t)))),
+                LabelPlacement::Suffix => (None, term_text.map(|t| fmt.text(&format!(", {}", t)))),
             }
         } else {
             // Fall back to global editor_label_format configuration

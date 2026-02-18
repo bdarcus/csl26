@@ -129,6 +129,7 @@ pub enum MonographType {
     Thesis,
     Webpage,
     Post,
+    PersonalCommunication,
     Document,
 }
 

@@ -554,6 +554,7 @@ impl InputReference {
                 MonographType::Thesis => "thesis".to_string(),
                 MonographType::Webpage => "webpage".to_string(),
                 MonographType::Post => "post".to_string(),
+                MonographType::PersonalCommunication => "personal-communication".to_string(),
                 MonographType::Document => "document".to_string(),
             },
             InputReference::CollectionComponent(r) => match r.r#type {

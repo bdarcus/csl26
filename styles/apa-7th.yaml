@@ -37,6 +37,16 @@ citation:
     template:
       - contributor: author
         form: short
+        overrides:
+          legal-case: { suppress: true }
+      - title: primary
+        form: short
+        suppress: true
+        overrides:
+          legal-case:
+            suppress: false
+            emph: true
+            quote: false
       - date: issued
         form: year
       - variable: locator
@@ -48,6 +58,16 @@ citation:
     template:
       - contributor: author
         form: short
+        overrides:
+          legal-case: { suppress: true }
+      - title: primary
+        form: short
+        suppress: true
+        overrides:
+          legal-case:
+            suppress: false
+            emph: true
+            quote: false
       - items:
           - date: issued
             form: year
@@ -56,6 +76,163 @@ citation:
         delimiter: ""
         wrap: parentheses
 bibliography:
+  type-templates:
+    personal-communication: []
+    article-newspaper:
+      - contributor: author
+        form: long
+        name-order: family-first
+        suffix: "."
+      - date: issued
+        form: year-month-day
+        wrap: parentheses
+        prefix: " "
+      - title: primary
+        emph: false
+      - title: parent-serial
+        emph: true
+        prefix: ". "
+        suffix: "."
+    article-magazine:
+      - contributor: author
+        form: long
+        name-order: family-first
+        suffix: "."
+      - date: issued
+        form: year-month-day
+        wrap: parentheses
+        prefix: " "
+      - title: primary
+        emph: false
+      - items:
+          - title: parent-serial
+            emph: true
+          - items:
+              - number: volume
+                emph: true
+              - number: issue
+                wrap: parentheses
+            delimiter: ""
+        delimiter: ", "
+        prefix: ". "
+      - number: pages
+        prefix: ", "
+        suffix: "."
+    chapter:
+      - contributor: author
+        form: long
+        name-order: family-first
+        suffix: "."
+      - date: issued
+        form: year
+        wrap: parentheses
+        prefix: " "
+      - title: primary
+        emph: false
+        suffix: "."
+      - items:
+          - contributor: editor
+            form: long
+            name-order: given-first
+          - items:
+              - title: parent-monograph
+                emph: true
+              - items:
+                  - number: collection-number
+                    prefix: "Vol. "
+                  - number: pages
+                    prefix: "pp. "
+                delimiter: ", "
+                wrap: parentheses
+            delimiter: " "
+        delimiter: ", "
+        prefix: " In "
+        suffix: "."
+      - variable: publisher
+        prefix: " "
+        suffix: "."
+    patent:
+      - contributor: author
+        form: long
+        name-order: family-first
+        suffix: "."
+      - date: issued
+        form: year
+        wrap: parentheses
+        prefix: " "
+      - title: primary
+        emph: true
+      - items:
+          - term: patent
+            form: long
+            suffix: " No. "
+          - variable: number
+        delimiter: ""
+        wrap: parentheses
+        prefix: " "
+        suffix: "."
+    paper-conference:
+      - contributor: author
+        form: long
+        name-order: family-first
+        suffix: "."
+      - date: issued
+        form: year
+        wrap: parentheses
+        prefix: " "
+      - title: primary
+        emph: false
+        suffix: "."
+      - title: parent-monograph
+        emph: true
+        prefix: " "
+      - number: pages
+        prefix: ", "
+        suffix: "."
+    report:
+      - contributor: author
+        form: long
+        name-order: family-first
+        suffix: "."
+      - date: issued
+        form: year
+        wrap: parentheses
+        prefix: " "
+      - title: primary
+        emph: true
+      - contributor: editor
+        form: long
+        name-order: given-first
+        label: { term: editor, form: short, placement: suffix }
+        wrap: parentheses
+        prefix: " "
+      - items:
+          - variable: genre
+          - variable: medium
+        delimiter: "; "
+        wrap: brackets
+        prefix: " "
+      - variable: publisher
+        prefix: ". "
+        suffix: "."
+    legal-case:
+      - title: primary
+        emph: false
+        quote: false
+        suffix: ", "
+      - number: volume
+        suffix: " "
+      - variable: reporter
+        suffix: " "
+      - number: pages
+      - items:
+          - variable: authority
+          - date: issued
+            form: year
+        delimiter: " "
+        wrap: parentheses
+        prefix: " "
+        suffix: "."
   template:
     - contributor: author
       form: long
@@ -73,7 +250,7 @@ bibliography:
           form: year-month-day
         article-magazine:
           date: issued
-          form: year-month
+          form: year-month-day
         legal-case: { suppress: true }
     - title: primary
       emph: true
@@ -88,7 +265,8 @@ bibliography:
       wrap: brackets
       prefix: " "
     - number: edition
-      suffix: " ed."
+      wrap: parentheses
+      prefix: " "
       overrides:
         patent:
           items:
@@ -111,19 +289,26 @@ bibliography:
       prefix: " "
     - contributor: translator
       form: long
+      name-order: given-first
       label: { term: translator, form: short, placement: suffix }
       wrap: parentheses
       prefix: " "
     - contributor: editor
       form: long
       name-order: given-first
-      label: { term: editor, form: short, placement: suffix }
       prefix: ". In "
       overrides:
          [book, article-journal, article-magazine, article-newspaper]: { suppress: true }
+         report:
+           contributor: editor
+           form: long
+           name-order: given-first
+           label: { term: editor, form: short, placement: suffix }
+           wrap: parentheses
+           prefix: ". "
     - title: parent-monograph
       emph: true
-      prefix: ". In "
+      prefix: ", "
       overrides:
          [book, article-journal, article-magazine, article-newspaper]: { suppress: true }
     - items:

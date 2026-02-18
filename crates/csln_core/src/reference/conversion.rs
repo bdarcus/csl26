@@ -19,14 +19,29 @@ impl From<csl_legacy::csl_json::Reference> for InputReference {
             .unwrap_or(EdtfString(String::new()));
         let url = legacy.url.and_then(|u| Url::parse(&u).ok());
         let accessed = legacy.accessed.map(EdtfString::from);
-        let note = legacy.note;
+        let mut note = legacy.note;
         let doi = legacy.doi;
         let isbn = legacy.isbn;
         let edition = legacy.edition.map(|e| e.to_string());
 
         match legacy.ref_type.as_str() {
-            "book" | "report" | "thesis" | "webpage" | "post" | "post-weblog" | "software"
-            | "dataset" => {
+            "book"
+            | "report"
+            | "thesis"
+            | "webpage"
+            | "post"
+            | "post-weblog"
+            | "software"
+            | "dataset"
+            | "personal_communication"
+            | "personal-communication" => {
+                if (legacy.ref_type == "personal_communication"
+                    || legacy.ref_type == "personal-communication")
+                    && note.is_none()
+                {
+                    note = Some("personal communication".to_string());
+                }
+
                 let r#type = if legacy.ref_type == "report" {
                     MonographType::Report
                 } else if legacy.ref_type == "thesis" {
@@ -35,6 +50,10 @@ impl From<csl_legacy::csl_json::Reference> for InputReference {
                     MonographType::Webpage
                 } else if legacy.ref_type.contains("post") {
                     MonographType::Post
+                } else if legacy.ref_type == "personal_communication"
+                    || legacy.ref_type == "personal-communication"
+                {
+                    MonographType::PersonalCommunication
                 } else {
                     MonographType::Book
                 };
@@ -97,7 +116,12 @@ impl From<csl_legacy::csl_json::Reference> for InputReference {
                                 location: legacy.publisher_place,
                             })
                         }),
-                        collection_number: legacy.collection_number.map(|v| v.to_string()),
+                        collection_number: legacy.collection_number.map(|v| v.to_string()).or(
+                            legacy.volume.as_ref().map(|v| match v {
+                                csl_legacy::csl_json::StringOrNumber::String(s) => s.clone(),
+                                csl_legacy::csl_json::StringOrNumber::Number(n) => n.to_string(),
+                            }),
+                        ),
                         url: None,
                         accessed: None,
                         language: None,
@@ -162,7 +186,7 @@ impl From<csl_legacy::csl_json::Reference> for InputReference {
                     keywords: None,
                 }))
             }
-            "legal-case" => InputReference::LegalCase(Box::new(LegalCase {
+            "legal-case" | "legal_case" => InputReference::LegalCase(Box::new(LegalCase {
                 id,
                 title,
                 authority: legacy.authority.unwrap_or_default(),
