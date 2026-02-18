@@ -56,14 +56,14 @@ Before deciding to use the simple path, verify:
 
 ## Risk Mitigation
 
-**Focused Validation (oracle-migration.js):**
-- Uses same 7-item subset as prep-migration.sh for consistency
-- Fast execution (~10 seconds vs 30+ for full oracle.js)
-- Clear success threshold: 5/7 items = acceptable, 7/7 = perfect
+**Canonical Validation (oracle.js):**
+- Uses the full `references-expanded.json` fixture (same basis as `docs/compat.html`)
+- Aligns iterative style work with final dashboard scoring
+- Prefer `--json` output for deterministic iteration tracking
 
 **Validation checkpoint at iteration 1:**
-- Run oracle-migration.js immediately after first implementation
-- If match rate <5/7 (71%), escalate immediately to @styleplan
+- Run `oracle.js --json` immediately after first implementation
+- If bibliography is <50%, escalate immediately to @styleplan
 - Don't waste iterations on fundamentally wrong template
 - Saves ~80K tokens on failures
 
@@ -89,9 +89,9 @@ For maximum efficiency, automatically detect simple migrations:
 
 **If auto-qualified:**
 - Skip Phase 1 research entirely
-- Use focused 7-item validation (oracle-migration.js)
+- Use full-fixture validation (`oracle.js --json`)
 - Time budget: 5 minutes max
-- Success threshold: 5/7 items (71%) on first iteration
+- Success threshold: bibliography ≥50% on first iteration
 
 ## Coordinator Decision Tree
 
@@ -107,7 +107,7 @@ Analyzing new style request...
    │
    ├─ Auto-qualifies (numeric/author-date)? YES → FAST PATH
    │ └─ Skip Phase 1 → @styleplan (Phase 2) → @styleauthor (Phase 3-4)
-   │    Use oracle-migration.js (7 items) for validation
+   │    Use oracle.js (full fixture) for validation
    │    Time budget: 5 minutes
    │
    └─ Complex features? YES → Use full workflow

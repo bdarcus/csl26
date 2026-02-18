@@ -117,7 +117,7 @@ Auto-generated baseline:
 - Options: csln-migrate (Rust)
 - Templates: infer-template.js (output-driven)
 
-Validation: Run \`node scripts/oracle-migration.js $STYLE_PATH\`
+Validation: Run \`node scripts/oracle.js $STYLE_PATH --json\`
 " 2>/dev/null
 
     rm "$TASK_FILE"  # Cleanup temp file
@@ -126,7 +126,7 @@ fi
 # 2. Generate Verification Prompt
 if [ "$AGENT_MODE" = true ]; then
     # Output machine-readable JSON
-    ORACLE_OUTPUT=$(node scripts/oracle-migration.js "$STYLE_PATH" --json 2>/dev/null || echo "{}")
+    ORACLE_OUTPUT=$(node scripts/oracle.js "$STYLE_PATH" --json 2>/dev/null || echo "{}")
     cat <<EOF
 {
   "action": "migrate",
@@ -150,7 +150,7 @@ TASK:
    - It is likely 80-90% correct but may need refinement for edge cases.
 
 2. Verify the output:
-   - Run: \`node scripts/oracle-migration.js "$STYLE_PATH"\`
+   - Run: \`node scripts/oracle.js "$STYLE_PATH" --json\`
    - Compare the CSLN output against the Oracle output.
 
 3. Iterate & Fix:

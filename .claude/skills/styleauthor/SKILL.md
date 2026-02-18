@@ -73,7 +73,7 @@ Use this workflow when converting an existing CSL 1.0 style. It identifies the t
 1.  **Prep**: Run `scripts/prep-migration.sh <path-to-csl>`
     -   This **automatically generates** `styles/<style-name>.yaml` by merging `csln-migrate` options with `infer-template.js` templates.
 2.  **Verify**:
-    -   Run `node scripts/oracle-migration.js <path-to-csl>` to check initial quality.
+    -   Run `node scripts/oracle.js <path-to-csl> --json` to check initial quality on the full fixture.
     -   Review the generated YAML for obvious issues or missing logic.
 3.  **Refine**: Proceed to Phase 3 (Build), but focus on *fixing mismatches* rather than authoring from scratch.
 
@@ -148,14 +148,14 @@ Implementation Specialist (Sonnet) takes over for the execution and test loop.
 4. Verify rendering output against oracle or guides.
 
 **MANDATORY Validation Gate at Iteration 1:**
-- **Simple migrations**: Run `node scripts/oracle-migration.js "$STYLE_PATH" --json`
-- **Threshold**: Match rate must be ≥ 71% (5/7 items).
-- **If FAIL**: Stop and escalate to @styleplan for template redesign. Using more iterations on a flawed template architecture wastes tokens.
-- **If PASS**: Continue to iteration 2 for final polish.
+- Run `node scripts/oracle.js "$STYLE_PATH" --json`
+- Use this as the canonical metric source because `docs/compat.html` is generated from the same oracle + fixture path.
+- **If bibliography <50%** on iteration 1: stop and escalate to @styleplan for template redesign.
+- **If bibliography ≥50%**: continue to iteration 2 for targeted fixes.
 
 **Agent Transparency Requirement:**
 After each iteration, the builder MUST report to user:
-- Iteration number and validation results (X/7 or X/31 matches)
+- Iteration number and validation results (X/N citations, X/N bibliography, percentages)
 - What was fixed in this iteration
 - What issues remain (if any)
 - Next step (continue iterating or escalate)
@@ -167,7 +167,7 @@ The agent MUST update the associated beans task after each iteration:
 # After iteration N completes:
 beans update <TASK_ID> --body "Iteration N/6 complete
 
-Match rate: X/7 (YY%)
+Match rate: Citations X/N (YY%), Bibliography X/N (YY%)
 Fixed: <brief description>
 Remaining: <issue list or 'None'>
 
@@ -179,7 +179,7 @@ If escalating to @styleplan:
 ```bash
 beans update <TASK_ID> --status blocked --body "Escalation after iteration N
 
-Match rate: X/7 (<71% threshold)
+Match rate: Citations X/N (YY%), Bibliography X/N (YY%)
 Issues: <specific problems>
 
 Action: Escalated to @styleplan for template redesign
@@ -217,21 +217,17 @@ Final verification before declaring done. The builder MUST surface output sample
 
 1. **Rendering Audit**: @styleplan checks for spacing issues (double spaces, space before punctuation).
 
-2. Validation strategy based on migration type:
+2. Validation strategy:
 
-   **Simple migrations** (author-date, numeric with <5 overrides):
    ```bash
-   node scripts/oracle-migration.js styles-legacy/<style-name>.csl
-   # 7-item focused test, ~10 seconds
-   # Pass threshold: ≥5/7 (71%)
+   node scripts/oracle.js styles-legacy/<style-name>.csl --json
+   # Full references-expanded fixture (same basis as docs/compat.html)
    ```
 
-   **Complex migrations** (note styles, legal, exotic features):
-   ```bash
-   node scripts/oracle.js styles-legacy/<style-name>.csl
-   # 31-item comprehensive test, ~30 seconds
-   # Pass threshold: ≥50% match
-   ```
+   Completion target (default):
+   - Citation ≥90%
+   - Bibliography ≥90%
+   - Or user-specified target if stricter/looser
 
 2. Run full test suite to check for regressions:
    ```bash
@@ -269,40 +265,26 @@ Final verification before declaring done. The builder MUST surface output sample
 
 ### Success Criteria Matrix
 
-**Simple Migration (7-item focused test):**
-```
-oracle-migration.js results:
-  7/7 citations + 7/7 bibliography = PERFECT ✅
-  5-6/7 = ACCEPTABLE ✅ (document gaps in YAML comments)
-  <5/7 = ESCALATE ⚠️ (template redesign needed)
-```
-
-**Complex Style (31-item comprehensive test):**
+**Migration/Update (full fixture oracle):**
 ```
 oracle.js results:
-  >80% match = EXCELLENT ✅
-  60-80% match = ACCEPTABLE ✅ (document known gaps)
-  <60% match = ESCALATE ⚠️ (schema or processor changes needed)
+  ≥90% citations AND ≥90% bibliography = TARGET ✅
+  citations ≥90%, bibliography 70-89% = PARTIAL ✅ (continue if user asks)
+  bibliography <70% = ESCALATE ⚠️ (template/design gaps)
 ```
 
 **Validation cadence:**
-- Iteration 1: Quick check (oracle-migration.js for simple, oracle.js for complex)
-- Iteration 2: Full validation if iteration 1 passed
+- Iteration 1: Full validation (`oracle.js --json`)
+- Iteration 2: Full validation after fixes
 - Iteration 3+: Only if making targeted fixes to specific issues
 
 ### Validation Scripts
 
-**oracle-migration.js** (to be created):
-- Uses same 7-item subset as prep-migration.sh
-- Fast execution (~10 seconds)
-- Outputs: X/7 citations, X/7 bibliography
-- Exit code 0 if ≥5/7, exit code 1 if <5/7
-
 **oracle.js** (existing):
-- Full 31-item comprehensive test
-- Slower execution (~30 seconds)
-- Outputs: X/31 citations, X/31 bibliography + component diff
-- Use for final verification or complex styles
+- Full `tests/fixtures/references-expanded.json` test set
+- Same oracle path used by `scripts/report-top10.js` to generate `docs/compat.html`
+- Outputs citations/bibliography match counts plus component diff
+- Use for every iteration and final verification
 
 ## Schema Reference
 

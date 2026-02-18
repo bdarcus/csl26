@@ -43,7 +43,16 @@ try {
     }
 
     console.error(`🌀 Cache MISS for ${styleName}. Running oracle...`);
-    const output = execSync(`node scripts/oracle-migration.js "${stylePath}" --json`, { encoding: 'utf8' });
+    let output;
+    try {
+        output = execSync(`node scripts/oracle.js "${stylePath}" --json`, { encoding: 'utf8' });
+    } catch (err) {
+        // oracle.js exits non-zero when mismatches exist; keep JSON output for caching.
+        output = err.stdout;
+        if (!output || !output.trim()) {
+            throw err;
+        }
+    }
 
     fs.writeFileSync(cachePath, output);
     console.log(output);

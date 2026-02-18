@@ -25,4 +25,4 @@ echo "✅ Resuming from checkpoint: $LATEST_YAML"
 cp "$LATEST_YAML" "styles/$STYLE_NAME.yaml"
 
 echo "Next Step: Run @styleauthor to continue refinement."
-echo "Validation: node scripts/oracle-migration.js styles-legacy/$STYLE_NAME.csl"
+echo "Validation: node scripts/oracle.js styles-legacy/$STYLE_NAME.csl --json"

@@ -40,11 +40,11 @@ Know when you've reached "good enough" for a style:
 
 | Target | Criterion | Action |
 |--------|-----------|--------|
-| **Minimum Viable** | 5/5 citations, 8/15 bibliography | Move to next priority style |
-| **High Quality** | 5/5 citations, 12/15 bibliography | Style ready for production use |
-| **Perfect** | 15/15 citations AND bibliography | Diminishing returns - revisit later |
+| **Minimum Viable** | Citation ≥90%, Bibliography ≥70% (full fixture) | Continue only for high-priority styles |
+| **High Quality** | Citation ≥90%, Bibliography ≥85% (full fixture) | Style ready for broad usage |
+| **Production Target** | Citation ≥90%, Bibliography ≥90% (full fixture) | Meets compat dashboard goals |
 
-**When to Move On**: Once a style reaches 12/15+ bibliography matches, move to the next priority style. Perfecting one style has lower ROI than improving many styles to "good enough."
+**Scoring basis**: use `node ../scripts/oracle.js <style.csl> --json` on `tests/fixtures/references-expanded.json` (same basis as `docs/compat.html`).
 
 ## Component-First Strategy (Tier 3 & 4)
 
@@ -104,9 +104,9 @@ This runs:
 
 ```
 Top 10 Priority Styles Analysis:
-  APA (783 deps): 5/5 citations ✓, 3/5 bibliography (year, volume issues)
-  Elsevier Harvard (665 deps): 5/5 citations ✓, 5/5 bibliography ✓
-  IEEE (176 deps): 2/5 citations (year issue), 5/5 bibliography ✓
+  APA (783 deps): citations 100%, bibliography 86% (year, volume issues)
+  Elsevier Harvard (665 deps): citations 100%, bibliography 92%
+  IEEE (176 deps): citations 88%, bibliography 90% (year issue)
 ```
 
 **CRITICAL INSIGHT - Component-First Approach:**
@@ -275,13 +275,13 @@ node ../scripts/oracle-batch-aggregate.js styles-legacy/ --top 20 --save baselin
 node ../scripts/oracle-batch-aggregate.js styles-legacy/ --top 20 --compare baselines/baseline-2026-02-06.json
 ```
 
-This will catch regressions immediately (e.g., "APA: 15/15 → 14/15 - ITEM-3 now failing").
+This will catch regressions immediately (e.g., "APA bibliography 93% → 89%").
 
 ## Oracle Scripts Reference
 
 ### `oracle.js` (Structured Diff - DEFAULT)
 
-**When to use:** Always use this as your first diagnostic tool.
+**When to use:** Always use this as your first diagnostic tool and canonical scoring source.
 
 **What it shows:** Component-level differences (author, year, title, volume, etc.)
 
@@ -305,6 +305,7 @@ Bibliography Entry ITEM-2:
 **Example usage:**
 ```bash
 node ../scripts/oracle.js styles-legacy/apa.csl
+node ../scripts/oracle.js styles-legacy/apa.csl --json
 node ../scripts/oracle.js styles-legacy/chicago-author-date.csl --verbose
 ```
 
@@ -341,9 +342,9 @@ node ../scripts/oracle-batch-aggregate.js styles-legacy/ --top 20 --json
 ```
 Priority: 1 (783 dependents)
 Style: apa.csl
-Citations: 5/5 passing ✓
-Bibliography: 3/5 passing
-  Failing: ITEM-1, ITEM-3 (both have year formatting issue)
+Citations: 28/28 passing (100%)
+Bibliography: 24/28 passing (86%)
+  Failing: ITEM-1, ITEM-3, ITEM-17, ITEM-20
 ```
 
 ### `workflow-test.sh` (Recommended Wrapper)
@@ -543,7 +544,7 @@ csln_migrate styles-legacy/apa.csl --debug-variable volume
 
 ### Testing Edge Cases
 
-The current test data (`tests/fixtures/references-expanded.json`) has 15 items covering 8 reference types. When fixing issues:
+The current test data (`tests/fixtures/references-expanded.json`) has 28 items across core reference types. When fixing issues:
 
 1. **Check coverage:** Does the fix affect an untested reference type?
 2. **Add test items:** Consider expanding test data (Task #11)
@@ -638,7 +639,7 @@ node ../scripts/oracle-batch-aggregate.js styles-legacy/ --top 20 --json > basel
 
 # Compare against baseline
 node ../scripts/oracle-batch-aggregate.js styles-legacy/ --top 20 --compare baselines/baseline-2026-02-05.json
-# Output: "Regression: APA 15/15 → 14/15 (ITEM-3 now failing)"
+# Output: "Regression: APA bibliography 93% → 89%"
 ```
 
 ### Phase 4: Test Data Generator (Task #26)
