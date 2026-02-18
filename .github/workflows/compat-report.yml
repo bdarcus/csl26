@@ -17,6 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      actions: write
 
     steps:
       - name: Checkout
@@ -45,5 +46,13 @@ jobs:
             echo "compat.html unchanged, skipping commit"
           else
             git commit -m "chore(ci): update compat report"
+            git pull --rebase origin main
             git push
+            echo "REPORT_UPDATED=true" >> "$GITHUB_ENV"
           fi
+
+      - name: Deploy updated report to Pages
+        if: env.REPORT_UPDATED == 'true'
+        run: gh workflow run deploy_docs.yml --ref main
+        env:
+          GH_TOKEN: ${{ github.token }}
