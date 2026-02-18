@@ -853,8 +853,8 @@ Structured: [@kuhn1962, section: 5].</pre>
                     <p class="text-slate-600 leading-relaxed mb-6">
                         Avoid complex conditional logic. Components in CSLN can
                         declaratively override their behavior or suppress
-                        themselves based on the item type (e.g., article, book,
-                        webpage).
+                        themselves based on the item type. Use concise list syntax 
+                        to apply the same rule to multiple types.
                     </p>
                 </div>
                 <div class="bg-slate-900 p-6 overflow-x-auto">
@@ -865,11 +865,10 @@ Structured: [@kuhn1962, section: 5].</pre>
   <span class="text-primary">template</span>:
     - <span class="text-primary">variable</span>: <span class="text-emerald-400">publisher</span>
       <span class="text-primary">overrides</span>:
-        <span class="text-primary">article-journal</span>: { <span class="text-primary">suppress</span>: <span class="text-emerald-400">true</span> }
-        <span class="text-primary">webpage</span>:         { <span class="text-primary">suppress</span>: <span class="text-emerald-400">true</span> }
+        <span class="text-primary">[article-journal, webpage, broadcast]</span>: { <span class="text-primary">suppress</span>: <span class="text-emerald-400">true</span> }
     - <span class="text-primary">number</span>: <span class="text-emerald-400">pages</span>
       <span class="text-primary">overrides</span>:
-        <span class="text-primary">chapter</span>:
+        <span class="text-primary">[chapter, report, entry-encyclopedia]</span>:
           <span class="text-primary">prefix</span>: <span class="text-emerald-400">"pp. "</span>
           <span class="text-primary">wrap</span>: <span class="text-emerald-400">parentheses</span></pre>
                 </div>
