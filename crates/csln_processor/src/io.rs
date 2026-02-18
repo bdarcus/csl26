@@ -10,66 +10,88 @@ use csl_legacy::csl_json::Reference as LegacyReference;
 use csln_core::reference::InputReference;
 use csln_core::InputBibliography;
 
-use crate::{Bibliography, Citation, Reference};
+use crate::{Bibliography, Citation, ProcessorError, Reference};
 
 /// Load a list of citations from a file.
 /// Supports CSLN YAML/JSON.
-pub fn load_citations(path: &Path) -> Result<Vec<Citation>, String> {
-    let bytes = fs::read(path).map_err(|e| format!("Error reading citations file: {}", e))?;
+pub fn load_citations(path: &Path) -> Result<Vec<Citation>, ProcessorError> {
+    let bytes = fs::read(path)?;
     let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("yaml");
 
     match ext {
         "json" => {
+            // Check for syntax errors first
+            let _: serde_json::Value = serde_json::from_slice(&bytes)
+                .map_err(|e| ProcessorError::ParseError("JSON".to_string(), e.to_string()))?;
+
             if let Ok(citations) = serde_json::from_slice::<Vec<Citation>>(&bytes) {
                 return Ok(citations);
             }
-            if let Ok(citation) = serde_json::from_slice::<Citation>(&bytes) {
-                return Ok(vec![citation]);
+            match serde_json::from_slice::<Citation>(&bytes) {
+                Ok(citation) => Ok(vec![citation]),
+                Err(e) => Err(ProcessorError::ParseError(
+                    "JSON".to_string(),
+                    e.to_string(),
+                )),
             }
         }
         _ => {
             let content = String::from_utf8_lossy(&bytes);
+            // Check for syntax errors first
+            let _: serde_yaml::Value = serde_yaml::from_str(&content)
+                .map_err(|e| ProcessorError::ParseError("YAML".to_string(), e.to_string()))?;
+
             if let Ok(citations) = serde_yaml::from_str::<Vec<Citation>>(&content) {
                 return Ok(citations);
             }
-            if let Ok(citation) = serde_yaml::from_str::<Citation>(&content) {
-                return Ok(vec![citation]);
+            match serde_yaml::from_str::<Citation>(&content) {
+                Ok(citation) => Ok(vec![citation]),
+                Err(e) => Err(ProcessorError::ParseError(
+                    "YAML".to_string(),
+                    e.to_string(),
+                )),
             }
         }
     }
-
-    Err("Error parsing citations: could not parse as CSLN Citation(s) (YAML/JSON)".to_string())
 }
 
 /// Load a bibliography from a file given its path.
 /// Supports CSLN YAML/JSON/CBOR and CSL-JSON.
-pub fn load_bibliography(path: &Path) -> Result<Bibliography, String> {
-    let bytes = fs::read(path).map_err(|e| format!("Error reading references file: {}", e))?;
+pub fn load_bibliography(path: &Path) -> Result<Bibliography, ProcessorError> {
+    let bytes = fs::read(path)?;
     let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("yaml");
 
     let mut bib = indexmap::IndexMap::new();
 
     // Try parsing as CSLN formats
     match ext {
-        "cbor" => {
-            if let Ok(input_bib) = serde_cbor::from_slice::<InputBibliography>(&bytes) {
+        "cbor" => match serde_cbor::from_slice::<InputBibliography>(&bytes) {
+            Ok(input_bib) => {
                 for r in input_bib.references {
                     if let Some(id) = r.id() {
                         bib.insert(id.to_string(), r);
                     }
                 }
-                return Ok(bib);
+                Ok(bib)
             }
-        }
+            Err(e) => Err(ProcessorError::ParseError(
+                "CBOR".to_string(),
+                e.to_string(),
+            )),
+        },
         "json" => {
-            // CSL-JSON is Vec<LegacyReference>
+            // Check for syntax errors first
+            let _: serde_json::Value = serde_json::from_slice(&bytes)
+                .map_err(|e| ProcessorError::ParseError("JSON".to_string(), e.to_string()))?;
+
+            // Try CSL-JSON (Vec<LegacyReference>)
             if let Ok(legacy_bib) = serde_json::from_slice::<Vec<LegacyReference>>(&bytes) {
                 for ref_item in legacy_bib {
                     bib.insert(ref_item.id.clone(), Reference::from(ref_item));
                 }
                 return Ok(bib);
             }
-            // Also try CSLN JSON
+            // Try CSLN JSON (InputBibliography)
             if let Ok(input_bib) = serde_json::from_slice::<InputBibliography>(&bytes) {
                 for r in input_bib.references {
                     if let Some(id) = r.id() {
@@ -98,10 +120,24 @@ pub fn load_bibliography(path: &Path) -> Result<Bibliography, String> {
                     return Ok(bib);
                 }
             }
+
+            // If all failed, return the error from the most likely format (CSLN JSON)
+            match serde_json::from_slice::<InputBibliography>(&bytes) {
+                Ok(_) => unreachable!(),
+                Err(e) => Err(ProcessorError::ParseError(
+                    "JSON".to_string(),
+                    e.to_string(),
+                )),
+            }
         }
         _ => {
             // YAML/Fallback
             let content = String::from_utf8_lossy(&bytes);
+
+            // Check for syntax errors first
+            let _: serde_yaml::Value = serde_yaml::from_str(&content)
+                .map_err(|e| ProcessorError::ParseError("YAML".to_string(), e.to_string()))?;
+
             if let Ok(input_bib) = serde_yaml::from_str::<InputBibliography>(&content) {
                 for r in input_bib.references {
                     if let Some(id) = r.id() {
@@ -146,11 +182,15 @@ pub fn load_bibliography(path: &Path) -> Result<Bibliography, String> {
                 }
                 return Ok(bib);
             }
+
+            // If all failed, return error from CSLN YAML
+            match serde_yaml::from_str::<InputBibliography>(&content) {
+                Ok(_) => unreachable!(),
+                Err(e) => Err(ProcessorError::ParseError(
+                    "YAML".to_string(),
+                    e.to_string(),
+                )),
+            }
         }
     }
-
-    Err(
-        "Error parsing references: could not parse as CSLN (YAML/JSON/CBOR) or CSL-JSON"
-            .to_string(),
-    )
 }
