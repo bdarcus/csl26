@@ -31,6 +31,9 @@ jobs:
       - name: Cache Rust
         uses: Swatinem/rust-cache@v2
 
+      - name: Install Node dependencies
+        run: npm install --prefix scripts
+
       - name: Build Rust workspace
         run: cargo build
 

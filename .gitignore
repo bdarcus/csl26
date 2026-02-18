@@ -9,6 +9,7 @@ flattened_*.json
 tests/*.csl
 scripts/node_modules/
 scripts/*.json
+!scripts/package.json
 styles-report.json
 .migrated-temp.yaml
 migrated_*.yaml
