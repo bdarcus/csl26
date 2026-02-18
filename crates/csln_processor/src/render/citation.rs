@@ -37,7 +37,29 @@ pub fn citation_to_string_with_format<F: OutputFormat<Output = String>>(
     }
 
     let delim = delimiter.unwrap_or("");
-    let content = parts.join(delim);
+    let punctuation_in_quote = proc_template
+        .first()
+        .and_then(|c| c.config.as_ref())
+        .is_some_and(|cfg| cfg.punctuation_in_quote);
+
+    let mut content = String::new();
+    for (i, part) in parts.iter().enumerate() {
+        if i > 0 {
+            if punctuation_in_quote
+                && delim.starts_with(',')
+                && (content.ends_with('"') || content.ends_with('\u{201D}'))
+            {
+                let is_curly = content.ends_with('\u{201D}');
+                content.pop();
+                content.push(',');
+                content.push(if is_curly { '\u{201D}' } else { '"' });
+                content.push_str(&delim[1..]);
+            } else {
+                content.push_str(delim);
+            }
+        }
+        content.push_str(part);
+    }
 
     let (open, close) = match wrap {
         Some(WrapPunctuation::Parentheses) => ("(", ")"),

@@ -485,7 +485,23 @@ impl<'a> Renderer<'a> {
                             joined_years
                         } else {
                             // Default parenthetical: Kuhn, 1962
-                            format!("{}{}{}", author_part, intra_delimiter, joined_years)
+                            if self.config.punctuation_in_quote
+                                && intra_delimiter.starts_with(',')
+                                && (author_part.ends_with('"') || author_part.ends_with('\u{201D}'))
+                            {
+                                let is_curly = author_part.ends_with('\u{201D}');
+                                let mut fixed_author = author_part.clone();
+                                fixed_author.pop();
+                                format!(
+                                    "{},{}{}{}",
+                                    fixed_author,
+                                    if is_curly { '\u{201D}' } else { '"' },
+                                    &intra_delimiter[1..],
+                                    joined_years
+                                )
+                            } else {
+                                format!("{}{}{}", author_part, intra_delimiter, joined_years)
+                            }
                         }
                     }
                 };
@@ -534,14 +550,12 @@ impl<'a> Renderer<'a> {
     fn render_author_for_grouping_with_format<F>(
         &self,
         reference: &Reference,
-        _template: &[TemplateComponent],
+        template: &[TemplateComponent],
         mode: &csln_core::citation::CitationMode,
     ) -> String
     where
         F: crate::render::format::OutputFormat<Output = String>,
     {
-        let fmt = F::default();
-        // For grouping, we need the short author form
         let options = RenderOptions {
             config: self.config,
             locale: self.locale,
@@ -552,7 +566,24 @@ impl<'a> Renderer<'a> {
             locator_label: None,
         };
 
-        // Use short form for citations
+        // Try to use the first component from the template if it's a contributor or title.
+        // This ensures substitution, shortening, and mode-dependent conjunctions are respected.
+        if let Some(comp) = template.first() {
+            if matches!(comp, TemplateComponent::Contributor(_) | TemplateComponent::Title(_)) {
+                let hints = self
+                    .hints
+                    .get(&reference.id().unwrap_or_default())
+                    .cloned()
+                    .unwrap_or_default();
+                if let Some(vals) = comp.values::<F>(reference, &hints, &options) {
+                    if !vals.value.is_empty() {
+                        return vals.value;
+                    }
+                }
+            }
+        }
+
+        // Fallback for cases where first component isn't suitable or returned empty
         if let Some(authors) = reference.author() {
             let mode = self
                 .config
@@ -572,14 +603,13 @@ impl<'a> Renderer<'a> {
                 preferred_script,
                 locale_str,
             );
-            fmt.text(&crate::values::format_contributors_short(
+            F::default().text(&crate::values::format_contributors_short(
                 &names_vec, &options,
             ))
         } else {
             String::new()
         }
     }
-
     #[allow(dead_code)]
     fn render_author_for_grouping(
         &self,
