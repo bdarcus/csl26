@@ -1,0 +1,57 @@
+name: Compat Report
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "crates/**"
+      - "styles/**"
+      - "scripts/**"
+
+jobs:
+  report:
+    name: Generate Style Compatibility Report
+    # Skip when the bot itself pushes (prevents loop with deploy_docs.yml)
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust
+        uses: Swatinem/rust-cache@v2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Node dependencies
+        run: npm install
+        working-directory: scripts
+
+      - name: Build Rust workspace
+        run: cargo build
+
+      - name: Generate compatibility report
+        run: node scripts/report-top10.js --write-html
+
+      - name: Commit report if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/compat.html
+          if git diff --staged --quiet; then
+            echo "compat.html unchanged, skipping commit"
+          else
+            git commit -m "chore(ci): update compat report"
+            git push
+          fi
