@@ -385,13 +385,13 @@
                     <div class="space-y-6">
                         <!-- Example 1 -->
                         <div>
-                            <h4 class="font-bold text-slate-900 mb-2">Process a bibliography (HTML)</h4>
+                            <h4 class="font-bold text-slate-900 mb-2">Render references (HTML)</h4>
                             <div class="bg-slate-900 rounded-lg p-4 flex items-center justify-between group border border-slate-700 shadow-md">
                                 <code class="font-mono text-sm text-slate-300">
-                                    <span class="text-primary">$</span> csln process paper.json apa.yaml <span class="text-emerald-400">--format html</span>
+                                    <span class="text-primary">$</span> csln render refs -b paper.json -s apa.yaml <span class="text-emerald-400">-O html</span>
                                 </code>
                                 <button class="text-slate-500 hover:text-white transition-colors"
-                                    onclick="navigator.clipboard.writeText('csln process paper.json apa.yaml --format html')"
+                                    onclick="navigator.clipboard.writeText('csln render refs -b paper.json -s apa.yaml -O html')"
                                     title="Copy to clipboard">
                                     <span class="material-icons text-base">content_copy</span>
                                 </button>
@@ -400,13 +400,13 @@
 
                         <!-- Example 1b (Djot) -->
                         <div>
-                            <h4 class="font-bold text-slate-900 mb-2">Process for static sites (Djot)</h4>
+                            <h4 class="font-bold text-slate-900 mb-2">Render for static sites (Djot)</h4>
                             <div class="bg-slate-900 rounded-lg p-4 flex items-center justify-between group border border-slate-700 shadow-md">
                                 <code class="font-mono text-sm text-slate-300">
-                                    <span class="text-primary">$</span> csln process paper.json apa.yaml <span class="text-emerald-400">--format djot</span>
+                                    <span class="text-primary">$</span> csln render refs -b paper.json -s apa.yaml <span class="text-emerald-400">-O djot</span>
                                 </code>
                                 <button class="text-slate-500 hover:text-white transition-colors"
-                                    onclick="navigator.clipboard.writeText('csln process paper.json apa.yaml --format djot')"
+                                    onclick="navigator.clipboard.writeText('csln render refs -b paper.json -s apa.yaml -O djot')"
                                     title="Copy to clipboard">
                                     <span class="material-icons text-base">content_copy</span>
                                 </button>
@@ -415,13 +415,13 @@
 
                         <!-- Example 1c (LaTeX) -->
                         <div>
-                            <h4 class="font-bold text-slate-900 mb-2">Process for LaTeX (Native Escaping)</h4>
+                            <h4 class="font-bold text-slate-900 mb-2">Render for LaTeX (Native Escaping)</h4>
                             <div class="bg-slate-900 rounded-lg p-4 flex items-center justify-between group border border-slate-700 shadow-md">
                                 <code class="font-mono text-sm text-slate-300">
-                                    <span class="text-primary">$</span> csln process paper.json apa.yaml <span class="text-emerald-400">--format latex</span>
+                                    <span class="text-primary">$</span> csln render refs -b paper.json -s apa.yaml <span class="text-emerald-400">-O latex</span>
                                 </code>
                                 <button class="text-slate-500 hover:text-white transition-colors"
-                                    onclick="navigator.clipboard.writeText('csln process paper.json apa.yaml --format latex')"
+                                    onclick="navigator.clipboard.writeText('csln render refs -b paper.json -s apa.yaml -O latex')"
                                     title="Copy to clipboard">
                                     <span class="material-icons text-base">content_copy</span>
                                 </button>
@@ -430,13 +430,13 @@
 
                         <!-- Example 1d (Document) -->
                         <div>
-                            <h4 class="font-bold text-slate-900 mb-2">Process full document (Djot draft syntax)</h4>
+                            <h4 class="font-bold text-slate-900 mb-2">Render full document (Djot draft syntax)</h4>
                             <div class="bg-slate-900 rounded-lg p-4 flex items-center justify-between group border border-slate-700 shadow-md">
                                 <code class="font-mono text-sm text-slate-300">
-                                    <span class="text-primary">$</span> csln doc paper.djot refs.json apa.yaml
+                                    <span class="text-primary">$</span> csln render doc -i paper.djot -b refs.json -s apa.yaml
                                 </code>
                                 <button class="text-slate-500 hover:text-white transition-colors"
-                                    onclick="navigator.clipboard.writeText('csln doc paper.djot refs.json apa.yaml')"
+                                    onclick="navigator.clipboard.writeText('csln render doc -i paper.djot -b refs.json -s apa.yaml')"
                                     title="Copy to clipboard">
                                     <span class="material-icons text-base">content_copy</span>
                                 </button>
