@@ -42,7 +42,7 @@ function renderWithCslnYaml(yamlPath) {
   let output;
   try {
     output = execSync(
-      `cargo run -q --bin csln -- process tests/fixtures/references-expanded.json "${absYamlPath}"`,
+      `cargo run -q --bin csln -- process tests/fixtures/references-expanded.json "${absYamlPath}" --show-keys`,
       { cwd: projectRoot, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }
     );
   } catch (e) {
@@ -56,17 +56,25 @@ function renderWithCslnYaml(yamlPath) {
 
   let section = null;
   for (const line of lines) {
-    if (line.includes('CITATIONS:')) {
+    if (line.includes('CITATIONS (Non-Integral)')) {
       section = 'citations';
+    } else if (line.includes('CITATIONS (Integral)')) {
+      // For now, we compare against non-integral which matches citeproc-js default
+      section = 'citations-integral';
     } else if (line.includes('BIBLIOGRAPHY:')) {
       section = 'bibliography';
     } else if (section === 'citations' && line.match(/\[ITEM-\d+\]/)) {
       const match = line.match(/\[(ITEM-\d+)\]\s*(.+)/);
-      if (match) {
+      if (match && !citations[match[1]]) {
         citations[match[1]] = match[2].trim();
       }
-    } else if (section === 'bibliography' && line.trim()) {
-      bibliography.push(line.trim());
+    } else if (section === 'bibliography' && line.trim() && !line.includes('===')) {
+      const match = line.match(/\[([^\]]+)\]\s+(.+)/);
+      if (match) {
+        bibliography.push(match[2].trim());
+      } else {
+        bibliography.push(line.trim());
+      }
     }
   }
 

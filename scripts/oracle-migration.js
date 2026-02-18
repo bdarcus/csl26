@@ -188,11 +188,18 @@ function renderWithCsln(stylePath) {
         const citations = [];
         const bibliography = [];
 
-        const citeLines = citeOutput.split('\n').filter(line => line.match(/^\s*\[ITEM-\d+\]/));
+        // For citations, we only want the non-integral ones for comparison with citeproc-js
+        const citeLines = citeOutput.split('\n');
+        let inIntegralSection = false;
         citeLines.forEach(line => {
-            const match = line.match(/^\s*\[(ITEM-\d+)\]\s+(.+)$/);
-            if (match) {
-                citations.push({ id: match[1], text: match[2] });
+            if (line.includes('CITATIONS (Integral)')) {
+                inIntegralSection = true;
+            }
+            if (!inIntegralSection) {
+                const match = line.match(/^\s*\[(ITEM-\d+)\]\s+(.+)$/);
+                if (match) {
+                    citations.push({ id: match[1], text: match[2] });
+                }
             }
         });
 
