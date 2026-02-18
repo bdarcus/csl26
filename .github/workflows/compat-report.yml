@@ -9,6 +9,10 @@ on:
       - "scripts/**"
   workflow_dispatch:
 
+concurrency:
+  group: compat-report
+  cancel-in-progress: true
+
 jobs:
   report:
     name: Generate Style Compatibility Report
