@@ -42,7 +42,7 @@ fn build_ml_style(name_mode: MultilingualMode, preferred_script: Option<String>)
             template: Some(vec![
                 TemplateComponent::Contributor(TemplateContributor {
                     contributor: ContributorRole::Author,
-                    form: ContributorForm::Long,
+                    form: ContributorForm::Short,
                     ..Default::default()
                 }),
                 TemplateComponent::Date(TemplateDate {
