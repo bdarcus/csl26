@@ -366,17 +366,23 @@ cargo nextest run --test bibliography
 The `csln` binary is the primary entry point for processing and conversion.
 
 ```bash
-# Process a bibliography with a style (default plain text)
-csln process references.json styles/apa-7th.yaml
+# Render references with a style (default plain text, citations + bibliography)
+csln render refs -b references.json -s styles/apa-7th.yaml
 
 # Show reference keys/IDs for debugging (e.g. [ITEM-1])
-csln process references.json styles/apa-7th.yaml --show-keys
+csln render refs -b references.json -s styles/apa-7th.yaml --show-keys
 
 # Generate semantic HTML
-csln process references.json styles/apa-7th.yaml --format html
+csln render refs -b references.json -s styles/apa-7th.yaml -O html
 
 # Generate Djot with semantic attributes
-csln process references.json styles/apa-7th.yaml --format djot
+csln render refs -b references.json -s styles/apa-7th.yaml -O djot
+
+# Render a full Djot document with bibliography appended
+csln render doc -i examples/document.djot -b examples/document-refs.json -s styles/apa-7th.yaml -I djot -O html
+
+# Validate style/bibliography/citations files
+csln check -s styles/apa-7th.yaml -b references.json -c citations.yaml
 ```
 
 ### Format Conversion
@@ -423,7 +429,7 @@ node oracle.js ../styles-legacy/apa.csl --bib        # Bibliography only
 node oracle.js ../styles-legacy/apa.csl --json       # JSON output for scripting
 
 # oracle-e2e.js - End-to-end migration test
-# Migrates CSL 1.0 → CSLN → csln process, then compares with citeproc-js
+# Migrates CSL 1.0 → CSLN → csln render refs, then compares with citeproc-js
 node oracle-e2e.js ../styles-legacy/apa.csl
 ```
 

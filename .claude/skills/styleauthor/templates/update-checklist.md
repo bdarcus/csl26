@@ -29,7 +29,7 @@
 - [ ] Locators in citations
 
 ## Testing
-- [ ] `cargo run --bin csln-processor -- <style-path>`
+- [ ] `cargo run --bin csln -- render refs -b examples/comprehensive.yaml -s <style-path>`
 - [ ] Verify output matches target reference examples (documentation or oracle)
 - [ ] Oracle comparison (only if a legacy CSL counterpart exists)
 - [ ] Full regression test (`cargo test`)
