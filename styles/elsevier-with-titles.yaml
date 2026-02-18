@@ -34,10 +34,298 @@ bibliography:
       shorten:
         min: 99
         use-first: 99
+  type-templates:
+    chapter:
+    - number: citation-number
+      wrap: brackets
+      suffix: ""
+    - contributor: author
+      form: long
+      suffix: ", "
+      overrides:
+        all:
+          initialize-with: "."
+    - title: primary
+    - items:
+        - term: in
+          suffix: ":"
+        - contributor: editor
+          form: long
+          suffix: ", "
+          overrides:
+            all:
+              initialize-with: "."
+        - title: parent-monograph
+      delimiter: " "
+      prefix: ", "
+    - variable: publisher
+      prefix: ", "
+    - items:
+        - date: issued
+          form: year
+          suffix: ":"
+        - number: pages
+          prefix: " pp. "
+      delimiter: ""
+      prefix: ", "
+      suffix: "."
+    paper-conference:
+    - number: citation-number
+      wrap: brackets
+      suffix: ""
+    - contributor: author
+      form: long
+      suffix: ", "
+      overrides:
+        all:
+          initialize-with: "."
+    - title: primary
+    - title: parent-monograph
+      prefix: ", in: "
+    - items:
+        - date: issued
+          form: year
+          suffix: ":"
+        - number: pages
+          prefix: " pp. "
+      delimiter: ""
+      prefix: ", "
+      suffix: "."
+    thesis:
+    - number: citation-number
+      wrap: brackets
+      suffix: ""
+    - contributor: author
+      form: long
+      suffix: ", "
+      overrides:
+        all:
+          initialize-with: "."
+    - title: primary
+    - variable: genre
+      prefix: ", "
+    - variable: publisher
+      prefix: ", "
+    - date: issued
+      form: year
+      prefix: ", "
+      suffix: "."
+    webpage:
+    - number: citation-number
+      wrap: brackets
+      suffix: ""
+    - contributor: author
+      form: long
+      suffix: ", "
+    - title: primary
+    - date: issued
+      form: year
+      wrap: parentheses
+      prefix: ", "
+      suffix: "."
+    - variable: url
+      prefix: " "
+      links:
+        target: url
+        anchor: component
+    - date: accessed
+      form: month-day
+      prefix: " (accessed "
+    - date: accessed
+      form: year
+      prefix: ", "
+      suffix: ")."
+    article-newspaper:
+    - number: citation-number
+      wrap: brackets
+      suffix: ""
+    - contributor: author
+      form: long
+      suffix: ", "
+      overrides:
+        all:
+          initialize-with: "."
+    - title: primary
+    - title: parent-serial
+      prefix: ", "
+    - date: issued
+      form: year
+      wrap: parentheses
+      prefix: " "
+      suffix: "."
+    dataset:
+    - number: citation-number
+      wrap: brackets
+      suffix: ""
+    - contributor: author
+      form: long
+      suffix: ", "
+    - title: primary
+    - date: issued
+      form: year
+      wrap: parentheses
+      prefix: ", "
+      suffix: "."
+    - variable: url
+      prefix: " "
+      links:
+        target: url
+        anchor: component
+    - date: accessed
+      form: month-day
+      prefix: " (accessed "
+    - date: accessed
+      form: year
+      prefix: ", "
+      suffix: ")."
+    legal-case:
+    - number: citation-number
+      wrap: brackets
+      suffix: ""
+    - title: primary
+    - date: issued
+      form: year
+      prefix: ", "
+      suffix: "."
+    patent:
+    - number: citation-number
+      wrap: brackets
+      suffix: ""
+    - contributor: author
+      form: long
+      suffix: ", "
+      overrides:
+        all:
+          initialize-with: "."
+    - title: primary
+    - variable: number
+      prefix: ", "
+    - date: issued
+      form: year
+      prefix: ", "
+      suffix: "."
+    motion-picture:
+    - number: citation-number
+      wrap: brackets
+      suffix: ""
+    - contributor: author
+      form: long
+      suffix: ", "
+      overrides:
+        all:
+          initialize-with: "."
+    - title: primary
+    - date: issued
+      form: year
+      prefix: ", "
+      suffix: "."
+    motion_picture:
+    - number: citation-number
+      wrap: brackets
+      suffix: ""
+    - contributor: author
+      form: long
+      suffix: ", "
+      overrides:
+        all:
+          initialize-with: "."
+    - title: primary
+    - date: issued
+      form: year
+      prefix: ", "
+      suffix: "."
+    interview:
+    - number: citation-number
+      wrap: brackets
+      suffix: ""
+    - contributor: author
+      form: long
+      suffix: ", "
+      overrides:
+        all:
+          initialize-with: "."
+    - title: primary
+    - date: issued
+      form: year
+      wrap: parentheses
+      prefix: ", "
+      suffix: "."
+    - variable: url
+      prefix: " "
+      links:
+        target: url
+        anchor: component
+      suffix: "."
+    broadcast:
+    - number: citation-number
+      wrap: brackets
+      suffix: ""
+    - contributor: author
+      form: long
+      suffix: ", "
+      overrides:
+        all:
+          initialize-with: "."
+    - title: primary
+    - title: parent-serial
+      prefix: ", "
+    - date: issued
+      form: year
+      wrap: parentheses
+      prefix: " "
+      suffix: "."
+    report:
+    - number: citation-number
+      wrap: brackets
+      suffix: ""
+    - contributor: author
+      form: long
+      suffix: ", "
+    - title: primary
+    - variable: publisher
+      prefix: ", "
+    - variable: publisher-place
+      prefix: ", "
+    - date: issued
+      form: year
+      prefix: ", "
+      suffix: "."
+    personal-communication:
+    - number: citation-number
+      wrap: brackets
+      suffix: ""
+    - contributor: author
+      form: long
+      suffix: ", "
+      overrides:
+        all:
+          initialize-with: "."
+    - title: primary
+    - date: issued
+      form: year
+      wrap: parentheses
+      prefix: ", "
+      suffix: "."
+    personal_communication:
+    - number: citation-number
+      wrap: brackets
+      suffix: ""
+    - contributor: author
+      form: long
+      suffix: ", "
+      overrides:
+        all:
+          initialize-with: "."
+    - title: primary
+    - date: issued
+      form: year
+      wrap: parentheses
+      prefix: ", "
+      suffix: "."
   template:
   - number: citation-number
     wrap: brackets
-    suffix: " "
+    suffix: ""
   - items:
     - contributor: author
       form: long
@@ -53,6 +341,7 @@ bibliography:
             overrides:
               article-journal: { suppress: true }
               book: { suppress: true }
+              report: { suppress: true }
               all: { initialize-with: "." }
         delimiter: ": "
         overrides:
@@ -62,6 +351,8 @@ bibliography:
         overrides:
           chapter:
             prefix: " "
+          paper-conference:
+            prefix: " in: "
       - items:
         - title: parent-serial
         - number: volume
@@ -72,14 +363,21 @@ bibliography:
           overrides:
             article-journal:
               suppress: false
+            article-magazine:
+              suppress: false
         - number: pages
           overrides:
             chapter:
               suppress: true
             book:
               suppress: true
+            paper-conference:
+              suppress: true
+            legal-case:
+              suppress: true
         delimiter: " "
       delimiter: comma
+    - number: edition
     - variable: publisher
     - variable: publisher-place
     - date: issued
@@ -89,19 +387,55 @@ bibliography:
           suppress: true
         chapter:
           suppress: true
+        article-magazine:
+          suppress: true
+        article-newspaper:
+          wrap: parentheses
+        webpage:
+          wrap: parentheses
+        dataset:
+          wrap: parentheses
+        interview:
+          wrap: parentheses
     - number: pages
       suppress: true
       overrides:
         chapter:
           suppress: false
           prefix: ": pp. "
+        paper-conference:
+          suppress: false
+          prefix: ": pp. "
+        legal-case:
+          suppress: true
+    - variable: genre
+      suppress: true
+      overrides:
+        thesis:
+          suppress: false
+          prefix: ", "
     - variable: url
+      overrides:
+        [webpage, dataset, interview]:
+          prefix: ". "
       links:
         target: url
         anchor: component
+    - date: accessed
+      form: month-day
+      prefix: " (accessed "
+    - date: accessed
+      form: year
+      prefix: ", "
+      suffix: ")"
+    - variable: number
+      overrides:
+        patent:
+          prefix: ", "
     - variable: doi
-      prefix: "https://doi.org/"
+      prefix: ". https://doi.org/"
       links:
         target: doi
         anchor: component
+      suffix: "."
     delimiter: comma
