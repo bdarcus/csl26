@@ -549,13 +549,33 @@ impl InputReference {
     pub fn ref_type(&self) -> String {
         match self {
             InputReference::Monograph(r) => match r.r#type {
-                MonographType::Book => "book".to_string(),
+                MonographType::Book => {
+                    if r
+                        .medium
+                        .as_deref()
+                        .is_some_and(|m| m.to_ascii_lowercase().contains("interview"))
+                    {
+                        "interview".to_string()
+                    } else {
+                        "book".to_string()
+                    }
+                }
                 MonographType::Report => "report".to_string(),
                 MonographType::Thesis => "thesis".to_string(),
                 MonographType::Webpage => "webpage".to_string(),
                 MonographType::Post => "post".to_string(),
                 MonographType::PersonalCommunication => "personal-communication".to_string(),
-                MonographType::Document => "document".to_string(),
+                MonographType::Document => {
+                    if r
+                        .medium
+                        .as_deref()
+                        .is_some_and(|m| m.to_ascii_lowercase().contains("interview"))
+                    {
+                        "interview".to_string()
+                    } else {
+                        "document".to_string()
+                    }
+                }
             },
             InputReference::CollectionComponent(r) => match r.r#type {
                 MonographComponentType::Chapter => "chapter".to_string(),
@@ -566,6 +586,17 @@ impl InputReference {
                     SerialType::AcademicJournal => "article-journal".to_string(),
                     SerialType::Magazine => "article-magazine".to_string(),
                     SerialType::Newspaper => "article-newspaper".to_string(),
+                    SerialType::BroadcastProgram => {
+                        if r
+                            .genre
+                            .as_deref()
+                            .is_some_and(|g| g.to_ascii_lowercase().contains("film"))
+                        {
+                            "motion-picture".to_string()
+                        } else {
+                            "broadcast".to_string()
+                        }
+                    }
                     _ => "article-journal".to_string(),
                 },
                 Parent::Id(_) => "article-journal".to_string(),
