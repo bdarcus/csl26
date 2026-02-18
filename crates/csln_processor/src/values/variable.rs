@@ -17,7 +17,31 @@ impl ComponentValues for TemplateVariable {
             SimpleVariable::Publisher => reference.publisher_str(),
             SimpleVariable::PublisherPlace => reference.publisher_place(),
             SimpleVariable::Genre => reference.genre(),
+            SimpleVariable::Medium => reference.medium(),
             SimpleVariable::Abstract => reference.abstract_text(),
+            SimpleVariable::Note => reference.note(),
+            SimpleVariable::Authority => reference.authority(),
+            SimpleVariable::Reporter => reference.reporter(),
+            SimpleVariable::Page => reference.pages().map(|v| v.to_string()),
+            SimpleVariable::Volume => reference.volume().map(|v| v.to_string()),
+            SimpleVariable::Number => reference.number(),
+            SimpleVariable::DocketNumber => match reference {
+                Reference::Brief(r) => r.docket_number.clone(),
+                _ => None,
+            },
+            SimpleVariable::PatentNumber => match reference {
+                Reference::Patent(r) => Some(r.patent_number.clone()),
+                _ => None,
+            },
+            SimpleVariable::StandardNumber => match reference {
+                Reference::Standard(r) => Some(r.standard_number.clone()),
+                _ => None,
+            },
+            SimpleVariable::ReportNumber => match reference {
+                Reference::Monograph(r) => r.report_number.clone(),
+                _ => None,
+            },
+            SimpleVariable::Version => reference.version(),
             SimpleVariable::Locator => {
                 // If we have a locator value in options, use it
                 options.locator.map(|loc| {
@@ -44,6 +68,31 @@ impl ComponentValues for TemplateVariable {
         };
 
         value.filter(|s: &String| !s.is_empty()).map(|value| {
+            // Resolve effective rendering options
+            let mut effective_rendering = self.rendering.clone();
+            if let Some(overrides) = &self.overrides {
+                use csln_core::template::ComponentOverride;
+                let ref_type = reference.ref_type();
+                let mut match_found = false;
+                for (selector, ov) in overrides {
+                    if selector.matches(&ref_type) {
+                        if let ComponentOverride::Rendering(r) = ov {
+                            effective_rendering.merge(r);
+                            match_found = true;
+                        }
+                    }
+                }
+                if !match_found {
+                    for (selector, ov) in overrides {
+                        if selector.matches("default") {
+                            if let ComponentOverride::Rendering(r) = ov {
+                                effective_rendering.merge(r);
+                            }
+                        }
+                    }
+                }
+            }
+
             use csln_core::options::{LinkAnchor, LinkTarget};
             let component_anchor = match self.variable {
                 SimpleVariable::Url => LinkAnchor::Url,

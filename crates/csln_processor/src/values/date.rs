@@ -32,6 +32,31 @@ impl ComponentValues for TemplateDate {
         let locale = options.locale;
         let date_config = options.config.dates.as_ref();
 
+        // Resolve effective rendering options (base merged with type-specific override)
+        let mut effective_rendering = self.rendering.clone();
+        if let Some(overrides) = &self.overrides {
+            use csln_core::template::ComponentOverride;
+            let ref_type = reference.ref_type();
+            let mut match_found = false;
+            for (selector, ov) in overrides {
+                if selector.matches(&ref_type) {
+                    if let ComponentOverride::Rendering(r) = ov {
+                        effective_rendering.merge(r);
+                        match_found = true;
+                    }
+                }
+            }
+            if !match_found {
+                for (selector, ov) in overrides {
+                    if selector.matches("default") {
+                        if let ComponentOverride::Rendering(r) = ov {
+                            effective_rendering.merge(r);
+                        }
+                    }
+                }
+            }
+        }
+
         let formatted = if date.is_range() {
             // Handle date ranges
             let start = match self.form {
@@ -61,6 +86,16 @@ impl ComponentValues for TemplateDate {
                         (true, _) => year,
                         (false, None) => format!("{} {}", month, year),
                         (false, Some(d)) => format!("{} {}, {}", month, d, year),
+                    }
+                }
+                DateForm::YearMonthDay => {
+                    let year = date.year();
+                    let month = date.month(&locale.dates.months.long);
+                    let day = date.day();
+                    match (month.is_empty(), day) {
+                        (true, _) => year,
+                        (false, None) => format!("{}, {}", year, month),
+                        (false, Some(d)) => format!("{}, {} {}", year, month, d),
                     }
                 }
             };
@@ -135,6 +170,19 @@ impl ComponentValues for TemplateDate {
                         (true, _) => Some(year),
                         (false, None) => Some(format!("{} {}", month, year)),
                         (false, Some(d)) => Some(format!("{} {}, {}", month, d, year)),
+                    }
+                }
+                DateForm::YearMonthDay => {
+                    let year = date.year();
+                    if year.is_empty() {
+                        return None;
+                    }
+                    let month = date.month(&locale.dates.months.long);
+                    let day = date.day();
+                    match (month.is_empty(), day) {
+                        (true, _) => Some(year),
+                        (false, None) => Some(format!("{}, {}", year, month)),
+                        (false, Some(d)) => Some(format!("{}, {} {}", year, month, d)),
                     }
                 }
             }

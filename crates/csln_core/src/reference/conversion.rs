@@ -55,17 +55,20 @@ impl From<csl_legacy::csl_json::Reference> for InputReference {
                     url,
                     accessed,
                     language,
-                    note,
+                    note: note.clone(),
                     isbn,
                     doi,
                     edition,
+                    report_number: legacy.number.map(|v| v.to_string()),
+                    collection_number: legacy.collection_number.map(|v| v.to_string()),
                     genre: legacy.genre,
+                    medium: legacy.medium,
                     keywords: None,
                     original_date: None,
                     original_title: None,
                 }))
             }
-            "chapter" | "paper-conference" => {
+            "chapter" | "paper-conference" | "entry-encyclopedia" | "entry-dictionary" => {
                 let parent_title = legacy
                     .container_title
                     .map(Title::Single)
@@ -94,6 +97,7 @@ impl From<csl_legacy::csl_json::Reference> for InputReference {
                                 location: legacy.publisher_place,
                             })
                         }),
+                        collection_number: legacy.collection_number.map(|v| v.to_string()),
                         url: None,
                         accessed: None,
                         language: None,
@@ -105,17 +109,20 @@ impl From<csl_legacy::csl_json::Reference> for InputReference {
                     url,
                     accessed,
                     language,
-                    note,
+                    note: note.clone(),
                     doi,
                     genre: legacy.genre,
+                    medium: legacy.medium,
                     keywords: None,
                 }))
             }
-            "article-journal" | "article" | "article-magazine" | "article-newspaper" => {
+            "article-journal" | "article" | "article-magazine" | "article-newspaper"
+            | "broadcast" | "motion_picture" => {
                 let serial_type = match legacy.ref_type.as_str() {
                     "article-journal" => SerialType::AcademicJournal,
                     "article-magazine" => SerialType::Magazine,
                     "article-newspaper" => SerialType::Newspaper,
+                    "broadcast" | "motion_picture" => SerialType::BroadcastProgram,
                     _ => SerialType::AcademicJournal,
                 };
                 let parent_title = legacy
@@ -139,7 +146,7 @@ impl From<csl_legacy::csl_json::Reference> for InputReference {
                     url,
                     accessed,
                     language,
-                    note,
+                    note: note.clone(),
                     doi,
                     pages: legacy.page,
                     volume: legacy.volume.map(|v| match v {
@@ -150,6 +157,8 @@ impl From<csl_legacy::csl_json::Reference> for InputReference {
                         csl_legacy::csl_json::StringOrNumber::String(s) => NumOrStr::Str(s),
                         csl_legacy::csl_json::StringOrNumber::Number(n) => NumOrStr::Number(n),
                     }),
+                    genre: legacy.genre,
+                    medium: legacy.medium,
                     keywords: None,
                 }))
             }
@@ -164,7 +173,7 @@ impl From<csl_legacy::csl_json::Reference> for InputReference {
                 url,
                 accessed,
                 language,
-                note,
+                note: note.clone(),
                 doi,
                 keywords: None,
             })),
@@ -179,7 +188,7 @@ impl From<csl_legacy::csl_json::Reference> for InputReference {
                 url,
                 accessed,
                 language,
-                note,
+                note: note.clone(),
                 keywords: None,
             })),
             "treaty" => InputReference::Treaty(Box::new(Treaty {
@@ -193,14 +202,14 @@ impl From<csl_legacy::csl_json::Reference> for InputReference {
                 url,
                 accessed,
                 language,
-                note,
+                note: note.clone(),
                 keywords: None,
             })),
             "standard" => InputReference::Standard(Box::new(Standard {
                 id,
                 title,
                 authority: legacy.authority,
-                number: legacy.number.unwrap_or_default(),
+                standard_number: legacy.number.map(|v| v.to_string()).unwrap_or_default(),
                 issued,
                 status: None,
                 publisher: legacy.publisher.map(|n| {
@@ -212,7 +221,24 @@ impl From<csl_legacy::csl_json::Reference> for InputReference {
                 url,
                 accessed,
                 language,
-                note,
+                note: note.clone(),
+                keywords: None,
+            })),
+            "patent" => InputReference::Patent(Box::new(Patent {
+                id,
+                title,
+                author: legacy.author.map(Contributor::from),
+                assignee: None,
+                patent_number: legacy.number.map(|v| v.to_string()).unwrap_or_default(),
+                application_number: None,
+                filing_date: None,
+                issued,
+                jurisdiction: None,
+                authority: legacy.authority,
+                url,
+                accessed,
+                language,
+                note: note.clone(),
                 keywords: None,
             })),
             _ => InputReference::Monograph(Box::new(Monograph {
@@ -236,7 +262,10 @@ impl From<csl_legacy::csl_json::Reference> for InputReference {
                 isbn,
                 doi,
                 edition,
+                report_number: legacy.number.map(|v| v.to_string()),
+                collection_number: legacy.collection_number.map(|v| v.to_string()),
                 genre: legacy.genre,
+                medium: legacy.medium,
                 keywords: None,
                 original_date: None,
                 original_title: None,
@@ -352,7 +381,24 @@ impl InputReference {
                     isbn: field_str("isbn"),
                     doi: field_str("doi"),
                     edition: field_str("edition"),
+                    report_number: if matches!(
+                        entry.entry_type.to_string().to_lowercase().as_str(),
+                        "report"
+                    ) {
+                        field_str("number")
+                    } else {
+                        None
+                    },
+                    collection_number: if !matches!(
+                        entry.entry_type.to_string().to_lowercase().as_str(),
+                        "report"
+                    ) {
+                        field_str("number")
+                    } else {
+                        None
+                    },
                     genre: field_str("type"),
+                    medium: None,
                     keywords: None,
                     original_date: None,
                     original_title: None,
@@ -377,6 +423,7 @@ impl InputReference {
                         translator: None,
                         issued: EdtfString(String::new()),
                         publisher,
+                        collection_number: field_str("number"),
                         url: None,
                         accessed: None,
                         language: None,
@@ -391,6 +438,7 @@ impl InputReference {
                     note: field_str("note"),
                     doi: field_str("doi"),
                     genre: field_str("type"),
+                    medium: None,
                     keywords: None,
                 }))
             }
@@ -421,6 +469,8 @@ impl InputReference {
                     pages: field_str("pages"),
                     volume: field_str("volume").map(NumOrStr::Str),
                     issue: field_str("number").map(NumOrStr::Str),
+                    genre: field_str("type"),
+                    medium: None,
                     keywords: None,
                 }))
             }
@@ -440,7 +490,24 @@ impl InputReference {
                 isbn: field_str("isbn"),
                 doi: field_str("doi"),
                 edition: field_str("edition"),
+                report_number: if matches!(
+                    entry.entry_type.to_string().to_lowercase().as_str(),
+                    "report"
+                ) {
+                    field_str("number")
+                } else {
+                    None
+                },
+                collection_number: if !matches!(
+                    entry.entry_type.to_string().to_lowercase().as_str(),
+                    "report"
+                ) {
+                    field_str("number")
+                } else {
+                    None
+                },
                 genre: field_str("type"),
+                medium: None,
                 keywords: None,
                 original_date: None,
                 original_title: None,

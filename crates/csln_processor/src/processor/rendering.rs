@@ -569,7 +569,10 @@ impl<'a> Renderer<'a> {
         // Try to use the first component from the template if it's a contributor or title.
         // This ensures substitution, shortening, and mode-dependent conjunctions are respected.
         if let Some(comp) = template.first() {
-            if matches!(comp, TemplateComponent::Contributor(_) | TemplateComponent::Title(_)) {
+            if matches!(
+                comp,
+                TemplateComponent::Contributor(_) | TemplateComponent::Title(_)
+            ) {
                 let hints = self
                     .hints
                     .get(&reference.id().unwrap_or_default())
@@ -704,11 +707,16 @@ impl<'a> Renderer<'a> {
         let default_template = bib_spec.resolve_template()?;
 
         // Determine effective template (override or default)
+        let ref_type = reference.ref_type();
         let template = if let Some(type_templates) = &bib_spec.type_templates {
-            type_templates
-                .get(&reference.ref_type())
-                .cloned()
-                .unwrap_or(default_template)
+            let mut matched_template = None;
+            for (selector, t) in type_templates {
+                if selector.matches(&ref_type) {
+                    matched_template = Some(t.clone());
+                    break;
+                }
+            }
+            matched_template.unwrap_or(default_template)
         } else {
             default_template
         };

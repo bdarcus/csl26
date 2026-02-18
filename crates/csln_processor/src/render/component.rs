@@ -244,9 +244,27 @@ pub fn get_effective_rendering(component: &ProcTemplateComponent) -> Rendering {
     if let Some(ref_type) = &component.ref_type {
         if let Some(overrides) = component.template_component.overrides() {
             use csln_core::template::ComponentOverride;
-            let ov = overrides.get(ref_type).or_else(|| overrides.get("default"));
-            if let Some(ComponentOverride::Rendering(r)) = ov {
-                effective.merge(r);
+
+            // Try explicit match first
+            let mut match_found = false;
+            for (selector, ov) in overrides {
+                if selector.matches(ref_type) {
+                    if let ComponentOverride::Rendering(r) = ov {
+                        effective.merge(r);
+                        match_found = true;
+                    }
+                }
+            }
+
+            // Fallback to default if no specific match found
+            if !match_found {
+                for (selector, ov) in overrides {
+                    if selector.matches("default") {
+                        if let ComponentOverride::Rendering(r) = ov {
+                            effective.merge(r);
+                        }
+                    }
+                }
             }
         }
     }

@@ -51,6 +51,9 @@ pub struct Reference {
     /// Collection title
     #[serde(skip_serializing_if = "Option::is_none")]
     pub collection_title: Option<String>,
+    /// Collection number (series number)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub collection_number: Option<StringOrNumber>,
     /// Issued date
     #[serde(skip_serializing_if = "Option::is_none")]
     pub issued: Option<DateVariable>,

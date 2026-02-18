@@ -188,14 +188,13 @@ fn suppress_issue_in_parent_monograph_list(items: &mut [TemplateComponent]) {
                     let overrides = n
                         .overrides
                         .get_or_insert_with(std::collections::HashMap::new);
-                    use csln_core::template::ComponentOverride;
-                    if let Some(ComponentOverride::Rendering(rendering)) =
-                        overrides.get_mut("article-journal")
-                    {
+                    use csln_core::template::{ComponentOverride, TypeSelector};
+                    let key = TypeSelector::Single("article-journal".to_string());
+                    if let Some(ComponentOverride::Rendering(rendering)) = overrides.get_mut(&key) {
                         rendering.suppress = Some(true);
                     } else {
                         overrides.insert(
-                            "article-journal".to_string(),
+                            key,
                             ComponentOverride::Rendering(csln_core::template::Rendering {
                                 suppress: Some(true),
                                 ..Default::default()

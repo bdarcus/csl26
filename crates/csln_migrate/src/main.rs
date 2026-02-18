@@ -210,7 +210,7 @@ fn compile_from_xml(
     tracker: &csln_migrate::provenance::ProvenanceTracker,
 ) -> (
     Vec<TemplateComponent>,
-    Option<std::collections::HashMap<String, Vec<TemplateComponent>>>,
+    Option<std::collections::HashMap<csln_core::template::TypeSelector, Vec<TemplateComponent>>>,
     Vec<TemplateComponent>,
 ) {
     // Extract author suffix before macro inlining (will be lost during inlining)
@@ -452,7 +452,10 @@ fn apply_type_overrides(
                     .get_or_insert_with(std::collections::HashMap::new);
                 use csln_core::template::ComponentOverride;
                 for (k, v) in new_ovr {
-                    overrides.insert(k, ComponentOverride::Rendering(v));
+                    overrides.insert(
+                        csln_core::template::TypeSelector::Single(k),
+                        ComponentOverride::Rendering(v),
+                    );
                 }
             }
         }
@@ -475,7 +478,10 @@ fn apply_type_overrides(
                     .get_or_insert_with(std::collections::HashMap::new);
                 use csln_core::template::ComponentOverride;
                 for (k, v) in new_ovr {
-                    overrides.insert(k, ComponentOverride::Rendering(v));
+                    overrides.insert(
+                        csln_core::template::TypeSelector::Single(k),
+                        ComponentOverride::Rendering(v),
+                    );
                 }
             }
         }
@@ -523,7 +529,10 @@ fn apply_type_overrides(
                 .get_or_insert_with(std::collections::HashMap::new);
             use csln_core::template::ComponentOverride;
             for (k, v) in new_ovr {
-                overrides.insert(k, ComponentOverride::Rendering(v));
+                overrides.insert(
+                    csln_core::template::TypeSelector::Single(k),
+                    ComponentOverride::Rendering(v),
+                );
             }
         }
         // Publisher: suppress for journal articles (journals don't have publishers in bib)
@@ -544,7 +553,10 @@ fn apply_type_overrides(
                 .get_or_insert_with(std::collections::HashMap::new);
             use csln_core::template::ComponentOverride;
             for (k, v) in new_ovr {
-                overrides.insert(k, ComponentOverride::Rendering(v));
+                overrides.insert(
+                    csln_core::template::TypeSelector::Single(k),
+                    ComponentOverride::Rendering(v),
+                );
             }
         }
         // Publisher-place: suppress for journal articles
@@ -565,7 +577,10 @@ fn apply_type_overrides(
                 .get_or_insert_with(std::collections::HashMap::new);
             use csln_core::template::ComponentOverride;
             for (k, v) in new_ovr {
-                overrides.insert(k, ComponentOverride::Rendering(v));
+                overrides.insert(
+                    csln_core::template::TypeSelector::Single(k),
+                    ComponentOverride::Rendering(v),
+                );
             }
         }
         // Pages: apply volume-pages delimiter for journal articles
@@ -590,7 +605,10 @@ fn apply_type_overrides(
                     .get_or_insert_with(std::collections::HashMap::new);
                 use csln_core::template::ComponentOverride;
                 for (k, v) in new_ovr {
-                    overrides.insert(k, ComponentOverride::Rendering(v));
+                    overrides.insert(
+                        csln_core::template::TypeSelector::Single(k),
+                        ComponentOverride::Rendering(v),
+                    );
                 }
             }
         }

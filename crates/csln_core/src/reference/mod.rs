@@ -279,6 +279,26 @@ impl InputReference {
         match self {
             InputReference::Monograph(r) => r.genre.clone(),
             InputReference::CollectionComponent(r) => r.genre.clone(),
+            InputReference::SerialComponent(r) => r.genre.clone(),
+            _ => None,
+        }
+    }
+
+    /// Return the medium.
+    pub fn medium(&self) -> Option<String> {
+        match self {
+            InputReference::Monograph(r) => r.medium.clone(),
+            InputReference::CollectionComponent(r) => r.medium.clone(),
+            InputReference::SerialComponent(r) => r.medium.clone(),
+            _ => None,
+        }
+    }
+
+    /// Return the version.
+    pub fn version(&self) -> Option<String> {
+        match self {
+            InputReference::Dataset(r) => r.version.clone(),
+            InputReference::Software(r) => r.version.clone(),
             _ => None,
         }
     }
@@ -317,6 +337,19 @@ impl InputReference {
             InputReference::Treaty(r) => r.volume.clone().map(NumOrStr::Str),
             InputReference::Regulation(r) => r.volume.clone().map(NumOrStr::Str),
             InputReference::Classic(r) => r.volume.clone().map(NumOrStr::Str),
+            _ => None,
+        }
+    }
+
+    /// Return the collection number (series number).
+    pub fn collection_number(&self) -> Option<String> {
+        match self {
+            InputReference::Monograph(r) => r.collection_number.clone(),
+            InputReference::Collection(r) => r.collection_number.clone(),
+            InputReference::CollectionComponent(r) => match &r.parent {
+                Parent::Embedded(p) => p.collection_number.clone(),
+                Parent::Id(_) => None,
+            },
             _ => None,
         }
     }
@@ -384,8 +417,11 @@ impl InputReference {
     /// Return the number (docket number, session number, etc.).
     pub fn number(&self) -> Option<String> {
         match self {
-            InputReference::Hearing(r) => r.number.clone(),
-            InputReference::Brief(r) => r.number.clone(),
+            InputReference::Monograph(r) => r.report_number.clone(),
+            InputReference::Hearing(r) => r.session_number.clone(),
+            InputReference::Brief(r) => r.docket_number.clone(),
+            InputReference::Patent(r) => Some(r.patent_number.clone()),
+            InputReference::Standard(r) => Some(r.standard_number.clone()),
             _ => None,
         }
     }

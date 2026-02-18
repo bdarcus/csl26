@@ -22,6 +22,8 @@ fn test_serial_component_with_parent_id() {
         pages: None,
         volume: None,
         issue: None,
+        genre: None,
+        medium: None,
         keywords: None,
     };
 
@@ -49,6 +51,7 @@ fn test_collection_component_with_parent_id() {
         note: None,
         doi: None,
         genre: None,
+        medium: None,
         keywords: None,
     };
 
