@@ -100,7 +100,7 @@ references:
       type: academic-journal
       title: American Naturalist
     issue: 185
-    pages: 653–64
+    pages: 653-664
     doi: 10.1086/680849
   - id: glass
     type: article
@@ -118,7 +118,7 @@ references:
       title: American Journal of Sociology
     volume: 119
     issue: 4
-    pages: 1002–46
+    pages: 1002-1046
     doi: 10.1086/674703
   - id: meyer
     type: article
@@ -131,4 +131,4 @@ references:
       type: academic-journal
       title: Diogenes
     issue: 25
-    pages: 84–117
+    pages: 84-117

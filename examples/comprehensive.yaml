@@ -52,7 +52,7 @@ references:
         name: Academic Press
     pages: "45-67"
 
-  # 4. Monograph with original-date and keywords (for test verification)
+  # 4. Monograph with original-date and keywords
   - id: foucault_discipline
     type: book
     title: Discipline and Punish
@@ -70,3 +70,44 @@ references:
       - humanities
       - translation
       - philosophy
+
+  # 5. Missing references from complex-citations.yaml
+  - id: brown1954
+    type: book
+    title: Another Book
+    author:
+      - family: Brown
+        given: Mary
+    issued: "1954"
+    publisher:
+      name: Oxford University Press
+
+  - id: who2020
+    type: book
+    title: Global Status Report
+    author:
+      name: World Health Organization
+    issued: "2020"
+    publisher:
+      name: World Health Organization
+
+  - id: goethe1808
+    type: book
+    title: Faust
+    author:
+      - family: Goethe
+        given: Johann Wolfgang von
+    issued: "1808"
+    publisher:
+      name: Cotta
+
+  - id: king1963
+    type: book
+    title: Letter from Birmingham Jail
+    author:
+      - family: King
+        given: Martin Luther
+        suffix: Jr.
+    issued: "1963"
+    publisher:
+      name: Christian Century
