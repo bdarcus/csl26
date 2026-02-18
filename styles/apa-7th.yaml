@@ -7,9 +7,7 @@ options:
   processing: author-date
   substitute:
     contributor-role-form: short
-    template:
-      - editor
-      - title
+    template: [editor, title]
   contributors:
     initialize-with: ". "
     editor-label-format: short-suffix
@@ -33,9 +31,7 @@ options:
 citation:
   options:
     contributors:
-      shorten:
-        min: 3
-        use-first: 1
+      shorten: { min: 3, use-first: 1 }
   non-integral:
     wrap: parentheses
     template:
@@ -53,10 +49,10 @@ citation:
       - contributor: author
         form: short
       - items:
-        - date: issued
-          form: year
-        - variable: locator
-          prefix: ", "
+          - date: issued
+            form: year
+          - variable: locator
+            prefix: ", "
         delimiter: ""
         wrap: parentheses
 bibliography:
@@ -66,83 +62,86 @@ bibliography:
       suffix: "."
       name-order: family-first
       overrides:
-        legal-case:
-          suppress: true
+        legal-case: { suppress: true }
     - date: issued
       form: year
       wrap: parentheses
       prefix: " "
       overrides:
-        interview:
-          suppress: true
-        article-newspaper:
-          suppress: true
-        broadcast:
-          suppress: true
+        [interview, article-newspaper, broadcast]:
+          date: issued
+          form: year-month-day
         article-magazine:
-          suppress: true
-        legal-case:
-          suppress: true
+          date: issued
+          form: year-month
+        legal-case: { suppress: true }
     - title: primary
       emph: true
       overrides:
-        legal-case:
-          items:
-            - title: primary
-              emph: true
-              suffix: ","
-            - variable: volume
-              prefix: " "
-            - variable: reporter
-              prefix: " "
-            - variable: page
-              prefix: " "
-            - date: issued
-              form: year
-              wrap: parentheses
-              prefix: " "
-          delimiter: ""
-        patent:
-          emph: false
-        dataset:
-          emph: false
-        standard:
-          emph: false
-        software:
+        [patent, dataset, standard, software]:
+          title: primary
           emph: false
     - items:
-        - items:
-            - contributor: editor
-              form: long
-              name-order: given-first
-            - title: parent-monograph
-              emph: true
-          prefix: ". In "
+        - variable: genre
+        - variable: medium
+      delimiter: "; "
+      wrap: brackets
+      prefix: " "
+    - number: edition
+      suffix: " ed."
+      overrides:
+        patent:
+          items:
+            - term: patent
+              form: short
+              suffix: " "
+            - variable: number
+          delimiter: ""
+    - items:
+        - term: volume
+          form: short
+          suffix: " "
           overrides:
-             book: { suppress: true }
-             article-journal: { suppress: true }
-        - items:
-             - title: parent-serial
+            [article-journal, article-magazine, article-newspaper]: { suppress: true }
+        - number: volume
+          overrides:
+            [article-journal, article-magazine, article-newspaper]: { suppress: true }
+      delimiter: ""
+      wrap: parentheses
+      prefix: " "
+    - contributor: translator
+      form: long
+      label: { term: translator, form: short, placement: suffix }
+      wrap: parentheses
+      prefix: " "
+    - contributor: editor
+      form: long
+      name-order: given-first
+      label: { term: editor, form: short, placement: suffix }
+      prefix: ". In "
+      overrides:
+         [book, article-journal, article-magazine, article-newspaper]: { suppress: true }
+    - title: parent-monograph
+      emph: true
+      prefix: ". In "
+      overrides:
+         [book, article-journal, article-magazine, article-newspaper]: { suppress: true }
+    - items:
+         - title: parent-serial
+           emph: true
+           overrides:
+             broadcast: { title: parent-serial, emph: true, prefix: "In " }
+         - items:
+             - number: volume
                emph: true
-             - items:
-                 - number: volume
-                 - number: issue
-                   wrap: parentheses
-                   overrides: {}
-               delimiter: none
-          delimiter: ", "
+             - number: issue
+               wrap: parentheses
+           delimiter: ""
+      delimiter: ", "
     - number: pages
       overrides:
-        chapter:
-          prefix: " (pp. "
-          suffix: ")."
-        entry-encyclopedia:
-          prefix: " (pp. "
-          suffix: ")."
-        report:
-          prefix: " (pp. "
-          suffix: ")."
-        paper-conference:
+        [chapter, entry-encyclopedia, report, paper-conference]:
+          number: pages
           prefix: " (pp. "
           suffix: ")."
       prefix: ", "
@@ -151,32 +150,13 @@ bibliography:
       prefix: ". "
       suffix: "."
       overrides:
-        article-journal:
-          suppress: true
-        article-newspaper:
-          suppress: true
-        article-magazine:
-          suppress: true
-        broadcast:
-          suppress: true
-        interview:
-          suppress: true
-        webpage:
-          suppress: true
+        [article-journal, article-newspaper, article-magazine, broadcast, interview, webpage, standard]: { suppress: true }
         patent:
           items:
             - variable: authority
               prefix: ". "
               suffix: "."
           delimiter: ""
-        standard:
-          suppress: true
     - variable: doi
-      overrides:
-        article-journal:
-          prefix: https://doi.org/
-        dataset:
-          prefix: https://doi.org/
-        software:
-          prefix: https://doi.org/
+      prefix: "https://doi.org/"
     - variable: url

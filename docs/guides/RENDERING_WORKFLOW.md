@@ -216,9 +216,19 @@ The processor merges options using **three-tier precedence**:
 
 1. **Global options** (`options:`) - base defaults for all contexts
 2. **Context-specific** (`citation.options:` or `bibliography.options:`) - override global for that context
-3. **Template overrides** (component `overrides:`) - type-specific rendering
+3. **Template overrides** (component `overrides:`) - type-specific rendering. Supports concise list syntax for grouping multiple types.
 
-**Example: APA uses different author shortening per context**
+**Example: APA concise overrides**
+```yaml
+# Apply suppression rule to multiple periodical types at once
+- items:
+    - term: volume
+    - number: volume
+  overrides:
+    [article-journal, article-magazine, article-newspaper]: { suppress: true }
+```
+
+**Example: Context-specific options (APA uses different shortening)**
 ```yaml
 options:
   contributors:
