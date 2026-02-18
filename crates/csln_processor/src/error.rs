@@ -18,4 +18,10 @@ pub enum ProcessorError {
 
     #[error("Substitution error: {0}")]
     SubstitutionError(String),
+
+    #[error("File I/O error: {0}")]
+    FileIO(#[from] std::io::Error),
+
+    #[error("Parse error ({0}): {1}")]
+    ParseError(String, String),
 }
