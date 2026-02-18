@@ -1,0 +1,18 @@
+{
+  "apa": [
+    {
+      "feature": "mode-dependent-conjunction",
+      "description": "APA uses 'and' in narrative (integral) citations and '&' in parenthetical (non-integral). CSLN models this declaratively via !mode-dependent, which is an intentional improvement over citeproc-js's implicit behavior.",
+      "intentional": true
+    }
+  ],
+  "elsevier-with-titles": [],
+  "elsevier-harvard": [],
+  "elsevier-vancouver": [],
+  "springer-vancouver-brackets": [],
+  "springer-basic-author-date": [],
+  "springer-basic-brackets": [],
+  "springer-socpsych-author-date": [],
+  "american-medical-association": [],
+  "taylor-and-francis-chicago-author-date": []
+}
