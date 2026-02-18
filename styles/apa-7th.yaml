@@ -15,7 +15,14 @@ options:
     editor-label-format: short-suffix
     demote-non-dropping-particle: never
     delimiter-precedes-last: always
-    and: symbol
+    and:
+      mode-dependent:
+        integral: text
+        non-integral: symbol
+    shorten:
+      min: 21
+      use-first: 19
+      use-last: 1
   dates: long
   titles: apa
   page-range-format: expanded
@@ -24,17 +31,16 @@ options:
     separator: ". "
   punctuation-in-quote: true
 citation:
+  options:
+    contributors:
+      shorten:
+        min: 3
+        use-first: 1
   non-integral:
     wrap: parentheses
     template:
       - contributor: author
         form: short
-        shorten:
-          min: 3
-          use-first: 1
-          and-others: et-al
-          delimiter-precedes-last: contextual
-        and: symbol
       - date: issued
         form: year
       - variable: locator
@@ -46,12 +52,6 @@ citation:
     template:
       - contributor: author
         form: short
-        shorten:
-          min: 3
-          use-first: 1
-          and-others: et-al
-          delimiter-precedes-last: contextual
-        and: text
       - items:
         - date: issued
           form: year
