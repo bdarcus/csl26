@@ -20,6 +20,7 @@ options:
   bibliography:
     hanging-indent: true
     separator: ". "
+    entry-suffix: "."
   punctuation-in-quote: true
   volume-pages-delimiter: comma
 citation:
@@ -52,6 +53,247 @@ citation:
             form: year
         wrap: parentheses
 bibliography:
+  type-templates:
+    article-journal:
+      - contributor: author
+        form: long
+        name-order: family-first
+      - date: issued
+        form: year
+        prefix: ", "
+        suffix: "."
+      - title: primary
+        suffix: "."
+      - items:
+          - title: parent-serial
+          - items:
+              - number: volume
+              - number: pages
+            delimiter: ", "
+        delimiter: " "
+      - variable: doi
+        prefix: ". https://doi.org/"
+        links:
+          target: doi
+          anchor: component
+    book:
+      - contributor: author
+        form: long
+        name-order: family-first
+      - date: issued
+        form: year
+        prefix: ", "
+        suffix: "."
+      - title: primary
+        suffix: "."
+      - number: edition
+      - items:
+          - variable: publisher
+          - variable: publisher-place
+        delimiter: ", "
+    chapter:
+      - contributor: author
+        form: long
+        name-order: family-first
+      - date: issued
+        form: year
+        prefix: ", "
+        suffix: "."
+      - title: primary
+      - items:
+          - term: in
+            suffix: ":"
+          - contributor: editor
+            form: long
+            name-order: family-first
+          - title: parent-monograph
+        delimiter: " "
+        prefix: ", "
+        suffix: "."
+      - variable: publisher
+      - number: pages
+        prefix: "pp. "
+    paper-conference:
+      - contributor: author
+        form: long
+        name-order: family-first
+      - date: issued
+        form: year
+        prefix: ", "
+        suffix: "."
+      - title: primary
+      - title: parent-monograph
+        prefix: ", in: "
+        suffix: "."
+      - number: pages
+        prefix: "pp. "
+        suffix: "."
+    thesis:
+      - contributor: author
+        form: long
+        name-order: family-first
+      - date: issued
+        form: year
+        prefix: ", "
+        suffix: "."
+      - title: primary
+      - variable: genre
+        wrap: parentheses
+        prefix: " "
+        suffix: "."
+      - variable: publisher
+    webpage:
+      - contributor: author
+        form: long
+        name-order: family-first
+      - date: issued
+        form: year
+        prefix: ", "
+        suffix: "."
+      - title: primary
+      - variable: url
+        prefix: "URL "
+        links:
+          target: url
+          anchor: component
+      - date: accessed
+        form: month-day
+        prefix: "(accessed "
+      - date: accessed
+        form: year
+        prefix: "."
+        suffix: ")."
+    article-newspaper:
+      - contributor: author
+        form: long
+        name-order: family-first
+      - date: issued
+        form: year
+        prefix: ", "
+        suffix: "."
+      - title: primary
+        suffix: "."
+      - title: parent-serial
+        suffix: "."
+    article-magazine:
+      - contributor: author
+        form: long
+        name-order: family-first
+      - date: issued
+        form: year
+        prefix: ", "
+        suffix: "."
+      - title: primary
+        suffix: "."
+      - items:
+          - title: parent-serial
+          - items:
+              - number: volume
+              - number: pages
+            delimiter: ", "
+        delimiter: " "
+    entry-encyclopedia:
+      - contributor: author
+        form: long
+        name-order: family-first
+      - date: issued
+        form: year
+        prefix: ", "
+        suffix: "."
+      - title: primary
+        suffix: "."
+      - title: parent-serial
+        suffix: "."
+    dataset:
+      - contributor: author
+        form: long
+        name-order: family-first
+      - date: issued
+        form: year
+        prefix: ", "
+        suffix: "."
+      - title: primary
+        suffix: "."
+    legal-case:
+      - title: primary
+      - date: issued
+        form: year
+        prefix: ", "
+        suffix: "."
+      - variable: reporter
+        prefix: " , "
+        suffix: "."
+    patent:
+      - contributor: author
+        form: long
+        name-order: family-first
+      - date: issued
+        form: year
+        prefix: ", "
+        suffix: "."
+      - title: primary
+        suffix: "."
+      - variable: number
+        suffix: "."
+    motion-picture:
+      - contributor: author
+        form: long
+        name-order: family-first
+      - date: issued
+        form: year
+        prefix: ", "
+        suffix: "."
+      - title: primary
+        suffix: "."
+    broadcast:
+      - contributor: author
+        form: long
+        name-order: family-first
+      - date: issued
+        form: year
+        prefix: ", "
+        suffix: "."
+      - title: primary
+        suffix: "."
+      - title: parent-serial
+        suffix: "."
+    interview:
+      - contributor: author
+        form: long
+        name-order: family-first
+      - date: issued
+        form: year
+        prefix: ", "
+        suffix: "."
+      - title: primary
+        suffix: "."
+    report:
+      - contributor: author
+        form: long
+        name-order: family-first
+      - date: issued
+        form: year
+        prefix: ", "
+        suffix: "."
+      - title: primary
+      - variable: genre
+        wrap: parentheses
+        prefix: " "
+        suffix: "."
+      - items:
+          - variable: publisher
+          - variable: publisher-place
+        delimiter: ", "
+    personal-communication:
+      - contributor: author
+        form: long
+        name-order: family-first
+      - date: issued
+        form: year
+        prefix: ", "
+        suffix: "."
+      - title: primary
+        suffix: "."
   template:
     - contributor: author
       form: long
@@ -59,30 +301,5 @@ bibliography:
     - date: issued
       form: year
       prefix: ", "
+      suffix: "."
     - title: primary
-    - items:
-        - contributor: editor
-          form: verb
-          name-order: given-first
-        - title: parent-monograph
-    - title: parent-serial
-    - variable: publisher
-    - items:
-        - number: volume
-        - number: issue
-          overrides:
-            article-magazine:
-              suppress: true
-    - number: pages
-      overrides:
-        chapter:
-          prefix: "pp. "
-        paper-conference:
-          prefix: "pp. "
-      prefix: ", "
-    - variable: publisher-place
-      prefix: ", "
-    - variable: doi
-      overrides:
-        article-journal:
-          prefix: https://doi.org/
