@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 /// Form for term lookup.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
+#[serde(rename_all = "kebab-case")]
 pub enum TermForm {
     Long,
     Short,
@@ -42,6 +43,13 @@ pub enum GeneralTerm {
     Online,
     ReviewOf,
     OriginalWorkPublished,
+    Patent,
+    Volume,
+    Issue,
+    Page,
+    Chapter,
+    Edition,
+    Section,
 }
 
 /// General terms used in citations and bibliographies.

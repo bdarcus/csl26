@@ -331,6 +331,12 @@ impl Locale {
             GeneralTerm::From => self.terms.from.as_deref(),
             GeneralTerm::Anonymous => Some(&self.terms.anonymous.long),
             GeneralTerm::Circa => Some(&self.terms.circa.long),
+            // Fallback to locators for shared terms
+            GeneralTerm::Volume => self.locator_term(&LocatorType::Volume, false, form),
+            GeneralTerm::Issue => self.locator_term(&LocatorType::Issue, false, form),
+            GeneralTerm::Page => self.locator_term(&LocatorType::Page, false, form),
+            GeneralTerm::Chapter => self.locator_term(&LocatorType::Chapter, false, form),
+            GeneralTerm::Section => self.locator_term(&LocatorType::Section, false, form),
             _ => None,
         }
     }
@@ -701,6 +707,13 @@ impl Locale {
             "online" => Some(GeneralTerm::Online),
             "review-of" | "review_of" | "review of" => Some(GeneralTerm::ReviewOf),
             "original-work-published" => Some(GeneralTerm::OriginalWorkPublished),
+            "patent" => Some(GeneralTerm::Patent),
+            "volume" => Some(GeneralTerm::Volume),
+            "issue" => Some(GeneralTerm::Issue),
+            "page" => Some(GeneralTerm::Page),
+            "chapter" => Some(GeneralTerm::Chapter),
+            "edition" => Some(GeneralTerm::Edition),
+            "section" => Some(GeneralTerm::Section),
             _ => None,
         }
     }

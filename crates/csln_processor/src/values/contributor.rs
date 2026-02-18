@@ -19,15 +19,28 @@ impl ComponentValues for TemplateContributor {
         let mut effective_rendering = self.rendering.clone();
         if let Some(overrides) = &self.overrides {
             use csln_core::template::ComponentOverride;
-            // Apply "all" wildcard override first
-            if let Some(ComponentOverride::Rendering(all_override)) = overrides.get("all") {
-                effective_rendering.merge(all_override);
+
+            // Apply specific type override
+            let ref_type = reference.ref_type();
+            let mut match_found = false;
+            for (selector, ov) in overrides {
+                if selector.matches(&ref_type) {
+                    if let ComponentOverride::Rendering(r) = ov {
+                        effective_rendering.merge(r);
+                        match_found = true;
+                    }
+                }
             }
-            // Then apply specific type override
-            if let Some(ComponentOverride::Rendering(type_override)) =
-                overrides.get(&reference.ref_type())
-            {
-                effective_rendering.merge(type_override);
+
+            // Fallback to default if no specific match
+            if !match_found {
+                for (selector, ov) in overrides {
+                    if selector.matches("default") {
+                        if let ComponentOverride::Rendering(r) = ov {
+                            effective_rendering.merge(r);
+                        }
+                    }
+                }
             }
         }
 

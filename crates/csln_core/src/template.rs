@@ -156,6 +156,25 @@ pub enum ComponentOverride {
     Rendering(Rendering),
 }
 
+/// Selector for reference types in overrides.
+/// Can be a single type string or a list of types.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum TypeSelector {
+    Single(String),
+    Multiple(Vec<String>),
+}
+
+impl TypeSelector {
+    /// Check if this selector matches a reference type.
+    pub fn matches(&self, ref_type: &str) -> bool {
+        match self {
+            TypeSelector::Single(s) => s == ref_type || s == "all" || s == "default",
+            TypeSelector::Multiple(types) => types.iter().any(|t| t == ref_type),
+        }
+    }
+}
+
 /// A template component - the building blocks of citation/bibliography templates.
 ///
 /// Each variant handles a specific data type with appropriate formatting options.
@@ -194,7 +213,7 @@ impl TemplateComponent {
     }
 
     /// Get the type-specific rendering overrides for this component.
-    pub fn overrides(&self) -> Option<&HashMap<String, ComponentOverride>> {
+    pub fn overrides(&self) -> Option<&HashMap<TypeSelector, ComponentOverride>> {
         match self {
             TemplateComponent::Contributor(c) => c.overrides.as_ref(),
             TemplateComponent::Date(d) => d.overrides.as_ref(),
@@ -278,7 +297,7 @@ pub struct TemplateContributor {
     pub links: Option<crate::options::LinksConfig>,
     /// Type-specific rendering overrides.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub overrides: Option<HashMap<String, ComponentOverride>>,
+    pub overrides: Option<HashMap<TypeSelector, ComponentOverride>>,
     /// Custom user-defined fields for extensions.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub custom: Option<HashMap<String, serde_json::Value>>,
@@ -375,7 +394,7 @@ pub struct TemplateDate {
     pub links: Option<crate::options::LinksConfig>,
     /// Type-specific rendering overrides.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub overrides: Option<HashMap<String, ComponentOverride>>,
+    pub overrides: Option<HashMap<TypeSelector, ComponentOverride>>,
     /// Custom user-defined fields for extensions.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub custom: Option<HashMap<String, serde_json::Value>>,
@@ -404,6 +423,7 @@ pub enum DateForm {
     YearMonth,
     Full,
     MonthDay,
+    YearMonthDay,
 }
 
 /// A title component.
@@ -421,7 +441,7 @@ pub struct TemplateTitle {
     pub links: Option<crate::options::LinksConfig>,
     /// Type-specific rendering overrides.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub overrides: Option<HashMap<String, ComponentOverride>>,
+    pub overrides: Option<HashMap<TypeSelector, ComponentOverride>>,
     /// Custom user-defined fields for extensions.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub custom: Option<HashMap<String, serde_json::Value>>,
@@ -469,7 +489,7 @@ pub struct TemplateNumber {
     pub links: Option<crate::options::LinksConfig>,
     /// Type-specific rendering overrides.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub overrides: Option<HashMap<String, ComponentOverride>>,
+    pub overrides: Option<HashMap<TypeSelector, ComponentOverride>>,
     /// Custom user-defined fields for extensions.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub custom: Option<HashMap<String, serde_json::Value>>,
@@ -491,6 +511,11 @@ pub enum NumberVariable {
     NumberOfPages,
     NumberOfVolumes,
     CitationNumber,
+    Number,
+    DocketNumber,
+    PatentNumber,
+    StandardNumber,
+    ReportNumber,
 }
 
 /// Number rendering forms.
@@ -528,7 +553,7 @@ pub struct TemplateVariable {
     pub links: Option<crate::options::LinksConfig>,
     /// Type-specific rendering overrides. Use `suppress: true` to hide for certain types.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub overrides: Option<HashMap<String, ComponentOverride>>,
+    pub overrides: Option<HashMap<TypeSelector, ComponentOverride>>,
     /// Custom user-defined fields for extensions.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub custom: Option<HashMap<String, serde_json::Value>>,
@@ -568,6 +593,11 @@ pub enum SimpleVariable {
     Reporter,
     Page,
     Volume,
+    Number,
+    DocketNumber,
+    PatentNumber,
+    StandardNumber,
+    ReportNumber,
 }
 
 /// A term component for rendering locale-specific text.
@@ -584,7 +614,7 @@ pub struct TemplateTerm {
     pub rendering: Rendering,
     /// Type-specific rendering overrides.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub overrides: Option<HashMap<String, ComponentOverride>>,
+    pub overrides: Option<HashMap<TypeSelector, ComponentOverride>>,
     /// Custom user-defined fields for extensions.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub custom: Option<HashMap<String, serde_json::Value>>,
@@ -602,7 +632,7 @@ pub struct TemplateList {
     pub rendering: Rendering,
     /// Type-specific rendering overrides.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub overrides: Option<HashMap<String, ComponentOverride>>,
+    pub overrides: Option<HashMap<TypeSelector, ComponentOverride>>,
     /// Custom user-defined fields for extensions.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub custom: Option<HashMap<String, serde_json::Value>>,

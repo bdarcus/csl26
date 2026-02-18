@@ -681,9 +681,10 @@ impl TemplateCompiler {
 
         for item_type in current_types {
             let type_str = self.item_type_to_string(item_type);
+            use csln_core::template::TypeSelector;
             let mut override_val = new_overrides
                 .as_ref()
-                .and_then(|ovr| ovr.get(&type_str))
+                .and_then(|ovr| ovr.get(&TypeSelector::Single(type_str.clone())))
                 .cloned()
                 .unwrap_or_else(|| ComponentOverride::Rendering(base_rendering.clone()));
 
@@ -799,7 +800,7 @@ impl TemplateCompiler {
         _is_numeric: bool,
     ) -> (
         Vec<TemplateComponent>,
-        HashMap<String, Vec<TemplateComponent>>,
+        std::collections::HashMap<csln_core::template::TypeSelector, Vec<TemplateComponent>>,
     ) {
         // Compile using the new occurrence-based approach
         // This handles suppress semantics correctly without needing deduplication
@@ -820,7 +821,10 @@ impl TemplateCompiler {
 
         // Type-specific template generation is disabled for now.
         // Future work: properly merge common components with type-specific branches.
-        let type_templates: HashMap<String, Vec<TemplateComponent>> = HashMap::new();
+        let type_templates: std::collections::HashMap<
+            csln_core::template::TypeSelector,
+            Vec<TemplateComponent>,
+        > = std::collections::HashMap::new();
 
         (default_template, type_templates)
     }
@@ -905,11 +909,18 @@ impl TemplateCompiler {
         // If component has suppress=true by default, only count types with suppress=false overrides
         if base_rendering.suppress == Some(true) {
             if let Some(ovr) = overrides {
-                use csln_core::template::ComponentOverride;
-                for (type_str, ov) in ovr {
+                use csln_core::template::{ComponentOverride, TypeSelector};
+                for (selector, ov) in ovr {
                     if let ComponentOverride::Rendering(rendering) = ov {
                         if rendering.suppress != Some(true) {
-                            visible_types.push(type_str);
+                            match selector {
+                                TypeSelector::Single(s) => visible_types.push(s),
+                                TypeSelector::Multiple(types) => {
+                                    for t in types {
+                                        visible_types.push(t);
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -1064,9 +1075,9 @@ impl TemplateCompiler {
                 _ => return,
             };
 
-            let overrides_map = target_overrides.get_or_insert_with(HashMap::new);
+            let overrides_map = target_overrides.get_or_insert_with(std::collections::HashMap::new);
             for (k, v) in source_overrides {
-                overrides_map.entry(k).or_insert(v);
+                overrides_map.entry(k.clone()).or_insert(v);
             }
         }
     }
@@ -1518,9 +1529,9 @@ impl TemplateCompiler {
                     var.overrides
                         .iter()
                         .map(|(t, fmt)| {
-                            use csln_core::template::ComponentOverride;
+                            use csln_core::template::{ComponentOverride, TypeSelector};
                             (
-                                self.item_type_to_string(t),
+                                TypeSelector::Single(self.item_type_to_string(t)),
                                 ComponentOverride::Rendering(self.convert_formatting(fmt)),
                             )
                         })
@@ -1546,9 +1557,9 @@ impl TemplateCompiler {
                     var.overrides
                         .iter()
                         .map(|(t, fmt)| {
-                            use csln_core::template::ComponentOverride;
+                            use csln_core::template::{ComponentOverride, TypeSelector};
                             (
-                                self.item_type_to_string(t),
+                                TypeSelector::Single(self.item_type_to_string(t)),
                                 ComponentOverride::Rendering(self.convert_formatting(fmt)),
                             )
                         })
@@ -1579,9 +1590,9 @@ impl TemplateCompiler {
                     var.overrides
                         .iter()
                         .map(|(t, fmt)| {
-                            use csln_core::template::ComponentOverride;
+                            use csln_core::template::{ComponentOverride, TypeSelector};
                             (
-                                self.item_type_to_string(t),
+                                TypeSelector::Single(self.item_type_to_string(t)),
                                 ComponentOverride::Rendering(self.convert_formatting(fmt)),
                             )
                         })
@@ -1856,7 +1867,12 @@ impl TemplateCompiler {
     fn get_component_overrides(
         &self,
         component: &TemplateComponent,
-    ) -> Option<HashMap<String, csln_core::template::ComponentOverride>> {
+    ) -> Option<
+        std::collections::HashMap<
+            csln_core::template::TypeSelector,
+            csln_core::template::ComponentOverride,
+        >,
+    > {
         match component {
             TemplateComponent::Contributor(c) => c.overrides.clone(),
             TemplateComponent::Date(d) => d.overrides.clone(),
@@ -1881,43 +1897,50 @@ impl TemplateCompiler {
             return;
         }
 
-        use csln_core::template::ComponentOverride;
+        use csln_core::template::{ComponentOverride, TypeSelector};
 
         match component {
             TemplateComponent::Contributor(c) => {
-                c.overrides
-                    .get_or_insert_with(HashMap::new)
-                    .insert(type_str, ComponentOverride::Rendering(rendering));
+                c.overrides.get_or_insert_with(HashMap::new).insert(
+                    TypeSelector::Single(type_str),
+                    ComponentOverride::Rendering(rendering),
+                );
             }
             TemplateComponent::Date(d) => {
-                d.overrides
-                    .get_or_insert_with(HashMap::new)
-                    .insert(type_str, ComponentOverride::Rendering(rendering));
+                d.overrides.get_or_insert_with(HashMap::new).insert(
+                    TypeSelector::Single(type_str),
+                    ComponentOverride::Rendering(rendering),
+                );
             }
             TemplateComponent::Term(t) => {
-                t.overrides
-                    .get_or_insert_with(HashMap::new)
-                    .insert(type_str, ComponentOverride::Rendering(rendering));
+                t.overrides.get_or_insert_with(HashMap::new).insert(
+                    TypeSelector::Single(type_str),
+                    ComponentOverride::Rendering(rendering),
+                );
             }
             TemplateComponent::Number(n) => {
-                n.overrides
-                    .get_or_insert_with(HashMap::new)
-                    .insert(type_str, ComponentOverride::Rendering(rendering));
+                n.overrides.get_or_insert_with(HashMap::new).insert(
+                    TypeSelector::Single(type_str),
+                    ComponentOverride::Rendering(rendering),
+                );
             }
             TemplateComponent::Title(t) => {
-                t.overrides
-                    .get_or_insert_with(HashMap::new)
-                    .insert(type_str, ComponentOverride::Rendering(rendering));
+                t.overrides.get_or_insert_with(HashMap::new).insert(
+                    TypeSelector::Single(type_str),
+                    ComponentOverride::Rendering(rendering),
+                );
             }
             TemplateComponent::Variable(v) => {
-                v.overrides
-                    .get_or_insert_with(HashMap::new)
-                    .insert(type_str, ComponentOverride::Rendering(rendering));
+                v.overrides.get_or_insert_with(HashMap::new).insert(
+                    TypeSelector::Single(type_str),
+                    ComponentOverride::Rendering(rendering),
+                );
             }
             TemplateComponent::List(l) => {
-                l.overrides
-                    .get_or_insert_with(HashMap::new)
-                    .insert(type_str, ComponentOverride::Rendering(rendering));
+                l.overrides.get_or_insert_with(HashMap::new).insert(
+                    TypeSelector::Single(type_str),
+                    ComponentOverride::Rendering(rendering),
+                );
             }
             _ => {} // Future variants
         }
@@ -2105,8 +2128,17 @@ mod tests {
             for item in items {
                 if let TemplateComponent::Variable(v) = item {
                     if v.variable == SimpleVariable::Publisher {
-                        assert!(v.overrides.as_ref().unwrap().contains_key("book"));
-                        assert!(v.overrides.as_ref().unwrap().contains_key("chapter"));
+                        use csln_core::template::TypeSelector;
+                        assert!(v
+                            .overrides
+                            .as_ref()
+                            .unwrap()
+                            .contains_key(&TypeSelector::Single("book".to_string())));
+                        assert!(v
+                            .overrides
+                            .as_ref()
+                            .unwrap()
+                            .contains_key(&TypeSelector::Single("chapter".to_string())));
                     }
                 }
                 if let TemplateComponent::List(l) = item {

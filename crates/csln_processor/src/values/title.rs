@@ -15,6 +15,31 @@ impl ComponentValues for TemplateTitle {
         _hints: &ProcHints,
         options: &RenderOptions<'_>,
     ) -> Option<ProcValues<F::Output>> {
+        // Resolve effective rendering options (base merged with type-specific override)
+        let mut effective_rendering = self.rendering.clone();
+        if let Some(overrides) = &self.overrides {
+            use csln_core::template::ComponentOverride;
+            let ref_type = reference.ref_type();
+            let mut match_found = false;
+            for (selector, ov) in overrides {
+                if selector.matches(&ref_type) {
+                    if let ComponentOverride::Rendering(r) = ov {
+                        effective_rendering.merge(r);
+                        match_found = true;
+                    }
+                }
+            }
+            if !match_found {
+                for (selector, ov) in overrides {
+                    if selector.matches("default") {
+                        if let ComponentOverride::Rendering(r) = ov {
+                            effective_rendering.merge(r);
+                        }
+                    }
+                }
+            }
+        }
+
         // Get the raw title based on type and template requirement
         let raw_title = match self.title {
             TitleType::Primary => reference.title(),

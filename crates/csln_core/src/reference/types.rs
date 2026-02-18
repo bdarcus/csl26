@@ -110,7 +110,10 @@ pub struct Monograph {
     #[serde(alias = "DOI")]
     pub doi: Option<String>,
     pub edition: Option<String>,
+    pub report_number: Option<String>,
+    pub collection_number: Option<String>,
     pub genre: Option<String>,
+    pub medium: Option<String>,
     pub keywords: Option<Vec<String>>,
     pub original_date: Option<EdtfString>,
     pub original_title: Option<Title>,
@@ -142,6 +145,7 @@ pub struct Collection {
     pub translator: Option<Contributor>,
     pub issued: EdtfString,
     pub publisher: Option<Contributor>,
+    pub collection_number: Option<String>,
     #[serde(alias = "URL")]
     pub url: Option<Url>,
     pub accessed: Option<EdtfString>,
@@ -186,6 +190,7 @@ pub struct CollectionComponent {
     #[serde(alias = "DOI")]
     pub doi: Option<String>,
     pub genre: Option<String>,
+    pub medium: Option<String>,
     pub keywords: Option<Vec<String>>,
 }
 
@@ -224,6 +229,8 @@ pub struct SerialComponent {
     pub pages: Option<String>,
     pub volume: Option<NumOrStr>,
     pub issue: Option<NumOrStr>,
+    pub genre: Option<String>,
+    pub medium: Option<String>,
     pub keywords: Option<Vec<String>>,
 }
 
@@ -443,7 +450,7 @@ pub struct Hearing {
     /// Legislative body conducting the hearing (e.g., "U.S. Senate Committee on Finance")
     pub authority: Option<String>,
     /// Session or congress number
-    pub number: Option<String>,
+    pub session_number: Option<String>,
     /// Hearing date
     pub issued: EdtfString,
     #[serde(alias = "URL")]
@@ -495,7 +502,7 @@ pub struct Brief {
     /// Author/filer of the brief
     pub author: Option<Contributor>,
     /// Docket number
-    pub number: Option<String>,
+    pub docket_number: Option<String>,
     /// Filing date
     pub issued: EdtfString,
     #[serde(alias = "URL")]
@@ -549,7 +556,7 @@ pub struct Patent {
     /// Assignee (patent holder)
     pub assignee: Option<Contributor>,
     /// Patent number (e.g., "U.S. Patent No. 7,347,809")
-    pub number: String,
+    pub patent_number: String,
     /// Application number
     pub application_number: Option<String>,
     /// Filing date
@@ -613,7 +620,7 @@ pub struct Standard {
     /// Standards organization (e.g., "ISO", "ANSI", "IEEE")
     pub authority: Option<String>,
     /// Standard number (e.g., "ISO 8601", "IEEE 754-2008")
-    pub number: String,
+    pub standard_number: String,
     /// Publication date
     pub issued: EdtfString,
     /// Status (e.g., "published", "draft", "withdrawn")

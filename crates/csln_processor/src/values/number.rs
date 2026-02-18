@@ -20,11 +20,54 @@ impl ComponentValues for TemplateNumber {
                 format_page_range(&p.to_string(), options.config.page_range_format.as_ref())
             }),
             NumberVariable::Edition => reference.edition(),
+            NumberVariable::CollectionNumber => reference.collection_number(),
+            NumberVariable::Number => reference.number(),
+            NumberVariable::DocketNumber => match reference {
+                Reference::Brief(r) => r.docket_number.clone(),
+                _ => None,
+            },
+            NumberVariable::PatentNumber => match reference {
+                Reference::Patent(r) => Some(r.patent_number.clone()),
+                _ => None,
+            },
+            NumberVariable::StandardNumber => match reference {
+                Reference::Standard(r) => Some(r.standard_number.clone()),
+                _ => None,
+            },
+            NumberVariable::ReportNumber => match reference {
+                Reference::Monograph(r) => r.report_number.clone(),
+                _ => None,
+            },
             NumberVariable::CitationNumber => hints.citation_number.map(|n| n.to_string()),
             _ => None,
         };
 
         value.filter(|s| !s.is_empty()).map(|value| {
+            // Resolve effective rendering options
+            let mut effective_rendering = self.rendering.clone();
+            if let Some(overrides) = &self.overrides {
+                use csln_core::template::ComponentOverride;
+                let ref_type = reference.ref_type();
+                let mut match_found = false;
+                for (selector, ov) in overrides {
+                    if selector.matches(&ref_type) {
+                        if let ComponentOverride::Rendering(r) = ov {
+                            effective_rendering.merge(r);
+                            match_found = true;
+                        }
+                    }
+                }
+                if !match_found {
+                    for (selector, ov) in overrides {
+                        if selector.matches("default") {
+                            if let ComponentOverride::Rendering(r) = ov {
+                                effective_rendering.merge(r);
+                            }
+                        }
+                    }
+                }
+            }
+
             // Handle label if label_form is specified
             let prefix = if let Some(label_form) = &self.label_form {
                 if let Some(locator_type) = number_var_to_locator_type(&self.number) {
@@ -41,12 +84,14 @@ impl ComponentValues for TemplateNumber {
                         .locale
                         .locator_term(&locator_type, plural, term_form)
                         .map(|t| {
-                            let term_str =
-                                if crate::values::should_strip_periods(&self.rendering, options) {
-                                    crate::values::strip_trailing_periods(t)
-                                } else {
-                                    t.to_string()
-                                };
+                            let term_str = if crate::values::should_strip_periods(
+                                &effective_rendering,
+                                options,
+                            ) {
+                                crate::values::strip_trailing_periods(t)
+                            } else {
+                                t.to_string()
+                            };
                             fmt.text(&format!("{} ", term_str))
                         })
                 } else {
@@ -83,6 +128,11 @@ pub fn number_var_to_locator_type(
         NumberVariable::ChapterNumber => Some(LocatorType::Chapter),
         NumberVariable::NumberOfPages => Some(LocatorType::Page),
         NumberVariable::NumberOfVolumes => Some(LocatorType::Volume),
+        NumberVariable::Number
+        | NumberVariable::DocketNumber
+        | NumberVariable::PatentNumber
+        | NumberVariable::StandardNumber
+        | NumberVariable::ReportNumber => Some(LocatorType::Number),
         NumberVariable::Issue => Some(LocatorType::Issue),
         _ => None,
     }
