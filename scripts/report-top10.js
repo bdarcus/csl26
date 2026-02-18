@@ -162,7 +162,7 @@ function detectTemplateSource(styleName) {
   if (fs.existsSync(stylesDir)) {
     const files = fs.readdirSync(stylesDir);
     const baseName = styleName.replace(/-\d+th$/, '').replace(/-\d+$/, '');
-    if (files.some(f => f.endsWith('.yaml') && (f.includes(styleName) || f.includes(baseName)))) {
+    if (files.some(f => f.endsWith('.yaml') && (f === `${styleName}.yaml` || f.startsWith(`${styleName}-`) || f.startsWith(`${baseName}-`)))) {
       return 'hand';
     }
   }

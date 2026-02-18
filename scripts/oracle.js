@@ -128,53 +128,84 @@ function renderWithCiteprocJs(stylePath) {
 
 function renderWithCslnProcessor(stylePath) {
   const projectRoot = path.resolve(__dirname, '..');
-  const absStylePath = path.resolve(stylePath);
+  const styleName = path.basename(stylePath, '.csl');
+  const stylesDir = path.join(projectRoot, 'styles');
 
-  let migratedYaml;
-  try {
-    migratedYaml = execSync(
-      `cargo run -q --bin csln-migrate -- "${absStylePath}"`,
-      { cwd: projectRoot, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }
+  // 1. Try to find a hand-authored style first
+  let cslnStylePath = null;
+  if (fs.existsSync(stylesDir)) {
+    const files = fs.readdirSync(stylesDir);
+    // Look for exact match or base name match (e.g. apa-7th matches apa)
+    const baseName = styleName.replace(/-\d+th$/, '').replace(/-\d+$/, '');
+    const found = files.find(f =>
+      f.endsWith('.yaml') &&
+      (f === `${styleName}.yaml` || f.startsWith(`${styleName}-`) || f.startsWith(`${baseName}-`))
     );
-  } catch (e) {
-    console.error('Migration failed:', e.stderr || e.message);
-    return null;
+    if (found) {
+      cslnStylePath = path.join(stylesDir, found);
+    }
   }
 
-  const tempStyleFile = path.join(projectRoot, '.migrated-temp.yaml');
   const tempRefFile = path.join(projectRoot, '.migrated-refs.json');
-  fs.writeFileSync(tempStyleFile, migratedYaml);
   fs.writeFileSync(tempRefFile, JSON.stringify(testItems, null, 2));
+
+  let tempStyleFile = null;
+  if (!cslnStylePath) {
+    // 2. Fall back to migration
+    const absStylePath = path.resolve(stylePath);
+    let migratedYaml;
+    try {
+      migratedYaml = execSync(
+        `cargo run -q --bin csln-migrate -- "${absStylePath}"`,
+        { cwd: projectRoot, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }
+      );
+    } catch (e) {
+      console.error('Migration failed:', e.stderr || e.message);
+      try { fs.unlinkSync(tempRefFile); } catch {}
+      return null;
+    }
+    tempStyleFile = path.join(projectRoot, '.migrated-temp.yaml');
+    fs.writeFileSync(tempStyleFile, migratedYaml);
+    cslnStylePath = tempStyleFile;
+  }
 
   let output;
   try {
     output = execSync(
-      `cargo run -q --bin csln -- process .migrated-refs.json .migrated-temp.yaml --show-keys`,
+      `cargo run -q --bin csln -- process .migrated-refs.json "${cslnStylePath}" --show-keys`,
       { cwd: projectRoot, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }
     );
   } catch (e) {
     console.error('Processor failed:', e.stderr || e.message);
-    try { fs.unlinkSync(tempStyleFile); } catch {}
+    if (tempStyleFile) try { fs.unlinkSync(tempStyleFile); } catch {}
     try { fs.unlinkSync(tempRefFile); } catch {}
     return null;
   }
 
-  try { fs.unlinkSync(tempStyleFile); } catch {}
+  if (tempStyleFile) try { fs.unlinkSync(tempStyleFile); } catch {}
   try { fs.unlinkSync(tempRefFile); } catch {}
 
   const lines = output.split('\n');
   const citations = {};
-  const bibliography = [];
+  const bibliography = {};
 
   let section = null;
+  let inIntegralSection = false;
   for (const line of lines) {
-    if (line.includes('CITATIONS (Non-Integral)') || line.includes('CITATIONS (Integral)')) {
+    if (line.includes('CITATIONS (Non-Integral)')) {
       section = 'citations';
+      inIntegralSection = false;
+      continue;
+    } else if (line.includes('CITATIONS (Integral)')) {
+      section = 'citations';
+      inIntegralSection = true;
       continue;
     } else if (line.includes('BIBLIOGRAPHY:')) {
       section = 'bibliography';
       continue;
-    } else if (section === 'citations' && line.trim() && !line.includes('===')) {
+    }
+
+    if (section === 'citations' && !inIntegralSection && line.trim() && !line.includes('===')) {
       const match = line.match(/^\s*\[([^\]]+)\]\s+(.+)/);
       if (match) {
         citations[match[1]] = match[2].trim();
@@ -182,14 +213,20 @@ function renderWithCslnProcessor(stylePath) {
     } else if (section === 'bibliography' && line.trim() && !line.includes('===')) {
       const match = line.match(/^\s*\[([^\]]+)\]\s+(.+)/);
       if (match) {
-        bibliography.push(match[2].trim());
-      } else {
-        bibliography.push(line.trim());
+        bibliography[match[1]] = match[2].trim();
       }
     }
   }
 
-  return { citations, bibliography };
+  // Convert bibliography map to array ordered by ID to match oracle expectation
+  const orderedBibliography = [];
+  Object.keys(testItems).forEach(id => {
+    if (bibliography[id]) {
+      orderedBibliography.push(bibliography[id]);
+    }
+  });
+
+  return { citations, bibliography: orderedBibliography };
 }
 
 /**
