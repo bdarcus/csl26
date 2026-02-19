@@ -1,7 +1,7 @@
 ---
 # csl26-group
 title: Implement configurable bibliography grouping
-status: complete
+status: completed
 type: feature
 priority: normal
 created_at: 2026-02-15T00:00:00Z

@@ -10,7 +10,7 @@ updated_at: 2026-02-14T14:08:20Z
 
 Migration prep completed ✅
 
-Style: styles/apa.yaml
+Style: styles/apa-7th.yaml
 Next: Agent refinement (Phase 4)
 
 Auto-generated baseline:

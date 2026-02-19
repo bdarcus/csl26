@@ -26,6 +26,6 @@ Target styles (by dependent count):
 
 Impact: Covers 60% of all dependent styles
 
-Success criteria: 5/5 citations + 5/5 bibliography for each style
+Success criteria: 8/8 citations + full bibliography match for each style (strict oracle scoring with citations-expanded.json)
 
 Refs: STYLE_PRIORITY.md

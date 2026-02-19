@@ -1,7 +1,7 @@
 ---
 # csl26-s60c
 title: Group-aware disambiguation sorting
-status: complete
+status: completed
 type: task
 priority: normal
 created_at: 2026-02-16T14:06:45Z

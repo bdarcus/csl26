@@ -1,7 +1,7 @@
 ---
 # csl26-m3lb
 title: Implement hybrid migration strategy
-status: in-progress
+status: completed
 type: milestone
 priority: high
 created_at: 2026-02-08T00:19:16Z
@@ -141,3 +141,16 @@ Next steps:
    - report numeric bibliography separately
 4. Run another wider random benchmark (>=200) after numeric fixes to confirm
    generalization.
+
+## Closure Note (2026-02-19)
+
+Strategy validated and deployed. Core objectives achieved:
+- PR #193 merged: output-driven template inference promoted as primary migration path
+- APA 7th: 27/27 bibliography (from 0%)
+- Benchmark across 100 styles: citations +10.9pp, bibliography +4.0pp vs XML baseline
+- Three-tier fallback (inferred -> hand-authored -> XML) operational
+
+Follow-on work tracked in:
+- csl26-l2hg: numeric style regression triage
+- csl26-heqm: top 10 parent styles to 100% fidelity
+- csl26-gidg: 90% oracle match corpus goal
