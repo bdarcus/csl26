@@ -453,6 +453,7 @@ Architectural decisions and design rationale:
 - **[LEGAL_CITATIONS.md](./docs/architecture/design/LEGAL_CITATIONS.md)**: Two-tier legal citation architecture. Core legal types (Tier 1) for academics citing legal materials in APA/Chicago/MLA, optional specialist features (Tier 2) for Bluebook/ALWD. Refs: csl26-rmoi
 - **[TYPE_SYSTEM_ARCHITECTURE.md](./docs/architecture/design/TYPE_SYSTEM_ARCHITECTURE.md)**: Analysis of structural vs flat type system approaches. Recommends hybrid model (structural for academic, flat for legal/domain-specific) with documented type addition policy. Refs: csl26-wodz
 - **[TYPE_ADDITION_POLICY.md](./docs/architecture/TYPE_ADDITION_POLICY.md)**: **Active policy** for deciding when to add new reference types. Uses 4-factor test (semantic distinction, style discrimination, field schema difference, no meaningful parent). Hybrid model balances data efficiency with style clarity.
+- **[SQI_REFINEMENT_PLAN.md](./docs/architecture/SQI_REFINEMENT_PLAN.md)**: Portfolio-wide plan for raising Style Quality Index across all core styles while preserving fidelity as the hard gate.
 
 ## Skills
 
@@ -460,7 +461,7 @@ Specialized expertise is available via the following skills in `.claude/skills/`
 
 - **[rust-pro](./.claude/skills/rust-pro/SKILL.md)**: Modern Rust engineering (1.75+), async patterns, and performance optimization. Use proactively for core processor development.
 - **[git-advanced-workflows](./.claude/skills/git-advanced-workflows/SKILL.md)**: Advanced Git operations (rebasing, cherry-picking, bisecting).
-- **[styleauthor](./.claude/skills/styleauthor/SKILL.md)**: LLM-driven style creation from reference materials. Iterative 5-phase workflow: research, author, test, evolve processor if needed, verify. Also available as `@styleauthor` agent for autonomous style creation.
+- **[styleauthor](./.claude/skills/styleauthor/SKILL.md)**: LLM-driven style creation from reference materials. Iterative 5-phase workflow: research, author, test, evolve processor if needed, verify. Also available as `@styleauthor` agent for autonomous style creation. For portfolio SQI sequencing, pair with **[SQI_REFINEMENT_PLAN.md](./docs/architecture/SQI_REFINEMENT_PLAN.md)**.
 
 ### Style Classes
 - **in-text**: 2,302 styles (80.9%) - author-date

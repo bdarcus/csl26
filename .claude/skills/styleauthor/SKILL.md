@@ -178,8 +178,13 @@ Implementation Specialist (Sonnet) takes over for the execution and test loop.
 - Evaluate SQI-oriented quality signals once fidelity is measured:
   - type coverage breadth
   - fallback robustness for types without explicit templates
-  - concision (avoid duplicate or bloated template structures)
-  - preset-use opportunities (`use-preset`)
+  - concision (avoid duplicate or bloated template structures, especially
+    within the same template scope)
+  - preset-use opportunities (`use-preset`/`preset`, plus options presets)
+- For portfolio-wide SQI improvement sequencing and wave priorities, consult
+  `docs/architecture/SQI_REFINEMENT_PLAN.md`.
+- Use `node scripts/report-core.js` as the canonical SQI source; it handles
+  note-style reweighting and `!custom` processing mappings.
 - Use SQI as a secondary objective only.
 - Do not accept SQI gains that reduce fidelity.
 
