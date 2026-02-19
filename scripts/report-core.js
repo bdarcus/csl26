@@ -17,6 +17,15 @@ const path = require('path');
 const { execSync } = require('child_process');
 const yaml = require('js-yaml');
 
+const CUSTOM_TAG_SCHEMA = yaml.DEFAULT_SCHEMA.extend([
+  new yaml.Type('!custom', {
+    kind: 'mapping',
+    construct(data) {
+      return data || {};
+    },
+  }),
+]);
+
 const STYLE_METADATA = {
   'apa-7th': { source: 'apa', dependents: 783, format: 'author-date' },
   'elsevier-with-titles': { dependents: 672, format: 'numeric' },
@@ -237,7 +246,7 @@ function loadStyleYaml(styleName) {
     return { stylePath, styleData: null, error: `Style YAML not found: ${stylePath}` };
   }
   try {
-    const styleData = yaml.load(fs.readFileSync(stylePath, 'utf8'));
+    const styleData = yaml.load(fs.readFileSync(stylePath, 'utf8'), { schema: CUSTOM_TAG_SCHEMA });
     return { stylePath, styleData, error: null };
   } catch (error) {
     return { stylePath, styleData: null, error: `YAML parse error: ${error.message}` };
@@ -256,27 +265,35 @@ function flattenTemplateComponents(components) {
   return flattened;
 }
 
-function collectStyleTemplates(styleData) {
+function collectTemplateScopes(styleData) {
   const citation = styleData?.citation || {};
   const bibliography = styleData?.bibliography || {};
   const typeTemplates = bibliography['type-templates'] || {};
+  const scopes = [];
 
-  const citationTemplates = [];
-  if (Array.isArray(citation.template)) citationTemplates.push(...citation.template);
-  if (Array.isArray(citation.integral?.template)) citationTemplates.push(...citation.integral.template);
-  if (Array.isArray(citation['non-integral']?.template)) citationTemplates.push(...citation['non-integral'].template);
-
-  const bibliographyTemplate = Array.isArray(bibliography.template) ? bibliography.template : [];
-  const typeTemplateComponents = [];
-  for (const template of Object.values(typeTemplates)) {
-    if (Array.isArray(template)) typeTemplateComponents.push(...template);
+  if (Array.isArray(citation.template)) {
+    scopes.push({ name: 'citation.template', components: citation.template });
+  }
+  if (Array.isArray(citation.integral?.template)) {
+    scopes.push({ name: 'citation.integral.template', components: citation.integral.template });
+  }
+  if (Array.isArray(citation['non-integral']?.template)) {
+    scopes.push({ name: 'citation.non-integral.template', components: citation['non-integral'].template });
+  }
+  if (Array.isArray(bibliography.template)) {
+    scopes.push({ name: 'bibliography.template', components: bibliography.template });
   }
 
-  return {
-    citationTemplates,
-    bibliographyTemplate,
-    typeTemplateComponents,
-  };
+  for (const [typeKey, template] of Object.entries(typeTemplates)) {
+    if (Array.isArray(template)) {
+      scopes.push({
+        name: `bibliography.type-templates.${typeKey}`,
+        components: template,
+      });
+    }
+  }
+
+  return scopes;
 }
 
 function parseOverrideKey(rawKey) {
@@ -329,7 +346,7 @@ function componentSemanticKey(component) {
   return Object.keys(component).sort().join('|') || 'unknown';
 }
 
-function countPresetUses(node) {
+function countTemplatePresetUses(node) {
   let count = 0;
   function visit(value) {
     if (!value || typeof value !== 'object') return;
@@ -339,11 +356,44 @@ function countPresetUses(node) {
     }
     for (const [key, child] of Object.entries(value)) {
       if (key === 'use-preset') count += 1;
+      if (key === 'preset' && typeof child === 'string' && child.trim()) count += 1;
       visit(child);
     }
   }
   visit(node);
   return count;
+}
+
+function countOptionsPresetUses(styleData) {
+  const optionScopes = [
+    styleData?.options,
+    styleData?.citation?.options,
+    styleData?.bibliography?.options,
+  ].filter(Boolean);
+
+  const keys = ['processing', 'contributors', 'dates', 'titles', 'substitute'];
+  let uses = 0;
+  const fields = [];
+
+  for (const options of optionScopes) {
+    for (const key of keys) {
+      const value = options[key];
+      if (typeof value === 'string') {
+        uses += 1;
+        fields.push(key);
+      } else if (value && typeof value === 'object') {
+        if (typeof value.preset === 'string' && value.preset.trim()) {
+          uses += 1;
+          fields.push(key);
+        } else if (typeof value['use-preset'] === 'string' && value['use-preset'].trim()) {
+          uses += 1;
+          fields.push(key);
+        }
+      }
+    }
+  }
+
+  return { uses, fields };
 }
 
 function computeTypeCoverageScore(citationsByType) {
@@ -405,56 +455,110 @@ function computeFallbackRobustness(styleData) {
 }
 
 function computeConcisionScore(styleData, format) {
-  const templates = collectStyleTemplates(styleData);
-  const flattened = flattenTemplateComponents([
-    ...templates.citationTemplates,
-    ...templates.bibliographyTemplate,
-    ...templates.typeTemplateComponents,
-  ]);
+  const scopes = collectTemplateScopes(styleData);
+  const scopedComponents = scopes
+    .map((scope) => ({
+      name: scope.name,
+      components: flattenTemplateComponents(scope.components),
+    }))
+    .filter((scope) => scope.components.length > 0);
+  const flattened = scopedComponents.flatMap((scope) => scope.components);
 
   if (flattened.length === 0) {
     return {
       score: 0,
       totalComponents: 0,
       duplicates: 0,
+      withinScopeDuplicates: 0,
+      crossScopeRepeats: 0,
       overrideDensity: 0,
+      targetComponents: 0,
     };
   }
 
   const semanticKeys = flattened.map(componentSemanticKey);
-  const uniqueKeys = new Set(semanticKeys);
-  const duplicates = Math.max(0, semanticKeys.length - uniqueKeys.size);
-  const duplicateRatio = duplicates / semanticKeys.length;
+  let withinScopeDuplicates = 0;
+  const keyScopeCount = new Map();
+
+  for (const scope of scopedComponents) {
+    const keys = scope.components.map(componentSemanticKey);
+    const uniqueInScope = new Set(keys);
+    withinScopeDuplicates += Math.max(0, keys.length - uniqueInScope.size);
+    for (const key of uniqueInScope) {
+      keyScopeCount.set(key, (keyScopeCount.get(key) || 0) + 1);
+    }
+  }
+
+  let crossScopeRepeats = 0;
+  for (const count of keyScopeCount.values()) {
+    crossScopeRepeats += Math.max(0, count - 1);
+  }
+
+  const weightedDuplicates = withinScopeDuplicates + (crossScopeRepeats * 0.25);
+  const duplicateRatio = weightedDuplicates / semanticKeys.length;
   const overrideCount = flattened.reduce(
     (sum, component) => sum + Object.keys(component.overrides || {}).length,
     0
   );
   const overrideDensity = overrideCount / flattened.length;
+  const typeTemplateCoverage = Object.keys(styleData?.bibliography?.['type-templates'] || {})
+    .reduce((sum, rawKey) => {
+      const parsed = parseOverrideKey(rawKey).filter((key) => key !== 'default');
+      return sum + (parsed.length || 1);
+    }, 0);
 
   const componentTargets = {
     'author-date': 52,
     numeric: 55,
     note: 65,
   };
-  const target = componentTargets[format] || 55;
-  const componentPenalty = Math.max(0, flattened.length - target) * 1.2;
-  const duplicatePenalty = duplicateRatio * 30;
-  const overridePenalty = Math.max(0, overrideDensity - 1.0) * 20;
+  const targetBase = componentTargets[format] || 55;
+  const targetBonus = clamp(0, 35, Math.max(0, typeTemplateCoverage - 3) * 2.5);
+  const target = targetBase + targetBonus;
+  const componentPenalty = Math.max(0, flattened.length - target) * 0.9;
+  const duplicatePenalty = duplicateRatio * 24;
+  const overridePenalty = Math.max(0, overrideDensity - 1.5) * 12;
   const score = 100 - componentPenalty - duplicatePenalty - overridePenalty;
 
   return {
     score: safePct(score),
     totalComponents: flattened.length,
-    duplicates,
+    duplicates: parseFloat(weightedDuplicates.toFixed(1)),
+    withinScopeDuplicates,
+    crossScopeRepeats,
     overrideDensity: parseFloat(overrideDensity.toFixed(2)),
+    targetComponents: parseFloat(target.toFixed(1)),
   };
 }
 
 function computePresetUsageScore(styleData, concisionScore) {
-  const uses = countPresetUses(styleData);
-  if (uses >= 2) return { score: 100, uses };
-  if (uses === 1) return { score: 80, uses };
-  return { score: concisionScore >= 80 ? 60 : 45, uses };
+  const templateUses = countTemplatePresetUses(styleData);
+  const { uses: optionUses, fields: optionPresetFields } = countOptionsPresetUses(styleData);
+  const weightedUses = (templateUses * 2) + optionUses;
+  const uses = templateUses + optionUses;
+
+  if (weightedUses >= 5) {
+    return { score: 100, uses, templateUses, optionUses, weightedUses, optionPresetFields };
+  }
+  if (weightedUses >= 3) {
+    return { score: 90, uses, templateUses, optionUses, weightedUses, optionPresetFields };
+  }
+  if (weightedUses >= 2) {
+    return { score: 80, uses, templateUses, optionUses, weightedUses, optionPresetFields };
+  }
+  if (weightedUses >= 1) {
+    return { score: 70, uses, templateUses, optionUses, weightedUses, optionPresetFields };
+  }
+
+  const baselineScore = concisionScore >= 80 ? 60 : 45;
+  return {
+    score: baselineScore,
+    uses,
+    templateUses,
+    optionUses,
+    weightedUses,
+    optionPresetFields,
+  };
 }
 
 function computeQualityMetrics(styleSpec, oracleResult) {
@@ -473,16 +577,37 @@ function computeQualityMetrics(styleSpec, oracleResult) {
   }
 
   const typeCoverage = computeTypeCoverageScore(oracleResult.citationsByType || {});
-  const fallbackRobustness = computeFallbackRobustness(loaded.styleData);
+  let fallbackRobustness = computeFallbackRobustness(loaded.styleData);
   const concision = computeConcisionScore(loaded.styleData, styleSpec.format);
   const presetUsage = computePresetUsageScore(loaded.styleData, concision.score);
+  const weights = {
+    typeCoverage: 0.35,
+    fallbackRobustness: 0.25,
+    concision: 0.25,
+    presetUsage: 0.15,
+  };
 
-  const score = (
-    (typeCoverage.score * 0.35) +
-    (fallbackRobustness.score * 0.25) +
-    (concision.score * 0.25) +
-    (presetUsage.score * 0.15)
+  // Citation-only note styles don't define bibliography templates, so
+  // bibliography fallback robustness is not applicable.
+  if (styleSpec.hasBibliography === false) {
+    fallbackRobustness = {
+      score: 100,
+      assessedTypes: 0,
+      passingTypes: 0,
+      note: 'not applicable for citation-only style',
+      notApplicable: true,
+    };
+    weights.fallbackRobustness = 0;
+  }
+
+  const weightSum = Object.values(weights).reduce((sum, value) => sum + value, 0);
+  const rawScore = (
+    (typeCoverage.score * weights.typeCoverage) +
+    (fallbackRobustness.score * weights.fallbackRobustness) +
+    (concision.score * weights.concision) +
+    (presetUsage.score * weights.presetUsage)
   );
+  const score = weightSum > 0 ? rawScore / weightSum : 0;
 
   return {
     score: safePct(score),

@@ -264,15 +264,6 @@ bibliography:
         suffix: "."
       - title: primary
         suffix: "."
-    legal-case:
-      - title: primary
-      - date: issued
-        form: year
-        prefix: ", "
-        suffix: ". "
-      - variable: reporter
-        prefix: ", "
-        suffix: "."
     patent:
       - contributor: author
         form: long
