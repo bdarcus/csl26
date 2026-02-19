@@ -318,6 +318,9 @@ cargo run --bin csln-migrate -- styles-legacy/apa.csl
 # Note: Options are accurate (87-100% citations), templates may need refinement
 ```
 
+See `crates/csln_migrate/README.md` for full `csln-migrate` documentation,
+including output-driven template cache workflows and source mode controls.
+
 **LLM-Assisted Hand-Authoring** (for top parent styles):
 ```bash
 # Prepare context for LLM-assisted authoring
