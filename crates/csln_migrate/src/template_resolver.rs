@@ -238,6 +238,9 @@ fn resolve_section(
     }
 
     if matches!(ctx.mode, TemplateMode::Auto | TemplateMode::Inferred) {
+        // `inferred` mode is cache-only so Rust migration can run without live
+        // citeproc-js inference after precompilation.
+        let allow_live_infer = matches!(ctx.mode, TemplateMode::Auto);
         if let Some(resolved) = resolve_inferred_section(
             ctx.style_path,
             ctx.style_name,
@@ -245,6 +248,7 @@ fn resolve_section(
             ctx.workspace_root,
             ctx.cache_dir,
             ctx.min_confidence,
+            allow_live_infer,
         ) {
             return Some(resolved);
         }
@@ -260,6 +264,7 @@ fn resolve_inferred_section(
     workspace_root: &Path,
     cache_dir: &Path,
     min_confidence: f64,
+    allow_live_infer: bool,
 ) -> Option<ResolvedTemplateSection> {
     for cache_path in section.cache_candidates(cache_dir, style_name) {
         if !cache_path.exists() {
@@ -271,14 +276,18 @@ fn resolve_inferred_section(
         }
     }
 
-    infer_live(
-        style_path,
-        style_name,
-        section,
-        workspace_root,
-        cache_dir,
-        min_confidence,
-    )
+    if allow_live_infer {
+        infer_live(
+            style_path,
+            style_name,
+            section,
+            workspace_root,
+            cache_dir,
+            min_confidence,
+        )
+    } else {
+        None
+    }
 }
 
 /// Load an inferred fragment from cache and extract a section template.
