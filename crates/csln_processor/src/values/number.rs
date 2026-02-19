@@ -16,9 +16,17 @@ impl ComponentValues for TemplateNumber {
         let value = match self.number {
             NumberVariable::Volume => reference.volume().map(|v| v.to_string()),
             NumberVariable::Issue => reference.issue().map(|v| v.to_string()),
-            NumberVariable::Pages => reference.pages().map(|p| {
-                format_page_range(&p.to_string(), options.config.page_range_format.as_ref())
-            }),
+            NumberVariable::Pages => {
+                if options.context == crate::values::RenderContext::Citation
+                    && options.locator.is_some()
+                {
+                    None
+                } else {
+                    reference.pages().map(|p| {
+                        format_page_range(&p.to_string(), options.config.page_range_format.as_ref())
+                    })
+                }
+            }
             NumberVariable::Edition => reference.edition(),
             NumberVariable::CollectionNumber => reference.collection_number(),
             NumberVariable::Number => reference.number(),
