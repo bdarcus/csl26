@@ -25,10 +25,6 @@ options:
     separator: ". "
   punctuation-in-quote: true
 citation:
-  sort:
-    template:
-      - key: author
-      - key: issued
   template:
     - items:
         - contributor: author

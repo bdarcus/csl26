@@ -37,12 +37,21 @@ options:
   punctuation-in-quote: true
 citation:
   template:
-    - contributor: author
-      form: short
-    - date: issued
-      form: year
+    - items:
+        - contributor: author
+          form: short
+          shorten:
+            min: 4
+            use-first: 1
+            and-others: et-al
+            delimiter-precedes-last: contextual
+          and: text
+        - date: issued
+          form: year
+      delimiter: space
+    - variable: locator
   wrap: parentheses
-  delimiter: " "
+  delimiter: ", "
   multi-cite-delimiter: "; "
 bibliography:
   template:

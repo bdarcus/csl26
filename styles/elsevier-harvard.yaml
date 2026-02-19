@@ -277,9 +277,9 @@ bibliography:
       - date: issued
         form: year
         prefix: ", "
-        suffix: "."
+        suffix: ". "
       - variable: reporter
-        prefix: " , "
+        prefix: ", "
         suffix: "."
     patent:
       - contributor: author
