@@ -5,7 +5,7 @@ status: in-progress
 type: milestone
 priority: high
 created_at: 2026-02-08T00:19:16Z
-updated_at: 2026-02-19T07:10:00Z
+updated_at: 2026-02-19T20:49:49Z
 ---
 
 Strategic pivot from pure XML semantic compiler to hybrid approach combining
@@ -66,3 +66,78 @@ manual domain-expert time.
    - Editor label punctuation: "(eds.)" -> ", eds."
    - Page delimiter consistency
 5. Continue LLM authoring for top 10 parent styles
+
+
+Latest Progress (2026-02-19):
+
+✅ Output-driven automation promoted to primary migration path in csln-migrate.
+
+- Branch: codex/output-driven-migrate-automation
+- PR: https://github.com/bdarcus/csl26/pull/193
+- Commit: f829b60
+
+Implemented:
+- Section-aware template resolution for both bibliography and citation.
+- Explicit source modes: auto|hand|inferred|xml.
+- Confidence-gated inferred template intake with XML fallback only when unresolved.
+- Section-keyed cache artifacts for offline Rust migration:
+  * templates/inferred/<style>.bibliography.json
+  * templates/inferred/<style>.citation.json
+- infer-template fragment output updated to emit section key + citation wrap metadata.
+- batch-infer script now precompiles both sections per style.
+
+Validation completed:
+- cargo fmt
+- cargo clippy --all-targets --all-features -- -D warnings
+- cargo nextest run
+
+
+Correction:
+- Cache artifact pattern is templates/inferred/STYLE_NAME.bibliography.json and templates/inferred/STYLE_NAME.citation.json.
+
+
+PR Conclusion (2026-02-19):
+
+- PR #193 establishes a scalable output-driven migration baseline.
+- Template migration is now section-aware (citation + bibliography) with inferred artifacts as primary input.
+- Inferred mode is cache-only, enabling precompute-once then Rust-only migration runs.
+- XML template compilation remains fallback-only for unresolved sections.
+- Added migration docs at crates/csln_migrate/README.md.
+
+
+Benchmark Update (2026-02-19, stratified sample n=100):
+
+Status:
+- ✅ Completed wider random benchmark across 100 styles:
+  * 40 author-date
+  * 40 numeric
+  * 20 note
+- ✅ Dynamic confidence scoring shipped in inference engine (commit b265280).
+- ✅ No benchmark execution errors in final paired rerun.
+
+Results (xml vs inferred):
+- Overall citation: 79.0% -> 89.9% (+10.9pp)
+- Overall bibliography: 84.8% -> 88.8% (+4.0pp)
+- Author-date: citation +4.1pp, bibliography +9.0pp
+- Numeric: citation +0.0pp, bibliography -1.2pp
+- Note: citation +46.3pp, bibliography +4.3pp
+
+Caveats:
+- Numeric bibliography remains a mild aggregate regression (-1.2pp) with several
+  strong negative outliers.
+- Inference cache generation currently fails for a small minority (3/100 in this
+  sample): international-review-of-the-red-cross, journal-of-the-indian-law-institute,
+  art-history.
+- Confidence scoring is heuristic and needs calibration data from larger random
+  samples before freezing thresholds.
+
+Next steps:
+1. Triage numeric bibliography regression cluster and add targeted guardrails for
+   inferred numeric bibliography templates.
+2. Improve inference precompile reliability for the three cache-fail styles.
+3. Add a benchmark gate in docs/PR workflow:
+   - require non-regression for citations overall
+   - require positive bibliography delta overall
+   - report numeric bibliography separately
+4. Run another wider random benchmark (>=200) after numeric fixes to confirm
+   generalization.
