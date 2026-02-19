@@ -612,7 +612,7 @@ fn test_apa_titles_config() {
 
 #[test]
 fn test_numeric_citation_numbers_with_repeated_refs() {
-    // Citation numbers should be assigned by first occurrence, not by position.
+    // Citation numbers should remain stable once assigned.
     // Citing ref1, ref2, ref1 again should give numbers 1, 2, 1.
     use csln_core::options::{Config, Processing};
     use csln_core::template::{NumberVariable, TemplateNumber};
@@ -695,6 +695,67 @@ fn test_numeric_citation_numbers_with_repeated_refs() {
     assert_eq!(cit1, "[1]", "First citation of ref1 should be [1]");
     assert_eq!(cit2, "[2]", "First citation of ref2 should be [2]");
     assert_eq!(cit3, "[1]", "Second citation of ref1 should still be [1]");
+}
+
+#[test]
+fn test_numeric_citation_numbers_follow_registry_order() {
+    use csln_core::options::{Config, Processing};
+    use csln_core::template::{NumberVariable, TemplateNumber};
+    use csln_core::CitationSpec;
+
+    let style = Style {
+        citation: Some(CitationSpec {
+            wrap: Some(csln_core::template::WrapPunctuation::Brackets),
+            template: Some(vec![TemplateComponent::Number(TemplateNumber {
+                number: NumberVariable::CitationNumber,
+                ..Default::default()
+            })]),
+            ..Default::default()
+        }),
+        options: Some(Config {
+            processing: Some(Processing::Numeric),
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
+
+    let mut bib = Bibliography::new();
+    bib.insert(
+        "ref1".to_string(),
+        Reference::from(LegacyReference {
+            id: "ref1".to_string(),
+            ref_type: "book".to_string(),
+            title: Some("First Book".to_string()),
+            ..Default::default()
+        }),
+    );
+    bib.insert(
+        "ref2".to_string(),
+        Reference::from(LegacyReference {
+            id: "ref2".to_string(),
+            ref_type: "book".to_string(),
+            title: Some("Second Book".to_string()),
+            ..Default::default()
+        }),
+    );
+
+    let processor = Processor::new(style, bib);
+
+    let cit = processor
+        .process_citation(&Citation {
+            id: Some("c1".to_string()),
+            items: vec![crate::reference::CitationItem {
+                id: "ref2".to_string(),
+                ..Default::default()
+            }],
+            ..Default::default()
+        })
+        .unwrap();
+
+    assert_eq!(
+        cit, "[2]",
+        "Numeric citation number should follow bibliography registry order"
+    );
 }
 
 #[test]
