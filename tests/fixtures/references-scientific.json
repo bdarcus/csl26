@@ -1,57 +1,43 @@
 [
   {
     "id": "pavlovic2008",
+    "type": "patent",
     "title": "Bicycle with adjustable suspension",
-    "author": {
-      "family": "Pavlovic",
-      "given": "Nebojša"
-    },
+    "author": [{ "family": "Pavlovic", "given": "Nebojša" }],
     "number": "7,347,809",
-    "issued": "2008-03-25",
+    "issued": { "date-parts": [[2008, 3, 25]] },
     "authority": "U.S. Patent and Trademark Office",
     "jurisdiction": "US",
     "url": "https://patents.google.com/patent/US7347809B2/en"
   },
   {
     "id": "irino2009",
+    "type": "dataset",
     "title": "Chemical and mineral compositions of sediments from ODP Site 127-797",
-    "author": [
-      {
-        "family": "Irino",
-        "given": "Tomohisa"
-      },
-      {
-        "family": "Tada",
-        "given": "Ryuji"
-      }
-    ],
-    "issued": "2009",
-    "publisher": {
-      "literal": "Geological Institute, University of Tokyo"
-    },
+    "author": [{ "family": "Irino", "given": "Tomohisa" }, { "family": "Tada", "given": "Ryuji" }],
+    "issued": { "date-parts": [[2009]] },
+    "publisher": "Geological Institute, University of Tokyo",
     "doi": "10.1594/PANGAEA.726855",
     "version": "1.0",
     "format": "NetCDF"
   },
   {
     "id": "ieee754-2008",
+    "type": "standard",
     "title": "IEEE Standard for Floating-Point Arithmetic",
     "authority": "IEEE",
     "number": "754-2008",
-    "issued": "2008-08",
+    "issued": { "date-parts": [[2008, 8]] },
     "status": "published",
     "url": "https://doi.org/10.1109/IEEESTD.2008.4610935"
   },
   {
     "id": "rcore2021",
+    "type": "software",
     "title": "R: A language and environment for statistical computing",
-    "author": {
-      "literal": "R Core Team"
-    },
-    "issued": "2021",
-    "publisher": {
-      "literal": "R Foundation for Statistical Computing"
-    },
+    "author": [{ "literal": "R Core Team" }],
+    "issued": { "date-parts": [[2021]] },
+    "publisher": "R Foundation for Statistical Computing",
     "version": "4.1.0",
     "repository": "https://www.R-project.org/",
     "license": "GPL-2.0",
