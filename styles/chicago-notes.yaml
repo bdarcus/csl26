@@ -1,0 +1,122 @@
+# yaml-language-server: $schema=https://bdarcus.github.io/csl26/schemas/style.json
+info:
+  title: Chicago Notes (CSLN, no bibliography)
+  id: http://www.zotero.org/styles/chicago-notes
+  link: https://www.chicagomanualofstyle.org/
+options:
+  processing: note
+  contributors:
+    and: text
+    delimiter-precedes-last: contextual
+    demote-non-dropping-particle: display-and-sort
+  dates: long
+  page-range-format: chicago16
+  punctuation-in-quote: true
+citation:
+  delimiter: ", "
+  template:
+    - contributor: author
+      form: long
+      shorten:
+        min: 4
+        use-first: 3
+        and-others: et-al
+    - title: primary
+      overrides:
+        book:
+          suppress: true
+        article-journal:
+          wrap: quotes
+        article-magazine:
+          wrap: quotes
+        article-newspaper:
+          wrap: quotes
+        paper-conference:
+          wrap: quotes
+    - items:
+        - title: parent-serial
+        - variable: publisher-place
+          wrap: parentheses
+          prefix: " "
+          overrides:
+            book:
+              suppress: true
+        - number: volume
+          prefix: " "
+          overrides:
+            book:
+              suppress: true
+        - number: issue
+          prefix: ", no. "
+          overrides:
+            book:
+              suppress: true
+        - date: issued
+          form: year
+          wrap: parentheses
+          prefix: " "
+          overrides:
+            book:
+              suppress: true
+        - number: pages
+          prefix: ": "
+          overrides:
+            book:
+              suppress: true
+        - variable: locator
+          prefix: ": "
+          overrides:
+            book:
+              suppress: true
+      delimiter: ""
+      overrides:
+        book:
+          suppress: true
+    - items:
+        - title: primary
+          overrides:
+            article-journal:
+              suppress: true
+            article-magazine:
+              suppress: true
+            article-newspaper:
+              suppress: true
+            paper-conference:
+              suppress: true
+        - items:
+            - variable: publisher
+            - date: issued
+              form: year
+          delimiter: ", "
+          wrap: parentheses
+          prefix: " "
+          overrides:
+            article-journal:
+              suppress: true
+            article-magazine:
+              suppress: true
+            article-newspaper:
+              suppress: true
+            paper-conference:
+              suppress: true
+        - variable: locator
+          prefix: ", "
+          overrides:
+            article-journal:
+              suppress: true
+            article-magazine:
+              suppress: true
+            article-newspaper:
+              suppress: true
+            paper-conference:
+              suppress: true
+      delimiter: ""
+    - variable: doi
+      prefix: "https://doi.org/"
+      overrides:
+        book:
+          suppress: true
+  suffix: .
+  multi-cite-delimiter: "; "
+bibliography:
+  template: []
