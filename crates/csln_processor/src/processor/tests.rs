@@ -295,6 +295,59 @@ fn test_citation_locator_label_renders_term_with_loaded_locale() {
 }
 
 #[test]
+fn test_springer_locator_label_survives_sorting() {
+    use std::{fs, path::Path};
+
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let style_path = root.join("styles/springer-basic-author-date.yaml");
+    let bib_path = root.join("tests/fixtures/references-expanded.json");
+    let cite_path = root.join("tests/fixtures/citations-expanded.json");
+
+    let style_yaml = fs::read_to_string(&style_path).expect("style should read");
+    let style: Style = serde_yaml::from_str(&style_yaml).expect("style should parse");
+    let bibliography = crate::io::load_bibliography(&bib_path).expect("bib should load");
+    let citations = crate::io::load_citations(&cite_path).expect("citations should load");
+
+    let processor = Processor::new(style.clone(), bibliography);
+    let citation = citations
+        .iter()
+        .find(|c| c.id.as_deref() == Some("with-locator"))
+        .cloned()
+        .expect("with-locator citation should exist");
+
+    assert_eq!(
+        citation.items[0].label,
+        Some(csln_core::citation::LocatorType::Page)
+    );
+
+    let spec = style.citation.as_ref().expect("citation spec should exist");
+    let sorted = processor.sort_citation_items(citation.items.clone(), spec);
+    assert_eq!(
+        sorted[0].label,
+        Some(csln_core::citation::LocatorType::Page)
+    );
+
+    let rendered_default_locale = processor.process_citation(&citation).unwrap();
+    assert!(
+        rendered_default_locale.contains("p. 23"),
+        "default locale render should include page label: {rendered_default_locale}"
+    );
+
+    let locales_dir = root.join("locales");
+    let loaded_locale = csln_core::locale::Locale::load("en-US", &locales_dir);
+    let with_loaded = Processor::with_locale(
+        style,
+        crate::io::load_bibliography(&bib_path).unwrap(),
+        loaded_locale,
+    );
+    let rendered_loaded_locale = with_loaded.process_citation(&citation).unwrap();
+    assert!(
+        rendered_loaded_locale.contains("p. 23"),
+        "loaded locale render should include page label: {rendered_loaded_locale}"
+    );
+}
+
+#[test]
 fn test_render_bibliography() {
     let style = make_style();
     let bib = make_bibliography();

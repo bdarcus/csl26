@@ -622,6 +622,19 @@ impl Locale {
                 singular: s.clone(),
                 plural: s.clone(), // Fallback if only one form provided
             }),
+            Some(raw::RawTermValue::Forms(forms)) => {
+                let singular = forms
+                    .get("singular")
+                    .and_then(|v| Self::extract_term_string(v, false));
+                let plural = forms
+                    .get("plural")
+                    .and_then(|v| Self::extract_term_string(v, false));
+
+                singular.map(|s| SingularPlural {
+                    plural: plural.unwrap_or_else(|| s.clone()),
+                    singular: s,
+                })
+            }
             _ => None,
         }
     }
