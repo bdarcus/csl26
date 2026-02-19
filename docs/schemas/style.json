@@ -3362,8 +3362,22 @@
             "null"
           ]
         },
+        "show-label": {
+          "description": "Whether locator labels (e.g., \"p.\", \"sec.\") should be rendered when `variable: locator` is used. If omitted, processor defaults apply.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
         "small-caps": {
           "description": "Render in small caps.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "strip-label-periods": {
+          "description": "Strip trailing periods from locator labels (e.g., \"p.\" -> \"p\"). Only applies to `variable: locator`.",
           "type": [
             "boolean",
             "null"
