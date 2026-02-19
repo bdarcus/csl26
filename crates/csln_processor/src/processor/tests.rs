@@ -295,6 +295,90 @@ fn test_citation_locator_label_renders_term_with_loaded_locale() {
 }
 
 #[test]
+fn test_citation_locator_can_suppress_label() {
+    let mut style = make_style();
+    style.citation = Some(csln_core::CitationSpec {
+        template: Some(vec![
+            csln_core::TemplateComponent::Contributor(csln_core::template::TemplateContributor {
+                contributor: ContributorRole::Author,
+                form: ContributorForm::Short,
+                ..Default::default()
+            }),
+            csln_core::TemplateComponent::Date(csln_core::template::TemplateDate {
+                date: TDateVar::Issued,
+                form: DateForm::Year,
+                ..Default::default()
+            }),
+            csln_core::TemplateComponent::Variable(csln_core::template::TemplateVariable {
+                variable: csln_core::template::SimpleVariable::Locator,
+                show_label: Some(false),
+                ..Default::default()
+            }),
+        ]),
+        wrap: Some(WrapPunctuation::Parentheses),
+        delimiter: Some(", ".to_string()),
+        ..Default::default()
+    });
+
+    let bib = make_bibliography();
+    let processor = Processor::new(style, bib);
+    let citation = Citation {
+        items: vec![crate::reference::CitationItem {
+            id: "kuhn1962".to_string(),
+            label: Some(csln_core::citation::LocatorType::Page),
+            locator: Some("23".to_string()),
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+
+    let rendered = processor.process_citation(&citation).unwrap();
+    assert_eq!(rendered, "(Kuhn, 1962, 23)");
+}
+
+#[test]
+fn test_citation_locator_can_strip_label_periods() {
+    let mut style = make_style();
+    style.citation = Some(csln_core::CitationSpec {
+        template: Some(vec![
+            csln_core::TemplateComponent::Contributor(csln_core::template::TemplateContributor {
+                contributor: ContributorRole::Author,
+                form: ContributorForm::Short,
+                ..Default::default()
+            }),
+            csln_core::TemplateComponent::Date(csln_core::template::TemplateDate {
+                date: TDateVar::Issued,
+                form: DateForm::Year,
+                ..Default::default()
+            }),
+            csln_core::TemplateComponent::Variable(csln_core::template::TemplateVariable {
+                variable: csln_core::template::SimpleVariable::Locator,
+                strip_label_periods: Some(true),
+                ..Default::default()
+            }),
+        ]),
+        wrap: Some(WrapPunctuation::Parentheses),
+        delimiter: Some(", ".to_string()),
+        ..Default::default()
+    });
+
+    let bib = make_bibliography();
+    let processor = Processor::new(style, bib);
+    let citation = Citation {
+        items: vec![crate::reference::CitationItem {
+            id: "kuhn1962".to_string(),
+            label: Some(csln_core::citation::LocatorType::Page),
+            locator: Some("23".to_string()),
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+
+    let rendered = processor.process_citation(&citation).unwrap();
+    assert_eq!(rendered, "(Kuhn, 1962, p23)");
+}
+
+#[test]
 fn test_springer_locator_label_survives_sorting() {
     use std::{fs, path::Path};
 
