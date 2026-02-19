@@ -27,7 +27,6 @@ const STYLE_METADATA = {
   'springer-socpsych-author-date': { dependents: 317, format: 'author-date' },
   'american-medical-association': { dependents: 293, format: 'numeric' },
   'taylor-and-francis-chicago-author-date': { dependents: 234, format: 'author-date' },
-  'annals-of-the-association-of-american-geographers': { format: 'author-date' },
   'chicago-notes': { format: 'note' },
 };
 
@@ -100,10 +99,14 @@ function discoverCoreStyles() {
   if (!fs.existsSync(stylesRoot)) {
     throw new Error(`Core styles directory not found: ${stylesRoot}`);
   }
+  const excludedCoreStyles = new Set([
+    'annals-of-the-association-of-american-geographers',
+  ]);
 
   return fs.readdirSync(stylesRoot)
     .filter((file) => file.endsWith('.yaml'))
     .map((file) => file.replace(/\.yaml$/, ''))
+    .filter((name) => !excludedCoreStyles.has(name))
     .sort()
     .map((name) => {
       const meta = STYLE_METADATA[name] || {};
