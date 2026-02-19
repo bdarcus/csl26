@@ -952,21 +952,27 @@ function generateHtmlTable(report) {
     const dependentsValue = style.dependents ?? -1;
     const componentRateValue = style.componentMatchRate !== null ? style.componentMatchRate : -1;
 
-    const statusBadgeMap = {
-      'perfect': 'badge-perfect',
-      'partial': 'badge-partial',
-      'failing': 'badge-failing',
-      'error': 'badge-pending',
-    };
-    const statusTextMap = {
-      'perfect': 'Perfect',
-      'partial': 'Partial',
-      'failing': 'Failing',
-      'error': 'Error',
-    };
-
-    const statusBadge = statusBadgeMap[style.statusTier];
-    const statusText = statusTextMap[style.statusTier];
+    const sqiScore = style.qualityBreakdown?.score ?? (style.qualityScore || 0) * 100;
+    let sqiTier = 'D';
+    let sqiTierRank = 1;
+    let sqiBadgeClass = 'badge-failing';
+    if (style.error || style.qualityBreakdown?.error) {
+      sqiTier = 'ERR';
+      sqiTierRank = 0;
+      sqiBadgeClass = 'badge-pending';
+    } else if (sqiScore >= 90) {
+      sqiTier = 'A';
+      sqiTierRank = 4;
+      sqiBadgeClass = 'badge-perfect';
+    } else if (sqiScore >= 80) {
+      sqiTier = 'B';
+      sqiTierRank = 3;
+      sqiBadgeClass = 'bg-blue-100 text-blue-700';
+    } else if (sqiScore >= 70) {
+      sqiTier = 'C';
+      sqiTierRank = 2;
+      sqiBadgeClass = 'badge-partial';
+    }
 
     const citationBadge = style.citations.total === 0
       ? 'badge-pending'
@@ -1002,13 +1008,6 @@ function generateHtmlTable(report) {
 
     const toggleId = `toggle-${style.name}`;
     const contentId = `content-${style.name}`;
-    const statusRank = {
-      perfect: 4,
-      partial: 3,
-      failing: 2,
-      error: 1,
-    }[style.statusTier] || 0;
-
     tableRows += `
                 <tr class="border-b border-slate-200 hover:bg-slate-50 accordion-toggle"
                     data-toggle="${toggleId}"
@@ -1021,7 +1020,7 @@ function generateHtmlTable(report) {
                     data-component-rate="${componentRateValue}"
                     data-fidelity="${style.fidelityScore}"
                     data-quality="${style.qualityScore || 0}"
-                    data-status-rank="${statusRank}">
+                    data-sqi-tier-rank="${sqiTierRank}">
                     <td class="px-6 py-4 text-sm font-medium text-slate-900">${style.name}</td>
                     <td class="px-6 py-4 text-sm text-slate-600">${style.format}</td>
                     <td class="px-6 py-4 text-sm text-slate-600">${style.dependents ?? '—'}</td>
@@ -1041,8 +1040,8 @@ function generateHtmlTable(report) {
                     <td class="px-6 py-4 text-sm font-mono text-slate-600">${fidelityPct}%</td>
                     <td class="px-6 py-4 text-sm font-mono text-slate-600">${qualityPct}%</td>
                     <td class="px-6 py-4">
-                        <span class="inline-flex items-center px-3 py-1 rounded text-xs font-medium ${statusBadge}">
-                            ${statusText}
+                        <span class="inline-flex items-center px-3 py-1 rounded text-xs font-medium ${sqiBadgeClass}">
+                            ${sqiTier}
                         </span>
                     </td>
                     <td class="px-6 py-4 text-right">
@@ -1110,8 +1109,8 @@ ${generateDetailContent(style)}
                                 </button>
                             </th>
                             <th class="text-left px-6 py-4 text-xs font-semibold text-slate-700">
-                                <button class="inline-flex items-center gap-1 hover:text-primary transition-colors" onclick="sortCompatTable('status-rank')">
-                                    Status <span class="text-slate-400" id="sort-ind-status-rank">↕</span>
+                                <button class="inline-flex items-center gap-1 hover:text-primary transition-colors" onclick="sortCompatTable('sqi-tier-rank')">
+                                    SQI Tier <span class="text-slate-400" id="sort-ind-sqi-tier-rank">↕</span>
                                 </button>
                             </th>
                             <th class="px-6 py-4"></th>
@@ -1415,7 +1414,7 @@ function generateHtmlFooter() {
                     'component-rate',
                     'fidelity',
                     'quality',
-                    'status-rank',
+                    'sqi-tier-rank',
                 ]);
 
                 if (numericKeys.has(key)) {
