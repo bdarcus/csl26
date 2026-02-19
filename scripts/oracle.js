@@ -39,6 +39,10 @@ const testItems = Object.fromEntries(
   Object.entries(fixturesData).filter(([key]) => key !== 'comment')
 );
 
+// Load test citations from JSON fixture
+const citationsPath = path.join(__dirname, '..', 'tests', 'fixtures', 'citations-expanded.json');
+const testCitations = JSON.parse(fs.readFileSync(citationsPath, 'utf8'));
+
 /**
  * Compare two component sets and identify differences.
  */
@@ -47,7 +51,7 @@ function compareComponents(oracleComp, cslnComp, refData) {
   const matches = [];
 
   const keys = ['contributors', 'year', 'title', 'containerTitle', 'volume',
-                'issue', 'pages', 'publisher', 'doi', 'edition', 'editors'];
+    'issue', 'pages', 'publisher', 'doi', 'edition', 'editors'];
 
   for (const key of keys) {
     const oracle = oracleComp[key];
@@ -59,7 +63,7 @@ function compareComponents(oracleComp, cslnComp, refData) {
     if (oracle.found && csln.found) {
       // Both have it - check if values match
       if (oracle.value === csln.value ||
-          (typeof oracle.value === 'boolean' && oracle.value === csln.value)) {
+        (typeof oracle.value === 'boolean' && oracle.value === csln.value)) {
         matches.push({ component: key, status: 'match' });
       } else {
         // Values differ
@@ -116,8 +120,29 @@ function renderWithCiteprocJs(stylePath) {
   citeproc.updateItems(Object.keys(testItems));
 
   const citations = {};
-  Object.keys(testItems).forEach(id => {
-    citations[id] = citeproc.makeCitationCluster([{ id }]);
+  testCitations.forEach(cite => {
+    // Convert CSLN citation items to citeproc-js format
+    const citeprocItems = cite.items.map(item => ({
+      id: item.id,
+      locator: item.locator,
+      label: item.label,
+      prefix: item.prefix,
+      suffix: item.suffix,
+      'suppress-author': item.visibility === 'suppress-author'
+    }));
+
+    // For narrative/integral citations, citeproc-js doesn't have a direct equivalent
+    // in makeCitationCluster that matches CSLN's specific split rendering.
+    // However, if we just want to test clustered rendering, we can use the cluster.
+    // For now, we compare non-integral clusters.
+    try {
+      const result = citeproc.makeCitationCluster(citeprocItems);
+      // citeproc-js returns [id, text] or formatted cluster
+      citations[cite.id] = result;
+    } catch (e) {
+      console.error(`Error rendering citation cluster ${cite.id}:`, e.message);
+      citations[cite.id] = `ERROR: ${e.message}`;
+    }
   });
 
   const bibResult = citeproc.makeBibliography();
@@ -149,6 +174,9 @@ function renderWithCslnProcessor(stylePath) {
   const tempRefFile = path.join(projectRoot, '.migrated-refs.json');
   fs.writeFileSync(tempRefFile, JSON.stringify(testItems, null, 2));
 
+  const tempCiteFile = path.join(projectRoot, '.migrated-citations.json');
+  fs.writeFileSync(tempCiteFile, JSON.stringify(testCitations, null, 2));
+
   let tempStyleFile = null;
   if (!cslnStylePath) {
     // 2. Fall back to migration
@@ -161,7 +189,8 @@ function renderWithCslnProcessor(stylePath) {
       );
     } catch (e) {
       console.error('Migration failed:', e.stderr || e.message);
-      try { fs.unlinkSync(tempRefFile); } catch {}
+      try { fs.unlinkSync(tempRefFile); } catch { }
+      try { fs.unlinkSync(tempCiteFile); } catch { }
       return null;
     }
     tempStyleFile = path.join(projectRoot, '.migrated-temp.yaml');
@@ -172,18 +201,20 @@ function renderWithCslnProcessor(stylePath) {
   let output;
   try {
     output = execSync(
-      `cargo run -q --bin csln -- process .migrated-refs.json "${cslnStylePath}" --show-keys`,
+      `cargo run -q --bin csln -- render refs -b .migrated-refs.json -s "${cslnStylePath}" -c .migrated-citations.json --mode both --show-keys`,
       { cwd: projectRoot, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }
     );
   } catch (e) {
     console.error('Processor failed:', e.stderr || e.message);
-    if (tempStyleFile) try { fs.unlinkSync(tempStyleFile); } catch {}
-    try { fs.unlinkSync(tempRefFile); } catch {}
+    if (tempStyleFile) try { fs.unlinkSync(tempStyleFile); } catch { }
+    try { fs.unlinkSync(tempRefFile); } catch { }
+    try { fs.unlinkSync(tempCiteFile); } catch { }
     return null;
   }
 
-  if (tempStyleFile) try { fs.unlinkSync(tempStyleFile); } catch {}
-  try { fs.unlinkSync(tempRefFile); } catch {}
+  if (tempStyleFile) try { fs.unlinkSync(tempStyleFile); } catch { }
+  try { fs.unlinkSync(tempRefFile); } catch { }
+  try { fs.unlinkSync(tempCiteFile); } catch { }
 
   const lines = output.split('\n');
   const citations = {};
@@ -192,20 +223,15 @@ function renderWithCslnProcessor(stylePath) {
   let section = null;
   let inIntegralSection = false;
   for (const line of lines) {
-    if (line.includes('CITATIONS (Non-Integral)')) {
+    if (line.includes('CITATIONS (From file):')) {
       section = 'citations';
-      inIntegralSection = false;
-      continue;
-    } else if (line.includes('CITATIONS (Integral)')) {
-      section = 'citations';
-      inIntegralSection = true;
       continue;
     } else if (line.includes('BIBLIOGRAPHY:')) {
       section = 'bibliography';
       continue;
     }
 
-    if (section === 'citations' && !inIntegralSection && line.trim() && !line.includes('===')) {
+    if (section === 'citations' && line.trim() && !line.includes('===')) {
       const match = line.match(/^\s*\[([^\]]+)\]\s+(.+)/);
       if (match) {
         citations[match[1]] = match[2].trim();
@@ -329,7 +355,7 @@ const pairs = matchBibliographyEntries(oracle.bibliography, csln.bibliography);
 const results = {
   style: styleName,
   citations: {
-    total: Object.keys(testItems).length,
+    total: testCitations.length,
     passed: 0,
     failed: 0,
     entries: [],
@@ -345,7 +371,8 @@ const results = {
 };
 
 // Check citations
-for (const id of Object.keys(testItems)) {
+for (const cite of testCitations) {
+  const id = cite.id;
   const oracleCit = normalizeText(oracle.citations[id] || '');
   const cslnCit = normalizeText(csln.citations[id] || '');
   const match = oracleCit === cslnCit;
@@ -456,6 +483,19 @@ if (jsonOutput) {
 
   if (verbose) {
     console.log('\n--- DETAILED FAILURES ---');
+
+    // Citation failures
+    const failedCitations = results.citations.entries.filter(e => !e.match);
+    if (failedCitations.length > 0) {
+      console.log('\nCitations:');
+      for (const entry of failedCitations) {
+        console.log(`  [${entry.id}]`);
+        console.log(`    Oracle: ${entry.oracle}`);
+        console.log(`    CSLN:   ${entry.csln}`);
+      }
+    }
+
+    // Bibliography failures
     for (const entry of results.bibliography.entries) {
       if (!entry.match && entry.oracle && entry.csln) {
         console.log(`\nEntry ${entry.index}:`);

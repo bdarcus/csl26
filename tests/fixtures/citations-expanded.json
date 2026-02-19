@@ -1,0 +1,48 @@
+[
+    {
+        "id": "single-item",
+        "items": [
+            {
+                "id": "ITEM-1"
+            }
+        ]
+    },
+    {
+        "id": "multi-item",
+        "items": [
+            {
+                "id": "ITEM-1"
+            },
+            {
+                "id": "ITEM-2",
+                "prefix": "see also "
+            }
+        ]
+    },
+    {
+        "id": "with-locator",
+        "items": [
+            {
+                "id": "ITEM-1",
+                "locator": "23",
+                "label": "page"
+            }
+        ]
+    },
+    {
+        "id": "multi-item-with-locators",
+        "items": [
+            {
+                "id": "ITEM-1",
+                "locator": "10",
+                "label": "page"
+            },
+            {
+                "id": "ITEM-3",
+                "locator": "440",
+                "label": "page",
+                "prefix": "see also "
+            }
+        ]
+    }
+]
