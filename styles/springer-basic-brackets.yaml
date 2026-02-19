@@ -48,80 +48,205 @@ citation:
   multi-cite-delimiter: ', '
 
 bibliography:
+  type-templates:
+    book:
+      - contributor: author
+        form: long
+        name-order: family-first
+      - date: issued
+        form: year
+        wrap: parentheses
+        prefix: " "
+      - items:
+          - title: primary
+          - number: edition
+        delimiter: ", "
+        prefix: " "
+      - items:
+          - variable: publisher
+          - variable: publisher-place
+        delimiter: ", "
+        prefix: ". "
+    thesis:
+      - contributor: author
+        form: long
+        name-order: family-first
+      - date: issued
+        form: year
+        wrap: parentheses
+        prefix: " "
+      - title: primary
+        prefix: " "
+      - items:
+          - variable: genre
+          - variable: publisher
+        delimiter: ", "
+        prefix: ". "
+    webpage:
+      - contributor: author
+        form: long
+        name-order: family-first
+      - date: issued
+        form: year
+        wrap: parentheses
+        prefix: " "
+      - title: primary
+        prefix: " "
+      - variable: url
+        prefix: ". "
+      - date: accessed
+        form: month-day
+        prefix: ". Accessed "
+      - date: accessed
+        form: year
+        prefix: " "
+    article-magazine:
+      - contributor: author
+        form: long
+        name-order: family-first
+      - date: issued
+        form: year
+        wrap: parentheses
+        prefix: " "
+      - title: primary
+        prefix: " "
+      - title: parent-serial
+        prefix: ". "
+      - items:
+          - number: volume
+          - number: pages
+            prefix: ""
+        delimiter: ":"
+        prefix: " "
+    entry-encyclopedia:
+      - contributor: author
+        form: long
+        name-order: family-first
+      - date: issued
+        form: year
+        wrap: parentheses
+        prefix: " "
+      - title: primary
+        prefix: " "
+      - title: parent-serial
+        prefix: ". "
+      - items:
+          - number: volume
+          - number: pages
+            prefix: ""
+        delimiter: ":"
+        prefix: " "
+    dataset:
+      - contributor: author
+        form: long
+        name-order: family-first
+      - date: issued
+        form: year
+        wrap: parentheses
+        prefix: " "
+      - title: primary
+        prefix: " "
+    report:
+      - contributor: author
+        form: long
+        name-order: family-first
+      - date: issued
+        form: year
+        wrap: parentheses
+        prefix: " "
+      - title: primary
+        prefix: " "
+      - items:
+          - variable: publisher
+          - variable: publisher-place
+        delimiter: ", "
+        prefix: ". "
+    paper-conference:
+      - contributor: author
+        form: long
+        name-order: family-first
+      - date: issued
+        form: year
+        wrap: parentheses
+        prefix: " "
+      - title: primary
+        prefix: " "
+      - title: parent-monograph
+        prefix: ". In: "
+      - number: pages
+        prefix: ". pp "
+    legal-case:
+      - date: issued
+        form: year
+        wrap: parentheses
+      - title: primary
+        prefix: " "
   template:
-  # 1. Author (Year) Title
-  - contributor: author
-    form: long
-
-  - date: issued
-    form: year
-    wrap: parentheses
-    prefix: ' '
-
-  - title: primary
-    prefix: ' '
-
-  # Chapter/paper-conference: "In: Editor (eds) Container"
-  - items:
-    - prefix: 'In: '
-      contributor: editor
+    - contributor: author
       form: long
-    - title: parent-monograph
-    overrides:
-      chapter:
-        suppress: false
-      paper-conference:
-        suppress: false
-      default:
-        suppress: true
-
-  # Journal article: "Container Volume:Pages"
-  - items:
+      name-order: family-first
+      shorten:
+        min: 5
+        use-first: 3
+        and-others: et-al
+    - contributor: editor
+      form: long
+      name-order: family-first
+      overrides:
+        chapter:
+          suppress: true
+        article-journal:
+          suppress: true
+        book:
+          suppress: true
+    - date: issued
+      form: year
+      wrap: parentheses
+      prefix: " "
+    - title: primary
+      prefix: " "
+    - items:
+        - prefix: "In: "
+          contributor: editor
+          form: long
+          name-order: family-first
+        - title: parent-monograph
+      delimiter: " "
+      overrides:
+        chapter: {}
+        book:
+          suppress: true
+        article-journal:
+          suppress: true
     - title: parent-serial
-      suffix: ' '
-    - number: volume
-      suffix: ':'
-    - number: pages
-    delimiter: none
-    overrides:
-      article-journal:
-        suppress: false
-      default:
-        suppress: true
-
-  # Book/report/chapter: "Publisher, Publisher-place"
-  - items:
-    - variable: publisher
-    - variable: publisher-place
-    delimiter: ', '
-    overrides:
-      book:
-        suppress: false
-      report:
-        suppress: false
-      chapter:
-        suppress: false
-      paper-conference:
-        suppress: false
-      default:
-        suppress: true
-
-  # Chapter pages: "pp X-Y"
-  - number: pages
-    prefix: ', pp '
-    overrides:
-      chapter:
-        suppress: false
-      paper-conference:
-        suppress: false
-      default:
-        suppress: true
-
-  # DOI for articles
-  - variable: doi
-    prefix: 'https://doi.org/'
-    overrides:
-      article-journal:
-        suppress: false
-      default:
-        suppress: true
+    - items:
+        - variable: publisher
+        - variable: publisher-place
+        - number: pages
+          prefix: "pp "
+          overrides:
+            chapter: {}
+            article-journal:
+              suppress: true
+      delimiter: ", "
+      overrides:
+        article-journal:
+          suppress: true
+    - items:
+        - number: volume
+        - number: pages
+          prefix: ""
+      delimiter: ":"
+      prefix: " "
+      overrides:
+        article-journal:
+          suppress: false
+        chapter:
+          suppress: true
+    - variable: doi
+      prefix: ". https://doi.org/"
+      overrides:
+        article-journal:
+          suppress: false
+        default:
+          suppress: true
