@@ -718,6 +718,14 @@ pub fn format_names(
         Some(AndOptions::None) | None => None, // No conjunction
         _ => None,                             // Already resolved ModeDependent
     };
+    // When "et al." is applied, most styles expect comma-separated shown names
+    // before the abbreviation (e.g., "Smith, Jones, et al."), not a final
+    // conjunction ("Smith, Jones, and Brown, et al.").
+    let and_str = if use_et_al && formatted_last.is_empty() {
+        None
+    } else {
+        and_str
+    };
 
     // Check if delimiter should precede last name (Oxford comma)
     use csln_core::options::DelimiterPrecedesLast;

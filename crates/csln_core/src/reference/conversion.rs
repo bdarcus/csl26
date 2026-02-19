@@ -205,16 +205,12 @@ impl From<csl_legacy::csl_json::Reference> for InputReference {
                         r#type: serial_type,
                         title: parent_title,
                         editor: None,
-                        publisher: if legacy.ref_type == "entry-encyclopedia" {
-                            legacy.publisher.clone().map(|n| {
-                                Contributor::SimpleName(SimpleName {
-                                    name: n.into(),
-                                    location: legacy.publisher_place.clone(),
-                                })
+                        publisher: legacy.publisher.clone().map(|n| {
+                            Contributor::SimpleName(SimpleName {
+                                name: n.into(),
+                                location: legacy.publisher_place.clone(),
                             })
-                        } else {
-                            None
-                        },
+                        }),
                         issn: legacy.issn,
                     }),
                     url,

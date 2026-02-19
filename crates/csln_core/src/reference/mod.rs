@@ -253,7 +253,10 @@ impl InputReference {
                 Parent::Embedded(p) => p.publisher.as_ref().and_then(|c| c.location()),
                 _ => None,
             },
-            InputReference::SerialComponent(_) => None,
+            InputReference::SerialComponent(r) => match &r.parent {
+                Parent::Embedded(p) => p.publisher.as_ref().and_then(|c| c.location()),
+                _ => None,
+            },
             InputReference::Collection(r) => r.publisher.as_ref().and_then(|c| c.location()),
             InputReference::Classic(r) => r.publisher.as_ref().and_then(|c| c.location()),
             InputReference::Dataset(r) => r.publisher.as_ref().and_then(|c| c.location()),
@@ -271,7 +274,10 @@ impl InputReference {
                 Parent::Embedded(p) => p.publisher.as_ref().and_then(|c| c.name()),
                 _ => None,
             },
-            InputReference::SerialComponent(_) => None,
+            InputReference::SerialComponent(r) => match &r.parent {
+                Parent::Embedded(p) => p.publisher.as_ref().and_then(|c| c.name()),
+                _ => None,
+            },
             InputReference::Collection(r) => r.publisher.as_ref().and_then(|c| c.name()),
             InputReference::Classic(r) => r.publisher.as_ref().and_then(|c| c.name()),
             InputReference::Dataset(r) => r.publisher.as_ref().and_then(|c| c.name()),

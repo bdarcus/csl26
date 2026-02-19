@@ -46,6 +46,12 @@ impl ComponentValues for TemplateVariable {
                 // If we have a locator value in options, use it
                 options.locator.map(|loc| {
                     if let Some(label_type) = &options.locator_label {
+                        // Page locators are typically rendered bare ("23") in note and
+                        // author-date contexts; section/chapter/etc. keep labels ("sec. 2").
+                        if matches!(label_type, csln_core::citation::LocatorType::Page) {
+                            return loc.to_string();
+                        }
+
                         // Check if value is plural (contains hyphen, comma, or space)
                         let is_plural = loc.contains('-') || loc.contains(',') || loc.contains(' ');
 
