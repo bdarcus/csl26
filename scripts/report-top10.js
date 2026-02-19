@@ -106,15 +106,17 @@ function runOracle(stylePath, styleName) {
 
     return JSON.parse(result);
   } catch (error) {
-    // Try to parse JSON from stderr or use error message
-    if (error.stdout) {
+    // Exit code 1 means validation failed but execution was successful (JSON is in stdout)
+    if (error.status === 1 && error.stdout) {
       try {
-        return JSON.parse(error.stdout);
+        return JSON.parse(error.stdout.toString());
       } catch {
-        return { error: `Oracle execution failed: ${error.message}`, style: styleName };
+        return { error: `Oracle execution failed to parse JSON: ${error.message}`, style: styleName };
       }
     }
-    return { error: `Oracle execution failed: ${error.message}`, style: styleName };
+    // Fatal error (exit code 2 or other)
+    const stderr = error.stderr ? error.stderr.toString() : '';
+    return { error: `Oracle fatal error: ${error.message}\n${stderr}`, style: styleName };
   }
 }
 
@@ -205,6 +207,7 @@ function generateReport(options) {
   let citationsPassed = 0;
   let biblioTotal = 0;
   let biblioPassed = 0;
+  let errorCount = 0;
 
   for (const styleSpec of TOP_10_STYLES) {
     const stylePath = path.join(stylesDir, `${styleSpec.name}.csl`);
@@ -222,10 +225,15 @@ function generateReport(options) {
         error: `Style file not found: ${stylePath}`,
         oracleDetail: null,
       });
+      errorCount++;
       continue;
     }
 
     const oracleResult = runOracle(stylePath, styleSpec.name);
+    if (oracleResult.error) {
+      errorCount++;
+      process.stderr.write(`Error processing ${styleSpec.name}: ${oracleResult.error}\n`);
+    }
     const fidelityScore = computeFidelityScore(oracleResult);
 
     const citations = oracleResult.citations || { passed: 0, total: 0 };
@@ -274,12 +282,15 @@ function generateReport(options) {
   const totalImpact = (TOP_10_STYLES.reduce((sum, s) => sum + s.dependents, 0) / TOTAL_DEPENDENTS * 100).toFixed(2);
 
   return {
-    generated: getTimestamp(),
-    commit: getGitCommit(),
-    totalImpact: parseFloat(totalImpact),
-    citationsOverall: { passed: citationsPassed, total: citationsTotal },
-    bibliographyOverall: { passed: biblioPassed, total: biblioTotal },
-    styles,
+    report: {
+      generated: getTimestamp(),
+      commit: getGitCommit(),
+      totalImpact: parseFloat(totalImpact),
+      citationsOverall: { passed: citationsPassed, total: citationsTotal },
+      bibliographyOverall: { passed: biblioPassed, total: biblioTotal },
+      styles,
+    },
+    errorCount
   };
 }
 
@@ -818,7 +829,7 @@ function escapeHtml(text) {
 function main() {
   try {
     const options = parseArgs();
-    const report = generateReport(options);
+    const { report, errorCount } = generateReport(options);
 
     // Output JSON to stdout
     console.log(JSON.stringify(report, null, 2));
@@ -835,6 +846,11 @@ function main() {
       const htmlContent = generateHtml(report);
       fs.writeFileSync(htmlPath, htmlContent, 'utf8');
       process.stderr.write(`HTML report written to: ${htmlPath}\n`);
+    }
+
+    if (errorCount > 0) {
+      process.stderr.write(`\nTotal styles with errors: ${errorCount}\n`);
+      process.exit(1);
     }
   } catch (error) {
     process.stderr.write(`Error: ${error.message}\n`);

@@ -205,11 +205,8 @@ function renderWithCslnProcessor(stylePath) {
       { cwd: projectRoot, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }
     );
   } catch (e) {
-    console.error('Processor failed:', e.stderr || e.message);
-    if (tempStyleFile) try { fs.unlinkSync(tempStyleFile); } catch { }
-    try { fs.unlinkSync(tempRefFile); } catch { }
-    try { fs.unlinkSync(tempCiteFile); } catch { }
-    return null;
+    const errorMsg = e.stderr ? e.stderr.toString() : e.message;
+    return { error: `Processor failed: ${errorMsg}`, citations: { passed: 0, total: 0 }, bibliography: { passed: 0, total: 0 } };
   }
 
   if (tempStyleFile) try { fs.unlinkSync(tempStyleFile); } catch { }

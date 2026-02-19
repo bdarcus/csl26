@@ -26,7 +26,7 @@ options:
     delimiter: ", "
     delimiter-precedes-last: always
     demote-non-dropping-particle: sort-only
-    name-as-sort-order: first
+    display-as-sort: first
   dates:
     month: long
     uncertainty-marker: "?"
@@ -54,9 +54,6 @@ bibliography:
     - contributor: author
       form: long
       name-order: family-first
-      et-al:
-        min: 8
-        use_first: 3
       suffix: "."
     - title: primary
     - items:
