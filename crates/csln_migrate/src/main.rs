@@ -123,7 +123,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     };
 
-    let resolved = template_resolver::resolve_templates(
+    let mut resolved = template_resolver::resolve_templates(
         path,
         style_name,
         template_dir.as_deref(),
@@ -131,6 +131,70 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         template_mode,
         min_template_confidence,
     );
+
+    // Guardrails for inferred citation templates:
+    // - Empty citation templates regress fidelity heavily.
+    // - Numeric styles require citation-number in citation templates.
+    let mut reject_inferred_citation_reason: Option<&str> = None;
+    if let Some(resolved_cit) = resolved.citation.as_ref() {
+        let is_inferred_source = matches!(
+            resolved_cit.source,
+            template_resolver::TemplateSource::InferredCached(_)
+                | template_resolver::TemplateSource::InferredLive
+        );
+        if is_inferred_source {
+            if resolved_cit.template.is_empty() {
+                reject_inferred_citation_reason = Some("empty citation template");
+            } else if matches!(
+                options.processing,
+                Some(csln_core::options::Processing::Numeric)
+            ) && !citation_template_has_citation_number(&resolved_cit.template)
+            {
+                reject_inferred_citation_reason =
+                    Some("numeric style citation template missing citation-number");
+            } else if legacy_style.class == "note"
+                && note_citation_template_is_underfit(&resolved_cit.template)
+            {
+                reject_inferred_citation_reason =
+                    Some("note style citation template is contributor-only underfit");
+            }
+        }
+    }
+    if let Some(reason) = reject_inferred_citation_reason {
+        eprintln!(
+            "Rejecting inferred citation template for {}: {}. Falling back to XML citation template.",
+            style_name, reason
+        );
+        resolved.citation = None;
+    }
+
+    // Heuristic normalization for note styles:
+    // If inferred citation template is a simple author-year shape, prefer short
+    // contributor form to align with typical note citation behavior.
+    let should_normalize_author_year_citations = legacy_style.class == "note"
+        || matches!(
+            options.processing,
+            Some(csln_core::options::Processing::AuthorDate)
+        );
+
+    if should_normalize_author_year_citations {
+        if let Some(resolved_cit) = resolved.citation.as_mut() {
+            let is_inferred_source = matches!(
+                resolved_cit.source,
+                template_resolver::TemplateSource::InferredCached(_)
+                    | template_resolver::TemplateSource::InferredLive
+            );
+            if is_inferred_source
+                && citation_template_is_author_year_only(&resolved_cit.template)
+                && normalize_contributor_form_to_short(&mut resolved_cit.template)
+            {
+                eprintln!(
+                    "Normalized citation contributor form to short for {} (author-year inferred citation template).",
+                    style_name
+                );
+            }
+        }
+    }
 
     let needs_xml_bib = resolved.bibliography.is_none();
     let needs_xml_cit = resolved.citation.is_none();
@@ -192,16 +256,29 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // The XML options extractor often gets the wrong delimiter because it reads group
     // delimiters rather than rendered output.
     if let Some(ref resolved_bib) = resolved.bibliography {
-        if let Some(ref delim) = resolved_bib.delimiter {
-            eprintln!("  Overriding bibliography separator: {:?}", delim);
-            let bib_cfg = options.bibliography.get_or_insert_with(Default::default);
-            bib_cfg.separator = Some(delim.clone());
-        }
+        let is_inferred_source = matches!(
+            resolved_bib.source,
+            template_resolver::TemplateSource::InferredCached(_)
+                | template_resolver::TemplateSource::InferredLive
+        );
+        let allow_bib_punctuation_override = !(legacy_style.class == "note" && is_inferred_source);
 
-        if let Some(ref suffix) = resolved_bib.entry_suffix {
-            eprintln!("  Overriding bibliography entry suffix: {:?}", suffix);
-            let bib_cfg = options.bibliography.get_or_insert_with(Default::default);
-            bib_cfg.entry_suffix = Some(suffix.clone());
+        if allow_bib_punctuation_override {
+            if let Some(ref delim) = resolved_bib.delimiter {
+                eprintln!("  Overriding bibliography separator: {:?}", delim);
+                let bib_cfg = options.bibliography.get_or_insert_with(Default::default);
+                bib_cfg.separator = Some(delim.clone());
+            }
+
+            if let Some(ref suffix) = resolved_bib.entry_suffix {
+                eprintln!("  Overriding bibliography entry suffix: {:?}", suffix);
+                let bib_cfg = options.bibliography.get_or_insert_with(Default::default);
+                bib_cfg.entry_suffix = Some(suffix.clone());
+            }
+        } else {
+            eprintln!(
+                "  Skipping inferred bibliography separator/entry-suffix override for note style."
+            );
         }
     }
 
@@ -696,4 +773,75 @@ fn apply_type_overrides(
         }
         _ => {}
     }
+}
+
+fn citation_template_has_citation_number(template: &[TemplateComponent]) -> bool {
+    template.iter().any(component_has_citation_number)
+}
+
+fn component_has_citation_number(component: &TemplateComponent) -> bool {
+    match component {
+        TemplateComponent::Number(n) => {
+            n.number == csln_core::template::NumberVariable::CitationNumber
+        }
+        TemplateComponent::List(list) => list.items.iter().any(component_has_citation_number),
+        _ => false,
+    }
+}
+
+fn note_citation_template_is_underfit(template: &[TemplateComponent]) -> bool {
+    template.len() == 1 && component_is_contributor_only(&template[0])
+}
+
+fn component_is_contributor_only(component: &TemplateComponent) -> bool {
+    match component {
+        TemplateComponent::Contributor(_) => true,
+        TemplateComponent::List(list) => list.items.iter().all(component_is_contributor_only),
+        _ => false,
+    }
+}
+
+fn citation_template_is_author_year_only(template: &[TemplateComponent]) -> bool {
+    let mut has_contributor = false;
+    let mut has_date = false;
+
+    for component in template {
+        match component {
+            TemplateComponent::Contributor(_) => has_contributor = true,
+            TemplateComponent::Date(_) => has_date = true,
+            TemplateComponent::List(list) => {
+                for item in &list.items {
+                    match item {
+                        TemplateComponent::Contributor(_) => has_contributor = true,
+                        TemplateComponent::Date(_) => has_date = true,
+                        _ => return false,
+                    }
+                }
+            }
+            _ => return false,
+        }
+    }
+
+    has_contributor && has_date
+}
+
+fn normalize_contributor_form_to_short(template: &mut [TemplateComponent]) -> bool {
+    let mut changed = false;
+    for component in template {
+        match component {
+            TemplateComponent::Contributor(c) => {
+                if c.form == csln_core::template::ContributorForm::Long {
+                    c.form = csln_core::template::ContributorForm::Short;
+                    changed = true;
+                }
+            }
+            TemplateComponent::List(list) => {
+                if normalize_contributor_form_to_short(&mut list.items) {
+                    changed = true;
+                }
+            }
+            _ => {}
+        }
+    }
+    changed
 }
