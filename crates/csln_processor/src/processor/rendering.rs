@@ -317,58 +317,30 @@ impl<'a> Renderer<'a> {
     {
         use crate::reference::CitationItem;
 
-        // Group adjacent items by author key
-        let mut groups: Vec<Vec<&CitationItem>> = Vec::new();
+        // Group adjacent items by author key (respecting substitution)
+        let mut groups: Vec<(String, Vec<&CitationItem>)> = Vec::new();
 
         for item in items {
             let reference = self.bibliography.get(&item.id);
             let author_key = reference
-                .and_then(|r| r.author())
-                .map(|authors| {
-                    authors
-                        .to_names_vec()
-                        .iter()
-                        .map(|a| a.family_or_literal().to_lowercase())
-                        .collect::<Vec<_>>()
-                        .join("|")
-                })
+                .map(|r| self.get_author_grouping_key(r))
                 .unwrap_or_default();
 
             // Check if this item has the same author as the previous group
-            let should_group = if let Some(last_group) = groups.last() {
-                if let Some(last_item) = last_group.last() {
-                    let last_author_key = self
-                        .bibliography
-                        .get(&last_item.id)
-                        .and_then(|r| r.author())
-                        .map(|authors| {
-                            authors
-                                .to_names_vec()
-                                .iter()
-                                .map(|a| a.family_or_literal().to_lowercase())
-                                .collect::<Vec<_>>()
-                                .join("|")
-                        })
-                        .unwrap_or_default();
-                    author_key == last_author_key && item.prefix.is_none() && !author_key.is_empty()
-                } else {
-                    false
-                }
+            if !groups.is_empty()
+                && groups.last().unwrap().0 == author_key
+                && !author_key.is_empty()
+            {
+                groups.last_mut().unwrap().1.push(item);
             } else {
-                false
-            };
-
-            if should_group {
-                groups.last_mut().unwrap().push(item);
-            } else {
-                groups.push(vec![item]);
+                groups.push((author_key, vec![item]));
             }
         }
 
         let mut rendered_groups = Vec::new();
         let fmt = F::default();
 
-        for group in groups {
+        for (_author_key, group) in groups {
             let first_item = group[0];
             let first_ref = self
                 .bibliography
@@ -491,30 +463,49 @@ impl<'a> Renderer<'a> {
             let author_part =
                 self.render_author_for_grouping_with_format::<F>(first_ref, template, mode);
 
-            let mut year_parts = Vec::new();
+            let filtered_template = self.filter_author_from_template(template);
+            let mut item_parts = Vec::new();
             for item in &group {
                 let reference = self
                     .bibliography
                     .get(&item.id)
                     .ok_or_else(|| ProcessorError::ReferenceNotFound(item.id.clone()))?;
 
-                let year_part = self.render_year_for_grouping_with_format::<F>(reference);
-                if !year_part.is_empty() {
-                    let suffix = item.suffix.as_deref().unwrap_or("");
-                    if !suffix.is_empty() {
-                        let spaced_suffix = self.ensure_suffix_spacing(suffix);
-                        year_parts.push(fmt.affix("", year_part, &spaced_suffix));
-                    } else {
-                        year_parts.push(year_part);
+                let citation_number = self.get_or_assign_citation_number(&item.id);
+                if let Some(proc) = self.process_template_with_number_with_format::<F>(
+                    reference,
+                    &filtered_template,
+                    RenderContext::Citation,
+                    mode.clone(),
+                    item.visibility,
+                    citation_number,
+                    item.locator.as_deref(),
+                    item.label.clone(),
+                ) {
+                    let item_str = crate::render::citation::citation_to_string_with_format::<F>(
+                        &proc,
+                        None,
+                        None,
+                        None,
+                        Some(intra_delimiter),
+                    );
+                    if !item_str.is_empty() {
+                        let suffix = item.suffix.as_deref().unwrap_or("");
+                        if !suffix.is_empty() {
+                            let spaced_suffix = self.ensure_suffix_spacing(suffix);
+                            item_parts.push(fmt.affix("", item_str, &spaced_suffix));
+                        } else {
+                            item_parts.push(item_str);
+                        }
                     }
                 }
             }
 
             let prefix = first_item.prefix.as_deref().unwrap_or("");
-            if !author_part.is_empty() && !year_parts.is_empty() {
-                let joined_years = year_parts.join(intra_delimiter);
+            if !author_part.is_empty() && !item_parts.is_empty() {
+                let joined_items = item_parts.join(intra_delimiter);
                 // Format based on citation mode:
-                // Integral: "Kuhn (1962a, 1962b)" - years in parentheses
+                // Integral: "Kuhn (1962a, 1962b)" - items in parentheses
                 // NonIntegral: "Kuhn, 1962a, 1962b" - no inner parens (outer wrap adds them)
                 let content = match mode {
                     csln_core::citation::CitationMode::Integral => {
@@ -524,10 +515,10 @@ impl<'a> Renderer<'a> {
                             csln_core::citation::ItemVisibility::SuppressAuthor
                         ) {
                             // Should theoretically not happen in narrative mode, but handle gracefully
-                            format!("({})", joined_years)
+                            format!("({})", joined_items)
                         } else {
                             // Default narrative: Kuhn (1962)
-                            format!("{} ({})", author_part, joined_years)
+                            format!("{} ({})", author_part, joined_items)
                         }
                     }
                     csln_core::citation::CitationMode::NonIntegral => {
@@ -536,7 +527,7 @@ impl<'a> Renderer<'a> {
                             csln_core::citation::ItemVisibility::SuppressAuthor
                         ) {
                             // Parenthetical SuppressAuthor: 1962
-                            joined_years
+                            joined_items
                         } else {
                             // Default parenthetical: Kuhn, 1962
                             if self.config.punctuation_in_quote
@@ -551,10 +542,10 @@ impl<'a> Renderer<'a> {
                                     fixed_author,
                                     if is_curly { '\u{201D}' } else { '"' },
                                     &intra_delimiter[1..],
-                                    joined_years
+                                    joined_items
                                 )
                             } else {
-                                format!("{}{}{}", author_part, intra_delimiter, joined_years)
+                                format!("{}{}{}", author_part, intra_delimiter, joined_items)
                             }
                         }
                     }
@@ -581,9 +572,9 @@ impl<'a> Renderer<'a> {
 
                 rendered_groups
                     .push(fmt.citation(ids, fmt.affix(&formatted_prefix, author_part, "")));
-            } else if !year_parts.is_empty() {
-                // Year-only case (SuppressAuthor)
-                let content = year_parts.join(intra_delimiter);
+            } else if !item_parts.is_empty() {
+                // Item-only case (SuppressAuthor)
+                let content = item_parts.join(intra_delimiter);
                 let ids: Vec<String> = group.iter().map(|item| item.id.clone()).collect();
 
                 let formatted_prefix =
@@ -677,6 +668,37 @@ impl<'a> Renderer<'a> {
         self.render_author_for_grouping_with_format::<crate::render::plain::PlainText>(
             reference, template, mode,
         )
+    }
+
+    /// Get a unique key for grouping citations by author.
+    fn get_author_grouping_key(&self, reference: &Reference) -> String {
+        if let Some(author) = reference.author() {
+            author.to_string().to_lowercase()
+        } else if let Some(editor) = reference.editor() {
+            editor.to_string().to_lowercase()
+        } else if let Some(title) = reference.title() {
+            title.to_string().to_lowercase()
+        } else {
+            String::new()
+        }
+    }
+
+    /// Filter out author components from a template.
+    fn filter_author_from_template(
+        &self,
+        template: &[TemplateComponent],
+    ) -> Vec<TemplateComponent> {
+        template
+            .iter()
+            .filter(|comp| {
+                if let TemplateComponent::Contributor(c) = comp {
+                    c.contributor != csln_core::template::ContributorRole::Author
+                } else {
+                    true
+                }
+            })
+            .cloned()
+            .collect()
     }
 
     /// Render just the year part (with suffix) for citation grouping.

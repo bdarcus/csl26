@@ -50,7 +50,7 @@ impl<'a> GroupSorter<'a> {
     }
 
     /// Compare two references by a single sort key.
-    fn compare_by_key(
+    pub fn compare_by_key(
         &self,
         a: &Reference,
         b: &Reference,
@@ -124,7 +124,11 @@ impl<'a> GroupSorter<'a> {
     }
 
     /// Extract author sort key with specified name ordering.
-    fn extract_author_sort_key(&self, reference: &Reference, name_order: NameSortOrder) -> String {
+    pub fn extract_author_sort_key(
+        &self,
+        reference: &Reference,
+        name_order: NameSortOrder,
+    ) -> String {
         reference
             .author()
             .and_then(|c| c.to_names_vec().first().cloned())

@@ -33,6 +33,10 @@ citation:
         - editor
         - translator
         - title
+  sort:
+    template:
+      - key: author
+      - key: issued
   template:
     - contributor: author
       form: short
@@ -55,7 +59,9 @@ citation:
           quote: false
     - date: issued
       form: year
+    - variable: locator
   wrap: parentheses
+  delimiter: ", "
   multi-cite-delimiter: "; "
   integral:
     delimiter: " "
@@ -82,6 +88,8 @@ citation:
       - items:
           - date: issued
             form: year
+          - variable: locator
+        delimiter: ", "
         wrap: parentheses
 bibliography:
   options:

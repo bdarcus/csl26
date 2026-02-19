@@ -34,6 +34,10 @@ options:
         form: short
 
 citation:
+  sort:
+    template:
+      - key: author
+      - key: issued
   options:
     contributors:
       shorten:
@@ -42,6 +46,7 @@ citation:
         use-first: 1
   non-integral:
     wrap: parentheses
+    delimiter: ", "
     template:
       - items:
           - contributor: author
@@ -64,6 +69,7 @@ citation:
             fallback:
               - term: no-date
           - variable: locator
+        delimiter: ", "
         wrap: parentheses
 
 bibliography:

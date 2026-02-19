@@ -428,6 +428,22 @@ pub fn build_author_date_style(
             ..Default::default()
         }),
         citation: Some(CitationSpec {
+            sort: Some(csln_core::grouping::GroupSort {
+                template: vec![
+                    csln_core::grouping::GroupSortKey {
+                        key: csln_core::grouping::SortKey::Author,
+                        ascending: true,
+                        order: None,
+                        sort_order: None,
+                    },
+                    csln_core::grouping::GroupSortKey {
+                        key: csln_core::grouping::SortKey::Issued,
+                        ascending: true,
+                        order: None,
+                        sort_order: None,
+                    },
+                ],
+            }),
             template: Some(citation_template),
             multi_cite_delimiter: Some("; ".to_string()),
             ..Default::default()

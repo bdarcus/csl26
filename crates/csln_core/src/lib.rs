@@ -174,6 +174,9 @@ pub struct CitationSpec {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "multi-cite-delimiter")]
     pub multi_cite_delimiter: Option<String>,
+    /// Optional citation sorting specification.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sort: Option<grouping::GroupSort>,
     /// Configuration for integral (narrative) citations (e.g., "Smith (2020)").
     /// Overrides fields from the main citation spec when mode is Integral.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -243,6 +246,9 @@ impl CitationSpec {
                 }
                 if spec.multi_cite_delimiter.is_some() {
                     merged.multi_cite_delimiter = spec.multi_cite_delimiter.clone();
+                }
+                if spec.sort.is_some() {
+                    merged.sort = spec.sort.clone();
                 }
 
                 std::borrow::Cow::Owned(merged)

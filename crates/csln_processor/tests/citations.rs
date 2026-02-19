@@ -49,7 +49,7 @@ fn test_disambiguate_yearsuffixandsort() {
         make_book("item2", "Smith", "John", 2020, "Beta"),
     ];
     let citation_items = vec![vec!["item1", "item2"]];
-    let expected = "Smith, (2020a); Smith, (2020b)";
+    let expected = "Smith, (2020a), (2020b)";
 
     run_test_case_native(&input, &citation_items, expected, "citation");
 }
@@ -73,7 +73,7 @@ fn test_disambiguate_yearsuffixmixeddates() {
         make_article("23", "Ylinen", "A", 1995, "Article C"),
     ];
     let citation_items = vec![vec!["22", "21", "23"]];
-    let expected = "Ylinen, (1995a); Ylinen, (1995b); Ylinen, (1995c)";
+    let expected = "Ylinen, (1995a), (1995b), (1995c)";
 
     run_test_case_native(&input, &citation_items, expected, "citation");
 }
@@ -92,7 +92,8 @@ fn test_disambiguate_bycitetwoauthorssamefamilyname() {
         make_book("ITEM-3", "Asthma", "Albert", 1885, "Book C"),
     ];
     let citation_items = vec![vec!["ITEM-1", "ITEM-2", "ITEM-3"]];
-    let expected = "Asthma, Asthma, (1980); Bronchitis, (1995); Asthma, (1885)";
+    // Sorted by author (Asthma, then Bronchitis) and year (1885, then 1980)
+    let expected = "Asthma, (1885); Asthma, Asthma, (1980); Bronchitis, (1995)";
 
     run_test_case_native_with_options(
         &input,
@@ -162,7 +163,7 @@ fn test_disambiguate_addnamesfailure() {
         ),
     ];
     let citation_items = vec![vec!["ITEM-1", "ITEM-2"]];
-    let expected = "Smith et al., (1980a); Smith et al., (1980b)";
+    let expected = "Smith et al., (1980a), (1980b)";
 
     run_test_case_native_with_options(
         &input,
@@ -271,7 +272,7 @@ fn test_disambiguate_bycitedisambiguatecondition() {
         ),
     ];
     let citation_items = vec![vec!["ITEM-1", "ITEM-2"]];
-    let expected = "Doe, Roe, (2000a); Doe, Roe, (2000b)";
+    let expected = "Doe, Roe, (2000a), (2000b)";
 
     run_test_case_native(&input, &citation_items, expected, "citation");
 }
@@ -294,7 +295,7 @@ fn test_disambiguate_yearsuffixfiftytwoentries() {
     }
 
     let citation_items = vec![citation_ids.iter().map(|s| s.as_str()).collect()];
-    let expected = "Smith, (1986a); Smith, (1986b); Smith, (1986c); Smith, (1986d); Smith, (1986e); Smith, (1986f); Smith, (1986g); Smith, (1986h); Smith, (1986i); Smith, (1986j); Smith, (1986k); Smith, (1986l); Smith, (1986m); Smith, (1986n); Smith, (1986o); Smith, (1986p); Smith, (1986q); Smith, (1986r); Smith, (1986s); Smith, (1986t); Smith, (1986u); Smith, (1986v); Smith, (1986w); Smith, (1986x); Smith, (1986y); Smith, (1986z); Smith, (1986aa); Smith, (1986ab); Smith, (1986ac); Smith, (1986ad)";
+    let expected = "Smith, (1986a), (1986b), (1986c), (1986d), (1986e), (1986f), (1986g), (1986h), (1986i), (1986j), (1986k), (1986l), (1986m), (1986n), (1986o), (1986p), (1986q), (1986r), (1986s), (1986t), (1986u), (1986v), (1986w), (1986x), (1986y), (1986z), (1986aa), (1986ab), (1986ac), (1986ad)";
 
     run_test_case_native(&input, &citation_items, expected, "citation");
 }
@@ -334,4 +335,34 @@ fn test_numeric_citation() {
 
     assert_eq!(processor.process_citation(&citation1).unwrap(), "[1]");
     assert_eq!(processor.process_citation(&citation2).unwrap(), "[2]");
+}
+
+// --- Sorting and Grouping Tests ---
+
+/// Test basic multi-item citation sorting by author.
+#[test]
+fn test_citation_sorting_by_author() {
+    let input = vec![
+        make_book("item1", "Kuhn", "Thomas", 1962, "Title A"),
+        make_book("item2", "Hawking", "Stephen", 1988, "Title B"),
+    ];
+    // Kuhn then Hawking in input, should be Hawking then Kuhn in output
+    let citation_items = vec![vec!["item1", "item2"]];
+    let expected = "Hawking, (1988); Kuhn, (1962)";
+
+    run_test_case_native(&input, &citation_items, expected, "citation");
+}
+
+/// Test grouped citation sorting by year.
+#[test]
+fn test_grouped_citation_sorting_by_year() {
+    let input = vec![
+        make_book("item1", "Kuhn", "Thomas", 1970, "Title A"),
+        make_book("item2", "Kuhn", "Thomas", 1962, "Title B"),
+    ];
+    // 1970 then 1962 in input, should be 1962 then 1970 in output
+    let citation_items = vec![vec!["item1", "item2"]];
+    let expected = "Kuhn, (1962), (1970)";
+
+    run_test_case_native(&input, &citation_items, expected, "citation");
 }

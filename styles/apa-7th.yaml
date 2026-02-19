@@ -32,6 +32,10 @@ citation:
   options:
     contributors:
       shorten: { min: 3, use-first: 1 }
+  sort:
+    template:
+      - key: author
+      - key: issued
   non-integral:
     wrap: parentheses
     template:
@@ -60,7 +64,6 @@ citation:
             date: issued
             form: year-month-day
       - variable: locator
-        prefix: ", "
   delimiter: ", "
   multi-cite-delimiter: "; "
   integral:
@@ -92,8 +95,7 @@ citation:
                 date: issued
                 form: year-month-day
           - variable: locator
-            prefix: ", "
-        delimiter: ""
+        delimiter: ", "
         wrap: parentheses
 bibliography:
   type-templates:

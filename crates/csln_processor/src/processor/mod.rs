@@ -30,7 +30,7 @@ pub mod sorting;
 mod tests;
 
 use crate::error::ProcessorError;
-use crate::reference::{Bibliography, Citation, Reference};
+use crate::reference::{Bibliography, Citation, CitationItem, Reference};
 use crate::render::{ProcEntry, ProcTemplate};
 use crate::values::ProcHints;
 use csln_core::locale::Locale;
@@ -243,115 +243,7 @@ impl Processor {
 
     /// Process a single citation.
     pub fn process_citation(&self, citation: &Citation) -> Result<String, ProcessorError> {
-        // Resolve the effective citation spec based on the mode (Integral vs NonIntegral)
-        // If the style has no citation spec, we use a default one.
-        let default_spec = csln_core::CitationSpec::default();
-        let effective_spec = self
-            .style
-            .citation
-            .as_ref()
-            .map(|cs| cs.resolve_for_mode(&citation.mode))
-            .unwrap_or(std::borrow::Cow::Borrowed(&default_spec));
-
-        let template_vec = effective_spec.resolve_template().unwrap_or_default();
-        let template = template_vec.as_slice();
-
-        // Get intra-citation delimiter (between components like author and year)
-        let intra_delimiter = effective_spec.delimiter.as_deref().unwrap_or(", ");
-
-        // Inter-citation delimiter (between different author groups)
-        let inter_delimiter = effective_spec
-            .multi_cite_delimiter
-            .as_deref()
-            .unwrap_or("; ");
-
-        // Check if this is an author-date style that supports grouping
-        let is_author_date = self
-            .style
-            .options
-            .as_ref()
-            .and_then(|o| o.processing.as_ref())
-            .map(|p| matches!(p, csln_core::options::Processing::AuthorDate))
-            .unwrap_or(false);
-
-        // Use citation-specific merged config
-        let cite_config = self.get_citation_config();
-
-        let renderer = Renderer::new(
-            &self.style,
-            &self.bibliography,
-            &self.locale,
-            &cite_config,
-            &self.hints,
-            &self.citation_numbers,
-        );
-
-        // Group adjacent items by author for author-date styles
-        let rendered_groups = if is_author_date {
-            renderer.render_grouped_citation(
-                &citation.items,
-                template,
-                &citation.mode,
-                intra_delimiter,
-            )?
-        } else {
-            // No grouping - render each item separately
-            renderer.render_ungrouped_citation(
-                &citation.items,
-                template,
-                &citation.mode,
-                intra_delimiter,
-            )?
-        };
-
-        let content = rendered_groups.join(inter_delimiter);
-
-        if content.is_empty() {
-            return Ok(String::new());
-        }
-
-        // Get wrap/prefix/suffix from citation spec
-        let wrap = effective_spec.wrap.as_ref();
-        let prefix = effective_spec.prefix.as_deref();
-        let suffix = effective_spec.suffix.as_deref();
-
-        // Apply citation-level prefix from input
-        let citation_prefix = citation.prefix.as_deref().unwrap_or("");
-        let citation_suffix = citation.suffix.as_deref().unwrap_or("");
-
-        // Apply wrap or prefix/suffix
-        let (open, close) = if matches!(citation.mode, csln_core::citation::CitationMode::Integral)
-        {
-            ("", "")
-        } else {
-            match wrap {
-                Some(WrapPunctuation::Parentheses) => ("(", ")"),
-                Some(WrapPunctuation::Brackets) => ("[", "]"),
-                Some(WrapPunctuation::Quotes) => ("\u{201C}", "\u{201D}"),
-                _ => (prefix.unwrap_or(""), suffix.unwrap_or("")),
-            }
-        };
-
-        // If it was integral mode, we might still want the spec prefix/suffix
-        let (spec_open, spec_close) =
-            if matches!(citation.mode, csln_core::citation::CitationMode::Integral) {
-                (prefix.unwrap_or(""), suffix.unwrap_or(""))
-            } else {
-                ("", "")
-            };
-
-        // Ensure citation-level suffix has proper spacing
-        let formatted_suffix =
-            if citation_suffix.is_empty() || citation_suffix.starts_with(char::is_whitespace) {
-                citation_suffix.to_string()
-            } else {
-                format!(" {}", citation_suffix)
-            };
-
-        Ok(format!(
-            "{}{}{}{}{}{}{}",
-            spec_open, open, citation_prefix, content, formatted_suffix, close, spec_close
-        ))
+        self.process_citation_with_format::<crate::render::plain::PlainText>(citation)
     }
 
     /// Process a bibliography entry.
@@ -389,6 +281,34 @@ impl Processor {
 
         let sorter = Sorter::new(self.get_config(), &self.locale);
         sorter.sort_references(references)
+    }
+
+    /// Sort citation items according to style instructions.
+    pub fn sort_citation_items(
+        &self,
+        items: Vec<CitationItem>,
+        spec: &csln_core::CitationSpec,
+    ) -> Vec<CitationItem> {
+        if let Some(sort_spec) = &spec.sort {
+            let mut items_with_refs: Vec<(CitationItem, &Reference)> = items
+                .into_iter()
+                .filter_map(|item| self.bibliography.get(&item.id).map(|r| (item, r)))
+                .collect();
+
+            let sorter = crate::grouping::GroupSorter::new(&self.locale);
+            items_with_refs.sort_by(|a, b| {
+                for sort_key in &sort_spec.template {
+                    let cmp = sorter.compare_by_key(a.1, b.1, sort_key);
+                    if cmp != std::cmp::Ordering::Equal {
+                        return cmp;
+                    }
+                }
+                std::cmp::Ordering::Equal
+            });
+
+            return items_with_refs.into_iter().map(|(item, _)| item).collect();
+        }
+        items
     }
 
     /// Calculate processing hints for disambiguation.
@@ -532,6 +452,9 @@ impl Processor {
         let template_vec = effective_spec.resolve_template().unwrap_or_default();
         let template = template_vec.as_slice();
 
+        // Sort items if sort spec is present
+        let sorted_items = self.sort_citation_items(citation.items.clone(), &effective_spec);
+
         let intra_delimiter = effective_spec.delimiter.as_deref().unwrap_or(", ");
         let renderer_delimiter = if intra_delimiter == "none" || intra_delimiter.is_empty() {
             ""
@@ -549,7 +472,7 @@ impl Processor {
             .options
             .as_ref()
             .and_then(|o| o.processing.as_ref())
-            .map(|p| matches!(p, csln_core::options::Processing::AuthorDate))
+            .map(|p| !matches!(p, csln_core::options::Processing::Numeric))
             .unwrap_or(false);
 
         let cite_config = self.get_citation_config();
@@ -565,14 +488,14 @@ impl Processor {
         // Process group components
         let rendered_groups = if is_author_date {
             renderer.render_grouped_citation_with_format::<F>(
-                &citation.items,
+                &sorted_items,
                 template,
                 &citation.mode,
                 renderer_delimiter,
             )?
         } else {
             renderer.render_ungrouped_citation_with_format::<F>(
-                &citation.items,
+                &sorted_items,
                 template,
                 &citation.mode,
                 renderer_delimiter,
