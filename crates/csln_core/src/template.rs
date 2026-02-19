@@ -546,6 +546,14 @@ pub enum LabelForm {
 #[serde(rename_all = "kebab-case", deny_unknown_fields)]
 pub struct TemplateVariable {
     pub variable: SimpleVariable,
+    /// Whether locator labels (e.g., "p.", "sec.") should be rendered when
+    /// `variable: locator` is used. If omitted, processor defaults apply.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub show_label: Option<bool>,
+    /// Strip trailing periods from locator labels (e.g., "p." -> "p").
+    /// Only applies to `variable: locator`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub strip_label_periods: Option<bool>,
     #[serde(flatten)]
     pub rendering: Rendering,
     /// Structured link options (DOI, URL).

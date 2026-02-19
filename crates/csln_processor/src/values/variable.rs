@@ -46,6 +46,12 @@ impl ComponentValues for TemplateVariable {
                 // If we have a locator value in options, use it
                 options.locator.map(|loc| {
                     if let Some(label_type) = &options.locator_label {
+                        if self.show_label == Some(false)
+                            && matches!(label_type, csln_core::citation::LocatorType::Page)
+                        {
+                            return loc.to_string();
+                        }
+
                         // Chicago-style notes typically render page locators bare ("23"),
                         // while most non-note styles expect labels ("p. 23").
                         if matches!(label_type, csln_core::citation::LocatorType::Page)
@@ -66,7 +72,12 @@ impl ComponentValues for TemplateVariable {
                             is_plural,
                             csln_core::locale::TermForm::Short,
                         ) {
-                            format!("{} {}", term, loc)
+                            if self.strip_label_periods == Some(true) {
+                                let locator_term = crate::values::strip_trailing_periods(term);
+                                format!("{}{}", locator_term, loc)
+                            } else {
+                                format!("{} {}", term, loc)
+                            }
                         } else {
                             loc.to_string()
                         }
