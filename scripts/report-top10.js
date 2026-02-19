@@ -155,9 +155,9 @@ function computeFidelityScore(oracleResult) {
   const bibliography = oracleResult.bibliography || {};
 
   const citationsPassed = citations.passed || 0;
-  const citationsTotal = citations.total || 1;
+  const citationsTotal = citations.total || 0;
   const biblioPassed = bibliography.passed || 0;
-  const biblioTotal = bibliography.total || 1;
+  const biblioTotal = bibliography.total || 0;
 
   const totalPassed = citationsPassed + biblioPassed;
   const totalTests = citationsTotal + biblioTotal;
