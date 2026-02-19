@@ -45,70 +45,24 @@ pub fn extract_contributor_config(style: &Style) -> Option<ContributorConfig> {
         has_config = true;
     }
 
-    // 2. Scan citation and bibliography for name options (et-al, display-as-sort)
-    let bib_macros = collect_bibliography_macros(style);
-    let cit_macros = collect_citation_macros(style);
-
-    if let Some(bib) = &style.bibliography {
-        if let Some(bib_opts) =
-            extract_name_options_from_nodes(&bib.layout.children, style, &bib_macros)
-        {
-            if bib_opts.shorten.is_some() {
-                config.shorten = bib_opts.shorten;
-            }
-            if bib_opts.display_as_sort.is_some() {
-                config.display_as_sort = bib_opts.display_as_sort;
-            }
-            if bib_opts.delimiter.is_some() {
-                config.delimiter = bib_opts.delimiter;
-            }
-            if bib_opts.sort_separator.is_some() {
-                config.sort_separator = bib_opts.sort_separator;
-            }
-            if bib_opts.initialize_with.is_some() {
-                config.initialize_with = bib_opts.initialize_with;
-            }
-            if bib_opts.initialize_with_hyphen.is_some() {
-                config.initialize_with_hyphen = bib_opts.initialize_with_hyphen;
-            }
-            if bib_opts.delimiter_precedes_last.is_some() {
-                config.delimiter_precedes_last = bib_opts.delimiter_precedes_last;
-            }
-            if bib_opts.delimiter_precedes_et_al.is_some() {
-                config.delimiter_precedes_et_al = bib_opts.delimiter_precedes_et_al;
-            }
-            has_config = true;
-        }
+    // 2. Scan bibliography and citation scopes independently.
+    // Keep bibliography-driven shortening as the global default when both are
+    // present; citation-specific shortening is emitted as scoped overrides.
+    if let Some(bib_opts) = extract_bibliography_contributor_overrides(style) {
+        merge_contributor_config(&mut config, bib_opts, true);
+        has_config = true;
     }
 
-    if let Some(cit_opts) =
-        extract_name_options_from_nodes(&style.citation.layout.children, style, &cit_macros)
-    {
-        if cit_opts.shorten.is_some() {
-            config.shorten = cit_opts.shorten;
-        }
-        if config.display_as_sort.is_none() && cit_opts.display_as_sort.is_some() {
-            config.display_as_sort = cit_opts.display_as_sort;
-        }
-        if config.delimiter.is_none() && cit_opts.delimiter.is_some() {
-            config.delimiter = cit_opts.delimiter;
-        }
-        if config.sort_separator.is_none() && cit_opts.sort_separator.is_some() {
-            config.sort_separator = cit_opts.sort_separator;
-        }
-        if config.initialize_with.is_none() && cit_opts.initialize_with.is_some() {
-            config.initialize_with = cit_opts.initialize_with;
-        }
-        if config.initialize_with_hyphen.is_none() && cit_opts.initialize_with_hyphen.is_some() {
-            config.initialize_with_hyphen = cit_opts.initialize_with_hyphen;
-        }
-        if config.delimiter_precedes_last.is_none() && cit_opts.delimiter_precedes_last.is_some() {
-            config.delimiter_precedes_last = cit_opts.delimiter_precedes_last;
-        }
-        if config.delimiter_precedes_et_al.is_none() && cit_opts.delimiter_precedes_et_al.is_some()
-        {
-            config.delimiter_precedes_et_al = cit_opts.delimiter_precedes_et_al;
-        }
+    if let Some(cit_opts) = extract_citation_contributor_overrides(style) {
+        // Citation options should not clobber an already-extracted bibliography
+        // shorten config at global scope.
+        let allow_shorten_override = config.shorten.is_none();
+        merge_contributor_config_with_shorten_policy(
+            &mut config,
+            cit_opts,
+            false,
+            allow_shorten_override,
+        );
         has_config = true;
     }
 
@@ -117,6 +71,29 @@ pub fn extract_contributor_config(style: &Style) -> Option<ContributorConfig> {
     } else {
         None
     }
+}
+
+pub fn extract_citation_contributor_overrides(style: &Style) -> Option<ContributorConfig> {
+    let cit_macros = collect_citation_macros(style);
+    extract_scope_contributor_overrides(
+        &style.citation.layout.children,
+        style,
+        &cit_macros,
+        style.citation.et_al_min,
+        style.citation.et_al_use_first,
+    )
+}
+
+pub fn extract_bibliography_contributor_overrides(style: &Style) -> Option<ContributorConfig> {
+    let bib = style.bibliography.as_ref()?;
+    let bib_macros = collect_bibliography_macros(style);
+    extract_scope_contributor_overrides(
+        &bib.layout.children,
+        style,
+        &bib_macros,
+        bib.et_al_min,
+        bib.et_al_use_first,
+    )
 }
 
 fn collect_bibliography_macros(style: &Style) -> HashSet<String> {
@@ -214,6 +191,106 @@ fn extract_name_options_from_nodes(
         }
     }
     None
+}
+
+fn extract_scope_contributor_overrides(
+    nodes: &[CslNode],
+    style: &Style,
+    target_macros: &HashSet<String>,
+    et_al_min: Option<usize>,
+    et_al_use_first: Option<usize>,
+) -> Option<ContributorConfig> {
+    let mut config =
+        extract_name_options_from_nodes(nodes, style, target_macros).unwrap_or_default();
+    let mut has_config = config != ContributorConfig::default();
+
+    if apply_et_al_attributes(&mut config, et_al_min, et_al_use_first) {
+        has_config = true;
+    }
+
+    if has_config {
+        Some(config)
+    } else {
+        None
+    }
+}
+
+fn apply_et_al_attributes(
+    config: &mut ContributorConfig,
+    et_al_min: Option<usize>,
+    et_al_use_first: Option<usize>,
+) -> bool {
+    let Some(min_value) = et_al_min else {
+        return false;
+    };
+
+    let shorten = config
+        .shorten
+        .get_or_insert_with(ShortenListOptions::default);
+    shorten.min = usize_to_u8(min_value);
+    if let Some(use_first) = et_al_use_first {
+        shorten.use_first = usize_to_u8(use_first);
+    }
+    true
+}
+
+fn usize_to_u8(value: usize) -> u8 {
+    value.min(u8::MAX as usize) as u8
+}
+
+fn merge_contributor_config(
+    base: &mut ContributorConfig,
+    incoming: ContributorConfig,
+    overwrite_existing: bool,
+) {
+    merge_contributor_config_with_shorten_policy(
+        base,
+        incoming,
+        overwrite_existing,
+        overwrite_existing,
+    );
+}
+
+fn merge_contributor_config_with_shorten_policy(
+    base: &mut ContributorConfig,
+    incoming: ContributorConfig,
+    overwrite_existing: bool,
+    overwrite_shorten: bool,
+) {
+    if incoming.shorten.is_some()
+        && (overwrite_existing || (overwrite_shorten && base.shorten.is_none()))
+    {
+        base.shorten = incoming.shorten;
+    }
+    if incoming.display_as_sort.is_some() && (overwrite_existing || base.display_as_sort.is_none())
+    {
+        base.display_as_sort = incoming.display_as_sort;
+    }
+    if incoming.delimiter.is_some() && (overwrite_existing || base.delimiter.is_none()) {
+        base.delimiter = incoming.delimiter;
+    }
+    if incoming.sort_separator.is_some() && (overwrite_existing || base.sort_separator.is_none()) {
+        base.sort_separator = incoming.sort_separator;
+    }
+    if incoming.initialize_with.is_some() && (overwrite_existing || base.initialize_with.is_none())
+    {
+        base.initialize_with = incoming.initialize_with;
+    }
+    if incoming.initialize_with_hyphen.is_some()
+        && (overwrite_existing || base.initialize_with_hyphen.is_none())
+    {
+        base.initialize_with_hyphen = incoming.initialize_with_hyphen;
+    }
+    if incoming.delimiter_precedes_last.is_some()
+        && (overwrite_existing || base.delimiter_precedes_last.is_none())
+    {
+        base.delimiter_precedes_last = incoming.delimiter_precedes_last;
+    }
+    if incoming.delimiter_precedes_et_al.is_some()
+        && (overwrite_existing || base.delimiter_precedes_et_al.is_none())
+    {
+        base.delimiter_precedes_et_al = incoming.delimiter_precedes_et_al;
+    }
 }
 
 fn extract_from_names(names: &Names) -> Option<ContributorConfig> {
