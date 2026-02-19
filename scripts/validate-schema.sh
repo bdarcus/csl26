@@ -22,18 +22,25 @@ CORE_LIB="crates/csln_core/src/lib.rs"
 SCHEMA_VERSION=$(grep -A1 'fn default_version()' "$CORE_LIB" | grep -o '"[^"]*"' | tr -d '"')
 
 info "Current schema version: $SCHEMA_VERSION"
-info "Validating all styles in $STYLES_DIR"
+info "Validating production styles in $STYLES_DIR (excluding experimental)"
 
-# Count style files
-STYLE_COUNT=$(find "$STYLES_DIR" -name "*.yaml" | wc -l | tr -d ' ')
-info "Found $STYLE_COUNT style files"
+# Validate only top-level styles/*.yaml; experimental drafts live under styles/experimental/
+STYLE_FILES=("$STYLES_DIR"/*.yaml)
+STYLE_COUNT=${#STYLE_FILES[@]}
+info "Found $STYLE_COUNT production style files"
 
-# Run library tests (includes style parsing tests)
-if cargo test --quiet --lib 2>&1 | grep -q "test result: ok"; then
-    success "All $STYLE_COUNT styles parse correctly with schema $SCHEMA_VERSION"
+FAILED=0
+for style in "${STYLE_FILES[@]}"; do
+    if ! cargo run --quiet --bin csln -- check -s "$style" >/dev/null 2>&1; then
+        error "Style failed schema validation: $style"
+        FAILED=1
+    fi
+done
+
+if [ "$FAILED" -eq 0 ]; then
+    success "All $STYLE_COUNT production styles parse correctly with schema $SCHEMA_VERSION"
     exit 0
-else
-    error "Style validation failed"
-    error "Run 'cargo test --lib' for detailed error messages"
-    exit 1
 fi
+
+error "Style validation failed"
+exit 1

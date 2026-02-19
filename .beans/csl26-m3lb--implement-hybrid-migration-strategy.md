@@ -5,7 +5,7 @@ status: in-progress
 type: milestone
 priority: high
 created_at: 2026-02-08T00:19:16Z
-updated_at: 2026-02-15T16:05:00Z
+updated_at: 2026-02-19T07:10:00Z
 ---
 
 Strategic pivot from pure XML semantic compiler to hybrid approach combining
@@ -33,12 +33,12 @@ and expanded test fixtures.
 5. **Oracle cross-validation for all approaches** - Where approaches agree,
 confidence is high.
 
-**Success criteria:**
+**Success criteria (re-baselined 2026-02-19):**
 
-• APA bibliography: 0% -> 80%+ match (✅ ACHIEVED: 14/15 via LLM authoring)
-• Top 10 styles: bibliography match comparable to citation match (🔄 IN PROGRESS: 6-14/15 author-date, 0/15 numeric)
+• APA bibliography: 0% -> high-fidelity match (✅ ACHIEVED: 27/27 in current oracle set)
+• Top 10 styles: bibliography match comparable to citation match (🔄 IN PROGRESS: 0-27/34 depending on style)
 • XML options pipeline remains intact (✅ MAINTAINED: ~2,500 lines preserved)
-• Citation match does not regress (✅ MAINTAINED: 9/10 at 15/15, Springer regression tracked)
+• Citation match does not regress (🔄 strict oracle now uses 8 citation scenarios per style)
 
 **Estimated effort:** ~1,500 lines new code. LLM-authored templates replace
 manual domain-expert time.

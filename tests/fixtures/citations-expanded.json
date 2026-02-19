@@ -44,5 +44,52 @@
                 "prefix": "see also "
             }
         ]
+    },
+    {
+        "id": "suppress-author",
+        "items": [
+            {
+                "id": "ITEM-1",
+                "visibility": "suppress-author"
+            }
+        ]
+    },
+    {
+        "id": "locator-section-with-suffix",
+        "items": [
+            {
+                "id": "ITEM-2",
+                "locator": "12",
+                "label": "section",
+                "suffix": ", esp. discussion"
+            }
+        ]
+    },
+    {
+        "id": "mixed-visibility-and-prefix",
+        "items": [
+            {
+                "id": "ITEM-1",
+                "visibility": "suppress-author",
+                "locator": "44",
+                "label": "page"
+            },
+            {
+                "id": "ITEM-3",
+                "prefix": "cf. ",
+                "locator": "437",
+                "label": "page"
+            }
+        ]
+    },
+    {
+        "id": "single-with-prefix-and-suffix",
+        "items": [
+            {
+                "id": "ITEM-7",
+                "prefix": "see ",
+                "suffix": ", and references therein"
+            }
+        ]
     }
 ]

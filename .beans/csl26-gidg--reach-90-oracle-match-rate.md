@@ -12,12 +12,11 @@ blocking:
 
 Achieve 90% oracle verification match rate across top 50 parent styles.
 
-**Current status (2026-02-15):**
-- Top 10 citations: 9/10 at 15/15 match (90%, Springer regression tracked)
-- Top 10 bibliography: varies by format
-  - Author-date: 6-14/15 (APA 14/15, Elsevier Harvard 8/15, Chicago 6/15)
-  - Numeric: 0/15 (blocked on year positioning feature)
+**Current status (2026-02-19, strict oracle):**
+- Top 10 citations: 0/10 at 8/8 match
+- Top 10 bibliography: 1/10 at 100% (APA 27/27), others 0-26/34
 - Coverage: 10/10 converted = 60% dependent corpus (4,792/7,987 styles)
+- Citation fixture expanded to include suppress-author and mixed locator/prefix/suffix cases
 
 **Target: 90% (top 50 styles)**
 Stretch: 95% (top 100 styles)
@@ -34,6 +33,7 @@ Stretch: 95% (top 100 styles)
 
 **Measurement:**
 - Run oracle-batch-aggregate.js weekly
+- Use `tests/fixtures/citations-expanded.json` as canonical citation scenario set
 - Track regression from baseline
 - Document failure categories in docs/TIER_STATUS.md
 
