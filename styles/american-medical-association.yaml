@@ -48,6 +48,7 @@ citation:
     - items:
         - number: citation-number
         - variable: locator
+          strip-label-periods: true
           wrap: parentheses
       delimiter: none
   multi-cite-delimiter: ","
