@@ -1,3 +1,4 @@
+.oracle-cache
 target/
 **/*.rs.bk
 *.swp
