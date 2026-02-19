@@ -123,10 +123,10 @@
                 </div>
             </div>
             <div class="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-                <div class="text-sm text-slate-500 font-mono">Generated: Thu, 19 Feb 2026 18:00:53 GMT</div>
+                <div class="text-sm text-slate-500 font-mono">Generated: Thu, 19 Feb 2026 21:09:20 GMT</div>
                 <div class="inline-flex items-center gap-2 px-3 py-1 rounded bg-slate-100 text-slate-700 text-xs font-mono border border-slate-200">
                     <span class="material-icons text-sm">code</span>
-                    <span>4a9d9a3</span>
+                    <span>4b36133</span>
                 </div>
             </div>
         </div>
@@ -135,7 +135,7 @@
     <!-- Statistics Cards -->
     <section class="py-12 px-6 bg-accent-cream">
         <div class="max-w-7xl mx-auto">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
                 <!-- Core Styles -->
                 <div class="bg-white rounded-xl border border-slate-200 p-6">
                     <div class="text-sm font-medium text-slate-500 mb-2">Core Styles</div>
@@ -156,6 +156,13 @@
                     <div class="text-3xl font-bold text-slate-900">276/279</div>
                     <div class="text-xs text-slate-400 mt-2">98.9% pass rate</div>
                 </div>
+
+                <!-- Quality Overall -->
+                <div class="bg-white rounded-xl border border-slate-200 p-6">
+                    <div class="text-sm font-medium text-slate-500 mb-2">Quality (SQI)</div>
+                    <div class="text-3xl font-bold text-slate-900">65.1%</div>
+                    <div class="text-xs text-slate-400 mt-2">Type coverage, fallback, concision, presets</div>
+                </div>
             </div>
         </div>
     </section>
@@ -167,20 +174,68 @@
                 <table class="w-full">
                     <thead class="bg-slate-50 border-b border-slate-200">
                         <tr>
-                            <th class="text-left px-6 py-4 text-xs font-semibold text-slate-700">Style</th>
-                            <th class="text-left px-6 py-4 text-xs font-semibold text-slate-700">Format</th>
-                            <th class="text-left px-6 py-4 text-xs font-semibold text-slate-700">Dependents</th>
-                            <th class="text-left px-6 py-4 text-xs font-semibold text-slate-700">Citations</th>
-                            <th class="text-left px-6 py-4 text-xs font-semibold text-slate-700">Bibliography</th>
-                            <th class="text-left px-6 py-4 text-xs font-semibold text-slate-700">Components</th>
-                            <th class="text-left px-6 py-4 text-xs font-semibold text-slate-700">Fidelity</th>
-                            <th class="text-left px-6 py-4 text-xs font-semibold text-slate-700">Status</th>
+                            <th class="text-left px-6 py-4 text-xs font-semibold text-slate-700">
+                                <button class="inline-flex items-center gap-1 hover:text-primary transition-colors" onclick="sortCompatTable('style-name')">
+                                    Style <span class="text-slate-400" id="sort-ind-style-name">↕</span>
+                                </button>
+                            </th>
+                            <th class="text-left px-6 py-4 text-xs font-semibold text-slate-700">
+                                <button class="inline-flex items-center gap-1 hover:text-primary transition-colors" onclick="sortCompatTable('format')">
+                                    Format <span class="text-slate-400" id="sort-ind-format">↕</span>
+                                </button>
+                            </th>
+                            <th class="text-left px-6 py-4 text-xs font-semibold text-slate-700">
+                                <button class="inline-flex items-center gap-1 hover:text-primary transition-colors" onclick="sortCompatTable('dependents')">
+                                    Dependents <span class="text-slate-400" id="sort-ind-dependents">↕</span>
+                                </button>
+                            </th>
+                            <th class="text-left px-6 py-4 text-xs font-semibold text-slate-700">
+                                <button class="inline-flex items-center gap-1 hover:text-primary transition-colors" onclick="sortCompatTable('citation-rate')">
+                                    Citations <span class="text-slate-400" id="sort-ind-citation-rate">↕</span>
+                                </button>
+                            </th>
+                            <th class="text-left px-6 py-4 text-xs font-semibold text-slate-700">
+                                <button class="inline-flex items-center gap-1 hover:text-primary transition-colors" onclick="sortCompatTable('bibliography-rate')">
+                                    Bibliography <span class="text-slate-400" id="sort-ind-bibliography-rate">↕</span>
+                                </button>
+                            </th>
+                            <th class="text-left px-6 py-4 text-xs font-semibold text-slate-700">
+                                <button class="inline-flex items-center gap-1 hover:text-primary transition-colors" onclick="sortCompatTable('component-rate')">
+                                    Components <span class="text-slate-400" id="sort-ind-component-rate">↕</span>
+                                </button>
+                            </th>
+                            <th class="text-left px-6 py-4 text-xs font-semibold text-slate-700">
+                                <button class="inline-flex items-center gap-1 hover:text-primary transition-colors" onclick="sortCompatTable('fidelity')">
+                                    Fidelity <span class="text-slate-400" id="sort-ind-fidelity">↕</span>
+                                </button>
+                            </th>
+                            <th class="text-left px-6 py-4 text-xs font-semibold text-slate-700">
+                                <button class="inline-flex items-center gap-1 hover:text-primary transition-colors" onclick="sortCompatTable('quality')">
+                                    Quality <span class="text-slate-400" id="sort-ind-quality">↕</span>
+                                </button>
+                            </th>
+                            <th class="text-left px-6 py-4 text-xs font-semibold text-slate-700">
+                                <button class="inline-flex items-center gap-1 hover:text-primary transition-colors" onclick="sortCompatTable('status-rank')">
+                                    Status <span class="text-slate-400" id="sort-ind-status-rank">↕</span>
+                                </button>
+                            </th>
                             <th class="px-6 py-4"></th>
                         </tr>
                     </thead>
                     <tbody>
 
-                <tr class="border-b border-slate-200 hover:bg-slate-50 accordion-toggle" data-toggle="toggle-american-medical-association">
+                <tr class="border-b border-slate-200 hover:bg-slate-50 accordion-toggle"
+                    data-toggle="toggle-american-medical-association"
+                    data-detail-id="content-american-medical-association"
+                    data-style-name="american-medical-association"
+                    data-format="numeric"
+                    data-dependents="293"
+                    data-citation-rate="1"
+                    data-bibliography-rate="1"
+                    data-component-rate="1"
+                    data-fidelity="1"
+                    data-quality="0.615"
+                    data-status-rank="4">
                     <td class="px-6 py-4 text-sm font-medium text-slate-900">american-medical-association</td>
                     <td class="px-6 py-4 text-sm text-slate-600">numeric</td>
                     <td class="px-6 py-4 text-sm text-slate-600">293</td>
@@ -198,6 +253,7 @@
                         <span class="inline-flex items-center px-3 py-1 rounded text-xs font-medium bg-emerald-100 text-emerald-700">100%</span>
                     </td>
                     <td class="px-6 py-4 text-sm font-mono text-slate-600">100.0%</td>
+                    <td class="px-6 py-4 text-sm font-mono text-slate-600">61.5%</td>
                     <td class="px-6 py-4">
                         <span class="inline-flex items-center px-3 py-1 rounded text-xs font-medium badge-perfect">
                             Perfect
@@ -210,8 +266,18 @@
                     </td>
                 </tr>
                 <tr class="accordion-content" id="content-american-medical-association">
-                    <td colspan="9" class="px-6 py-4 bg-slate-50">
+                    <td colspan="10" class="px-6 py-4 bg-slate-50">
                         <div class="max-w-4xl">
+
+                            <div class="mb-4 p-3 rounded border border-slate-200 bg-white">
+                                <div class="text-xs font-semibold text-slate-900 mb-2">Quality (SQI): 61.5%</div>
+                                <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs font-mono">
+                                    <div class="px-2 py-1 rounded bg-slate-100 text-slate-700">type 85.0%</div>
+                                    <div class="px-2 py-1 rounded bg-slate-100 text-slate-700">fallback 100.0%</div>
+                                    <div class="px-2 py-1 rounded bg-slate-100 text-slate-700">concision 0.0%</div>
+                                    <div class="px-2 py-1 rounded bg-slate-100 text-slate-700">presets 45.0%</div>
+                                </div>
+                            </div>
 
                             <div class="mb-4">
                                 <div class="text-xs font-semibold text-slate-900 mb-2">Citation Type Coverage (2 types)</div>
@@ -480,7 +546,18 @@
                     </td>
                 </tr>
     
-                <tr class="border-b border-slate-200 hover:bg-slate-50 accordion-toggle" data-toggle="toggle-apa-7th">
+                <tr class="border-b border-slate-200 hover:bg-slate-50 accordion-toggle"
+                    data-toggle="toggle-apa-7th"
+                    data-detail-id="content-apa-7th"
+                    data-style-name="apa-7th"
+                    data-format="author-date"
+                    data-dependents="783"
+                    data-citation-rate="1"
+                    data-bibliography-rate="1"
+                    data-component-rate="1"
+                    data-fidelity="1"
+                    data-quality="0.633"
+                    data-status-rank="4">
                     <td class="px-6 py-4 text-sm font-medium text-slate-900">apa-7th</td>
                     <td class="px-6 py-4 text-sm text-slate-600">author-date</td>
                     <td class="px-6 py-4 text-sm text-slate-600">783</td>
@@ -498,6 +575,7 @@
                         <span class="inline-flex items-center px-3 py-1 rounded text-xs font-medium bg-emerald-100 text-emerald-700">100%</span>
                     </td>
                     <td class="px-6 py-4 text-sm font-mono text-slate-600">100.0%</td>
+                    <td class="px-6 py-4 text-sm font-mono text-slate-600">63.3%</td>
                     <td class="px-6 py-4">
                         <span class="inline-flex items-center px-3 py-1 rounded text-xs font-medium badge-perfect">
                             Perfect
@@ -510,8 +588,18 @@
                     </td>
                 </tr>
                 <tr class="accordion-content" id="content-apa-7th">
-                    <td colspan="9" class="px-6 py-4 bg-slate-50">
+                    <td colspan="10" class="px-6 py-4 bg-slate-50">
                         <div class="max-w-4xl">
+
+                            <div class="mb-4 p-3 rounded border border-slate-200 bg-white">
+                                <div class="text-xs font-semibold text-slate-900 mb-2">Quality (SQI): 63.3%</div>
+                                <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs font-mono">
+                                    <div class="px-2 py-1 rounded bg-slate-100 text-slate-700">type 85.0%</div>
+                                    <div class="px-2 py-1 rounded bg-slate-100 text-slate-700">fallback 100.0%</div>
+                                    <div class="px-2 py-1 rounded bg-slate-100 text-slate-700">concision 7.2%</div>
+                                    <div class="px-2 py-1 rounded bg-slate-100 text-slate-700">presets 45.0%</div>
+                                </div>
+                            </div>
 
                             <div class="mb-4">
                                 <div class="text-xs font-semibold text-slate-900 mb-2">Citation Type Coverage (2 types)</div>
@@ -772,7 +860,18 @@
                     </td>
                 </tr>
     
-                <tr class="border-b border-slate-200 hover:bg-slate-50 accordion-toggle" data-toggle="toggle-chicago-notes">
+                <tr class="border-b border-slate-200 hover:bg-slate-50 accordion-toggle"
+                    data-toggle="toggle-chicago-notes"
+                    data-detail-id="content-chicago-notes"
+                    data-style-name="chicago-notes"
+                    data-format="note"
+                    data-dependents="5"
+                    data-citation-rate="1"
+                    data-bibliography-rate="-1"
+                    data-component-rate="-1"
+                    data-fidelity="1"
+                    data-quality="0.51"
+                    data-status-rank="4">
                     <td class="px-6 py-4 text-sm font-medium text-slate-900">chicago-notes</td>
                     <td class="px-6 py-4 text-sm text-slate-600">note</td>
                     <td class="px-6 py-4 text-sm text-slate-600">5</td>
@@ -790,6 +889,7 @@
                         —
                     </td>
                     <td class="px-6 py-4 text-sm font-mono text-slate-600">100.0%</td>
+                    <td class="px-6 py-4 text-sm font-mono text-slate-600">51.0%</td>
                     <td class="px-6 py-4">
                         <span class="inline-flex items-center px-3 py-1 rounded text-xs font-medium badge-perfect">
                             Perfect
@@ -802,8 +902,18 @@
                     </td>
                 </tr>
                 <tr class="accordion-content" id="content-chicago-notes">
-                    <td colspan="9" class="px-6 py-4 bg-slate-50">
+                    <td colspan="10" class="px-6 py-4 bg-slate-50">
                         <div class="max-w-4xl">
+
+                            <div class="mb-4 p-3 rounded border border-slate-200 bg-white">
+                                <div class="text-xs font-semibold text-slate-900 mb-2">Quality (SQI): 51.0%</div>
+                                <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs font-mono">
+                                    <div class="px-2 py-1 rounded bg-slate-100 text-slate-700">type 100.0%</div>
+                                    <div class="px-2 py-1 rounded bg-slate-100 text-slate-700">fallback 0.0%</div>
+                                    <div class="px-2 py-1 rounded bg-slate-100 text-slate-700">concision 37.1%</div>
+                                    <div class="px-2 py-1 rounded bg-slate-100 text-slate-700">presets 45.0%</div>
+                                </div>
+                            </div>
 
                             <div class="mb-4">
                                 <div class="text-xs font-semibold text-slate-900 mb-2">Citation Type Coverage (17 types)</div>
@@ -888,7 +998,18 @@
                     </td>
                 </tr>
     
-                <tr class="border-b border-slate-200 hover:bg-slate-50 accordion-toggle" data-toggle="toggle-elsevier-harvard">
+                <tr class="border-b border-slate-200 hover:bg-slate-50 accordion-toggle"
+                    data-toggle="toggle-elsevier-harvard"
+                    data-detail-id="content-elsevier-harvard"
+                    data-style-name="elsevier-harvard"
+                    data-format="author-date"
+                    data-dependents="665"
+                    data-citation-rate="1"
+                    data-bibliography-rate="1"
+                    data-component-rate="1"
+                    data-fidelity="1"
+                    data-quality="0"
+                    data-status-rank="4">
                     <td class="px-6 py-4 text-sm font-medium text-slate-900">elsevier-harvard</td>
                     <td class="px-6 py-4 text-sm text-slate-600">author-date</td>
                     <td class="px-6 py-4 text-sm text-slate-600">665</td>
@@ -906,6 +1027,7 @@
                         <span class="inline-flex items-center px-3 py-1 rounded text-xs font-medium bg-emerald-100 text-emerald-700">100%</span>
                     </td>
                     <td class="px-6 py-4 text-sm font-mono text-slate-600">100.0%</td>
+                    <td class="px-6 py-4 text-sm font-mono text-slate-600">0.0%</td>
                     <td class="px-6 py-4">
                         <span class="inline-flex items-center px-3 py-1 rounded text-xs font-medium badge-perfect">
                             Perfect
@@ -918,8 +1040,18 @@
                     </td>
                 </tr>
                 <tr class="accordion-content" id="content-elsevier-harvard">
-                    <td colspan="9" class="px-6 py-4 bg-slate-50">
+                    <td colspan="10" class="px-6 py-4 bg-slate-50">
                         <div class="max-w-4xl">
+
+                            <div class="mb-4 p-3 rounded border border-slate-200 bg-white">
+                                <div class="text-xs font-semibold text-slate-900 mb-2">Quality (SQI): 0.0%</div>
+                                <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs font-mono">
+                                    <div class="px-2 py-1 rounded bg-slate-100 text-slate-700">type 0.0%</div>
+                                    <div class="px-2 py-1 rounded bg-slate-100 text-slate-700">fallback 0.0%</div>
+                                    <div class="px-2 py-1 rounded bg-slate-100 text-slate-700">concision 0.0%</div>
+                                    <div class="px-2 py-1 rounded bg-slate-100 text-slate-700">presets 0.0%</div>
+                                </div>
+                            </div>
 
                             <div class="mb-4">
                                 <div class="text-xs font-semibold text-slate-900 mb-2">Citation Type Coverage (2 types)</div>
@@ -1188,7 +1320,18 @@
                     </td>
                 </tr>
     
-                <tr class="border-b border-slate-200 hover:bg-slate-50 accordion-toggle" data-toggle="toggle-elsevier-vancouver">
+                <tr class="border-b border-slate-200 hover:bg-slate-50 accordion-toggle"
+                    data-toggle="toggle-elsevier-vancouver"
+                    data-detail-id="content-elsevier-vancouver"
+                    data-style-name="elsevier-vancouver"
+                    data-format="numeric"
+                    data-dependents="502"
+                    data-citation-rate="1"
+                    data-bibliography-rate="1"
+                    data-component-rate="1"
+                    data-fidelity="1"
+                    data-quality="0.844"
+                    data-status-rank="4">
                     <td class="px-6 py-4 text-sm font-medium text-slate-900">elsevier-vancouver</td>
                     <td class="px-6 py-4 text-sm text-slate-600">numeric</td>
                     <td class="px-6 py-4 text-sm text-slate-600">502</td>
@@ -1206,6 +1349,7 @@
                         <span class="inline-flex items-center px-3 py-1 rounded text-xs font-medium bg-emerald-100 text-emerald-700">100%</span>
                     </td>
                     <td class="px-6 py-4 text-sm font-mono text-slate-600">100.0%</td>
+                    <td class="px-6 py-4 text-sm font-mono text-slate-600">84.4%</td>
                     <td class="px-6 py-4">
                         <span class="inline-flex items-center px-3 py-1 rounded text-xs font-medium badge-perfect">
                             Perfect
@@ -1218,8 +1362,18 @@
                     </td>
                 </tr>
                 <tr class="accordion-content" id="content-elsevier-vancouver">
-                    <td colspan="9" class="px-6 py-4 bg-slate-50">
+                    <td colspan="10" class="px-6 py-4 bg-slate-50">
                         <div class="max-w-4xl">
+
+                            <div class="mb-4 p-3 rounded border border-slate-200 bg-white">
+                                <div class="text-xs font-semibold text-slate-900 mb-2">Quality (SQI): 84.4%</div>
+                                <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs font-mono">
+                                    <div class="px-2 py-1 rounded bg-slate-100 text-slate-700">type 85.0%</div>
+                                    <div class="px-2 py-1 rounded bg-slate-100 text-slate-700">fallback 100.0%</div>
+                                    <div class="px-2 py-1 rounded bg-slate-100 text-slate-700">concision 82.6%</div>
+                                    <div class="px-2 py-1 rounded bg-slate-100 text-slate-700">presets 60.0%</div>
+                                </div>
+                            </div>
 
                             <div class="mb-4">
                                 <div class="text-xs font-semibold text-slate-900 mb-2">Citation Type Coverage (2 types)</div>
@@ -1488,7 +1642,18 @@
                     </td>
                 </tr>
     
-                <tr class="border-b border-slate-200 hover:bg-slate-50 accordion-toggle" data-toggle="toggle-elsevier-with-titles">
+                <tr class="border-b border-slate-200 hover:bg-slate-50 accordion-toggle"
+                    data-toggle="toggle-elsevier-with-titles"
+                    data-detail-id="content-elsevier-with-titles"
+                    data-style-name="elsevier-with-titles"
+                    data-format="numeric"
+                    data-dependents="672"
+                    data-citation-rate="1"
+                    data-bibliography-rate="1"
+                    data-component-rate="1"
+                    data-fidelity="1"
+                    data-quality="0.643"
+                    data-status-rank="4">
                     <td class="px-6 py-4 text-sm font-medium text-slate-900">elsevier-with-titles</td>
                     <td class="px-6 py-4 text-sm text-slate-600">numeric</td>
                     <td class="px-6 py-4 text-sm text-slate-600">672</td>
@@ -1506,6 +1671,7 @@
                         <span class="inline-flex items-center px-3 py-1 rounded text-xs font-medium bg-emerald-100 text-emerald-700">100%</span>
                     </td>
                     <td class="px-6 py-4 text-sm font-mono text-slate-600">100.0%</td>
+                    <td class="px-6 py-4 text-sm font-mono text-slate-600">64.3%</td>
                     <td class="px-6 py-4">
                         <span class="inline-flex items-center px-3 py-1 rounded text-xs font-medium badge-perfect">
                             Perfect
@@ -1518,8 +1684,18 @@
                     </td>
                 </tr>
                 <tr class="accordion-content" id="content-elsevier-with-titles">
-                    <td colspan="9" class="px-6 py-4 bg-slate-50">
+                    <td colspan="10" class="px-6 py-4 bg-slate-50">
                         <div class="max-w-4xl">
+
+                            <div class="mb-4 p-3 rounded border border-slate-200 bg-white">
+                                <div class="text-xs font-semibold text-slate-900 mb-2">Quality (SQI): 64.3%</div>
+                                <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs font-mono">
+                                    <div class="px-2 py-1 rounded bg-slate-100 text-slate-700">type 85.0%</div>
+                                    <div class="px-2 py-1 rounded bg-slate-100 text-slate-700">fallback 100.0%</div>
+                                    <div class="px-2 py-1 rounded bg-slate-100 text-slate-700">concision 11.0%</div>
+                                    <div class="px-2 py-1 rounded bg-slate-100 text-slate-700">presets 45.0%</div>
+                                </div>
+                            </div>
 
                             <div class="mb-4">
                                 <div class="text-xs font-semibold text-slate-900 mb-2">Citation Type Coverage (2 types)</div>
@@ -1788,7 +1964,18 @@
                     </td>
                 </tr>
     
-                <tr class="border-b border-slate-200 hover:bg-slate-50 accordion-toggle" data-toggle="toggle-springer-basic-author-date">
+                <tr class="border-b border-slate-200 hover:bg-slate-50 accordion-toggle"
+                    data-toggle="toggle-springer-basic-author-date"
+                    data-detail-id="content-springer-basic-author-date"
+                    data-style-name="springer-basic-author-date"
+                    data-format="author-date"
+                    data-dependents="460"
+                    data-citation-rate="1"
+                    data-bibliography-rate="1"
+                    data-component-rate="1"
+                    data-fidelity="1"
+                    data-quality="0.753"
+                    data-status-rank="4">
                     <td class="px-6 py-4 text-sm font-medium text-slate-900">springer-basic-author-date</td>
                     <td class="px-6 py-4 text-sm text-slate-600">author-date</td>
                     <td class="px-6 py-4 text-sm text-slate-600">460</td>
@@ -1806,6 +1993,7 @@
                         <span class="inline-flex items-center px-3 py-1 rounded text-xs font-medium bg-emerald-100 text-emerald-700">100%</span>
                     </td>
                     <td class="px-6 py-4 text-sm font-mono text-slate-600">100.0%</td>
+                    <td class="px-6 py-4 text-sm font-mono text-slate-600">75.3%</td>
                     <td class="px-6 py-4">
                         <span class="inline-flex items-center px-3 py-1 rounded text-xs font-medium badge-perfect">
                             Perfect
@@ -1818,8 +2006,18 @@
                     </td>
                 </tr>
                 <tr class="accordion-content" id="content-springer-basic-author-date">
-                    <td colspan="9" class="px-6 py-4 bg-slate-50">
+                    <td colspan="10" class="px-6 py-4 bg-slate-50">
                         <div class="max-w-4xl">
+
+                            <div class="mb-4 p-3 rounded border border-slate-200 bg-white">
+                                <div class="text-xs font-semibold text-slate-900 mb-2">Quality (SQI): 75.3%</div>
+                                <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs font-mono">
+                                    <div class="px-2 py-1 rounded bg-slate-100 text-slate-700">type 85.0%</div>
+                                    <div class="px-2 py-1 rounded bg-slate-100 text-slate-700">fallback 100.0%</div>
+                                    <div class="px-2 py-1 rounded bg-slate-100 text-slate-700">concision 55.2%</div>
+                                    <div class="px-2 py-1 rounded bg-slate-100 text-slate-700">presets 45.0%</div>
+                                </div>
+                            </div>
 
                             <div class="mb-4">
                                 <div class="text-xs font-semibold text-slate-900 mb-2">Citation Type Coverage (2 types)</div>
@@ -2088,7 +2286,18 @@
                     </td>
                 </tr>
     
-                <tr class="border-b border-slate-200 hover:bg-slate-50 accordion-toggle" data-toggle="toggle-springer-basic-brackets">
+                <tr class="border-b border-slate-200 hover:bg-slate-50 accordion-toggle"
+                    data-toggle="toggle-springer-basic-brackets"
+                    data-detail-id="content-springer-basic-brackets"
+                    data-style-name="springer-basic-brackets"
+                    data-format="numeric"
+                    data-dependents="352"
+                    data-citation-rate="1"
+                    data-bibliography-rate="1"
+                    data-component-rate="1"
+                    data-fidelity="1"
+                    data-quality="0.774"
+                    data-status-rank="4">
                     <td class="px-6 py-4 text-sm font-medium text-slate-900">springer-basic-brackets</td>
                     <td class="px-6 py-4 text-sm text-slate-600">numeric</td>
                     <td class="px-6 py-4 text-sm text-slate-600">352</td>
@@ -2106,6 +2315,7 @@
                         <span class="inline-flex items-center px-3 py-1 rounded text-xs font-medium bg-emerald-100 text-emerald-700">100%</span>
                     </td>
                     <td class="px-6 py-4 text-sm font-mono text-slate-600">100.0%</td>
+                    <td class="px-6 py-4 text-sm font-mono text-slate-600">77.4%</td>
                     <td class="px-6 py-4">
                         <span class="inline-flex items-center px-3 py-1 rounded text-xs font-medium badge-perfect">
                             Perfect
@@ -2118,8 +2328,18 @@
                     </td>
                 </tr>
                 <tr class="accordion-content" id="content-springer-basic-brackets">
-                    <td colspan="9" class="px-6 py-4 bg-slate-50">
+                    <td colspan="10" class="px-6 py-4 bg-slate-50">
                         <div class="max-w-4xl">
+
+                            <div class="mb-4 p-3 rounded border border-slate-200 bg-white">
+                                <div class="text-xs font-semibold text-slate-900 mb-2">Quality (SQI): 77.4%</div>
+                                <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs font-mono">
+                                    <div class="px-2 py-1 rounded bg-slate-100 text-slate-700">type 85.0%</div>
+                                    <div class="px-2 py-1 rounded bg-slate-100 text-slate-700">fallback 100.0%</div>
+                                    <div class="px-2 py-1 rounded bg-slate-100 text-slate-700">concision 63.7%</div>
+                                    <div class="px-2 py-1 rounded bg-slate-100 text-slate-700">presets 45.0%</div>
+                                </div>
+                            </div>
 
                             <div class="mb-4">
                                 <div class="text-xs font-semibold text-slate-900 mb-2">Citation Type Coverage (2 types)</div>
@@ -2388,7 +2608,18 @@
                     </td>
                 </tr>
     
-                <tr class="border-b border-slate-200 hover:bg-slate-50 accordion-toggle" data-toggle="toggle-springer-socpsych-author-date">
+                <tr class="border-b border-slate-200 hover:bg-slate-50 accordion-toggle"
+                    data-toggle="toggle-springer-socpsych-author-date"
+                    data-detail-id="content-springer-socpsych-author-date"
+                    data-style-name="springer-socpsych-author-date"
+                    data-format="author-date"
+                    data-dependents="317"
+                    data-citation-rate="1"
+                    data-bibliography-rate="0.9642857142857143"
+                    data-component-rate="1"
+                    data-fidelity="0.972"
+                    data-quality="0.872"
+                    data-status-rank="3">
                     <td class="px-6 py-4 text-sm font-medium text-slate-900">springer-socpsych-author-date</td>
                     <td class="px-6 py-4 text-sm text-slate-600">author-date</td>
                     <td class="px-6 py-4 text-sm text-slate-600">317</td>
@@ -2406,6 +2637,7 @@
                         <span class="inline-flex items-center px-3 py-1 rounded text-xs font-medium bg-emerald-100 text-emerald-700">100%</span>
                     </td>
                     <td class="px-6 py-4 text-sm font-mono text-slate-600">97.2%</td>
+                    <td class="px-6 py-4 text-sm font-mono text-slate-600">87.2%</td>
                     <td class="px-6 py-4">
                         <span class="inline-flex items-center px-3 py-1 rounded text-xs font-medium badge-partial">
                             Partial
@@ -2418,8 +2650,18 @@
                     </td>
                 </tr>
                 <tr class="accordion-content" id="content-springer-socpsych-author-date">
-                    <td colspan="9" class="px-6 py-4 bg-slate-50">
+                    <td colspan="10" class="px-6 py-4 bg-slate-50">
                         <div class="max-w-4xl">
+
+                            <div class="mb-4 p-3 rounded border border-slate-200 bg-white">
+                                <div class="text-xs font-semibold text-slate-900 mb-2">Quality (SQI): 87.2%</div>
+                                <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs font-mono">
+                                    <div class="px-2 py-1 rounded bg-slate-100 text-slate-700">type 85.0%</div>
+                                    <div class="px-2 py-1 rounded bg-slate-100 text-slate-700">fallback 100.0%</div>
+                                    <div class="px-2 py-1 rounded bg-slate-100 text-slate-700">concision 93.7%</div>
+                                    <div class="px-2 py-1 rounded bg-slate-100 text-slate-700">presets 60.0%</div>
+                                </div>
+                            </div>
 
                             <div class="mb-4">
                                 <div class="text-xs font-semibold text-slate-900 mb-2">Citation Type Coverage (2 types)</div>
@@ -2688,7 +2930,18 @@
                     </td>
                 </tr>
     
-                <tr class="border-b border-slate-200 hover:bg-slate-50 accordion-toggle" data-toggle="toggle-springer-vancouver-brackets">
+                <tr class="border-b border-slate-200 hover:bg-slate-50 accordion-toggle"
+                    data-toggle="toggle-springer-vancouver-brackets"
+                    data-detail-id="content-springer-vancouver-brackets"
+                    data-style-name="springer-vancouver-brackets"
+                    data-format="numeric"
+                    data-dependents="472"
+                    data-citation-rate="1"
+                    data-bibliography-rate="1"
+                    data-component-rate="1"
+                    data-fidelity="1"
+                    data-quality="0.644"
+                    data-status-rank="4">
                     <td class="px-6 py-4 text-sm font-medium text-slate-900">springer-vancouver-brackets</td>
                     <td class="px-6 py-4 text-sm text-slate-600">numeric</td>
                     <td class="px-6 py-4 text-sm text-slate-600">472</td>
@@ -2706,6 +2959,7 @@
                         <span class="inline-flex items-center px-3 py-1 rounded text-xs font-medium bg-emerald-100 text-emerald-700">100%</span>
                     </td>
                     <td class="px-6 py-4 text-sm font-mono text-slate-600">100.0%</td>
+                    <td class="px-6 py-4 text-sm font-mono text-slate-600">64.4%</td>
                     <td class="px-6 py-4">
                         <span class="inline-flex items-center px-3 py-1 rounded text-xs font-medium badge-perfect">
                             Perfect
@@ -2718,8 +2972,18 @@
                     </td>
                 </tr>
                 <tr class="accordion-content" id="content-springer-vancouver-brackets">
-                    <td colspan="9" class="px-6 py-4 bg-slate-50">
+                    <td colspan="10" class="px-6 py-4 bg-slate-50">
                         <div class="max-w-4xl">
+
+                            <div class="mb-4 p-3 rounded border border-slate-200 bg-white">
+                                <div class="text-xs font-semibold text-slate-900 mb-2">Quality (SQI): 64.4%</div>
+                                <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs font-mono">
+                                    <div class="px-2 py-1 rounded bg-slate-100 text-slate-700">type 85.0%</div>
+                                    <div class="px-2 py-1 rounded bg-slate-100 text-slate-700">fallback 100.0%</div>
+                                    <div class="px-2 py-1 rounded bg-slate-100 text-slate-700">concision 11.7%</div>
+                                    <div class="px-2 py-1 rounded bg-slate-100 text-slate-700">presets 45.0%</div>
+                                </div>
+                            </div>
 
                             <div class="mb-4">
                                 <div class="text-xs font-semibold text-slate-900 mb-2">Citation Type Coverage (2 types)</div>
@@ -2988,7 +3252,18 @@
                     </td>
                 </tr>
     
-                <tr class="border-b border-slate-200 hover:bg-slate-50 accordion-toggle" data-toggle="toggle-taylor-and-francis-chicago-author-date">
+                <tr class="border-b border-slate-200 hover:bg-slate-50 accordion-toggle"
+                    data-toggle="toggle-taylor-and-francis-chicago-author-date"
+                    data-detail-id="content-taylor-and-francis-chicago-author-date"
+                    data-style-name="taylor-and-francis-chicago-author-date"
+                    data-format="author-date"
+                    data-dependents="234"
+                    data-citation-rate="1"
+                    data-bibliography-rate="0.9285714285714286"
+                    data-component-rate="1"
+                    data-fidelity="0.944"
+                    data-quality="0.875"
+                    data-status-rank="3">
                     <td class="px-6 py-4 text-sm font-medium text-slate-900">taylor-and-francis-chicago-author-date</td>
                     <td class="px-6 py-4 text-sm text-slate-600">author-date</td>
                     <td class="px-6 py-4 text-sm text-slate-600">234</td>
@@ -3006,6 +3281,7 @@
                         <span class="inline-flex items-center px-3 py-1 rounded text-xs font-medium bg-emerald-100 text-emerald-700">100%</span>
                     </td>
                     <td class="px-6 py-4 text-sm font-mono text-slate-600">94.4%</td>
+                    <td class="px-6 py-4 text-sm font-mono text-slate-600">87.5%</td>
                     <td class="px-6 py-4">
                         <span class="inline-flex items-center px-3 py-1 rounded text-xs font-medium badge-partial">
                             Partial
@@ -3018,8 +3294,18 @@
                     </td>
                 </tr>
                 <tr class="accordion-content" id="content-taylor-and-francis-chicago-author-date">
-                    <td colspan="9" class="px-6 py-4 bg-slate-50">
+                    <td colspan="10" class="px-6 py-4 bg-slate-50">
                         <div class="max-w-4xl">
+
+                            <div class="mb-4 p-3 rounded border border-slate-200 bg-white">
+                                <div class="text-xs font-semibold text-slate-900 mb-2">Quality (SQI): 87.5%</div>
+                                <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs font-mono">
+                                    <div class="px-2 py-1 rounded bg-slate-100 text-slate-700">type 85.0%</div>
+                                    <div class="px-2 py-1 rounded bg-slate-100 text-slate-700">fallback 100.0%</div>
+                                    <div class="px-2 py-1 rounded bg-slate-100 text-slate-700">concision 95.0%</div>
+                                    <div class="px-2 py-1 rounded bg-slate-100 text-slate-700">presets 60.0%</div>
+                                </div>
+                            </div>
 
                             <div class="mb-4">
                                 <div class="text-xs font-semibold text-slate-900 mb-2">Citation Type Coverage (2 types)</div>
@@ -3318,9 +3604,77 @@
     </footer>
 
     <script>
+        const sortState = { key: null, direction: 1 };
+
         function toggleAccordion(contentId) {
             const content = document.getElementById(contentId);
             if (content) content.classList.toggle('active');
+        }
+
+        function updateSortIndicators(activeKey, direction) {
+            document.querySelectorAll('[id^="sort-ind-"]').forEach((el) => {
+                el.textContent = '↕';
+                el.classList.remove('text-primary');
+                el.classList.add('text-slate-400');
+            });
+            const active = document.getElementById('sort-ind-' + activeKey);
+            if (active) {
+                active.textContent = direction > 0 ? '↑' : '↓';
+                active.classList.remove('text-slate-400');
+                active.classList.add('text-primary');
+            }
+        }
+
+        function sortCompatTable(key) {
+            const tbody = document.querySelector('table tbody');
+            if (!tbody) return;
+
+            const summaryRows = Array.from(tbody.querySelectorAll('tr.accordion-toggle'));
+            const rowPairs = summaryRows.map((summary) => {
+                const detailId = summary.dataset.detailId;
+                const detail = detailId ? document.getElementById(detailId) : null;
+                return { summary, detail };
+            });
+
+            const defaultAsc = key === 'style-name' || key === 'format';
+            if (sortState.key === key) {
+                sortState.direction *= -1;
+            } else {
+                sortState.key = key;
+                sortState.direction = defaultAsc ? 1 : -1;
+            }
+
+            const asNumber = (value) => {
+                const parsed = Number(value);
+                return Number.isNaN(parsed) ? -Infinity : parsed;
+            };
+            const asText = (value) => String(value || '').toLowerCase();
+
+            rowPairs.sort((a, b) => {
+                const left = a.summary.dataset[key] || '';
+                const right = b.summary.dataset[key] || '';
+                const numericKeys = new Set([
+                    'dependents',
+                    'citation-rate',
+                    'bibliography-rate',
+                    'component-rate',
+                    'fidelity',
+                    'quality',
+                    'status-rank',
+                ]);
+
+                if (numericKeys.has(key)) {
+                    return (asNumber(left) - asNumber(right)) * sortState.direction;
+                }
+                return asText(left).localeCompare(asText(right)) * sortState.direction;
+            });
+
+            for (const pair of rowPairs) {
+                tbody.appendChild(pair.summary);
+                if (pair.detail) tbody.appendChild(pair.detail);
+            }
+
+            updateSortIndicators(key, sortState.direction);
         }
     </script>
 
