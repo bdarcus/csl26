@@ -275,9 +275,9 @@ CSLN uses a **hybrid approach** combining the strengths of three migration strat
 
 1. **XML Options Extraction** - The XML compiler excels at extracting global options (name formatting, et-al rules, initialization, date forms). This is why citations achieve 87-100% accuracy out of the box.
 
-2. **Output-Driven Template Inference** - For template structure (which components, in what order, with which delimiters), observing actual rendered output is more reliable than parsing 126+ nested conditionals in CSL 1.0. The template inferrer has been validated to correctly identify component ordering, type-specific suppression, and delimiter consensus across 6 major styles.
+2. **Output-Driven Template Inference** - The primary strategy for template structure. Observing actual rendered output is more reliable than parsing 126+ nested conditionals in CSL 1.0. The `csln-migrate` pipeline resolves citation and bibliography templates from inferred output artifacts first, falling back to XML compilation only when artifacts are missing.
 
-3. **Hand-Authored Styles** - For the top 5-10 parent styles covering 60% of the ecosystem (like APA 7th), a human domain expert or LLM-assisted author creates gold-standard CSLN templates using official style guides. APA 7th has been validated with 5/5 citation and bibliography matches.
+3. **Hand-Authored Styles** - For the top 5-10 parent styles covering 60% of the ecosystem (like APA 7th), a human domain expert or LLM-assisted author creates gold-standard CSLN templates using official style guides. APA 7th is the validated gold standard (8/8 citations, 27/27 bibliography).
 
 **Why hybrid?**
 - XML options extraction handles what it does well (global config), while being abandoned where it fails (template structure)
@@ -310,10 +310,11 @@ For existing CSL 1.0 styles, CSLN provides multiple migration options:
 
 **Automated Migration** (for low-priority styles):
 ```bash
-# XML-based migration extracts options and compiles templates
+# Output-driven migration: extracts options from XML, resolves templates from
+# inferred citeproc-js output artifacts, falls back to XML compilation
 cargo run --bin csln-migrate -- styles-legacy/apa.csl
 
-# Output: csln-new.yaml with XML-derived options and compiled template
+# Output: csln-new.yaml with XML-derived options and inferred templates
 # Note: Options are accurate (87-100% citations), templates may need refinement
 ```
 
