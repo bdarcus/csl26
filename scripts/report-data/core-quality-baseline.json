@@ -1,0 +1,73 @@
+{
+  "generated": "2026-02-19",
+  "commit": "eb4dbad",
+  "source": "scripts/report-core.js",
+  "styles": {
+    "american-medical-association": {
+      "fidelityScore": 1,
+      "quality": 91.4,
+      "concision": 92.6,
+      "presetUsage": 90
+    },
+    "apa-7th": {
+      "fidelityScore": 1,
+      "quality": 86.2,
+      "concision": 71.6,
+      "presetUsage": 90
+    },
+    "chicago-notes": {
+      "fidelityScore": 1,
+      "quality": 86.3,
+      "concision": 64.9,
+      "presetUsage": 90
+    },
+    "elsevier-harvard": {
+      "fidelityScore": 1,
+      "quality": 89,
+      "concision": 95.1,
+      "presetUsage": 70
+    },
+    "elsevier-vancouver": {
+      "fidelityScore": 1,
+      "quality": 88.7,
+      "concision": 93.6,
+      "presetUsage": 70
+    },
+    "elsevier-with-titles": {
+      "fidelityScore": 1,
+      "quality": 89.8,
+      "concision": 86.1,
+      "presetUsage": 90
+    },
+    "springer-basic-author-date": {
+      "fidelityScore": 1,
+      "quality": 87.9,
+      "concision": 90.7,
+      "presetUsage": 70
+    },
+    "springer-basic-brackets": {
+      "fidelityScore": 1,
+      "quality": 90.3,
+      "concision": 94.3,
+      "presetUsage": 80
+    },
+    "springer-socpsych-author-date": {
+      "fidelityScore": 1,
+      "quality": 89.5,
+      "concision": 97.2,
+      "presetUsage": 70
+    },
+    "springer-vancouver-brackets": {
+      "fidelityScore": 1,
+      "quality": 88.6,
+      "concision": 81.3,
+      "presetUsage": 90
+    },
+    "taylor-and-francis-chicago-author-date": {
+      "fidelityScore": 1,
+      "quality": 89.7,
+      "concision": 97.6,
+      "presetUsage": 70
+    }
+  }
+}

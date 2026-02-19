@@ -142,11 +142,16 @@ Improve SQI so it rewards real maintainability changes:
 ## Phase 5: Governance and Regression Safety
 
 1. Add a CI report check that fails if any core fidelity drops below `1.0`.
+   - Completed: `scripts/check-core-quality.js` enforces this as a hard gate.
+   - Wired in `.github/workflows/ci.yml`.
 2. Add an SQI drift report (warn-level initially) for:
    - large concision regressions
    - preset-usage regressions
    - metric computation failures
+   - Completed (warn-level): emitted by `scripts/check-core-quality.js`
+     against `scripts/report-data/core-quality-baseline.json`.
 3. Record per-wave before/after snapshots in `docs/compat.html` generation notes.
+   - Pending follow-up: add explicit wave snapshot notes to compat page output.
 
 ## Deliverables
 
