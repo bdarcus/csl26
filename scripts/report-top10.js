@@ -1,33 +1,35 @@
 #!/usr/bin/env node
 /**
- * Top-10 Style Compatibility Report Generator
+ * Core Styles Compatibility Report Generator
  *
- * Generates a JSON report of compatibility metrics for Tier 1 top-10 styles
+ * Generates a JSON report of compatibility metrics for core styles in styles/
  * and optionally produces an HTML dashboard.
  *
  * Usage:
- *   node report-top10.js                                    # Output JSON to stdout
- *   node report-top10.js --write-html                       # Write HTML to docs/compat.html
- *   node report-top10.js --output-html /path/to/output.html # Write HTML to custom path
- *   node report-top10.js --styles-dir /path/to/csl           # Override CSL directory
+ *   node report-top10.js                                      # Output JSON to stdout
+ *   node report-top10.js --write-html                         # Write HTML to docs/compat.html
+ *   node report-top10.js --output-html /path/to/output.html   # Write HTML to custom path
+ *   node report-top10.js --styles-dir /path/to/csl            # Override CSL directory
  */
 
 const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
 
-const TOP_10_STYLES = [
-  { name: 'apa', dependents: 783, format: 'author-date' },
-  { name: 'elsevier-with-titles', dependents: 672, format: 'numeric' },
-  { name: 'elsevier-harvard', dependents: 665, format: 'author-date' },
-  { name: 'elsevier-vancouver', dependents: 502, format: 'numeric' },
-  { name: 'springer-vancouver-brackets', dependents: 472, format: 'numeric' },
-  { name: 'springer-basic-author-date', dependents: 460, format: 'author-date' },
-  { name: 'springer-basic-brackets', dependents: 352, format: 'numeric' },
-  { name: 'springer-socpsych-author-date', dependents: 317, format: 'author-date' },
-  { name: 'american-medical-association', dependents: 293, format: 'numeric' },
-  { name: 'taylor-and-francis-chicago-author-date', dependents: 234, format: 'author-date' },
-];
+const STYLE_METADATA = {
+  'apa-7th': { source: 'apa', dependents: 783, format: 'author-date' },
+  'elsevier-with-titles': { dependents: 672, format: 'numeric' },
+  'elsevier-harvard': { dependents: 665, format: 'author-date' },
+  'elsevier-vancouver': { dependents: 502, format: 'numeric' },
+  'springer-vancouver-brackets': { dependents: 472, format: 'numeric' },
+  'springer-basic-author-date': { dependents: 460, format: 'author-date' },
+  'springer-basic-brackets': { dependents: 352, format: 'numeric' },
+  'springer-socpsych-author-date': { dependents: 317, format: 'author-date' },
+  'american-medical-association': { dependents: 293, format: 'numeric' },
+  'taylor-and-francis-chicago-author-date': { dependents: 234, format: 'author-date' },
+  'annals-of-the-association-of-american-geographers': { format: 'author-date' },
+  'chicago-notes': { format: 'note' },
+};
 
 const TOTAL_DEPENDENTS = 7987;
 
@@ -93,6 +95,27 @@ function getStylesDir(optionsDir) {
   throw new Error(`Styles directory not found. Use --styles-dir to specify path.`);
 }
 
+function discoverCoreStyles() {
+  const stylesRoot = path.join(path.dirname(__dirname), 'styles');
+  if (!fs.existsSync(stylesRoot)) {
+    throw new Error(`Core styles directory not found: ${stylesRoot}`);
+  }
+
+  return fs.readdirSync(stylesRoot)
+    .filter((file) => file.endsWith('.yaml'))
+    .map((file) => file.replace(/\.yaml$/, ''))
+    .sort()
+    .map((name) => {
+      const meta = STYLE_METADATA[name] || {};
+      return {
+        name,
+        sourceName: meta.source || name,
+        dependents: meta.dependents ?? null,
+        format: meta.format || 'unknown',
+      };
+    });
+}
+
 /**
  * Run oracle.js for a single style and parse output
  */
@@ -156,22 +179,6 @@ function loadDivergences() {
 }
 
 /**
- * Detect whether a style is hand-authored or XML-based
- */
-function detectTemplateSource(styleName) {
-  const projectRoot = path.dirname(__dirname);
-  const stylesDir = path.join(projectRoot, 'styles');
-  if (fs.existsSync(stylesDir)) {
-    const files = fs.readdirSync(stylesDir);
-    const baseName = styleName.replace(/-\d+th$/, '').replace(/-\d+$/, '');
-    if (files.some(f => f.endsWith('.yaml') && (f === `${styleName}.yaml` || f.startsWith(`${styleName}-`) || f.startsWith(`${baseName}-`)))) {
-      return 'hand';
-    }
-  }
-  return 'xml';
-}
-
-/**
  * Compute component match rate from oracle result
  */
 function computeComponentMatchRate(oracleResult) {
@@ -200,6 +207,7 @@ function computeComponentMatchRate(oracleResult) {
  */
 function generateReport(options) {
   const stylesDir = getStylesDir(options.stylesDir);
+  const coreStyles = discoverCoreStyles();
   const divergences = loadDivergences();
 
   const styles = [];
@@ -209,15 +217,17 @@ function generateReport(options) {
   let biblioPassed = 0;
   let errorCount = 0;
 
-  for (const styleSpec of TOP_10_STYLES) {
-    const stylePath = path.join(stylesDir, `${styleSpec.name}.csl`);
+  for (const styleSpec of coreStyles) {
+    const stylePath = path.join(stylesDir, `${styleSpec.sourceName}.csl`);
 
     if (!fs.existsSync(stylePath)) {
       styles.push({
         name: styleSpec.name,
         dependents: styleSpec.dependents,
         format: styleSpec.format,
-        impactPct: (styleSpec.dependents / TOTAL_DEPENDENTS * 100).toFixed(2),
+        impactPct: styleSpec.dependents != null
+          ? (styleSpec.dependents / TOTAL_DEPENDENTS * 100).toFixed(2)
+          : null,
         fidelityScore: 0,
         citations: { passed: 0, total: 0 },
         bibliography: { passed: 0, total: 0 },
@@ -244,33 +254,29 @@ function generateReport(options) {
     biblioTotal += bibliography.total || 0;
     biblioPassed += bibliography.passed || 0;
 
-    const templateSource = detectTemplateSource(styleSpec.name);
     const componentMatchRate = computeComponentMatchRate(oracleResult);
 
-    let statusTier = 'pending';
+    let statusTier = 'failing';
     if (oracleResult.error) {
       statusTier = 'error';
-    } else if (templateSource === 'xml') {
-      statusTier = 'pending';
     } else if (fidelityScore === 1.0) {
       statusTier = 'perfect';
     } else if (fidelityScore > 0) {
       statusTier = 'partial';
-    } else {
-      statusTier = 'failing';
     }
 
     styles.push({
       name: styleSpec.name,
       dependents: styleSpec.dependents,
       format: styleSpec.format,
-      impactPct: (styleSpec.dependents / TOTAL_DEPENDENTS * 100).toFixed(2),
+      impactPct: styleSpec.dependents != null
+        ? (styleSpec.dependents / TOTAL_DEPENDENTS * 100).toFixed(2)
+        : null,
       fidelityScore: parseFloat(fidelityScore.toFixed(3)),
       citations,
       bibliography,
       knownDivergences: divergences[styleSpec.name] || [],
       error: oracleResult.error || null,
-      templateSource,
       componentMatchRate,
       statusTier,
       componentSummary: oracleResult.componentSummary || {},
@@ -279,13 +285,17 @@ function generateReport(options) {
     });
   }
 
-  const totalImpact = (TOP_10_STYLES.reduce((sum, s) => sum + s.dependents, 0) / TOTAL_DEPENDENTS * 100).toFixed(2);
+  const knownDependents = coreStyles
+    .filter((s) => typeof s.dependents === 'number')
+    .reduce((sum, s) => sum + s.dependents, 0);
+  const totalImpact = ((knownDependents / TOTAL_DEPENDENTS) * 100).toFixed(2);
 
   return {
     report: {
       generated: getTimestamp(),
       commit: getGitCommit(),
       totalImpact: parseFloat(totalImpact),
+      totalStyles: coreStyles.length,
       citationsOverall: { passed: citationsPassed, total: citationsTotal },
       bibliographyOverall: { passed: biblioPassed, total: biblioTotal },
       styles,
@@ -429,7 +439,7 @@ function generateHtmlHeader(report) {
                     <h1 class="text-4xl md:text-5xl font-mono font-bold tracking-tight text-slate-900 mb-2">
                         Style Compatibility Report
                     </h1>
-                    <p class="text-slate-500">Compatibility metrics for Tier 1 top-10 parent styles</p>
+                    <p class="text-slate-500">Compatibility metrics for core styles in <code>styles/</code></p>
                 </div>
             </div>
             <div class="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
@@ -457,11 +467,11 @@ function generateHtmlStats(report) {
     <section class="py-12 px-6 bg-accent-cream">
         <div class="max-w-7xl mx-auto">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <!-- Coverage Impact -->
+                <!-- Core Styles -->
                 <div class="bg-white rounded-xl border border-slate-200 p-6">
-                    <div class="text-sm font-medium text-slate-500 mb-2">Coverage Impact</div>
-                    <div class="text-3xl font-bold text-slate-900">${report.totalImpact}%</div>
-                    <div class="text-xs text-slate-400 mt-2">of dependent styles</div>
+                    <div class="text-sm font-medium text-slate-500 mb-2">Core Styles</div>
+                    <div class="text-3xl font-bold text-slate-900">${report.totalStyles}</div>
+                    <div class="text-xs text-slate-400 mt-2">${report.totalImpact}% known dependent coverage</div>
                 </div>
 
                 <!-- Citations Overall -->
@@ -500,22 +510,17 @@ function generateHtmlTable(report) {
       'perfect': 'badge-perfect',
       'partial': 'badge-partial',
       'failing': 'badge-failing',
-      'pending': 'badge-pending',
       'error': 'badge-pending',
     };
     const statusTextMap = {
       'perfect': 'Perfect',
       'partial': 'Partial',
       'failing': 'Failing',
-      'pending': 'Pending (XML)',
       'error': 'Error',
     };
 
     const statusBadge = statusBadgeMap[style.statusTier];
     const statusText = statusTextMap[style.statusTier];
-
-    const templateBadgeClass = style.templateSource === 'hand' ? 'badge-perfect' : 'badge-pending';
-    const templateText = style.templateSource === 'hand' ? 'hand' : 'xml';
 
     const citationBadge = style.citations.total === 0
       ? 'badge-pending'
@@ -551,12 +556,7 @@ function generateHtmlTable(report) {
                 <tr class="border-b border-slate-200 hover:bg-slate-50 accordion-toggle" data-toggle="${toggleId}">
                     <td class="px-6 py-4 text-sm font-medium text-slate-900">${style.name}</td>
                     <td class="px-6 py-4 text-sm text-slate-600">${style.format}</td>
-                    <td class="px-6 py-4 text-sm text-slate-600">${style.dependents}</td>
-                    <td class="px-6 py-4">
-                        <span class="inline-flex items-center px-3 py-1 rounded text-xs font-medium ${templateBadgeClass}">
-                            ${templateText}
-                        </span>
-                    </td>
+                    <td class="px-6 py-4 text-sm text-slate-600">${style.dependents ?? '—'}</td>
                     <td class="px-6 py-4">
                         <span class="inline-flex items-center px-3 py-1 rounded text-xs font-medium ${citationBadge}">
                             ${style.citations.passed}/${style.citations.total}
@@ -583,7 +583,7 @@ function generateHtmlTable(report) {
                     </td>
                 </tr>
                 <tr class="accordion-content" id="${contentId}">
-                    <td colspan="10" class="px-6 py-4 bg-slate-50">
+                    <td colspan="9" class="px-6 py-4 bg-slate-50">
                         <div class="max-w-4xl">
 ${generateDetailContent(style)}
                         </div>
@@ -603,7 +603,6 @@ ${generateDetailContent(style)}
                             <th class="text-left px-6 py-4 text-xs font-semibold text-slate-700">Style</th>
                             <th class="text-left px-6 py-4 text-xs font-semibold text-slate-700">Format</th>
                             <th class="text-left px-6 py-4 text-xs font-semibold text-slate-700">Dependents</th>
-                            <th class="text-left px-6 py-4 text-xs font-semibold text-slate-700">Template</th>
                             <th class="text-left px-6 py-4 text-xs font-semibold text-slate-700">Citations</th>
                             <th class="text-left px-6 py-4 text-xs font-semibold text-slate-700">Bibliography</th>
                             <th class="text-left px-6 py-4 text-xs font-semibold text-slate-700">Components</th>
