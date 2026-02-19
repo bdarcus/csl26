@@ -11,6 +11,16 @@ use std::path::PathBuf;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = std::env::args().collect();
+    let program_name = args
+        .first()
+        .and_then(|arg| std::path::Path::new(arg).file_name())
+        .and_then(|name| name.to_str())
+        .unwrap_or("csln-migrate");
+
+    if args.iter().any(|arg| arg == "-h" || arg == "--help") {
+        print_help(program_name);
+        return Ok(());
+    }
 
     // Parse command-line arguments
     let mut path = "styles-legacy/apa.csl";
@@ -76,12 +86,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     std::process::exit(1);
                 }
             }
-            arg if !arg.starts_with("--") => {
+            arg if !arg.starts_with('-') => {
                 path = &args[i];
                 i += 1;
             }
             _ => {
-                i += 1;
+                eprintln!("Error: unknown argument '{}'", args[i]);
+                eprintln!();
+                print_help(program_name);
+                std::process::exit(1);
             }
         }
     }
@@ -365,6 +378,24 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     Ok(())
+}
+
+fn print_help(program_name: &str) {
+    eprintln!("CSLN style migration tool");
+    eprintln!();
+    eprintln!("Usage:");
+    eprintln!("  {program_name} [STYLE.csl] [options]");
+    eprintln!();
+    eprintln!("Arguments:");
+    eprintln!("  STYLE.csl                       Input CSL 1.0 style path");
+    eprintln!("                                  (default: styles-legacy/apa.csl)");
+    eprintln!();
+    eprintln!("Options:");
+    eprintln!("  -h, --help                      Show this help text");
+    eprintln!("  --debug-variable <name>         Print provenance details for one variable");
+    eprintln!("  --template-source <mode>        Template source: auto|hand|inferred|xml");
+    eprintln!("  --template-dir <path>           Override directory for hand-authored templates");
+    eprintln!("  --min-template-confidence <n>   Minimum inferred confidence [0.0, 1.0]");
 }
 
 /// Run the full XML compilation pipeline for bibliography and citation templates.
