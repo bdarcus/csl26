@@ -586,6 +586,55 @@ impl Processor {
         self.render_with_legacy_grouping::<F>(&processed.bibliography)
     }
 
+    fn resolve_group_heading(&self, heading: &csln_core::GroupHeading) -> Option<String> {
+        match heading {
+            csln_core::GroupHeading::Literal { literal } => Some(literal.clone()),
+            csln_core::GroupHeading::Term { term, form } => self
+                .locale
+                .general_term(term, form.unwrap_or(csln_core::locale::TermForm::Long))
+                .map(ToOwned::to_owned),
+            csln_core::GroupHeading::Localized { localized } => {
+                self.resolve_localized_heading(localized)
+            }
+        }
+    }
+
+    fn resolve_localized_heading(&self, localized: &HashMap<String, String>) -> Option<String> {
+        fn language_tag(locale: &str) -> &str {
+            locale.split('-').next().unwrap_or(locale)
+        }
+
+        let mut candidates: Vec<String> = Vec::new();
+        let mut push_candidate = |locale: &str| {
+            let candidate = locale.to_string();
+            if !candidates.contains(&candidate) {
+                candidates.push(candidate);
+            }
+        };
+
+        push_candidate(&self.locale.locale);
+        push_candidate(language_tag(&self.locale.locale));
+
+        if let Some(default_locale) = self.style.info.default_locale.as_deref() {
+            push_candidate(default_locale);
+            push_candidate(language_tag(default_locale));
+        }
+
+        push_candidate("en-US");
+        push_candidate("en");
+
+        for locale in candidates {
+            if let Some(value) = localized.get(&locale) {
+                return Some(value.clone());
+            }
+        }
+
+        localized
+            .iter()
+            .min_by(|a, b| a.0.cmp(b.0))
+            .map(|(_, value)| value.clone())
+    }
+
     /// Render bibliography with configurable groups.
     fn render_with_custom_groups<F>(
         &self,
@@ -712,7 +761,9 @@ impl Processor {
                 result.push_str("\n\n");
             }
             if let Some(heading) = &group.heading {
-                result.push_str(&format!("# {}\n\n", heading));
+                if let Some(resolved_heading) = self.resolve_group_heading(heading) {
+                    result.push_str(&format!("# {}\n\n", resolved_heading));
+                }
             }
 
             // Render entries

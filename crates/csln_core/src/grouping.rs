@@ -3,6 +3,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+use crate::locale::{GeneralTerm, TermForm};
 use crate::Template;
 
 /// A bibliography group with selector, optional heading, and per-group sorting.
@@ -16,7 +17,10 @@ use crate::Template;
 /// ```yaml
 /// groups:
 ///   - id: vietnamese
-///     heading: "Tài liệu tiếng Việt"
+///     heading:
+///       localized:
+///         vi: "Tài liệu tiếng Việt"
+///         en-US: "Vietnamese Sources"
 ///     selector:
 ///       field:
 ///         language: vi
@@ -35,7 +39,7 @@ pub struct BibliographyGroup {
     /// Optional heading to display above this group.
     /// Omit for no heading (e.g., fallback group).
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub heading: Option<String>,
+    pub heading: Option<GroupHeading>,
 
     /// Selector predicate to match references.
     pub selector: GroupSelector,
@@ -55,6 +59,31 @@ pub struct BibliographyGroup {
     /// - `locally`: Year suffixes are assigned independently within this group.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub disambiguate: Option<DisambiguationScope>,
+}
+
+/// Localizable heading source for bibliography groups.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+#[serde(rename_all = "kebab-case", untagged)]
+pub enum GroupHeading {
+    /// Fixed literal heading text.
+    Literal {
+        /// Literal heading value.
+        literal: String,
+    },
+    /// Locale general term key resolved at render time.
+    Term {
+        /// Locale general term key.
+        term: GeneralTerm,
+        /// Optional term form (defaults to long).
+        #[serde(skip_serializing_if = "Option::is_none")]
+        form: Option<TermForm>,
+    },
+    /// Locale-indexed heading map.
+    Localized {
+        /// Map keyed by BCP 47 locale identifiers or language tags.
+        localized: HashMap<String, String>,
+    },
 }
 
 /// Scope for disambiguation (e.g., year suffix assignment).
@@ -276,7 +305,10 @@ selector:
     fn test_bibliography_group_full() {
         let yaml = r#"
 id: vietnamese
-heading: "Tài liệu tiếng Việt"
+heading:
+  localized:
+    vi: "Tài liệu tiếng Việt"
+    en-US: "Vietnamese Sources"
 selector:
   field:
     language: vi
@@ -289,7 +321,13 @@ sort:
 "#;
         let group: BibliographyGroup = serde_yaml::from_str(yaml).unwrap();
         assert_eq!(group.id, "vietnamese");
-        assert_eq!(group.heading.unwrap(), "Tài liệu tiếng Việt");
+        match group.heading.unwrap() {
+            GroupHeading::Localized { localized } => {
+                assert_eq!(localized.get("vi").unwrap(), "Tài liệu tiếng Việt");
+                assert_eq!(localized.get("en-US").unwrap(), "Vietnamese Sources");
+            }
+            _ => panic!("Expected localized heading"),
+        }
 
         let sort = group.sort.unwrap();
         assert_eq!(sort.template.len(), 2);
@@ -322,5 +360,33 @@ template:
 
         let order = sort.template[0].order.as_ref().unwrap();
         assert_eq!(order, &vec!["legal-case", "statute", "treaty"]);
+    }
+
+    #[test]
+    fn test_group_heading_literal() {
+        let yaml = r#"
+literal: "Primary Sources"
+"#;
+        let heading: GroupHeading = serde_yaml::from_str(yaml).unwrap();
+        match heading {
+            GroupHeading::Literal { literal } => assert_eq!(literal, "Primary Sources"),
+            _ => panic!("Expected literal heading"),
+        }
+    }
+
+    #[test]
+    fn test_group_heading_term() {
+        let yaml = r#"
+term: no-date
+form: short
+"#;
+        let heading: GroupHeading = serde_yaml::from_str(yaml).unwrap();
+        match heading {
+            GroupHeading::Term { term, form } => {
+                assert_eq!(term, GeneralTerm::NoDate);
+                assert_eq!(form, Some(TermForm::Short));
+            }
+            _ => panic!("Expected term heading"),
+        }
     }
 }

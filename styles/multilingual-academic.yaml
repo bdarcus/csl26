@@ -23,7 +23,10 @@ citation:
 bibliography:
   groups:
     - id: vietnamese
-      heading: "Tài liệu tiếng Việt"
+      heading:
+        localized:
+          vi: "Tài liệu tiếng Việt"
+          en-US: "Vietnamese Sources"
       selector:
         field:
           language: vi
@@ -36,7 +39,8 @@ bibliography:
             ascending: false
 
     - id: western
-      heading: "Western Sources"
+      heading:
+        literal: "Western Sources"
       selector:
         not:
           field:

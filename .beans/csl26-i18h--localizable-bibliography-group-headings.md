@@ -1,11 +1,11 @@
 ---
 # csl26-i18h
 title: Localizable bibliography group headings
-status: todo
+status: completed
 type: refactor
 priority: normal
 created_at: 2026-02-16T16:15:00Z
-updated_at: 2026-02-16T16:15:00Z
+updated_at: 2026-02-19T11:26:41Z
 ---
 
 The `heading` field in `BibliographyGroup` is currently a plain `String`, which prevents it from being localized.
