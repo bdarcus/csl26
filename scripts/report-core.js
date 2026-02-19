@@ -27,7 +27,7 @@ const STYLE_METADATA = {
   'springer-socpsych-author-date': { dependents: 317, format: 'author-date' },
   'american-medical-association': { dependents: 293, format: 'numeric' },
   'taylor-and-francis-chicago-author-date': { dependents: 234, format: 'author-date' },
-  'chicago-notes': { format: 'note' },
+  'chicago-notes': { dependents: 5, format: 'note', hasBibliography: false },
 };
 
 const TOTAL_DEPENDENTS = 7987;
@@ -111,6 +111,7 @@ function discoverCoreStyles() {
         sourceName: meta.source || name,
         dependents: meta.dependents ?? null,
         format: meta.format || 'unknown',
+        hasBibliography: meta.hasBibliography ?? true,
       };
     });
 }
@@ -118,9 +119,20 @@ function discoverCoreStyles() {
 /**
  * Run oracle.js for a single style and parse output
  */
-function runOracle(stylePath, styleName) {
+function runOracle(stylePath, styleName, styleFormat) {
+  const oracleScript = path.join(__dirname, 'oracle.js');
+  const noteCitationsFixture = path.join(
+    path.dirname(__dirname),
+    'tests',
+    'fixtures',
+    'citations-note-expanded.json'
+  );
+  const command = styleFormat === 'note'
+    ? `node "${oracleScript}" "${stylePath}" --json --citations-fixture "${noteCitationsFixture}"`
+    : `node "${oracleScript}" "${stylePath}" --json`;
+
   try {
-    const result = execSync(`node "${path.join(__dirname, 'oracle.js')}" "${stylePath}" --json`, {
+    const result = execSync(command, {
       encoding: 'utf8',
       timeout: 120000,
       stdio: ['pipe', 'pipe', 'pipe'],
@@ -224,6 +236,7 @@ function generateReport(options) {
         name: styleSpec.name,
         dependents: styleSpec.dependents,
         format: styleSpec.format,
+        hasBibliography: styleSpec.hasBibliography,
         impactPct: styleSpec.dependents != null
           ? (styleSpec.dependents / TOTAL_DEPENDENTS * 100).toFixed(2)
           : null,
@@ -231,6 +244,7 @@ function generateReport(options) {
         citations: { passed: 0, total: 0 },
         bibliography: { passed: 0, total: 0 },
         knownDivergences: divergences[styleSpec.name] || [],
+        citationsByType: {},
         error: `Style file not found: ${stylePath}`,
         oracleDetail: null,
       });
@@ -238,7 +252,7 @@ function generateReport(options) {
       continue;
     }
 
-    const oracleResult = runOracle(stylePath, styleSpec.name);
+    const oracleResult = runOracle(stylePath, styleSpec.name, styleSpec.format);
     if (oracleResult.error) {
       errorCount++;
       process.stderr.write(`Error processing ${styleSpec.name}: ${oracleResult.error}\n`);
@@ -268,6 +282,7 @@ function generateReport(options) {
       name: styleSpec.name,
       dependents: styleSpec.dependents,
       format: styleSpec.format,
+      hasBibliography: styleSpec.hasBibliography,
       impactPct: styleSpec.dependents != null
         ? (styleSpec.dependents / TOTAL_DEPENDENTS * 100).toFixed(2)
         : null,
@@ -275,6 +290,7 @@ function generateReport(options) {
       citations,
       bibliography,
       knownDivergences: divergences[styleSpec.name] || [],
+      citationsByType: oracleResult.citationsByType || {},
       error: oracleResult.error || null,
       componentMatchRate,
       statusTier,
@@ -496,13 +512,6 @@ function generateHtmlTable(report) {
   let tableRows = '';
 
   for (const style of report.styles) {
-    const citationsPct = style.citations.total > 0
-      ? ((style.citations.passed / style.citations.total) * 100).toFixed(0)
-      : 'N/A';
-    const biblioPct = style.bibliography.total > 0
-      ? ((style.bibliography.passed / style.bibliography.total) * 100).toFixed(0)
-      : 'N/A';
-
     const fidelityPct = (style.fidelityScore * 100).toFixed(1);
 
     const statusBadgeMap = {
@@ -529,11 +538,16 @@ function generateHtmlTable(report) {
           ? 'badge-partial'
           : 'badge-failing';
 
-    const biblioBadge = style.bibliography.passed === style.bibliography.total && style.bibliography.total > 0
-      ? 'badge-perfect'
-      : style.bibliography.passed > 0
-        ? 'badge-partial'
-        : 'badge-failing';
+    const biblioBadge = !style.hasBibliography
+      ? 'badge-pending'
+      : style.bibliography.passed === style.bibliography.total && style.bibliography.total > 0
+        ? 'badge-perfect'
+        : style.bibliography.passed > 0
+          ? 'badge-partial'
+          : 'badge-failing';
+    const biblioText = style.hasBibliography
+      ? `${style.bibliography.passed}/${style.bibliography.total}`
+      : 'N/A';
 
     let componentRateHtml = '—';
     if (style.componentMatchRate !== null) {
@@ -563,7 +577,7 @@ function generateHtmlTable(report) {
                     </td>
                     <td class="px-6 py-4">
                         <span class="inline-flex items-center px-3 py-1 rounded text-xs font-medium ${biblioBadge}">
-                            ${style.bibliography.passed}/${style.bibliography.total}
+                            ${biblioText}
                         </span>
                     </td>
                     <td class="px-6 py-4">
@@ -645,6 +659,39 @@ function generateDetailContent(style) {
       html += `
                                     <span class="px-2 py-1 rounded bg-slate-100 text-slate-600 text-xs font-mono">
                                         ${escapeHtml(issue)} <span class="font-bold">×${count}</span>
+                                    </span>
+`;
+    }
+    html += `
+                                </div>
+                            </div>
+`;
+  }
+
+  if (style.citationsByType && Object.keys(style.citationsByType).length > 0) {
+    const citationTypes = Object.entries(style.citationsByType)
+      .sort((a, b) => {
+        const aPct = a[1].total > 0 ? (a[1].passed / a[1].total) : 0;
+        const bPct = b[1].total > 0 ? (b[1].passed / b[1].total) : 0;
+        if (aPct !== bPct) return aPct - bPct;
+        return a[0].localeCompare(b[0]);
+      });
+    html += `
+                            <div class="mb-4">
+                                <div class="text-xs font-semibold text-slate-900 mb-2">Citation Type Coverage (${citationTypes.length} types)</div>
+                                <div class="flex flex-wrap gap-2">
+`;
+    for (const [type, stats] of citationTypes) {
+      const pct = stats.total > 0 ? Math.round((stats.passed / stats.total) * 100) : 0;
+      let badgeClass = 'bg-red-100 text-red-700';
+      if (pct === 100) {
+        badgeClass = 'bg-emerald-100 text-emerald-700';
+      } else if (pct >= 70) {
+        badgeClass = 'bg-amber-100 text-amber-700';
+      }
+      html += `
+                                    <span class="px-2 py-1 rounded ${badgeClass} text-xs font-mono">
+                                        ${escapeHtml(type)} ${stats.passed}/${stats.total}
                                     </span>
 `;
     }

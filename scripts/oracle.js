@@ -32,16 +32,49 @@ const {
   loadLocale,
 } = require('./oracle-utils');
 
-// Load test items from JSON fixture
-const fixturesPath = path.join(__dirname, '..', 'tests', 'fixtures', 'references-expanded.json');
-const fixturesData = JSON.parse(fs.readFileSync(fixturesPath, 'utf8'));
-const testItems = Object.fromEntries(
-  Object.entries(fixturesData).filter(([key]) => key !== 'comment')
-);
+const DEFAULT_REFS_FIXTURE = path.join(__dirname, '..', 'tests', 'fixtures', 'references-expanded.json');
+const DEFAULT_CITATIONS_FIXTURE = path.join(__dirname, '..', 'tests', 'fixtures', 'citations-expanded.json');
 
-// Load test citations from JSON fixture
-const citationsPath = path.join(__dirname, '..', 'tests', 'fixtures', 'citations-expanded.json');
-const testCitations = JSON.parse(fs.readFileSync(citationsPath, 'utf8'));
+function parseArgs() {
+  const args = process.argv.slice(2);
+  const options = {
+    stylePath: null,
+    jsonOutput: false,
+    verbose: false,
+    refsFixture: DEFAULT_REFS_FIXTURE,
+    citationsFixture: DEFAULT_CITATIONS_FIXTURE,
+  };
+
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    if (arg === '--json') {
+      options.jsonOutput = true;
+    } else if (arg === '--verbose') {
+      options.verbose = true;
+    } else if (arg === '--refs-fixture') {
+      options.refsFixture = path.resolve(args[++i]);
+    } else if (arg === '--citations-fixture') {
+      options.citationsFixture = path.resolve(args[++i]);
+    } else if (!arg.startsWith('--') && !options.stylePath) {
+      options.stylePath = arg;
+    }
+  }
+
+  if (!options.stylePath) {
+    options.stylePath = path.join(__dirname, '..', 'styles-legacy', 'apa.csl');
+  }
+
+  return options;
+}
+
+function loadFixtures(refsFixture, citationsFixture) {
+  const fixturesData = JSON.parse(fs.readFileSync(refsFixture, 'utf8'));
+  const testItems = Object.fromEntries(
+    Object.entries(fixturesData).filter(([key]) => key !== 'comment')
+  );
+  const testCitations = JSON.parse(fs.readFileSync(citationsFixture, 'utf8'));
+  return { testItems, testCitations };
+}
 
 /**
  * Compare two component sets and identify differences.
@@ -108,7 +141,7 @@ function compareOrdering(oracleOrder, cslnOrder) {
   return issues;
 }
 
-function renderWithCiteprocJs(stylePath) {
+function renderWithCiteprocJs(stylePath, testItems, testCitations) {
   const styleXml = fs.readFileSync(stylePath, 'utf8');
 
   const sys = {
@@ -151,7 +184,7 @@ function renderWithCiteprocJs(stylePath) {
   return { citations, bibliography };
 }
 
-function renderWithCslnProcessor(stylePath) {
+function renderWithCslnProcessor(stylePath, testItems, testCitations) {
   const projectRoot = path.resolve(__dirname, '..');
   const styleName = path.basename(stylePath, '.csl');
   const stylesDir = path.join(projectRoot, 'styles');
@@ -252,6 +285,19 @@ function renderWithCslnProcessor(stylePath) {
   return { citations, bibliography: orderedBibliography };
 }
 
+function collectCitationTypes(citation, testItems) {
+  const types = new Set();
+  for (const item of citation.items || []) {
+    const ref = testItems[item.id];
+    if (ref && ref.type) {
+      types.add(ref.type);
+    } else {
+      types.add('unknown');
+    }
+  }
+  return [...types];
+}
+
 /**
  * Match bibliography entries between oracle and CSLN by finding best matches.
  * Uses contributor names and titles to pair entries.
@@ -303,10 +349,15 @@ function matchBibliographyEntries(oracleBib, cslnBib) {
 }
 
 // Main
-const args = process.argv.slice(2);
-const stylePath = args.find(a => !a.startsWith('--')) || path.join(__dirname, '..', 'styles-legacy', 'apa.csl');
-const jsonOutput = args.includes('--json');
-const verbose = args.includes('--verbose');
+const cliOptions = parseArgs();
+const stylePath = cliOptions.stylePath;
+const jsonOutput = cliOptions.jsonOutput;
+const verbose = cliOptions.verbose;
+
+const { testItems, testCitations } = loadFixtures(
+  cliOptions.refsFixture,
+  cliOptions.citationsFixture
+);
 
 const styleName = path.basename(stylePath, '.csl');
 
@@ -315,13 +366,13 @@ if (!jsonOutput) {
   console.log('Rendering with citeproc-js (oracle)...');
 }
 
-const oracle = renderWithCiteprocJs(stylePath);
+const oracle = renderWithCiteprocJs(stylePath, testItems, testCitations);
 
 if (!jsonOutput) {
   console.log('Migrating and rendering with CSLN...');
 }
 
-const csln = renderWithCslnProcessor(stylePath);
+const csln = renderWithCslnProcessor(stylePath, testItems, testCitations);
 
 if (!csln || csln.error) {
   if (jsonOutput) {
@@ -361,6 +412,7 @@ const results = {
     failed: 0,
     entries: [],
   },
+  citationsByType: {},
   bibliography: {
     total: pairs.length,
     passed: 0,
@@ -383,6 +435,17 @@ for (const cite of testCitations) {
     results.citations.failed++;
   }
   results.citations.entries.push({ id, oracle: oracleCit, csln: cslnCit, match });
+
+  const citationTypes = collectCitationTypes(cite, testItems);
+  for (const type of citationTypes) {
+    if (!results.citationsByType[type]) {
+      results.citationsByType[type] = { total: 0, passed: 0 };
+    }
+    results.citationsByType[type].total++;
+    if (match) {
+      results.citationsByType[type].passed++;
+    }
+  }
 }
 
 // Analyze bibliography entries
