@@ -5,7 +5,7 @@ use csln_core::options::{
     AndOptions, AndOtherOptions, DemoteNonDroppingParticle, DisplayAsSort, EditorLabelFormat,
     ShortenListOptions, SubstituteKey,
 };
-use csln_core::template::{ContributorForm, ContributorRole, TemplateContributor};
+use csln_core::template::{ContributorForm, ContributorRole, NameOrder, TemplateContributor};
 
 fn is_role_label_omitted(options: &RenderOptions<'_>, role: &ContributorRole) -> bool {
     options
@@ -29,19 +29,29 @@ impl ComponentValues for TemplateContributor {
         options: &RenderOptions<'_>,
     ) -> Option<ProcValues<F::Output>> {
         let fmt = F::default();
+        let mut component = self.clone();
         // Resolve effective rendering options (base merged with type-specific override)
-        let mut effective_rendering = self.rendering.clone();
+        let mut effective_rendering = component.rendering.clone();
         if let Some(overrides) = &self.overrides {
-            use csln_core::template::ComponentOverride;
+            use csln_core::template::{ComponentOverride, TemplateComponent};
 
             // Apply specific type override
             let ref_type = reference.ref_type();
             let mut match_found = false;
             for (selector, ov) in overrides {
                 if selector.matches(&ref_type) {
-                    if let ComponentOverride::Rendering(r) = ov {
-                        effective_rendering.merge(r);
-                        match_found = true;
+                    match ov {
+                        ComponentOverride::Rendering(r) => {
+                            effective_rendering.merge(r);
+                            match_found = true;
+                        }
+                        ComponentOverride::Component(c) => {
+                            if let TemplateComponent::Contributor(tc) = c.as_ref() {
+                                component = tc.clone();
+                                effective_rendering = component.rendering.clone();
+                                match_found = true;
+                            }
+                        }
                     }
                 }
             }
@@ -50,8 +60,16 @@ impl ComponentValues for TemplateContributor {
             if !match_found {
                 for (selector, ov) in overrides {
                     if selector.matches("default") {
-                        if let ComponentOverride::Rendering(r) = ov {
-                            effective_rendering.merge(r);
+                        match ov {
+                            ComponentOverride::Rendering(r) => {
+                                effective_rendering.merge(r);
+                            }
+                            ComponentOverride::Component(c) => {
+                                if let TemplateComponent::Contributor(tc) = c.as_ref() {
+                                    component = tc.clone();
+                                    effective_rendering = component.rendering.clone();
+                                }
+                            }
                         }
                     }
                 }
@@ -63,7 +81,16 @@ impl ComponentValues for TemplateContributor {
             return None;
         }
 
-        let contributor = match self.contributor {
+        if options.context == RenderContext::Citation
+            && reference.ref_type() == "personal-communication"
+            && matches!(component.contributor, ContributorRole::Author)
+        {
+            component.form = ContributorForm::Long;
+            component.name_order = Some(NameOrder::GivenFirst);
+            effective_rendering.suffix = Some(", personal communication".to_string());
+        }
+
+        let contributor = match &component.contributor {
             ContributorRole::Author => {
                 if matches!(
                     options.visibility,
@@ -100,7 +127,7 @@ impl ComponentValues for TemplateContributor {
 
         // If author is suppressed, don't attempt substitution or formatting
         if names_vec.is_empty()
-            && matches!(self.contributor, ContributorRole::Author)
+            && matches!(component.contributor, ContributorRole::Author)
             && matches!(
                 options.visibility,
                 csln_core::citation::ItemVisibility::SuppressAuthor
@@ -110,7 +137,7 @@ impl ComponentValues for TemplateContributor {
         }
 
         // Handle substitution if author is empty
-        if names_vec.is_empty() && matches!(self.contributor, ContributorRole::Author) {
+        if names_vec.is_empty() && matches!(component.contributor, ContributorRole::Author) {
             // Use explicit substitute config, or fall back to default (editor → title → translator)
             let default_substitute = csln_core::options::SubstituteConfig::default();
             let substitute_config = options
@@ -144,28 +171,29 @@ impl ComponentValues for TemplateContributor {
                             );
                             if !names_vec.is_empty() {
                                 // Substituted editors use the contributor's name_order and and
-                                let effective_name_order = self.name_order.as_ref().or_else(|| {
-                                    options
-                                        .config
-                                        .contributors
-                                        .as_ref()?
-                                        .role
-                                        .as_ref()?
-                                        .roles
-                                        .as_ref()?
-                                        .get(self.contributor.as_str())?
-                                        .name_order
-                                        .as_ref()
-                                });
+                                let effective_name_order =
+                                    component.name_order.as_ref().or_else(|| {
+                                        options
+                                            .config
+                                            .contributors
+                                            .as_ref()?
+                                            .role
+                                            .as_ref()?
+                                            .roles
+                                            .as_ref()?
+                                            .get(component.contributor.as_str())?
+                                            .name_order
+                                            .as_ref()
+                                    });
 
                                 let formatted = format_names(
                                     &names_vec,
-                                    &self.form,
+                                    &component.form,
                                     options,
                                     effective_name_order,
-                                    self.sort_separator.as_ref(),
-                                    self.shorten.as_ref(),
-                                    self.and.as_ref(),
+                                    component.sort_separator.as_ref(),
+                                    component.shorten.as_ref(),
+                                    component.and.as_ref(),
                                     effective_rendering.initialize_with.as_ref(),
                                     hints,
                                 );
@@ -213,7 +241,7 @@ impl ComponentValues for TemplateContributor {
                                 };
 
                                 let url = crate::values::resolve_effective_url(
-                                    self.links.as_ref(),
+                                    component.links.as_ref(),
                                     options.config.links.as_ref(),
                                     reference,
                                     csln_core::options::LinkAnchor::Component,
@@ -246,7 +274,7 @@ impl ComponentValues for TemplateContributor {
 
                             // Check if links should be applied to substituted title
                             let url = crate::values::resolve_effective_url(
-                                self.links.as_ref(),
+                                component.links.as_ref(),
                                 options.config.links.as_ref(),
                                 reference,
                                 csln_core::options::LinkAnchor::Title,
@@ -285,18 +313,18 @@ impl ComponentValues for TemplateContributor {
                             if !names_vec.is_empty() {
                                 let formatted = format_names(
                                     &names_vec,
-                                    &self.form,
+                                    &component.form,
                                     options,
-                                    self.name_order.as_ref(),
-                                    self.sort_separator.as_ref(),
-                                    self.shorten.as_ref(),
-                                    self.and.as_ref(),
+                                    component.name_order.as_ref(),
+                                    component.sort_separator.as_ref(),
+                                    component.shorten.as_ref(),
+                                    component.and.as_ref(),
                                     effective_rendering.initialize_with.as_ref(),
                                     hints,
                                 );
 
                                 let url = crate::values::resolve_effective_url(
-                                    self.links.as_ref(),
+                                    component.links.as_ref(),
                                     options.config.links.as_ref(),
                                     reference,
                                     csln_core::options::LinkAnchor::Component,
@@ -324,7 +352,7 @@ impl ComponentValues for TemplateContributor {
 
         // Use explicit name_order if provided on this contributor template,
         // otherwise check global config for this role.
-        let effective_name_order = self.name_order.as_ref().or_else(|| {
+        let effective_name_order = component.name_order.as_ref().or_else(|| {
             options
                 .config
                 .contributors
@@ -333,26 +361,26 @@ impl ComponentValues for TemplateContributor {
                 .as_ref()?
                 .roles
                 .as_ref()?
-                .get(self.contributor.as_str())?
+                .get(component.contributor.as_str())?
                 .name_order
                 .as_ref()
         });
 
         let formatted = format_names(
             &names_vec,
-            &self.form,
+            &component.form,
             options,
             effective_name_order,
-            self.sort_separator.as_ref(),
-            self.shorten.as_ref(),
-            self.and.as_ref(),
+            component.sort_separator.as_ref(),
+            component.shorten.as_ref(),
+            component.and.as_ref(),
             effective_rendering.initialize_with.as_ref(),
             hints,
         );
 
         // Check for explicit label configuration first
-        let role_omitted = is_role_label_omitted(options, &self.contributor);
-        let (role_prefix, role_suffix) = if let Some(label_config) = &self.label {
+        let role_omitted = is_role_label_omitted(options, &component.contributor);
+        let (role_prefix, role_suffix) = if let Some(label_config) = &component.label {
             use csln_core::template::{LabelPlacement, RoleLabelForm};
 
             // Determine if plural based on contributor count
@@ -368,7 +396,7 @@ impl ComponentValues for TemplateContributor {
             let role = match label_config.term.as_str() {
                 "editor" => Some(ContributorRole::Editor),
                 "translator" => Some(ContributorRole::Translator),
-                _ => Some(self.contributor.clone()), // Fall back to current role
+                _ => Some(component.contributor.clone()), // Fall back to current role
             };
 
             // Look up term from locale
@@ -391,16 +419,17 @@ impl ComponentValues for TemplateContributor {
 
             if let Some(format) = editor_format {
                 if matches!(
-                    self.contributor,
+                    component.contributor,
                     ContributorRole::Editor | ContributorRole::Translator
                 ) {
                     let plural = names_vec.len() > 1;
                     match format {
                         EditorLabelFormat::VerbPrefix => {
-                            let term =
-                                options
-                                    .locale
-                                    .role_term(&self.contributor, plural, TermForm::Verb);
+                            let term = options.locale.role_term(
+                                &component.contributor,
+                                plural,
+                                TermForm::Verb,
+                            );
                             (
                                 term.map(|t| {
                                     let term_str = if crate::values::should_strip_periods(
@@ -418,7 +447,7 @@ impl ComponentValues for TemplateContributor {
                         }
                         EditorLabelFormat::ShortSuffix => {
                             let term = options.locale.role_term(
-                                &self.contributor,
+                                &component.contributor,
                                 plural,
                                 TermForm::Short,
                             );
@@ -438,10 +467,11 @@ impl ComponentValues for TemplateContributor {
                             )
                         }
                         EditorLabelFormat::LongSuffix => {
-                            let term =
-                                options
-                                    .locale
-                                    .role_term(&self.contributor, plural, TermForm::Long);
+                            let term = options.locale.role_term(
+                                &component.contributor,
+                                plural,
+                                TermForm::Long,
+                            );
                             (
                                 None,
                                 term.map(|t| {
@@ -462,10 +492,10 @@ impl ComponentValues for TemplateContributor {
                     (None, None)
                 }
             } else {
-                match (&self.form, &self.contributor) {
+                match (&component.form, &component.contributor) {
                     (ContributorForm::Verb | ContributorForm::VerbShort, role) => {
                         let plural = names_vec.len() > 1;
-                        let term_form = match self.form {
+                        let term_form = match component.form {
                             ContributorForm::VerbShort => TermForm::VerbShort,
                             _ => TermForm::Verb,
                         };
@@ -490,10 +520,11 @@ impl ComponentValues for TemplateContributor {
                         ContributorRole::Editor | ContributorRole::Translator,
                     ) => {
                         let plural = names_vec.len() > 1;
-                        let term =
-                            options
-                                .locale
-                                .role_term(&self.contributor, plural, TermForm::Short);
+                        let term = options.locale.role_term(
+                            &component.contributor,
+                            plural,
+                            TermForm::Short,
+                        );
                         (
                             None,
                             term.map(|t| {
@@ -527,7 +558,7 @@ impl ComponentValues for TemplateContributor {
             prefix: role_prefix,
             suffix: role_suffix,
             url: crate::values::resolve_effective_url(
-                self.links.as_ref(),
+                component.links.as_ref(),
                 options.config.links.as_ref(),
                 reference,
                 csln_core::options::LinkAnchor::Component, // Contributors only link if explicit or whole-component

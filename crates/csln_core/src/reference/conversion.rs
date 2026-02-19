@@ -5,6 +5,37 @@ use crate::reference::InputReference;
 use biblatex::{Chunk, Entry, Person};
 use url::Url;
 
+fn format_interviewer_note(names: &[csl_legacy::csl_json::Name]) -> Option<String> {
+    if names.is_empty() {
+        return None;
+    }
+
+    let formatted: Vec<String> = names
+        .iter()
+        .filter_map(|n| {
+            if let Some(literal) = &n.literal {
+                return Some(literal.clone());
+            }
+            let family = n.family.as_deref().unwrap_or("").trim();
+            if family.is_empty() {
+                return None;
+            }
+            let given_initial = n
+                .given
+                .as_deref()
+                .and_then(|g| g.chars().next())
+                .map(|c| format!("{c}. "));
+            Some(format!("{}{}", given_initial.unwrap_or_default(), family))
+        })
+        .collect();
+
+    if formatted.is_empty() {
+        None
+    } else {
+        Some(format!("{}, Interviewer", formatted.join(", ")))
+    }
+}
+
 impl From<csl_legacy::csl_json::Reference> for InputReference {
     fn from(legacy: csl_legacy::csl_json::Reference) -> Self {
         let id = Some(legacy.id);
@@ -32,6 +63,7 @@ impl From<csl_legacy::csl_json::Reference> for InputReference {
             | "post"
             | "post-weblog"
             | "software"
+            | "interview"
             | "personal_communication"
             | "personal-communication" => {
                 if (legacy.ref_type == "personal_communication"
@@ -39,6 +71,11 @@ impl From<csl_legacy::csl_json::Reference> for InputReference {
                     && note.is_none()
                 {
                     note = Some("personal communication".to_string());
+                } else if legacy.ref_type == "interview" && note.is_none() {
+                    note = legacy
+                        .interviewer
+                        .as_ref()
+                        .and_then(|names| format_interviewer_note(names));
                 }
 
                 let r#type = if legacy.ref_type == "report" {
@@ -168,7 +205,16 @@ impl From<csl_legacy::csl_json::Reference> for InputReference {
                         r#type: serial_type,
                         title: parent_title,
                         editor: None,
-                        publisher: None,
+                        publisher: if legacy.ref_type == "entry-encyclopedia" {
+                            legacy.publisher.clone().map(|n| {
+                                Contributor::SimpleName(SimpleName {
+                                    name: n.into(),
+                                    location: legacy.publisher_place.clone(),
+                                })
+                            })
+                        } else {
+                            None
+                        },
                         issn: legacy.issn,
                     }),
                     url,
@@ -181,10 +227,22 @@ impl From<csl_legacy::csl_json::Reference> for InputReference {
                         csl_legacy::csl_json::StringOrNumber::String(s) => NumOrStr::Str(s),
                         csl_legacy::csl_json::StringOrNumber::Number(n) => NumOrStr::Number(n),
                     }),
-                    issue: legacy.issue.map(|v| match v {
-                        csl_legacy::csl_json::StringOrNumber::String(s) => NumOrStr::Str(s),
-                        csl_legacy::csl_json::StringOrNumber::Number(n) => NumOrStr::Number(n),
-                    }),
+                    issue: legacy
+                        .issue
+                        .or_else(|| {
+                            if legacy.ref_type == "broadcast" || legacy.ref_type == "motion_picture"
+                            {
+                                legacy.number.as_ref().map(|n| {
+                                    csl_legacy::csl_json::StringOrNumber::String(n.clone())
+                                })
+                            } else {
+                                None
+                            }
+                        })
+                        .map(|v| match v {
+                            csl_legacy::csl_json::StringOrNumber::String(s) => NumOrStr::Str(s),
+                            csl_legacy::csl_json::StringOrNumber::Number(n) => NumOrStr::Number(n),
+                        }),
                     genre,
                     medium: legacy.medium,
                     keywords: None,

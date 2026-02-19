@@ -4,6 +4,7 @@ use crate::render::{ProcTemplate, ProcTemplateComponent};
 use crate::values::{ComponentValues, ProcHints, RenderContext, RenderOptions};
 use csln_core::locale::Locale;
 use csln_core::options::Config;
+use csln_core::template::ComponentOverride;
 use csln_core::template::TemplateComponent;
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
@@ -433,6 +434,59 @@ impl<'a> Renderer<'a> {
                 }
             }
 
+            // Non-integral legal cases and personal communications need full template
+            // rendering; grouped author/year compression drops required content.
+            if matches!(mode, csln_core::citation::CitationMode::NonIntegral)
+                && matches!(
+                    first_ref.ref_type().as_str(),
+                    "legal-case" | "personal-communication"
+                )
+            {
+                for item in &group {
+                    let reference = self
+                        .bibliography
+                        .get(&item.id)
+                        .ok_or_else(|| ProcessorError::ReferenceNotFound(item.id.clone()))?;
+                    let citation_number = self.get_or_assign_citation_number(&item.id);
+                    if let Some(proc) = self.process_template_with_number_with_format::<F>(
+                        reference,
+                        template,
+                        RenderContext::Citation,
+                        mode.clone(),
+                        item.visibility,
+                        citation_number,
+                        item.locator.as_deref(),
+                        item.label.clone(),
+                    ) {
+                        let item_str = crate::render::citation::citation_to_string_with_format::<F>(
+                            &proc,
+                            None,
+                            None,
+                            None,
+                            Some(intra_delimiter),
+                        );
+                        if !item_str.is_empty() {
+                            let prefix = item.prefix.as_deref().unwrap_or("");
+                            let suffix = item.suffix.as_deref().unwrap_or("");
+                            let formatted_prefix =
+                                if !prefix.is_empty() && !prefix.ends_with(char::is_whitespace) {
+                                    format!("{} ", prefix)
+                                } else {
+                                    prefix.to_string()
+                                };
+                            let content = if !prefix.is_empty() || !suffix.is_empty() {
+                                let spaced_suffix = self.ensure_suffix_spacing(suffix);
+                                fmt.affix(&formatted_prefix, item_str, &spaced_suffix)
+                            } else {
+                                item_str
+                            };
+                            rendered_groups.push(fmt.citation(vec![item.id.clone()], content));
+                        }
+                    }
+                }
+                continue;
+            }
+
             // Fallback to default hardcoded grouping (or if no integral template)
             let author_part =
                 self.render_author_for_grouping_with_format::<F>(first_ref, template, mode);
@@ -859,8 +913,10 @@ impl<'a> Renderer<'a> {
         let components: Vec<ProcTemplateComponent> = template
             .iter()
             .filter_map(|component| {
+                let ref_type = reference.ref_type().to_string();
+                let resolved_component = resolve_component_for_ref_type(component, &ref_type);
                 // Get unique key for this variable (e.g., "contributor:Author")
-                let var_key = get_variable_key(component);
+                let var_key = get_variable_key(&resolved_component);
 
                 // Skip if this variable was already rendered
                 if let Some(ref key) = var_key {
@@ -871,7 +927,7 @@ impl<'a> Renderer<'a> {
                 }
 
                 // Extract value from reference using the requested format
-                let mut values = component.values::<F>(reference, &hint, &options)?;
+                let mut values = resolved_component.values::<F>(reference, &hint, &options)?;
                 if values.value.is_empty() {
                     return None;
                 }
@@ -898,12 +954,12 @@ impl<'a> Renderer<'a> {
                 }
 
                 Some(ProcTemplateComponent {
-                    template_component: component.clone(),
+                    template_component: resolved_component,
                     value: values.value,
                     prefix: values.prefix,
                     suffix: values.suffix,
                     url: values.url,
-                    ref_type: Some(reference.ref_type().to_string()),
+                    ref_type: Some(ref_type),
                     config: Some(options.config.clone()),
                     pre_formatted: values.pre_formatted,
                 })
@@ -984,6 +1040,39 @@ pub fn get_variable_key(component: &TemplateComponent) -> Option<String> {
         TemplateComponent::List(_) => None, // Lists contain multiple variables, not deduplicated
         _ => None,                          // Future component types
     }
+}
+
+fn resolve_component_for_ref_type(
+    component: &TemplateComponent,
+    ref_type: &str,
+) -> TemplateComponent {
+    let Some(overrides) = component.overrides() else {
+        return component.clone();
+    };
+
+    let mut replacement: Option<TemplateComponent> = None;
+    let mut matched = false;
+
+    for (selector, ov) in overrides {
+        if selector.matches(ref_type) {
+            matched = true;
+            if let ComponentOverride::Component(c) = ov {
+                replacement = Some((**c).clone());
+            }
+        }
+    }
+
+    if !matched {
+        for (selector, ov) in overrides {
+            if selector.matches("default") {
+                if let ComponentOverride::Component(c) = ov {
+                    replacement = Some((**c).clone());
+                }
+            }
+        }
+    }
+
+    replacement.unwrap_or_else(|| component.clone())
 }
 
 #[cfg(test)]

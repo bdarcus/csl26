@@ -31,6 +31,14 @@ impl ComponentValues for TemplateDate {
         let date = date_opt.unwrap();
         let locale = options.locale;
         let date_config = options.config.dates.as_ref();
+        let effective_form = if options.context == crate::values::RenderContext::Citation
+            && reference.ref_type() == "personal-communication"
+            && matches!(self.date, TemplateDateVar::Issued)
+        {
+            DateForm::Full
+        } else {
+            self.form.clone()
+        };
 
         // Resolve effective rendering options (base merged with type-specific override)
         let mut effective_rendering = self.rendering.clone();
@@ -59,7 +67,7 @@ impl ComponentValues for TemplateDate {
 
         let formatted = if date.is_range() {
             // Handle date ranges
-            let start = match self.form {
+            let start = match effective_form {
                 DateForm::Year => date.year(),
                 DateForm::YearMonth => {
                     let month = date.month(&locale.dates.months.long);
@@ -127,7 +135,7 @@ impl ComponentValues for TemplateDate {
             }
         } else {
             // Single date (not a range)
-            match self.form {
+            match effective_form {
                 DateForm::Year => {
                     let year = date.year();
                     if year.is_empty() {

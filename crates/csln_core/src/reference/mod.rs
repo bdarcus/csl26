@@ -139,6 +139,13 @@ impl InputReference {
                     Parent::Id(_) => None,
                 }
             }
+            InputReference::SerialComponent(r) => {
+                let r = r.as_ref();
+                match &r.parent {
+                    Parent::Embedded(p) => p.publisher.clone(),
+                    Parent::Id(_) => None,
+                }
+            }
             InputReference::Collection(r) => r.publisher.clone(),
             InputReference::Classic(r) => r.publisher.clone(),
             InputReference::Dataset(r) => r.publisher.clone(),
