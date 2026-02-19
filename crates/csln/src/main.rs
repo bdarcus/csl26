@@ -98,10 +98,6 @@ enum Commands {
         out_dir: Option<PathBuf>,
     },
 
-    /// Alias for `render refs`
-    #[command(hide = true)]
-    Process(RenderRefsArgs),
-
     /// Legacy alias for `render doc`
     #[command(hide = true)]
     Doc(LegacyDocArgs),
@@ -295,10 +291,6 @@ fn run() -> Result<(), Box<dyn Error>> {
         Commands::Convert(args) => run_convert(args),
         #[cfg(feature = "schema")]
         Commands::Schema { r#type, out_dir } => run_schema(r#type, out_dir),
-        Commands::Process(args) => {
-            eprintln!("Note: `csln process` is an alias for `csln render refs`.");
-            run_render_refs(args)
-        }
         Commands::Doc(args) => {
             eprintln!("Warning: `csln doc` is deprecated. Use `csln render doc` with -i/-b/-s.");
             let doc_args = RenderDocArgs {
