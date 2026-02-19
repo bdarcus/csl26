@@ -14,6 +14,7 @@ info:
   title: "Taylor & Francis Journals Standard Reference Style Guide: Chicago author-date version 2.0"
   id: http://www.zotero.org/styles/taylor-and-francis-chicago-author-date
 options:
+  processing: author-date
   contributors:
     and: text
     display-as-sort: first
@@ -37,6 +38,11 @@ options:
     separator: ". "
   punctuation-in-quote: true
 citation:
+  options:
+    contributors:
+      shorten:
+        min: 4
+        use-first: 1
   template:
     - items:
         - contributor: author
@@ -56,6 +62,23 @@ citation:
   delimiter: ", "
   multi-cite-delimiter: "; "
 bibliography:
+  type-templates:
+    personal-communication: []
+    patent:
+      - contributor: author
+        form: long
+      - date: issued
+        form: year
+      - title: primary
+      - items:
+          - term: patent
+            suffix: " "
+          - number: number
+          - date: issued
+            form: full
+            prefix: ", issued "
+        delimiter: none
+        prefix: ". "
   template:
     - contributor: author
       form: long

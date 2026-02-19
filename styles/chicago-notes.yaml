@@ -5,11 +5,13 @@ info:
   link: https://www.chicagomanualofstyle.org/
 options:
   processing: note
+  substitute: standard
   contributors:
     and: text
     delimiter-precedes-last: contextual
     demote-non-dropping-particle: display-and-sort
   dates: long
+  titles: chicago
   page-range-format: chicago16
   punctuation-in-quote: true
 citation:

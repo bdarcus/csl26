@@ -374,7 +374,8 @@ impl Processor {
 
     /// Calculate processing hints for disambiguation.
     pub fn calculate_hints(&self) -> HashMap<String, ProcHints> {
-        let config = self.get_config();
+        let cite_config = self.get_citation_config();
+        let config = cite_config.as_ref();
 
         // Use global bibliography sort spec if present for year-suffix sorting
         let bib_sort = self
@@ -530,15 +531,9 @@ impl Processor {
             .as_deref()
             .unwrap_or("; ");
 
-        let is_author_date = self
-            .style
-            .options
-            .as_ref()
-            .and_then(|o| o.processing.as_ref())
-            .map(|p| !matches!(p, csln_core::options::Processing::Numeric))
-            .unwrap_or(false);
-
         let cite_config = self.get_citation_config();
+        let processing = cite_config.processing.clone().unwrap_or_default();
+        let is_author_date = !matches!(processing, csln_core::options::Processing::Numeric);
         let renderer = Renderer::new(
             &self.style,
             &self.bibliography,

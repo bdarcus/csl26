@@ -91,5 +91,45 @@
                 "suffix": ", and references therein"
             }
         ]
+    },
+    {
+        "id": "et-al-single-long-list",
+        "items": [
+            {
+                "id": "ITEM-29"
+            }
+        ]
+    },
+    {
+        "id": "disambiguate-add-names-et-al",
+        "items": [
+            {
+                "id": "ITEM-29"
+            },
+            {
+                "id": "ITEM-30"
+            }
+        ]
+    },
+    {
+        "id": "disambiguate-year-suffix",
+        "items": [
+            {
+                "id": "ITEM-31"
+            },
+            {
+                "id": "ITEM-32"
+            }
+        ]
+    },
+    {
+        "id": "et-al-with-locator",
+        "items": [
+            {
+                "id": "ITEM-30",
+                "locator": "205",
+                "label": "page"
+            }
+        ]
     }
 ]

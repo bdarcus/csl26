@@ -4,6 +4,17 @@ info:
   id: http://www.zotero.org/styles/elsevier-harvard
   default-locale: en-US
 options:
+  processing: !custom
+    sort:
+      template:
+        - key: author
+        - key: year
+    group:
+      template: [author, year]
+    disambiguate:
+      names: false
+      add-givenname: true
+      year-suffix: true
   substitute:
     contributor-role-form: short
     template:
@@ -33,6 +44,10 @@ citation:
         - editor
         - translator
         - title
+    contributors:
+      shorten:
+        min: 3
+        use-first: 1
   sort:
     template:
       - key: author
@@ -97,7 +112,7 @@ bibliography:
       template:
         - translator
   type-templates:
-    article-journal:
+    [article-journal, article-magazine]:
       - contributor: author
         form: long
         name-order: family-first
@@ -119,6 +134,9 @@ bibliography:
         links:
           target: doi
           anchor: component
+        overrides:
+          article-magazine:
+            suppress: true
     book:
       - contributor: editor
         form: long
@@ -213,36 +231,7 @@ bibliography:
         form: full
         prefix: " (accessed "
         suffix: ")."
-    article-newspaper:
-      - contributor: author
-        form: long
-        name-order: family-first
-      - date: issued
-        form: year
-        prefix: ", "
-        suffix: "."
-      - title: primary
-        suffix: "."
-      - title: parent-serial
-        suffix: "."
-    article-magazine:
-      - contributor: author
-        form: long
-        name-order: family-first
-      - date: issued
-        form: year
-        prefix: ", "
-        suffix: "."
-      - title: primary
-        suffix: "."
-      - items:
-          - title: parent-serial
-          - items:
-              - number: volume
-              - number: pages
-            delimiter: ", "
-        delimiter: " "
-    entry-encyclopedia:
+    [article-newspaper, entry-encyclopedia, broadcast]:
       - contributor: author
         form: long
         name-order: family-first
@@ -262,7 +251,10 @@ bibliography:
         suffix: ". "
       - title: parent-serial
         prefix: ", "
-    dataset:
+      - variable: reporter
+        prefix: ", "
+        suffix: "."
+    [dataset, motion-picture, interview, personal-communication]:
       - contributor: author
         form: long
         name-order: family-first
@@ -293,38 +285,6 @@ bibliography:
         suffix: "."
       - variable: number
         suffix: "."
-    motion-picture:
-      - contributor: author
-        form: long
-        name-order: family-first
-      - date: issued
-        form: year
-        prefix: ", "
-        suffix: "."
-      - title: primary
-        suffix: "."
-    broadcast:
-      - contributor: author
-        form: long
-        name-order: family-first
-      - date: issued
-        form: year
-        prefix: ", "
-        suffix: "."
-      - title: primary
-        suffix: "."
-      - title: parent-serial
-        suffix: "."
-    interview:
-      - contributor: author
-        form: long
-        name-order: family-first
-      - date: issued
-        form: year
-        prefix: ", "
-        suffix: "."
-      - title: primary
-        suffix: "."
     report:
       - contributor: author
         form: long
@@ -342,16 +302,6 @@ bibliography:
           - variable: publisher
           - variable: publisher-place
         delimiter: ", "
-    personal-communication:
-      - contributor: author
-        form: long
-        name-order: family-first
-      - date: issued
-        form: year
-        prefix: ", "
-        suffix: "."
-      - title: primary
-        suffix: "."
   template:
     - contributor: author
       form: long

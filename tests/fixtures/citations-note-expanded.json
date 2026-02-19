@@ -222,5 +222,59 @@
         "id": "ITEM-28"
       }
     ]
+  },
+  {
+    "id": "single-item-29",
+    "items": [
+      {
+        "id": "ITEM-29"
+      }
+    ]
+  },
+  {
+    "id": "single-item-30",
+    "items": [
+      {
+        "id": "ITEM-30"
+      }
+    ]
+  },
+  {
+    "id": "single-item-31",
+    "items": [
+      {
+        "id": "ITEM-31"
+      }
+    ]
+  },
+  {
+    "id": "single-item-32",
+    "items": [
+      {
+        "id": "ITEM-32"
+      }
+    ]
+  },
+  {
+    "id": "note-disambiguate-add-names-et-al",
+    "items": [
+      {
+        "id": "ITEM-29"
+      },
+      {
+        "id": "ITEM-30"
+      }
+    ]
+  },
+  {
+    "id": "note-disambiguate-year-suffix",
+    "items": [
+      {
+        "id": "ITEM-31"
+      },
+      {
+        "id": "ITEM-32"
+      }
+    ]
   }
 ]

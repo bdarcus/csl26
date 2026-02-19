@@ -13,6 +13,7 @@ info:
   title: Springer - SocPsych (author-date)
   id: http://www.zotero.org/styles/springer-socpsych-author-date
 options:
+  processing: author-date
   substitute:
     contributor-role-form: short
     template:
@@ -45,6 +46,11 @@ options:
   punctuation-in-quote: true
   volume-pages-delimiter: comma
 citation:
+  options:
+    contributors:
+      shorten:
+        min: 3
+        use-first: 1
   sort:
     template:
       - key: author
@@ -67,6 +73,22 @@ citation:
   delimiter: ", "
   multi-cite-delimiter: "; "
 bibliography:
+  type-templates:
+    legal-case:
+      - title: primary
+        suffix: "., "
+      - number: volume
+        suffix: " "
+      - title: parent-serial
+        suffix: " "
+      - number: pages
+      - items:
+          - variable: authority
+          - date: issued
+            form: full
+        delimiter: " "
+        wrap: parentheses
+        prefix: " "
   template:
     - contributor: author
       form: long

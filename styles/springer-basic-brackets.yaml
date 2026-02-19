@@ -35,8 +35,7 @@ options:
     shorten:
       min: 5
       use-first: 3
-  dates:
-    month: long
+  dates: long
   bibliography:
     separator: '. '
   punctuation-in-quote: true
