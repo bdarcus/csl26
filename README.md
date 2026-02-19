@@ -532,7 +532,7 @@ The most impactful way to contribute is by providing the "raw material" that the
 We treat GitHub Issues as **Context Packets** for our AI agents. Here is the current lifecycle:
 
 1. **Context Submission**: A Domain Expert submits an issue with dense context (e.g., "Legal citations in this jurisdiction require X, see attached PDF").
-2. **Agent Activation**: A project maintainer activates an AI agent (using tools like `antigravity` or `gemini`) initialized with the [Domain Expert Persona](./docs/architecture/PERSONAS.md).
+2. **Agent Activation**: A project maintainer activates an AI agent (using `@styleauthor` or `/styleauthor` via Claude Code) initialized with the [Domain Expert Persona](./docs/architecture/PERSONAS.md).
 3. **Implementation**: The agent reads the issue, extracts the rules, and generates the necessary Rust code, YAML schema changes, or tests.
 4. **Verification**: The Code and tests are verified against the Oracle (citeproc-js) to ensure correctness.
 
@@ -559,13 +559,13 @@ Current development tasks are tracked locally as beans. If you see a GitHub issu
 
 ### For Maintainers
 
-Use the `/bean` skill (see `.claude/skills/bean/SKILL.md`) for local task management:
+Use the `/beans` skill (see `.claude/skills/beans/SKILL.md`) for local task management:
 
 ```bash
-/bean list              # Show all tasks
-/bean next              # Get recommended task
-/bean show BEAN_ID      # View details
-/bean update BEAN_ID --status completed
+/beans list              # Show all tasks
+/beans next              # Get recommended task
+/beans show BEAN_ID      # View details
+/beans update BEAN_ID --status completed
 ```
 
 All beans are git-tracked markdown files with dependency relationships and priority levels.

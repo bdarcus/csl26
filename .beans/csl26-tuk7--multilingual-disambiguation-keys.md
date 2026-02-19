@@ -1,7 +1,7 @@
 ---
 # csl26-tuk7
 title: Multilingual disambiguation keys
-status: complete
+status: completed
 type: task
 priority: normal
 created_at: 2026-02-16T14:06:41Z

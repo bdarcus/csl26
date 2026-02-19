@@ -1,5 +1,10 @@
 # Rendering Fidelity Workflow Analysis & Improvements
 
+> **Historical document** — This analysis reflects the pre-strict-oracle state (2026-02-06)
+> when oracle scoring used 5-scenario citation sets. Current oracle uses the strict 8-scenario
+> set (`tests/fixtures/citations-expanded.json`). Numbers here are not directly comparable to
+> current reporting. See `docs/TIER_STATUS.md` for live metrics.
+
 **Date:** 2026-02-06 (Updated)
 **Status:** Phase 1 Complete, Phases 2-4 In Progress
 

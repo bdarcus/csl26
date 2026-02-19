@@ -191,7 +191,7 @@ See **[docs/architecture/MIGRATION_STRATEGY_ANALYSIS.md](./docs/architecture/MIG
 5. **Cross-validation** - Where both approaches agree, confidence is high
 6. **Agent-assisted migration** - Use `./scripts/prep-migration.sh` to provide high-fidelity context (citeproc-js output + migration baseline) to the `@styleauthor` agent for hand-authoring top styles.
 
-**Current work:** Beans task `csl26-m3lb` tracks implementation of the hybrid approach.
+**Current state:** The hybrid strategy is validated and deployed (PR #193). Top parent styles are being hand-authored via the `/styleauthor` workflow. See `docs/TIER_STATUS.md` for live fidelity metrics.
 
 ## Development Principles
 
@@ -368,14 +368,17 @@ Baseline files are stored in `.bench-baselines/` (gitignored, local-only). Use `
 
 ## Current Status
 
-- **APA 7th**: 5/5 citations ✅, 5/5 bibliography ✅
-- **Academy of Management Review**: 5/5 citations ✅, 0/5 bibliography (style-specific formatting)
-- **Batch (50 styles)**: 74% with 5/5 citation match, bibliography work in progress
-- **Locale**: en-US with terms, months, contributor roles
-- **Key Features**: Variable-once rule, type-specific overrides, name_order control, initials formatting, volume(issue) grouping
+Oracle scoring uses the strict 8-scenario citation set (`tests/fixtures/citations-expanded.json`),
+which hard-fails on processor/style errors and includes edge-case variants (suppress-author,
+mixed locator/prefix/suffix). See `docs/TIER_STATUS.md` for the live per-style breakdown.
+
+- **APA 7th**: 8/8 citations ✅, 27/27 bibliography ✅
+- **Batch (top 10 styles)**: 0/10 at strict 100% citation match; top hit rates at 7/8
+- **Bibliography top rates**: APA 27/27, Springer Basic 26/28, Elsevier With Titles 25/28
+- **Locale**: en-US with terms, months, contributor roles, page labels ("pp.")
+- **Key Features**: Variable-once rule, type-specific overrides, name_order control, initials formatting, volume(issue) grouping, page label extraction
 
 ### Known Gaps
-- Page label extraction ("pp." from CSL Label nodes)
 - Volume-pages delimiter varies by style (comma vs colon)
 - DOI suppression for styles that don't output DOI
 - Editor name-order varies by style (given-first vs family-first)
@@ -403,7 +406,6 @@ Run `cargo run --bin csln-analyze -- styles/` to regenerate these statistics.
 | Feature | Usage | Notes |
 |---------|-------|-------|
 | Group delimiters | - | Colon vs period between components |
-| Page labels | - | "pp." extraction from CSL Label nodes |
 | Volume-pages delimiter | - | Varies by style (comma vs colon) |
 | DOI suppression | - | Some styles don't output DOI |
 | Editor name-order | - | given-first vs family-first varies by style |
@@ -502,6 +504,12 @@ node scripts/oracle-simple.js styles-legacy/apa.csl
 
 # Prepare for agent-assisted migration
 ./scripts/prep-migration.sh styles-legacy/apa.csl
+
+# Core fidelity and SQI drift check (mirrors CI gate)
+node scripts/report-core.js > /tmp/core-report.json
+node scripts/check-core-quality.js \
+  --report /tmp/core-report.json \
+  --baseline scripts/report-data/core-quality-baseline.json
 
 # Run CSLN processor
 cargo run --bin csln -- render refs -b tests/fixtures/references-expanded.json -s styles/apa-7th.yaml

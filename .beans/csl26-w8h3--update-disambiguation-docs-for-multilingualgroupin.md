@@ -1,7 +1,7 @@
 ---
 # csl26-w8h3
 title: Update disambiguation docs for multilingual/grouping
-status: complete
+status: completed
 type: task
 priority: low
 created_at: 2026-02-16T14:06:56Z
