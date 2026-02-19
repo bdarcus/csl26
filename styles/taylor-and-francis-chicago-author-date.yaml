@@ -16,6 +16,7 @@ info:
 options:
   contributors:
     and: text
+    display-as-sort: first
     demote-non-dropping-particle: display-and-sort
   dates:
     month: long
@@ -57,7 +58,6 @@ bibliography:
   template:
     - contributor: author
       form: long
-      name-order: family-first
     - date: issued
       form: year
     - title: primary
@@ -127,6 +127,7 @@ bibliography:
         chapter:
           suppress: true
     - variable: doi
-      prefix: " https://doi.org/"
+      prefix: ". https://doi.org/"
       suffix: "."
     - variable: url
+      suffix: "."
