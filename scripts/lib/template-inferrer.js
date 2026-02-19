@@ -194,6 +194,7 @@ function findConsensusOrdering(entries, refByEntry) {
 
   const allOrderings = [];
   const orderingsByType = {};
+  const orderingAgreementByType = {};
 
   for (const [type, data] of Object.entries(typedComponents)) {
     const typeOrderings = [];
@@ -210,6 +211,10 @@ function findConsensusOrdering(entries, refByEntry) {
     }
     const best = Object.entries(counts).sort((a, b) => b[1] - a[1]);
     orderingsByType[type] = best[0]?.[0]?.split(',').filter(Boolean) || [];
+    const bestCount = best[0]?.[1] || 0;
+    orderingAgreementByType[type] = typeOrderings.length > 0
+      ? bestCount / typeOrderings.length
+      : 0;
   }
 
   const allComponents = new Set();
@@ -271,6 +276,7 @@ function findConsensusOrdering(entries, refByEntry) {
   return {
     consensusOrdering,
     orderingsByType,
+    orderingAgreementByType,
     typedComponents,
     componentFrequency,
   };
@@ -764,6 +770,85 @@ function generateYaml(template, delimiter, wrap) {
   return yaml;
 }
 
+function clamp01(value) {
+  if (Number.isNaN(value)) return 0;
+  if (value < 0) return 0;
+  if (value > 1) return 1;
+  return value;
+}
+
+function round2(value) {
+  return Math.round(value * 100) / 100;
+}
+
+function computeInferenceConfidence({
+  section,
+  template,
+  renderedEntries,
+  refByEntry,
+  typedComponents,
+  orderingAgreementByType,
+  componentFrequency,
+  consensusOrdering,
+  delimiterSupport,
+}) {
+  const entryCount = Math.max(1, renderedEntries.length);
+  const mappedEntries = refByEntry.filter(Boolean).length;
+  const mappedRate = mappedEntries / entryCount;
+
+  let weightedOrderingSum = 0;
+  let weightedOrderingWeight = 0;
+  for (const [type, data] of Object.entries(typedComponents)) {
+    if (type === 'unknown') continue;
+    const weight = Math.max(1, data.entries.length);
+    const agreement = orderingAgreementByType[type] ?? 0.5;
+    weightedOrderingSum += agreement * weight;
+    weightedOrderingWeight += weight;
+  }
+  const orderingScore = weightedOrderingWeight > 0
+    ? weightedOrderingSum / weightedOrderingWeight
+    : 0.5;
+
+  let componentSupportScore = 0.5;
+  if (consensusOrdering.length > 0) {
+    let supportSum = 0;
+    for (const componentName of consensusOrdering) {
+      supportSum += (componentFrequency[componentName] || 0) / entryCount;
+    }
+    componentSupportScore = supportSum / consensusOrdering.length;
+  }
+
+  const structuralScore = template.length === 0
+    ? 0
+    : section === 'citation'
+      ? Math.min(1, template.length / 2)
+      : Math.min(1, template.length / 5);
+
+  const unknownRate = ((typedComponents.unknown?.entries?.length) || 0) / entryCount;
+
+  let score =
+    0.10 +
+    (mappedRate * 0.35) +
+    (orderingScore * 0.25) +
+    (componentSupportScore * 0.15) +
+    (clamp01(delimiterSupport) * 0.10) +
+    (structuralScore * 0.15) -
+    (unknownRate * 0.10);
+
+  if (section === 'citation') {
+    const hasCoreSignal = template.some(comp =>
+      comp.contributor || comp.date || comp.number === 'citation-number'
+    );
+    if (!hasCoreSignal) score -= 0.15;
+  }
+
+  if (section === 'bibliography' && template.length < 3) {
+    score -= 0.10;
+  }
+
+  return round2(clamp01(score));
+}
+
 // -- Main inference function --
 
 function inferTemplate(stylePath, section = 'bibliography') {
@@ -783,7 +868,7 @@ function inferTemplate(stylePath, section = 'bibliography') {
   if (!rendered?.entries?.length) return null;
 
   const refByEntry = rendered.entries.map(entry => findRefDataForEntry(entry, testItems));
-  const { consensusOrdering, typedComponents, componentFrequency } = findConsensusOrdering(rendered.entries, refByEntry);
+  const { consensusOrdering, typedComponents, componentFrequency, orderingAgreementByType } = findConsensusOrdering(rendered.entries, refByEntry);
 
   const MONOGRAPH_TYPES = new Set(['chapter', 'entry-encyclopedia', 'entry-dictionary', 'paper-conference']);
   if (consensusOrdering.includes('containerTitle')) {
@@ -871,6 +956,7 @@ function inferTemplate(stylePath, section = 'bibliography') {
 
   const suppressions = detectSuppressions(consensusOrdering, typedComponents, componentFrequency, rendered, refByEntry);
   let delimiterConsensus = '. ';
+  let delimiterSupport = 0.5;
   {
     const skipPairs = new Set(['contributors', 'year', 'editors']), delimCounts = {};
     for (let i = 0; i < rendered.entries.length; i++) {
@@ -881,7 +967,11 @@ function inferTemplate(stylePath, section = 'bibliography') {
       }
     }
     const best = Object.entries(delimCounts).sort((a, b) => b[1] - a[1]);
-    if (best.length > 0) delimiterConsensus = best[0][0];
+    const totalDetections = Object.values(delimCounts).reduce((sum, n) => sum + n, 0);
+    if (best.length > 0) {
+      delimiterConsensus = best[0][0];
+      delimiterSupport = totalDetections > 0 ? best[0][1] / totalDetections : 0.5;
+    }
   }
 
   let entrySuffix = null;
@@ -928,6 +1018,18 @@ function inferTemplate(stylePath, section = 'bibliography') {
     delete comp._componentName;
   }
 
+  const confidence = computeInferenceConfidence({
+    section,
+    template,
+    renderedEntries: rendered.entries,
+    refByEntry,
+    typedComponents,
+    orderingAgreementByType,
+    componentFrequency,
+    consensusOrdering,
+    delimiterSupport,
+  });
+
   return {
     template,
     yaml: generateYaml(template, delimiterConsensus, citationWrap),
@@ -936,7 +1038,7 @@ function inferTemplate(stylePath, section = 'bibliography') {
       entrySuffix,
       typesAnalyzed: Object.keys(typedComponents),
       entryCount: rendered.entries.length,
-      confidence: 0.85,
+      confidence,
       section,
       wrap: citationWrap
     }
