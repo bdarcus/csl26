@@ -18,38 +18,138 @@ citation:
     - contributor: author
       form: long
       shorten:
-        min: 4
+        min: 8
         use-first: 3
         and-others: et-al
     - title: primary
+      wrap: quotes
       overrides:
         book:
+          wrap: none
+        report:
+          wrap: none
+        legal-case:
+          wrap: none
+        patent:
+          wrap: none
+        motion-picture:
+          wrap: none
+    - date: issued
+      form: month-day
+      prefix: ", "
+      overrides:
+        personal-communication:
+          suppress: false
+        default:
           suppress: true
-        article-journal:
-          wrap: quotes
-        article-magazine:
-          wrap: quotes
-        article-newspaper:
-          wrap: quotes
-        paper-conference:
-          wrap: quotes
+    - date: issued
+      form: year
+      prefix: ", "
+      overrides:
+        personal-communication:
+          suppress: false
+        default:
+          suppress: true
     - items:
         - title: parent-serial
+          overrides:
+            book:
+              suppress: true
+            chapter:
+              suppress: true
+            report:
+              suppress: true
+            thesis:
+              suppress: true
+            webpage:
+              suppress: true
+            dataset:
+              suppress: true
+            legal-case:
+              suppress: true
+            patent:
+              suppress: true
+            motion-picture:
+              suppress: true
+            interview:
+              suppress: true
+            personal-communication:
+              suppress: true
         - variable: publisher-place
           wrap: parentheses
           prefix: " "
           overrides:
             book:
               suppress: true
+            chapter:
+              suppress: true
+            report:
+              suppress: true
+            thesis:
+              suppress: true
+            webpage:
+              suppress: true
+            dataset:
+              suppress: true
+            legal-case:
+              suppress: true
+            patent:
+              suppress: true
+            motion-picture:
+              suppress: true
+            interview:
+              suppress: true
+            personal-communication:
+              suppress: true
         - number: volume
           prefix: " "
           overrides:
             book:
               suppress: true
+            chapter:
+              suppress: true
+            report:
+              suppress: true
+            thesis:
+              suppress: true
+            webpage:
+              suppress: true
+            dataset:
+              suppress: true
+            legal-case:
+              suppress: true
+            patent:
+              suppress: true
+            motion-picture:
+              suppress: true
+            interview:
+              suppress: true
+            personal-communication:
+              suppress: true
         - number: issue
           prefix: ", no. "
           overrides:
             book:
+              suppress: true
+            chapter:
+              suppress: true
+            report:
+              suppress: true
+            thesis:
+              suppress: true
+            webpage:
+              suppress: true
+            dataset:
+              suppress: true
+            legal-case:
+              suppress: true
+            patent:
+              suppress: true
+            motion-picture:
+              suppress: true
+            interview:
+              suppress: true
+            personal-communication:
               suppress: true
         - date: issued
           form: year
@@ -58,31 +158,68 @@ citation:
           overrides:
             book:
               suppress: true
+            chapter:
+              suppress: true
+            report:
+              suppress: true
+            thesis:
+              suppress: true
+            webpage:
+              suppress: true
+            dataset:
+              suppress: true
+            legal-case:
+              suppress: true
+            patent:
+              suppress: true
+            motion-picture:
+              suppress: true
+            interview:
+              suppress: true
+            personal-communication:
+              suppress: true
         - number: pages
           prefix: ": "
           overrides:
             book:
               suppress: true
-        - variable: locator
-          prefix: ": "
-          overrides:
-            book:
+            chapter:
+              suppress: true
+            report:
+              suppress: true
+            thesis:
+              suppress: true
+            webpage:
+              suppress: true
+            dataset:
+              suppress: true
+            legal-case:
+              suppress: true
+            patent:
+              suppress: true
+            motion-picture:
+              suppress: true
+            interview:
+              suppress: true
+            personal-communication:
               suppress: true
       delimiter: ""
-      overrides:
-        book:
-          suppress: true
     - items:
-        - title: primary
+        - title: parent-monograph
+          prefix: ", in "
+        - title: parent-serial
+          prefix: ", in "
           overrides:
-            article-journal:
+            chapter:
               suppress: true
-            article-magazine:
+        - number: volume
+          prefix: ", vol. "
+          overrides:
+            chapter:
               suppress: true
-            article-newspaper:
-              suppress: true
-            paper-conference:
-              suppress: true
+        - contributor: editor
+          form: long
+          prefix: ", editors. "
         - items:
             - variable: publisher
             - date: issued
@@ -90,31 +227,290 @@ citation:
           delimiter: ", "
           wrap: parentheses
           prefix: " "
-          overrides:
-            article-journal:
-              suppress: true
-            article-magazine:
-              suppress: true
-            article-newspaper:
-              suppress: true
-            paper-conference:
-              suppress: true
-        - variable: locator
-          prefix: ", "
-          overrides:
-            article-journal:
-              suppress: true
-            article-magazine:
-              suppress: true
-            article-newspaper:
-              suppress: true
-            paper-conference:
-              suppress: true
       delimiter: ""
-    - variable: doi
-      prefix: "https://doi.org/"
+      overrides:
+        article-journal:
+          suppress: true
+        article-magazine:
+          suppress: true
+        article-newspaper:
+          suppress: true
+        book:
+          suppress: true
+        report:
+          suppress: true
+        thesis:
+          suppress: true
+        webpage:
+          suppress: true
+        dataset:
+          suppress: true
+        legal-case:
+          suppress: true
+        patent:
+          suppress: true
+        motion-picture:
+          suppress: true
+        broadcast:
+          suppress: true
+        interview:
+          suppress: true
+        personal-communication:
+          suppress: true
+    - items:
+        - variable: genre
+        - variable: publisher
+        - date: issued
+          form: year
+      delimiter: ", "
+      wrap: parentheses
+      prefix: " "
+      overrides:
+        article-journal:
+          suppress: true
+        article-magazine:
+          suppress: true
+        article-newspaper:
+          suppress: true
+        chapter:
+          suppress: true
+        paper-conference:
+          suppress: true
+        entry-encyclopedia:
+          suppress: true
+        legal-case:
+          suppress: true
+        patent:
+          suppress: true
+        motion-picture:
+          suppress: true
+        broadcast:
+          suppress: true
+        interview:
+          suppress: true
+        personal-communication:
+          suppress: true
+    - items:
+        - title: parent-serial
+        - date: issued
+          form: year
+        - number: pages
+      delimiter: ", "
+      prefix: ", "
+      overrides:
+        article-journal:
+          suppress: true
+        article-magazine:
+          suppress: true
+        article-newspaper:
+          suppress: true
+        chapter:
+          suppress: true
+        book:
+          suppress: true
+        report:
+          suppress: true
+        thesis:
+          suppress: true
+        webpage:
+          suppress: true
+        dataset:
+          suppress: true
+        entry-encyclopedia:
+          suppress: true
+        legal-case:
+          suppress: true
+        patent:
+          suppress: true
+        motion-picture:
+          suppress: true
+        broadcast:
+          suppress: true
+        interview:
+          suppress: true
+        personal-communication:
+          suppress: true
+    - variable: publisher
+      prefix: ", "
+      overrides:
+        dataset:
+          suppress: false
+        default:
+          suppress: true
+    - variable: url
+      prefix: ", "
+      overrides:
+        webpage:
+          suppress: false
+        dataset:
+          suppress: false
+        interview:
+          suppress: false
+        default:
+          suppress: true
+    - items:
+        - number: volume
+        - variable: reporter
+        - number: pages
+      delimiter: " "
+      prefix: ", "
+      overrides:
+        legal-case:
+          suppress: false
+        default:
+          suppress: true
+    - items:
+        - variable: authority
+        - date: issued
+          form: year
+      delimiter: " "
+      wrap: parentheses
+      prefix: " "
+      overrides:
+        legal-case:
+          suppress: false
+        default:
+          suppress: true
+    - number: number
+      prefix: ", Patent "
+      overrides:
+        patent:
+          suppress: false
+        default:
+          suppress: true
+    - items:
+        - date: issued
+          form: month-day
+          prefix: ", issued "
+        - date: issued
+          form: year
+          prefix: ", "
+      delimiter: none
+      overrides:
+        patent:
+          suppress: false
+        default:
+          suppress: true
+    - variable: genre
+      prefix: ", "
+      overrides:
+        motion-picture:
+          suppress: false
+        default:
+          suppress: true
+    - contributor: author
+      form: long
+      prefix: ", directed by "
+      overrides:
+        motion-picture:
+          suppress: false
+        default:
+          suppress: true
+    - number: number
+      prefix: ", episode "
+      overrides:
+        broadcast:
+          suppress: false
+        default:
+          suppress: true
+    - date: issued
+      form: month-day
+      prefix: ", aired "
+      overrides:
+        broadcast:
+          suppress: false
+        default:
+          suppress: true
+    - date: issued
+      form: year
+      prefix: ", "
+      overrides:
+        motion-picture:
+          suppress: false
+        default:
+          suppress: true
+    - variable: medium
+      prefix: ", "
+      overrides:
+        broadcast:
+          suppress: false
+        motion-picture:
+          suppress: false
+        interview:
+          suppress: false
+        default:
+          suppress: true
+    - contributor: interviewer
+      form: long
+      prefix: ", interview by "
+      overrides:
+        interview:
+          suppress: false
+        default:
+          suppress: true
+    - contributor: recipient
+      form: long
+      prefix: ", to "
+      overrides:
+        personal-communication:
+          suppress: false
+        default:
+          suppress: true
+    - date: issued
+      form: month-day
+      prefix: ", "
+      overrides:
+        personal-communication:
+          suppress: false
+        interview:
+          suppress: false
+        default:
+          suppress: true
+    - date: issued
+      form: year
+      prefix: ", "
+      overrides:
+        personal-communication:
+          suppress: false
+        interview:
+          suppress: false
+        default:
+          suppress: true
+    - variable: locator
+      prefix: ", "
       overrides:
         book:
+          suppress: false
+        chapter:
+          suppress: false
+        article-journal:
+          suppress: false
+        default:
+          suppress: true
+    - variable: doi
+      prefix: ", https://doi.org/"
+      overrides:
+        book:
+          suppress: true
+        report:
+          suppress: true
+        thesis:
+          suppress: true
+        webpage:
+          suppress: true
+        dataset:
+          suppress: true
+        legal-case:
+          suppress: true
+        patent:
+          suppress: true
+        motion-picture:
+          suppress: true
+        broadcast:
+          suppress: true
+        interview:
+          suppress: true
+        personal-communication:
           suppress: true
   suffix: .
   multi-cite-delimiter: "; "
