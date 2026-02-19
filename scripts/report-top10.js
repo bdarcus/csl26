@@ -99,14 +99,10 @@ function discoverCoreStyles() {
   if (!fs.existsSync(stylesRoot)) {
     throw new Error(`Core styles directory not found: ${stylesRoot}`);
   }
-  const excludedCoreStyles = new Set([
-    'annals-of-the-association-of-american-geographers',
-  ]);
 
   return fs.readdirSync(stylesRoot)
     .filter((file) => file.endsWith('.yaml'))
     .map((file) => file.replace(/\.yaml$/, ''))
-    .filter((name) => !excludedCoreStyles.has(name))
     .sort()
     .map((name) => {
       const meta = STYLE_METADATA[name] || {};
