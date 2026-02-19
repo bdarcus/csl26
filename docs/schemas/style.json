@@ -205,7 +205,7 @@
       "additionalProperties": false
     },
     "BibliographyGroup": {
-      "description": "A bibliography group with selector, optional heading, and per-group sorting.\n\nGroups allow styles to divide bibliographies into labeled sections with distinct sorting rules. Items match the first group whose selector evaluates to true (first-match semantics).\n\n# Examples\n\n```yaml groups: - id: vietnamese heading: \"Tài liệu tiếng Việt\" selector: field: language: vi sort: template: - key: author sort-order: given-family ```",
+      "description": "A bibliography group with selector, optional heading, and per-group sorting.\n\nGroups allow styles to divide bibliographies into labeled sections with distinct sorting rules. Items match the first group whose selector evaluates to true (first-match semantics).\n\n# Examples\n\n```yaml groups: - id: vietnamese heading: localized: vi: \"Tài liệu tiếng Việt\" en-US: \"Vietnamese Sources\" selector: field: language: vi sort: template: - key: author sort-order: given-family ```",
       "type": "object",
       "required": [
         "id",
@@ -225,9 +225,13 @@
         },
         "heading": {
           "description": "Optional heading to display above this group. Omit for no heading (e.g., fallback group).",
-          "type": [
-            "string",
-            "null"
+          "anyOf": [
+            {
+              "$ref": "#/definitions/GroupHeading"
+            },
+            {
+              "type": "null"
+            }
           ]
         },
         "id": {
@@ -408,6 +412,17 @@
           "type": [
             "string",
             "null"
+          ]
+        },
+        "sort": {
+          "description": "Optional citation sorting specification.",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/GroupSort"
+            },
+            {
+              "type": "null"
+            }
           ]
         },
         "suffix": {
@@ -953,7 +968,8 @@
         "year",
         "year-month",
         "full",
-        "month-day"
+        "month-day",
+        "year-month-day"
       ]
     },
     "DatePreset": {
@@ -1133,7 +1149,14 @@
         "forthcoming",
         "online",
         "review-of",
-        "original-work-published"
+        "original-work-published",
+        "patent",
+        "volume",
+        "issue",
+        "page",
+        "chapter",
+        "edition",
+        "section"
       ]
     },
     "Group": {
@@ -1150,6 +1173,68 @@
           }
         }
       }
+    },
+    "GroupHeading": {
+      "description": "Localizable heading source for bibliography groups.",
+      "anyOf": [
+        {
+          "description": "Fixed literal heading text.",
+          "type": "object",
+          "required": [
+            "literal"
+          ],
+          "properties": {
+            "literal": {
+              "description": "Literal heading value.",
+              "type": "string"
+            }
+          }
+        },
+        {
+          "description": "Locale general term key resolved at render time.",
+          "type": "object",
+          "required": [
+            "term"
+          ],
+          "properties": {
+            "form": {
+              "description": "Optional term form (defaults to long).",
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/TermForm"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "term": {
+              "description": "Locale general term key.",
+              "allOf": [
+                {
+                  "$ref": "#/definitions/GeneralTerm"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "description": "Locale-indexed heading map.",
+          "type": "object",
+          "required": [
+            "localized"
+          ],
+          "properties": {
+            "localized": {
+              "description": "Map keyed by BCP 47 locale identifiers or language tags.",
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      ]
     },
     "GroupSelector": {
       "description": "Selector predicate for matching references to groups.\n\nAll specified conditions must match (AND logic). Use the `not` field for negation-based fallback groups.",
@@ -1524,7 +1609,12 @@
         "collection-number",
         "number-of-pages",
         "number-of-volumes",
-        "citation-number"
+        "citation-number",
+        "number",
+        "docket-number",
+        "patent-number",
+        "standard-number",
+        "report-number"
       ]
     },
     "PageRangeFormat": {
@@ -1957,7 +2047,12 @@
         "authority",
         "reporter",
         "page",
-        "volume"
+        "volume",
+        "number",
+        "docket-number",
+        "patent-number",
+        "standard-number",
+        "report-number"
       ]
     },
     "Sort": {
@@ -3323,11 +3418,11 @@
       "description": "Form for term lookup.",
       "type": "string",
       "enum": [
-        "Long",
-        "Short",
-        "Verb",
-        "VerbShort",
-        "Symbol"
+        "long",
+        "short",
+        "verb",
+        "verb-short",
+        "symbol"
       ]
     },
     "TitleForm": {

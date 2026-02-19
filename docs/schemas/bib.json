@@ -71,6 +71,13 @@
             "null"
           ]
         },
+        "docket-number": {
+          "description": "Docket number",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "id": {
           "type": [
             "string",
@@ -101,13 +108,6 @@
           ]
         },
         "note": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "number": {
-          "description": "Docket number",
           "type": [
             "string",
             "null"
@@ -276,6 +276,12 @@
             }
           ]
         },
+        "collection-number": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "editor": {
           "anyOf": [
             {
@@ -425,6 +431,12 @@
           }
         },
         "language": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "medium": {
           "type": [
             "string",
             "null"
@@ -707,7 +719,7 @@
             "null"
           ]
         },
-        "number": {
+        "session-number": {
           "description": "Session or congress number",
           "type": [
             "string",
@@ -1007,6 +1019,12 @@
             }
           ]
         },
+        "collection-number": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "doi": {
           "type": [
             "string",
@@ -1065,6 +1083,12 @@
             "null"
           ]
         },
+        "medium": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "note": {
           "type": [
             "string",
@@ -1099,6 +1123,12 @@
             {
               "type": "null"
             }
+          ]
+        },
+        "report-number": {
+          "type": [
+            "string",
+            "null"
           ]
         },
         "title": {
@@ -1143,6 +1173,7 @@
         "thesis",
         "webpage",
         "post",
+        "personal-communication",
         "document"
       ]
     },
@@ -1270,7 +1301,7 @@
       "type": "object",
       "required": [
         "issued",
-        "number",
+        "patent-number",
         "title"
       ],
       "properties": {
@@ -1373,7 +1404,7 @@
             "null"
           ]
         },
-        "number": {
+        "patent-number": {
           "description": "Patent number (e.g., \"U.S. Patent No. 7,347,809\")",
           "type": "string"
         },
@@ -1571,6 +1602,12 @@
             "null"
           ]
         },
+        "genre": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "id": {
           "type": [
             "string",
@@ -1600,6 +1637,12 @@
           }
         },
         "language": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "medium": {
           "type": [
             "string",
             "null"
@@ -1841,7 +1884,7 @@
       "type": "object",
       "required": [
         "issued",
-        "number",
+        "standard-number",
         "title"
       ],
       "properties": {
@@ -1897,10 +1940,6 @@
             "null"
           ]
         },
-        "number": {
-          "description": "Standard number (e.g., \"ISO 8601\", \"IEEE 754-2008\")",
-          "type": "string"
-        },
         "publisher": {
           "description": "Publisher (usually same as authority)",
           "anyOf": [
@@ -1911,6 +1950,10 @@
               "type": "null"
             }
           ]
+        },
+        "standard-number": {
+          "description": "Standard number (e.g., \"ISO 8601\", \"IEEE 754-2008\")",
+          "type": "string"
         },
         "status": {
           "description": "Status (e.g., \"published\", \"draft\", \"withdrawn\")",
