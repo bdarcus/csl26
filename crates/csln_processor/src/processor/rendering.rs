@@ -844,6 +844,17 @@ impl<'a> Renderer<'a> {
         // Track rendered variables to prevent duplicates (CSL 1.0 spec:
         // "Substituted variables are suppressed in the rest of the output")
         let mut rendered_vars: HashSet<String> = HashSet::new();
+        // Track base keys of substituted variables so they suppress all contextual
+        // variants (for example "title:Primary" should suppress title with suffixes).
+        let mut substituted_bases: HashSet<String> = HashSet::new();
+
+        let key_base = |key: &str| -> String {
+            let mut parts = key.splitn(3, ':');
+            match (parts.next(), parts.next()) {
+                (Some(kind), Some(var)) => format!("{kind}:{var}"),
+                _ => key.to_string(),
+            }
+        };
 
         let components: Vec<ProcTemplateComponent> = template
             .iter()
@@ -853,7 +864,8 @@ impl<'a> Renderer<'a> {
 
                 // Skip if this variable was already rendered
                 if let Some(ref key) = var_key {
-                    if rendered_vars.contains(key) {
+                    let base = key_base(key);
+                    if rendered_vars.contains(key) || substituted_bases.contains(&base) {
                         return None;
                     }
                 }
@@ -882,6 +894,7 @@ impl<'a> Renderer<'a> {
                 // Also mark substituted variable (e.g., title when it replaces author)
                 if let Some(sub_key) = &values.substituted_key {
                     rendered_vars.insert(sub_key.clone());
+                    substituted_bases.insert(key_base(sub_key));
                 }
 
                 Some(ProcTemplateComponent {

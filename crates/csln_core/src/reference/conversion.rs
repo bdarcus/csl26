@@ -141,6 +141,11 @@ impl From<csl_legacy::csl_json::Reference> for InputReference {
             }
             "article-journal" | "article" | "article-magazine" | "article-newspaper"
             | "broadcast" | "motion_picture" | "entry-encyclopedia" => {
+                let mut genre = legacy.genre;
+                if legacy.ref_type == "entry-encyclopedia" && genre.is_none() {
+                    // Preserve original entry type so style type-templates can target it.
+                    genre = Some("entry-encyclopedia".to_string());
+                }
                 let serial_type = match legacy.ref_type.as_str() {
                     "article-journal" => SerialType::AcademicJournal,
                     "article-magazine" => SerialType::Magazine,
@@ -180,7 +185,7 @@ impl From<csl_legacy::csl_json::Reference> for InputReference {
                         csl_legacy::csl_json::StringOrNumber::String(s) => NumOrStr::Str(s),
                         csl_legacy::csl_json::StringOrNumber::Number(n) => NumOrStr::Number(n),
                     }),
-                    genre: legacy.genre,
+                    genre,
                     medium: legacy.medium,
                     keywords: None,
                 }))
