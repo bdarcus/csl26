@@ -42,7 +42,7 @@ jobs:
         run: cargo build
 
       - name: Generate compatibility report
-        run: node scripts/report-top10.js --write-html
+        run: node scripts/report-core.js --write-html
 
       - name: Commit report if changed
         run: |

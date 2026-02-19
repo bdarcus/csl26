@@ -23,8 +23,16 @@ jobs:
         with:
           components: rustfmt, clippy
 
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
+
+      - name: Install script dependencies
+        run: npm install --prefix scripts
 
       - name: Check formatting
         run: cargo fmt --all -- --check
@@ -37,3 +45,10 @@ jobs:
 
       - name: Run tests
         run: cargo test --verbose
+
+      - name: Check core fidelity and SQI drift
+        run: |
+          node scripts/report-core.js > /tmp/core-report.json
+          node scripts/check-core-quality.js \
+            --report /tmp/core-report.json \
+            --baseline scripts/report-data/core-quality-baseline.json
