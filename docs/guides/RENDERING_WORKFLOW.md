@@ -21,6 +21,18 @@ csln render refs -b references.json -s styles/apa-7th.yaml -O html
 node ../scripts/oracle.js styles-legacy/apa.csl
 ```
 
+## Style Catalog Scope
+
+Use production styles from `styles/*.yaml` for routine validation and
+reporting. Experimental and in-progress drafts live under
+`styles/experimental/` and are intentionally excluded from production schema
+validation.
+
+```bash
+# Validate production styles only
+./scripts/validate-schema.sh
+```
+
 ## Hybrid Migration Strategy
 
 CSLN uses a three-tier architecture to balance high fidelity for popular styles with broad coverage for the long tail of CSL 1.0 styles (see `csl26-m3lb`).
@@ -93,7 +105,7 @@ This tells you:
 Run the workflow test to see if this is a style-specific issue or systemic:
 
 ```bash
-./../scripts/workflow-test.sh styles-legacy/apa.csl
+../scripts/workflow-test.sh styles-legacy/apa.csl
 ```
 
 This runs:
@@ -128,7 +140,7 @@ This project uses a tri-agent specialist model to achieve high-fidelity renderin
 2.  **@styleplan**: Converts the architectural design into a technical build plan with actionable tasks and exact code snippets for the builder.
 3.  **@styleauthor**: Executes the implementation (Haiku) using the hand-authoring loop.
 
-**Workflow**: Run `./../scripts/prep-migration.sh <style>` and use the specialized agents to hand-author the CSLN template.
+**Workflow**: Run `../scripts/prep-migration.sh <style>` and use the specialized agents to hand-author the CSLN template.
 
 #### Systemic Issues (affects Tier 3/4 styles)
 → Fix in `../crates/csln_processor/`
@@ -250,7 +262,7 @@ When debugging unexpectedly different output between citations and bibliography,
 Re-run the workflow test:
 
 ```bash
-./../scripts/workflow-test.sh styles-legacy/apa.csl
+../scripts/workflow-test.sh styles-legacy/apa.csl
 ```
 
 Check that:
@@ -261,7 +273,7 @@ Check that:
    cargo nextest run --test citations
    cargo nextest run --test bibliography
    ```
-   Or run all tests: `cargo test`
+   Or run all tests: `cargo nextest run` (fallback: `cargo test`)
 
 ### Step 6: Track Progress
 
@@ -358,9 +370,9 @@ Bibliography: 24/28 passing (86%)
 
 **Example usage:**
 ```bash
-./../scripts/workflow-test.sh styles-legacy/apa.csl
-./../scripts/workflow-test.sh styles-legacy/ieee.csl --json
-./../scripts/workflow-test.sh styles-legacy/nature.csl --top 20
+../scripts/workflow-test.sh styles-legacy/apa.csl
+../scripts/workflow-test.sh styles-legacy/ieee.csl --json
+../scripts/workflow-test.sh styles-legacy/nature.csl --top 20
 ```
 
 ### `prep-migration.sh` (Agent Context Prep)
@@ -374,7 +386,7 @@ Bibliography: 24/28 passing (86%)
 
 **Example usage**:
 ```bash
-./../scripts/prep-migration.sh styles-legacy/apa.csl
+../scripts/prep-migration.sh styles-legacy/apa.csl
 ```
 Then, copy the output and provide it to the `@styleauthor` agent to begin the iterative authoring process.
 
@@ -621,8 +633,8 @@ This means the component extraction is incomplete. The structured oracle only ch
 
 - **[WORKFLOW_ANALYSIS.md](./WORKFLOW_ANALYSIS.md)**: Detailed analysis of bottlenecks and improvement plan
 - **[../reference/STYLE_PRIORITY.md](./../reference/STYLE_PRIORITY.md)**: Which styles to prioritize based on dependent counts
-- **[TEST_STRATEGY.md](./architecture/design/TEST_STRATEGY.md)**: Oracle vs CSLN-native testing approach
-- **[CLAUDE.md](../CLAUDE.md)**: Test commands and autonomous workflow whitelist
+- **[TEST_STRATEGY.md](../architecture/design/TEST_STRATEGY.md)**: Oracle vs CSLN-native testing approach
+- **[CLAUDE.md](../../CLAUDE.md)**: Test commands and autonomous workflow whitelist
 
 ## Future Improvements
 
