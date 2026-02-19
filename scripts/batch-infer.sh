@@ -1,11 +1,12 @@
 #!/bin/bash
-# Batch template inference: runs infer-template.js --fragment for parent styles
-# and caches results to templates/inferred/{style-name}.json.
+# Batch template inference: runs infer-template.js for both citation and
+# bibliography sections, then caches section-specific fragments for Rust.
 #
 # Usage:
 #   ./scripts/batch-infer.sh                    # All parent styles
 #   ./scripts/batch-infer.sh --top 10           # Top 10 by dependent count
 #   ./scripts/batch-infer.sh --styles "apa elsevier-harvard"  # Specific styles
+#   ./scripts/batch-infer.sh --force            # Regenerate existing cache
 
 set -euo pipefail
 
@@ -32,6 +33,7 @@ TOP_PARENTS=(
 # Parse arguments
 TOP_N=0
 SPECIFIC_STYLES=""
+FORCE=false
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -43,9 +45,13 @@ while [[ $# -gt 0 ]]; do
             SPECIFIC_STYLES="$2"
             shift 2
             ;;
+        --force)
+            FORCE=true
+            shift
+            ;;
         *)
             echo "Unknown argument: $1" >&2
-            echo "Usage: $0 [--top N] [--styles \"style1 style2\"]" >&2
+            echo "Usage: $0 [--top N] [--styles \"style1 style2\"] [--force]" >&2
             exit 1
             ;;
     esac
@@ -86,15 +92,18 @@ for style_name in "${STYLES[@]}"; do
         continue
     fi
 
-    cache_path="$CACHE_DIR/$style_name.json"
-    if [[ -f "$cache_path" ]]; then
+    bib_cache_path="$CACHE_DIR/$style_name.bibliography.json"
+    cit_cache_path="$CACHE_DIR/$style_name.citation.json"
+    if [[ "$FORCE" = false && -f "$bib_cache_path" && -f "$cit_cache_path" ]]; then
         echo "  CACHE $style_name"
         SKIP=$((SKIP + 1))
         continue
     fi
 
-    if output=$(node "$INFERRER" "$style_path" --fragment 2>/dev/null); then
-        echo "$output" > "$cache_path"
+    if bib_output=$(node "$INFERRER" "$style_path" --section=bibliography --fragment 2>/dev/null) \
+      && cit_output=$(node "$INFERRER" "$style_path" --section=citation --fragment 2>/dev/null); then
+        echo "$bib_output" > "$bib_cache_path"
+        echo "$cit_output" > "$cit_cache_path"
         echo "  OK    $style_name"
         SUCCESS=$((SUCCESS + 1))
     else

@@ -744,10 +744,10 @@ function generateYaml(template, delimiter, wrap) {
     if (component.wrap) yaml += `${indent}  wrap: ${component.wrap}\n`;
     if (component.prefix) yaml += `${indent}  prefix: "${component.prefix}"\n`;
     if (component['name-order']) yaml += `${indent}  name-order: ${component['name-order']}\n`;
-    if (component['et-al']) {
-      yaml += `${indent}  et-al:\n`;
-      yaml += `${indent}    min: ${component['et-al'].min}\n`;
-      yaml += `${indent}    use-first: ${component['et-al'].use_first}\n`;
+    if (component.shorten) {
+      yaml += `${indent}  shorten:\n`;
+      yaml += `${indent}    min: ${component.shorten.min}\n`;
+      yaml += `${indent}    use-first: ${component.shorten['use-first']}\n`;
     }
     if (component.delimiter) yaml += `${indent}  delimiter: "${component.delimiter}"\n`;
 
@@ -858,7 +858,12 @@ function inferTemplate(stylePath, section = 'bibliography') {
 
       yamlComp._componentName = componentName;
       if (nameOrderPatterns[parserName]?.globalWinner) yamlComp['name-order'] = nameOrderPatterns[parserName].globalWinner;
-      if (etAlSettings[parserName]) yamlComp['et-al'] = etAlSettings[parserName];
+      if (etAlSettings[parserName]) {
+        yamlComp.shorten = {
+          min: etAlSettings[parserName].min,
+          'use-first': etAlSettings[parserName].use_first
+        };
+      }
 
       template.push(yamlComp);
     }
