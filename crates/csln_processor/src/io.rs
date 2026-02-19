@@ -194,3 +194,26 @@ pub fn load_bibliography(path: &Path) -> Result<Bibliography, ProcessorError> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn load_citations_preserves_locator_labels() {
+        let path = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests/fixtures/citations-expanded.json");
+        let citations = load_citations(&path).expect("citations fixture should parse");
+        let with_locator = citations
+            .iter()
+            .find(|c| c.id.as_deref() == Some("with-locator"))
+            .expect("with-locator citation should exist");
+
+        assert_eq!(with_locator.items.len(), 1);
+        assert_eq!(
+            with_locator.items[0].label,
+            Some(csln_core::citation::LocatorType::Page)
+        );
+        assert_eq!(with_locator.items[0].locator.as_deref(), Some("23"));
+    }
+}

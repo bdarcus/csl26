@@ -89,6 +89,41 @@ pub struct ProcessedReferences {
 }
 
 impl Processor {
+    /// Returns true when style processing mode is note-based.
+    fn is_note_style(&self) -> bool {
+        self.get_config()
+            .processing
+            .as_ref()
+            .is_some_and(|p| matches!(p, csln_core::options::Processing::Note))
+    }
+
+    /// Normalize citation note context for note styles.
+    ///
+    /// Document/plugin layers should provide explicit `note_number` values.
+    /// When missing, this method assigns sequential note numbers in citation order.
+    pub fn normalize_note_context(&self, citations: &[Citation]) -> Vec<Citation> {
+        if !self.is_note_style() {
+            return citations.to_vec();
+        }
+
+        let mut next_note = 1_u32;
+        citations
+            .iter()
+            .cloned()
+            .map(|mut c| {
+                if let Some(n) = c.note_number {
+                    if n >= next_note {
+                        next_note = n.saturating_add(1);
+                    }
+                } else {
+                    c.note_number = Some(next_note);
+                    next_note = next_note.saturating_add(1);
+                }
+                c
+            })
+            .collect()
+    }
+
     /// Initialize numeric citation numbers from bibliography insertion order.
     ///
     /// citeproc-js registers all bibliography items before citation rendering in
@@ -585,6 +620,26 @@ impl Processor {
         };
 
         Ok(fmt.finish(wrapped))
+    }
+
+    /// Render multiple citations in order with note-context normalization.
+    pub fn process_citations(&self, citations: &[Citation]) -> Result<Vec<String>, ProcessorError> {
+        self.process_citations_with_format::<crate::render::plain::PlainText>(citations)
+    }
+
+    /// Render multiple citations in order with note-context normalization.
+    pub fn process_citations_with_format<F>(
+        &self,
+        citations: &[Citation],
+    ) -> Result<Vec<String>, ProcessorError>
+    where
+        F: crate::render::format::OutputFormat<Output = String>,
+    {
+        let normalized = self.normalize_note_context(citations);
+        normalized
+            .iter()
+            .map(|c| self.process_citation_with_format::<F>(c))
+            .collect()
     }
 
     /// Render the bibliography to a string.

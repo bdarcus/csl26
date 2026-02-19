@@ -457,24 +457,22 @@ impl Locale {
         let punctuation_in_quote = raw.locale.starts_with("en-US")
             || (raw.locale.starts_with("en") && !raw.locale.starts_with("en-GB"));
 
-        let mut locale = Locale {
-            locale: raw.locale.clone(),
-            dates: DateTerms {
-                months: MonthNames {
-                    long: raw.dates.months.long,
-                    short: raw.dates.months.short,
-                },
-                seasons: raw.dates.seasons,
-                uncertainty_term: raw.dates.uncertainty_term,
-                open_ended_term: raw.dates.open_ended_term,
+        // Start from en-US defaults so partially specified locale files still
+        // have complete term/locator coverage (e.g., page/section labels).
+        let mut locale = Locale::en_us();
+        locale.locale = raw.locale.clone();
+        locale.dates = DateTerms {
+            months: MonthNames {
+                long: raw.dates.months.long,
+                short: raw.dates.months.short,
             },
-            roles: HashMap::new(),
-            locators: HashMap::new(),
-            terms: Terms::default(),
-            punctuation_in_quote,
-            // Set locale-specific articles based on language
-            sort_articles: Self::default_articles_for_locale(&raw.locale),
+            seasons: raw.dates.seasons,
+            uncertainty_term: raw.dates.uncertainty_term,
+            open_ended_term: raw.dates.open_ended_term,
         };
+        locale.punctuation_in_quote = punctuation_in_quote;
+        // Set locale-specific articles based on language
+        locale.sort_articles = Self::default_articles_for_locale(&raw.locale);
 
         // Map raw terms to structured terms and locators
         for (key, value) in &raw.terms {
