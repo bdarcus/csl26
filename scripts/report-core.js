@@ -15,6 +15,7 @@
 const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
+const yaml = require('js-yaml');
 
 const STYLE_METADATA = {
   'apa-7th': { source: 'apa', dependents: 783, format: 'author-date' },
@@ -31,6 +32,15 @@ const STYLE_METADATA = {
 };
 
 const TOTAL_DEPENDENTS = 7987;
+const CORE_FALLBACK_TYPES = [
+  'article-journal',
+  'book',
+  'chapter',
+  'report',
+  'thesis',
+  'paper-conference',
+  'webpage',
+];
 
 /**
  * Parse command-line arguments
@@ -213,6 +223,279 @@ function computeComponentMatchRate(oracleResult) {
   return totalComponents > 0 ? parseFloat((totalMatches / totalComponents).toFixed(3)) : null;
 }
 
+function clamp(min, max, value) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function safePct(value) {
+  return parseFloat(clamp(0, 100, value).toFixed(1));
+}
+
+function loadStyleYaml(styleName) {
+  const stylePath = path.join(path.dirname(__dirname), 'styles', `${styleName}.yaml`);
+  if (!fs.existsSync(stylePath)) {
+    return { stylePath, styleData: null, error: `Style YAML not found: ${stylePath}` };
+  }
+  try {
+    const styleData = yaml.load(fs.readFileSync(stylePath, 'utf8'));
+    return { stylePath, styleData, error: null };
+  } catch (error) {
+    return { stylePath, styleData: null, error: `YAML parse error: ${error.message}` };
+  }
+}
+
+function flattenTemplateComponents(components) {
+  const flattened = [];
+  for (const component of components || []) {
+    if (!component || typeof component !== 'object') continue;
+    flattened.push(component);
+    if (Array.isArray(component.items)) {
+      flattened.push(...flattenTemplateComponents(component.items));
+    }
+  }
+  return flattened;
+}
+
+function collectStyleTemplates(styleData) {
+  const citation = styleData?.citation || {};
+  const bibliography = styleData?.bibliography || {};
+  const typeTemplates = bibliography['type-templates'] || {};
+
+  const citationTemplates = [];
+  if (Array.isArray(citation.template)) citationTemplates.push(...citation.template);
+  if (Array.isArray(citation.integral?.template)) citationTemplates.push(...citation.integral.template);
+  if (Array.isArray(citation['non-integral']?.template)) citationTemplates.push(...citation['non-integral'].template);
+
+  const bibliographyTemplate = Array.isArray(bibliography.template) ? bibliography.template : [];
+  const typeTemplateComponents = [];
+  for (const template of Object.values(typeTemplates)) {
+    if (Array.isArray(template)) typeTemplateComponents.push(...template);
+  }
+
+  return {
+    citationTemplates,
+    bibliographyTemplate,
+    typeTemplateComponents,
+  };
+}
+
+function parseOverrideKey(rawKey) {
+  const key = String(rawKey || '').trim();
+  if (!key) return [];
+  if (key === 'default') return ['default'];
+  return key
+    .replace(/^\[/, '')
+    .replace(/\]$/, '')
+    .split(',')
+    .map((part) => part.trim())
+    .map((part) => part.replace(/^['"]|['"]$/g, ''))
+    .filter(Boolean);
+}
+
+function resolveOverrideForType(overrides, refType) {
+  if (!overrides || typeof overrides !== 'object') return null;
+  let defaultOverride = null;
+  for (const [rawKey, value] of Object.entries(overrides)) {
+    const keys = parseOverrideKey(rawKey);
+    if (keys.includes('default')) {
+      defaultOverride = value;
+      continue;
+    }
+    if (keys.includes(refType)) return value;
+  }
+  return defaultOverride;
+}
+
+function componentVisibleForType(component, refType) {
+  const baseSuppressed = component?.suppress === true;
+  const override = resolveOverrideForType(component?.overrides, refType);
+  if (override && typeof override === 'object' && Object.prototype.hasOwnProperty.call(override, 'suppress')) {
+    return override.suppress !== true;
+  }
+  return !baseSuppressed;
+}
+
+function isAnchorComponent(component) {
+  return Boolean(component?.contributor || component?.title || component?.date);
+}
+
+function componentSemanticKey(component) {
+  if (component.contributor) return `contributor:${component.contributor}`;
+  if (component.title) return `title:${component.title}`;
+  if (component.date) return `date:${component.date}:${component.form || 'default'}`;
+  if (component.number) return `number:${component.number}`;
+  if (component.variable) return `variable:${component.variable}`;
+  if (component.items) return 'items-group';
+  return Object.keys(component).sort().join('|') || 'unknown';
+}
+
+function countPresetUses(node) {
+  let count = 0;
+  function visit(value) {
+    if (!value || typeof value !== 'object') return;
+    if (Array.isArray(value)) {
+      for (const item of value) visit(item);
+      return;
+    }
+    for (const [key, child] of Object.entries(value)) {
+      if (key === 'use-preset') count += 1;
+      visit(child);
+    }
+  }
+  visit(node);
+  return count;
+}
+
+function computeTypeCoverageScore(citationsByType) {
+  const entries = Object.entries(citationsByType || {})
+    .filter(([, stats]) => (stats?.total || 0) > 0);
+
+  if (entries.length === 0) {
+    return {
+      score: 0,
+      observedTypes: 0,
+      averageTypePassRate: 0,
+      breadthFactor: 0,
+    };
+  }
+
+  const averageTypePassRate = entries
+    .map(([, stats]) => stats.passed / stats.total)
+    .reduce((sum, rate) => sum + rate, 0) / entries.length;
+  const breadthFactor = clamp(0, 1, entries.length / 4);
+  const score = ((averageTypePassRate * 0.7) + (breadthFactor * 0.3)) * 100;
+
+  return {
+    score: safePct(score),
+    observedTypes: entries.length,
+    averageTypePassRate: parseFloat((averageTypePassRate * 100).toFixed(1)),
+    breadthFactor: parseFloat((breadthFactor * 100).toFixed(1)),
+  };
+}
+
+function computeFallbackRobustness(styleData) {
+  const bibliography = styleData?.bibliography || {};
+  const typeTemplates = bibliography['type-templates'] || {};
+  const typeTemplateSet = new Set(Object.keys(typeTemplates));
+  const assessedTypes = CORE_FALLBACK_TYPES.filter((type) => !typeTemplateSet.has(type));
+  const flattenedBase = flattenTemplateComponents(Array.isArray(bibliography.template) ? bibliography.template : []);
+
+  if (assessedTypes.length === 0) {
+    return {
+      score: 100,
+      assessedTypes: 0,
+      passingTypes: 0,
+      note: 'all core types have explicit type-templates',
+    };
+  }
+
+  let passingTypes = 0;
+  for (const refType of assessedTypes) {
+    const visible = flattenedBase.filter((component) => componentVisibleForType(component, refType));
+    const anchorCount = visible.filter(isAnchorComponent).length;
+    if (visible.length > 0 && anchorCount >= 2) passingTypes += 1;
+  }
+
+  return {
+    score: safePct((passingTypes / assessedTypes.length) * 100),
+    assessedTypes: assessedTypes.length,
+    passingTypes,
+    note: 'base bibliography template only',
+  };
+}
+
+function computeConcisionScore(styleData, format) {
+  const templates = collectStyleTemplates(styleData);
+  const flattened = flattenTemplateComponents([
+    ...templates.citationTemplates,
+    ...templates.bibliographyTemplate,
+    ...templates.typeTemplateComponents,
+  ]);
+
+  if (flattened.length === 0) {
+    return {
+      score: 0,
+      totalComponents: 0,
+      duplicates: 0,
+      overrideDensity: 0,
+    };
+  }
+
+  const semanticKeys = flattened.map(componentSemanticKey);
+  const uniqueKeys = new Set(semanticKeys);
+  const duplicates = Math.max(0, semanticKeys.length - uniqueKeys.size);
+  const duplicateRatio = duplicates / semanticKeys.length;
+  const overrideCount = flattened.reduce(
+    (sum, component) => sum + Object.keys(component.overrides || {}).length,
+    0
+  );
+  const overrideDensity = overrideCount / flattened.length;
+
+  const componentTargets = {
+    'author-date': 52,
+    numeric: 55,
+    note: 65,
+  };
+  const target = componentTargets[format] || 55;
+  const componentPenalty = Math.max(0, flattened.length - target) * 1.2;
+  const duplicatePenalty = duplicateRatio * 30;
+  const overridePenalty = Math.max(0, overrideDensity - 1.0) * 20;
+  const score = 100 - componentPenalty - duplicatePenalty - overridePenalty;
+
+  return {
+    score: safePct(score),
+    totalComponents: flattened.length,
+    duplicates,
+    overrideDensity: parseFloat(overrideDensity.toFixed(2)),
+  };
+}
+
+function computePresetUsageScore(styleData, concisionScore) {
+  const uses = countPresetUses(styleData);
+  if (uses >= 2) return { score: 100, uses };
+  if (uses === 1) return { score: 80, uses };
+  return { score: concisionScore >= 80 ? 60 : 45, uses };
+}
+
+function computeQualityMetrics(styleSpec, oracleResult) {
+  const loaded = loadStyleYaml(styleSpec.name);
+  if (!loaded.styleData) {
+    return {
+      score: 0,
+      error: loaded.error,
+      subscores: {
+        typeCoverage: { score: 0 },
+        fallbackRobustness: { score: 0 },
+        concision: { score: 0 },
+        presetUsage: { score: 0 },
+      },
+    };
+  }
+
+  const typeCoverage = computeTypeCoverageScore(oracleResult.citationsByType || {});
+  const fallbackRobustness = computeFallbackRobustness(loaded.styleData);
+  const concision = computeConcisionScore(loaded.styleData, styleSpec.format);
+  const presetUsage = computePresetUsageScore(loaded.styleData, concision.score);
+
+  const score = (
+    (typeCoverage.score * 0.35) +
+    (fallbackRobustness.score * 0.25) +
+    (concision.score * 0.25) +
+    (presetUsage.score * 0.15)
+  );
+
+  return {
+    score: safePct(score),
+    error: null,
+    subscores: {
+      typeCoverage,
+      fallbackRobustness,
+      concision,
+      presetUsage,
+    },
+  };
+}
+
 /**
  * Generate compatibility report
  */
@@ -226,6 +509,8 @@ function generateReport(options) {
   let citationsPassed = 0;
   let biblioTotal = 0;
   let biblioPassed = 0;
+  let qualityTotal = 0;
+  let qualityCount = 0;
   let errorCount = 0;
 
   for (const styleSpec of coreStyles) {
@@ -247,6 +532,8 @@ function generateReport(options) {
         citationsByType: {},
         error: `Style file not found: ${stylePath}`,
         oracleDetail: null,
+        qualityScore: 0,
+        qualityBreakdown: null,
       });
       errorCount++;
       continue;
@@ -268,6 +555,10 @@ function generateReport(options) {
     biblioPassed += bibliography.passed || 0;
 
     const componentMatchRate = computeComponentMatchRate(oracleResult);
+    const qualityMetrics = computeQualityMetrics(styleSpec, oracleResult);
+    const qualityScore = qualityMetrics.score / 100;
+    qualityTotal += qualityScore;
+    qualityCount += 1;
 
     let statusTier = 'failing';
     if (oracleResult.error) {
@@ -297,6 +588,8 @@ function generateReport(options) {
       componentSummary: oracleResult.componentSummary || {},
       citationEntries: oracleResult.citations ? oracleResult.citations.entries : null,
       oracleDetail: oracleResult.bibliography ? oracleResult.bibliography.entries : null,
+      qualityScore: parseFloat(qualityScore.toFixed(3)),
+      qualityBreakdown: qualityMetrics,
     });
   }
 
@@ -313,6 +606,9 @@ function generateReport(options) {
       totalStyles: coreStyles.length,
       citationsOverall: { passed: citationsPassed, total: citationsTotal },
       bibliographyOverall: { passed: biblioPassed, total: biblioTotal },
+      qualityOverall: {
+        score: qualityCount > 0 ? parseFloat((qualityTotal / qualityCount).toFixed(3)) : 0,
+      },
       styles,
     },
     errorCount
@@ -476,12 +772,15 @@ function generateHtmlStats(report) {
   const biblioPct = report.bibliographyOverall.total > 0
     ? ((report.bibliographyOverall.passed / report.bibliographyOverall.total) * 100).toFixed(1)
     : 0;
+  const qualityPct = report.qualityOverall
+    ? (report.qualityOverall.score * 100).toFixed(1)
+    : '0.0';
 
   return `
     <!-- Statistics Cards -->
     <section class="py-12 px-6 bg-accent-cream">
         <div class="max-w-7xl mx-auto">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
                 <!-- Core Styles -->
                 <div class="bg-white rounded-xl border border-slate-200 p-6">
                     <div class="text-sm font-medium text-slate-500 mb-2">Core Styles</div>
@@ -502,6 +801,13 @@ function generateHtmlStats(report) {
                     <div class="text-3xl font-bold text-slate-900">${report.bibliographyOverall.passed}/${report.bibliographyOverall.total}</div>
                     <div class="text-xs text-slate-400 mt-2">${biblioPct}% pass rate</div>
                 </div>
+
+                <!-- Quality Overall -->
+                <div class="bg-white rounded-xl border border-slate-200 p-6">
+                    <div class="text-sm font-medium text-slate-500 mb-2">Quality (SQI)</div>
+                    <div class="text-3xl font-bold text-slate-900">${qualityPct}%</div>
+                    <div class="text-xs text-slate-400 mt-2">Type coverage, fallback, concision, presets</div>
+                </div>
             </div>
         </div>
     </section>
@@ -513,6 +819,13 @@ function generateHtmlTable(report) {
 
   for (const style of report.styles) {
     const fidelityPct = (style.fidelityScore * 100).toFixed(1);
+    const qualityPct = ((style.qualityScore || 0) * 100).toFixed(1);
+    const citationRate = style.citations.total > 0 ? style.citations.passed / style.citations.total : -1;
+    const bibliographyRate = style.hasBibliography && style.bibliography.total > 0
+      ? style.bibliography.passed / style.bibliography.total
+      : -1;
+    const dependentsValue = style.dependents ?? -1;
+    const componentRateValue = style.componentMatchRate !== null ? style.componentMatchRate : -1;
 
     const statusBadgeMap = {
       'perfect': 'badge-perfect',
@@ -564,9 +877,26 @@ function generateHtmlTable(report) {
 
     const toggleId = `toggle-${style.name}`;
     const contentId = `content-${style.name}`;
+    const statusRank = {
+      perfect: 4,
+      partial: 3,
+      failing: 2,
+      error: 1,
+    }[style.statusTier] || 0;
 
     tableRows += `
-                <tr class="border-b border-slate-200 hover:bg-slate-50 accordion-toggle" data-toggle="${toggleId}">
+                <tr class="border-b border-slate-200 hover:bg-slate-50 accordion-toggle"
+                    data-toggle="${toggleId}"
+                    data-detail-id="${contentId}"
+                    data-style-name="${escapeHtml(style.name.toLowerCase())}"
+                    data-format="${escapeHtml(String(style.format).toLowerCase())}"
+                    data-dependents="${dependentsValue}"
+                    data-citation-rate="${citationRate}"
+                    data-bibliography-rate="${bibliographyRate}"
+                    data-component-rate="${componentRateValue}"
+                    data-fidelity="${style.fidelityScore}"
+                    data-quality="${style.qualityScore || 0}"
+                    data-status-rank="${statusRank}">
                     <td class="px-6 py-4 text-sm font-medium text-slate-900">${style.name}</td>
                     <td class="px-6 py-4 text-sm text-slate-600">${style.format}</td>
                     <td class="px-6 py-4 text-sm text-slate-600">${style.dependents ?? '—'}</td>
@@ -584,6 +914,7 @@ function generateHtmlTable(report) {
                         ${componentRateHtml}
                     </td>
                     <td class="px-6 py-4 text-sm font-mono text-slate-600">${fidelityPct}%</td>
+                    <td class="px-6 py-4 text-sm font-mono text-slate-600">${qualityPct}%</td>
                     <td class="px-6 py-4">
                         <span class="inline-flex items-center px-3 py-1 rounded text-xs font-medium ${statusBadge}">
                             ${statusText}
@@ -596,7 +927,7 @@ function generateHtmlTable(report) {
                     </td>
                 </tr>
                 <tr class="accordion-content" id="${contentId}">
-                    <td colspan="9" class="px-6 py-4 bg-slate-50">
+                    <td colspan="10" class="px-6 py-4 bg-slate-50">
                         <div class="max-w-4xl">
 ${generateDetailContent(style)}
                         </div>
@@ -613,14 +944,51 @@ ${generateDetailContent(style)}
                 <table class="w-full">
                     <thead class="bg-slate-50 border-b border-slate-200">
                         <tr>
-                            <th class="text-left px-6 py-4 text-xs font-semibold text-slate-700">Style</th>
-                            <th class="text-left px-6 py-4 text-xs font-semibold text-slate-700">Format</th>
-                            <th class="text-left px-6 py-4 text-xs font-semibold text-slate-700">Dependents</th>
-                            <th class="text-left px-6 py-4 text-xs font-semibold text-slate-700">Citations</th>
-                            <th class="text-left px-6 py-4 text-xs font-semibold text-slate-700">Bibliography</th>
-                            <th class="text-left px-6 py-4 text-xs font-semibold text-slate-700">Components</th>
-                            <th class="text-left px-6 py-4 text-xs font-semibold text-slate-700">Fidelity</th>
-                            <th class="text-left px-6 py-4 text-xs font-semibold text-slate-700">Status</th>
+                            <th class="text-left px-6 py-4 text-xs font-semibold text-slate-700">
+                                <button class="inline-flex items-center gap-1 hover:text-primary transition-colors" onclick="sortCompatTable('style-name')">
+                                    Style <span class="text-slate-400" id="sort-ind-style-name">↕</span>
+                                </button>
+                            </th>
+                            <th class="text-left px-6 py-4 text-xs font-semibold text-slate-700">
+                                <button class="inline-flex items-center gap-1 hover:text-primary transition-colors" onclick="sortCompatTable('format')">
+                                    Format <span class="text-slate-400" id="sort-ind-format">↕</span>
+                                </button>
+                            </th>
+                            <th class="text-left px-6 py-4 text-xs font-semibold text-slate-700">
+                                <button class="inline-flex items-center gap-1 hover:text-primary transition-colors" onclick="sortCompatTable('dependents')">
+                                    Dependents <span class="text-slate-400" id="sort-ind-dependents">↕</span>
+                                </button>
+                            </th>
+                            <th class="text-left px-6 py-4 text-xs font-semibold text-slate-700">
+                                <button class="inline-flex items-center gap-1 hover:text-primary transition-colors" onclick="sortCompatTable('citation-rate')">
+                                    Citations <span class="text-slate-400" id="sort-ind-citation-rate">↕</span>
+                                </button>
+                            </th>
+                            <th class="text-left px-6 py-4 text-xs font-semibold text-slate-700">
+                                <button class="inline-flex items-center gap-1 hover:text-primary transition-colors" onclick="sortCompatTable('bibliography-rate')">
+                                    Bibliography <span class="text-slate-400" id="sort-ind-bibliography-rate">↕</span>
+                                </button>
+                            </th>
+                            <th class="text-left px-6 py-4 text-xs font-semibold text-slate-700">
+                                <button class="inline-flex items-center gap-1 hover:text-primary transition-colors" onclick="sortCompatTable('component-rate')">
+                                    Components <span class="text-slate-400" id="sort-ind-component-rate">↕</span>
+                                </button>
+                            </th>
+                            <th class="text-left px-6 py-4 text-xs font-semibold text-slate-700">
+                                <button class="inline-flex items-center gap-1 hover:text-primary transition-colors" onclick="sortCompatTable('fidelity')">
+                                    Fidelity <span class="text-slate-400" id="sort-ind-fidelity">↕</span>
+                                </button>
+                            </th>
+                            <th class="text-left px-6 py-4 text-xs font-semibold text-slate-700">
+                                <button class="inline-flex items-center gap-1 hover:text-primary transition-colors" onclick="sortCompatTable('quality')">
+                                    Quality <span class="text-slate-400" id="sort-ind-quality">↕</span>
+                                </button>
+                            </th>
+                            <th class="text-left px-6 py-4 text-xs font-semibold text-slate-700">
+                                <button class="inline-flex items-center gap-1 hover:text-primary transition-colors" onclick="sortCompatTable('status-rank')">
+                                    Status <span class="text-slate-400" id="sort-ind-status-rank">↕</span>
+                                </button>
+                            </th>
                             <th class="px-6 py-4"></th>
                         </tr>
                     </thead>
@@ -642,6 +1010,26 @@ function generateDetailContent(style) {
                             <div class="p-4 rounded-lg bg-red-50 border border-red-200 mb-4">
                                 <div class="text-sm font-medium text-red-700 mb-1">Error</div>
                                 <div class="text-xs text-red-600 font-mono">${escapeHtml(style.error)}</div>
+                            </div>
+`;
+  }
+
+  if (style.qualityBreakdown) {
+    const qb = style.qualityBreakdown;
+    const overall = ((style.qualityScore || 0) * 100).toFixed(1);
+    const typeCoverage = qb.subscores?.typeCoverage?.score ?? 0;
+    const fallback = qb.subscores?.fallbackRobustness?.score ?? 0;
+    const concision = qb.subscores?.concision?.score ?? 0;
+    const presets = qb.subscores?.presetUsage?.score ?? 0;
+    html += `
+                            <div class="mb-4 p-3 rounded border border-slate-200 bg-white">
+                                <div class="text-xs font-semibold text-slate-900 mb-2">Quality (SQI): ${overall}%</div>
+                                <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs font-mono">
+                                    <div class="px-2 py-1 rounded bg-slate-100 text-slate-700">type ${typeCoverage.toFixed(1)}%</div>
+                                    <div class="px-2 py-1 rounded bg-slate-100 text-slate-700">fallback ${fallback.toFixed(1)}%</div>
+                                    <div class="px-2 py-1 rounded bg-slate-100 text-slate-700">concision ${concision.toFixed(1)}%</div>
+                                    <div class="px-2 py-1 rounded bg-slate-100 text-slate-700">presets ${presets.toFixed(1)}%</div>
+                                </div>
                             </div>
 `;
   }
@@ -846,9 +1234,77 @@ function generateHtmlFooter() {
     </footer>
 
     <script>
+        const sortState = { key: null, direction: 1 };
+
         function toggleAccordion(contentId) {
             const content = document.getElementById(contentId);
             if (content) content.classList.toggle('active');
+        }
+
+        function updateSortIndicators(activeKey, direction) {
+            document.querySelectorAll('[id^="sort-ind-"]').forEach((el) => {
+                el.textContent = '↕';
+                el.classList.remove('text-primary');
+                el.classList.add('text-slate-400');
+            });
+            const active = document.getElementById('sort-ind-' + activeKey);
+            if (active) {
+                active.textContent = direction > 0 ? '↑' : '↓';
+                active.classList.remove('text-slate-400');
+                active.classList.add('text-primary');
+            }
+        }
+
+        function sortCompatTable(key) {
+            const tbody = document.querySelector('table tbody');
+            if (!tbody) return;
+
+            const summaryRows = Array.from(tbody.querySelectorAll('tr.accordion-toggle'));
+            const rowPairs = summaryRows.map((summary) => {
+                const detailId = summary.dataset.detailId;
+                const detail = detailId ? document.getElementById(detailId) : null;
+                return { summary, detail };
+            });
+
+            const defaultAsc = key === 'style-name' || key === 'format';
+            if (sortState.key === key) {
+                sortState.direction *= -1;
+            } else {
+                sortState.key = key;
+                sortState.direction = defaultAsc ? 1 : -1;
+            }
+
+            const asNumber = (value) => {
+                const parsed = Number(value);
+                return Number.isNaN(parsed) ? -Infinity : parsed;
+            };
+            const asText = (value) => String(value || '').toLowerCase();
+
+            rowPairs.sort((a, b) => {
+                const left = a.summary.dataset[key] || '';
+                const right = b.summary.dataset[key] || '';
+                const numericKeys = new Set([
+                    'dependents',
+                    'citation-rate',
+                    'bibliography-rate',
+                    'component-rate',
+                    'fidelity',
+                    'quality',
+                    'status-rank',
+                ]);
+
+                if (numericKeys.has(key)) {
+                    return (asNumber(left) - asNumber(right)) * sortState.direction;
+                }
+                return asText(left).localeCompare(asText(right)) * sortState.direction;
+            });
+
+            for (const pair of rowPairs) {
+                tbody.appendChild(pair.summary);
+                if (pair.detail) tbody.appendChild(pair.detail);
+            }
+
+            updateSortIndicators(key, sortState.direction);
         }
     </script>
 
