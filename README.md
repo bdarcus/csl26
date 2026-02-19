@@ -14,7 +14,6 @@ CSLN is a ground-up reimagining of the [Citation Style Language](https://citatio
 - [Architecture](#architecture)
 - [For Style Maintainers](#for-style-maintainers)
 - [For Developers](#for-developers)
-- [Roadmap](#roadmap)
 - [Contributing](#contributing)
 - [License](#license)
 - [Acknowledgments](#acknowledgments)
@@ -490,29 +489,6 @@ cargo run --bin csln --features schema -- schema --out-dir ./schemas
 
 The `schema` command is feature-gated to keep default binaries smaller. CI
 publishes generated schemas to the project website.
-
-## Roadmap
-
-### Near-term
-- [x] Bibliography formatting (page ranges, subsequent author substitute)
-- [ ] Complete bibliography formatting (complex punctuation, affixes)
-- [ ] Resolve high-frequency gaps identified by `csln_analyze`
-- [ ] Automated verification pipeline for top 100 styles
-- [x] Schema versioning and forward compatibility
-- [ ] Bulk migration of all 2,844 styles
-
-### Medium-term
-- [ ] WASM build for browser use
-- [x] Additional locales (de-DE, fr-FR, tr-TR, etc.)
-- [x] Style presets vocabulary (see [STYLE_ALIASING.md](./docs/architecture/design/STYLE_ALIASING.md))
-- [x] Embedded priority templates (APA, Chicago, Vancouver, IEEE, Harvard)
-- [x] Preset-aware migration (emit preset names instead of expanded config)
-- [ ] Note-bibliography citation style support
-
-### Long-term
-- [ ] CSLN 1.0 specification
-- [ ] Visual style editor
-- [ ] Integration guides for reference managers
 
 ## Contributing
 
