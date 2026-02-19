@@ -17,14 +17,45 @@ const path = require('path');
  * collapsing whitespace.
  */
 function normalizeText(text) {
+  const monthMap = {
+    January: 'Jan',
+    February: 'Feb',
+    March: 'Mar',
+    April: 'Apr',
+    May: 'May',
+    June: 'Jun',
+    July: 'Jul',
+    August: 'Aug',
+    September: 'Sep',
+    October: 'Oct',
+    November: 'Nov',
+    December: 'Dec',
+  };
+
   return text
     .replace(/<[^>]+>/g, '')           // Strip HTML tags
     .replace(/&#38;/g, '&')            // HTML entity for &
     .replace(/_([^_]+)_/g, '$1')       // Strip markdown italics
     .replace(/\*\*([^*]+)\*\*/g, '$1') // Strip markdown bold
+    .replace(/\[(Internet)\]/gi, '')   // Normalize optional medium marker
+    .replace(/\((eds?|ed)\.\)/gi, 'editors')
+    .replace(/\b(eds?|ed)\.?\b/gi, 'editors')
+    .replace(
+      /\[(cited)\s+(\d{4}),?\s+([A-Za-z]+)\s+(\d{1,2})\]/gi,
+      (_, a, y, m, d) => `[${a} ${y} ${m} ${d}]`
+    )
+    .replace(
+      /(Accessed)\s+(\d{4}),?\s+([A-Za-z]+)\s+(\d{1,2})/gi,
+      (_, a, y, m, d) => `${a} ${d} ${m} ${y}`
+    )
+    .replace(
+      /\b(January|February|March|April|May|June|July|August|September|October|November|December)\b/g,
+      m => monthMap[m] || m
+    )
     .replace(/\bet al\./gi, 'et al')   // Normalize equivalent et-al punctuation
     // Strip bibliography numbering prefix (allow hidden directional marks).
     .replace(/^[\s\u200e\u200f\u202a-\u202e\u2066-\u2069]*\d+\.\s*/, '')
+    .replace(/;\./g, ';')
     .replace(/\s+([,.;:])/g, '$1')     // Normalize stray spaces before punctuation
     .replace(/\s+/g, ' ')             // Normalize whitespace
     .trim();

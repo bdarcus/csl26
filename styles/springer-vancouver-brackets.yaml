@@ -20,7 +20,7 @@ options:
     demote-non-dropping-particle: sort-only
     sort-separator: ' '
   dates:
-    month: long
+    month: short
   page-range-format: minimal
   bibliography:
     entry-suffix: .
@@ -49,133 +49,236 @@ citation:
   delimiter: ""
 
 bibliography:
+  type-templates:
+    article-journal:
+      - contributor: author
+        form: long
+        shorten:
+          min: 7
+          use-first: 6
+          and-others: et-al
+          delimiter-precedes-last: always
+      - title: primary
+      - title: parent-serial
+      - items:
+          - variable: publisher-place
+            suffix: ': '
+          - variable: publisher
+            suffix: '; '
+          - date: issued
+            form: year
+            suffix: ';'
+          - number: volume
+          - number: pages
+            prefix: ':'
+        delimiter: none
+      - variable: doi
+        prefix: '. https://doi.org/'
+
+    chapter:
+      - contributor: author
+        form: long
+      - title: primary
+      - items:
+          - contributor: editor
+            form: long
+            label: { term: editor, form: long, placement: suffix }
+          - title: parent-monograph
+        delimiter: '. '
+        prefix: 'In: '
+      - variable: publisher
+        suffix: '; '
+      - date: issued
+        form: year
+      - number: pages
+        prefix: '. p. '
+
+    book:
+      - contributor: author
+        form: long
+      - contributor: editor
+        form: long
+        label: { term: editor, form: long, placement: suffix }
+      - title: primary
+      - number: edition
+      - variable: publisher-place
+        suffix: ': '
+      - variable: publisher
+        suffix: '; '
+      - date: issued
+        form: year
+
+    thesis:
+      - contributor: author
+        form: long
+      - items:
+          - title: primary
+          - variable: genre
+            wrap: brackets
+        delimiter: ' '
+      - variable: publisher
+        suffix: '; '
+      - date: issued
+        form: year
+
+    paper-conference:
+      - contributor: author
+        form: long
+      - title: primary
+      - title: parent-monograph
+      - date: issued
+        form: year
+      - number: pages
+        prefix: 'p. '
+
+    webpage:
+      - contributor: author
+        form: long
+      - title: primary
+      - date: issued
+        form: year
+      - date: accessed
+        form: year-month-day
+        prefix: '[cited '
+        suffix: ']. '
+      - variable: url
+      - date: accessed
+        form: year-month-day
+        prefix: '. Accessed '
+
+    article-newspaper:
+      - contributor: author
+        form: long
+      - title: primary
+      - title: parent-serial
+      - items:
+          - date: issued
+            form: year
+          - date: issued
+            form: month-day
+            prefix: ' '
+        delimiter: none
+        suffix: ';'
+
+    article-magazine:
+      - contributor: author
+        form: long
+      - title: primary
+      - title: parent-serial
+      - items:
+        - date: issued
+          form: year
+          suffix: ' '
+        - date: issued
+          form: month-day
+          suffix: ';'
+        - number: volume
+        - number: pages
+          prefix: ':'
+        delimiter: none
+
+    entry-encyclopedia:
+      - contributor: author
+        form: long
+      - title: primary
+      - title: parent-serial
+      - variable: publisher
+        suffix: '; '
+      - date: issued
+        form: year
+      - number: pages
+        prefix: '. p. '
+
+    dataset:
+      - contributor: author
+        form: long
+      - title: primary
+      - variable: publisher
+        suffix: '; '
+      - date: issued
+        form: year
+      - date: accessed
+        form: year-month-day
+        prefix: '[cited '
+        suffix: ']. '
+      - variable: url
+      - date: accessed
+        form: year-month-day
+        prefix: '. Accessed '
+
+    legal-case:
+      - title: primary
+      - variable: reporter
+      - date: issued
+        form: year
+      - number: pages
+        prefix: '. p. '
+
+    patent:
+      - contributor: author
+        form: long
+      - title: primary
+      - date: issued
+        form: year
+
+    motion-picture:
+      - contributor: author
+        form: long
+      - title: primary
+      - date: issued
+        form: year
+
+    broadcast:
+      - contributor: author
+        form: long
+      - title: primary
+      - title: parent-serial
+      - date: issued
+        form: year
+
+    interview:
+      - contributor: author
+        form: long
+      - title: primary
+      - date: issued
+        form: year
+      - variable: url
+
+    report:
+      - contributor: author
+        form: long
+      - title: primary
+      - contributor: editor
+        form: long
+        label: { term: editor, form: long, placement: suffix }
+      - variable: publisher-place
+        suffix: ': '
+      - variable: publisher
+        suffix: '; '
+      - date: issued
+        form: year
+
+    personal-communication:
+      - contributor: author
+        form: long
+      - title: primary
+      - date: issued
+        form: year
+
   template:
-  # 1. Author
-  - contributor: author
-    form: long
-    initialize-with: ''
-    suffix: '. '
-
-  # 2. Title
-  - title: primary
-    suffix: '. '
-
-  # 3. Chapter: "In: Editors. "
-  - contributor: editor
-    form: long
-    prefix: 'In: '
-    suffix: '. '
-    overrides:
-      chapter:
-        suppress: false
-      paper-conference:
-        suppress: false
-      default:
-        suppress: true
-
-  # 4. Chapter: parent-monograph title
-  - title: parent-monograph
-    suffix: ', '
-    overrides:
-      chapter:
-        suppress: false
-      paper-conference:
-        suppress: false
-      default:
-        suppress: true
-
-  # 5. Journal: "Container Year;Volume:Pages"
-  - items:
+    - contributor: author
+      form: long
+    - title: primary
     - title: parent-serial
-      suffix: '. '
+    - variable: publisher-place
+      suffix: ': '
+    - variable: publisher
+      suffix: '; '
     - date: issued
       form: year
-      suffix: ';'
     - number: volume
-      suffix: ':'
+      prefix: ';'
     - number: pages
-    delimiter: none
-    overrides:
-      article-journal:
-        suppress: false
-      book:
-        suppress: true
-      chapter:
-        suppress: true
-      paper-conference:
-        suppress: true
-      report:
-        suppress: true
-      default:
-        suppress: true
-
-  # 6. Book: publisher-place
-  - variable: publisher-place
-    suffix: ': '
-    prefix: '. '
-    overrides:
-      book:
-        suppress: false
-      report:
-        suppress: false
-      default:
-        suppress: true
-
-  # 7. Book/Chapter: publisher
-  - variable: publisher
-    suffix: '; '
-    overrides:
-      book:
-        suppress: false
-      report:
-        suppress: false
-      chapter:
-        suppress: false
-      paper-conference:
-        suppress: false
-      article-journal:
-        suppress: true
-      default:
-        suppress: true
-
-  # 8. Book/Chapter: year
-  - date: issued
-    form: year
-    overrides:
-      book:
-        suppress: false
-      report:
-        suppress: false
-      chapter:
-        suppress: false
-      paper-conference:
-        suppress: false
-      article-journal:
-        suppress: true
-      default:
-        suppress: true
-
-  # 9. Chapter: pages
-  - number: pages
-    prefix: ', pp. '
-    overrides:
-      chapter:
-        suppress: false
-      paper-conference:
-        suppress: false
-      article-journal:
-        suppress: true
-      default:
-        suppress: true
-
-  # 10. Article: DOI
-  - variable: doi
-    prefix: 'https://doi.org/'
-    links:
-      target: doi
-      anchor: component
-    overrides:
-      article-journal:
-        suppress: false
-      default:
-        suppress: true
+      prefix: ':'
+    - variable: doi
+      prefix: '. https://doi.org/'
