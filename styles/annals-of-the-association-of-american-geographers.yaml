@@ -27,17 +27,20 @@ citation:
   non-integral:
     wrap: parentheses
     template:
-      - contributor: author
-        form: short
-        shorten:
-          min: 4
-          use-first: 1
-          and-others: et-al
-          delimiter-precedes-last: contextual
-        and: text
-      - date: issued
-        form: year
-    delimiter: " "
+      - items:
+          - contributor: author
+            form: short
+            shorten:
+              min: 4
+              use-first: 1
+              and-others: et-al
+              delimiter-precedes-last: contextual
+            and: text
+          - date: issued
+            form: year
+        delimiter: space
+      - variable: locator
+    delimiter: ", "
   integral:
     delimiter: " "
     template:
@@ -52,6 +55,8 @@ citation:
       - items:
           - date: issued
             form: year
+          - variable: locator
+        delimiter: ", "
         wrap: parentheses
   multi-cite-delimiter: "; "
 bibliography:
