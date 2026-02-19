@@ -1,7 +1,14 @@
 use csl_legacy::model::Style;
-use csln_core::options::{Disambiguation, Processing, ProcessingCustom};
+use csln_core::options::{
+    Disambiguation, Group, Processing, ProcessingCustom, Sort, SortKey, SortSpec,
+};
 
 pub fn detect_processing_mode(style: &Style) -> Option<Processing> {
+    // 0. Note styles are explicit in CSL and should map directly.
+    if style.class == "note" {
+        return Some(Processing::Note);
+    }
+
     // 1. Explicitly numeric style
     // Check if bibliography uses second-field-align (heuristic for numeric labels)
     // Actually, check if it's APA (not numeric) or check common markers
@@ -40,9 +47,11 @@ pub fn detect_processing_mode(style: &Style) -> Option<Processing> {
     });
 
     if is_author_date {
-        // Extract disambiguation settings from citation
+        // Extract disambiguation settings from citation-level attributes.
         let mut disamb = Disambiguation {
-            year_suffix: true, // Standard for author-date
+            // Author-date styles commonly rely on year suffixes; allow explicit
+            // CSL settings to override this default.
+            year_suffix: style.citation.disambiguate_add_year_suffix.unwrap_or(true),
             ..Default::default()
         };
 
@@ -53,11 +62,91 @@ pub fn detect_processing_mode(style: &Style) -> Option<Processing> {
             disamb.add_givenname = opt;
         }
 
+        let sort = style.citation.sort.as_ref().and_then(extract_sort);
+        let group = sort.as_ref().and_then(extract_group_from_sort);
+
         return Some(Processing::Custom(ProcessingCustom {
+            sort,
+            group,
             disambiguate: Some(disamb),
-            ..Default::default()
         }));
     }
 
     None
+}
+
+fn extract_sort(legacy_sort: &csl_legacy::model::Sort) -> Option<Sort> {
+    let template: Vec<SortSpec> = legacy_sort
+        .keys
+        .iter()
+        .filter_map(|key| {
+            let key_kind = key
+                .variable
+                .as_ref()
+                .and_then(|name| parse_sort_key(name))
+                .or_else(|| {
+                    key.macro_name
+                        .as_ref()
+                        .and_then(|name| parse_sort_key(name))
+                })?;
+
+            let ascending = key.sort.as_deref() != Some("descending");
+            Some(SortSpec {
+                key: key_kind,
+                ascending,
+            })
+        })
+        .collect();
+
+    if template.is_empty() {
+        None
+    } else {
+        Some(Sort {
+            shorten_names: false,
+            render_substitutions: false,
+            template,
+        })
+    }
+}
+
+fn extract_group_from_sort(sort: &Sort) -> Option<Group> {
+    let mut keys: Vec<SortKey> = Vec::new();
+
+    for spec in &sort.template {
+        match spec.key {
+            SortKey::Author | SortKey::Year | SortKey::Title => {
+                if !keys.contains(&spec.key) {
+                    keys.push(spec.key.clone());
+                }
+            }
+            SortKey::CitationNumber => {}
+            _ => {}
+        }
+    }
+
+    if keys.is_empty() {
+        None
+    } else {
+        Some(Group { template: keys })
+    }
+}
+
+fn parse_sort_key(name: &str) -> Option<SortKey> {
+    let lowered = name.to_ascii_lowercase();
+
+    if lowered == "citation-number" || lowered.contains("citation-number") {
+        Some(SortKey::CitationNumber)
+    } else if lowered == "author" || lowered.contains("author") {
+        Some(SortKey::Author)
+    } else if lowered == "issued"
+        || lowered == "year"
+        || lowered.contains("year")
+        || lowered.contains("date")
+    {
+        Some(SortKey::Year)
+    } else if lowered == "title" || lowered.contains("title") {
+        Some(SortKey::Title)
+    } else {
+        None
+    }
 }

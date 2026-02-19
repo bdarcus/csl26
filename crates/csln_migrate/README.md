@@ -5,6 +5,8 @@
 The migration pipeline is now output-driven first:
 
 1. Extract global options from CSL XML.
+   - Includes processing/disambiguation extraction and citation-sort mapping.
+   - Emits citation/bibliography contributor overrides when et-al thresholds differ by scope.
 2. Resolve citation and bibliography templates from inferred output artifacts.
 3. Fall back to XML template compilation only when template artifacts are missing or rejected.
 

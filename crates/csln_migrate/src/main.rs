@@ -302,6 +302,24 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // 5. Build Style in correct format for csln_processor
+    let citation_scope_options =
+        csln_migrate::options_extractor::contributors::extract_citation_contributor_overrides(
+            &legacy_style,
+        )
+        .map(|contributors| csln_core::options::Config {
+            contributors: Some(contributors),
+            ..Default::default()
+        });
+
+    let bibliography_scope_options =
+        csln_migrate::options_extractor::contributors::extract_bibliography_contributor_overrides(
+            &legacy_style,
+        )
+        .map(|contributors| csln_core::options::Config {
+            contributors: Some(contributors),
+            ..Default::default()
+        });
+
     let style = Style {
         info: StyleInfo {
             title: Some(legacy_style.info.title.clone()),
@@ -313,7 +331,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         options: Some(options.clone()),
         citation: Some({
             CitationSpec {
-                options: None,
+                options: citation_scope_options,
                 use_preset: None,
                 template: Some(new_cit),
                 wrap: citation_wrap,
@@ -325,7 +343,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }),
         bibliography: Some(BibliographySpec {
-            options: None,
+            options: bibliography_scope_options,
             use_preset: None,
             template: Some(new_bib),
             type_templates,
