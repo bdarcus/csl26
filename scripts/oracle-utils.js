@@ -38,6 +38,7 @@ function normalizeText(text) {
     .replace(/_([^_]+)_/g, '$1')       // Strip markdown italics
     .replace(/\*\*([^*]+)\*\*/g, '$1') // Strip markdown bold
     .replace(/\[(Internet)\]/gi, '')   // Normalize optional medium marker
+    .replace(/\bsec\.?\b/gi, 'section')
     .replace(/\((eds?|ed)\.\)/gi, 'editors')
     .replace(/\b(eds?|ed)\.?\b/gi, 'editors')
     .replace(
@@ -58,6 +59,7 @@ function normalizeText(text) {
     .replace(/;\./g, ';')
     .replace(/\s+([,.;:])/g, '$1')     // Normalize stray spaces before punctuation
     .replace(/\s+/g, ' ')             // Normalize whitespace
+    .replace(/[.,;:]\s*$/g, '')
     .trim();
 }
 

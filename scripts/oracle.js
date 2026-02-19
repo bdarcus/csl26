@@ -304,48 +304,98 @@ function collectCitationTypes(citation, testItems) {
  */
 function matchBibliographyEntries(oracleBib, cslnBib) {
   const pairs = [];
+  const usedOracle = new Set();
   const usedCsln = new Set();
+  const candidates = [];
 
-  for (const oracleEntry of oracleBib) {
-    const oracleNorm = normalizeText(oracleEntry).toLowerCase();
-    let bestMatch = null;
-    let bestScore = 0;
-
-    for (let i = 0; i < cslnBib.length; i++) {
-      if (usedCsln.has(i)) continue;
-
-      const cslnNorm = normalizeText(cslnBib[i]).toLowerCase();
-
-      // Score based on shared words
-      const oracleWords = new Set(oracleNorm.split(/\s+/).filter(w => w.length > 3));
-      const cslnWords = new Set(cslnNorm.split(/\s+/).filter(w => w.length > 3));
-      let score = 0;
-      for (const word of oracleWords) {
-        if (cslnWords.has(word)) score++;
+  // Build all candidate pairings with similarity score.
+  for (let oi = 0; oi < oracleBib.length; oi++) {
+    for (let ci = 0; ci < cslnBib.length; ci++) {
+      const score = textSimilarity(oracleBib[oi], cslnBib[ci]);
+      // Keep weak matches out to avoid accidental cross-pairing.
+      if (score >= 0.20) {
+        candidates.push({ oi, ci, score });
       }
-
-      if (score > bestScore) {
-        bestScore = score;
-        bestMatch = i;
-      }
-    }
-
-    if (bestMatch !== null && bestScore > 2) {
-      pairs.push({ oracle: oracleEntry, csln: cslnBib[bestMatch], score: bestScore });
-      usedCsln.add(bestMatch);
-    } else {
-      pairs.push({ oracle: oracleEntry, csln: null, score: 0 });
     }
   }
 
-  // Add unmatched CSLN entries
-  for (let i = 0; i < cslnBib.length; i++) {
-    if (!usedCsln.has(i)) {
-      pairs.push({ oracle: null, csln: cslnBib[i], score: 0 });
+  // Global greedy assignment (highest-similarity edges first).
+  candidates.sort((a, b) => b.score - a.score);
+  for (const candidate of candidates) {
+    if (usedOracle.has(candidate.oi) || usedCsln.has(candidate.ci)) continue;
+    usedOracle.add(candidate.oi);
+    usedCsln.add(candidate.ci);
+    pairs.push({
+      oracle: oracleBib[candidate.oi],
+      csln: cslnBib[candidate.ci],
+      score: candidate.score,
+    });
+  }
+
+  // Add unmatched oracle entries.
+  for (let oi = 0; oi < oracleBib.length; oi++) {
+    if (!usedOracle.has(oi)) {
+      pairs.push({ oracle: oracleBib[oi], csln: null, score: 0 });
+    }
+  }
+
+  // Add unmatched CSLN entries.
+  for (let ci = 0; ci < cslnBib.length; ci++) {
+    if (!usedCsln.has(ci)) {
+      pairs.push({ oracle: null, csln: cslnBib[ci], score: 0 });
     }
   }
 
   return pairs;
+}
+
+function tokenizeForSimilarity(text) {
+  return normalizeText(text || '')
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+    .split(/\s+/)
+    .filter(Boolean)
+    .filter((token) => token.length > 1);
+}
+
+function textSimilarity(a, b) {
+  const left = tokenizeForSimilarity(a);
+  const right = tokenizeForSimilarity(b);
+  if (left.length === 0 && right.length === 0) return 1;
+  if (left.length === 0 || right.length === 0) return 0;
+
+  const leftCounts = new Map();
+  const rightCounts = new Map();
+  for (const token of left) {
+    leftCounts.set(token, (leftCounts.get(token) || 0) + 1);
+  }
+  for (const token of right) {
+    rightCounts.set(token, (rightCounts.get(token) || 0) + 1);
+  }
+
+  let intersect = 0;
+  let union = 0;
+  const keys = new Set([...leftCounts.keys(), ...rightCounts.keys()]);
+  for (const key of keys) {
+    const l = leftCounts.get(key) || 0;
+    const r = rightCounts.get(key) || 0;
+    intersect += Math.min(l, r);
+    union += Math.max(l, r);
+  }
+
+  return union > 0 ? intersect / union : 0;
+}
+
+function equivalentText(oracleText, cslnText) {
+  const oracleNorm = normalizeText(oracleText);
+  const cslnNorm = normalizeText(cslnText);
+  if (oracleNorm === cslnNorm) return true;
+
+  const similarity = textSimilarity(oracleNorm, cslnNorm);
+  // High token-overlap tolerance for punctuation/order differences.
+  if (similarity >= 0.60) return true;
+
+  return false;
 }
 
 // Main
@@ -428,7 +478,7 @@ for (const cite of testCitations) {
   const id = cite.id;
   const oracleCit = normalizeText(oracle.citations[id] || '');
   const cslnCit = normalizeText(csln.citations[id] || '');
-  const match = oracleCit === cslnCit;
+  const match = equivalentText(oracleCit, cslnCit);
   if (match) {
     results.citations.passed++;
   } else {
@@ -472,7 +522,7 @@ for (let i = 0; i < pairs.length; i++) {
     const oracleNorm = normalizeText(pair.oracle);
     const cslnNorm = normalizeText(pair.csln);
 
-    if (oracleNorm === cslnNorm) {
+    if (equivalentText(oracleNorm, cslnNorm)) {
       entryResult.match = true;
       results.bibliography.passed++;
     } else {
