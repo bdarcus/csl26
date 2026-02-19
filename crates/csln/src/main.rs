@@ -98,9 +98,9 @@ enum Commands {
         out_dir: Option<PathBuf>,
     },
 
-    /// Legacy alias for `render refs`
+    /// Alias for `render refs`
     #[command(hide = true)]
-    Process(LegacyProcessArgs),
+    Process(RenderRefsArgs),
 
     /// Legacy alias for `render doc`
     #[command(hide = true)]
@@ -243,49 +243,6 @@ struct ConvertArgs {
 }
 
 #[derive(Args, Debug)]
-struct LegacyProcessArgs {
-    /// Path to references file
-    #[arg(index = 1)]
-    references: PathBuf,
-
-    /// Path to style file
-    #[arg(index = 2)]
-    style: PathBuf,
-
-    /// Path to citations file
-    #[arg(short = 'c', long)]
-    citations: Option<PathBuf>,
-
-    /// Output format
-    #[arg(short = 'f', long, value_enum, default_value_t = OutputFormat::Plain)]
-    format: OutputFormat,
-
-    /// Show bibliography
-    #[arg(long)]
-    bib: bool,
-
-    /// Show citations
-    #[arg(long)]
-    cite: bool,
-
-    /// Specific citation keys to render (comma-separated)
-    #[arg(short = 'k', long, value_delimiter = ',')]
-    keys: Option<Vec<String>>,
-
-    /// Show reference keys/IDs in output
-    #[arg(long)]
-    show_keys: bool,
-
-    /// Output as JSON
-    #[arg(long)]
-    json: bool,
-
-    /// Disable semantic classes (HTML spans, Djot attributes)
-    #[arg(long)]
-    no_semantics: bool,
-}
-
-#[derive(Args, Debug)]
 struct LegacyDocArgs {
     /// Path to the document file
     #[arg(index = 1)]
@@ -339,31 +296,8 @@ fn run() -> Result<(), Box<dyn Error>> {
         #[cfg(feature = "schema")]
         Commands::Schema { r#type, out_dir } => run_schema(r#type, out_dir),
         Commands::Process(args) => {
-            eprintln!(
-                "Warning: `csln process` is deprecated. Use `csln render refs` with -b/-s flags."
-            );
-            let mode = if args.bib && args.cite {
-                RenderMode::Both
-            } else if args.bib {
-                RenderMode::Bib
-            } else if args.cite {
-                RenderMode::Cite
-            } else {
-                RenderMode::Both
-            };
-            let refs_args = RenderRefsArgs {
-                bibliography: vec![args.references],
-                style: args.style,
-                citations: args.citations.into_iter().collect(),
-                mode,
-                keys: args.keys,
-                show_keys: args.show_keys,
-                json: args.json,
-                output_format: args.format,
-                output: None,
-                no_semantics: args.no_semantics,
-            };
-            run_render_refs(refs_args)
+            eprintln!("Note: `csln process` is an alias for `csln render refs`.");
+            run_render_refs(args)
         }
         Commands::Doc(args) => {
             eprintln!("Warning: `csln doc` is deprecated. Use `csln render doc` with -i/-b/-s.");
