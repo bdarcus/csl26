@@ -20,6 +20,13 @@
 - [ ] Thesis/dissertation
 - [ ] Legal citation (if applicable)
 
+## Template Architecture
+- [ ] Start from shared `bibliography.template` spine before adding `type-templates`
+- [ ] Use `type-templates` only for structural outliers
+- [ ] After parity, run a compaction pass to reduce duplicated per-type logic
+- [ ] Confirm fallback behavior for types without explicit templates
+- [ ] Record maintainability metrics (template count, file size) before/after
+
 ## Edge Cases
 - [ ] 1 author, 2 authors, 3+ authors (shortening)
 - [ ] No date / n.d.
