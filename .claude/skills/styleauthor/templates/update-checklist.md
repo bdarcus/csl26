@@ -27,6 +27,14 @@
 - [ ] Confirm fallback behavior for types without explicit templates
 - [ ] Record maintainability metrics (template count, file size) before/after
 
+## Quality (SQI)
+- [ ] Type coverage remains broad (no avoidable type-level regressions)
+- [ ] Fallback robustness confirmed for core types without explicit type templates
+- [ ] Concision check passed (no unnecessary duplicated components)
+- [ ] Override density kept reasonable (avoid overfit type-specific branching)
+- [ ] Preset opportunities assessed (`use-preset` where appropriate)
+- [ ] SQI direction recorded (up/flat/down) with rationale
+
 ## Edge Cases
 - [ ] 1 author, 2 authors, 3+ authors (shortening)
 - [ ] No date / n.d.

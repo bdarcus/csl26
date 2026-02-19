@@ -58,6 +58,19 @@ Know when you've reached "good enough" for a style:
 
 **Scoring basis**: use `node ../scripts/oracle.js <style.csl> --json` on `tests/fixtures/references-expanded.json` (same basis as `docs/compat.html`).
 
+## Acceptance Rule: Fidelity First, SQI Second
+
+Use a dual-metric decision rule when evaluating style work:
+
+1. **Fidelity is the release gate** (oracle match target must be met).
+2. **SQI is the secondary quality metric** (type coverage, fallback robustness,
+   concision, preset usage).
+
+Practical rule:
+- Reject changes that improve SQI but regress fidelity.
+- If two fixes have equivalent fidelity, choose the one with stronger SQI.
+- Record temporary tradeoffs during iteration and resolve before merge.
+
 ## Component-First Strategy (Tier 3 & 4)
 
 **Key Principle**: Fix common failures across the "Long Tail" of styles, not individual styles in isolation.

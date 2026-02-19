@@ -174,6 +174,15 @@ Implementation Specialist (Sonnet) takes over for the execution and test loop.
 - **If bibliography <50%** on iteration 1: stop and escalate to @styleplan for template redesign.
 - **If bibliography ≥50%**: continue to iteration 2 for targeted fixes.
 
+**Quality Gate (after fidelity check):**
+- Evaluate SQI-oriented quality signals once fidelity is measured:
+  - type coverage breadth
+  - fallback robustness for types without explicit templates
+  - concision (avoid duplicate or bloated template structures)
+  - preset-use opportunities (`use-preset`)
+- Use SQI as a secondary objective only.
+- Do not accept SQI gains that reduce fidelity.
+
 **Agent Transparency Requirement:**
 After each iteration, the builder MUST report to user:
 - Iteration number and validation results (X/N citations, X/N bibliography, percentages)
@@ -293,6 +302,12 @@ oracle.js results:
   citations ≥90%, bibliography 70-89% = PARTIAL ✅ (continue if user asks)
   bibliography <70% = ESCALATE ⚠️ (template/design gaps)
 ```
+
+**Tie-break rule for multiple candidate fixes:**
+- If fidelity is unchanged, choose the option with better SQI direction:
+  - stronger fallback behavior
+  - lower unnecessary template complexity
+  - better preset reuse potential
 
 **Validation cadence:**
 - Iteration 1: Full validation (`oracle.js --json`)

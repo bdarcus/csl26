@@ -288,6 +288,21 @@ All changes must pass the verification loop:
 2. Render with CSLN → String B
 3. **Pass**: A == B (for supported features)
 
+### 9a. Dual Metrics: Fidelity + SQI
+
+Use two metrics with clear priority:
+
+1. **Fidelity** (oracle match) is the hard gate.
+2. **SQI** (Style Quality Index) is a secondary optimization metric.
+
+Policy:
+- Never accept an SQI improvement that causes a fidelity regression.
+- Use SQI to break ties when multiple implementations have comparable fidelity.
+- Prefer SQI improvements that increase fallback robustness and concision
+  without changing rendered output.
+- When tradeoffs are unavoidable during iteration, restore fidelity before
+  merge and document temporary SQI/fidelity drift explicitly.
+
 ### 10. Well-Commented Code
 
 Code should be self-documenting with clear comments explaining:
