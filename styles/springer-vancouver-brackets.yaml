@@ -6,11 +6,7 @@ info:
   link: http://www.zotero.org/styles/springer-vancouver-brackets
 
 options:
-  substitute:
-    contributor-role-form: long
-    template:
-    - editor
-    - translator
+  substitute: standard
   processing: numeric
   contributors:
     display-as-sort: all
@@ -19,8 +15,8 @@ options:
     delimiter-precedes-last: always
     demote-non-dropping-particle: sort-only
     sort-separator: ' '
-  dates:
-    month: short
+  dates: short
+  titles: scientific
   page-range-format: minimal
   bibliography:
     entry-suffix: .
@@ -214,28 +210,6 @@ bibliography:
       - number: pages
         prefix: '. p. '
 
-    patent:
-      - contributor: author
-        form: long
-      - title: primary
-      - date: issued
-        form: year
-
-    motion-picture:
-      - contributor: author
-        form: long
-      - title: primary
-      - date: issued
-        form: year
-
-    broadcast:
-      - contributor: author
-        form: long
-      - title: primary
-      - title: parent-serial
-      - date: issued
-        form: year
-
     interview:
       - contributor: author
         form: long
@@ -258,12 +232,6 @@ bibliography:
       - date: issued
         form: year
 
-    personal-communication:
-      - contributor: author
-        form: long
-      - title: primary
-      - date: issued
-        form: year
 
   template:
     - contributor: author

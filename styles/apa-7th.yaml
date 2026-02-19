@@ -5,9 +5,7 @@ info:
   link: https://apastyle.apa.org/
 options:
   processing: author-date
-  substitute:
-    contributor-role-form: short
-    template: [editor, title]
+  substitute: standard
   contributors:
     initialize-with: ". "
     editor-label-format: short-suffix
@@ -233,67 +231,65 @@ bibliography:
         suffix: "."
       - variable: url
         prefix: " "
-    motion-picture:
+    [motion-picture, broadcast, interview]:
       - contributor: author
         form: long
         name-order: family-first
         suffix: "."
       - date: issued
-        form: year
+        form: year-month-day
         wrap: parentheses
         prefix: " "
+        overrides:
+          motion-picture:
+            date: issued
+            form: year
       - title: primary
         emph: true
+        overrides:
+          broadcast:
+            title: primary
+            emph: false
+      - number: issue
+        wrap: parentheses
+        prefix: " "
+        inner-prefix: "No. "
+        overrides:
+          [motion-picture, interview]:
+            suppress: true
+      - variable: note
+        wrap: parentheses
+        prefix: " "
+        overrides:
+          [motion-picture, broadcast]:
+            suppress: true
       - variable: genre
         wrap: brackets
         prefix: " "
         inner-suffix: "; Film"
         suffix: "."
-      - variable: medium
-        suppress: true
-    broadcast:
-      - contributor: author
-        form: long
-        name-order: family-first
-        suffix: "."
-      - date: issued
-        form: year-month-day
-        wrap: parentheses
-        prefix: " "
-      - title: primary
-        emph: false
-      - number: issue
-        wrap: parentheses
-        prefix: " "
-        inner-prefix: "No. "
+        overrides:
+          [broadcast, interview]:
+            suppress: true
       - variable: medium
         wrap: brackets
         prefix: " "
         suffix: "."
+        overrides:
+          motion-picture:
+            suppress: true
       - title: parent-serial
         emph: true
         prefix: " In "
         suffix: "."
-    interview:
-      - contributor: author
-        form: long
-        name-order: family-first
-        suffix: "."
-      - date: issued
-        form: year-month-day
-        wrap: parentheses
-        prefix: " "
-      - title: primary
-        emph: true
-      - variable: note
-        wrap: parentheses
-        prefix: " "
-      - variable: medium
-        wrap: brackets
-        prefix: " "
-        suffix: "."
+        overrides:
+          [motion-picture, interview]:
+            suppress: true
       - variable: url
         prefix: " "
+        overrides:
+          [motion-picture, broadcast]:
+            suppress: true
     paper-conference:
       - contributor: author
         form: long

@@ -17,8 +17,8 @@ options:
     delimiter: ', '
     delimiter-precedes-last: always
     demote-non-dropping-particle: sort-only
-  dates:
-    month: long
+  dates: long
+  titles: scientific
   bibliography:
     entry-suffix: .
     separator: ""
@@ -110,7 +110,7 @@ bibliography:
       form: year
       prefix: ", "
       suffix: "."
-    webpage:
+    [webpage, dataset]:
     - number: citation-number
       wrap: brackets
       suffix: ""
@@ -135,7 +135,7 @@ bibliography:
       form: year
       prefix: ", "
       suffix: ")."
-    article-newspaper:
+    [article-newspaper, broadcast]:
     - number: citation-number
       wrap: brackets
       suffix: ""
@@ -153,31 +153,6 @@ bibliography:
       wrap: parentheses
       prefix: " "
       suffix: "."
-    dataset:
-    - number: citation-number
-      wrap: brackets
-      suffix: ""
-    - contributor: author
-      form: long
-      suffix: ", "
-    - title: primary
-    - date: issued
-      form: year
-      wrap: parentheses
-      prefix: ", "
-      suffix: "."
-    - variable: url
-      prefix: " "
-      links:
-        target: url
-        anchor: component
-    - date: accessed
-      form: month-day
-      prefix: " (accessed "
-    - date: accessed
-      form: year
-      prefix: ", "
-      suffix: ")."
     legal-case:
     - number: citation-number
       wrap: brackets
@@ -219,21 +194,6 @@ bibliography:
       form: year
       prefix: ", "
       suffix: "."
-    motion_picture:
-    - number: citation-number
-      wrap: brackets
-      suffix: ""
-    - contributor: author
-      form: long
-      suffix: ", "
-      overrides:
-        all:
-          initialize-with: "."
-    - title: primary
-    - date: issued
-      form: year
-      prefix: ", "
-      suffix: "."
     interview:
     - number: citation-number
       wrap: brackets
@@ -256,24 +216,6 @@ bibliography:
         target: url
         anchor: component
       suffix: "."
-    broadcast:
-    - number: citation-number
-      wrap: brackets
-      suffix: ""
-    - contributor: author
-      form: long
-      suffix: ", "
-      overrides:
-        all:
-          initialize-with: "."
-    - title: primary
-    - title: parent-serial
-      prefix: ", "
-    - date: issued
-      form: year
-      wrap: parentheses
-      prefix: " "
-      suffix: "."
     report:
     - number: citation-number
       wrap: brackets
@@ -291,22 +233,6 @@ bibliography:
       prefix: ", "
       suffix: "."
     personal-communication:
-    - number: citation-number
-      wrap: brackets
-      suffix: ""
-    - contributor: author
-      form: long
-      suffix: ", "
-      overrides:
-        all:
-          initialize-with: "."
-    - title: primary
-    - date: issued
-      form: year
-      wrap: parentheses
-      prefix: ", "
-      suffix: "."
-    personal_communication:
     - number: citation-number
       wrap: brackets
       suffix: ""

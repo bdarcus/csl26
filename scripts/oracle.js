@@ -34,6 +34,13 @@ const {
 
 const DEFAULT_REFS_FIXTURE = path.join(__dirname, '..', 'tests', 'fixtures', 'references-expanded.json');
 const DEFAULT_CITATIONS_FIXTURE = path.join(__dirname, '..', 'tests', 'fixtures', 'citations-expanded.json');
+// Citation IDs where fuzzy token overlap can hide real disambiguation regressions.
+const STRICT_CITATION_IDS = new Set([
+  'et-al-single-long-list',
+  'disambiguate-add-names-et-al',
+  'disambiguate-year-suffix',
+  'et-al-with-locator',
+]);
 
 function parseArgs() {
   const args = process.argv.slice(2);
@@ -398,6 +405,65 @@ function equivalentText(oracleText, cslnText) {
   return false;
 }
 
+function extractYearSuffixes(text) {
+  return normalizeText(text).match(/\b\d{4}[a-z]\b/gi) || [];
+}
+
+function hasEtAl(text) {
+  return /\bet al\b/i.test(normalizeText(text));
+}
+
+function splitCitationCluster(text) {
+  const normalized = normalizeText(text)
+    .replace(/^\(/, '')
+    .replace(/\)$/, '');
+  return normalized
+    .split(/\s*;\s*/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+}
+
+function extractLocatorNumber(text) {
+  const match = normalizeText(text).match(/\b(?:p|pp|section|sec)\.?\s*(\d+)\b/i);
+  return match ? match[1] : null;
+}
+
+function equivalentDisambiguationProbe(oracleText, cslnText, citationId) {
+  const oracleNorm = normalizeText(oracleText);
+  const cslnNorm = normalizeText(cslnText);
+
+  const oracleSuffixCount = extractYearSuffixes(oracleNorm).length;
+  const cslnSuffixCount = extractYearSuffixes(cslnNorm).length;
+  const oracleHasEtAl = hasEtAl(oracleNorm);
+  const cslnHasEtAl = hasEtAl(cslnNorm);
+
+  if (oracleHasEtAl && !cslnHasEtAl) return false;
+  if (oracleSuffixCount > 0 && cslnSuffixCount === 0) return false;
+
+  if (citationId === 'disambiguate-add-names-et-al') {
+    if (oracleHasEtAl || oracleSuffixCount > 0) {
+      const cslnParts = splitCitationCluster(cslnNorm);
+      if (cslnParts.length < 2) return false;
+      if (new Set(cslnParts).size !== cslnParts.length) return false;
+    }
+  }
+
+  if (citationId === 'et-al-with-locator') {
+    const oracleLocator = extractLocatorNumber(oracleNorm);
+    const cslnLocator = extractLocatorNumber(cslnNorm);
+    if (oracleLocator && oracleLocator !== cslnLocator) return false;
+  }
+
+  return true;
+}
+
+function equivalentCitationText(oracleText, cslnText, citationId) {
+  if (STRICT_CITATION_IDS.has(citationId)) {
+    return equivalentDisambiguationProbe(oracleText, cslnText, citationId);
+  }
+  return equivalentText(oracleText, cslnText);
+}
+
 // Main
 const cliOptions = parseArgs();
 const stylePath = cliOptions.stylePath;
@@ -478,7 +544,7 @@ for (const cite of testCitations) {
   const id = cite.id;
   const oracleCit = normalizeText(oracle.citations[id] || '');
   const cslnCit = normalizeText(csln.citations[id] || '');
-  const match = equivalentText(oracleCit, cslnCit);
+  const match = equivalentCitationText(oracleCit, cslnCit, id);
   if (match) {
     results.citations.passed++;
   } else {

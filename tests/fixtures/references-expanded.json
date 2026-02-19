@@ -325,5 +325,61 @@
     "issued": { "date-parts": [[2024, 2, 7]] },
     "type-translated": "Email",
     "recipient": [{ "family": "Darcus", "given": "Bruce" }]
+  },
+  "ITEM-29": {
+    "id": "ITEM-29",
+    "type": "article-journal",
+    "title": "Adaptive Climate Risk Modeling in Coastal Cities",
+    "author": [
+      { "family": "Smith", "given": "John" },
+      { "family": "Lee", "given": "Alice" },
+      { "family": "Kumar", "given": "Priya" },
+      { "family": "Zhou", "given": "Ming" }
+    ],
+    "issued": { "date-parts": [[2021]] },
+    "container-title": "Journal of Climate Analytics",
+    "volume": "12",
+    "issue": "2",
+    "page": "101-119",
+    "DOI": "10.5555/jca.2021.12.2.101"
+  },
+  "ITEM-30": {
+    "id": "ITEM-30",
+    "type": "article-journal",
+    "title": "Adaptive Climate Risk Modeling for Inland Regions",
+    "author": [
+      { "family": "Smith", "given": "John" },
+      { "family": "Lee", "given": "Alice" },
+      { "family": "Nguyen", "given": "Bao" },
+      { "family": "Patel", "given": "Ravi" }
+    ],
+    "issued": { "date-parts": [[2021]] },
+    "container-title": "Journal of Climate Analytics",
+    "volume": "12",
+    "issue": "3",
+    "page": "201-219",
+    "DOI": "10.5555/jca.2021.12.3.201"
+  },
+  "ITEM-31": {
+    "id": "ITEM-31",
+    "type": "article-journal",
+    "title": "Methods for Robust Climate Attribution",
+    "author": [{ "family": "Garcia", "given": "Maria" }],
+    "issued": { "date-parts": [[2019]] },
+    "container-title": "Annual Review of Climate Science",
+    "volume": "4",
+    "page": "55-80",
+    "DOI": "10.5555/arcs.2019.4.55"
+  },
+  "ITEM-32": {
+    "id": "ITEM-32",
+    "type": "article-journal",
+    "title": "Methods for Probabilistic Climate Attribution",
+    "author": [{ "family": "Garcia", "given": "Maria" }],
+    "issued": { "date-parts": [[2019]] },
+    "container-title": "Annual Review of Climate Science",
+    "volume": "4",
+    "page": "81-104",
+    "DOI": "10.5555/arcs.2019.4.81"
   }
 }

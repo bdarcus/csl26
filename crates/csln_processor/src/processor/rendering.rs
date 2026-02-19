@@ -611,22 +611,18 @@ impl<'a> Renderer<'a> {
             locator_label: None,
         };
 
-        // Try to use the first component from the template if it's a contributor or title.
+        // Try to use the first semantically relevant component (including nested lists)
+        // so disambiguation hints and component-specific formatting are preserved.
         // This ensures substitution, shortening, and mode-dependent conjunctions are respected.
-        if let Some(comp) = template.first() {
-            if matches!(
-                comp,
-                TemplateComponent::Contributor(_) | TemplateComponent::Title(_)
-            ) {
-                let hints = self
-                    .hints
-                    .get(&reference.id().unwrap_or_default())
-                    .cloned()
-                    .unwrap_or_default();
-                if let Some(vals) = comp.values::<F>(reference, &hints, &options) {
-                    if !vals.value.is_empty() {
-                        return vals.value;
-                    }
+        if let Some(comp) = template.first().and_then(find_grouping_component) {
+            let hints = self
+                .hints
+                .get(&reference.id().unwrap_or_default())
+                .cloned()
+                .unwrap_or_default();
+            if let Some(vals) = comp.values::<F>(reference, &hints, &options) {
+                if !vals.value.is_empty() {
+                    return vals.value;
                 }
             }
         }
@@ -688,17 +684,7 @@ impl<'a> Renderer<'a> {
         &self,
         template: &[TemplateComponent],
     ) -> Vec<TemplateComponent> {
-        template
-            .iter()
-            .filter(|comp| {
-                if let TemplateComponent::Contributor(c) = comp {
-                    c.contributor != csln_core::template::ContributorRole::Author
-                } else {
-                    true
-                }
-            })
-            .cloned()
-            .collect()
+        template.iter().filter_map(strip_author_component).collect()
     }
 
     /// Render just the year part (with suffix) for citation grouping.
@@ -1020,6 +1006,40 @@ impl<'a> Renderer<'a> {
     }
 }
 
+fn strip_author_component(component: &TemplateComponent) -> Option<TemplateComponent> {
+    match component {
+        TemplateComponent::Contributor(c)
+            if c.contributor == csln_core::template::ContributorRole::Author =>
+        {
+            None
+        }
+        TemplateComponent::List(list) => {
+            let filtered_items: Vec<TemplateComponent> = list
+                .items
+                .iter()
+                .filter_map(strip_author_component)
+                .collect();
+
+            if filtered_items.is_empty() {
+                None
+            } else {
+                let mut filtered_list = list.clone();
+                filtered_list.items = filtered_items;
+                Some(TemplateComponent::List(filtered_list))
+            }
+        }
+        _ => Some(component.clone()),
+    }
+}
+
+fn find_grouping_component(component: &TemplateComponent) -> Option<&TemplateComponent> {
+    match component {
+        TemplateComponent::Contributor(_) | TemplateComponent::Title(_) => Some(component),
+        TemplateComponent::List(list) => list.items.iter().find_map(find_grouping_component),
+        _ => None,
+    }
+}
+
 /// Get a unique key for a template component's variable.
 ///
 /// The key includes rendering context (prefix/suffix) to allow the same variable
@@ -1156,5 +1176,48 @@ mod tests {
         assert_eq!(key1, Some("date:Issued".to_string()));
         assert_eq!(key2, Some("date:Issued:, ".to_string()));
         assert_eq!(key3, Some("date:Issued:.".to_string()));
+    }
+
+    #[test]
+    fn test_strip_author_component_nested_list() {
+        let nested = TemplateComponent::List(TemplateList {
+            items: vec![
+                TemplateComponent::Contributor(TemplateContributor {
+                    contributor: ContributorRole::Author,
+                    form: ContributorForm::Short,
+                    and: None,
+                    shorten: None,
+                    label: None,
+                    name_order: None,
+                    delimiter: None,
+                    sort_separator: None,
+                    links: None,
+                    rendering: Rendering::default(),
+                    overrides: None,
+                    custom: None,
+                }),
+                TemplateComponent::Date(TemplateDate {
+                    date: DateVariable::Issued,
+                    form: DateForm::Year,
+                    rendering: Rendering::default(),
+                    fallback: None,
+                    links: None,
+                    overrides: None,
+                    custom: None,
+                }),
+            ],
+            delimiter: Some(DelimiterPunctuation::Space),
+            rendering: Rendering::default(),
+            overrides: None,
+            custom: None,
+        });
+
+        let filtered = strip_author_component(&nested).expect("list should remain");
+        let TemplateComponent::List(filtered_list) = filtered else {
+            panic!("expected list");
+        };
+
+        assert_eq!(filtered_list.items.len(), 1);
+        assert!(matches!(filtered_list.items[0], TemplateComponent::Date(_)));
     }
 }

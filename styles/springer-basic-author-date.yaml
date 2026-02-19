@@ -5,6 +5,17 @@ info:
   id: http://www.zotero.org/styles/springer-basic-author-date
   default-locale: en-US
 options:
+  processing: !custom
+    sort:
+      template:
+        - key: author
+        - key: year
+    group:
+      template: [author, year]
+    disambiguate:
+      names: false
+      add-givenname: false
+      year-suffix: true
   strip-periods: true
   substitute:
     contributor-role-form: short
@@ -25,6 +36,11 @@ options:
     separator: ". "
   punctuation-in-quote: true
 citation:
+  options:
+    contributors:
+      shorten:
+        min: 3
+        use-first: 1
   template:
     - items:
         - contributor: author

@@ -122,8 +122,10 @@ impl<'a> Disambiguator<'a> {
                 let disamb_config = self
                     .config
                     .processing
-                    .as_ref()
-                    .and_then(|p| p.config().disambiguate);
+                    .clone()
+                    .unwrap_or_default()
+                    .config()
+                    .disambiguate;
 
                 let add_names = disamb_config.as_ref().map(|d| d.names).unwrap_or(false);
                 let add_givenname = disamb_config

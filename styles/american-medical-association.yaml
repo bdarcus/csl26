@@ -27,18 +27,8 @@ options:
     delimiter-precedes-last: always
     demote-non-dropping-particle: sort-only
     display-as-sort: first
-  dates:
-    month: short
-    uncertainty-marker: "?"
-    approximation-marker: "ca. "
-    range-delimiter: –
-  titles:
-    monograph:
-      emph: true
-    periodical:
-      emph: true
-    serial:
-      emph: true
+  dates: short
+  titles: humanities
   page-range-format: expanded
   bibliography:
     separator: ". "
@@ -54,7 +44,7 @@ citation:
   multi-cite-delimiter: ","
 bibliography:
   type-templates:
-    article-journal:
+    [article-journal, article-magazine]:
       - contributor: author
         form: long
         name-order: family-first
@@ -76,17 +66,27 @@ bibliography:
         delimiter: none
       - variable: doi
         prefix: " doi:"
-    book:
+        overrides:
+          article-magazine:
+            suppress: true
+    [book, report, thesis]:
       - contributor: author
         form: long
         name-order: family-first
       - title: primary
+      - variable: genre
+        overrides:
+          [book, report]:
+            suppress: true
       - number: edition
+        overrides:
+          [report, thesis]:
+            suppress: true
       - variable: publisher
         suffix: "; "
       - date: issued
         form: year
-    chapter:
+    [chapter, paper-conference]:
       - contributor: author
         form: long
         name-order: family-first
@@ -102,39 +102,9 @@ bibliography:
         delimiter: " "
       - variable: publisher
         suffix: "; "
-      - items:
-          - date: issued
-            form: year
-          - number: pages
-            prefix: ":"
-        delimiter: none
-    report:
-      - contributor: author
-        form: long
-        name-order: family-first
-      - title: primary
-      - variable: publisher
-        suffix: "; "
-      - date: issued
-        form: year
-    thesis:
-      - contributor: author
-        form: long
-        name-order: family-first
-      - title: primary
-      - variable: genre
-      - variable: publisher
-        suffix: "; "
-      - date: issued
-        form: year
-    paper-conference:
-      - contributor: author
-        form: long
-        name-order: family-first
-      - title: primary
-      - term: in
-        suffix: ": "
-      - title: parent-monograph
+        overrides:
+          paper-conference:
+            suppress: true
       - items:
           - date: issued
             form: year
@@ -167,22 +137,6 @@ bibliography:
       - date: issued
         form: year
         prefix: ", "
-    article-magazine:
-      - contributor: author
-        form: long
-        name-order: family-first
-      - title: primary
-      - title: parent-serial
-      - items:
-          - date: issued
-            form: year
-            suffix: ";"
-          - number: volume
-          - number: issue
-            wrap: parentheses
-          - number: pages
-            prefix: ":"
-        delimiter: none
     entry-encyclopedia:
       - contributor: author
         form: long
@@ -278,7 +232,7 @@ bibliography:
           - variable: number
             prefix: ":"
         delimiter: none
-    interview:
+    [interview, personal-communication]:
       - contributor: author
         form: long
         name-order: family-first
@@ -294,21 +248,9 @@ bibliography:
             prefix: ", "
         delimiter: none
       - variable: url
-    personal-communication:
-      - contributor: author
-        form: long
-        name-order: family-first
-      - title: primary
-      - items:
-          - term: online
-            prefix: "Published "
-            suffix: " "
-          - date: issued
-            form: month-day
-          - date: issued
-            form: year
-            prefix: ", "
-        delimiter: none
+        overrides:
+          personal-communication:
+            suppress: true
   template:
     - contributor: author
       form: long
