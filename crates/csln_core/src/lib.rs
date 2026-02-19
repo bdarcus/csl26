@@ -21,8 +21,8 @@ pub mod embedded;
 
 pub use citation::{Citation, CitationItem, CitationMode, Citations, ItemVisibility, LocatorType};
 pub use grouping::{
-    BibliographyGroup, CitedStatus, FieldMatcher, GroupSelector, GroupSort, GroupSortKey,
-    NameSortOrder, SortKey, TypeSelector,
+    BibliographyGroup, CitedStatus, FieldMatcher, GroupHeading, GroupSelector, GroupSort,
+    GroupSortKey, NameSortOrder, SortKey, TypeSelector,
 };
 pub use legacy::{
     AndTerm, ConditionBlock, CslnInfo, CslnLocale, CslnNode, CslnStyle, DateBlock, DateForm,
@@ -564,7 +564,10 @@ bibliography:
       form: long
   groups:
     - id: vietnamese
-      heading: "Tài liệu tiếng Việt"
+      heading:
+        localized:
+          vi: "Tài liệu tiếng Việt"
+          en-US: "Vietnamese Sources"
       selector:
         field:
           language: vi
@@ -587,7 +590,12 @@ bibliography:
 
         // First group
         assert_eq!(groups[0].id, "vietnamese");
-        assert_eq!(groups[0].heading.as_ref().unwrap(), "Tài liệu tiếng Việt");
+        match groups[0].heading.as_ref().unwrap() {
+            grouping::GroupHeading::Localized { localized } => {
+                assert_eq!(localized.get("vi").unwrap(), "Tài liệu tiếng Việt");
+            }
+            _ => panic!("expected localized heading"),
+        }
         assert!(groups[0].sort.is_some());
 
         // Second group (fallback with negation)

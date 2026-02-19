@@ -22,7 +22,8 @@ citation:
 bibliography:
   groups:
     - id: primary-legal
-      heading: "Primary Sources"
+      heading:
+        literal: "Primary Sources"
       selector:
         type:
           - legal-case
@@ -40,7 +41,8 @@ bibliography:
             ascending: true
 
     - id: secondary
-      heading: "Secondary Sources"
+      heading:
+        literal: "Secondary Sources"
       selector:
         not:
           type:

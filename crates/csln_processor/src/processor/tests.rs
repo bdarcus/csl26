@@ -1097,7 +1097,7 @@ fn test_citation_visibility_modifiers() {
 #[test]
 fn test_bibliography_per_group_disambiguation() {
     use csln_core::grouping::{
-        BibliographyGroup, DisambiguationScope, FieldMatcher, GroupSelector,
+        BibliographyGroup, DisambiguationScope, FieldMatcher, GroupHeading, GroupSelector,
     };
 
     let mut style = make_style();
@@ -1106,7 +1106,9 @@ fn test_bibliography_per_group_disambiguation() {
     style.bibliography.as_mut().unwrap().groups = Some(vec![
         BibliographyGroup {
             id: "group1".to_string(),
-            heading: Some("Group 1".to_string()),
+            heading: Some(GroupHeading::Literal {
+                literal: "Group 1".to_string(),
+            }),
             selector: GroupSelector {
                 field: Some({
                     let mut map = HashMap::new();
@@ -1121,7 +1123,9 @@ fn test_bibliography_per_group_disambiguation() {
         },
         BibliographyGroup {
             id: "group2".to_string(),
-            heading: Some("Group 2".to_string()),
+            heading: Some(GroupHeading::Literal {
+                literal: "Group 2".to_string(),
+            }),
             selector: GroupSelector {
                 field: Some({
                     let mut map = HashMap::new();
@@ -1208,4 +1212,58 @@ fn test_bibliography_per_group_disambiguation() {
         "1962a should appear in both groups if disambiguated locally. Output: {}",
         result
     );
+}
+
+#[test]
+fn test_group_heading_localized_uses_processor_locale() {
+    use csln_core::grouping::{BibliographyGroup, GroupHeading, GroupSelector};
+
+    let mut style = make_style();
+    style.bibliography.as_mut().unwrap().groups = Some(vec![BibliographyGroup {
+        id: "all".to_string(),
+        heading: Some(GroupHeading::Localized {
+            localized: HashMap::from([
+                ("en-US".to_string(), "English Sources".to_string()),
+                ("vi".to_string(), "Tài liệu tiếng Việt".to_string()),
+            ]),
+        }),
+        selector: GroupSelector::default(),
+        sort: None,
+        template: None,
+        disambiguate: None,
+    }]);
+
+    let mut locale = csln_core::Locale::en_us();
+    locale.locale = "vi-VN".to_string();
+
+    let processor = Processor::with_locale(style, make_bibliography(), locale);
+    let output =
+        processor.render_grouped_bibliography_with_format::<crate::render::plain::PlainText>();
+
+    assert!(output.contains("# Tài liệu tiếng Việt"));
+}
+
+#[test]
+fn test_group_heading_term_resolves_from_locale() {
+    use csln_core::grouping::{BibliographyGroup, GroupHeading, GroupSelector};
+    use csln_core::locale::{GeneralTerm, TermForm};
+
+    let mut style = make_style();
+    style.bibliography.as_mut().unwrap().groups = Some(vec![BibliographyGroup {
+        id: "all".to_string(),
+        heading: Some(GroupHeading::Term {
+            term: GeneralTerm::And,
+            form: Some(TermForm::Long),
+        }),
+        selector: GroupSelector::default(),
+        sort: None,
+        template: None,
+        disambiguate: None,
+    }]);
+
+    let processor = Processor::new(style, make_bibliography());
+    let output =
+        processor.render_grouped_bibliography_with_format::<crate::render::plain::PlainText>();
+
+    assert!(output.contains("# and"));
 }
