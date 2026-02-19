@@ -323,17 +323,21 @@ if (!jsonOutput) {
 
 const csln = renderWithCslnProcessor(stylePath);
 
-if (!csln) {
+if (!csln || csln.error) {
   if (jsonOutput) {
     console.log(JSON.stringify({
       error: 'CSLN rendering failed',
-      reason: 'Processor execution error or migration output invalid',
+      reason: csln && csln.error ? csln.error : 'Processor execution error or migration output invalid',
       style: styleName
     }));
   } else {
     console.error('❌ CSLN Rendering Failed\n');
     console.error(`Style: ${styleName}`);
-    console.error('Reason: Processor execution error or invalid migration output\n');
+    if (csln && csln.error) {
+      console.error(`Reason: ${csln.error}\n`);
+    } else {
+      console.error('Reason: Processor execution error or invalid migration output\n');
+    }
     console.error('Common causes:');
     console.error('  - Invalid YAML syntax in migrated style');
     console.error('  - Unsupported schema features in migration output');
@@ -341,7 +345,7 @@ if (!csln) {
     console.error('Next Steps:');
     console.error('  1. Check migration output: cargo run --bin csln-migrate -- <csl-path>');
     console.error('  2. Validate YAML syntax: yamllint .migrated-temp.yaml');
-    console.error('  3. Check processor error: cargo run --bin csln -- process <refs> <style>');
+    console.error('  3. Check processor error: cargo run --bin csln -- render refs -b <refs> -s <style> -c <citations> --mode both');
   }
   process.exit(2);
 }

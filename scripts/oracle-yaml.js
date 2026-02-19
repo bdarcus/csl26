@@ -31,24 +31,29 @@ const testItems = Object.fromEntries(
 );
 
 /**
- * Render CSLN YAML style with csln process.
+ * Render CSLN YAML style with csln render refs.
  * @param {string} yamlPath - Path to CSLN YAML file
  * @returns {{ citations: Object, bibliography: Array }|null}
  */
 function renderWithCslnYaml(yamlPath) {
   const projectRoot = path.resolve(__dirname, '..');
   const absYamlPath = path.resolve(yamlPath);
+  const tempCiteFile = path.join(projectRoot, '.oracle-yaml-citations.json');
+  const testCitations = Object.keys(testItems).map(id => ({ id, items: [{ id }] }));
+  fs.writeFileSync(tempCiteFile, JSON.stringify(testCitations, null, 2));
 
   let output;
   try {
     output = execSync(
-      `cargo run -q --bin csln -- process tests/fixtures/references-expanded.json "${absYamlPath}" --show-keys`,
+      `cargo run -q --bin csln -- render refs -b tests/fixtures/references-expanded.json -s "${absYamlPath}" -c .oracle-yaml-citations.json --mode both --show-keys`,
       { cwd: projectRoot, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }
     );
   } catch (e) {
     console.error('Processor failed:', e.stderr || e.message);
+    try { fs.unlinkSync(tempCiteFile); } catch { }
     return null;
   }
+  try { fs.unlinkSync(tempCiteFile); } catch { }
 
   const lines = output.split('\n');
   const citations = {};
@@ -56,15 +61,12 @@ function renderWithCslnYaml(yamlPath) {
 
   let section = null;
   for (const line of lines) {
-    if (line.includes('CITATIONS (Non-Integral)')) {
+    if (line.includes('CITATIONS')) {
       section = 'citations';
-    } else if (line.includes('CITATIONS (Integral)')) {
-      // For now, we compare against non-integral which matches citeproc-js default
-      section = 'citations-integral';
     } else if (line.includes('BIBLIOGRAPHY:')) {
       section = 'bibliography';
-    } else if (section === 'citations' && line.match(/\[ITEM-\d+\]/)) {
-      const match = line.match(/\[(ITEM-\d+)\]\s*(.+)/);
+    } else if (section === 'citations' && line.match(/\[[^\]]+\]/)) {
+      const match = line.match(/\[([^\]]+)\]\s*(.+)/);
       if (match && !citations[match[1]]) {
         citations[match[1]] = match[2].trim();
       }

@@ -80,21 +80,26 @@ function renderWithCslnProcessor(stylePath) {
   // Write to temp file in project root
   const tempFile = path.join(projectRoot, '.migrated-temp.yaml');
   fs.writeFileSync(tempFile, migratedYaml);
+  const tempCiteFile = path.join(projectRoot, '.migrated-citations.json');
+  const testCitations = Object.keys(testItems).map(id => ({ id, items: [{ id }] }));
+  fs.writeFileSync(tempCiteFile, JSON.stringify(testCitations, null, 2));
 
-  // Run csln process
+  // Run csln render refs
   let output;
   try {
     output = execSync(
-      `cargo run -q --bin csln -- process tests/fixtures/references-expanded.json .migrated-temp.yaml`,
+      `cargo run -q --bin csln -- render refs -b tests/fixtures/references-expanded.json -s .migrated-temp.yaml -c .migrated-citations.json --mode both --show-keys`,
       { cwd: projectRoot, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }
     );
   } catch (e) {
     console.error('Processor failed:', e.stderr || e.message);
     try { fs.unlinkSync(tempFile); } catch { } // Ignore if already deleted
+    try { fs.unlinkSync(tempCiteFile); } catch { } // Ignore if already deleted
     return null;
   }
 
   try { fs.unlinkSync(tempFile); } catch { } // Ignore if already deleted
+  try { fs.unlinkSync(tempCiteFile); } catch { } // Ignore if already deleted
 
   // Parse output
   const lines = output.split('\n');
@@ -103,12 +108,12 @@ function renderWithCslnProcessor(stylePath) {
 
   let section = null;
   for (const line of lines) {
-    if (line.includes('CITATIONS:')) {
+    if (line.includes('CITATIONS')) {
       section = 'citations';
     } else if (line.includes('BIBLIOGRAPHY:')) {
       section = 'bibliography';
-    } else if (section === 'citations' && line.match(/\[ITEM-\d+\]/)) {
-      const match = line.match(/\[(ITEM-\d+)\]\s*(.+)/);
+    } else if (section === 'citations' && line.match(/\[[^\]]+\]/)) {
+      const match = line.match(/\[([^\]]+)\]\s*(.+)/);
       if (match) {
         citations[match[1]] = match[2].trim();
       }

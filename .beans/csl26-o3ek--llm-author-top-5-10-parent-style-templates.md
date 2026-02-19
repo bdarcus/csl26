@@ -25,18 +25,19 @@ Target styles (by dependent count):
 9. taylor-and-francis-chicago-author-date (234) - ✅ CONVERTED
 10. springer-vancouver-brackets (472) - ✅ CONVERTED
 
-**Current Status (2026-02-15):**
+**Current Status (2026-02-19):**
 - 10/10 styles converted to YAML
-- Citations: 9/10 at 15/15 match (Springer regression pending fix)
-- Bibliography quality varies: author-date 6-14/15, numeric 0/15 (blockers)
+- Citations (strict oracle, 8 scenarios): 0/10 at 8/8
+- Bibliography quality varies: 0-27/34 depending on style
+- Production style directory now contains only schema-valid styles; drafts moved to `styles/experimental/`
 
 **Next Steps:**
 
 Phase 1: Author-Date Quality Refinement (4 styles, 40% corpus)
-- APA: Iterate to 15/15 bibliography (current: 14/15)
-- Elsevier Harvard: Iterate to 12/15+ (current: 8/15)
-- Chicago: Iterate to 10/15+ (current: 6/15)
-- Springer Basic: Baseline and iterate to 10/15+
+- APA: Maintain 27/27 bibliography while lifting citations from 7/8 to 8/8
+- Elsevier Harvard: Raise citations (4/8) and bibliography (24/28)
+- Taylor & Francis Chicago: Raise bibliography from 3/29
+- Annals AAG: Raise bibliography from 5/28
 
 Phase 2: Numeric Style Features (blockers for 6 styles, 20% corpus)
 - Implement year positioning fix (all numeric styles at 0/15)

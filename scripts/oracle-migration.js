@@ -159,10 +159,33 @@ function renderWithCiteprocJs(stylePath) {
 
 function renderWithCsln(stylePath) {
     const styleName = path.basename(stylePath, '.csl');
-    const cslnStylePath = path.join(__dirname, '..', 'styles', `${styleName}.yaml`);
+    const stylesDir = path.join(__dirname, '..', 'styles');
+    const styleCandidates = [
+        `${styleName}.yaml`,
+        `${styleName}-7th.yaml`,
+        `${styleName}-author-date.yaml`,
+    ];
+    let cslnStylePath = null;
+    for (const candidate of styleCandidates) {
+        const full = path.join(stylesDir, candidate);
+        if (fs.existsSync(full)) {
+            cslnStylePath = full;
+            break;
+        }
+    }
+    if (!cslnStylePath) {
+        const files = fs.readdirSync(stylesDir);
+        const found = files.find(f =>
+            f.endsWith('.yaml') &&
+            (f === `${styleName}.yaml` || f.startsWith(`${styleName}-`))
+        );
+        if (found) {
+            cslnStylePath = path.join(stylesDir, found);
+        }
+    }
 
-    if (!fs.existsSync(cslnStylePath)) {
-        console.error(`❌ CSLN style not found: ${cslnStylePath}`);
+    if (!cslnStylePath) {
+        console.error(`❌ CSLN style not found for legacy style: ${styleName}`);
         console.error('\nRun prep-migration.sh first to generate the CSLN style.');
         process.exit(2);
     }
@@ -170,17 +193,13 @@ function renderWithCsln(stylePath) {
     // Create temp fixture with 7-item subset
     const tmpFixture = path.join(__dirname, '..', '.tmp-migration-fixture.json');
     fs.writeFileSync(tmpFixture, JSON.stringify(testItems, null, 2));
+    const tmpCitations = path.join(__dirname, '..', '.tmp-migration-citations.json');
+    const testCitations = Object.keys(testItems).map(id => ({ id, items: [{ id }] }));
+    fs.writeFileSync(tmpCitations, JSON.stringify(testCitations, null, 2));
 
     try {
-        // Render bibliography
-        const bibOutput = execSync(
-            `cargo run -q --bin csln -- process ${tmpFixture} ${cslnStylePath} --bib --show-keys`,
-            { encoding: 'utf8', cwd: path.join(__dirname, '..') }
-        );
-
-        // Render citations
-        const citeOutput = execSync(
-            `cargo run -q --bin csln -- process ${tmpFixture} ${cslnStylePath} --cite --show-keys`,
+        const output = execSync(
+            `cargo run -q --bin csln -- render refs -b ${tmpFixture} -s ${cslnStylePath} -c ${tmpCitations} --mode both --show-keys`,
             { encoding: 'utf8', cwd: path.join(__dirname, '..') }
         );
 
@@ -188,26 +207,27 @@ function renderWithCsln(stylePath) {
         const citations = [];
         const bibliography = [];
 
-        // For citations, we only want the non-integral ones for comparison with citeproc-js
-        const citeLines = citeOutput.split('\n');
-        let inIntegralSection = false;
-        citeLines.forEach(line => {
-            if (line.includes('CITATIONS (Integral)')) {
-                inIntegralSection = true;
+        const lines = output.split('\n');
+        let section = null;
+        lines.forEach(line => {
+            if (line.includes('CITATIONS')) {
+                section = 'citations';
+                return;
             }
-            if (!inIntegralSection) {
-                const match = line.match(/^\s*\[(ITEM-\d+)\]\s+(.+)$/);
+            if (line.includes('BIBLIOGRAPHY:')) {
+                section = 'bibliography';
+                return;
+            }
+            if (section === 'citations') {
+                const match = line.match(/^\s*\[([^\]]+)\]\s+(.+)$/);
                 if (match) {
                     citations.push({ id: match[1], text: match[2] });
                 }
-            }
-        });
-
-        const bibLines = bibOutput.split('\n').filter(line => line.match(/^\s*\[ITEM-\d+\]/));
-        bibLines.forEach(line => {
-            const match = line.match(/^\s*\[(ITEM-\d+)\]\s+(.+)$/);
-            if (match) {
-                bibliography.push({ id: match[1], text: match[2] });
+            } else if (section === 'bibliography') {
+                const match = line.match(/^\s*\[(ITEM-\d+)\]\s+(.+)$/);
+                if (match) {
+                    bibliography.push({ id: match[1], text: match[2] });
+                }
             }
         });
 
@@ -216,6 +236,9 @@ function renderWithCsln(stylePath) {
         // Cleanup
         if (fs.existsSync(tmpFixture)) {
             fs.unlinkSync(tmpFixture);
+        }
+        if (fs.existsSync(tmpCitations)) {
+            fs.unlinkSync(tmpCitations);
         }
     }
 }

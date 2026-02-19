@@ -164,10 +164,8 @@ Users encounter versions in different contexts:
 $ csln --version
 csln 0.2.3
 
-$ csln schema --info
-Schema version: 1.0.0
-Processor version: 0.2.3
-Compatibility: ✓ (processor supports schema 0.x-1.x)
+$ cargo run --bin csln --features schema -- schema style
+# prints style JSON Schema to stdout
 ```
 
 ### Style Files (Schema Version)

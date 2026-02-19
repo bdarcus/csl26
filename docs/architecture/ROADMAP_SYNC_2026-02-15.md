@@ -1,6 +1,8 @@
 # Roadmap Synchronization - 2026-02-15
 
 **Purpose:** Document the alignment between project reality and tracking systems (beans, docs)
+**Note:** This is a historical synchronization snapshot from 2026-02-15. For
+current metrics, see `docs/architecture/ROADMAP.md`.
 
 ## Changes Made
 

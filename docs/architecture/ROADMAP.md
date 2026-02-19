@@ -1,6 +1,6 @@
 # CSLN Project Roadmap
 
-**Last updated:** 2026-02-15
+**Last updated:** 2026-02-19
 **Purpose:** Strategic plan tracking project maturity, phases, and risks
 
 ## Current State Matrix
@@ -20,15 +20,15 @@
 |-----------|--------|----------|-------|
 | XML Options Extraction | ✅ Operational | 87-100% citations | ~2,500 lines, DO NOT TOUCH |
 | Output-Driven Templates | ✅ Validated | 95-97% confidence | Tested on 6 styles |
-| LLM Hand-Authoring | 🔄 In Progress | 14/15 bibliography (APA) | 10/10 top styles converted |
+| LLM Hand-Authoring | 🔄 In Progress | APA 27/27 bibliography | 10/10 production styles converted |
 | Oracle Verification | ✅ Complete | - | Structured diff, batch aggregator |
 
 ### Processor (Format-Specific Readiness)
 
 | Format | Citations | Bibliography | Blockers |
 |--------|-----------|--------------|----------|
-| Author-Date | 9/10 at 15/15 (90%) | 6-14/15 (varies) | Quality refinement needed |
-| Numeric | 15/15 (tested 3 styles) | 0/15 | Year positioning, numbering, superscript |
+| Author-Date | 3-7/8 (varies) | 3-27/29 (varies) | Quality refinement needed |
+| Numeric | 3-7/8 (varies) | 0/34 | Year positioning, numbering, superscript |
 | Note | Not tested | Not tested | Position tracking (ibid, subsequent) |
 
 **Output Formats:** Plain text ✅, HTML ✅, Djot ✅
@@ -132,11 +132,11 @@
 
 | Metric | Current | Phase 1 Target | Phase 2 Target | Notes |
 |--------|---------|----------------|----------------|-------|
-| Top-10 coverage | 10/10 (100%) | 10/10 | 10/10 | All converted |
-| Top-10 citation quality | 9/10 at 15/15 (90%) | 10/10 at 15/15 | 10/10 at 15/15 | Fix Springer regression |
-| Author-date bib quality | 6-14/15 (varies) | 12-15/15 (4 styles) | - | Quality refinement |
-| Numeric bib quality | 0/15 (blocked) | - | 8-12/15 (6 styles) | After feature work |
-| Dependent corpus coverage | 4,792/7,987 (60%) | ~3,200/7,987 (40%) | ~4,800/7,987 (60%) | Top-10 styles |
+| Top-10 coverage | 10/10 (100%) | 10/10 | 10/10 | Production set in `styles/*.yaml` |
+| Top-10 citation quality | 0/10 at 8/8 (strict) | 4/10 at 8/8 | 8/10 at 8/8 | Expanded citation fixture and strict oracle error handling |
+| Author-date bib quality | 3-27/29 (varies) | 20+/29 (4 styles) | - | Quality refinement |
+| Numeric bib quality | 0/34 (blocked) | - | 12+/34 (6 styles) | After feature work |
+| Dependent corpus coverage | 4,792/7,987 (60%) | ~3,200/7,987 (40%) | ~4,800/7,987 (60%) | Top-10 parents by impact |
 | Bean health | Stale statuses | All accurate | All accurate | Audit 2026-02-15 |
 
 ## Risk Register

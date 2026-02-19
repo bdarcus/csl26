@@ -146,19 +146,24 @@ function renderWithCslnProcessor(stylePath) {
   
   const tempFile = path.join(projectRoot, '.migrated-temp.yaml');
   fs.writeFileSync(tempFile, migratedYaml);
+  const tempCiteFile = path.join(projectRoot, '.migrated-citations.json');
+  const testCitations = Object.keys(testItems).map(id => ({ id, items: [{ id }] }));
+  fs.writeFileSync(tempCiteFile, JSON.stringify(testCitations, null, 2));
   
   let output;
   try {
     output = execSync(
-      `cargo run -q --bin csln -- process tests/fixtures/references-expanded.json .migrated-temp.yaml`,
+      `cargo run -q --bin csln -- render refs -b tests/fixtures/references-expanded.json -s .migrated-temp.yaml -c .migrated-citations.json --mode both --show-keys`,
       { cwd: projectRoot, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }
     );
   } catch (e) {
     fs.rmSync(tempFile, { force: true });
+    fs.rmSync(tempCiteFile, { force: true });
     return { error: 'processor', message: (e.stderr || e.message).slice(0, 200) };
   }
 
   fs.rmSync(tempFile, { force: true });
+  fs.rmSync(tempCiteFile, { force: true });
   
   const lines = output.split('\n');
   const citations = {};
@@ -166,12 +171,12 @@ function renderWithCslnProcessor(stylePath) {
   
   let section = null;
   for (const line of lines) {
-    if (line.includes('CITATIONS:')) {
+    if (line.includes('CITATIONS')) {
       section = 'citations';
     } else if (line.includes('BIBLIOGRAPHY:')) {
       section = 'bibliography';
-    } else if (section === 'citations' && line.match(/\[ITEM-\d+\]/)) {
-      const match = line.match(/\[(ITEM-\d+)\]\s*(.+)/);
+    } else if (section === 'citations' && line.match(/\[[^\]]+\]/)) {
+      const match = line.match(/\[([^\]]+)\]\s*(.+)/);
       if (match) {
         citations[match[1]] = match[2].trim();
       }

@@ -194,14 +194,19 @@ This approach keeps the core repository lean while providing a tight development
 
 ### Current Test Results
 
-The hybrid migration strategy has been validated with the following results:
+The hybrid migration strategy is under active validation. Current oracle baseline
+is measured with `scripts/oracle-batch-aggregate.js` using the production style
+set and `tests/fixtures/citations-expanded.json` (8 citation scenarios):
 
-**APA 7th Edition** (hand-authored): 5/5 citations ✅, 5/5 bibliography ✅ (exact match)
+**Production Top-10 Snapshot (2026-02-19)**:
+- Citations 100%: 0/10 styles
+- Bibliography 100%: 1/10 styles (APA)
+- Top citation hit rates: APA/Elsevier/Numeric springer variants at 7/8
+- Top bibliography hit rates: APA 27/27, Springer Basic 26/28, Elsevier With Titles 25/28
 
-**Batch Testing** (50 styles):
-- Citations: 74% with 5/5 match (XML options extraction)
-- Bibliography: Output-driven inference tested on 6 major styles, validated component ordering and type-specific suppression logic
-- Errors: 0 migration errors, 0 processor errors
+These numbers are stricter than prior snapshots because oracle now hard-fails
+processor/style errors and citation coverage includes additional edge-case
+variants (suppress-author, mixed locator/prefix/suffix cases).
 
 **Features Implemented**:
 - ✅ XML options extraction (87-100% citation accuracy): initialize-with, name-as-sort-order, et-al rules, page-range-format, delimiter logic
@@ -473,14 +478,15 @@ You can generate formal JSON Schemas for all CSLN models using the CLI:
 
 ```bash
 # Output specific schema to stdout (style, bib, locale, citation)
-csln schema style
-csln schema bib
+cargo run --bin csln --features schema -- schema style
+cargo run --bin csln --features schema -- schema bib
 
 # Save all schemas to a directory
-csln schema --out-dir ./schemas
+cargo run --bin csln --features schema -- schema --out-dir ./schemas
 ```
 
-These schemas can be used to validate your files or provide intellisense in editors like VS Code.
+The `schema` command is feature-gated to keep default binaries smaller. CI
+publishes generated schemas to the project website.
 
 ## Roadmap
 
