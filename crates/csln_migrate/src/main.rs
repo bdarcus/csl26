@@ -15,8 +15,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Parse command-line arguments
     let mut path = "styles-legacy/apa.csl";
     let mut debug_variable: Option<String> = None;
-    let mut template_source: Option<String> = None;
+    let mut template_mode = template_resolver::TemplateMode::Auto;
     let mut template_dir: Option<PathBuf> = None;
+    let mut min_template_confidence = 0.70_f64;
 
     let mut i = 1;
     while i < args.len() {
@@ -32,12 +33,37 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             "--template-source" => {
                 if i + 1 < args.len() {
-                    template_source = Some(args[i + 1].clone());
+                    template_mode = match args[i + 1].parse::<template_resolver::TemplateMode>() {
+                        Ok(mode) => mode,
+                        Err(msg) => {
+                            eprintln!("Error: {}", msg);
+                            std::process::exit(1);
+                        }
+                    };
                     i += 2;
                 } else {
                     eprintln!(
                         "Error: --template-source requires an argument (auto|hand|inferred|xml)"
                     );
+                    std::process::exit(1);
+                }
+            }
+            "--min-template-confidence" => {
+                if i + 1 < args.len() {
+                    match args[i + 1].parse::<f64>() {
+                        Ok(val) if (0.0..=1.0).contains(&val) => {
+                            min_template_confidence = val;
+                            i += 2;
+                        }
+                        _ => {
+                            eprintln!(
+                                "Error: --min-template-confidence requires a number in [0.0, 1.0]"
+                            );
+                            std::process::exit(1);
+                        }
+                    }
+                } else {
+                    eprintln!("Error: --min-template-confidence requires a numeric argument");
                     std::process::exit(1);
                 }
             }
@@ -97,54 +123,106 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     };
 
-    let use_xml = template_source.as_deref() == Some("xml");
-    let resolved = if use_xml {
-        None
+    let resolved = template_resolver::resolve_templates(
+        path,
+        style_name,
+        template_dir.as_deref(),
+        &workspace_root,
+        template_mode,
+        min_template_confidence,
+    );
+
+    let needs_xml_bib = resolved.bibliography.is_none();
+    let needs_xml_cit = resolved.citation.is_none();
+
+    let xml_fallback = if needs_xml_bib || needs_xml_cit {
+        Some(compile_from_xml(
+            &legacy_style,
+            &mut options,
+            enable_provenance,
+            &tracker,
+        ))
     } else {
-        template_resolver::resolve_template(
-            path,
-            style_name,
-            template_dir.as_deref(),
-            &workspace_root,
-        )
+        None
     };
 
-    // If we have a resolved template, use it directly and skip the XML pipeline.
-    // Otherwise, run the full XML compilation pipeline.
-    let (new_bib, type_templates, new_cit) = if let Some(ref resolved_tmpl) = resolved {
-        eprintln!("Using {} template", resolved_tmpl.source);
+    if let Some(ref resolved_bib) = resolved.bibliography {
+        eprintln!("Using {} bibliography template", resolved_bib.source);
+        if let Some(conf) = resolved_bib.confidence {
+            eprintln!("  bibliography confidence: {:.0}%", conf * 100.0);
+        }
+    } else {
+        eprintln!(
+            "Using {} bibliography template",
+            template_resolver::TemplateSource::XmlCompiled
+        );
+    }
 
-        // Override bibliography options with inferred values when available.
-        // The XML options extractor often gets the wrong delimiter (e.g., ", " instead of ". ")
-        // because it reads from group delimiters rather than actual rendered output.
-        if let Some(ref delim) = resolved_tmpl.delimiter {
+    if let Some(ref resolved_cit) = resolved.citation {
+        eprintln!("Using {} citation template", resolved_cit.source);
+        if let Some(conf) = resolved_cit.confidence {
+            eprintln!("  citation confidence: {:.0}%", conf * 100.0);
+        }
+    } else {
+        eprintln!(
+            "Using {} citation template",
+            template_resolver::TemplateSource::XmlCompiled
+        );
+    }
+
+    let (new_bib, type_templates) = if let Some(ref resolved_bib) = resolved.bibliography {
+        (resolved_bib.template.clone(), None)
+    } else {
+        let (new_bib, type_templates, _) = xml_fallback
+            .as_ref()
+            .expect("XML fallback must exist when bibliography is unresolved");
+        (new_bib.clone(), type_templates.clone())
+    };
+
+    let new_cit = if let Some(ref resolved_cit) = resolved.citation {
+        resolved_cit.template.clone()
+    } else {
+        let (_, _, new_cit) = xml_fallback
+            .as_ref()
+            .expect("XML fallback must exist when citation is unresolved");
+        new_cit.clone()
+    };
+
+    // Override bibliography options with inferred values when available.
+    // The XML options extractor often gets the wrong delimiter because it reads group
+    // delimiters rather than rendered output.
+    if let Some(ref resolved_bib) = resolved.bibliography {
+        if let Some(ref delim) = resolved_bib.delimiter {
             eprintln!("  Overriding bibliography separator: {:?}", delim);
             let bib_cfg = options.bibliography.get_or_insert_with(Default::default);
             bib_cfg.separator = Some(delim.clone());
         }
 
-        if let Some(ref suffix) = resolved_tmpl.entry_suffix {
+        if let Some(ref suffix) = resolved_bib.entry_suffix {
             eprintln!("  Overriding bibliography entry suffix: {:?}", suffix);
             let bib_cfg = options.bibliography.get_or_insert_with(Default::default);
             bib_cfg.entry_suffix = Some(suffix.clone());
         }
+    }
 
-        // Still need citation from XML pipeline
-        let inliner = MacroInliner::new(&legacy_style);
-        let flattened_cit = inliner.inline_citation(&legacy_style);
-        let mut upsampler = Upsampler::new();
-        upsampler.et_al_min = legacy_style.citation.et_al_min;
-        upsampler.et_al_use_first = legacy_style.citation.et_al_use_first;
-        let raw_cit = upsampler.upsample_nodes(&flattened_cit);
-        let compressor = Compressor;
-        let csln_cit = compressor.compress_nodes(raw_cit);
-        let template_compiler = TemplateCompiler;
-        let new_cit = template_compiler.compile_citation(&csln_cit);
-        (resolved_tmpl.bibliography.clone(), None, new_cit)
-    } else {
-        // Full XML pipeline for both bibliography and citation
-        compile_from_xml(&legacy_style, &mut options, enable_provenance, &tracker)
-    };
+    let (mut citation_wrap, mut citation_prefix, mut citation_suffix) =
+        analysis::citation::infer_citation_wrapping(&legacy_style.citation.layout);
+    let mut citation_delimiter = analysis::citation::extract_citation_delimiter(
+        &legacy_style.citation.layout,
+        &legacy_style.macros,
+    );
+
+    // Output-driven citation metadata is higher fidelity than XML analysis when available.
+    if let Some(ref resolved_cit) = resolved.citation {
+        if let Some(ref wrap) = resolved_cit.wrap {
+            citation_wrap = Some(wrap.clone());
+            citation_prefix = None;
+            citation_suffix = None;
+        }
+        if let Some(ref delim) = resolved_cit.delimiter {
+            citation_delimiter = Some(delim.clone());
+        }
+    }
 
     // 5. Build Style in correct format for csln_processor
     let style = Style {
@@ -157,20 +235,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         templates: None,
         options: Some(options.clone()),
         citation: Some({
-            let (wrap, prefix, suffix) =
-                analysis::citation::infer_citation_wrapping(&legacy_style.citation.layout);
             CitationSpec {
                 options: None,
                 use_preset: None,
                 template: Some(new_cit),
-                wrap,
-                prefix,
-                suffix,
-                // Extract delimiter from first group in CSL layout (author-year separator)
-                delimiter: analysis::citation::extract_citation_delimiter(
-                    &legacy_style.citation.layout,
-                    &legacy_style.macros,
-                ),
+                wrap: citation_wrap,
+                prefix: citation_prefix,
+                suffix: citation_suffix,
+                delimiter: citation_delimiter,
                 multi_cite_delimiter: legacy_style.citation.layout.delimiter.clone(),
                 ..Default::default()
             }

@@ -80,17 +80,17 @@ if (!result) {
 if (fragmentOutput) {
   // Compact JSON fragment for Rust template resolver consumption.
   // Outputs to stdout only, no stderr noise.
-  console.log(JSON.stringify({
+  const fragment = {
     meta: {
       style: styleName,
       confidence: result.meta.confidence,
       delimiter: result.meta.delimiterConsensus,
       entrySuffix: result.meta.entrySuffix,
+      wrap: result.meta.wrap,
     },
-    bibliography: {
-      template: result.template,
-    },
-  }));
+  };
+  fragment[section] = { template: result.template };
+  console.log(JSON.stringify(fragment));
   process.exit(0);
 } else if (jsonOutput) {
   // Full result object as JSON

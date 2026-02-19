@@ -37,10 +37,11 @@ try {
     const bibData = JSON.parse(fs.readFileSync(bibPath, 'utf8'));
 
     // 3. Merge Data
-    // Merge citation template
-    if (citeData.citation && citeData.citation.template) {
+    // Merge citation template (supports legacy fragment key "bibliography")
+    const citationTemplate = citeData.citation?.template || citeData.bibliography?.template;
+    if (citationTemplate) {
         if (!baseData.citation) baseData.citation = {};
-        baseData.citation.template = citeData.citation.template;
+        baseData.citation.template = citationTemplate;
 
         // Merge other inferred citation properties if present and not in base
         // (e.g., wrap, delimiter)

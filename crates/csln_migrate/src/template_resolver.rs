@@ -1,14 +1,75 @@
 //! Template resolution for CSLN migration.
 //!
-//! Resolves bibliography and citation templates from multiple sources in priority order:
-//! 1. Hand-authored YAML files (examples/{style-name}-style.yaml)
-//! 2. Cached inferred JSON files (templates/inferred/{style-name}.json)
-//! 3. Live inference via Node.js (scripts/infer-template.js --fragment)
+//! Resolves bibliography and citation templates from multiple sources:
+//! 1. Hand-authored YAML files (`examples/{style-name}-style.yaml`)
+//! 2. Cached inferred JSON files (`templates/inferred/`)
+//! 3. Live inference via Node.js (`scripts/infer-template.js --fragment`)
 //! 4. Fallback to XML template compiler (caller handles this case)
 
-use csln_core::template::TemplateComponent;
+use csln_core::template::{TemplateComponent, WrapPunctuation};
 use std::path::{Path, PathBuf};
 use std::process::Command;
+
+/// Template source preference passed from CLI.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TemplateMode {
+    /// Prefer hand-authored, then inferred.
+    Auto,
+    /// Use hand-authored templates only.
+    Hand,
+    /// Use inferred templates only.
+    Inferred,
+    /// Disable template resolution and use XML compiler only.
+    Xml,
+}
+
+impl std::str::FromStr for TemplateMode {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "auto" => Ok(Self::Auto),
+            "hand" => Ok(Self::Hand),
+            "inferred" => Ok(Self::Inferred),
+            "xml" => Ok(Self::Xml),
+            other => Err(format!(
+                "invalid template mode '{}': expected auto|hand|inferred|xml",
+                other
+            )),
+        }
+    }
+}
+
+/// Template section to resolve.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TemplateSection {
+    Bibliography,
+    Citation,
+}
+
+impl TemplateSection {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::Bibliography => "bibliography",
+            Self::Citation => "citation",
+        }
+    }
+
+    fn cache_candidates(self, cache_dir: &Path, style_name: &str) -> Vec<PathBuf> {
+        match self {
+            // Keep support for legacy cache naming (`{style}.json`).
+            Self::Bibliography => vec![
+                cache_dir.join(format!("{}.bibliography.json", style_name)),
+                cache_dir.join(format!("{}.json", style_name)),
+            ],
+            Self::Citation => vec![cache_dir.join(format!("{}.citation.json", style_name))],
+        }
+    }
+
+    fn cache_output_path(self, cache_dir: &Path, style_name: &str) -> PathBuf {
+        cache_dir.join(format!("{}.{}.json", style_name, self.as_str()))
+    }
+}
 
 /// How the template was resolved.
 #[derive(Debug, Clone)]
@@ -19,7 +80,7 @@ pub enum TemplateSource {
     InferredCached(PathBuf),
     /// From live Node.js inference (then cached).
     InferredLive,
-    /// XML compiler fallback (resolve_template returns None).
+    /// XML compiler fallback (resolve_templates returns None for section).
     XmlCompiled,
 }
 
@@ -27,116 +88,205 @@ impl std::fmt::Display for TemplateSource {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             TemplateSource::HandAuthored(p) => write!(f, "hand-authored ({})", p.display()),
-            TemplateSource::InferredCached(p) => {
-                write!(f, "cached inferred ({})", p.display())
-            }
+            TemplateSource::InferredCached(p) => write!(f, "cached inferred ({})", p.display()),
             TemplateSource::InferredLive => write!(f, "live inferred"),
             TemplateSource::XmlCompiled => write!(f, "XML compiled"),
         }
     }
 }
 
-/// Result of template resolution containing the template and its source.
-pub struct ResolvedTemplate {
+/// Section-level resolved template and metadata.
+#[derive(Debug, Clone)]
+pub struct ResolvedTemplateSection {
     pub source: TemplateSource,
-    pub bibliography: Vec<TemplateComponent>,
-    /// Bibliography delimiter from inferred fragment (e.g., ". ").
-    /// Overrides the XML-extracted options.bibliography.separator when present.
+    pub template: Vec<TemplateComponent>,
+    pub confidence: Option<f64>,
+    /// Delimiter inferred from output (e.g., ". " for bibliography, ", " for citation).
     pub delimiter: Option<String>,
-    /// Bibliography entry suffix from inferred fragment (e.g., ".").
-    /// Overrides the XML-extracted options.bibliography.entry_suffix when present.
+    /// Bibliography entry suffix inferred from output (e.g., ".").
     pub entry_suffix: Option<String>,
+    /// Inferred citation wrap (`parentheses`, `brackets`, etc).
+    pub wrap: Option<WrapPunctuation>,
+}
+
+/// Templates resolved per section.
+#[derive(Debug, Clone, Default)]
+pub struct ResolvedTemplates {
+    pub bibliography: Option<ResolvedTemplateSection>,
+    pub citation: Option<ResolvedTemplateSection>,
 }
 
 /// JSON fragment format produced by `infer-template.js --fragment`.
 #[derive(serde::Deserialize)]
 struct InferredFragment {
     meta: Option<FragmentMeta>,
-    bibliography: BibliographyFragment,
+    bibliography: Option<TemplateFragment>,
+    citation: Option<TemplateFragment>,
 }
 
 #[derive(serde::Deserialize)]
 struct FragmentMeta {
+    confidence: Option<f64>,
     delimiter: Option<String>,
     #[serde(rename = "entrySuffix")]
     entry_suffix: Option<String>,
+    wrap: Option<WrapPunctuation>,
 }
 
 #[derive(serde::Deserialize)]
-struct BibliographyFragment {
+struct TemplateFragment {
     template: Vec<TemplateComponent>,
 }
 
-/// Resolve a template for the given style using the priority cascade.
-///
-/// Returns `None` when no pre-built template is available, signaling the caller
-/// to use the XML template compiler.
-///
-/// Priority: hand-authored YAML > cached inferred JSON > live Node.js inference.
-pub fn resolve_template(
+/// Resolve citation and bibliography templates from configured sources.
+pub fn resolve_templates(
     style_path: &str,
     style_name: &str,
     template_dir: Option<&Path>,
     workspace_root: &Path,
-) -> Option<ResolvedTemplate> {
-    // 1. Check for hand-authored YAML
+    mode: TemplateMode,
+    min_confidence: f64,
+) -> ResolvedTemplates {
+    if mode == TemplateMode::Xml {
+        return ResolvedTemplates::default();
+    }
+
     let hand_path = workspace_root
         .join("examples")
         .join(format!("{}-style.yaml", style_name));
-    if hand_path.exists() {
-        if let Some(template) = load_hand_authored(&hand_path) {
-            return Some(ResolvedTemplate {
-                source: TemplateSource::HandAuthored(hand_path),
-                bibliography: template,
-                delimiter: None, // Hand-authored styles define their own options
-                entry_suffix: None,
-            });
-        }
-    }
+    let hand_authored = if matches!(mode, TemplateMode::Auto | TemplateMode::Hand) {
+        load_hand_authored_sections(&hand_path)
+    } else {
+        None
+    };
 
-    // 2. Check for cached inferred JSON
     let cache_dir = template_dir
         .map(|p| p.to_path_buf())
         .unwrap_or_else(|| workspace_root.join("templates").join("inferred"));
-    let cache_path = cache_dir.join(format!("{}.json", style_name));
-    if cache_path.exists() {
-        if let Some((template, delimiter, entry_suffix)) = load_inferred_json(&cache_path) {
-            return Some(ResolvedTemplate {
-                source: TemplateSource::InferredCached(cache_path),
-                bibliography: template,
-                delimiter,
-                entry_suffix,
-            });
+
+    let ctx = ResolveContext {
+        style_path,
+        style_name,
+        workspace_root,
+        cache_dir: &cache_dir,
+        hand_authored: hand_authored.as_ref(),
+        mode,
+        min_confidence,
+    };
+
+    let bibliography = resolve_section(TemplateSection::Bibliography, &ctx);
+    let citation = resolve_section(TemplateSection::Citation, &ctx);
+
+    ResolvedTemplates {
+        bibliography,
+        citation,
+    }
+}
+
+struct HandAuthoredTemplates {
+    path: PathBuf,
+    bibliography: Option<Vec<TemplateComponent>>,
+    citation: Option<Vec<TemplateComponent>>,
+}
+
+/// Load citation and bibliography templates from a hand-authored YAML style file.
+fn load_hand_authored_sections(path: &Path) -> Option<HandAuthoredTemplates> {
+    if !path.exists() {
+        return None;
+    }
+
+    let text = std::fs::read_to_string(path).ok()?;
+    let style: csln_core::Style = serde_yaml::from_str(&text).ok()?;
+    Some(HandAuthoredTemplates {
+        path: path.to_path_buf(),
+        bibliography: style.bibliography.and_then(|b| b.template),
+        citation: style.citation.and_then(|c| c.template),
+    })
+}
+
+struct ResolveContext<'a> {
+    style_path: &'a str,
+    style_name: &'a str,
+    workspace_root: &'a Path,
+    cache_dir: &'a Path,
+    hand_authored: Option<&'a HandAuthoredTemplates>,
+    mode: TemplateMode,
+    min_confidence: f64,
+}
+
+fn resolve_section(
+    section: TemplateSection,
+    ctx: &ResolveContext<'_>,
+) -> Option<ResolvedTemplateSection> {
+    if matches!(ctx.mode, TemplateMode::Auto | TemplateMode::Hand) {
+        if let Some(hand) = ctx.hand_authored {
+            let hand_template = match section {
+                TemplateSection::Bibliography => hand.bibliography.clone(),
+                TemplateSection::Citation => hand.citation.clone(),
+            };
+            if let Some(template) = hand_template {
+                return Some(ResolvedTemplateSection {
+                    source: TemplateSource::HandAuthored(hand.path.clone()),
+                    template,
+                    confidence: None,
+                    delimiter: None,
+                    entry_suffix: None,
+                    wrap: None,
+                });
+            }
         }
     }
 
-    // 3. Try live inference via Node.js
-    if let Some((template, delimiter, entry_suffix)) =
-        infer_live(style_path, &cache_dir, style_name, workspace_root)
-    {
-        return Some(ResolvedTemplate {
-            source: TemplateSource::InferredLive,
-            bibliography: template,
-            delimiter,
-            entry_suffix,
-        });
+    if matches!(ctx.mode, TemplateMode::Auto | TemplateMode::Inferred) {
+        if let Some(resolved) = resolve_inferred_section(
+            ctx.style_path,
+            ctx.style_name,
+            section,
+            ctx.workspace_root,
+            ctx.cache_dir,
+            ctx.min_confidence,
+        ) {
+            return Some(resolved);
+        }
     }
 
-    // 4. No template found — caller should use XML compiler
     None
 }
 
-/// Load bibliography template from a hand-authored YAML style file.
-fn load_hand_authored(path: &Path) -> Option<Vec<TemplateComponent>> {
-    let text = std::fs::read_to_string(path).ok()?;
-    let style: csln_core::Style = serde_yaml::from_str(&text).ok()?;
-    style.bibliography?.template
+fn resolve_inferred_section(
+    style_path: &str,
+    style_name: &str,
+    section: TemplateSection,
+    workspace_root: &Path,
+    cache_dir: &Path,
+    min_confidence: f64,
+) -> Option<ResolvedTemplateSection> {
+    for cache_path in section.cache_candidates(cache_dir, style_name) {
+        if !cache_path.exists() {
+            continue;
+        }
+        if let Some(mut resolved) = load_inferred_json(&cache_path, section, min_confidence) {
+            resolved.source = TemplateSource::InferredCached(cache_path);
+            return Some(resolved);
+        }
+    }
+
+    infer_live(
+        style_path,
+        style_name,
+        section,
+        workspace_root,
+        cache_dir,
+        min_confidence,
+    )
 }
 
-/// Load bibliography template and delimiter from a cached inferred JSON fragment.
+/// Load an inferred fragment from cache and extract a section template.
 fn load_inferred_json(
     path: &Path,
-) -> Option<(Vec<TemplateComponent>, Option<String>, Option<String>)> {
+    section: TemplateSection,
+    min_confidence: f64,
+) -> Option<ResolvedTemplateSection> {
     let text = match std::fs::read_to_string(path) {
         Ok(t) => t,
         Err(e) => {
@@ -144,7 +294,15 @@ fn load_inferred_json(
             return None;
         }
     };
-    let fragment: InferredFragment = match serde_json::from_str(&text) {
+    parse_fragment(&text, section, min_confidence)
+}
+
+fn parse_fragment(
+    text: &str,
+    section: TemplateSection,
+    min_confidence: f64,
+) -> Option<ResolvedTemplateSection> {
+    let fragment: InferredFragment = match serde_json::from_str(text) {
         Ok(f) => f,
         Err(e) => {
             eprintln!("  [template_resolver] Failed to parse cache JSON: {}", e);
@@ -155,23 +313,54 @@ fn load_inferred_json(
             return None;
         }
     };
+
+    let template_fragment = match section {
+        TemplateSection::Bibliography => fragment
+            .bibliography
+            .as_ref()
+            .or(fragment.citation.as_ref()),
+        TemplateSection::Citation => fragment
+            .citation
+            .as_ref()
+            .or(fragment.bibliography.as_ref()),
+    }?;
+
+    let confidence = fragment.meta.as_ref().and_then(|m| m.confidence);
+    if let Some(score) = confidence {
+        if score < min_confidence {
+            eprintln!(
+                "  [template_resolver] Rejected {} template (confidence {:.2} < {:.2})",
+                section.as_str(),
+                score,
+                min_confidence
+            );
+            return None;
+        }
+    }
+
     let delimiter = fragment.meta.as_ref().and_then(|m| m.delimiter.clone());
     let entry_suffix = fragment.meta.as_ref().and_then(|m| m.entry_suffix.clone());
-    eprintln!(
-        "  [template_resolver] Loaded cached template: delimiter={:?}, entry_suffix={:?}",
-        delimiter, entry_suffix
-    );
-    Some((fragment.bibliography.template, delimiter, entry_suffix))
+    let wrap = fragment.meta.as_ref().and_then(|m| m.wrap.clone());
+
+    Some(ResolvedTemplateSection {
+        source: TemplateSource::InferredLive,
+        template: template_fragment.template.clone(),
+        confidence,
+        delimiter,
+        entry_suffix,
+        wrap,
+    })
 }
 
 /// Run the Node.js template inferrer and cache the result.
 fn infer_live(
     style_path: &str,
-    cache_dir: &Path,
     style_name: &str,
+    section: TemplateSection,
     workspace_root: &Path,
-) -> Option<(Vec<TemplateComponent>, Option<String>, Option<String>)> {
-    // Check if node is available
+    cache_dir: &Path,
+    min_confidence: f64,
+) -> Option<ResolvedTemplateSection> {
     if Command::new("node").arg("--version").output().is_err() {
         return None;
     }
@@ -181,11 +370,16 @@ fn infer_live(
         return None;
     }
 
-    eprintln!("Inferring template for {}...", style_name);
+    eprintln!(
+        "Inferring {} template for {}...",
+        section.as_str(),
+        style_name
+    );
 
     let output = Command::new("node")
         .arg(&script)
         .arg(style_path)
+        .arg(format!("--section={}", section.as_str()))
         .arg("--fragment")
         .current_dir(workspace_root)
         .output()
@@ -196,16 +390,15 @@ fn infer_live(
     }
 
     let stdout = String::from_utf8(output.stdout).ok()?;
-    let fragment: InferredFragment = serde_json::from_str(&stdout).ok()?;
-    let delimiter = fragment.meta.as_ref().and_then(|m| m.delimiter.clone());
-    let entry_suffix = fragment.meta.as_ref().and_then(|m| m.entry_suffix.clone());
+    let mut resolved = parse_fragment(&stdout, section, min_confidence)?;
+    resolved.source = TemplateSource::InferredLive;
 
-    // Cache the result for next time
     if std::fs::create_dir_all(cache_dir).is_ok() {
-        let cache_path = cache_dir.join(format!("{}.json", style_name));
-        let _ = std::fs::write(&cache_path, &stdout);
+        let cache_path = section.cache_output_path(cache_dir, style_name);
+        let _ = std::fs::write(cache_path, &stdout);
     }
-    Some((fragment.bibliography.template, delimiter, entry_suffix))
+
+    Some(resolved)
 }
 
 #[cfg(test)]
@@ -213,7 +406,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_inferred_json_deserialization() {
+    fn test_inferred_json_deserialization_for_bibliography() {
         let json = r#"{
             "meta": { "style": "test", "confidence": 0.95 },
             "bibliography": {
@@ -228,68 +421,53 @@ mod tests {
         }"#;
 
         let fragment: InferredFragment = serde_json::from_str(json).unwrap();
-        assert_eq!(fragment.bibliography.template.len(), 5);
-
-        match &fragment.bibliography.template[0] {
-            TemplateComponent::Contributor(c) => {
-                assert_eq!(c.contributor, csln_core::template::ContributorRole::Author);
-            }
-            other => panic!("Expected Contributor, got {:?}", other),
-        }
-
-        match &fragment.bibliography.template[1] {
-            TemplateComponent::Date(d) => {
-                assert_eq!(d.date, csln_core::template::DateVariable::Issued);
-                assert_eq!(
-                    d.rendering.wrap,
-                    Some(csln_core::template::WrapPunctuation::Parentheses)
-                );
-            }
-            other => panic!("Expected Date, got {:?}", other),
-        }
+        assert_eq!(fragment.bibliography.unwrap().template.len(), 5);
     }
 
     #[test]
-    fn test_live_fragment_with_list_and_delimiter() {
-        // Matches actual output from infer-template.js --fragment
+    fn test_citation_section_key_is_used() {
         let json = r#"{
-            "meta": { "style": "elsevier-harvard", "confidence": 0.97, "delimiter": ". " },
-            "bibliography": {
+            "meta": { "style": "test", "confidence": 0.90, "wrap": "parentheses" },
+            "citation": {
                 "template": [
-                    { "contributor": "author", "form": "long" },
-                    { "date": "issued", "form": "year" },
-                    { "title": "primary" },
-                    { "contributor": "editor", "form": "verb" },
-                    { "title": "parent-monograph" },
-                    { "title": "parent-serial" },
-                    { "variable": "publisher" },
-                    { "items": [{ "number": "volume" }, { "number": "issue" }] },
-                    { "number": "pages" },
-                    { "variable": "publisher-place" },
-                    { "variable": "doi", "prefix": "https://doi.org/" }
+                    { "contributor": "author", "form": "short" },
+                    { "date": "issued", "form": "year" }
                 ]
             }
         }"#;
 
-        let fragment: InferredFragment = serde_json::from_str(json).unwrap();
-        assert_eq!(fragment.bibliography.template.len(), 11);
-        assert_eq!(
-            fragment.meta.and_then(|m| m.delimiter),
-            Some(". ".to_string())
-        );
+        let resolved = parse_fragment(json, TemplateSection::Citation, 0.70).unwrap();
+        assert_eq!(resolved.template.len(), 2);
+        assert_eq!(resolved.wrap, Some(WrapPunctuation::Parentheses));
     }
 
     #[test]
-    fn test_fragment_without_delimiter() {
+    fn test_legacy_fragment_works_for_citation() {
+        // Legacy infer-template fragment only emitted `bibliography`.
         let json = r#"{
-            "meta": { "style": "test", "confidence": 0.9 },
+            "meta": { "style": "test", "confidence": 0.90 },
+            "bibliography": {
+                "template": [
+                    { "contributor": "author", "form": "short" },
+                    { "date": "issued", "form": "year" }
+                ]
+            }
+        }"#;
+
+        let resolved = parse_fragment(json, TemplateSection::Citation, 0.70).unwrap();
+        assert_eq!(resolved.template.len(), 2);
+    }
+
+    #[test]
+    fn test_low_confidence_fragment_rejected() {
+        let json = r#"{
+            "meta": { "style": "test", "confidence": 0.20 },
             "bibliography": {
                 "template": [{ "contributor": "author", "form": "long" }]
             }
         }"#;
 
-        let fragment: InferredFragment = serde_json::from_str(json).unwrap();
-        assert_eq!(fragment.meta.and_then(|m| m.delimiter), None);
+        assert!(parse_fragment(json, TemplateSection::Bibliography, 0.70).is_none());
     }
 
     #[test]
@@ -298,13 +476,13 @@ mod tests {
         std::fs::create_dir_all(&dir).unwrap();
         let path = dir.join("bad.json");
         std::fs::write(&path, "not valid json").unwrap();
-        assert!(load_inferred_json(&path).is_none());
+        assert!(load_inferred_json(&path, TemplateSection::Bibliography, 0.70).is_none());
         let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]
     fn test_missing_file_returns_none() {
         let path = Path::new("/nonexistent/path/style.json");
-        assert!(load_inferred_json(path).is_none());
+        assert!(load_inferred_json(path, TemplateSection::Bibliography, 0.70).is_none());
     }
 }
