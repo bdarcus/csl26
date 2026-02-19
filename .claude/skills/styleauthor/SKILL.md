@@ -116,6 +116,27 @@ Use this mode when the user gives a concrete metric target (for example, “get 
 4.  **Stop on Target, Then Commit**:
     -   Once target metric is reached, commit before optional polish to avoid drift.
 
+### Template Strategy Guardrails (Default)
+
+Use these defaults unless the user explicitly requests a type-template-heavy style.
+
+1.  **Start with a shared bibliography spine**:
+    -   Prefer one generic `bibliography.template` with targeted `overrides`.
+    -   Put common punctuation/order rules in shared components first.
+2.  **Use `type-templates` only for structural outliers**:
+    -   Reserve `type-templates` for types that need materially different
+        structure, not minor punctuation toggles.
+3.  **Compaction pass after parity**:
+    -   If first-pass fidelity was achieved with many `type-templates`,
+        refactor to reduce duplication while preserving oracle parity.
+4.  **Fallback behavior check (required)**:
+    -   Ensure reasonable output for types without explicit templates.
+    -   Avoid style designs where unsupported types render as near-empty
+        entries unless that is explicitly desired.
+5.  **Report maintainability metrics**:
+    -   Include template count and file size before/after compaction in the
+        final report when substantial refactoring occurred.
+
 ---
 
 ## Standard Workflow Phases
