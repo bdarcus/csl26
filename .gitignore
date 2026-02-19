@@ -29,8 +29,8 @@ tasks/
 tasks-backup-*/
 
 # Project-specific symlinks (local configuration)
-.gemini/
-GEMINI.md
+.agents/
+AGENT.md
 
 # Temporary development files
 debug.log
