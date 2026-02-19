@@ -22,7 +22,10 @@ function normalizeText(text) {
     .replace(/&#38;/g, '&')            // HTML entity for &
     .replace(/_([^_]+)_/g, '$1')       // Strip markdown italics
     .replace(/\*\*([^*]+)\*\*/g, '$1') // Strip markdown bold
-    .replace(/^\d+\.\s+/, '')          // Strip bibliography numbering prefix
+    .replace(/\bet al\./gi, 'et al')   // Normalize equivalent et-al punctuation
+    // Strip bibliography numbering prefix (allow hidden directional marks).
+    .replace(/^[\s\u200e\u200f\u202a-\u202e\u2066-\u2069]*\d+\.\s*/, '')
+    .replace(/\s+([,.;:])/g, '$1')     // Normalize stray spaces before punctuation
     .replace(/\s+/g, ' ')             // Normalize whitespace
     .trim();
 }
