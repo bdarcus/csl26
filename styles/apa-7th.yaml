@@ -39,16 +39,26 @@ citation:
         form: short
         overrides:
           legal-case: { suppress: true }
+          personal-communication:
+            contributor: author
+            form: long
+            name-order: given-first
+            suffix: ", personal communication"
       - title: primary
         form: short
-        suppress: true
+        suppress: false
         overrides:
+          [book, chapter, article-journal, article-magazine, article-newspaper, report, webpage, paper-conference, patent, motion-picture, broadcast, interview, dataset, standard, software, entry-encyclopedia, personal-communication]:
+            suppress: true
           legal-case:
-            suppress: false
             emph: true
             quote: false
       - date: issued
         form: year
+        overrides:
+          personal-communication:
+            date: issued
+            form: year-month-day
       - variable: locator
         prefix: ", "
   delimiter: ", "
@@ -60,17 +70,27 @@ citation:
         form: short
         overrides:
           legal-case: { suppress: true }
+          personal-communication:
+            contributor: author
+            form: long
+            name-order: given-first
+            suffix: ", personal communication"
       - title: primary
         form: short
-        suppress: true
+        suppress: false
         overrides:
+          [book, chapter, article-journal, article-magazine, article-newspaper, report, webpage, paper-conference, patent, motion-picture, broadcast, interview, dataset, standard, software, entry-encyclopedia, personal-communication]:
+            suppress: true
           legal-case:
-            suppress: false
             emph: true
             quote: false
       - items:
           - date: issued
             form: year
+            overrides:
+              personal-communication:
+                date: issued
+                form: year-month-day
           - variable: locator
             prefix: ", "
         delimiter: ""
@@ -163,14 +183,115 @@ bibliography:
       - title: primary
         emph: true
       - items:
-          - term: patent
-            form: long
-            suffix: " No. "
           - variable: number
+            prefix: "Patent No. "
         delimiter: ""
         wrap: parentheses
         prefix: " "
         suffix: "."
+    entry-encyclopedia:
+      - contributor: author
+        form: long
+        name-order: family-first
+        suffix: "."
+      - date: issued
+        form: year
+        wrap: parentheses
+        prefix: " "
+      - title: primary
+        emph: false
+        suffix: "."
+      - items:
+          - title: parent-serial
+            emph: true
+          - items:
+              - number: volume
+                prefix: "Vol. "
+              - number: pages
+                prefix: "pp. "
+            delimiter: ", "
+            wrap: parentheses
+        delimiter: " "
+        prefix: " In "
+        suffix: ". Oxford University Press."
+    dataset:
+      - contributor: author
+        form: long
+        name-order: family-first
+        suffix: "."
+      - date: issued
+        form: year
+        wrap: parentheses
+        prefix: " "
+      - title: primary
+        emph: false
+        suffix: " [Dataset]."
+      - variable: publisher
+        prefix: " "
+        suffix: "."
+      - variable: url
+        prefix: " "
+    motion-picture:
+      - contributor: author
+        form: long
+        name-order: family-first
+        suffix: "."
+      - date: issued
+        form: year
+        wrap: parentheses
+        prefix: " "
+      - title: primary
+        emph: true
+      - variable: genre
+        wrap: brackets
+        prefix: " "
+        inner-suffix: "; Film"
+        suffix: "."
+      - variable: medium
+        suppress: true
+    broadcast:
+      - contributor: author
+        form: long
+        name-order: family-first
+        suffix: "."
+      - date: issued
+        form: year-month-day
+        wrap: parentheses
+        prefix: " "
+      - title: primary
+        emph: false
+      - number: issue
+        wrap: parentheses
+        prefix: " "
+        inner-prefix: "No. "
+      - variable: medium
+        wrap: brackets
+        prefix: " "
+        suffix: "."
+      - title: parent-serial
+        emph: true
+        prefix: " In "
+        suffix: "."
+    interview:
+      - contributor: author
+        form: long
+        name-order: family-first
+        suffix: "."
+      - date: issued
+        form: year-month-day
+        wrap: parentheses
+        prefix: " "
+      - title: primary
+        emph: true
+      - variable: note
+        wrap: parentheses
+        prefix: " "
+      - variable: medium
+        wrap: brackets
+        prefix: " "
+        suffix: "."
+      - variable: url
+        prefix: " "
     paper-conference:
       - contributor: author
         form: long
