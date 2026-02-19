@@ -51,6 +51,7 @@ citation:
           form: year
       delimiter: space
     - variable: locator
+      show-label: false
   wrap: parentheses
   delimiter: ", "
   multi-cite-delimiter: "; "
