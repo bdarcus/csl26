@@ -7,6 +7,20 @@ use csln_core::options::{
 };
 use csln_core::template::{ContributorForm, ContributorRole, TemplateContributor};
 
+fn is_role_label_omitted(options: &RenderOptions<'_>, role: &ContributorRole) -> bool {
+    options
+        .config
+        .contributors
+        .as_ref()
+        .and_then(|c| c.role.as_ref())
+        .is_some_and(|role_opts| {
+            role_opts
+                .omit
+                .iter()
+                .any(|entry| entry.eq_ignore_ascii_case(role.as_str()))
+        })
+}
+
 impl ComponentValues for TemplateContributor {
     fn values<F: crate::render::format::OutputFormat<Output = String>>(
         &self,
@@ -158,32 +172,42 @@ impl ComponentValues for TemplateContributor {
                                 // Add role suffix if configured, but ONLY in bibliography context.
                                 // In citations, substituted editors should look identical to authors.
                                 let suffix = if options.context == RenderContext::Bibliography {
-                                    substitute.contributor_role_form.as_ref().and_then(|form| {
-                                        let plural = names_vec.len() > 1;
-                                        let term_form = match form.as_str() {
-                                            "short" => TermForm::Short,
-                                            "verb" => TermForm::Verb,
-                                            "verb-short" => TermForm::VerbShort,
-                                            _ => TermForm::Short, // Default to short
-                                        };
-                                        // Look up editor term from locale
-                                        options
-                                            .locale
-                                            .role_term(&ContributorRole::Editor, plural, term_form)
-                                            .map(|term| {
-                                                let term_str =
-                                                    if crate::values::should_strip_periods(
-                                                        &effective_rendering,
-                                                        options,
-                                                    ) {
-                                                        crate::values::strip_trailing_periods(term)
-                                                    } else {
-                                                        term.to_string()
-                                                    };
-                                                // Escaping needed here because we are building a complex string
-                                                fmt.text(&format!(" ({})", term_str))
-                                            })
-                                    })
+                                    if is_role_label_omitted(options, &ContributorRole::Editor) {
+                                        None
+                                    } else {
+                                        substitute.contributor_role_form.as_ref().and_then(|form| {
+                                            let plural = names_vec.len() > 1;
+                                            let term_form = match form.as_str() {
+                                                "short" => TermForm::Short,
+                                                "verb" => TermForm::Verb,
+                                                "verb-short" => TermForm::VerbShort,
+                                                _ => TermForm::Short, // Default to short
+                                            };
+                                            // Look up editor term from locale
+                                            options
+                                                .locale
+                                                .role_term(
+                                                    &ContributorRole::Editor,
+                                                    plural,
+                                                    term_form,
+                                                )
+                                                .map(|term| {
+                                                    let term_str =
+                                                        if crate::values::should_strip_periods(
+                                                            &effective_rendering,
+                                                            options,
+                                                        ) {
+                                                            crate::values::strip_trailing_periods(
+                                                                term,
+                                                            )
+                                                        } else {
+                                                            term.to_string()
+                                                        };
+                                                    // Escaping needed here because we are building a complex string
+                                                    fmt.text(&format!(" ({})", term_str))
+                                                })
+                                        })
+                                    }
                                 } else {
                                     None
                                 };
@@ -327,6 +351,7 @@ impl ComponentValues for TemplateContributor {
         );
 
         // Check for explicit label configuration first
+        let role_omitted = is_role_label_omitted(options, &self.contributor);
         let (role_prefix, role_suffix) = if let Some(label_config) = &self.label {
             use csln_core::template::{LabelPlacement, RoleLabelForm};
 
@@ -354,6 +379,8 @@ impl ComponentValues for TemplateContributor {
                 LabelPlacement::Prefix => (term_text.map(|t| fmt.text(&format!("{} ", t))), None),
                 LabelPlacement::Suffix => (None, term_text.map(|t| fmt.text(&format!(", {}", t)))),
             }
+        } else if role_omitted {
+            (None, None)
         } else {
             // Fall back to global editor_label_format configuration
             let editor_format = options

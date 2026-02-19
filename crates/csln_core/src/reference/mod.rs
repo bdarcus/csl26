@@ -550,8 +550,7 @@ impl InputReference {
         match self {
             InputReference::Monograph(r) => match r.r#type {
                 MonographType::Book => {
-                    if r
-                        .medium
+                    if r.medium
                         .as_deref()
                         .is_some_and(|m| m.to_ascii_lowercase().contains("interview"))
                     {
@@ -566,8 +565,7 @@ impl InputReference {
                 MonographType::Post => "post".to_string(),
                 MonographType::PersonalCommunication => "personal-communication".to_string(),
                 MonographType::Document => {
-                    if r
-                        .medium
+                    if r.medium
                         .as_deref()
                         .is_some_and(|m| m.to_ascii_lowercase().contains("interview"))
                     {
@@ -583,12 +581,17 @@ impl InputReference {
             },
             InputReference::SerialComponent(r) => match r.parent {
                 Parent::Embedded(ref s) => match s.r#type {
-                    SerialType::AcademicJournal => "article-journal".to_string(),
+                    SerialType::AcademicJournal => {
+                        if r.genre.as_deref() == Some("entry-encyclopedia") {
+                            "entry-encyclopedia".to_string()
+                        } else {
+                            "article-journal".to_string()
+                        }
+                    }
                     SerialType::Magazine => "article-magazine".to_string(),
                     SerialType::Newspaper => "article-newspaper".to_string(),
                     SerialType::BroadcastProgram => {
-                        if r
-                            .genre
+                        if r.genre
                             .as_deref()
                             .is_some_and(|g| g.to_ascii_lowercase().contains("film"))
                         {
