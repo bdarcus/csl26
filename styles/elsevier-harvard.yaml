@@ -7,8 +7,8 @@ options:
   substitute:
     contributor-role-form: short
     template:
-      - editor
       - translator
+      - title
   contributors:
     display-as-sort: all
     initialize-with: .
@@ -16,6 +16,9 @@ options:
     delimiter-precedes-last: always
     demote-non-dropping-particle: never
     sort-separator: ", "
+    role:
+      omit:
+        - editor
   dates: numeric
   bibliography:
     hanging-indent: true
@@ -24,6 +27,12 @@ options:
   punctuation-in-quote: true
   volume-pages-delimiter: comma
 citation:
+  options:
+    substitute:
+      template:
+        - editor
+        - translator
+        - title
   template:
     - contributor: author
       form: short
@@ -33,6 +42,17 @@ citation:
         and-others: et-al
         delimiter-precedes-last: contextual
       and: text
+      overrides:
+        legal-case:
+          suppress: true
+    - title: primary
+      form: short
+      suppress: true
+      overrides:
+        legal-case:
+          suppress: false
+          emph: true
+          quote: false
     - date: issued
       form: year
   wrap: parentheses
@@ -48,11 +68,26 @@ citation:
           and-others: et-al
           delimiter-precedes-last: contextual
         and: text
+        overrides:
+          legal-case:
+            suppress: true
+      - title: primary
+        form: short
+        suppress: true
+        overrides:
+          legal-case:
+            suppress: false
+            emph: true
+            quote: false
       - items:
           - date: issued
             form: year
         wrap: parentheses
 bibliography:
+  options:
+    substitute:
+      template:
+        - translator
   type-templates:
     article-journal:
       - contributor: author
@@ -77,6 +112,10 @@ bibliography:
           target: doi
           anchor: component
     book:
+      - contributor: editor
+        form: long
+        name-order: family-first
+        suffix: " (Eds.)"
       - contributor: author
         form: long
         name-order: family-first
@@ -84,9 +123,12 @@ bibliography:
         form: year
         prefix: ", "
         suffix: "."
-      - title: primary
+      - items:
+          - title: primary
+          - number: edition
+            suffix: ". ed."
+        delimiter: ", "
         suffix: "."
-      - number: edition
       - items:
           - variable: publisher
           - variable: publisher-place
@@ -106,13 +148,15 @@ bibliography:
           - contributor: editor
             form: long
             name-order: family-first
+            suffix: " (Eds.),"
           - title: parent-monograph
         delimiter: " "
         prefix: ", "
         suffix: "."
       - variable: publisher
+        suffix: ","
       - number: pages
-        prefix: "pp. "
+        prefix: " pp. "
     paper-conference:
       - contributor: author
         form: long
@@ -151,17 +195,15 @@ bibliography:
         prefix: ", "
         suffix: "."
       - title: primary
+        suffix: " [WWW Document]."
       - variable: url
         prefix: "URL "
         links:
           target: url
           anchor: component
       - date: accessed
-        form: month-day
-        prefix: "(accessed "
-      - date: accessed
-        form: year
-        prefix: "."
+        form: full
+        prefix: " (accessed "
         suffix: ")."
     article-newspaper:
       - contributor: author
@@ -204,6 +246,14 @@ bibliography:
         suffix: "."
       - title: parent-serial
         suffix: "."
+    legal-case:
+      - title: primary
+      - date: issued
+        form: year
+        prefix: ", "
+        suffix: ". "
+      - title: parent-serial
+        prefix: ", "
     dataset:
       - contributor: author
         form: long
