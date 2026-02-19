@@ -47,10 +47,12 @@ impl Processor {
     {
         let mut result = String::new();
         let mut last_idx = 0;
-        let citations = parser.parse_citations(content);
+        let parsed = parser.parse_citations(content);
+        let citation_models: Vec<Citation> = parsed.iter().map(|(_, _, c)| c.clone()).collect();
+        let normalized = self.normalize_note_context(&citation_models);
 
         // Render citations in the specified format
-        for (start, end, citation) in citations {
+        for ((start, end, _), citation) in parsed.into_iter().zip(normalized.into_iter()) {
             result.push_str(&content[last_idx..start]);
             match self.process_citation_with_format::<F>(&citation) {
                 Ok(rendered) => result.push_str(&rendered),

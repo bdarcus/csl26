@@ -19,6 +19,10 @@ impl ComponentValues for TemplateNumber {
             NumberVariable::Pages => {
                 if options.context == crate::values::RenderContext::Citation
                     && options.locator.is_some()
+                    && matches!(
+                        options.config.processing,
+                        Some(csln_core::options::Processing::Note)
+                    )
                 {
                     None
                 } else {

@@ -93,6 +93,15 @@ fn make_style() -> Style {
     }
 }
 
+fn make_note_style() -> Style {
+    let mut style = make_style();
+    style.options = Some(Config {
+        processing: Some(Processing::Note),
+        ..Default::default()
+    });
+    style
+}
+
 fn make_bibliography() -> Bibliography {
     let mut bib = Bibliography::new();
     bib.insert(
@@ -127,6 +136,162 @@ fn test_process_citation() {
 
     let result = processor.process_citation(&citation).unwrap();
     assert_eq!(result, "(Kuhn, 1962)");
+}
+
+#[test]
+fn test_normalize_note_context_assigns_missing_numbers() {
+    let style = make_note_style();
+    let bib = make_bibliography();
+    let processor = Processor::new(style, bib);
+
+    let citations = vec![
+        Citation {
+            id: Some("c1".to_string()),
+            items: vec![crate::reference::CitationItem {
+                id: "kuhn1962".to_string(),
+                ..Default::default()
+            }],
+            ..Default::default()
+        },
+        Citation {
+            id: Some("c2".to_string()),
+            note_number: Some(7),
+            items: vec![crate::reference::CitationItem {
+                id: "kuhn1962".to_string(),
+                ..Default::default()
+            }],
+            ..Default::default()
+        },
+        Citation {
+            id: Some("c3".to_string()),
+            items: vec![crate::reference::CitationItem {
+                id: "kuhn1962".to_string(),
+                ..Default::default()
+            }],
+            ..Default::default()
+        },
+    ];
+
+    let normalized = processor.normalize_note_context(&citations);
+    assert_eq!(normalized[0].note_number, Some(1));
+    assert_eq!(normalized[1].note_number, Some(7));
+    assert_eq!(normalized[2].note_number, Some(8));
+}
+
+#[test]
+fn test_process_citations_batch_api() {
+    let style = make_style();
+    let bib = make_bibliography();
+    let processor = Processor::new(style, bib);
+
+    let citations = vec![
+        Citation {
+            id: Some("c1".to_string()),
+            items: vec![crate::reference::CitationItem {
+                id: "kuhn1962".to_string(),
+                ..Default::default()
+            }],
+            ..Default::default()
+        },
+        Citation {
+            id: Some("c2".to_string()),
+            items: vec![crate::reference::CitationItem {
+                id: "kuhn1962".to_string(),
+                ..Default::default()
+            }],
+            ..Default::default()
+        },
+    ];
+
+    let rendered = processor.process_citations(&citations).unwrap();
+    assert_eq!(rendered.len(), 2);
+    assert_eq!(rendered[0], "(Kuhn, 1962)");
+    assert_eq!(rendered[1], "(Kuhn, 1962)");
+}
+
+#[test]
+fn test_citation_locator_label_renders_term() {
+    let mut style = make_style();
+    style.citation = Some(csln_core::CitationSpec {
+        template: Some(vec![
+            csln_core::TemplateComponent::Contributor(csln_core::template::TemplateContributor {
+                contributor: ContributorRole::Author,
+                form: ContributorForm::Short,
+                ..Default::default()
+            }),
+            csln_core::TemplateComponent::Date(csln_core::template::TemplateDate {
+                date: TDateVar::Issued,
+                form: DateForm::Year,
+                ..Default::default()
+            }),
+            csln_core::TemplateComponent::Variable(csln_core::template::TemplateVariable {
+                variable: csln_core::template::SimpleVariable::Locator,
+                ..Default::default()
+            }),
+        ]),
+        wrap: Some(WrapPunctuation::Parentheses),
+        delimiter: Some(", ".to_string()),
+        ..Default::default()
+    });
+
+    let bib = make_bibliography();
+    let processor = Processor::new(style, bib);
+    let citation = Citation {
+        items: vec![crate::reference::CitationItem {
+            id: "kuhn1962".to_string(),
+            label: Some(csln_core::citation::LocatorType::Page),
+            locator: Some("23".to_string()),
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+
+    let rendered = processor.process_citation(&citation).unwrap();
+    assert_eq!(rendered, "(Kuhn, 1962, p. 23)");
+}
+
+#[test]
+fn test_citation_locator_label_renders_term_with_loaded_locale() {
+    use std::path::Path;
+
+    let mut style = make_style();
+    style.citation = Some(csln_core::CitationSpec {
+        template: Some(vec![
+            csln_core::TemplateComponent::Contributor(csln_core::template::TemplateContributor {
+                contributor: ContributorRole::Author,
+                form: ContributorForm::Short,
+                ..Default::default()
+            }),
+            csln_core::TemplateComponent::Date(csln_core::template::TemplateDate {
+                date: TDateVar::Issued,
+                form: DateForm::Year,
+                ..Default::default()
+            }),
+            csln_core::TemplateComponent::Variable(csln_core::template::TemplateVariable {
+                variable: csln_core::template::SimpleVariable::Locator,
+                ..Default::default()
+            }),
+        ]),
+        wrap: Some(WrapPunctuation::Parentheses),
+        delimiter: Some(", ".to_string()),
+        ..Default::default()
+    });
+
+    let bib = make_bibliography();
+    let locale = csln_core::locale::Locale::load("en-US", Path::new("locales"));
+    let processor = Processor::with_locale(style, bib, locale);
+    let citation = Citation {
+        items: vec![crate::reference::CitationItem {
+            id: "kuhn1962".to_string(),
+            label: Some(csln_core::citation::LocatorType::Page),
+            locator: Some("23".to_string()),
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+
+    let rendered = processor.process_citation(&citation).unwrap();
+    assert_eq!(rendered, "(Kuhn, 1962, p. 23)");
 }
 
 #[test]
