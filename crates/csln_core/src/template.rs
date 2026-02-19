@@ -169,8 +169,12 @@ impl TypeSelector {
     /// Check if this selector matches a reference type.
     pub fn matches(&self, ref_type: &str) -> bool {
         match self {
-            TypeSelector::Single(s) => s == ref_type || s == "all" || s == "default",
-            TypeSelector::Multiple(types) => types.iter().any(|t| t == ref_type),
+            TypeSelector::Single(s) => {
+                s == ref_type || s == "all" || (s == "default" && ref_type == "default")
+            }
+            TypeSelector::Multiple(types) => types
+                .iter()
+                .any(|t| t == ref_type || t == "all" || (t == "default" && ref_type == "default")),
         }
     }
 }
@@ -850,5 +854,17 @@ wrap: parentheses
             TemplateComponent::Variable(v) => assert_eq!(v.variable, SimpleVariable::Publisher),
             _ => panic!("Expected Variable for publisher, got {:?}", comps[1]),
         }
+    }
+
+    #[test]
+    fn test_type_selector_default_only_matches_default_context() {
+        let selector = TypeSelector::Single("default".to_string());
+        assert!(selector.matches("default"));
+        assert!(!selector.matches("article-journal"));
+
+        let mixed = TypeSelector::Multiple(vec!["default".to_string(), "chapter".to_string()]);
+        assert!(mixed.matches("default"));
+        assert!(mixed.matches("chapter"));
+        assert!(!mixed.matches("book"));
     }
 }
