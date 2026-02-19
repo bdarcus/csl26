@@ -89,6 +89,31 @@ pub struct ProcessedReferences {
 }
 
 impl Processor {
+    /// Initialize numeric citation numbers from bibliography insertion order.
+    ///
+    /// citeproc-js registers all bibliography items before citation rendering in
+    /// the oracle workflow, so numeric labels are stable by reference registry
+    /// order rather than first-citation order.
+    fn initialize_numeric_citation_numbers(&self) {
+        let is_numeric = self
+            .get_config()
+            .processing
+            .as_ref()
+            .is_some_and(|p| matches!(p, csln_core::options::Processing::Numeric));
+        if !is_numeric {
+            return;
+        }
+
+        let mut numbers = self.citation_numbers.borrow_mut();
+        if !numbers.is_empty() {
+            return;
+        }
+
+        for (index, ref_id) in self.bibliography.keys().enumerate() {
+            numbers.insert(ref_id.clone(), index + 1);
+        }
+    }
+
     /// Create a new processor with default English locale.
     pub fn new(style: Style, bibliography: Bibliography) -> Self {
         Self::with_locale(style, bibliography, Locale::en_us())
@@ -165,6 +190,7 @@ impl Processor {
 
     /// Process all references to get rendered output.
     pub fn process_references(&self) -> ProcessedReferences {
+        self.initialize_numeric_citation_numbers();
         let sorted_refs = self.sort_references(self.bibliography.values().collect());
         let mut bibliography: Vec<ProcEntry> = Vec::new();
         let mut prev_reference: Option<&Reference> = None;
@@ -355,6 +381,7 @@ impl Processor {
     where
         F: crate::render::format::OutputFormat<Output = String>,
     {
+        self.initialize_numeric_citation_numbers();
         let sorted_refs = self.sort_references(self.bibliography.values().collect());
         let mut bibliography: Vec<ProcEntry> = Vec::new();
         let mut prev_reference: Option<&Reference> = None;
@@ -435,6 +462,7 @@ impl Processor {
     where
         F: crate::render::format::OutputFormat<Output = String>,
     {
+        self.initialize_numeric_citation_numbers();
         // Track cited IDs
         for item in &citation.items {
             self.cited_ids.borrow_mut().insert(item.id.clone());
