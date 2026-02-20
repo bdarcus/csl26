@@ -132,12 +132,46 @@ impl<'a> Disambiguator<'a> {
                     .as_ref()
                     .map(|d| d.add_givenname)
                     .unwrap_or(false);
+                let year_suffix = disamb_config
+                    .as_ref()
+                    .map(|d| d.year_suffix)
+                    .unwrap_or(false);
+
+                let is_label_mode = self
+                    .config
+                    .processing
+                    .as_ref()
+                    .is_some_and(|p| matches!(p, csln_core::options::Processing::Label(_)));
 
                 let mut resolved = false;
 
-                // 1. Try expanding names (et-al expansion)
-                if add_names {
-                    if let Some(n) = self.check_names_resolution(&group) {
+                // For label mode, skip name strategies and go straight to year-suffix
+                if is_label_mode && year_suffix {
+                    self.apply_year_suffix(&mut hints, &group, key, group_len, false);
+                } else {
+                    // 1. Try expanding names (et-al expansion)
+                    if add_names {
+                        if let Some(n) = self.check_names_resolution(&group) {
+                            for (i, reference) in group.iter().enumerate() {
+                                hints.insert(
+                                    reference.id().unwrap_or_default(),
+                                    ProcHints {
+                                        disamb_condition: false,
+                                        group_index: i + 1,
+                                        group_length: group_len,
+                                        group_key: key.clone(),
+                                        expand_given_names: false,
+                                        min_names_to_show: Some(n),
+                                        ..Default::default()
+                                    },
+                                );
+                            }
+                            resolved = true;
+                        }
+                    }
+
+                    // 2. Try expanding given names for the base name list
+                    if !resolved && add_givenname && self.check_givenname_resolution(&group, None) {
                         for (i, reference) in group.iter().enumerate() {
                             hints.insert(
                                 reference.id().unwrap_or_default(),
@@ -146,69 +180,50 @@ impl<'a> Disambiguator<'a> {
                                     group_index: i + 1,
                                     group_length: group_len,
                                     group_key: key.clone(),
-                                    expand_given_names: false,
-                                    min_names_to_show: Some(n),
+                                    expand_given_names: true,
+                                    min_names_to_show: None,
                                     ..Default::default()
                                 },
                             );
                         }
                         resolved = true;
                     }
-                }
 
-                // 2. Try expanding given names for the base name list
-                if !resolved && add_givenname && self.check_givenname_resolution(&group, None) {
-                    for (i, reference) in group.iter().enumerate() {
-                        hints.insert(
-                            reference.id().unwrap_or_default(),
-                            ProcHints {
-                                disamb_condition: false,
-                                group_index: i + 1,
-                                group_length: group_len,
-                                group_key: key.clone(),
-                                expand_given_names: true,
-                                min_names_to_show: None,
-                                ..Default::default()
-                            },
-                        );
-                    }
-                    resolved = true;
-                }
+                    // 3. Try combined expansion: multiple names + given names
+                    if !resolved && add_names && add_givenname {
+                        // Find if there's an N such that expanding both names and given names works
+                        let max_authors = group
+                            .iter()
+                            .map(|r| r.author().map(|a| a.to_names_vec().len()).unwrap_or(0))
+                            .max()
+                            .unwrap_or(0);
 
-                // 3. Try combined expansion: multiple names + given names
-                if !resolved && add_names && add_givenname {
-                    // Find if there's an N such that expanding both names and given names works
-                    let max_authors = group
-                        .iter()
-                        .map(|r| r.author().map(|a| a.to_names_vec().len()).unwrap_or(0))
-                        .max()
-                        .unwrap_or(0);
-
-                    for n in 2..=max_authors {
-                        if self.check_givenname_resolution(&group, Some(n)) {
-                            for (idx, reference) in group.iter().enumerate() {
-                                hints.insert(
-                                    reference.id().unwrap_or_default(),
-                                    ProcHints {
-                                        disamb_condition: false,
-                                        group_index: idx + 1,
-                                        group_length: group_len,
-                                        group_key: key.clone(),
-                                        expand_given_names: true,
-                                        min_names_to_show: Some(n),
-                                        ..Default::default()
-                                    },
-                                );
+                        for n in 2..=max_authors {
+                            if self.check_givenname_resolution(&group, Some(n)) {
+                                for (idx, reference) in group.iter().enumerate() {
+                                    hints.insert(
+                                        reference.id().unwrap_or_default(),
+                                        ProcHints {
+                                            disamb_condition: false,
+                                            group_index: idx + 1,
+                                            group_length: group_len,
+                                            group_key: key.clone(),
+                                            expand_given_names: true,
+                                            min_names_to_show: Some(n),
+                                            ..Default::default()
+                                        },
+                                    );
+                                }
+                                resolved = true;
+                                break;
                             }
-                            resolved = true;
-                            break;
                         }
                     }
-                }
 
-                // 4. Fallback to year-suffix
-                if !resolved {
-                    self.apply_year_suffix(&mut hints, &group, key, group_len, false);
+                    // 4. Fallback to year-suffix
+                    if !resolved {
+                        self.apply_year_suffix(&mut hints, &group, key, group_len, false);
+                    }
                 }
             } else {
                 // No collision
@@ -351,6 +366,14 @@ impl<'a> Disambiguator<'a> {
 
     /// Create a grouping key for a reference based on its base citation form.
     fn make_group_key(&self, reference: &Reference) -> String {
+        // In label mode, group by base label string rather than author-year.
+        // This ensures disambiguation happens at the label level (Knu84a/Knu84b)
+        // rather than the author-year level.
+        if let Some(csln_core::options::Processing::Label(config)) = &self.config.processing {
+            let params = config.effective_params();
+            return crate::processor::labels::generate_base_label(reference, &params);
+        }
+
         let shorten = self
             .config
             .contributors

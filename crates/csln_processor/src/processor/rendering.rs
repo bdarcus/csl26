@@ -68,6 +68,37 @@ impl<'a> Renderer<'a> {
         !has_explicit_integral
     }
 
+    /// Check if this is a label style with integral mode.
+    fn should_render_author_for_label_integral(
+        &self,
+        mode: &csln_core::citation::CitationMode,
+    ) -> bool {
+        if !matches!(mode, csln_core::citation::CitationMode::Integral) {
+            return false;
+        }
+
+        let is_label = self
+            .config
+            .processing
+            .as_ref()
+            .map(|p| matches!(p, csln_core::options::Processing::Label(_)))
+            .unwrap_or(false);
+
+        if !is_label {
+            return false;
+        }
+
+        // If the style provides an explicit integral template, use it instead of the hardcoded default.
+        let has_explicit_integral = self
+            .style
+            .citation
+            .as_ref()
+            .map(|cs| cs.integral.is_some())
+            .unwrap_or(false);
+
+        !has_explicit_integral
+    }
+
     /// Ensure suffix has proper spacing (add space if suffix doesn't start with
     /// punctuation and isn't empty).
     fn ensure_suffix_spacing(&self, suffix: &str) -> String {
@@ -157,6 +188,59 @@ impl<'a> Renderer<'a> {
         )
     }
 
+    /// Render author-only text for label integral citations.
+    fn render_author_for_label_integral_with_format<F>(
+        &self,
+        reference: &Reference,
+        item: &crate::reference::CitationItem,
+    ) -> String
+    where
+        F: crate::render::format::OutputFormat<Output = String>,
+    {
+        let fmt = F::default();
+        let options = RenderOptions {
+            config: self.config,
+            locale: self.locale,
+            context: RenderContext::Citation,
+            mode: csln_core::citation::CitationMode::Integral,
+            visibility: item.visibility,
+            locator: item.locator.as_deref(),
+            locator_label: item.label.clone(),
+        };
+
+        if let Some(contributor) = reference.author().or_else(|| reference.editor()) {
+            let mode = self
+                .config
+                .multilingual
+                .as_ref()
+                .and_then(|m| m.name_mode.as_ref());
+            let preferred_script = self
+                .config
+                .multilingual
+                .as_ref()
+                .and_then(|m| m.preferred_script.as_ref());
+            let locale_str = &self.locale.locale;
+
+            let names_vec = crate::values::resolve_multilingual_name(
+                &contributor,
+                mode,
+                preferred_script,
+                locale_str,
+            );
+            let author_part = fmt.text(&crate::values::format_contributors_short(
+                &names_vec, &options,
+            ));
+            if !author_part.is_empty() {
+                return author_part;
+            }
+        }
+
+        reference
+            .title()
+            .map(|title| fmt.text(&title.to_string()))
+            .unwrap_or_default()
+    }
+
     /// Render citation items without grouping.
     pub fn render_ungrouped_citation(
         &self,
@@ -188,6 +272,8 @@ impl<'a> Renderer<'a> {
 
         // For numeric styles with integral mode, render author-year instead
         let use_author_year = self.should_render_author_year_for_numeric_integral(mode);
+        // For label styles with integral mode, render narrative contributor text.
+        let use_label_author = self.should_render_author_for_label_integral(mode);
 
         for item in items {
             let reference = self
@@ -203,6 +289,28 @@ impl<'a> Renderer<'a> {
                     item,
                     citation_number,
                 );
+                if !item_str.is_empty() {
+                    let prefix = item.prefix.as_deref().unwrap_or("");
+                    let suffix = item.suffix.as_deref().unwrap_or("");
+
+                    let formatted_prefix =
+                        if !prefix.is_empty() && !prefix.ends_with(char::is_whitespace) {
+                            format!("{} ", prefix)
+                        } else {
+                            prefix.to_string()
+                        };
+
+                    let content = if !prefix.is_empty() || !suffix.is_empty() {
+                        let spaced_suffix = self.ensure_suffix_spacing(suffix);
+                        fmt.affix(&formatted_prefix, item_str, &spaced_suffix)
+                    } else {
+                        item_str
+                    };
+                    rendered_items.push(fmt.citation(vec![item.id.clone()], content));
+                }
+            } else if use_label_author {
+                let item_str =
+                    self.render_author_for_label_integral_with_format::<F>(reference, item);
                 if !item_str.is_empty() {
                     let prefix = item.prefix.as_deref().unwrap_or("");
                     let suffix = item.suffix.as_deref().unwrap_or("");

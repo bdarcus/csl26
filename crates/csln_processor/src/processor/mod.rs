@@ -22,6 +22,7 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 
 pub mod disambiguation;
 pub mod document;
+pub mod labels;
 pub mod matching;
 pub mod rendering;
 pub mod sorting;
@@ -533,7 +534,10 @@ impl Processor {
 
         let cite_config = self.get_citation_config();
         let processing = cite_config.processing.clone().unwrap_or_default();
-        let is_author_date = !matches!(processing, csln_core::options::Processing::Numeric);
+        let is_author_date = !matches!(
+            processing,
+            csln_core::options::Processing::Numeric | csln_core::options::Processing::Label(_)
+        );
         let renderer = Renderer::new(
             &self.style,
             &self.bibliography,

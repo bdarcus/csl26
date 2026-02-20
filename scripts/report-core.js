@@ -119,12 +119,13 @@ function discoverCoreStyles() {
     throw new Error(`Core styles directory not found: ${stylesRoot}`);
   }
 
-  return fs.readdirSync(stylesRoot)
-    .filter((file) => file.endsWith('.yaml'))
-    .map((file) => file.replace(/\.yaml$/, ''))
-    .sort()
-    .map((name) => {
-      const meta = STYLE_METADATA[name] || {};
+  return Object.entries(STYLE_METADATA)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([name, meta]) => {
+      const stylePath = path.join(stylesRoot, `${name}.yaml`);
+      if (!fs.existsSync(stylePath)) {
+        throw new Error(`Core style YAML not found: ${stylePath}`);
+      }
       return {
         name,
         sourceName: meta.source || name,

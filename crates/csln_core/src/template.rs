@@ -515,6 +515,7 @@ pub enum NumberVariable {
     NumberOfPages,
     NumberOfVolumes,
     CitationNumber,
+    CitationLabel,
     Number,
     DocketNumber,
     PatentNumber,
