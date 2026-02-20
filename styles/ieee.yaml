@@ -1,0 +1,84 @@
+version: ''
+info:
+  title: IEEE Reference Guide version 11.29.2023
+  id: http://www.zotero.org/styles/ieee
+options:
+  substitute:
+    contributor-role-form: short
+    template:
+    - editor
+    - translator
+  processing: numeric
+  contributors:
+    initialize-with: '. '
+    demote-non-dropping-particle: sort-only
+  dates:
+    month: short
+    uncertainty-marker: '?'
+    approximation-marker: 'ca. '
+    range-delimiter: –
+  titles:
+    monograph:
+      emph: true
+    periodical:
+      emph: true
+    serial:
+      emph: true
+  bibliography:
+    separator: ', '
+  punctuation-in-quote: true
+citation:
+  template:
+  - items:
+    - number: citation-number
+    - variable: locator
+      show-label: true
+      prefix: ', '
+    delimiter: none
+    wrap: brackets
+  multi-cite-delimiter: ', '
+bibliography:
+  options:
+    contributors:
+      initialize-with: '. '
+  type-templates:
+    patent:
+    - number: citation-number
+      wrap: brackets
+    - contributor: author
+      form: long
+      suffix: ', '
+    - title: primary
+      wrap: quotes
+      suffix: ', '
+    - variable: number
+      suffix: ', '
+    - date: issued
+      form: full
+  template:
+  - contributor: author
+    form: long
+  - title: primary
+    wrap: quotes
+  - title: parent-monograph
+    emph: true
+  - title: parent-serial
+    emph: true
+  - number: volume
+    prefix: ', vol. '
+  - number: issue
+    prefix: ', no. '
+  - contributor: editor
+    form: verb
+  - variable: publisher-place
+  - variable: publisher
+    prefix: ': '
+  - number: pages
+    prefix: 'pp. '
+  - date: issued
+    form: year
+    overrides:
+      patent:
+        suppress: true
+  - variable: doi
+  - variable: url

@@ -1,0 +1,75 @@
+version: ''
+info:
+  title: Springer - MathPhys (numeric, brackets)
+  id: http://www.zotero.org/styles/springer-mathphys-brackets
+options:
+  substitute:
+    contributor-role-form: short
+    template:
+    - editor
+  processing: numeric
+  contributors:
+    display-as-sort: all
+    initialize-with: .
+    delimiter: ', '
+    delimiter-precedes-last: always
+    demote-non-dropping-particle: sort-only
+    sort-separator: ', '
+  dates:
+    month: long
+    uncertainty-marker: '?'
+    approximation-marker: 'ca. '
+    range-delimiter: –
+  bibliography:
+    separator: '. '
+  punctuation-in-quote: true
+citation:
+  template:
+  - number: citation-number
+  wrap: brackets
+  multi-cite-delimiter: ', '
+bibliography:
+  options:
+    contributors:
+      display-as-sort: all
+      initialize-with: .
+      delimiter: ', '
+      delimiter-precedes-last: always
+      sort-separator: ', '
+  type-templates:
+    entry-encyclopedia:
+    - contributor: author
+      form: long
+      name-order: family-first
+    - title: primary
+      prefix: ': '
+    - date: issued
+      form: year
+      prefix: ', '
+      wrap: parentheses
+  template:
+  - contributor: author
+    form: long
+    name-order: family-first
+  - title: primary
+    prefix: ': '
+  - title: parent-monograph
+  - title: parent-serial
+  - number: pages
+    overrides:
+      paper-conference:
+        prefix: 'pp. '
+      chapter:
+        prefix: 'pp. '
+  - variable: publisher
+  - variable: publisher-place
+    prefix: ', '
+  - variable: url
+  - date: issued
+    form: year
+    prefix: ' '
+    wrap: parentheses
+  - variable: doi
+    overrides:
+      article-journal:
+        prefix: https://doi.org/

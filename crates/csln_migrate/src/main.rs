@@ -1,5 +1,14 @@
-use csl_legacy::parser::parse_style;
-use csln_core::{template::TemplateComponent, BibliographySpec, CitationSpec, Style, StyleInfo};
+use csl_legacy::{
+    model::{CslNode, Layout},
+    parser::parse_style,
+};
+use csln_core::{
+    template::{
+        DelimiterPunctuation, Rendering, SimpleVariable, TemplateComponent, TemplateList,
+        TemplateVariable, WrapPunctuation,
+    },
+    BibliographySpec, CitationSpec, Style, StyleInfo,
+};
 use csln_migrate::{
     analysis, debug_output::DebugOutputFormatter, passes, preset_detector,
     provenance::ProvenanceTracker, template_resolver, Compressor, MacroInliner, OptionsExtractor,
@@ -256,7 +265,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         (new_bib.clone(), type_templates.clone())
     };
 
-    let new_cit = if let Some(ref resolved_cit) = resolved.citation {
+    let mut new_cit = if let Some(ref resolved_cit) = resolved.citation {
         resolved_cit.template.clone()
     } else {
         let (_, _, new_cit) = xml_fallback
@@ -312,6 +321,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         if let Some(ref delim) = resolved_cit.delimiter {
             citation_delimiter = Some(delim.clone());
         }
+    }
+
+    // Numeric citation fixups informed by migration quality runs:
+    // - Keep locator labels when legacy style has a citation-locator macro.
+    // - Preserve per-item wrapping for grouped numeric layouts (e.g., IEEE).
+    if matches!(
+        options.processing,
+        Some(csln_core::options::Processing::Numeric)
+    ) {
+        ensure_numeric_locator_citation_component(&legacy_style.citation.layout, &mut new_cit);
+        move_group_wrap_to_citation_items(
+            &legacy_style.citation.layout,
+            &mut new_cit,
+            &mut citation_wrap,
+        );
     }
 
     // 5. Build Style in correct format for csln_processor
@@ -821,6 +845,181 @@ fn apply_type_overrides(
             }
         }
         _ => {}
+    }
+}
+
+fn ensure_numeric_locator_citation_component(layout: &Layout, template: &mut [TemplateComponent]) {
+    if !layout_uses_citation_locator(layout) || citation_template_has_locator(template) {
+        return;
+    }
+
+    let locator_component = TemplateComponent::Variable(TemplateVariable {
+        variable: SimpleVariable::Locator,
+        show_label: Some(true),
+        rendering: Rendering {
+            prefix: Some(", ".to_string()),
+            ..Default::default()
+        },
+        ..Default::default()
+    });
+
+    if let Some(idx) = template.iter().position(component_has_citation_number) {
+        match &mut template[idx] {
+            TemplateComponent::List(list) => {
+                list.items.push(locator_component);
+                if list.delimiter.is_none() {
+                    list.delimiter = Some(DelimiterPunctuation::None);
+                }
+            }
+            _ => {
+                let original = template[idx].clone();
+                template[idx] = TemplateComponent::List(TemplateList {
+                    items: vec![original, locator_component],
+                    delimiter: Some(DelimiterPunctuation::None),
+                    ..Default::default()
+                });
+            }
+        }
+    }
+}
+
+fn move_group_wrap_to_citation_items(
+    layout: &Layout,
+    template: &mut [TemplateComponent],
+    citation_wrap: &mut Option<WrapPunctuation>,
+) {
+    let Some(wrap) = citation_wrap.clone() else {
+        return;
+    };
+
+    if !layout_has_group_wrap_for_citation_number(layout, &wrap) {
+        return;
+    }
+
+    for component in template.iter_mut() {
+        if component_has_citation_number(component) {
+            apply_wrap_to_component(component, wrap.clone());
+        }
+    }
+    *citation_wrap = None;
+}
+
+fn apply_wrap_to_component(component: &mut TemplateComponent, wrap: WrapPunctuation) {
+    match component {
+        TemplateComponent::Number(n) => {
+            if n.rendering.wrap.is_none() {
+                n.rendering.wrap = Some(wrap);
+            }
+        }
+        TemplateComponent::List(list) => {
+            if list.rendering.wrap.is_none() {
+                list.rendering.wrap = Some(wrap);
+            }
+        }
+        _ => {}
+    }
+}
+
+fn citation_template_has_locator(template: &[TemplateComponent]) -> bool {
+    template.iter().any(component_has_locator)
+}
+
+fn component_has_locator(component: &TemplateComponent) -> bool {
+    match component {
+        TemplateComponent::Variable(v) => v.variable == SimpleVariable::Locator,
+        TemplateComponent::List(list) => list.items.iter().any(component_has_locator),
+        _ => false,
+    }
+}
+
+fn layout_uses_citation_locator(layout: &Layout) -> bool {
+    nodes_use_citation_locator(&layout.children)
+}
+
+fn nodes_use_citation_locator(nodes: &[CslNode]) -> bool {
+    nodes.iter().any(node_uses_citation_locator)
+}
+
+fn node_uses_citation_locator(node: &CslNode) -> bool {
+    match node {
+        CslNode::Text(t) => {
+            t.variable.as_deref() == Some("locator")
+                || t.macro_name
+                    .as_deref()
+                    .is_some_and(|name| name.contains("citation-locator"))
+        }
+        CslNode::Group(g) => nodes_use_citation_locator(&g.children),
+        CslNode::Choose(c) => {
+            nodes_use_citation_locator(&c.if_branch.children)
+                || c.else_if_branches
+                    .iter()
+                    .any(|b| nodes_use_citation_locator(&b.children))
+                || c.else_branch
+                    .as_ref()
+                    .is_some_and(|children| nodes_use_citation_locator(children))
+        }
+        _ => false,
+    }
+}
+
+fn layout_has_group_wrap_for_citation_number(layout: &Layout, wrap: &WrapPunctuation) -> bool {
+    let (prefix, suffix) = match wrap {
+        WrapPunctuation::Brackets => ("[", "]"),
+        WrapPunctuation::Parentheses => ("(", ")"),
+        _ => return false,
+    };
+    nodes_have_wrapped_citation_number_group(&layout.children, prefix, suffix)
+}
+
+fn nodes_have_wrapped_citation_number_group(nodes: &[CslNode], prefix: &str, suffix: &str) -> bool {
+    nodes
+        .iter()
+        .any(|node| node_has_wrapped_citation_number_group(node, prefix, suffix))
+}
+
+fn node_has_wrapped_citation_number_group(node: &CslNode, prefix: &str, suffix: &str) -> bool {
+    match node {
+        CslNode::Group(g) => {
+            if g.prefix.as_deref() == Some(prefix)
+                && g.suffix.as_deref() == Some(suffix)
+                && nodes_contain_citation_number(&g.children)
+            {
+                return true;
+            }
+            nodes_have_wrapped_citation_number_group(&g.children, prefix, suffix)
+        }
+        CslNode::Choose(c) => {
+            nodes_have_wrapped_citation_number_group(&c.if_branch.children, prefix, suffix)
+                || c.else_if_branches
+                    .iter()
+                    .any(|b| nodes_have_wrapped_citation_number_group(&b.children, prefix, suffix))
+                || c.else_branch.as_ref().is_some_and(|children| {
+                    nodes_have_wrapped_citation_number_group(children, prefix, suffix)
+                })
+        }
+        _ => false,
+    }
+}
+
+fn nodes_contain_citation_number(nodes: &[CslNode]) -> bool {
+    nodes.iter().any(node_contains_citation_number)
+}
+
+fn node_contains_citation_number(node: &CslNode) -> bool {
+    match node {
+        CslNode::Text(t) => t.variable.as_deref() == Some("citation-number"),
+        CslNode::Number(n) => n.variable == "citation-number",
+        CslNode::Group(g) => nodes_contain_citation_number(&g.children),
+        CslNode::Choose(c) => {
+            nodes_contain_citation_number(&c.if_branch.children)
+                || c.else_if_branches
+                    .iter()
+                    .any(|b| nodes_contain_citation_number(&b.children))
+                || c.else_branch
+                    .as_ref()
+                    .is_some_and(|children| nodes_contain_citation_number(children))
+        }
+        _ => false,
     }
 }
 
