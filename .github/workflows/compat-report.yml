@@ -3,10 +3,8 @@ name: Compat Report
 on:
   push:
     branches: ["main"]
-    paths:
-      - "crates/**"
-      - "styles/**"
-      - "scripts/**"
+  schedule:
+    - cron: "0 6 * * *"
   workflow_dispatch:
 
 concurrency:
@@ -17,7 +15,7 @@ jobs:
   report:
     name: Generate Style Compatibility Report
     # Skip when the bot itself pushes (prevents loop with deploy_docs.yml)
-    if: github.actor != 'github-actions[bot]'
+    if: github.event_name == 'schedule' || github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     permissions:
       contents: write
