@@ -12,6 +12,14 @@
 const fs = require('fs');
 const path = require('path');
 const yaml = require('js-yaml');
+const CUSTOM_TAG_SCHEMA = yaml.DEFAULT_SCHEMA.extend([
+    new yaml.Type('!custom', {
+        kind: 'mapping',
+        construct(data) {
+            return data || {};
+        },
+    }),
+]);
 
 // Parse arguments
 const args = process.argv.slice(2);
@@ -27,7 +35,7 @@ try {
     // 1. Load Base YAML (from csln-migrate)
     if (!fs.existsSync(basePath)) throw new Error(`Base YAML not found: ${basePath}`);
     const baseContent = fs.readFileSync(basePath, 'utf8');
-    const baseData = yaml.load(baseContent);
+    const baseData = yaml.load(baseContent, { schema: CUSTOM_TAG_SCHEMA });
 
     // 2. Load Inferred Templates (from infer-template.js)
     if (!fs.existsSync(citePath)) throw new Error(`Citation JSON not found: ${citePath}`);

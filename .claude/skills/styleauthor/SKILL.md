@@ -446,6 +446,8 @@ config when you need fine-grained control.
 - `harvard` - All family-first, "and", "." initials
 - `springer` - All family-first, no conjunction, space sort-separator, 5/3 et al.
 - `ieee` - Given-first, "and", ". " initials
+- `numeric-compact` - Numeric family-first, no conjunction, space sort-separator, 7/6 et al.
+- `numeric-medium` - Numeric family-first, no conjunction, space sort-separator, 4/3 et al.
 
 **Date presets** (`options.dates`):
 - `long` - Long month names, EDTF markers ("?", "ca. ", en-dash)
@@ -458,12 +460,17 @@ config when you need fine-grained control.
 - `chicago` - Articles quoted, books/journals italic
 - `ieee` - Same as chicago
 - `humanities` - Articles plain, books/journals/series italic
+- `journal-emphasis` - Journals/series italic, books plain
 - `scientific` - All plain
 
 **Substitute presets** (`options.substitute`):
 - `standard` - Editor, Title, Translator
 - `editor-first` - Editor, Translator, Title
 - `title-first` - Title, Editor, Translator
+- `editor-short` - Short editor label only
+- `editor-long` - Long editor label only
+- `editor-translator-short` - Short labels for editor then translator
+- `editor-translator-long` - Long labels for editor then translator
 
 **Example using presets:**
 ```yaml
