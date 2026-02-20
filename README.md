@@ -10,8 +10,8 @@ CSLN is in active development.
 
 For current, generated metrics, use these as source of truth:
 
-- Compatibility dashboard: [`docs/compat.html`](./docs/compat.html)
-- Tier status snapshot: [`docs/TIER_STATUS.md`](./docs/TIER_STATUS.md)
+- Compatibility dashboard: [`bdarcus.github.io/csl26/compat.html`](https://bdarcus.github.io/csl26/compat.html)
+- Tier status snapshot: [`bdarcus.github.io/csl26/TIER_STATUS.md`](https://bdarcus.github.io/csl26/TIER_STATUS.md)
 - Core fidelity/SQI baseline: [`scripts/report-data/core-quality-baseline.json`](./scripts/report-data/core-quality-baseline.json)
 
 Do not treat hard-coded README percentages as canonical.
