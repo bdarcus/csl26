@@ -10,11 +10,11 @@
 #
 version: ""
 info:
-  title: "NLM Style Guide (Vancouver): Citing Medicine 2nd edition (citation-sequence)"
-  id: http://www.zotero.org/styles/nlm-citation-sequence
+  title: BioMed Central
+  id: http://www.zotero.org/styles/biomed-central
+  default-locale: en-US
 options:
   substitute:
-    contributor-role-form: long
     template:
       - editor
   processing: numeric
@@ -31,7 +31,7 @@ options:
     demote-non-dropping-particle: sort-only
     sort-separator: " "
   dates:
-    month: long
+    month: numeric
     uncertainty-marker: "?"
     approximation-marker: "ca. "
     range-delimiter: –
@@ -43,8 +43,8 @@ options:
 citation:
   template:
     - number: citation-number
-  wrap: parentheses
-  multi-cite-delimiter: ","
+  wrap: brackets
+  multi-cite-delimiter: ", "
 bibliography:
   options:
     contributors:
@@ -81,28 +81,27 @@ bibliography:
       overrides:
         article-journal:
           suppress: true
-        webpage:
-          suppress: true
-        article-newspaper:
-          suppress: true
         article-magazine:
           suppress: true
-        dataset:
+        entry-encyclopedia:
           suppress: true
-    - items:
-        - number: volume
-        - number: issue
-          wrap: parentheses
-          overrides: {}
-    - variable: publisher-place
-    - variable: publisher
-      prefix: ": "
+    - number: volume
+    - number: issue
+      prefix: ":"
+      overrides:
+        article-magazine:
+          suppress: true
     - number: pages
       overrides:
         chapter:
           prefix: "pp. "
         paper-conference:
           prefix: "pp. "
-        entry-encyclopedia:
-          prefix: "pp. "
-    - variable: url
+      prefix: ":"
+    - variable: doi
+      overrides:
+        article-journal:
+          prefix: https://doi.org/
+    - variable: publisher-place
+    - variable: publisher
+      prefix: ": "

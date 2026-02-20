@@ -10,11 +10,11 @@
 #
 version: ""
 info:
-  title: "NLM Style Guide (Vancouver): Citing Medicine 2nd edition (citation-sequence)"
-  id: http://www.zotero.org/styles/nlm-citation-sequence
+  title: Karger journals
+  id: http://www.zotero.org/styles/karger-journals
+  default-locale: en-US
 options:
   substitute:
-    contributor-role-form: long
     template:
       - editor
   processing: numeric
@@ -31,7 +31,7 @@ options:
     demote-non-dropping-particle: sort-only
     sort-separator: " "
   dates:
-    month: long
+    month: short
     uncertainty-marker: "?"
     approximation-marker: "ca. "
     range-delimiter: –
@@ -43,7 +43,7 @@ options:
 citation:
   template:
     - number: citation-number
-  wrap: parentheses
+  wrap: brackets
   multi-cite-delimiter: ","
 bibliography:
   options:
@@ -67,6 +67,8 @@ bibliography:
         use-first: 6
     - title: primary
       prefix: " "
+    - date: issued
+      form: year
     - items:
         - contributor: editor
           form: verb
@@ -76,33 +78,14 @@ bibliography:
           name-order: given-first
         - title: parent-monograph
     - title: parent-serial
-    - date: issued
-      form: year
-      overrides:
-        article-journal:
-          suppress: true
-        webpage:
-          suppress: true
-        article-newspaper:
-          suppress: true
-        article-magazine:
-          suppress: true
-        dataset:
-          suppress: true
     - items:
         - number: volume
         - number: issue
           wrap: parentheses
           overrides: {}
+    - number: pages
+      prefix: ":"
     - variable: publisher-place
     - variable: publisher
       prefix: ": "
-    - number: pages
-      overrides:
-        chapter:
-          prefix: "pp. "
-        paper-conference:
-          prefix: "pp. "
-        entry-encyclopedia:
-          prefix: "pp. "
     - variable: url

@@ -10,11 +10,12 @@
 #
 version: ""
 info:
-  title: "NLM Style Guide (Vancouver): Citing Medicine 2nd edition (citation-sequence)"
-  id: http://www.zotero.org/styles/nlm-citation-sequence
+  title: Mary Ann Liebert - NLM/Vancouver
+  id: http://www.zotero.org/styles/mary-ann-liebert-vancouver
+  default-locale: en-US
 options:
   substitute:
-    contributor-role-form: long
+    contributor-role-form: short
     template:
       - editor
   processing: numeric
@@ -22,20 +23,18 @@ options:
     display-as-sort: all
     initialize-with: ""
     shorten:
-      min: 7
-      use-first: 6
+      min: 4
+      use-first: 3
       and-others: et-al
       delimiter-precedes-last: contextual
-    delimiter: ", "
-    delimiter-precedes-last: always
+    delimiter-precedes-last: never
     demote-non-dropping-particle: sort-only
     sort-separator: " "
   dates:
-    month: long
+    month: numeric
     uncertainty-marker: "?"
     approximation-marker: "ca. "
     range-delimiter: –
-  page-range-format: minimal
   bibliography:
     entry-suffix: .
     separator: ". "
@@ -43,7 +42,6 @@ options:
 citation:
   template:
     - number: citation-number
-  wrap: parentheses
   multi-cite-delimiter: ","
 bibliography:
   options:
@@ -51,12 +49,11 @@ bibliography:
       display-as-sort: all
       initialize-with: ""
       shorten:
-        min: 7
-        use-first: 6
+        min: 4
+        use-first: 3
         and-others: et-al
         delimiter-precedes-last: contextual
-      delimiter: ", "
-      delimiter-precedes-last: always
+      delimiter-precedes-last: never
       sort-separator: " "
   template:
     - contributor: author
@@ -64,45 +61,45 @@ bibliography:
       name-order: family-first
       shorten:
         min: 8
-        use-first: 6
+        use-first: 3
     - title: primary
       prefix: " "
     - items:
         - contributor: editor
           form: verb
-          overrides:
-            chapter:
-              prefix: "on "
-          name-order: given-first
+          name-order: family-first
+          shorten:
+            min: 4
+            use-first: 3
         - title: parent-monograph
     - title: parent-serial
-    - date: issued
-      form: year
-      overrides:
-        article-journal:
-          suppress: true
-        webpage:
-          suppress: true
-        article-newspaper:
-          suppress: true
-        article-magazine:
-          suppress: true
-        dataset:
-          suppress: true
     - items:
         - number: volume
         - number: issue
           wrap: parentheses
           overrides: {}
-    - variable: publisher-place
     - variable: publisher
-      prefix: ": "
     - number: pages
       overrides:
         chapter:
           prefix: "pp. "
         paper-conference:
           prefix: "pp. "
+      prefix: "; 2006; "
+    - date: issued
+      form: year
+      overrides:
+        article-journal:
+          suppress: true
+        chapter:
+          suppress: true
+        paper-conference:
+          suppress: true
+        article-magazine:
+          suppress: true
         entry-encyclopedia:
-          prefix: "pp. "
-    - variable: url
+          suppress: true
+    - variable: doi
+      prefix: "; "
+    - variable: publisher-place
+      prefix: ": "
