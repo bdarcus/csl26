@@ -73,6 +73,36 @@ Wave aggregate:
 - Edited: citations `120/120`, bibliography `320/320` (100.0% fidelity)
 - Auto-migrate rerun: citations `120/120`, bibliography `299/325` (94.2% fidelity)
 
+#### Tier-2 Wave: Next 20 Priority Styles (2026-02-20)
+
+| Style | Citation Hit Rate | Bibliography Hit Rate | Notes |
+|-------|-------------------|-----------------------|-------|
+| taylor-and-francis-national-library-of-medicine | 12/12 | 32/32 | Full strict match after locator citation fix |
+| american-chemical-society | 12/12 | 32/32 | Full strict match |
+| springer-fachzeitschriften-medizin-psychologie | 11/12 | 32/32 | One remaining mixed-visibility citation mismatch |
+| springer-humanities-author-date | 12/12 | 30/32 | Disambiguation + short-author citation pass |
+| landes-bioscience-journals | 12/12 | 31/32 | Citation template normalized |
+| taylor-and-francis-council-of-science-editors-author-date | 12/12 | 31/32 | Disambiguation + locator citation pass |
+| bmj | 12/12 | 31/32 | Citation template normalized |
+| springer-physics-brackets | 12/12 | 11/32 | Citation fixed; bibliography still major outlier |
+| frontiers | 12/12 | 32/32 | Full strict match after citation disambiguation tuning |
+| baishideng-publishing-group | 12/12 | 31/32 | Citation template normalized |
+| royal-society-of-chemistry | 12/12 | 15/33 | Citation fixed; bibliography still major outlier |
+| association-for-computing-machinery | 12/12 | 31/32 | Locator citation formatting fixed |
+| chicago-shortened-notes-bibliography | 12/12 | 30/32 | Strong baseline retained |
+| nature | 12/12 | 31/32 | Citation template normalized |
+| copernicus-publications | 12/12 | 31/32 | Disambiguation + short-author citation pass |
+| springer-socpsych-brackets | 12/12 | 31/32 | Citation template normalized |
+| american-society-of-civil-engineers | 12/12 | 31/32 | Disambiguation + short-author citation pass |
+| cell | 12/12 | 31/32 | Citation template normalized |
+| springer-mathphys-author-date | 12/12 | 31/32 | Disambiguation + short-author citation pass |
+| begell-house-chicago-author-date | 12/12 | 29/32 | Citation disambiguation fixed |
+
+Wave aggregate:
+- Baseline: citations `157/240`, bibliography `584/641` (84.1% fidelity)
+- Edited: citations `239/240`, bibliography `584/641` (93.4% fidelity)
+- Auto-migrate rerun: citations `157/240`, bibliography `584/641` (84.1% fidelity)
+
 ### Note Styles (Tier 3 — Future)
 
 Note styles (footnote-based) are ~19% of corpus. Not yet targeted.
