@@ -42,6 +42,8 @@ To install nextest: `cargo install cargo-nextest`
 - Follow Conventional Commits format: `type(scope): subject`
 - Lowercase subject line
 - 50/72 rule (50 char subject, 72 char body wrap)
+- Never use literal `\n` in commit messages; use real newlines via multiple
+  `-m` flags or `git commit -F`
 - Never use `--amend` (always create new commits)
 - Never include `Co-Authored-By` footers in AI-authored commits
 
@@ -569,6 +571,7 @@ Follow these conventions for all commits:
 - **Explain What and Why**: The body should explain the rationale behind the change.
 - **Issue References**: Include GitHub issue references where relevant (e.g., `Refs: #123` or `csln#64`).
 - **Plain Text Body**: Do NOT use Markdown in the commit body. Uses asterisks for bullet points is okay, but do not backtick code elements.
+- **No Literal `\n`**: Never include escaped newline sequences in commit text; create paragraph breaks with separate `-m` flags or `git commit -F`.
 - **No Escaped Backticks**: Never escape backticks (e.g., write `code` not \`code\`).
 - **No Co-Authored-By**: Do NOT include `Co-Authored-By` footers in AI-authored commit messages.
 
