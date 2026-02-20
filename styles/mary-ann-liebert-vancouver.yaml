@@ -55,6 +55,27 @@ bibliography:
         delimiter-precedes-last: contextual
       delimiter-precedes-last: never
       sort-separator: " "
+  type-templates:
+    legal-case:
+      - title: primary
+        prefix: "Anonymous. "
+        suffix: ". "
+      - date: issued
+        form: year
+    webpage:
+      - contributor: author
+        form: long
+        name-order: family-first
+      - title: primary
+      - date: issued
+        form: year
+        suffix: ". "
+      - variable: url
+        prefix: "Available from: "
+      - date: accessed
+        form: full
+        prefix: " [Last accessed: "
+        suffix: "]"
   template:
     - contributor: author
       form: long
@@ -85,7 +106,7 @@ bibliography:
           prefix: "pp. "
         paper-conference:
           prefix: "pp. "
-      prefix: "; 2006; "
+      prefix: "; "
     - date: issued
       form: year
       overrides:

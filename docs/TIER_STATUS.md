@@ -62,15 +62,16 @@ strictly, and a new Tier-2 wave has been migrated and enhanced.
 | ieee | 12/12 | 32/32 | Citation template + locator support |
 | nlm-citation-sequence-superscript | 12/12 | 32/32 | Full strict match |
 | nlm-citation-sequence | 12/12 | 32/32 | Full strict match |
-| karger-journals | 12/12 | 31/32 | One bibliography mismatch |
-| institute-of-physics-numeric | 12/12 | 31/32 | One bibliography mismatch |
-| biomed-central | 12/12 | 31/32 | One bibliography mismatch |
-| thieme-german | 12/12 | 30/32 | Two bibliography mismatches |
-| mary-ann-liebert-vancouver | 12/12 | 30/32 | Two bibliography mismatches |
+| karger-journals | 12/12 | 32/32 | Full strict match |
+| institute-of-physics-numeric | 12/12 | 32/32 | Full strict match |
+| biomed-central | 12/12 | 32/32 | Full strict match |
+| thieme-german | 12/12 | 32/32 | Full strict match |
+| mary-ann-liebert-vancouver | 12/12 | 32/32 | Full strict match |
 
 Wave aggregate:
-- Baseline: citations `68/120`, bibliography `313/320` (86.6% fidelity)
-- Edited: citations `120/120`, bibliography `313/320` (98.4% fidelity)
+- Baseline: citations `120/120`, bibliography `313/320` (98.4% fidelity)
+- Edited: citations `120/120`, bibliography `320/320` (100.0% fidelity)
+- Auto-migrate rerun: citations `120/120`, bibliography `299/325` (94.2% fidelity)
 
 ### Note Styles (Tier 3 — Future)
 

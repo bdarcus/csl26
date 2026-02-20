@@ -64,18 +64,48 @@ bibliography:
       delimiter: ", "
       delimiter-precedes-last: never
       sort-separator: " "
+  type-templates:
+    legal-case:
+      - term: anonymous
+        form: short
+        strip-periods: true
+      - date: issued
+        form: year
+      - title: primary
+      - term: volume
+        form: short
+        strip-periods: true
+      - number: volume
   template:
     - contributor: author
       form: long
       name-order: family-first
+    - date: issued
+      form: year
     - title: primary
-      prefix: " 2023 "
+      prefix: " "
     - title: parent-monograph
       emph: true
     - title: parent-serial
       emph: true
     - number: volume
+      overrides:
+        legal-case:
+          suppress: true
     - number: pages
+      overrides:
+        legal-case:
+          suppress: true
     - variable: publisher-place
+      overrides:
+        article-journal:
+          suppress: true
+        legal-case:
+          suppress: true
     - variable: publisher
       prefix: ": "
+      overrides:
+        article-journal:
+          suppress: true
+        legal-case:
+          suppress: true
