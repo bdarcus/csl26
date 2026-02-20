@@ -181,6 +181,14 @@ function inferStyleFormat(styleData) {
     ) {
       return 'numeric';
     }
+    // !custom processing objects with sort/group/disambiguate keys are author-date
+    if (
+      Object.prototype.hasOwnProperty.call(processing, 'sort') ||
+      Object.prototype.hasOwnProperty.call(processing, 'group') ||
+      Object.prototype.hasOwnProperty.call(processing, 'disambiguate')
+    ) {
+      return 'author-date';
+    }
   }
 
   const citation = styleData?.citation || {};
@@ -194,6 +202,19 @@ function inferStyleFormat(styleData) {
   );
 
   if (usesCitationNumbers) return 'numeric';
+
+  // Styles with non-integral/integral citation sections are always author-date
+  if (citation['non-integral'] || citation['integral']) return 'author-date';
+
+  // Styles whose citation template uses contributor + date (but no number) are author-date
+  const allTemplates = candidateTemplates.concat(
+    [citation.template].filter(Array.isArray)
+  );
+  const flat = allTemplates.flatMap((t) => flattenTemplateComponents(t));
+  const hasContributor = flat.some((c) => Boolean(c?.contributor));
+  const hasDate = flat.some((c) => Boolean(c?.date));
+  if (hasContributor && hasDate) return 'author-date';
+
   return 'unknown';
 }
 
