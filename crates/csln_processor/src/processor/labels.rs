@@ -205,6 +205,21 @@ mod tests {
     }
 
     #[test]
+    fn test_alpha_et_al_threshold_boundary() {
+        // Alpha et_al_min=4: exactly 4 authors should trigger et-al behavior
+        let r = make_ref(
+            vec![
+                Name::new("Vaswani", "Ashish"),
+                Name::new("Shazeer", "Noam"),
+                Name::new("Parmar", "Niki"),
+                Name::new("Uszkoreit", "Jakob"),
+            ],
+            2017,
+        );
+        assert_eq!(generate_base_label(&r, &alpha_params()), "VSP+17");
+    }
+
+    #[test]
     fn test_three_authors_din_triggers_et_al() {
         // DIN et_al_min=3: count=3 is NOT < 3, so et_al case (no marker)
         // LeCun + Bengio + Hinton 2015 → "LBH15"
