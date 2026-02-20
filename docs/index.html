@@ -93,7 +93,7 @@
                 <a class="text-sm font-medium hover:text-primary transition-colors text-slate-600"
                     href="#features">Features</a>
                 <a class="text-sm font-medium hover:text-primary transition-colors text-slate-600"
-                    href="#roadmap">Roadmap</a>
+                    href="#roadmap">Status</a>
                 <a class="text-sm font-medium hover:text-primary transition-colors text-slate-600"
                     href="interactive-demo.html">Demo</a>
                 <a class="text-sm font-medium hover:text-primary transition-colors text-slate-600"
@@ -388,10 +388,10 @@
                             <h4 class="font-bold text-slate-900 mb-2">Render references (HTML)</h4>
                             <div class="bg-slate-900 rounded-lg p-4 flex items-center justify-between group border border-slate-700 shadow-md">
                                 <code class="font-mono text-sm text-slate-300">
-                                    <span class="text-primary">$</span> csln render refs -b paper.json -s apa.yaml <span class="text-emerald-400">-O html</span>
+                                    <span class="text-primary">$</span> csln render refs -b tests/fixtures/references-expanded.json -s styles/apa-7th.yaml <span class="text-emerald-400">-O html</span>
                                 </code>
                                 <button class="text-slate-500 hover:text-white transition-colors"
-                                    onclick="navigator.clipboard.writeText('csln render refs -b paper.json -s apa.yaml -O html')"
+                                    onclick="navigator.clipboard.writeText('csln render refs -b tests/fixtures/references-expanded.json -s styles/apa-7th.yaml -O html')"
                                     title="Copy to clipboard">
                                     <span class="material-icons text-base">content_copy</span>
                                 </button>
@@ -403,10 +403,10 @@
                             <h4 class="font-bold text-slate-900 mb-2">Render for static sites (Djot)</h4>
                             <div class="bg-slate-900 rounded-lg p-4 flex items-center justify-between group border border-slate-700 shadow-md">
                                 <code class="font-mono text-sm text-slate-300">
-                                    <span class="text-primary">$</span> csln render refs -b paper.json -s apa.yaml <span class="text-emerald-400">-O djot</span>
+                                    <span class="text-primary">$</span> csln render refs -b tests/fixtures/references-expanded.json -s styles/apa-7th.yaml <span class="text-emerald-400">-O djot</span>
                                 </code>
                                 <button class="text-slate-500 hover:text-white transition-colors"
-                                    onclick="navigator.clipboard.writeText('csln render refs -b paper.json -s apa.yaml -O djot')"
+                                    onclick="navigator.clipboard.writeText('csln render refs -b tests/fixtures/references-expanded.json -s styles/apa-7th.yaml -O djot')"
                                     title="Copy to clipboard">
                                     <span class="material-icons text-base">content_copy</span>
                                 </button>
@@ -418,10 +418,10 @@
                             <h4 class="font-bold text-slate-900 mb-2">Render for LaTeX (Native Escaping)</h4>
                             <div class="bg-slate-900 rounded-lg p-4 flex items-center justify-between group border border-slate-700 shadow-md">
                                 <code class="font-mono text-sm text-slate-300">
-                                    <span class="text-primary">$</span> csln render refs -b paper.json -s apa.yaml <span class="text-emerald-400">-O latex</span>
+                                    <span class="text-primary">$</span> csln render refs -b tests/fixtures/references-expanded.json -s styles/apa-7th.yaml <span class="text-emerald-400">-O latex</span>
                                 </code>
                                 <button class="text-slate-500 hover:text-white transition-colors"
-                                    onclick="navigator.clipboard.writeText('csln render refs -b paper.json -s apa.yaml -O latex')"
+                                    onclick="navigator.clipboard.writeText('csln render refs -b tests/fixtures/references-expanded.json -s styles/apa-7th.yaml -O latex')"
                                     title="Copy to clipboard">
                                     <span class="material-icons text-base">content_copy</span>
                                 </button>
@@ -433,10 +433,10 @@
                             <h4 class="font-bold text-slate-900 mb-2">Render full document (Djot draft syntax)</h4>
                             <div class="bg-slate-900 rounded-lg p-4 flex items-center justify-between group border border-slate-700 shadow-md">
                                 <code class="font-mono text-sm text-slate-300">
-                                    <span class="text-primary">$</span> csln render doc -i paper.djot -b refs.json -s apa.yaml
+                                    <span class="text-primary">$</span> csln render doc -i examples/document.djot -b examples/document-refs.json -s styles/apa-7th.yaml
                                 </code>
                                 <button class="text-slate-500 hover:text-white transition-colors"
-                                    onclick="navigator.clipboard.writeText('csln render doc -i paper.djot -b refs.json -s apa.yaml')"
+                                    onclick="navigator.clipboard.writeText('csln render doc -i examples/document.djot -b examples/document-refs.json -s styles/apa-7th.yaml')"
                                     title="Copy to clipboard">
                                     <span class="material-icons text-base">content_copy</span>
                                 </button>
@@ -448,10 +448,10 @@
                             <h4 class="font-bold text-slate-900 mb-2">Convert to binary (Performance Mode)</h4>
                             <div class="bg-slate-900 rounded-lg p-4 flex items-center justify-between group border border-slate-700 shadow-md">
                                 <code class="font-mono text-sm text-slate-300">
-                                    <span class="text-primary">$</span> csln convert styles/apa.yaml --output styles/apa.cbor
+                                    <span class="text-primary">$</span> csln convert styles/apa-7th.yaml --output /tmp/apa-7th.cbor
                                 </code>
                                 <button class="text-slate-500 hover:text-white transition-colors"
-                                    onclick="navigator.clipboard.writeText('csln convert styles/apa.yaml --output styles/apa.cbor')"
+                                    onclick="navigator.clipboard.writeText('csln convert styles/apa-7th.yaml --output /tmp/apa-7th.cbor')"
                                     title="Copy to clipboard">
                                     <span class="material-icons text-base">content_copy</span>
                                 </button>
@@ -482,115 +482,60 @@
         </div>
     </section>
 
-    <!-- Roadmap Section -->
+    <!-- Status Section -->
     <section class="py-24 px-6 border-t border-slate-200" id="roadmap">
         <div class="max-w-7xl mx-auto">
             <div class="text-center mb-16">
-                <h2 class="text-3xl md:text-4xl font-bold text-slate-900 mb-4">Project Roadmap</h2>
-                <p class="text-slate-500">The path toward a production-grade, multi-platform citation engine.</p>
+                <h2 class="text-3xl md:text-4xl font-bold text-slate-900 mb-4">Current Status</h2>
+                <p class="text-slate-500">Generated compatibility metrics are the source of truth for progress.</p>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
 
-                <!-- Numeric Styles -->
-                <div class="p-6 rounded-xl border border-slate-100 bg-white">
+                <!-- Compatibility Report -->
+                <a href="compat.html" class="p-6 rounded-xl border border-slate-100 bg-white block hover:border-primary/40 transition-colors">
                     <div class="flex items-center gap-3 mb-4">
                         <span
-                            class="w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center">
-                            <span class="material-icons text-sm">check_circle</span>
+                            class="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center">
+                            <span class="material-icons text-sm">analytics</span>
                         </span>
-                        <h3 class="font-bold text-slate-900">Numeric Styles (Tier 3)</h3>
+                        <h3 class="font-bold text-slate-900">Compatibility Dashboard</h3>
                     </div>
-                    <p class="text-sm text-slate-500 mb-4">Finalizing support for IEEE, Nature, and Elsevier Vancouver
-                        styles with precise year positioning and superscript handling.</p>
-                    <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
-                        <div class="bg-emerald-500 h-full w-3/4"></div>
-                    </div>
-                    <p class="text-[10px] font-mono text-slate-400 mt-2 text-right">75% Complete</p>
-                </div>
+                    <p class="text-sm text-slate-500 mb-4">
+                        CI-generated per-style fidelity and SQI metrics for the core production style set.
+                    </p>
+                    <p class="text-[10px] font-mono text-slate-400">Source: scripts/report-core.js -> docs/compat.html</p>
+                </a>
 
-                <!-- C-FFI & Bindings -->
-                <div class="p-6 rounded-xl border border-slate-100 bg-white">
+                <!-- Tier Tracking -->
+                <a href="TIER_STATUS.md" class="p-6 rounded-xl border border-slate-100 bg-white block hover:border-primary/40 transition-colors">
                     <div class="flex items-center gap-3 mb-4">
                         <span
-                            class="w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center">
-                            <span class="material-icons text-sm">check_circle</span>
+                            class="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center">
+                            <span class="material-icons text-sm">list_alt</span>
                         </span>
-                        <h3 class="font-bold text-slate-900">C-FFI & Lua Bindings</h3>
+                        <h3 class="font-bold text-slate-900">Tier Status</h3>
                     </div>
-                    <p class="text-sm text-slate-500 mb-4">Universal FFI bridge for cross-language integration. Native support for LuaJIT and LuaLaTeX workflows is now live.</p>
-                    <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
-                        <div class="bg-emerald-500 h-full w-full"></div>
-                    </div>
-                    <p class="text-[10px] font-mono text-slate-400 mt-2 text-right">100% Complete</p>
-                </div>
+                    <p class="text-sm text-slate-500 mb-4">
+                        Live tracking for top parent styles, strict citation scenarios, and current migration priorities.
+                    </p>
+                    <p class="text-[10px] font-mono text-slate-400">Source: docs/TIER_STATUS.md</p>
+                </a>
 
-                <!-- Legal Citations -->
-                <div class="p-6 rounded-xl border border-slate-100 bg-white">
+                <!-- Quality Gates -->
+                <a href="https://github.com/bdarcus/csl26/blob/main/docs/architecture/SQI_REFINEMENT_PLAN.md"
+                    class="p-6 rounded-xl border border-slate-100 bg-white block hover:border-primary/40 transition-colors">
                     <div class="flex items-center gap-3 mb-4">
                         <span
-                            class="w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center">
-                            <span class="material-icons text-sm">check_circle</span>
+                            class="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center">
+                            <span class="material-icons text-sm">rule</span>
                         </span>
-                        <h3 class="font-bold text-slate-900">Legal Citations</h3>
+                        <h3 class="font-bold text-slate-900">Fidelity + SQI Gates</h3>
                     </div>
-                    <p class="text-sm text-slate-500 mb-4">Initial support for legal-case, statute, treaty, and standard
-                        types with specialized sorting rules.</p>
-                    <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
-                        <div class="bg-emerald-500 h-full w-2/3"></div>
-                    </div>
-                    <p class="text-[10px] font-mono text-slate-400 mt-2 text-right">66% Complete</p>
-                </div>
-
-                <!-- Advanced Sorting -->
-                <div class="p-6 rounded-xl border border-slate-100 bg-white">
-                    <div class="flex items-center gap-3 mb-4">
-                        <span
-                            class="w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center">
-                            <span class="material-icons text-sm">check_circle</span>
-                        </span>
-                        <h3 class="font-bold text-slate-900">Advanced Sorting</h3>
-                    </div>
-                    <p class="text-sm text-slate-500 mb-4">Flexible sorting templates (nyt, ynt) and locale-aware
-                        collation for multi-language bibliographies.</p>
-                    <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
-                        <div class="bg-emerald-500 h-full w-full"></div>
-                    </div>
-                    <p class="text-[10px] font-mono text-slate-400 mt-2 text-right">100% Complete</p>
-                </div>
-
-                <!-- Pluggable Renderers -->
-                <div class="p-6 rounded-xl border border-slate-100 bg-white">
-                    <div class="flex items-center gap-3 mb-4">
-                        <span
-                            class="w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center">
-                            <span class="material-icons text-sm">check_circle</span>
-                        </span>
-                        <h3 class="font-bold text-slate-900">LaTeX & Typst Output</h3>
-                    </div>
-                    <p class="text-sm text-slate-500 mb-4">Native renderers for high-fidelity PDF publishing
-                        workflows. LaTeX support is now live; Typst is under development.</p>
-                    <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
-                        <div class="bg-emerald-500 h-full w-4/5"></div>
-                    </div>
-                    <p class="text-[10px] font-mono text-slate-400 mt-2 text-right">80% Complete</p>
-                </div>
-
-                <!-- Interactive Mode -->
-                <div class="p-6 rounded-xl border border-slate-100 bg-white">
-                    <div class="flex items-center gap-3 mb-4">
-                        <span
-                            class="w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center">
-                            <span class="material-icons text-sm">check_circle</span>
-                        </span>
-                        <h3 class="font-bold text-slate-900">Interactive HTML</h3>
-                    </div>
-                    <p class="text-sm text-slate-500 mb-4">A high-performance JS/CSS library for real-time citation
-                        rendering, bidirectional navigation, and sidebar bibliographies.</p>
-                    <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
-                        <div class="bg-emerald-500 h-full w-full"></div>
-                    </div>
-                    <p class="text-[10px] font-mono text-slate-400 mt-2 text-right">100% Complete</p>
-                </div>
+                    <p class="text-sm text-slate-500 mb-4">
+                        Fidelity is the release gate; SQI is a secondary quality metric used for style robustness.
+                    </p>
+                    <p class="text-[10px] font-mono text-slate-400">Policy: no SQI gain may regress fidelity</p>
+                </a>
 
             </div>
         </div>
@@ -723,13 +668,13 @@
                 </div>
                 <div class="flex gap-8 text-sm font-medium text-slate-500">
                     <a class="hover:text-primary transition-colors" href="https://github.com/bdarcus/csl26">GitHub</a>
-                    <a class="hover:text-primary transition-colors" href="#roadmap">Roadmap</a>
+                    <a class="hover:text-primary transition-colors" href="#roadmap">Status</a>
                     <a class="hover:text-primary transition-colors" href="examples.html">Examples</a>
                     <a class="hover:text-primary transition-colors" href="https://github.com/bdarcus/style-hub">Styles
                         Registry</a>
                 </div>
                 <div class="text-sm text-slate-400">
-                    © 2026 CSLN Project. MIT Licensed.
+                    © 2026 CSLN Project. MPL-2.0.
                 </div>
             </div>
         </div>
