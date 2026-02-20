@@ -1,0 +1,103 @@
+version: ''
+info:
+  title: Multidisciplinary Digital Publishing Institute
+  id: http://www.zotero.org/styles/multidisciplinary-digital-publishing-institute
+  default-locale: en-US
+options:
+  processing: numeric
+  contributors:
+    display-as-sort: all
+    initialize-with: .
+    delimiter: '; '
+    delimiter-precedes-last: always
+    demote-non-dropping-particle: sort-only
+    sort-separator: ', '
+  dates:
+    month: long
+    uncertainty-marker: '?'
+    approximation-marker: 'ca. '
+    range-delimiter: –
+  titles:
+    monograph:
+      emph: true
+    periodical:
+      emph: true
+    serial:
+      emph: true
+  page-range-format: expanded
+  bibliography:
+    entry-suffix: .
+    separator: ', '
+  punctuation-in-quote: true
+citation:
+  template:
+  - number: citation-number
+  wrap: brackets
+  multi-cite-delimiter: ','
+bibliography:
+  options:
+    contributors:
+      display-as-sort: all
+      initialize-with: .
+      delimiter: '; '
+      delimiter-precedes-last: always
+      sort-separator: ', '
+  type-templates:
+    webpage:
+    - contributor: author
+      form: long
+      name-order: family-first
+    - title: primary
+      prefix: ' '
+    - variable: url
+      prefix: ' Available online: '
+    - date: accessed
+      form: full
+      prefix: ' (accessed on '
+      suffix: ')'
+  template:
+  - contributor: author
+    form: long
+    name-order: family-first
+  - title: primary
+    prefix: ' '
+    overrides:
+      article-magazine:
+        suppress: true
+  - title: parent-monograph
+    emph: true
+  - title: parent-serial
+    emph: true
+  - contributor: editor
+    form: verb
+    name-order: family-first
+  - variable: publisher
+    prefix: '; '
+  - date: issued
+    form: year
+    overrides:
+      book:
+        suppress: true
+      report:
+        suppress: true
+      paper-conference:
+        suppress: true
+      motion_picture:
+        suppress: true
+      chapter:
+        suppress: true
+  - number: volume
+  - number: issue
+    overrides:
+      article-magazine:
+        suppress: true
+  - number: pages
+    overrides:
+      chapter:
+        prefix: 'pp. '
+      paper-conference:
+        prefix: 'pp. '
+      article-magazine:
+        prefix: 'pp. '
+  - variable: doi
+  - variable: publisher-place

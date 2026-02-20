@@ -37,6 +37,11 @@ const STYLE_METADATA = {
   'springer-socpsych-author-date': { dependents: 317, format: 'author-date' },
   'american-medical-association': { dependents: 293, format: 'numeric' },
   'taylor-and-francis-chicago-author-date': { dependents: 234, format: 'author-date' },
+  'springer-mathphys-brackets': { dependents: 201, format: 'numeric' },
+  'multidisciplinary-digital-publishing-institute': { dependents: 180, format: 'numeric' },
+  'ieee': { dependents: 176, format: 'numeric' },
+  'nlm-citation-sequence-superscript': { dependents: 121, format: 'numeric' },
+  'nlm-citation-sequence': { dependents: 116, format: 'numeric' },
   'chicago-notes': { dependents: 5, format: 'note', hasBibliography: false },
 };
 
