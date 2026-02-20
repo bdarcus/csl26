@@ -82,6 +82,37 @@ Use this workflow when converting an existing CSL 1.0 style. It identifies the t
 - Proceed directly to Phase 2 (build plan)
 - See checklist for when this is appropriate
 
+### Priority Batch Migrate+Enhance Mode (Optional)
+
+Use this mode when the user asks for a queued portfolio wave, for example:
+- `use styleauthor to migrate+enhance the next 10 priority styles`
+- `/styleauthor migrate+enhance --count 10 --priority`
+
+1.  **Select Batch**:
+    - Use `docs/reference/STYLE_PRIORITY.md` and `docs/TIER_STATUS.md`.
+    - Choose the next N highest-priority parent styles not yet completed.
+2.  **Seed with csln-migrate**:
+    - Run `csln-migrate` for each selected legacy style to create baseline YAML.
+    - Record baseline fidelity + SQI using `node scripts/report-core.js`.
+3.  **Enhance with styleauthor loop**:
+    - Apply targeted style edits for fidelity first, SQI second.
+    - Use `type-templates` only where structure truly diverges.
+4.  **Rerun Comparison (Required)**:
+    - Re-run `csln-migrate` on the same styles after enhancements.
+    - Compare auto-migrated rerun vs edited style:
+      - fidelity
+      - SQI
+      - citations passed
+      - bibliography passed
+5.  **Pattern Extraction**:
+    - Identify repeated migration gaps across the batch.
+    - Propose `csln-migrate` refinements or new presets only after confirming no fidelity regression.
+6.  **Deliverable**:
+    - Provide one metrics table with before/after/rerun columns.
+    - Include concrete migration follow-up recommendations.
+
+Use `.claude/skills/styleauthor/templates/migrate-enhance-checklist.md` for run tracking.
+
 ### Update Workflow (Optional)
 
 Use this workflow to improve an existing style based on new language features or expanded output coverage.
@@ -504,6 +535,12 @@ The styleauthor workflow has pre-approved safe operations that execute without c
 - Modifying `crates/csln_migrate/` - Migration pipeline (protected)
 - Modifying `scripts/oracle*.js` - Oracle scripts (protected)
 - Modifying `tests/fixtures/` - Test fixtures (protected)
+
+### Explicit Exception for Priority Batch Mode
+- If the user explicitly requests **migrate+enhance** with migration refinement,
+  targeted updates to `crates/csln_migrate/` are allowed after reporting:
+  - measured fidelity/SQI impact
+  - no regression for existing core styles
 
 ## Guard Rails
 
