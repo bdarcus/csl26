@@ -31,8 +31,7 @@ options:
   bibliography:
     separator: ". "
 citation:
-  template:
-    - number: citation-number
+  use-preset: numeric-citation
   multi-cite-delimiter: ","
 bibliography:
   options:

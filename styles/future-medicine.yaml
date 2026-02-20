@@ -33,8 +33,7 @@ options:
     entry-suffix: .
     separator: ". "
 citation:
-  template:
-    - number: citation-number
+  use-preset: numeric-citation
   wrap: brackets
   multi-cite-delimiter: ","
 bibliography:

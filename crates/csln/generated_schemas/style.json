@@ -29,6 +29,14 @@
         }
       ]
     },
+    "custom": {
+      "description": "Custom user-defined fields for extensions.",
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": true
+    },
     "info": {
       "description": "Style metadata.",
       "allOf": [
@@ -67,7 +75,7 @@
       "type": "string"
     }
   },
-  "additionalProperties": true,
+  "additionalProperties": false,
   "definitions": {
     "AndOptions": {
       "description": "Conjunction options between contributors.",
@@ -142,6 +150,14 @@
       "description": "Bibliography-specific configuration.",
       "type": "object",
       "properties": {
+        "custom": {
+          "description": "Custom user-defined fields for extensions.",
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": true
+        },
         "entry-suffix": {
           "description": "Suffix appended to each bibliography entry (e.g., \".\"). Extracted from CSL 1.0 `<layout suffix=\".\">` attribute. If None, a trailing period is added by default unless entry ends with DOI/URL.",
           "type": [
@@ -186,16 +202,110 @@
           "type": "boolean"
         }
       },
-      "additionalProperties": true
+      "additionalProperties": false
+    },
+    "BibliographyGroup": {
+      "description": "A bibliography group with selector, optional heading, and per-group sorting.\n\nGroups allow styles to divide bibliographies into labeled sections with distinct sorting rules. Items match the first group whose selector evaluates to true (first-match semantics).\n\n# Examples\n\n```yaml groups: - id: vietnamese heading: localized: vi: \"Tài liệu tiếng Việt\" en-US: \"Vietnamese Sources\" selector: field: language: vi sort: template: - key: author sort-order: given-family ```",
+      "type": "object",
+      "required": [
+        "id",
+        "selector"
+      ],
+      "properties": {
+        "disambiguate": {
+          "description": "Optional disambiguation scope. - `globally` (default): Year suffixes are assigned across the whole bibliography. - `locally`: Year suffixes are assigned independently within this group.",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/DisambiguationScope"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "heading": {
+          "description": "Optional heading to display above this group. Omit for no heading (e.g., fallback group).",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/GroupHeading"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "id": {
+          "description": "Unique identifier for this group.",
+          "type": "string"
+        },
+        "selector": {
+          "description": "Selector predicate to match references.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/GroupSelector"
+            }
+          ]
+        },
+        "sort": {
+          "description": "Optional per-group sorting specification. Falls back to global bibliography sort if omitted.",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/GroupSort"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "template": {
+          "description": "Optional per-group template override. Falls back to global bibliography template if omitted.",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "$ref": "#/definitions/TemplateComponent"
+          }
+        }
+      }
     },
     "BibliographySpec": {
       "description": "Bibliography specification.",
       "type": "object",
       "properties": {
+        "custom": {
+          "description": "Custom user-defined fields for extensions.",
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": true
+        },
+        "groups": {
+          "description": "Optional bibliography grouping specification.\n\nWhen present, divides the bibliography into labeled sections with optional per-group sorting. Items match the first group whose selector evaluates to true (first-match semantics). Omit for flat bibliography.\n\nSee `BibliographyGroup` for examples.",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "$ref": "#/definitions/BibliographyGroup"
+          }
+        },
         "options": {
           "anyOf": [
             {
               "$ref": "#/definitions/Config"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "sort": {
+          "description": "Optional global bibliography sorting specification.\n\nWhen present, used for sorting the flat bibliography or as default for groups that don't specify their own sort.",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/GroupSort"
             },
             {
               "type": "null"
@@ -237,12 +347,20 @@
           ]
         }
       },
-      "additionalProperties": true
+      "additionalProperties": false
     },
     "CitationSpec": {
       "description": "Citation specification.",
       "type": "object",
       "properties": {
+        "custom": {
+          "description": "Custom user-defined fields for extensions.",
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": true
+        },
         "delimiter": {
           "description": "Delimiter between components within a single citation item (e.g., \", \" or \" \"). Defaults to \", \".",
           "type": [
@@ -296,6 +414,17 @@
             "null"
           ]
         },
+        "sort": {
+          "description": "Optional citation sorting specification.",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/GroupSort"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "suffix": {
           "description": "Suffix for the citation (use only when `wrap` doesn't suffice).",
           "type": [
@@ -335,7 +464,47 @@
           ]
         }
       },
-      "additionalProperties": true
+      "additionalProperties": false
+    },
+    "CitedStatus": {
+      "description": "Citation status filter.",
+      "oneOf": [
+        {
+          "description": "Match only references cited in the document.",
+          "type": "string",
+          "enum": [
+            "visible"
+          ]
+        },
+        {
+          "description": "Match all references regardless of citation status.",
+          "type": "string",
+          "enum": [
+            "any"
+          ]
+        }
+      ]
+    },
+    "ComponentOverride": {
+      "description": "Type-specific rendering overrides for components.",
+      "anyOf": [
+        {
+          "description": "A full component replacement for specific reference types.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/TemplateComponent"
+            }
+          ]
+        },
+        {
+          "description": "Simple rendering options override.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Rendering"
+            }
+          ]
+        }
+      ]
     },
     "Config": {
       "description": "Top-level style configuration.",
@@ -353,21 +522,29 @@
           ]
         },
         "contributors": {
-          "description": "Contributor formatting defaults.",
+          "description": "Contributor formatting defaults. Accepts a preset name (e.g., \"apa\") or explicit configuration.",
           "anyOf": [
             {
-              "$ref": "#/definitions/ContributorConfig"
+              "$ref": "#/definitions/ContributorConfigEntry"
             },
             {
               "type": "null"
             }
           ]
         },
+        "custom": {
+          "description": "Custom user-defined fields for extensions.",
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": true
+        },
         "dates": {
-          "description": "Date formatting defaults.",
+          "description": "Date formatting defaults. Accepts a preset name (e.g., \"long\") or explicit configuration.",
           "anyOf": [
             {
-              "$ref": "#/definitions/DateConfig"
+              "$ref": "#/definitions/DateConfigEntry"
             },
             {
               "type": "null"
@@ -441,6 +618,13 @@
             "null"
           ]
         },
+        "strip-periods": {
+          "description": "Strip trailing periods from terms, labels, and abbreviated dates.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
         "substitute": {
           "description": "Substitution rules for missing data.",
           "anyOf": [
@@ -453,10 +637,10 @@
           ]
         },
         "titles": {
-          "description": "Title formatting defaults.",
+          "description": "Title formatting defaults. Accepts a preset name (e.g., \"apa\") or explicit configuration.",
           "anyOf": [
             {
-              "$ref": "#/definitions/TitlesConfig"
+              "$ref": "#/definitions/TitlesConfigEntry"
             },
             {
               "type": "null"
@@ -475,7 +659,7 @@
           ]
         }
       },
-      "additionalProperties": true
+      "additionalProperties": false
     },
     "ContributorConfig": {
       "description": "Contributor formatting configuration.",
@@ -491,6 +675,14 @@
               "type": "null"
             }
           ]
+        },
+        "custom": {
+          "description": "Custom user-defined fields for extensions.",
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": true
         },
         "delimiter": {
           "description": "The delimiter between contributors.",
@@ -598,7 +790,28 @@
           ]
         }
       },
-      "additionalProperties": true
+      "additionalProperties": false
+    },
+    "ContributorConfigEntry": {
+      "description": "Contributor config: either a preset name or explicit configuration.\n\nAllows styles to write `contributors: apa` as shorthand, or provide full explicit configuration with field-level overrides.",
+      "anyOf": [
+        {
+          "description": "A named preset (e.g., \"apa\", \"chicago\", \"vancouver\", \"springer\").",
+          "allOf": [
+            {
+              "$ref": "#/definitions/ContributorPreset"
+            }
+          ]
+        },
+        {
+          "description": "Explicit contributor configuration.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/ContributorConfig"
+            }
+          ]
+        }
+      ]
     },
     "ContributorForm": {
       "description": "How to render contributor names.",
@@ -608,6 +821,67 @@
         "short",
         "verb",
         "verb-short"
+      ]
+    },
+    "ContributorPreset": {
+      "description": "Contributor formatting presets.\n\nEach preset encodes the contributor formatting conventions for a major citation style or style family. Use doc comments to describe the visual behavior so style authors can choose the right preset without knowing style guide names.",
+      "oneOf": [
+        {
+          "description": "First author family-first, \"&\" symbol, et al. after 20 authors, initials with period-space, comma before \"&\". Example: \"Smith, J. D., & Jones, M. K.\"",
+          "type": "string",
+          "enum": [
+            "apa"
+          ]
+        },
+        {
+          "description": "First author family-first, \"and\" text, contextual serial comma, full given names (no initials). Example: \"Smith, John D., and Mary K. Jones\"",
+          "type": "string",
+          "enum": [
+            "chicago"
+          ]
+        },
+        {
+          "description": "All authors family-first, no conjunction, compact initials (no period/space), et al. after 6 of 7+. Example: \"Smith JD, Jones MK, Brown AB\"",
+          "type": "string",
+          "enum": [
+            "vancouver"
+          ]
+        },
+        {
+          "description": "Given-first format, \"and\" text, initials with period-space, comma before \"and\". Example: \"J. D. Smith, M. K. Jones, and A. B. Brown\"",
+          "type": "string",
+          "enum": [
+            "ieee"
+          ]
+        },
+        {
+          "description": "All authors family-first, \"and\" text, compact initials (period, no space), comma before \"and\". Example: \"Smith, J.D., Jones, M.K., and Brown, A.B.\"",
+          "type": "string",
+          "enum": [
+            "harvard"
+          ]
+        },
+        {
+          "description": "All authors family-first, no conjunction, compact initials (no period/space), space sort-separator, et al. after 3 of 5+. Example: \"Smith JD, Jones MK, Brown AB\"",
+          "type": "string",
+          "enum": [
+            "springer"
+          ]
+        },
+        {
+          "description": "Numeric compact author list for journal-heavy corpora: all family-first, no conjunction, sort-only particle demotion, space sort-separator, et al. after 6 of 7+.",
+          "type": "string",
+          "enum": [
+            "numeric-compact"
+          ]
+        },
+        {
+          "description": "Numeric medium author list variant: same as `numeric-compact`, but et al. after 3 of 4+.",
+          "type": "string",
+          "enum": [
+            "numeric-medium"
+          ]
+        }
       ]
     },
     "ContributorRole": {
@@ -647,6 +921,14 @@
             "null"
           ]
         },
+        "custom": {
+          "description": "Custom user-defined fields for extensions.",
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": true
+        },
         "month": {
           "$ref": "#/definitions/MonthFormat"
         },
@@ -670,7 +952,28 @@
           ]
         }
       },
-      "additionalProperties": true
+      "additionalProperties": false
+    },
+    "DateConfigEntry": {
+      "description": "Date config: either a preset name or explicit configuration.\n\nAllows styles to write `dates: long` as shorthand, or provide full explicit configuration with field-level overrides.",
+      "anyOf": [
+        {
+          "description": "A named preset (e.g., \"long\", \"short\", \"numeric\", \"iso\").",
+          "allOf": [
+            {
+              "$ref": "#/definitions/DatePreset"
+            }
+          ]
+        },
+        {
+          "description": "Explicit date configuration.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/DateConfig"
+            }
+          ]
+        }
+      ]
     },
     "DateForm": {
       "description": "Date rendering forms.",
@@ -679,7 +982,41 @@
         "year",
         "year-month",
         "full",
-        "month-day"
+        "month-day",
+        "year-month-day"
+      ]
+    },
+    "DatePreset": {
+      "description": "Date formatting presets.\n\nEach preset defines how dates are displayed in citations and bibliographies, including month format, EDTF uncertainty/approximation markers, and range delimiters.",
+      "oneOf": [
+        {
+          "description": "Long month names, EDTF markers, en-dash ranges. Example: \"January 15, 2024\", \"ca. 2024\", \"2024?\"",
+          "type": "string",
+          "enum": [
+            "long"
+          ]
+        },
+        {
+          "description": "Short month names, EDTF markers, en-dash ranges. Example: \"Jan 15, 2024\"",
+          "type": "string",
+          "enum": [
+            "short"
+          ]
+        },
+        {
+          "description": "Numeric months, EDTF markers, en-dash ranges. Example: \"1/15/2024\"",
+          "type": "string",
+          "enum": [
+            "numeric"
+          ]
+        },
+        {
+          "description": "ISO 8601 numeric format, no EDTF markers. Example: \"2024-01-15\"",
+          "type": "string",
+          "enum": [
+            "iso"
+          ]
+        }
       ]
     },
     "DateVariable": {
@@ -735,6 +1072,25 @@
         }
       }
     },
+    "DisambiguationScope": {
+      "description": "Scope for disambiguation (e.g., year suffix assignment).",
+      "oneOf": [
+        {
+          "description": "Disambiguate across all items in the bibliography.",
+          "type": "string",
+          "enum": [
+            "globally"
+          ]
+        },
+        {
+          "description": "Disambiguate only within the current group.",
+          "type": "string",
+          "enum": [
+            "locally"
+          ]
+        }
+      ]
+    },
     "DisplayAsSort": {
       "description": "When to display names in sort order (family-first).",
       "type": "string",
@@ -770,6 +1126,22 @@
         }
       ]
     },
+    "FieldMatcher": {
+      "description": "Field value matcher.",
+      "anyOf": [
+        {
+          "description": "Match exact field value.",
+          "type": "string"
+        },
+        {
+          "description": "Match any of multiple values.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      ]
+    },
     "GeneralTerm": {
       "description": "A list of general terms for citation formatting.",
       "type": "string",
@@ -791,7 +1163,14 @@
         "forthcoming",
         "online",
         "review-of",
-        "original-work-published"
+        "original-work-published",
+        "patent",
+        "volume",
+        "issue",
+        "page",
+        "chapter",
+        "edition",
+        "section"
       ]
     },
     "Group": {
@@ -809,6 +1188,234 @@
         }
       }
     },
+    "GroupHeading": {
+      "description": "Localizable heading source for bibliography groups.",
+      "anyOf": [
+        {
+          "description": "Fixed literal heading text.",
+          "type": "object",
+          "required": [
+            "literal"
+          ],
+          "properties": {
+            "literal": {
+              "description": "Literal heading value.",
+              "type": "string"
+            }
+          }
+        },
+        {
+          "description": "Locale general term key resolved at render time.",
+          "type": "object",
+          "required": [
+            "term"
+          ],
+          "properties": {
+            "form": {
+              "description": "Optional term form (defaults to long).",
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/TermForm"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "term": {
+              "description": "Locale general term key.",
+              "allOf": [
+                {
+                  "$ref": "#/definitions/GeneralTerm"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "description": "Locale-indexed heading map.",
+          "type": "object",
+          "required": [
+            "localized"
+          ],
+          "properties": {
+            "localized": {
+              "description": "Map keyed by BCP 47 locale identifiers or language tags.",
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "GroupSelector": {
+      "description": "Selector predicate for matching references to groups.\n\nAll specified conditions must match (AND logic). Use the `not` field for negation-based fallback groups.",
+      "type": "object",
+      "properties": {
+        "cited": {
+          "description": "Match references by citation status.",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/CitedStatus"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "field": {
+          "description": "Match references by field values (e.g., language, keywords).",
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {
+            "$ref": "#/definitions/FieldMatcher"
+          }
+        },
+        "not": {
+          "description": "Negation for fallback groups. Matches references that do NOT match the nested selector.",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/GroupSelector"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "type": {
+          "description": "Match references by type.",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/TypeSelector"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "GroupSort": {
+      "description": "Per-group sorting specification.\n\nSorting follows a template of sort keys, applied in order. The first key is the primary sort, second is the tiebreaker, etc.",
+      "type": "object",
+      "required": [
+        "template"
+      ],
+      "properties": {
+        "template": {
+          "description": "Ordered list of sort keys to apply.",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/GroupSortKey"
+          }
+        }
+      }
+    },
+    "GroupSortKey": {
+      "description": "A single sort key in a group sorting template.",
+      "type": "object",
+      "required": [
+        "key"
+      ],
+      "properties": {
+        "ascending": {
+          "description": "Sort order direction.",
+          "default": true,
+          "type": "boolean"
+        },
+        "key": {
+          "description": "The field or variable to sort by.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/SortKey2"
+            }
+          ]
+        },
+        "order": {
+          "description": "For type-based ordering: explicit type sequence.\n\nExample: `[\"legal-case\", \"statute\", \"treaty\"]` for Bluebook hierarchy. Items appear in this order regardless of alphabetical content.",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "sort-order": {
+          "description": "For name-based sorting: culturally appropriate name order.\n\nExample: `given-family` for Vietnamese, `family-given` for Western.",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/NameSortOrder"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "LabelConfig": {
+      "description": "Configuration for label citation mode.",
+      "type": "object",
+      "properties": {
+        "et-al-marker": {
+          "description": "Suffix appended when truncated. Alpha/Ams default: \"+\", Din default: \"\".",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "et-al-min": {
+          "description": "Max authors before truncation. Alpha/Ams default: 4, Din default: 3.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint8",
+          "minimum": 0.0
+        },
+        "multi-author-chars": {
+          "description": "Chars per author family name when 2+ authors. Preset default: 1.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint8",
+          "minimum": 0.0
+        },
+        "preset": {
+          "description": "Preset that determines default parameters.",
+          "default": "alpha",
+          "allOf": [
+            {
+              "$ref": "#/definitions/LabelPreset"
+            }
+          ]
+        },
+        "single-author-chars": {
+          "description": "Chars taken from single author's family name. Preset default: 3 (Alpha/Ams), 4 (Din).",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint8",
+          "minimum": 0.0
+        },
+        "year-digits": {
+          "description": "Year digits: 2 or 4. Preset default: 2.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint8",
+          "minimum": 0.0
+        }
+      }
+    },
     "LabelForm": {
       "description": "Label rendering forms.",
       "type": "string",
@@ -816,6 +1423,40 @@
         "long",
         "short",
         "symbol"
+      ]
+    },
+    "LabelPlacement": {
+      "description": "Label placement relative to contributor names.",
+      "type": "string",
+      "enum": [
+        "prefix",
+        "suffix"
+      ]
+    },
+    "LabelPreset": {
+      "description": "Label style preset conventions.",
+      "oneOf": [
+        {
+          "description": "biblatex alphabetic / BibTeX alpha.bst: up to 4 authors, \"+\" marker, 2-digit year.",
+          "type": "string",
+          "enum": [
+            "alpha"
+          ]
+        },
+        {
+          "description": "DIN 1505-2: up to 3 authors, no et-al marker, 2-digit year.",
+          "type": "string",
+          "enum": [
+            "din"
+          ]
+        },
+        {
+          "description": "American Mathematical Society: same algorithm as Alpha, sorted by citation-number.",
+          "type": "string",
+          "enum": [
+            "ams"
+          ]
+        }
       ]
     },
     "LinkAnchor": {
@@ -1026,6 +1667,25 @@
         }
       ]
     },
+    "NameSortOrder": {
+      "description": "Name sorting order for culturally appropriate collation.",
+      "oneOf": [
+        {
+          "description": "Family name first (Western convention). Example: \"Smith, John\" → \"S\" sorts before \"T\"",
+          "type": "string",
+          "enum": [
+            "family-given"
+          ]
+        },
+        {
+          "description": "Given name first (Vietnamese convention). Example: \"Nguyễn Văn A\" → \"Nguyễn\" sorts before \"Trần\"",
+          "type": "string",
+          "enum": [
+            "given-family"
+          ]
+        }
+      ]
+    },
     "NumberForm": {
       "description": "Number rendering forms.",
       "type": "string",
@@ -1047,7 +1707,13 @@
         "collection-number",
         "number-of-pages",
         "number-of-volumes",
-        "citation-number"
+        "citation-number",
+        "citation-label",
+        "number",
+        "docket-number",
+        "patent-number",
+        "standard-number",
+        "report-number"
       ]
     },
     "PageRangeFormat": {
@@ -1091,7 +1757,7 @@
       ]
     },
     "Processing": {
-      "description": "Processing mode for citation/bibliography generation.",
+      "description": "Processing mode for citation/bibliography generation.\n\nCan be specified as: - A string: \"author-date\", \"numeric\", \"note\", or \"label\" - A label config map: { label: { preset: din } } - A custom config map: { sort: ..., group: ..., disambiguate: ... }",
       "oneOf": [
         {
           "type": "string",
@@ -1100,6 +1766,18 @@
             "numeric",
             "note"
           ]
+        },
+        {
+          "type": "object",
+          "required": [
+            "label"
+          ],
+          "properties": {
+            "label": {
+              "$ref": "#/definitions/LabelConfig"
+            }
+          },
+          "additionalProperties": false
         },
         {
           "type": "object",
@@ -1204,6 +1882,13 @@
             "null"
           ]
         },
+        "strip-periods": {
+          "description": "Strip trailing periods from rendered value.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
         "strong": {
           "description": "Render in bold/strong.",
           "type": [
@@ -1236,7 +1921,47 @@
             }
           ]
         }
+      },
+      "additionalProperties": false
+    },
+    "RoleLabel": {
+      "description": "Configuration for role labels (e.g., \"eds.\", \"trans.\").",
+      "type": "object",
+      "required": [
+        "term"
+      ],
+      "properties": {
+        "form": {
+          "description": "Term form: short (\"eds.\") or long (\"editors\").",
+          "default": "short",
+          "allOf": [
+            {
+              "$ref": "#/definitions/RoleLabelForm"
+            }
+          ]
+        },
+        "placement": {
+          "description": "Where to place the label relative to names.",
+          "default": "suffix",
+          "allOf": [
+            {
+              "$ref": "#/definitions/LabelPlacement"
+            }
+          ]
+        },
+        "term": {
+          "description": "Locale term key for the role (e.g., \"editor\", \"translator\").",
+          "type": "string"
+        }
       }
+    },
+    "RoleLabelForm": {
+      "description": "Term form for role labels.",
+      "type": "string",
+      "enum": [
+        "short",
+        "long"
+      ]
     },
     "RoleOptions": {
       "description": "Role display options.",
@@ -1429,7 +2154,16 @@
         "dimensions",
         "scale",
         "version",
-        "locator"
+        "locator",
+        "authority",
+        "reporter",
+        "page",
+        "volume",
+        "number",
+        "docket-number",
+        "patent-number",
+        "standard-number",
+        "report-number"
       ]
     },
     "Sort": {
@@ -1475,6 +2209,52 @@
           "enum": [
             "citation-number"
           ]
+        }
+      ]
+    },
+    "SortKey2": {
+      "description": "Sort key selector.",
+      "oneOf": [
+        {
+          "description": "Sort by reference type.",
+          "type": "string",
+          "enum": [
+            "type"
+          ]
+        },
+        {
+          "description": "Sort by author/contributor.",
+          "type": "string",
+          "enum": [
+            "author"
+          ]
+        },
+        {
+          "description": "Sort by title.",
+          "type": "string",
+          "enum": [
+            "title"
+          ]
+        },
+        {
+          "description": "Sort by issued date.",
+          "type": "string",
+          "enum": [
+            "issued"
+          ]
+        },
+        {
+          "description": "Sort by custom field.",
+          "type": "object",
+          "required": [
+            "field"
+          ],
+          "properties": {
+            "field": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
         }
       ]
     },
@@ -1587,7 +2367,8 @@
             "$ref": "#/definitions/SubstituteKey"
           }
         }
-      }
+      },
+      "additionalProperties": false
     },
     "SubstituteConfig": {
       "description": "Substitution rules for missing author data.",
@@ -1641,6 +2422,62 @@
           "type": "string",
           "enum": [
             "title-first"
+          ]
+        },
+        {
+          "description": "Editor only with short role labels.",
+          "type": "string",
+          "enum": [
+            "editor-short"
+          ]
+        },
+        {
+          "description": "Editor only with long role labels.",
+          "type": "string",
+          "enum": [
+            "editor-long"
+          ]
+        },
+        {
+          "description": "Editor then translator with short role labels.",
+          "type": "string",
+          "enum": [
+            "editor-translator-short"
+          ]
+        },
+        {
+          "description": "Editor then translator with long role labels.",
+          "type": "string",
+          "enum": [
+            "editor-translator-long"
+          ]
+        },
+        {
+          "description": "Editor then title with short role labels.",
+          "type": "string",
+          "enum": [
+            "editor-title-short"
+          ]
+        },
+        {
+          "description": "Editor then title with long role labels.",
+          "type": "string",
+          "enum": [
+            "editor-title-long"
+          ]
+        },
+        {
+          "description": "Editor then translator then title with short role labels.",
+          "type": "string",
+          "enum": [
+            "editor-translator-title-short"
+          ]
+        },
+        {
+          "description": "Editor then translator then title with long role labels.",
+          "type": "string",
+          "enum": [
+            "editor-translator-title-long"
           ]
         }
       ]
@@ -1698,6 +2535,14 @@
             }
           ]
         },
+        "custom": {
+          "description": "Custom user-defined fields for extensions.",
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": true
+        },
         "delimiter": {
           "description": "Custom delimiter between names (overrides global setting).",
           "type": [
@@ -1741,6 +2586,17 @@
             "null"
           ]
         },
+        "label": {
+          "description": "Optional role label configuration (e.g., \"eds.\" for editors).",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/RoleLabel"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "links": {
           "description": "Structured link options (DOI, URL).",
           "anyOf": [
@@ -1770,7 +2626,7 @@
             "null"
           ],
           "additionalProperties": {
-            "$ref": "#/definitions/Rendering"
+            "$ref": "#/definitions/ComponentOverride"
           }
         },
         "prefix": {
@@ -1812,6 +2668,13 @@
             "null"
           ]
         },
+        "strip-periods": {
+          "description": "Strip trailing periods from rendered value.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
         "strong": {
           "description": "Render in bold/strong.",
           "type": [
@@ -1845,7 +2708,7 @@
           ]
         }
       },
-      "additionalProperties": true
+      "additionalProperties": false
     },
     "TemplateDate": {
       "description": "A date component for rendering dates.",
@@ -1855,6 +2718,14 @@
         "form"
       ],
       "properties": {
+        "custom": {
+          "description": "Custom user-defined fields for extensions.",
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": true
+        },
         "date": {
           "$ref": "#/definitions/DateVariable"
         },
@@ -1917,7 +2788,7 @@
             "null"
           ],
           "additionalProperties": {
-            "$ref": "#/definitions/Rendering"
+            "$ref": "#/definitions/ComponentOverride"
           }
         },
         "prefix": {
@@ -1936,6 +2807,13 @@
         },
         "small-caps": {
           "description": "Render in small caps.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "strip-periods": {
+          "description": "Strip trailing periods from rendered value.",
           "type": [
             "boolean",
             "null"
@@ -1974,7 +2852,7 @@
           ]
         }
       },
-      "additionalProperties": true
+      "additionalProperties": false
     },
     "TemplateList": {
       "description": "A list component for grouping multiple items with a delimiter.",
@@ -1983,6 +2861,14 @@
         "items"
       ],
       "properties": {
+        "custom": {
+          "description": "Custom user-defined fields for extensions.",
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": true
+        },
         "delimiter": {
           "anyOf": [
             {
@@ -2034,7 +2920,7 @@
             "null"
           ],
           "additionalProperties": {
-            "$ref": "#/definitions/Rendering"
+            "$ref": "#/definitions/ComponentOverride"
           }
         },
         "prefix": {
@@ -2053,6 +2939,13 @@
         },
         "small-caps": {
           "description": "Render in small caps.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "strip-periods": {
+          "description": "Strip trailing periods from rendered value.",
           "type": [
             "boolean",
             "null"
@@ -2091,7 +2984,7 @@
           ]
         }
       },
-      "additionalProperties": true
+      "additionalProperties": false
     },
     "TemplateNumber": {
       "description": "A number component (volume, issue, pages, etc.).",
@@ -2100,6 +2993,14 @@
         "number"
       ],
       "properties": {
+        "custom": {
+          "description": "Custom user-defined fields for extensions.",
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": true
+        },
         "emph": {
           "description": "Render in italics/emphasis.",
           "type": [
@@ -2169,7 +3070,7 @@
             "null"
           ],
           "additionalProperties": {
-            "$ref": "#/definitions/Rendering"
+            "$ref": "#/definitions/ComponentOverride"
           }
         },
         "prefix": {
@@ -2188,6 +3089,13 @@
         },
         "small-caps": {
           "description": "Render in small caps.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "strip-periods": {
+          "description": "Strip trailing periods from rendered value.",
           "type": [
             "boolean",
             "null"
@@ -2226,7 +3134,7 @@
           ]
         }
       },
-      "additionalProperties": true
+      "additionalProperties": false
     },
     "TemplatePreset": {
       "description": "Available embedded template presets.\n\nThese reference battle-tested templates for common citation styles. See `csln_core::embedded` for the actual template implementations.",
@@ -2265,6 +3173,13 @@
           "enum": [
             "harvard"
           ]
+        },
+        {
+          "description": "Numeric citation number only (citation-focused preset)",
+          "type": "string",
+          "enum": [
+            "numeric-citation"
+          ]
         }
       ]
     },
@@ -2275,6 +3190,14 @@
         "term"
       ],
       "properties": {
+        "custom": {
+          "description": "Custom user-defined fields for extensions.",
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": true
+        },
         "emph": {
           "description": "Render in italics/emphasis.",
           "type": [
@@ -2321,7 +3244,7 @@
             "null"
           ],
           "additionalProperties": {
-            "$ref": "#/definitions/Rendering"
+            "$ref": "#/definitions/ComponentOverride"
           }
         },
         "prefix": {
@@ -2340,6 +3263,13 @@
         },
         "small-caps": {
           "description": "Render in small caps.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "strip-periods": {
+          "description": "Strip trailing periods from rendered value.",
           "type": [
             "boolean",
             "null"
@@ -2386,7 +3316,7 @@
           ]
         }
       },
-      "additionalProperties": true
+      "additionalProperties": false
     },
     "TemplateTitle": {
       "description": "A title component.",
@@ -2395,6 +3325,14 @@
         "title"
       ],
       "properties": {
+        "custom": {
+          "description": "Custom user-defined fields for extensions.",
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": true
+        },
         "emph": {
           "description": "Render in italics/emphasis.",
           "type": [
@@ -2451,7 +3389,7 @@
             "null"
           ],
           "additionalProperties": {
-            "$ref": "#/definitions/Rendering"
+            "$ref": "#/definitions/ComponentOverride"
           }
         },
         "prefix": {
@@ -2470,6 +3408,13 @@
         },
         "small-caps": {
           "description": "Render in small caps.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "strip-periods": {
+          "description": "Strip trailing periods from rendered value.",
           "type": [
             "boolean",
             "null"
@@ -2511,7 +3456,7 @@
           ]
         }
       },
-      "additionalProperties": true
+      "additionalProperties": false
     },
     "TemplateVariable": {
       "description": "A simple variable component (DOI, ISBN, URL, etc.).",
@@ -2520,6 +3465,14 @@
         "variable"
       ],
       "properties": {
+        "custom": {
+          "description": "Custom user-defined fields for extensions.",
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": true
+        },
         "emph": {
           "description": "Render in italics/emphasis.",
           "type": [
@@ -2566,7 +3519,7 @@
             "null"
           ],
           "additionalProperties": {
-            "$ref": "#/definitions/Rendering"
+            "$ref": "#/definitions/ComponentOverride"
           }
         },
         "prefix": {
@@ -2583,8 +3536,29 @@
             "null"
           ]
         },
+        "show-label": {
+          "description": "Whether locator labels (e.g., \"p.\", \"sec.\") should be rendered when `variable: locator` is used. If omitted, processor defaults apply.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
         "small-caps": {
           "description": "Render in small caps.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "strip-label-periods": {
+          "description": "Strip trailing periods from locator labels (e.g., \"p.\" -> \"p\"). Only applies to `variable: locator`.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "strip-periods": {
+          "description": "Strip trailing periods from rendered value.",
           "type": [
             "boolean",
             "null"
@@ -2626,17 +3600,17 @@
           ]
         }
       },
-      "additionalProperties": true
+      "additionalProperties": false
     },
     "TermForm": {
       "description": "Form for term lookup.",
       "type": "string",
       "enum": [
-        "Long",
-        "Short",
-        "Verb",
-        "VerbShort",
-        "Symbol"
+        "long",
+        "short",
+        "verb",
+        "verb-short",
+        "symbol"
       ]
     },
     "TitleForm": {
@@ -2645,6 +3619,53 @@
       "enum": [
         "short",
         "long"
+      ]
+    },
+    "TitlePreset": {
+      "description": "Title formatting presets.\n\nEach preset defines how different types of titles (articles, books, journals) are formatted. Presets typically differ in whether titles are quoted, italicized, or plain.",
+      "oneOf": [
+        {
+          "description": "APA style: article titles plain, book/journal titles italic. Example: Article title. *Book Title*. *Journal Title*.",
+          "type": "string",
+          "enum": [
+            "apa"
+          ]
+        },
+        {
+          "description": "Chicago style: article titles quoted, book/journal titles italic. Example: \"Article Title.\" *Book Title*. *Journal Title*.",
+          "type": "string",
+          "enum": [
+            "chicago"
+          ]
+        },
+        {
+          "description": "IEEE style: article titles quoted, book/journal titles italic. Example: \"Article title,\" *Book Title*. *Journal Title*.",
+          "type": "string",
+          "enum": [
+            "ieee"
+          ]
+        },
+        {
+          "description": "Humanities style: monographs, periodicals, and serials all italic, articles plain. Common in geography, history, and social sciences. Example: Article title. *Book Title*. *Journal Title*. *Series Title*.",
+          "type": "string",
+          "enum": [
+            "humanities"
+          ]
+        },
+        {
+          "description": "Journal-focused emphasis: periodicals and serials italic, monographs plain.",
+          "type": "string",
+          "enum": [
+            "journal-emphasis"
+          ]
+        },
+        {
+          "description": "Scientific/Vancouver style: all titles plain (no formatting). Example: Article title. Book title. Journal title.",
+          "type": "string",
+          "enum": [
+            "scientific"
+          ]
+        }
       ]
     },
     "TitleRendering": {
@@ -2687,7 +3708,8 @@
             "null"
           ]
         }
-      }
+      },
+      "additionalProperties": false
     },
     "TitleType": {
       "description": "Types of titles.",
@@ -2741,6 +3763,14 @@
             }
           ]
         },
+        "custom": {
+          "description": "Custom user-defined fields for extensions.",
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": true
+        },
         "default": {
           "description": "Default formatting for all titles.",
           "anyOf": [
@@ -2793,7 +3823,44 @@
           }
         }
       },
-      "additionalProperties": true
+      "additionalProperties": false
+    },
+    "TitlesConfigEntry": {
+      "description": "Title config: either a preset name or explicit configuration.\n\nAllows styles to write `titles: apa` as shorthand, or provide full explicit configuration with field-level overrides.",
+      "anyOf": [
+        {
+          "description": "A named preset (e.g., \"apa\", \"chicago\", \"humanities\", \"scientific\").",
+          "allOf": [
+            {
+              "$ref": "#/definitions/TitlePreset"
+            }
+          ]
+        },
+        {
+          "description": "Explicit title configuration.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/TitlesConfig"
+            }
+          ]
+        }
+      ]
+    },
+    "TypeSelector": {
+      "description": "Type-based selector.",
+      "anyOf": [
+        {
+          "description": "Match a single type.",
+          "type": "string"
+        },
+        {
+          "description": "Match any of multiple types.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      ]
     },
     "WrapPunctuation": {
       "description": "Punctuation to wrap a component in.",

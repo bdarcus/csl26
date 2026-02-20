@@ -459,6 +459,14 @@
                                 <div class="font-mono text-sm text-primary mb-2">springer</div>
                                 <p class="text-slate-600 text-xs">All family-first, no conjunction, compact initials, et al. after 3 of 5+. Example: "Smith JD, Jones MK, Brown AB"</p>
                             </div>
+                            <div class="bg-white border border-slate-200 rounded-lg p-4">
+                                <div class="font-mono text-sm text-primary mb-2">numeric-compact</div>
+                                <p class="text-slate-600 text-xs">All family-first, no conjunction, sort-only particle demotion, et al. after 6 of 7+.</p>
+                            </div>
+                            <div class="bg-white border border-slate-200 rounded-lg p-4">
+                                <div class="font-mono text-sm text-primary mb-2">numeric-medium</div>
+                                <p class="text-slate-600 text-xs">Same as numeric-compact, but et al. after 3 of 4+.</p>
+                            </div>
                         </div>
                     </div>
 
@@ -535,6 +543,11 @@
                                         <td class="px-4 py-3 text-slate-600">Italic (incl. series)</td>
                                     </tr>
                                     <tr class="hover:bg-slate-50">
+                                        <td class="px-4 py-3 font-mono text-primary">journal-emphasis</td>
+                                        <td class="px-4 py-3 text-slate-600">Plain</td>
+                                        <td class="px-4 py-3 text-slate-600">Journal + serial italic, monograph plain</td>
+                                    </tr>
+                                    <tr class="hover:bg-slate-50">
                                         <td class="px-4 py-3 font-mono text-primary">scientific</td>
                                         <td class="px-4 py-3 text-slate-600">Plain</td>
                                         <td class="px-4 py-3 text-slate-600">Plain</td>
@@ -569,8 +582,53 @@
                                         <td class="px-4 py-3 font-mono text-primary">title-first</td>
                                         <td class="px-4 py-3 text-slate-600">Title → Editor → Translator (anonymous works)</td>
                                     </tr>
+                                    <tr class="hover:bg-slate-50">
+                                        <td class="px-4 py-3 font-mono text-primary">editor-short</td>
+                                        <td class="px-4 py-3 text-slate-600">Editor only (short role form)</td>
+                                    </tr>
+                                    <tr class="hover:bg-slate-50">
+                                        <td class="px-4 py-3 font-mono text-primary">editor-long</td>
+                                        <td class="px-4 py-3 text-slate-600">Editor only (long role form)</td>
+                                    </tr>
+                                    <tr class="hover:bg-slate-50">
+                                        <td class="px-4 py-3 font-mono text-primary">editor-translator-short</td>
+                                        <td class="px-4 py-3 text-slate-600">Editor → Translator (short role form)</td>
+                                    </tr>
+                                    <tr class="hover:bg-slate-50">
+                                        <td class="px-4 py-3 font-mono text-primary">editor-translator-long</td>
+                                        <td class="px-4 py-3 text-slate-600">Editor → Translator (long role form)</td>
+                                    </tr>
+                                    <tr class="hover:bg-slate-50">
+                                        <td class="px-4 py-3 font-mono text-primary">editor-title-short</td>
+                                        <td class="px-4 py-3 text-slate-600">Editor → Title (short role form)</td>
+                                    </tr>
+                                    <tr class="hover:bg-slate-50">
+                                        <td class="px-4 py-3 font-mono text-primary">editor-title-long</td>
+                                        <td class="px-4 py-3 text-slate-600">Editor → Title (long role form)</td>
+                                    </tr>
+                                    <tr class="hover:bg-slate-50">
+                                        <td class="px-4 py-3 font-mono text-primary">editor-translator-title-short</td>
+                                        <td class="px-4 py-3 text-slate-600">Editor → Translator → Title (short role form)</td>
+                                    </tr>
+                                    <tr class="hover:bg-slate-50">
+                                        <td class="px-4 py-3 font-mono text-primary">editor-translator-title-long</td>
+                                        <td class="px-4 py-3 text-slate-600">Editor → Translator → Title (long role form)</td>
+                                    </tr>
                                 </tbody>
                             </table>
+                        </div>
+                    </div>
+
+                    <div class="mb-10">
+                        <h3 class="text-lg font-semibold text-slate-900 mb-4">Template Preset</h3>
+                        <div class="border border-slate-200 rounded-lg p-4 bg-white">
+                            <p class="text-slate-600 text-sm mb-2">
+                                Use <code class="font-mono text-xs">citation.use-preset: numeric-citation</code>
+                                when the citation template is only a citation number and wrapping is controlled by style options.
+                            </p>
+                            <pre class="font-mono text-xs text-slate-700 bg-slate-50 rounded p-3 overflow-x-auto">citation:
+  use-preset: numeric-citation
+  wrap: brackets</pre>
                         </div>
                     </div>
 

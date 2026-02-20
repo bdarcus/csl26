@@ -17,11 +17,7 @@ options:
       add-givenname: false
       year-suffix: true
   strip-periods: true
-  substitute:
-    contributor-role-form: short
-    template:
-      - editor
-      - translator
+  substitute: editor-translator-short
   contributors:
     display-as-sort: all
     initialize-with: ""

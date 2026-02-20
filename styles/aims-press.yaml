@@ -14,12 +14,7 @@ info:
   id: http://www.zotero.org/styles/aims-press
   default-locale: en-GB
 options:
-  substitute:
-    contributor-role-form: short
-    template:
-      - editor
-      - translator
-      - title
+  substitute: editor-translator-title-short
   processing: numeric
   contributors: numeric-medium
   dates: long
@@ -29,8 +24,7 @@ options:
     entry-suffix: .
     separator: ", "
 citation:
-  template:
-    - number: citation-number
+  use-preset: numeric-citation
   wrap: brackets
   multi-cite-delimiter: ","
 bibliography:

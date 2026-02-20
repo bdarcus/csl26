@@ -33,25 +33,14 @@ options:
     delimiter-precedes-last: always
     demote-non-dropping-particle: never
     sort-separator: ", "
-  dates:
-    month: long
-    uncertainty-marker: "?"
-    approximation-marker: "ca. "
-    range-delimiter: –
-  titles:
-    monograph:
-      emph: true
-    periodical:
-      emph: true
-    serial:
-      emph: true
+  dates: long
+  titles: humanities
   bibliography:
     separator: ". "
   punctuation-in-quote: true
   volume-pages-delimiter: comma
 citation:
-  template:
-    - number: citation-number
+  use-preset: numeric-citation
   wrap: brackets
   multi-cite-delimiter: ", "
 bibliography:

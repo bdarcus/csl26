@@ -29,6 +29,35 @@ Fidelity is the hard gate. SQI helps choose between equally correct solutions.
 5. Improve SQI only when output stays unchanged.
 6. Re-run checks before finishing.
 
+## Preset Catalog
+
+Use presets first, then override only what is style-specific.
+
+Option presets:
+
+- `contributors`: `apa`, `chicago`, `vancouver`, `ieee`, `harvard`, `springer`, `numeric-compact`, `numeric-medium`
+- `dates`: `long`, `short`, `numeric`, `iso`
+- `titles`: `apa`, `chicago`, `ieee`, `humanities`, `journal-emphasis`, `scientific`
+- `substitute`: `standard`, `editor-first`, `title-first`, `editor-short`, `editor-long`, `editor-translator-short`, `editor-translator-long`, `editor-title-short`, `editor-title-long`, `editor-translator-title-short`, `editor-translator-title-long`
+
+Template presets:
+
+- `citation.use-preset: numeric-citation` for numeric styles that render citation numbers via style-level wrapping (`[1]`, `(1)`, or superscript contexts).
+
+Example:
+
+```yaml
+options:
+  contributors: numeric-compact
+  dates: long
+  titles: humanities
+  substitute: editor-translator-title-short
+
+citation:
+  use-preset: numeric-citation
+  wrap: brackets
+```
+
 ## Verification Commands
 
 Run from repository root:

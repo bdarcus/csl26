@@ -117,6 +117,8 @@ pub enum TemplatePreset {
     Ieee,
     /// Harvard/Elsevier (author-date)
     Harvard,
+    /// Numeric citation number only (citation-focused preset)
+    NumericCitation,
 }
 
 impl TemplatePreset {
@@ -128,6 +130,7 @@ impl TemplatePreset {
             TemplatePreset::Vancouver => embedded::vancouver_citation(),
             TemplatePreset::Ieee => embedded::ieee_citation(),
             TemplatePreset::Harvard => embedded::harvard_citation(),
+            TemplatePreset::NumericCitation => embedded::numeric_citation(),
         }
     }
 
@@ -139,6 +142,8 @@ impl TemplatePreset {
             TemplatePreset::Vancouver => embedded::vancouver_bibliography(),
             TemplatePreset::Ieee => embedded::ieee_bibliography(),
             TemplatePreset::Harvard => embedded::harvard_bibliography(),
+            // Citation-focused preset; Vancouver bibliography is the closest numeric fallback.
+            TemplatePreset::NumericCitation => embedded::vancouver_bibliography(),
         }
     }
 }

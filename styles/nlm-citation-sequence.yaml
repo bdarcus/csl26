@@ -13,36 +13,17 @@ info:
   title: "NLM Style Guide (Vancouver): Citing Medicine 2nd edition (citation-sequence)"
   id: http://www.zotero.org/styles/nlm-citation-sequence
 options:
-  substitute:
-    contributor-role-form: long
-    template:
-      - editor
+  substitute: editor-long
   processing: numeric
-  contributors:
-    display-as-sort: all
-    initialize-with: ""
-    shorten:
-      min: 7
-      use-first: 6
-      and-others: et-al
-      delimiter-precedes-last: contextual
-    delimiter: ", "
-    delimiter-precedes-last: always
-    demote-non-dropping-particle: sort-only
-    sort-separator: " "
-  dates:
-    month: long
-    uncertainty-marker: "?"
-    approximation-marker: "ca. "
-    range-delimiter: –
+  contributors: numeric-compact
+  dates: long
   page-range-format: minimal
   bibliography:
     entry-suffix: .
     separator: ". "
   punctuation-in-quote: true
 citation:
-  template:
-    - number: citation-number
+  use-preset: numeric-citation
   wrap: parentheses
   multi-cite-delimiter: ","
 bibliography:

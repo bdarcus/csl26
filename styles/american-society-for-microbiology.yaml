@@ -29,8 +29,7 @@ options:
   punctuation-in-quote: true
   volume-pages-delimiter: colon
 citation:
-  template:
-    - number: citation-number
+  use-preset: numeric-citation
   wrap: parentheses
   multi-cite-delimiter: ", "
 bibliography:

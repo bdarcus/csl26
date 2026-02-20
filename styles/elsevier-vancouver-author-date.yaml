@@ -14,12 +14,7 @@ info:
   id: http://www.zotero.org/styles/elsevier-vancouver-author-date
   default-locale: en-US
 options:
-  substitute:
-    contributor-role-form: long
-    template:
-      - editor
-      - translator
-      - title
+  substitute: editor-translator-title-long
   contributors: numeric-compact
   dates: long
   page-range-format: minimal

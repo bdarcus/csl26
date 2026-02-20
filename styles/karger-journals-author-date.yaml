@@ -14,11 +14,7 @@ info:
   id: http://www.zotero.org/styles/karger-journals-author-date
   default-locale: en-US
 options:
-  substitute:
-    contributor-role-form: long
-    template:
-      - editor
-      - title
+  substitute: editor-title-long
   contributors: numeric-compact
   dates: short
   bibliography:

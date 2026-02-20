@@ -14,10 +14,7 @@ info:
   id: http://www.zotero.org/styles/taylor-and-francis-national-library-of-medicine
   default-locale: en-US
 options:
-  substitute:
-    contributor-role-form: long
-    template:
-      - editor
+  substitute: editor-long
   processing: numeric
   contributors:
     display-as-sort: all
@@ -31,11 +28,7 @@ options:
     delimiter-precedes-last: always
     demote-non-dropping-particle: sort-only
     sort-separator: " "
-  dates:
-    month: long
-    uncertainty-marker: "?"
-    approximation-marker: "ca. "
-    range-delimiter: –
+  dates: long
   page-range-format: expanded
   bibliography:
     entry-suffix: .

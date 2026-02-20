@@ -41,18 +41,8 @@ options:
     delimiter-precedes-last: never
     demote-non-dropping-particle: display-and-sort
     sort-separator: ", "
-  dates:
-    month: long
-    uncertainty-marker: "?"
-    approximation-marker: "ca. "
-    range-delimiter: –
-  titles:
-    monograph:
-      emph: true
-    periodical:
-      emph: true
-    serial:
-      emph: true
+  dates: long
+  titles: humanities
   page-range-format: chicago
   bibliography:
     hanging-indent: true
