@@ -867,6 +867,20 @@
           "enum": [
             "springer"
           ]
+        },
+        {
+          "description": "Numeric compact author list for journal-heavy corpora: all family-first, no conjunction, sort-only particle demotion, space sort-separator, et al. after 6 of 7+.",
+          "type": "string",
+          "enum": [
+            "numeric-compact"
+          ]
+        },
+        {
+          "description": "Numeric medium author list variant: same as `numeric-compact`, but et al. after 3 of 4+.",
+          "type": "string",
+          "enum": [
+            "numeric-medium"
+          ]
         }
       ]
     },
@@ -1344,6 +1358,64 @@
         }
       }
     },
+    "LabelConfig": {
+      "description": "Configuration for label citation mode.",
+      "type": "object",
+      "properties": {
+        "et-al-marker": {
+          "description": "Suffix appended when truncated. Alpha/Ams default: \"+\", Din default: \"\".",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "et-al-min": {
+          "description": "Max authors before truncation. Alpha/Ams default: 4, Din default: 3.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint8",
+          "minimum": 0.0
+        },
+        "multi-author-chars": {
+          "description": "Chars per author family name when 2+ authors. Preset default: 1.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint8",
+          "minimum": 0.0
+        },
+        "preset": {
+          "description": "Preset that determines default parameters.",
+          "default": "alpha",
+          "allOf": [
+            {
+              "$ref": "#/definitions/LabelPreset"
+            }
+          ]
+        },
+        "single-author-chars": {
+          "description": "Chars taken from single author's family name. Preset default: 3 (Alpha/Ams), 4 (Din).",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint8",
+          "minimum": 0.0
+        },
+        "year-digits": {
+          "description": "Year digits: 2 or 4. Preset default: 2.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint8",
+          "minimum": 0.0
+        }
+      }
+    },
     "LabelForm": {
       "description": "Label rendering forms.",
       "type": "string",
@@ -1359,6 +1431,32 @@
       "enum": [
         "prefix",
         "suffix"
+      ]
+    },
+    "LabelPreset": {
+      "description": "Label style preset conventions.",
+      "oneOf": [
+        {
+          "description": "biblatex alphabetic / BibTeX alpha.bst: up to 4 authors, \"+\" marker, 2-digit year.",
+          "type": "string",
+          "enum": [
+            "alpha"
+          ]
+        },
+        {
+          "description": "DIN 1505-2: up to 3 authors, no et-al marker, 2-digit year.",
+          "type": "string",
+          "enum": [
+            "din"
+          ]
+        },
+        {
+          "description": "American Mathematical Society: same algorithm as Alpha, sorted by citation-number.",
+          "type": "string",
+          "enum": [
+            "ams"
+          ]
+        }
       ]
     },
     "LinkAnchor": {
@@ -1610,6 +1708,7 @@
         "number-of-pages",
         "number-of-volumes",
         "citation-number",
+        "citation-label",
         "number",
         "docket-number",
         "patent-number",
@@ -1658,7 +1757,7 @@
       ]
     },
     "Processing": {
-      "description": "Processing mode for citation/bibliography generation.",
+      "description": "Processing mode for citation/bibliography generation.\n\nCan be specified as: - A string: \"author-date\", \"numeric\", \"note\", or \"label\" - A label config map: { label: { preset: din } } - A custom config map: { sort: ..., group: ..., disambiguate: ... }",
       "oneOf": [
         {
           "type": "string",
@@ -1667,6 +1766,18 @@
             "numeric",
             "note"
           ]
+        },
+        {
+          "type": "object",
+          "required": [
+            "label"
+          ],
+          "properties": {
+            "label": {
+              "$ref": "#/definitions/LabelConfig"
+            }
+          },
+          "additionalProperties": false
         },
         {
           "type": "object",
@@ -2311,6 +2422,62 @@
           "type": "string",
           "enum": [
             "title-first"
+          ]
+        },
+        {
+          "description": "Editor only with short role labels.",
+          "type": "string",
+          "enum": [
+            "editor-short"
+          ]
+        },
+        {
+          "description": "Editor only with long role labels.",
+          "type": "string",
+          "enum": [
+            "editor-long"
+          ]
+        },
+        {
+          "description": "Editor then translator with short role labels.",
+          "type": "string",
+          "enum": [
+            "editor-translator-short"
+          ]
+        },
+        {
+          "description": "Editor then translator with long role labels.",
+          "type": "string",
+          "enum": [
+            "editor-translator-long"
+          ]
+        },
+        {
+          "description": "Editor then title with short role labels.",
+          "type": "string",
+          "enum": [
+            "editor-title-short"
+          ]
+        },
+        {
+          "description": "Editor then title with long role labels.",
+          "type": "string",
+          "enum": [
+            "editor-title-long"
+          ]
+        },
+        {
+          "description": "Editor then translator then title with short role labels.",
+          "type": "string",
+          "enum": [
+            "editor-translator-title-short"
+          ]
+        },
+        {
+          "description": "Editor then translator then title with long role labels.",
+          "type": "string",
+          "enum": [
+            "editor-translator-title-long"
           ]
         }
       ]
@@ -3006,6 +3173,13 @@
           "enum": [
             "harvard"
           ]
+        },
+        {
+          "description": "Numeric citation number only (citation-focused preset)",
+          "type": "string",
+          "enum": [
+            "numeric-citation"
+          ]
         }
       ]
     },
@@ -3476,6 +3650,13 @@
           "type": "string",
           "enum": [
             "humanities"
+          ]
+        },
+        {
+          "description": "Journal-focused emphasis: periodicals and serials italic, monographs plain.",
+          "type": "string",
+          "enum": [
+            "journal-emphasis"
           ]
         },
         {

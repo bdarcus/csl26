@@ -15,10 +15,7 @@ info:
   id: http://www.zotero.org/styles/american-medical-association
   default-locale: en-US
 options:
-  substitute:
-    contributor-role-form: short
-    template:
-      - editor
+  substitute: editor-short
   processing: numeric
   contributors:
     initialize-with: ""

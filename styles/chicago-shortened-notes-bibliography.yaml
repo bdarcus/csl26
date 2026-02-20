@@ -21,18 +21,8 @@ options:
       and-others: et-al
       delimiter-precedes-last: contextual
     demote-non-dropping-particle: display-and-sort
-  dates:
-    month: long
-    uncertainty-marker: "?"
-    approximation-marker: "ca. "
-    range-delimiter: –
-  titles:
-    monograph:
-      emph: true
-    periodical:
-      emph: true
-    serial:
-      emph: true
+  dates: long
+  titles: humanities
   page-range-format: chicago16
   bibliography:
     hanging-indent: true

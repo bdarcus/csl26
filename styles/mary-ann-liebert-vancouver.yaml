@@ -14,10 +14,7 @@ info:
   id: http://www.zotero.org/styles/mary-ann-liebert-vancouver
   default-locale: en-US
 options:
-  substitute:
-    contributor-role-form: short
-    template:
-      - editor
+  substitute: editor-short
   processing: numeric
   contributors:
     display-as-sort: all
@@ -30,18 +27,13 @@ options:
     delimiter-precedes-last: never
     demote-non-dropping-particle: sort-only
     sort-separator: " "
-  dates:
-    month: numeric
-    uncertainty-marker: "?"
-    approximation-marker: "ca. "
-    range-delimiter: –
+  dates: numeric
   bibliography:
     entry-suffix: .
     separator: ". "
   punctuation-in-quote: true
 citation:
-  template:
-    - number: citation-number
+  use-preset: numeric-citation
   multi-cite-delimiter: ","
 bibliography:
   options:

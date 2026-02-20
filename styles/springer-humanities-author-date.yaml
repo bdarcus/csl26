@@ -25,11 +25,7 @@ options:
       names: false
       add-givenname: false
       year-suffix: true
-  substitute:
-    contributor-role-form: short
-    template:
-      - editor
-      - translator
+  substitute: editor-translator-short
   contributors:
     display-as-sort: first
     initialize-with: ". "
@@ -42,18 +38,8 @@ options:
     delimiter-precedes-last: always
     demote-non-dropping-particle: sort-only
     sort-separator: ", "
-  dates:
-    month: long
-    uncertainty-marker: "?"
-    approximation-marker: "ca. "
-    range-delimiter: –
-  titles:
-    monograph:
-      emph: true
-    periodical:
-      emph: true
-    serial:
-      emph: true
+  dates: long
+  titles: humanities
   bibliography:
     hanging-indent: true
     entry-suffix: .

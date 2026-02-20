@@ -14,10 +14,7 @@ info:
   id: http://www.zotero.org/styles/landes-bioscience-journals
   default-locale: en-US
 options:
-  substitute:
-    contributor-role-form: long
-    template:
-      - editor
+  substitute: editor-long
   processing: numeric
   contributors:
     display-as-sort: all
@@ -31,19 +28,14 @@ options:
     delimiter-precedes-last: always
     demote-non-dropping-particle: sort-only
     sort-separator: " "
-  dates:
-    month: short
-    uncertainty-marker: "?"
-    approximation-marker: "ca. "
-    range-delimiter: –
+  dates: short
   page-range-format: minimal
   bibliography:
     entry-suffix: .
     separator: ". "
   punctuation-in-quote: true
 citation:
-  template:
-    - number: citation-number
+  use-preset: numeric-citation
   multi-cite-delimiter: ","
 bibliography:
   options:

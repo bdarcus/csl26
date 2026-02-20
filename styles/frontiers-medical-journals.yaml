@@ -14,11 +14,7 @@ info:
   id: http://www.zotero.org/styles/frontiers-medical-journals
   default-locale: en-US
 options:
-  substitute:
-    contributor-role-form: short
-    template:
-      - editor
-      - title
+  substitute: editor-title-short
   processing: numeric
   contributors:
     display-as-sort: all
@@ -37,8 +33,7 @@ options:
     separator: ". "
   punctuation-in-quote: true
 citation:
-  template:
-    - number: citation-number
+  use-preset: numeric-citation
   wrap: parentheses
   multi-cite-delimiter: ","
 bibliography:

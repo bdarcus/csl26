@@ -31,16 +31,11 @@ options:
     delimiter-precedes-et-al: never
     demote-non-dropping-particle: sort-only
     sort-separator: " "
-  dates:
-    month: long
-    uncertainty-marker: "?"
-    approximation-marker: "ca. "
-    range-delimiter: –
+  dates: long
   bibliography:
     separator: ". "
 citation:
-  template:
-    - number: citation-number
+  use-preset: numeric-citation
   wrap: brackets
   multi-cite-delimiter: ", "
 bibliography:

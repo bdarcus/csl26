@@ -24,10 +24,7 @@ options:
       names: false
       add-givenname: false
       year-suffix: true
-  substitute:
-    contributor-role-form: short
-    template:
-      - editor
+  substitute: editor-short
   contributors:
     display-as-sort: all
     initialize-with: .
@@ -40,11 +37,7 @@ options:
     delimiter-precedes-last: always
     demote-non-dropping-particle: sort-only
     sort-separator: ", "
-  dates:
-    month: long
-    uncertainty-marker: "?"
-    approximation-marker: "ca. "
-    range-delimiter: –
+  dates: long
   bibliography:
     separator: ". "
   punctuation-in-quote: true

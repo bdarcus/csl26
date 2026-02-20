@@ -13,27 +13,13 @@ info:
   title: IEEE Reference Guide version 11.29.2023
   id: http://www.zotero.org/styles/ieee
 options:
-  substitute:
-    contributor-role-form: short
-    template:
-      - editor
-      - translator
+  substitute: editor-translator-short
   processing: numeric
   contributors:
     initialize-with: ". "
     demote-non-dropping-particle: sort-only
-  dates:
-    month: short
-    uncertainty-marker: "?"
-    approximation-marker: "ca. "
-    range-delimiter: –
-  titles:
-    monograph:
-      emph: true
-    periodical:
-      emph: true
-    serial:
-      emph: true
+  dates: short
+  titles: humanities
   bibliography:
     separator: ", "
   punctuation-in-quote: true

@@ -334,6 +334,14 @@ pub enum SubstitutePreset {
     EditorTranslatorShort,
     /// Editor then translator with long role labels.
     EditorTranslatorLong,
+    /// Editor then title with short role labels.
+    EditorTitleShort,
+    /// Editor then title with long role labels.
+    EditorTitleLong,
+    /// Editor then translator then title with short role labels.
+    EditorTranslatorTitleShort,
+    /// Editor then translator then title with long role labels.
+    EditorTranslatorTitleLong,
 }
 
 impl SubstitutePreset {
@@ -385,6 +393,34 @@ impl SubstitutePreset {
             SubstitutePreset::EditorTranslatorLong => Substitute {
                 contributor_role_form: Some("long".to_string()),
                 template: vec![SubstituteKey::Editor, SubstituteKey::Translator],
+                overrides: HashMap::new(),
+            },
+            SubstitutePreset::EditorTitleShort => Substitute {
+                contributor_role_form: Some("short".to_string()),
+                template: vec![SubstituteKey::Editor, SubstituteKey::Title],
+                overrides: HashMap::new(),
+            },
+            SubstitutePreset::EditorTitleLong => Substitute {
+                contributor_role_form: Some("long".to_string()),
+                template: vec![SubstituteKey::Editor, SubstituteKey::Title],
+                overrides: HashMap::new(),
+            },
+            SubstitutePreset::EditorTranslatorTitleShort => Substitute {
+                contributor_role_form: Some("short".to_string()),
+                template: vec![
+                    SubstituteKey::Editor,
+                    SubstituteKey::Translator,
+                    SubstituteKey::Title,
+                ],
+                overrides: HashMap::new(),
+            },
+            SubstitutePreset::EditorTranslatorTitleLong => Substitute {
+                contributor_role_form: Some("long".to_string()),
+                template: vec![
+                    SubstituteKey::Editor,
+                    SubstituteKey::Translator,
+                    SubstituteKey::Title,
+                ],
                 overrides: HashMap::new(),
             },
         }
@@ -543,6 +579,10 @@ mod tests {
             SubstitutePreset::EditorLong,
             SubstitutePreset::EditorTranslatorShort,
             SubstitutePreset::EditorTranslatorLong,
+            SubstitutePreset::EditorTitleShort,
+            SubstitutePreset::EditorTitleLong,
+            SubstitutePreset::EditorTranslatorTitleShort,
+            SubstitutePreset::EditorTranslatorTitleLong,
         ];
         for preset in substitute_presets {
             let yaml = serde_yaml::to_string(&preset).unwrap();

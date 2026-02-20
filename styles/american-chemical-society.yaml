@@ -22,26 +22,15 @@ options:
     delimiter-precedes-last: always
     demote-non-dropping-particle: sort-only
     sort-separator: ", "
-  dates:
-    month: long
-    uncertainty-marker: "?"
-    approximation-marker: "ca. "
-    range-delimiter: –
-  titles:
-    monograph:
-      emph: true
-    periodical:
-      emph: true
-    serial:
-      emph: true
+  dates: long
+  titles: humanities
   page-range-format: expanded
   bibliography:
     entry-suffix: .
     separator: ". "
   punctuation-in-quote: true
 citation:
-  template:
-    - number: citation-number
+  use-preset: numeric-citation
   multi-cite-delimiter: ","
 bibliography:
   options:

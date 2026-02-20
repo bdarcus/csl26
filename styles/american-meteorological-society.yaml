@@ -14,12 +14,7 @@ info:
   id: http://www.zotero.org/styles/american-meteorological-society
   default-locale: en-GB
 options:
-  substitute:
-    contributor-role-form: short
-    template:
-      - editor
-      - translator
-      - title
+  substitute: editor-translator-title-short
   contributors:
     display-as-sort: first
     initialize-with: ". "

@@ -14,12 +14,7 @@ info:
   id: http://www.zotero.org/styles/international-journal-of-wildland-fire
   default-locale: en-US
 options:
-  substitute:
-    contributor-role-form: short
-    template:
-      - editor
-      - translator
-      - title
+  substitute: editor-translator-title-short
   processing:
     sort:
       shorten-names: false

@@ -14,12 +14,7 @@ info:
   id: http://www.zotero.org/styles/inter-research-science-center
   default-locale: en-GB
 options:
-  substitute:
-    contributor-role-form: short
-    template:
-      - editor
-      - translator
-      - title
+  substitute: editor-translator-title-short
   contributors:
     display-as-sort: all
     initialize-with: ""

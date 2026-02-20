@@ -9,6 +9,7 @@ pub mod apa;
 pub mod chicago;
 pub mod harvard;
 pub mod ieee;
+pub mod numeric;
 pub mod vancouver;
 
 use crate::template::TemplateComponent;
@@ -23,6 +24,7 @@ pub use harvard::bibliography as harvard_bibliography;
 pub use harvard::citation as harvard_citation;
 pub use ieee::bibliography as ieee_bibliography;
 pub use ieee::citation as ieee_citation;
+pub use numeric::citation as numeric_citation;
 pub use vancouver::bibliography as vancouver_bibliography;
 pub use vancouver::citation as vancouver_citation;
 
@@ -34,6 +36,7 @@ pub fn citation_templates() -> HashMap<&'static str, Vec<TemplateComponent>> {
     map.insert("vancouver", vancouver_citation());
     map.insert("ieee", ieee_citation());
     map.insert("harvard", harvard_citation());
+    map.insert("numeric-citation", numeric_citation());
     map
 }
 
@@ -138,6 +141,7 @@ mod tests {
         assert!(templates.contains_key("vancouver"));
         assert!(templates.contains_key("ieee"));
         assert!(templates.contains_key("harvard"));
+        assert!(templates.contains_key("numeric-citation"));
     }
 
     #[test]
