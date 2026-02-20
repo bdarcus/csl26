@@ -86,6 +86,14 @@ bibliography:
     - number: pages
       prefix: ":"
     - variable: publisher-place
+      overrides:
+        article-journal:
+          suppress: true
     - variable: publisher
       prefix: ": "
+      overrides:
+        article-journal:
+          suppress: true
+    - variable: doi
+      prefix: "DOI: "
     - variable: url

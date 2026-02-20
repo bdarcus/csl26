@@ -78,16 +78,43 @@ bibliography:
         - title: parent-monograph
     - title: parent-serial
     - number: volume
+      overrides:
+        legal-case:
+          suppress: true
     - number: issue
       prefix: ": "
       overrides:
         article-magazine:
           suppress: true
+        legal-case:
+          suppress: true
     - date: issued
       form: year
     - number: pages
       prefix: ". 2013: "
+      overrides:
+        legal-case:
+          suppress: true
     - variable: doi
+      overrides:
+        legal-case:
+          suppress: true
+    - variable: url
+      suppress: true
+      overrides:
+        webpage:
+          suppress: false
+          prefix: "; Im Internet: "
+    - date: accessed
+      form: full
+      suppress: true
+      overrides:
+        webpage:
+          suppress: false
+          prefix: "; Stand: "
     - variable: publisher-place
     - variable: publisher
       prefix: ": "
+      overrides:
+        dataset:
+          suppress: true

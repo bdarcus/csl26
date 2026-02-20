@@ -58,6 +58,22 @@ bibliography:
       delimiter: ", "
       delimiter-precedes-last: always
       sort-separator: " "
+  type-templates:
+    webpage:
+      - contributor: author
+        form: long
+        name-order: family-first
+      - title: primary
+      - date: issued
+        form: year
+        suffix: ". "
+      - variable: url
+      - date: accessed
+        form: month-day
+        prefix: "Accessed "
+      - date: accessed
+        form: year
+        prefix: " "
   template:
     - contributor: author
       form: long
