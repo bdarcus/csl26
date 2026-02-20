@@ -103,6 +103,26 @@ Wave aggregate:
 - Edited: citations `239/240`, bibliography `584/641` (93.4% fidelity)
 - Auto-migrate rerun: citations `157/240`, bibliography `584/641` (84.1% fidelity)
 
+#### Tier-2/3 Wave: Next 58 Priority Styles (2026-02-20)
+
+Batch scope:
+- Selected the next 58 parent styles from `csln-analyze --rank-parents` not
+  already represented in `styles/`.
+- Core style catalog expanded from `42` to `100` YAML styles.
+
+Wave aggregate:
+- Edited (presetized + citation-sync): citations `607/696`,
+  bibliography `1722/1824` (91.5% fidelity)
+- Auto-migrate rerun: citations `607/696`, bibliography `1720/1824`
+  (91.4% fidelity)
+- Delta vs rerun: citations `+0`, bibliography `+2`
+
+Preset extraction across the 58-style wave:
+- `options.dates` presetized in `58` styles (`long`/`short`/`numeric`)
+- `options.titles` presetized in `39` styles (`humanities`/`journal-emphasis`)
+- `options.substitute` presetized in `36` styles (`editor-*` variants)
+- contributor presetization in `11` styles (`numeric-compact`/`numeric-medium`)
+
 ### Note Styles (Tier 3 — Future)
 
 Note styles (footnote-based) are ~19% of corpus. Not yet targeted.

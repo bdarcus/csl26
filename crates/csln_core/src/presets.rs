@@ -28,8 +28,9 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 //! 3. Skip presets entirely and specify everything explicitly
 
 use crate::options::{
-    AndOptions, ContributorConfig, DateConfig, DelimiterPrecedesLast, DisplayAsSort, MonthFormat,
-    ShortenListOptions, Substitute, SubstituteKey, TitleRendering, TitlesConfig,
+    AndOptions, ContributorConfig, DateConfig, DelimiterPrecedesLast, DemoteNonDroppingParticle,
+    DisplayAsSort, MonthFormat, ShortenListOptions, Substitute, SubstituteKey, TitleRendering,
+    TitlesConfig,
 };
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
@@ -70,6 +71,13 @@ pub enum ContributorPreset {
     /// period/space), space sort-separator, et al. after 3 of 5+.
     /// Example: "Smith JD, Jones MK, Brown AB"
     Springer,
+    /// Numeric compact author list for journal-heavy corpora:
+    /// all family-first, no conjunction, sort-only particle demotion,
+    /// space sort-separator, et al. after 6 of 7+.
+    NumericCompact,
+    /// Numeric medium author list variant:
+    /// same as `numeric-compact`, but et al. after 3 of 4+.
+    NumericMedium,
 }
 
 impl ContributorPreset {
@@ -133,6 +141,36 @@ impl ContributorPreset {
                 sort_separator: Some(" ".to_string()),
                 shorten: Some(ShortenListOptions {
                     min: 5,
+                    use_first: 3,
+                    ..Default::default()
+                }),
+                ..Default::default()
+            },
+            ContributorPreset::NumericCompact => ContributorConfig {
+                display_as_sort: Some(DisplayAsSort::All),
+                and: Some(AndOptions::None),
+                delimiter: Some(", ".to_string()),
+                delimiter_precedes_last: Some(DelimiterPrecedesLast::Always),
+                initialize_with: Some("".to_string()),
+                sort_separator: Some(" ".to_string()),
+                demote_non_dropping_particle: Some(DemoteNonDroppingParticle::SortOnly),
+                shorten: Some(ShortenListOptions {
+                    min: 7,
+                    use_first: 6,
+                    ..Default::default()
+                }),
+                ..Default::default()
+            },
+            ContributorPreset::NumericMedium => ContributorConfig {
+                display_as_sort: Some(DisplayAsSort::All),
+                and: Some(AndOptions::None),
+                delimiter: Some(", ".to_string()),
+                delimiter_precedes_last: Some(DelimiterPrecedesLast::Always),
+                initialize_with: Some("".to_string()),
+                sort_separator: Some(" ".to_string()),
+                demote_non_dropping_particle: Some(DemoteNonDroppingParticle::SortOnly),
+                shorten: Some(ShortenListOptions {
+                    min: 4,
                     use_first: 3,
                     ..Default::default()
                 }),
@@ -215,6 +253,9 @@ pub enum TitlePreset {
     /// articles plain. Common in geography, history, and social sciences.
     /// Example: Article title. *Book Title*. *Journal Title*. *Series Title*.
     Humanities,
+    /// Journal-focused emphasis: periodicals and serials italic,
+    /// monographs plain.
+    JournalEmphasis,
     /// Scientific/Vancouver style: all titles plain (no formatting).
     /// Example: Article title. Book title. Journal title.
     Scientific,
@@ -250,6 +291,12 @@ impl TitlePreset {
                 serial: Some(emph_rendering),
                 ..Default::default()
             },
+            TitlePreset::JournalEmphasis => TitlesConfig {
+                component: Some(TitleRendering::default()),
+                periodical: Some(emph_rendering.clone()),
+                serial: Some(emph_rendering),
+                ..Default::default()
+            },
             TitlePreset::Scientific => TitlesConfig {
                 component: Some(TitleRendering::default()),
                 monograph: Some(TitleRendering::default()),
@@ -279,6 +326,14 @@ pub enum SubstitutePreset {
     /// Title-first: Title → Editor → Translator.
     /// Used when anonymous works should show title prominently.
     TitleFirst,
+    /// Editor only with short role labels.
+    EditorShort,
+    /// Editor only with long role labels.
+    EditorLong,
+    /// Editor then translator with short role labels.
+    EditorTranslatorShort,
+    /// Editor then translator with long role labels.
+    EditorTranslatorLong,
 }
 
 impl SubstitutePreset {
@@ -310,6 +365,26 @@ impl SubstitutePreset {
                     SubstituteKey::Editor,
                     SubstituteKey::Translator,
                 ],
+                overrides: HashMap::new(),
+            },
+            SubstitutePreset::EditorShort => Substitute {
+                contributor_role_form: Some("short".to_string()),
+                template: vec![SubstituteKey::Editor],
+                overrides: HashMap::new(),
+            },
+            SubstitutePreset::EditorLong => Substitute {
+                contributor_role_form: Some("long".to_string()),
+                template: vec![SubstituteKey::Editor],
+                overrides: HashMap::new(),
+            },
+            SubstitutePreset::EditorTranslatorShort => Substitute {
+                contributor_role_form: Some("short".to_string()),
+                template: vec![SubstituteKey::Editor, SubstituteKey::Translator],
+                overrides: HashMap::new(),
+            },
+            SubstitutePreset::EditorTranslatorLong => Substitute {
+                contributor_role_form: Some("long".to_string()),
+                template: vec![SubstituteKey::Editor, SubstituteKey::Translator],
                 overrides: HashMap::new(),
             },
         }
@@ -353,6 +428,21 @@ mod tests {
         let shorten = config.shorten.unwrap();
         assert_eq!(shorten.min, 5);
         assert_eq!(shorten.use_first, 3);
+    }
+
+    #[test]
+    fn test_contributor_preset_numeric_compact() {
+        let config = ContributorPreset::NumericCompact.config();
+        assert_eq!(config.and, Some(AndOptions::None));
+        assert_eq!(config.display_as_sort, Some(DisplayAsSort::All));
+        assert_eq!(config.sort_separator, Some(" ".to_string()));
+        assert_eq!(
+            config.demote_non_dropping_particle,
+            Some(DemoteNonDroppingParticle::SortOnly)
+        );
+        let shorten = config.shorten.unwrap();
+        assert_eq!(shorten.min, 7);
+        assert_eq!(shorten.use_first, 6);
     }
 
     #[test]
@@ -413,6 +503,8 @@ mod tests {
             ContributorPreset::Ieee,
             ContributorPreset::Harvard,
             ContributorPreset::Springer,
+            ContributorPreset::NumericCompact,
+            ContributorPreset::NumericMedium,
         ];
         for preset in contributor_presets {
             let yaml = serde_yaml::to_string(&preset).unwrap();
@@ -435,6 +527,7 @@ mod tests {
             TitlePreset::Chicago,
             TitlePreset::Ieee,
             TitlePreset::Humanities,
+            TitlePreset::JournalEmphasis,
             TitlePreset::Scientific,
         ];
         for preset in title_presets {
@@ -446,6 +539,10 @@ mod tests {
             SubstitutePreset::Standard,
             SubstitutePreset::EditorFirst,
             SubstitutePreset::TitleFirst,
+            SubstitutePreset::EditorShort,
+            SubstitutePreset::EditorLong,
+            SubstitutePreset::EditorTranslatorShort,
+            SubstitutePreset::EditorTranslatorLong,
         ];
         for preset in substitute_presets {
             let yaml = serde_yaml::to_string(&preset).unwrap();
