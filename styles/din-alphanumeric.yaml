@@ -1,0 +1,24 @@
+info:
+  title: DIN 1505-2 Alphanumeric
+  id: https://www.zotero.org/styles/din-1505-2-alphanumeric-csln
+
+options:
+  processing:
+    label:
+      preset: din
+
+citation:
+  template:
+    - number: citation-label
+  wrap: brackets
+
+bibliography:
+  template:
+    - number: citation-label
+      suffix: " "
+    - contributor: author
+      form: long
+    - date: issued
+      form: year
+      wrap: parentheses
+    - title: primary

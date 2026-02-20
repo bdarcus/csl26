@@ -1,12 +1,13 @@
 use super::*;
 use csl_legacy::csl_json::{DateVariable, Name, Reference as LegacyReference};
 use csln_core::options::{
-    AndOptions, ContributorConfig, DisplayAsSort, Processing, ShortenListOptions,
+    AndOptions, ContributorConfig, DisplayAsSort, LabelConfig, LabelPreset, Processing,
+    ShortenListOptions,
 };
 use csln_core::template::{
-    ContributorForm, ContributorRole, DateForm, DateVariable as TDateVar, Rendering,
-    TemplateComponent, TemplateContributor, TemplateDate, TemplateTitle, TitleType,
-    WrapPunctuation,
+    ContributorForm, ContributorRole, DateForm, DateVariable as TDateVar, NumberVariable,
+    Rendering, TemplateComponent, TemplateContributor, TemplateDate, TemplateNumber, TemplateTitle,
+    TitleType, WrapPunctuation,
 };
 use csln_core::{BibliographySpec, CitationSpec, StyleInfo};
 
@@ -1110,6 +1111,68 @@ fn test_citation_grouping_same_author() {
     assert!(
         !result.contains("; Kuhn"),
         "Should not have semicolon between same-author citations. Got: {}",
+        result
+    );
+}
+
+#[test]
+fn test_label_mode_does_not_group_by_author() {
+    let mut style = make_style();
+    style.options = Some(Config {
+        processing: Some(Processing::Label(LabelConfig {
+            preset: LabelPreset::Din,
+            ..Default::default()
+        })),
+        ..Default::default()
+    });
+    style.citation = Some(CitationSpec {
+        template: Some(vec![TemplateComponent::Number(TemplateNumber {
+            number: NumberVariable::CitationLabel,
+            ..Default::default()
+        })]),
+        wrap: Some(WrapPunctuation::Brackets),
+        ..Default::default()
+    });
+
+    let mut bib = make_bibliography();
+    bib.insert(
+        "kuhn1962b".to_string(),
+        Reference::from(LegacyReference {
+            id: "kuhn1962b".to_string(),
+            ref_type: "article-journal".to_string(),
+            author: Some(vec![Name::new("Kuhn", "Thomas S.")]),
+            title: Some("The Function of Measurement in Modern Physical Science".to_string()),
+            issued: Some(DateVariable::year(1962)),
+            ..Default::default()
+        }),
+    );
+
+    let processor = Processor::new(style, bib);
+    let result = processor
+        .process_citation(&Citation {
+            id: Some("c1".to_string()),
+            items: vec![
+                crate::reference::CitationItem {
+                    id: "kuhn1962b".to_string(),
+                    ..Default::default()
+                },
+                crate::reference::CitationItem {
+                    id: "kuhn1962".to_string(),
+                    ..Default::default()
+                },
+            ],
+            ..Default::default()
+        })
+        .unwrap();
+
+    assert!(
+        !result.contains(", Kuhn"),
+        "Label mode should not include grouped author text. Got: {}",
+        result
+    );
+    assert!(
+        result.contains(";"),
+        "Label mode should render separate labels for multi-item citations. Got: {}",
         result
     );
 }

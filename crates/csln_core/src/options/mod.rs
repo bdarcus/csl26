@@ -23,7 +23,8 @@ pub use dates::{DateConfig, DateConfigEntry};
 pub use localization::{Localize, MonthFormat, Scope};
 pub use multilingual::{MultilingualConfig, MultilingualMode, ScriptConfig};
 pub use processing::{
-    Disambiguation, Group, Processing, ProcessingCustom, Sort, SortKey, SortSpec,
+    Disambiguation, Group, LabelConfig, LabelParams, LabelPreset, Processing, ProcessingCustom,
+    Sort, SortKey, SortSpec,
 };
 pub use substitute::{Substitute, SubstituteConfig, SubstituteKey};
 

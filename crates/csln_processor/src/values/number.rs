@@ -51,6 +51,23 @@ impl ComponentValues for TemplateNumber {
                 _ => None,
             },
             NumberVariable::CitationNumber => hints.citation_number.map(|n| n.to_string()),
+            NumberVariable::CitationLabel => {
+                let config = match options.config.processing.as_ref() {
+                    Some(csln_core::options::Processing::Label(cfg)) => cfg,
+                    _ => return None,
+                };
+                let params = config.effective_params();
+                let base = crate::processor::labels::generate_base_label(reference, &params);
+                if base.is_empty() {
+                    return None;
+                }
+                let suffix = if hints.disamb_condition && hints.group_index > 0 {
+                    crate::values::int_to_letter(hints.group_index as u32).unwrap_or_default()
+                } else {
+                    String::new()
+                };
+                Some(format!("{}{}", base, suffix))
+            }
             _ => None,
         };
 
