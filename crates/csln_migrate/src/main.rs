@@ -256,48 +256,69 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         );
     }
 
-    let (new_bib, type_templates) = if let Some(ref resolved_bib) = resolved.bibliography {
-        let inferred_bib = matches!(
-            resolved_bib.source,
-            template_resolver::TemplateSource::InferredCached(_)
-                | template_resolver::TemplateSource::InferredLive
-        );
+    let (mut new_bib, mut type_templates, inferred_bib_source) =
+        if let Some(ref resolved_bib) = resolved.bibliography {
+            let inferred_bib = matches!(
+                resolved_bib.source,
+                template_resolver::TemplateSource::InferredCached(_)
+                    | template_resolver::TemplateSource::InferredLive
+            );
 
-        // When bibliography comes from inferred output, merge selective
-        // branch-derived type templates from the XML fallback path. This keeps
-        // inferred global ordering while restoring high-value type branches
-        // (e.g., patent/webpage/entry-encyclopedia) that frequently need full
-        // template specialization.
-        let merged_type_templates = if inferred_bib {
-            xml_fallback
-                .as_ref()
-                .and_then(|(_, type_templates, _)| type_templates.clone())
-                .map(|type_templates| {
-                    type_templates
-                        .into_iter()
-                        .filter(|(selector, type_template)| {
-                            selector.type_names().iter().any(|type_name| {
-                                should_merge_inferred_type_template(
-                                    type_name,
-                                    &resolved_bib.template,
-                                    type_template,
-                                )
+            // When bibliography comes from inferred output, merge selective
+            // branch-derived type templates from the XML fallback path. This keeps
+            // inferred global ordering while restoring high-value type branches
+            // (e.g., patent/webpage/entry-encyclopedia/legal-case) that frequently
+            // need full template specialization.
+            let merged_type_templates = if inferred_bib {
+                xml_fallback
+                    .as_ref()
+                    .and_then(|(_, type_templates, _)| type_templates.clone())
+                    .map(|type_templates| {
+                        type_templates
+                            .into_iter()
+                            .filter(|(selector, type_template)| {
+                                selector.type_names().iter().any(|type_name| {
+                                    should_merge_inferred_type_template(
+                                        type_name,
+                                        &resolved_bib.template,
+                                        type_template,
+                                    )
+                                })
                             })
-                        })
-                        .collect::<std::collections::HashMap<_, _>>()
-                })
-                .filter(|m| !m.is_empty())
+                            .collect::<std::collections::HashMap<_, _>>()
+                    })
+                    .filter(|m| !m.is_empty())
+            } else {
+                None
+            };
+
+            (
+                resolved_bib.template.clone(),
+                merged_type_templates,
+                inferred_bib,
+            )
         } else {
-            None
+            let (new_bib, type_templates, _) = xml_fallback
+                .as_ref()
+                .expect("XML fallback must exist when bibliography is unresolved");
+            (new_bib.clone(), type_templates.clone(), false)
         };
 
-        (resolved_bib.template.clone(), merged_type_templates)
-    } else {
-        let (new_bib, type_templates, _) = xml_fallback
-            .as_ref()
-            .expect("XML fallback must exist when bibliography is unresolved");
-        (new_bib.clone(), type_templates.clone())
-    };
+    if inferred_bib_source {
+        // Output-driven inference can leak literal sample years into prefixes
+        // (e.g., " 2023 " in titles, "; 2006; " in page prefixes).
+        // Strip those artifacts while keeping component structure intact.
+        for component in &mut new_bib {
+            scrub_inferred_literal_artifacts(component);
+        }
+        if let Some(type_templates) = type_templates.as_mut() {
+            for template in type_templates.values_mut() {
+                for component in template {
+                    scrub_inferred_literal_artifacts(component);
+                }
+            }
+        }
+    }
 
     let mut new_cit = if let Some(ref resolved_cit) = resolved.citation {
         resolved_cit.template.clone()
@@ -1150,12 +1171,152 @@ fn should_merge_inferred_type_template(
         // the candidate is not carrying parent-title chains better left in the
         // shared inferred template.
         "webpage" => {
-            !template_targets_type(inferred_template, type_name)
+            (!template_targets_type(inferred_template, type_name)
+                || !template_has_accessed_date(inferred_template))
                 && template_has_accessed_date(candidate_template)
+                && !template_has_parent_title(candidate_template)
+        }
+        // Case-law citations are structurally distinct in many numeric styles
+        // and often need dedicated suppression/order not recoverable from the
+        // shared inferred template alone.
+        "legal-case" | "legal_case" => {
+            !template_targets_type(inferred_template, type_name)
                 && !template_has_parent_title(candidate_template)
         }
         _ => false,
     }
+}
+
+fn scrub_inferred_literal_artifacts(component: &mut TemplateComponent) {
+    match component {
+        TemplateComponent::Title(title) => {
+            if title.title == TitleType::Primary {
+                if let Some(prefix) = title.rendering.prefix.as_ref() {
+                    if let Some(cleaned) = scrub_year_only_prefix(prefix) {
+                        title.rendering.prefix = Some(cleaned);
+                    }
+                }
+            }
+            if let Some(overrides) = title.overrides.as_mut() {
+                for override_value in overrides.values_mut() {
+                    scrub_component_override_literals(override_value);
+                }
+            }
+        }
+        TemplateComponent::Number(number) => {
+            if number.number == csln_core::template::NumberVariable::Pages {
+                if let Some(prefix) = number.rendering.prefix.as_ref() {
+                    if let Some(cleaned) = scrub_pages_year_literal_prefix(prefix) {
+                        number.rendering.prefix = Some(cleaned);
+                    }
+                }
+            }
+            if let Some(overrides) = number.overrides.as_mut() {
+                for override_value in overrides.values_mut() {
+                    scrub_component_override_literals(override_value);
+                }
+            }
+        }
+        TemplateComponent::List(list) => {
+            for item in &mut list.items {
+                scrub_inferred_literal_artifacts(item);
+            }
+            if let Some(overrides) = list.overrides.as_mut() {
+                for override_value in overrides.values_mut() {
+                    scrub_component_override_literals(override_value);
+                }
+            }
+        }
+        TemplateComponent::Contributor(contributor) => {
+            if let Some(overrides) = contributor.overrides.as_mut() {
+                for override_value in overrides.values_mut() {
+                    scrub_component_override_literals(override_value);
+                }
+            }
+        }
+        TemplateComponent::Date(date) => {
+            if let Some(overrides) = date.overrides.as_mut() {
+                for override_value in overrides.values_mut() {
+                    scrub_component_override_literals(override_value);
+                }
+            }
+        }
+        TemplateComponent::Variable(variable) => {
+            if let Some(overrides) = variable.overrides.as_mut() {
+                for override_value in overrides.values_mut() {
+                    scrub_component_override_literals(override_value);
+                }
+            }
+        }
+        TemplateComponent::Term(term) => {
+            if let Some(overrides) = term.overrides.as_mut() {
+                for override_value in overrides.values_mut() {
+                    scrub_component_override_literals(override_value);
+                }
+            }
+        }
+        _ => {}
+    }
+}
+
+fn scrub_component_override_literals(override_value: &mut csln_core::template::ComponentOverride) {
+    match override_value {
+        csln_core::template::ComponentOverride::Component(component) => {
+            scrub_inferred_literal_artifacts(component)
+        }
+        csln_core::template::ComponentOverride::Rendering(rendering) => {
+            if let Some(prefix) = rendering.prefix.as_ref() {
+                if let Some(cleaned) = scrub_year_only_prefix(prefix) {
+                    rendering.prefix = Some(cleaned);
+                } else if let Some(cleaned) = scrub_pages_year_literal_prefix(prefix) {
+                    rendering.prefix = Some(cleaned);
+                }
+            }
+        }
+    }
+}
+
+fn scrub_year_only_prefix(prefix: &str) -> Option<String> {
+    let trimmed = prefix.trim();
+    if !is_four_digit_year(trimmed) {
+        return None;
+    }
+
+    if prefix.starts_with(' ') && prefix.ends_with(' ') {
+        Some(" ".to_string())
+    } else {
+        None
+    }
+}
+
+fn scrub_pages_year_literal_prefix(prefix: &str) -> Option<String> {
+    if let Some(inner) = prefix
+        .strip_prefix("; ")
+        .and_then(|s| s.strip_suffix("; "))
+        .filter(|s| is_four_digit_year(s.trim()))
+    {
+        let _ = inner;
+        return Some("; ".to_string());
+    }
+
+    if let Some(inner) = prefix
+        .strip_prefix(". ")
+        .and_then(|s| s.strip_suffix(": "))
+        .filter(|s| is_four_digit_year(s.trim()))
+    {
+        let _ = inner;
+        return Some(": ".to_string());
+    }
+
+    None
+}
+
+fn is_four_digit_year(value: &str) -> bool {
+    value.len() == 4
+        && value.chars().all(|ch| ch.is_ascii_digit())
+        && value
+            .parse::<u16>()
+            .is_ok_and(|year| (1800..=2100).contains(&year))
 }
 
 fn template_targets_type(template: &[TemplateComponent], target_type: &str) -> bool {
