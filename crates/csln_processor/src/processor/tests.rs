@@ -1484,6 +1484,46 @@ fn test_numeric_integral_with_multiple_items() {
 }
 
 #[test]
+fn test_label_integral_citation_uses_author_text() {
+    use csln_core::options::Processing;
+
+    let mut style = make_style();
+    style.options = Some(Config {
+        processing: Some(Processing::Label(LabelConfig {
+            preset: LabelPreset::Din,
+            ..Default::default()
+        })),
+        ..Default::default()
+    });
+    style.citation = Some(csln_core::CitationSpec {
+        template: Some(vec![TemplateComponent::Number(
+            csln_core::template::TemplateNumber {
+                number: csln_core::template::NumberVariable::CitationLabel,
+                ..Default::default()
+            },
+        )]),
+        wrap: Some(WrapPunctuation::Brackets),
+        ..Default::default()
+    });
+
+    let bib = make_bibliography();
+    let processor = Processor::new(style, bib);
+
+    let citation = Citation {
+        id: Some("c1".to_string()),
+        mode: csln_core::citation::CitationMode::Integral,
+        items: vec![crate::reference::CitationItem {
+            id: "kuhn1962".to_string(),
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+
+    let result = processor.process_citation(&citation).unwrap();
+    assert_eq!(result, "Kuhn");
+}
+
+#[test]
 fn test_citation_visibility_modifiers() {
     use csln_core::citation::CitationMode;
     use csln_core::citation::ItemVisibility;
