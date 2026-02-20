@@ -42,6 +42,11 @@ const STYLE_METADATA = {
   'ieee': { dependents: 176, format: 'numeric' },
   'nlm-citation-sequence-superscript': { dependents: 121, format: 'numeric' },
   'nlm-citation-sequence': { dependents: 116, format: 'numeric' },
+  'karger-journals': { dependents: 85, format: 'numeric' },
+  'institute-of-physics-numeric': { dependents: 82, format: 'numeric' },
+  'thieme-german': { dependents: 74, format: 'numeric' },
+  'mary-ann-liebert-vancouver': { dependents: 72, format: 'numeric' },
+  'biomed-central': { dependents: 66, format: 'numeric' },
   'chicago-notes': { dependents: 5, format: 'note', hasBibliography: false },
 };
 
