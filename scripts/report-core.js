@@ -1139,6 +1139,18 @@ ${generateDetailContent(style)}
     <section class="py-12 px-6">
         <div class="max-w-7xl mx-auto">
             <div class="rounded-xl border border-slate-200 overflow-hidden">
+                <div class="px-6 py-4 bg-slate-50 border-b border-slate-200 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+                    <label for="style-search" class="text-xs font-semibold text-slate-700">Search Styles</label>
+                    <div class="flex items-center gap-3 w-full sm:w-auto">
+                        <input
+                            id="style-search"
+                            type="search"
+                            placeholder="Filter by style name..."
+                            class="w-full sm:w-80 rounded-md border-slate-300 text-sm focus:border-primary focus:ring-primary"
+                        />
+                        <span id="style-search-count" class="text-xs text-slate-500 font-mono whitespace-nowrap"></span>
+                    </div>
+                </div>
                 <table class="w-full">
                     <thead class="bg-slate-50 border-b border-slate-200">
                         <tr>
@@ -1433,6 +1445,7 @@ function generateHtmlFooter() {
 
     <script>
         const sortState = { key: null, direction: 1 };
+        const filterState = { query: '' };
 
         function toggleAccordion(contentId) {
             const content = document.getElementById(contentId);
@@ -1504,6 +1517,51 @@ function generateHtmlFooter() {
 
             updateSortIndicators(key, sortState.direction);
         }
+
+        function updateFilterCount(visible, total) {
+            const count = document.getElementById('style-search-count');
+            if (!count) return;
+            count.textContent = visible === total
+                ? total + ' styles'
+                : visible + ' of ' + total + ' styles';
+        }
+
+        function applyStyleFilter() {
+            const tbody = document.querySelector('table tbody');
+            if (!tbody) return;
+
+            const summaryRows = Array.from(tbody.querySelectorAll('tr.accordion-toggle'));
+            const query = filterState.query;
+            let visible = 0;
+
+            for (const summary of summaryRows) {
+                const detailId = summary.dataset.detailId;
+                const detail = detailId ? document.getElementById(detailId) : null;
+                const haystack = (summary.dataset.styleName || '').toLowerCase();
+                const isMatch = !query || haystack.includes(query);
+
+                summary.style.display = isMatch ? '' : 'none';
+                if (detail) {
+                    detail.style.display = isMatch ? '' : 'none';
+                    if (!isMatch) detail.classList.remove('active');
+                }
+                if (isMatch) visible += 1;
+            }
+
+            updateFilterCount(visible, summaryRows.length);
+        }
+
+        function initStyleSearch() {
+            const input = document.getElementById('style-search');
+            if (!input) return;
+            input.addEventListener('input', (event) => {
+                filterState.query = String(event.target.value || '').trim().toLowerCase();
+                applyStyleFilter();
+            });
+            applyStyleFilter();
+        }
+
+        document.addEventListener('DOMContentLoaded', initStyleSearch);
     </script>
 
 </body>
