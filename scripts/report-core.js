@@ -26,28 +26,33 @@ const CUSTOM_TAG_SCHEMA = yaml.DEFAULT_SCHEMA.extend([
   }),
 ]);
 
-const STYLE_METADATA = {
-  'apa-7th': { source: 'apa', dependents: 783, format: 'author-date' },
-  'elsevier-with-titles': { dependents: 672, format: 'numeric' },
-  'elsevier-harvard': { dependents: 665, format: 'author-date' },
-  'elsevier-vancouver': { dependents: 502, format: 'numeric' },
-  'springer-vancouver-brackets': { dependents: 472, format: 'numeric' },
-  'springer-basic-author-date': { dependents: 460, format: 'author-date' },
-  'springer-basic-brackets': { dependents: 352, format: 'numeric' },
-  'springer-socpsych-author-date': { dependents: 317, format: 'author-date' },
-  'american-medical-association': { dependents: 293, format: 'numeric' },
-  'taylor-and-francis-chicago-author-date': { dependents: 234, format: 'author-date' },
-  'springer-mathphys-brackets': { dependents: 201, format: 'numeric' },
-  'multidisciplinary-digital-publishing-institute': { dependents: 180, format: 'numeric' },
-  'ieee': { dependents: 176, format: 'numeric' },
-  'nlm-citation-sequence-superscript': { dependents: 121, format: 'numeric' },
-  'nlm-citation-sequence': { dependents: 116, format: 'numeric' },
-  'karger-journals': { dependents: 85, format: 'numeric' },
-  'institute-of-physics-numeric': { dependents: 82, format: 'numeric' },
-  'thieme-german': { dependents: 74, format: 'numeric' },
-  'mary-ann-liebert-vancouver': { dependents: 72, format: 'numeric' },
-  'biomed-central': { dependents: 66, format: 'numeric' },
-  'chicago-notes': { dependents: 5, format: 'note', hasBibliography: false },
+const LEGACY_SOURCE_OVERRIDES = {
+  'apa-7th': 'apa',
+  'din-alphanumeric': 'din-1505-2-alphanumeric',
+};
+
+const KNOWN_DEPENDENTS = {
+  'apa-7th': 783,
+  'elsevier-with-titles': 672,
+  'elsevier-harvard': 665,
+  'elsevier-vancouver': 502,
+  'springer-vancouver-brackets': 472,
+  'springer-basic-author-date': 460,
+  'springer-basic-brackets': 352,
+  'springer-socpsych-author-date': 317,
+  'american-medical-association': 293,
+  'taylor-and-francis-chicago-author-date': 234,
+  'springer-mathphys-brackets': 201,
+  'multidisciplinary-digital-publishing-institute': 180,
+  'ieee': 176,
+  'nlm-citation-sequence-superscript': 121,
+  'nlm-citation-sequence': 116,
+  'karger-journals': 85,
+  'institute-of-physics-numeric': 82,
+  'thieme-german': 74,
+  'mary-ann-liebert-vancouver': 72,
+  'biomed-central': 66,
+  'chicago-notes': 5,
 };
 
 const TOTAL_DEPENDENTS = 7987;
@@ -129,21 +134,79 @@ function discoverCoreStyles() {
     throw new Error(`Core styles directory not found: ${stylesRoot}`);
   }
 
-  return Object.entries(STYLE_METADATA)
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([name, meta]) => {
-      const stylePath = path.join(stylesRoot, `${name}.yaml`);
-      if (!fs.existsSync(stylePath)) {
-        throw new Error(`Core style YAML not found: ${stylePath}`);
-      }
-      return {
-        name,
-        sourceName: meta.source || name,
-        dependents: meta.dependents ?? null,
-        format: meta.format || 'unknown',
-        hasBibliography: meta.hasBibliography ?? true,
-      };
-    });
+  const styleFiles = fs.readdirSync(stylesRoot)
+    .filter((entry) => entry.endsWith('.yaml'))
+    .sort((a, b) => a.localeCompare(b));
+
+  if (styleFiles.length === 0) {
+    throw new Error(`No style YAML files found in: ${stylesRoot}`);
+  }
+
+  return styleFiles.map((filename) => {
+    const stylePath = path.join(stylesRoot, filename);
+    const name = path.basename(filename, '.yaml');
+    let styleData = null;
+
+    try {
+      styleData = yaml.load(fs.readFileSync(stylePath, 'utf8'), { schema: CUSTOM_TAG_SCHEMA });
+    } catch {
+      styleData = null;
+    }
+
+    return {
+      name,
+      sourceName: LEGACY_SOURCE_OVERRIDES[name] || name,
+      dependents: KNOWN_DEPENDENTS[name] ?? null,
+      format: inferStyleFormat(styleData),
+      hasBibliography: hasBibliographyTemplate(styleData),
+    };
+  });
+}
+
+function inferStyleFormat(styleData) {
+  const processing = styleData?.options?.processing;
+  if (typeof processing === 'string') {
+    return processing;
+  }
+  if (processing && typeof processing === 'object') {
+    if (Object.prototype.hasOwnProperty.call(processing, 'note')) {
+      return 'note';
+    }
+    if (Object.prototype.hasOwnProperty.call(processing, 'author-date')) {
+      return 'author-date';
+    }
+    if (
+      Object.prototype.hasOwnProperty.call(processing, 'label') ||
+      Object.prototype.hasOwnProperty.call(processing, 'numeric')
+    ) {
+      return 'numeric';
+    }
+  }
+
+  const citation = styleData?.citation || {};
+  const candidateTemplates = [
+    citation.template,
+    citation.integral?.template,
+    citation['non-integral']?.template,
+  ].filter(Array.isArray);
+  const usesCitationNumbers = candidateTemplates.some((template) =>
+    flattenTemplateComponents(template).some((component) => Boolean(component?.number))
+  );
+
+  if (usesCitationNumbers) return 'numeric';
+  return 'unknown';
+}
+
+function hasBibliographyTemplate(styleData) {
+  const bibliography = styleData?.bibliography;
+  if (!bibliography || typeof bibliography !== 'object') {
+    return false;
+  }
+
+  const hasTemplate = Array.isArray(bibliography.template) && bibliography.template.length > 0;
+  const typeTemplates = bibliography['type-templates'];
+  const hasTypeTemplates = Boolean(typeTemplates && Object.keys(typeTemplates).length > 0);
+  return hasTemplate || hasTypeTemplates;
 }
 
 /**
@@ -886,7 +949,7 @@ function generateHtmlHeader(report) {
                     <h1 class="text-4xl md:text-5xl font-mono font-bold tracking-tight text-slate-900 mb-2">
                         Style Compatibility Report
                     </h1>
-                    <p class="text-slate-500">Compatibility metrics for core styles in <code>styles/</code></p>
+                    <p class="text-slate-500">Compatibility metrics for styles in <code>styles/</code></p>
                 </div>
             </div>
             <div class="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
