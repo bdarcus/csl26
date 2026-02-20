@@ -257,7 +257,27 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     let (new_bib, type_templates) = if let Some(ref resolved_bib) = resolved.bibliography {
-        (resolved_bib.template.clone(), None)
+        let inferred_bib = matches!(
+            resolved_bib.source,
+            template_resolver::TemplateSource::InferredCached(_)
+                | template_resolver::TemplateSource::InferredLive
+        );
+
+        // When bibliography comes from inferred output, merge selective
+        // branch-derived type templates from the XML fallback path. This keeps
+        // inferred global ordering while restoring high-value type branches
+        // (e.g., patent/webpage/entry-encyclopedia) that frequently need full
+        // template specialization.
+        let merged_type_templates = if inferred_bib {
+            xml_fallback
+                .as_ref()
+                .and_then(|(_, type_templates, _)| type_templates.clone())
+                .filter(|m| !m.is_empty())
+        } else {
+            None
+        };
+
+        (resolved_bib.template.clone(), merged_type_templates)
     } else {
         let (new_bib, type_templates, _) = xml_fallback
             .as_ref()

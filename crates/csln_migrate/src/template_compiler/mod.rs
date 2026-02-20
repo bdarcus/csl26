@@ -819,14 +819,62 @@ impl TemplateCompiler {
         // Fix duplicate variables (e.g., date appearing both in List and standalone)
         self.fix_duplicate_variables(&mut default_template);
 
-        // Type-specific template generation is disabled for now.
-        // Future work: properly merge common components with type-specific branches.
+        // Generate selective type templates for high-impact outlier types where
+        // branch-specific structure is often materially different from the
+        // default template (and where suppress-only overrides are insufficient).
+        //
+        // These templates are intentionally scoped to limit migration noise.
         let type_templates: std::collections::HashMap<
             csln_core::template::TypeSelector,
             Vec<TemplateComponent>,
-        > = std::collections::HashMap::new();
+        > = self.generate_selective_type_templates(nodes, &default_template);
 
         (default_template, type_templates)
+    }
+
+    fn generate_selective_type_templates(
+        &self,
+        nodes: &[CslnNode],
+        default_template: &[TemplateComponent],
+    ) -> std::collections::HashMap<csln_core::template::TypeSelector, Vec<TemplateComponent>> {
+        use csln_core::template::TypeSelector;
+
+        let mut candidates = self.collect_types_with_branches(nodes);
+        if !candidates.contains(&ItemType::EntryEncyclopedia) {
+            candidates.push(ItemType::EntryEncyclopedia);
+        }
+
+        candidates.retain(|t| {
+            matches!(
+                t,
+                ItemType::Patent | ItemType::Webpage | ItemType::EntryEncyclopedia
+            )
+        });
+        candidates.sort_by_key(|t| self.item_type_to_string(t));
+        candidates.dedup_by_key(|t| self.item_type_to_string(t));
+
+        let mut type_templates = std::collections::HashMap::new();
+        for item_type in candidates {
+            let mut type_template = self.compile_for_type(nodes, &item_type);
+            if type_template.is_empty() {
+                continue;
+            }
+
+            crate::passes::deduplicate::deduplicate_numbers_in_lists(&mut type_template);
+            crate::passes::deduplicate::deduplicate_dates_in_lists(&mut type_template);
+            self.fix_duplicate_variables(&mut type_template);
+
+            if type_template == default_template {
+                continue;
+            }
+
+            type_templates.insert(
+                TypeSelector::Single(self.item_type_to_string(&item_type)),
+                type_template,
+            );
+        }
+
+        type_templates
     }
 
     /// Fix duplicate variables that appear both in Lists and as standalone components.
