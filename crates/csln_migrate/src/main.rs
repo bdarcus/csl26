@@ -4,8 +4,8 @@ use csl_legacy::{
 };
 use csln_core::{
     template::{
-        DelimiterPunctuation, Rendering, SimpleVariable, TemplateComponent, TemplateList,
-        TemplateVariable, WrapPunctuation,
+        DateVariable, DelimiterPunctuation, Rendering, SimpleVariable, TemplateComponent,
+        TemplateList, TemplateVariable, TitleType, TypeSelector, WrapPunctuation,
     },
     BibliographySpec, CitationSpec, Style, StyleInfo,
 };
@@ -272,6 +272,20 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             xml_fallback
                 .as_ref()
                 .and_then(|(_, type_templates, _)| type_templates.clone())
+                .map(|type_templates| {
+                    type_templates
+                        .into_iter()
+                        .filter(|(selector, type_template)| {
+                            selector.type_names().iter().any(|type_name| {
+                                should_merge_inferred_type_template(
+                                    type_name,
+                                    &resolved_bib.template,
+                                    type_template,
+                                )
+                            })
+                        })
+                        .collect::<std::collections::HashMap<_, _>>()
+                })
                 .filter(|m| !m.is_empty())
         } else {
             None
@@ -1112,4 +1126,110 @@ fn normalize_contributor_form_to_short(template: &mut [TemplateComponent]) -> bo
         }
     }
     changed
+}
+
+fn should_merge_inferred_type_template(
+    type_name: &str,
+    inferred_template: &[TemplateComponent],
+    candidate_template: &[TemplateComponent],
+) -> bool {
+    match type_name {
+        // Patent branches can require structural divergence in numeric styles,
+        // but keep only compact candidates to avoid overfitting from verbose
+        // fallback templates that are better handled by the inferred default.
+        "patent" => candidate_template.len() <= 6,
+        // Only merge encyclopedia fallback templates when inferred output does
+        // not already carry entry-encyclopedia overrides and the candidate is
+        // compact (no parent title chain).
+        "entry-encyclopedia" => {
+            !template_targets_type(inferred_template, type_name)
+                && !template_has_parent_title(candidate_template)
+        }
+        // Webpage templates are kept only when inferred output does not already
+        // target webpages, the candidate includes accessed-date structure, and
+        // the candidate is not carrying parent-title chains better left in the
+        // shared inferred template.
+        "webpage" => {
+            !template_targets_type(inferred_template, type_name)
+                && template_has_accessed_date(candidate_template)
+                && !template_has_parent_title(candidate_template)
+        }
+        _ => false,
+    }
+}
+
+fn template_targets_type(template: &[TemplateComponent], target_type: &str) -> bool {
+    template
+        .iter()
+        .any(|component| component_targets_type(component, target_type))
+}
+
+fn component_targets_type(component: &TemplateComponent, target_type: &str) -> bool {
+    let overrides = match component {
+        TemplateComponent::Contributor(c) => c.overrides.as_ref(),
+        TemplateComponent::Date(d) => d.overrides.as_ref(),
+        TemplateComponent::Title(t) => t.overrides.as_ref(),
+        TemplateComponent::Number(n) => n.overrides.as_ref(),
+        TemplateComponent::Variable(v) => v.overrides.as_ref(),
+        TemplateComponent::List(l) => l.overrides.as_ref(),
+        TemplateComponent::Term(t) => t.overrides.as_ref(),
+        _ => None,
+    };
+
+    if let Some(overrides) = overrides {
+        if overrides
+            .keys()
+            .any(|selector| selector.matches(target_type))
+        {
+            return true;
+        }
+    }
+
+    if let TemplateComponent::List(list) = component {
+        return list
+            .items
+            .iter()
+            .any(|item| component_targets_type(item, target_type));
+    }
+
+    false
+}
+
+fn template_has_parent_title(template: &[TemplateComponent]) -> bool {
+    template.iter().any(component_has_parent_title)
+}
+
+fn component_has_parent_title(component: &TemplateComponent) -> bool {
+    match component {
+        TemplateComponent::Title(t) => {
+            t.title == TitleType::ParentMonograph || t.title == TitleType::ParentSerial
+        }
+        TemplateComponent::List(list) => list.items.iter().any(component_has_parent_title),
+        _ => false,
+    }
+}
+
+fn template_has_accessed_date(template: &[TemplateComponent]) -> bool {
+    template.iter().any(component_has_accessed_date)
+}
+
+fn component_has_accessed_date(component: &TemplateComponent) -> bool {
+    match component {
+        TemplateComponent::Date(d) => d.date == DateVariable::Accessed,
+        TemplateComponent::List(list) => list.items.iter().any(component_has_accessed_date),
+        _ => false,
+    }
+}
+
+trait TypeSelectorNames {
+    fn type_names(&self) -> Vec<String>;
+}
+
+impl TypeSelectorNames for TypeSelector {
+    fn type_names(&self) -> Vec<String> {
+        match self {
+            TypeSelector::Single(name) => vec![name.clone()],
+            TypeSelector::Multiple(names) => names.clone(),
+        }
+    }
 }
