@@ -46,10 +46,28 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add docs/compat.html
-          if git diff --staged --quiet; then
-            echo "compat.html unchanged, skipping commit"
+
+          # Avoid metadata-only churn (Generated timestamp / commit marker).
+          cp docs/compat.html /tmp/compat.new.html
+          if git cat-file -e HEAD:docs/compat.html 2>/dev/null; then
+            git show HEAD:docs/compat.html > /tmp/compat.old.html
           else
+            touch /tmp/compat.old.html
+          fi
+
+          sed -E \
+            -e 's/Generated: .* GMT/Generated: <normalized>/g' \
+            -e 's/Commit: [0-9a-f]{7,40}/Commit: <normalized>/g' \
+            /tmp/compat.new.html > /tmp/compat.new.norm.html
+          sed -E \
+            -e 's/Generated: .* GMT/Generated: <normalized>/g' \
+            -e 's/Commit: [0-9a-f]{7,40}/Commit: <normalized>/g' \
+            /tmp/compat.old.html > /tmp/compat.old.norm.html
+
+          if diff -q /tmp/compat.old.norm.html /tmp/compat.new.norm.html >/dev/null; then
+            echo "compat report content unchanged (metadata-only diff), skipping commit"
+          else
+            git add docs/compat.html
             git commit -m "chore(ci): update compat report"
             git pull --rebase origin main
             git push
