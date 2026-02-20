@@ -315,8 +315,7 @@
                     <div class="mb-8">
                         <h3 class="text-lg font-semibold text-slate-900 mb-3">Minimal Style Skeleton</h3>
                         <div class="bg-slate-900 rounded-lg p-6 overflow-x-auto">
-                            <pre class="font-mono text-sm text-slate-300 leading-relaxed"><span class="text-slate-500"># Recommended: Add YAML language server support</span>
-<span class="text-slate-500"># yaml-language-server: $schema=https://bdarcus.github.io/csl26/csln.schema.json</span>
+                            <pre class="font-mono text-sm text-slate-300 leading-relaxed"><span class="text-slate-500"># yaml-language-server: $schema=https://bdarcus.github.io/csl26/schemas/style.json</span>
 
 <span class="text-indigo-400">info</span>:
   <span class="text-primary">title</span>: <span class="text-emerald-400">"My Style Name"</span>
@@ -337,6 +336,30 @@
     - <span class="text-primary">contributor</span>: <span class="text-emerald-400">author</span>
     - <span class="text-primary">date</span>: <span class="text-emerald-400">issued</span>
     - <span class="text-primary">title</span>: <span class="text-emerald-400">primary</span></pre>
+                        </div>
+                    </div>
+
+                    <!-- IDE Integration Callout -->
+                    <div class="mb-8 bg-blue-50 border border-blue-200 rounded-lg p-5">
+                        <div class="flex items-start gap-3">
+                            <span class="material-icons text-blue-600 mt-0.5">tips_and_updates</span>
+                            <div class="flex-1">
+                                <h4 class="font-semibold text-blue-900 mb-1">Editor autocomplete and validation</h4>
+                                <p class="text-blue-800 text-sm mb-3">
+                                    The <code class="font-mono bg-blue-100 px-1 rounded">yaml-language-server</code> comment in the skeleton above enables
+                                    full autocomplete and inline validation in editors that support the
+                                    <a href="https://github.com/redhat-developer/yaml-language-server" class="underline hover:text-blue-600">YAML Language Server protocol</a>.
+                                    Supported editors include <strong>VS Code</strong> with the Red Hat YAML extension,
+                                    <strong>Helix</strong>, and <strong>Zed</strong>.
+                                </p>
+                                <p class="text-blue-800 text-sm mb-3">Add this as the first line of any CSLN style file:</p>
+                                <div class="bg-slate-900 rounded p-3 overflow-x-auto">
+                                    <pre class="font-mono text-xs text-emerald-400"># yaml-language-server: $schema=https://bdarcus.github.io/csl26/schemas/style.json</pre>
+                                </div>
+                                <p class="text-blue-800 text-sm mt-3">
+                                    See <a href="../index.html#schemas" class="underline hover:text-blue-600">Schema &amp; Editor Integration</a> on the home page for the full schema list and setup instructions.
+                                </p>
+                            </div>
                         </div>
                     </div>
 
