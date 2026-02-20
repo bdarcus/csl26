@@ -58,10 +58,12 @@ jobs:
           sed -E \
             -e 's/Generated: .* GMT/Generated: <normalized>/g' \
             -e 's/Commit: [0-9a-f]{7,40}/Commit: <normalized>/g' \
+            -e 's#<span>[0-9a-f]{7,40}</span>#<span><normalized></span>#g' \
             /tmp/compat.new.html > /tmp/compat.new.norm.html
           sed -E \
             -e 's/Generated: .* GMT/Generated: <normalized>/g' \
             -e 's/Commit: [0-9a-f]{7,40}/Commit: <normalized>/g' \
+            -e 's#<span>[0-9a-f]{7,40}</span>#<span><normalized></span>#g' \
             /tmp/compat.old.html > /tmp/compat.old.norm.html
 
           if diff -q /tmp/compat.old.norm.html /tmp/compat.new.norm.html >/dev/null; then
