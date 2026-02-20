@@ -10,24 +10,24 @@
 #
 version: ""
 info:
-  title: "NLM Style Guide (Vancouver): Citing Medicine 2nd edition (citation-sequence)"
-  id: http://www.zotero.org/styles/nlm-citation-sequence
+  title: Institute of Physics (numeric)
+  id: http://www.zotero.org/styles/institute-of-physics-numeric
+  default-locale: en-US
 options:
   substitute:
-    contributor-role-form: long
     template:
       - editor
   processing: numeric
   contributors:
     display-as-sort: all
-    initialize-with: ""
+    initialize-with: " "
     shorten:
-      min: 7
-      use-first: 6
+      min: 99
+      use-first: 98
       and-others: et-al
       delimiter-precedes-last: contextual
     delimiter: ", "
-    delimiter-precedes-last: always
+    delimiter-precedes-last: never
     demote-non-dropping-particle: sort-only
     sort-separator: " "
   dates:
@@ -35,74 +35,47 @@ options:
     uncertainty-marker: "?"
     approximation-marker: "ca. "
     range-delimiter: –
+  titles:
+    monograph:
+      emph: true
+    periodical:
+      emph: true
+    serial:
+      emph: true
   page-range-format: minimal
   bibliography:
-    entry-suffix: .
-    separator: ". "
+    separator: " "
   punctuation-in-quote: true
 citation:
   template:
     - number: citation-number
-  wrap: parentheses
+  wrap: brackets
   multi-cite-delimiter: ","
 bibliography:
   options:
     contributors:
       display-as-sort: all
-      initialize-with: ""
+      initialize-with: " "
       shorten:
-        min: 7
-        use-first: 6
+        min: 99
+        use-first: 98
         and-others: et-al
         delimiter-precedes-last: contextual
       delimiter: ", "
-      delimiter-precedes-last: always
+      delimiter-precedes-last: never
       sort-separator: " "
   template:
     - contributor: author
       form: long
       name-order: family-first
-      shorten:
-        min: 8
-        use-first: 6
     - title: primary
-      prefix: " "
-    - items:
-        - contributor: editor
-          form: verb
-          overrides:
-            chapter:
-              prefix: "on "
-          name-order: given-first
-        - title: parent-monograph
+      prefix: " 2023 "
+    - title: parent-monograph
+      emph: true
     - title: parent-serial
-    - date: issued
-      form: year
-      overrides:
-        article-journal:
-          suppress: true
-        webpage:
-          suppress: true
-        article-newspaper:
-          suppress: true
-        article-magazine:
-          suppress: true
-        dataset:
-          suppress: true
-    - items:
-        - number: volume
-        - number: issue
-          wrap: parentheses
-          overrides: {}
+      emph: true
+    - number: volume
+    - number: pages
     - variable: publisher-place
     - variable: publisher
       prefix: ": "
-    - number: pages
-      overrides:
-        chapter:
-          prefix: "pp. "
-        paper-conference:
-          prefix: "pp. "
-        entry-encyclopedia:
-          prefix: "pp. "
-    - variable: url
