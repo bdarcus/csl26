@@ -200,14 +200,23 @@ function renderWithCslnProcessor(stylePath, testItems, testCitations) {
   let cslnStylePath = null;
   if (fs.existsSync(stylesDir)) {
     const files = fs.readdirSync(stylesDir);
+    const exactMatch = `${styleName}.yaml`;
+
+    // Prefer exact filename matches before any prefix matching.
+    if (files.includes(exactMatch)) {
+      cslnStylePath = path.join(stylesDir, exactMatch);
+    }
+
+    if (!cslnStylePath) {
     // Look for exact match or base name match (e.g. apa-7th matches apa)
     const baseName = styleName.replace(/-\d+th$/, '').replace(/-\d+$/, '');
     const found = files.find(f =>
       f.endsWith('.yaml') &&
-      (f === `${styleName}.yaml` || f.startsWith(`${styleName}-`) || f.startsWith(`${baseName}-`))
+      (f.startsWith(`${styleName}-`) || f.startsWith(`${baseName}-`))
     );
     if (found) {
       cslnStylePath = path.join(stylesDir, found);
+    }
     }
   }
 

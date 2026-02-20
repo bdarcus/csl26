@@ -116,7 +116,31 @@ function run() {
     process.exit(2);
   }
 
-  const fidelityFailures = styles.filter((style) => Number(style.fidelityScore) < 1.0);
+  const styleMap = new Map(styles.map((style) => [style.name, style]));
+  let baselineStyleNames = null;
+  let baseline = null;
+
+  if (args.baseline) {
+    try {
+      baseline = readJson(args.baseline);
+    } catch (error) {
+      annotateWarning(`Baseline unavailable (${args.baseline}): ${error.message}`);
+    }
+  }
+
+  if (baseline && baseline.styles && typeof baseline.styles === 'object') {
+    baselineStyleNames = Object.keys(baseline.styles);
+  }
+
+  const fidelityTargets = baselineStyleNames
+    ? baselineStyleNames
+        .map((name) => styleMap.get(name))
+        .filter(Boolean)
+    : styles;
+  const missingBaselineStyles = baselineStyleNames
+    ? baselineStyleNames.filter((name) => !styleMap.has(name))
+    : [];
+  const fidelityFailures = fidelityTargets.filter((style) => Number(style.fidelityScore) < 1.0);
   const metricFailures = styles.filter((style) => {
     if (style.error) return true;
     if (!style.qualityBreakdown) return true;
@@ -132,17 +156,7 @@ function run() {
     );
   }
 
-  if (args.baseline) {
-    let baseline;
-    try {
-      baseline = readJson(args.baseline);
-    } catch (error) {
-      annotateWarning(`Baseline unavailable (${args.baseline}): ${error.message}`);
-      baseline = null;
-    }
-
-    if (baseline && baseline.styles && typeof baseline.styles === 'object') {
-      const styleMap = new Map(styles.map((style) => [style.name, style]));
+  if (baseline && baseline.styles && typeof baseline.styles === 'object') {
       for (const [name, baselineMetrics] of Object.entries(baseline.styles)) {
         const style = styleMap.get(name);
         if (!style) continue;
@@ -172,7 +186,13 @@ function run() {
           }
         }
       }
+  }
+
+  if (missingBaselineStyles.length > 0) {
+    for (const name of missingBaselineStyles) {
+      annotateError(`Missing baseline core style in report: ${name}`);
     }
+    process.exit(1);
   }
 
   if (fidelityFailures.length > 0) {
