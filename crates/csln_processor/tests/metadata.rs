@@ -105,6 +105,28 @@ fn test_name_rendering_short() {
 }
 
 #[test]
+fn test_name_rendering_family_only() {
+    let style = build_name_style(ContributorForm::FamilyOnly, None);
+
+    let mut bib = indexmap::IndexMap::new();
+    let mut item = make_book("item1", "Gogh", "Vincent", 1888, "Title");
+    if let csln_core::reference::InputReference::Monograph(m) = &mut item
+        && let Some(csln_core::reference::Contributor::StructuredName(n)) = &mut m.author
+    {
+        n.non_dropping_particle = Some("van".to_string());
+    }
+    bib.insert("item1".to_string(), item);
+
+    let processor = Processor::new(style, bib);
+    assert_eq!(
+        processor
+            .process_citation(&csln_core::cite!("item1"))
+            .unwrap(),
+        "Gogh"
+    );
+}
+
+#[test]
 fn test_name_rendering_et_al() {
     let style = build_name_style(
         ContributorForm::Short,
@@ -219,6 +241,29 @@ fn test_date_rendering_full() {
             .process_citation(&csln_core::cite!("item1"))
             .unwrap(),
         "May 15, 2020"
+    );
+}
+
+#[test]
+fn test_date_rendering_day_month_abbr_year() {
+    let style = build_date_style(DateForm::DayMonthAbbrYear);
+
+    let mut bib = indexmap::IndexMap::new();
+    // EDTF: 2020-05-15
+    let mut item = make_book("item1", "Smith", "J", 2020, "Title");
+    if let csln_core::reference::InputReference::Monograph(m) = &mut item {
+        m.issued = csln_core::reference::EdtfString("2020-05-15".to_string());
+    }
+    bib.insert("item1".to_string(), item);
+
+    let processor = Processor::new(style, bib);
+    // Short term for May in English locale is usually "May", depending on fallback.
+    // It's "day month year".
+    assert_eq!(
+        processor
+            .process_citation(&csln_core::cite!("item1"))
+            .unwrap(),
+        "15 May 2020"
     );
 }
 
