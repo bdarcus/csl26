@@ -55,6 +55,8 @@ const KNOWN_DEPENDENTS = {
   'chicago-notes': 5,
 };
 
+const SKIPPED_STYLES = ['alpha'];
+
 const TOTAL_DEPENDENTS = 7987;
 const CORE_FALLBACK_TYPES = [
   'article-journal',
@@ -136,6 +138,7 @@ function discoverCoreStyles() {
 
   const styleFiles = fs.readdirSync(stylesRoot)
     .filter((entry) => entry.endsWith('.yaml'))
+    .filter((entry) => !SKIPPED_STYLES.includes(path.basename(entry, '.yaml')))
     .sort((a, b) => a.localeCompare(b));
 
   if (styleFiles.length === 0) {

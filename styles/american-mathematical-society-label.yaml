@@ -1,0 +1,80 @@
+version: ''
+info:
+  title: American Mathematical Society (label)
+  id: http://www.zotero.org/styles/american-mathematical-society-label
+  default-locale: en-US
+options:
+  processing:
+    label:
+      preset: ams
+      # AMS amsplain.bst uses 4 chars for single-author labels (Kuhn -> Kuhn62)
+      single-author-chars: 4
+      # AMS shows all initials for up to 4 authors (SLKZ21 not SLK+21)
+      et-al-min: 5
+      # AMS takes 4 initials when >4 authors (not 3+marker); empty marker best approx
+      # until processor supports 4-initial et-al truncation (known gap: VSP+17 vs VSPU17)
+      et-al-marker: ''
+  substitute:
+    contributor-role-form: short
+    template:
+      - editor
+      - translator
+  contributors:
+    display-as-sort: all
+    delimiter: ', '
+    delimiter-precedes-last: always
+    sort-separator: ', '
+  titles:
+    monograph:
+      emph: true
+    periodical:
+      emph: true
+    serial:
+      emph: true
+  bibliography:
+    entry-suffix: .
+    separator: ', '
+citation:
+  sort:
+    template:
+      - key: author
+  template:
+    - number: citation-label
+  wrap: brackets
+  delimiter: ''
+  multi-cite-delimiter: ', '
+bibliography:
+  options:
+    contributors:
+      display-as-sort: all
+      delimiter: ', '
+      delimiter-precedes-last: always
+      sort-separator: ', '
+  template:
+    - number: citation-label
+      wrap: brackets
+      suffix: ' '
+    - contributor: author
+      form: long
+      name-order: family-first
+    - title: primary
+    - title: parent-monograph
+    - title: parent-serial
+    - variable: publisher
+    - variable: publisher-place
+    - number: volume
+    - date: issued
+      form: year
+      overrides:
+        article-journal:
+          wrap: parentheses
+          prefix: ' '
+        chapter:
+          suppress: true
+    - number: pages
+      prefix: ' '
+      overrides:
+        chapter:
+          prefix: 'pp. '
+        paper-conference:
+          prefix: 'pp. '
