@@ -61,7 +61,7 @@ citation:
         delimiter-precedes-last: contextual
   template:
     - contributor: author
-      form: long
+      form: family-only
       name-order: family-first
       shorten:
         min: 3
@@ -114,7 +114,7 @@ bibliography:
       prefix: ", no. "
     - variable: publisher
     - date: issued
-      form: year
+      form: day-month-abbr-year
       prefix: ", "
     - number: pages
       overrides:
