@@ -79,7 +79,7 @@ enum Commands {
         group = ArgGroup::new("inputs")
             .required(true)
             .multiple(true)
-            .args(["style", "bibliography", "citations"])
+            .args(["style", "bibliography", "citations", "builtin"])
     )]
     Check(CheckArgs),
 
@@ -129,6 +129,7 @@ enum StylesCommands {
 }
 
 #[derive(Args, Debug)]
+#[command(group = ArgGroup::new("style-source").required(true).args(["style", "builtin"]))]
 struct RenderDocArgs {
     /// Path to input document
     #[arg(short = 'i', long)]
@@ -136,7 +137,11 @@ struct RenderDocArgs {
 
     /// Path to style file
     #[arg(short = 's', long)]
-    style: PathBuf,
+    style: Option<PathBuf>,
+
+    /// Use an embedded (builtin) style by name (e.g., apa-7th, ieee)
+    #[arg(long)]
+    builtin: Option<String>,
 
     /// Path(s) to bibliography input files (repeat for multiple)
     #[arg(short = 'b', long, required = true, action = ArgAction::Append)]
@@ -229,6 +234,10 @@ struct CheckArgs {
     #[arg(short = 's', long)]
     style: Option<PathBuf>,
 
+    /// Use an embedded (builtin) style by name (e.g., apa-7th, ieee)
+    #[arg(long)]
+    builtin: Option<String>,
+
     /// Path(s) to bibliography input files (repeat for multiple)
     #[arg(short = 'b', long, action = ArgAction::Append)]
     bibliography: Vec<PathBuf>,
@@ -317,7 +326,8 @@ fn run() -> Result<(), Box<dyn Error>> {
             eprintln!("Warning: `csln doc` is deprecated. Use `csln render doc` with -i/-b/-s.");
             let doc_args = RenderDocArgs {
                 input: args.document,
-                style: args.style,
+                style: Some(args.style),
+                builtin: None,
                 bibliography: vec![args.references],
                 citations: Vec::new(),
                 input_format: InputFormat::Djot,
@@ -331,6 +341,7 @@ fn run() -> Result<(), Box<dyn Error>> {
             eprintln!("Warning: `csln validate` is deprecated. Use `csln check --style`.");
             run_check(CheckArgs {
                 style: Some(args.path),
+                builtin: None,
                 bibliography: Vec::new(),
                 citations: Vec::new(),
                 json: false,
@@ -389,7 +400,11 @@ fn run_styles_list() -> Result<(), Box<dyn Error>> {
 }
 
 fn run_render_doc(args: RenderDocArgs) -> Result<(), Box<dyn Error>> {
-    let style_obj = load_style(&args.style, args.no_semantics)?;
+    let style_obj = match (args.style.as_ref(), args.builtin.as_deref()) {
+        (Some(path), _) => load_style(path, args.no_semantics)?,
+        (_, Some(name)) => load_style_builtin(name)?,
+        _ => unreachable!("ArgGroup ensures --style or --builtin is provided"),
+    };
     let bibliography = load_merged_bibliography(&args.bibliography)?;
 
     if !args.citations.is_empty() {
@@ -398,9 +413,22 @@ fn run_render_doc(args: RenderDocArgs) -> Result<(), Box<dyn Error>> {
         );
     }
 
-    let locales_dir = find_locales_dir(args.style.to_str().unwrap_or("."));
     let processor = if let Some(ref locale_id) = style_obj.info.default_locale {
-        let locale = Locale::load(locale_id, &locales_dir);
+        let locale = if let Some(ref path) = args.style {
+            // File-based style: search for locale on disk, fall back to embedded.
+            let locales_dir = find_locales_dir(path.to_str().unwrap_or("."));
+            let disk_locale = Locale::load(locale_id, &locales_dir);
+            // If disk load returned the en-US fallback but locale isn't en-US,
+            // try the embedded locale instead.
+            if disk_locale.locale == *locale_id || locale_id == "en-US" {
+                disk_locale
+            } else {
+                load_locale_builtin(locale_id)
+            }
+        } else {
+            // Builtin style: use embedded locale directly.
+            load_locale_builtin(locale_id)
+        };
         Processor::with_locale(style_obj, bibliography, locale)
     } else {
         Processor::new(style_obj, bibliography)
@@ -514,6 +542,24 @@ fn run_check(args: CheckArgs) -> Result<(), Box<dyn Error>> {
             Err(e) => CheckItem {
                 kind: "style",
                 path: style_display,
+                ok: false,
+                error: Some(e.to_string()),
+            },
+        };
+        checks.push(status);
+    }
+
+    if let Some(builtin) = args.builtin {
+        let status = match load_style_builtin(&builtin) {
+            Ok(_) => CheckItem {
+                kind: "style",
+                path: format!("builtin:{}", builtin),
+                ok: true,
+                error: None,
+            },
+            Err(e) => CheckItem {
+                kind: "style",
+                path: format!("builtin:{}", builtin),
                 ok: false,
                 error: Some(e.to_string()),
             },
