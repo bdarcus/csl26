@@ -18,7 +18,8 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 //! See `.agent/design/STYLE_ALIASING.md` for design context.
 
 use csln_core::options::{
-    AndOptions, Config, ContributorConfig, DateConfig, DisplayAsSort, TitlesConfig,
+    AndOptions, Config, ContributorConfig, DateConfig, DelimiterPrecedesLast,
+    DemoteNonDroppingParticle, DisplayAsSort, TitlesConfig,
 };
 use csln_core::presets::{ContributorPreset, DatePreset, TitlePreset};
 
@@ -59,6 +60,15 @@ pub fn detect_style_preset(config: &Config) -> Option<StylePreset> {
 /// The detection is "fuzzy" - we check characteristic fields that define each
 /// preset, not every single field.
 pub fn detect_contributor_preset(config: &ContributorConfig) -> Option<ContributorPreset> {
+    fn shorten_matches(config: &ContributorConfig, min: u8, use_first: u8) -> bool {
+        config
+            .shorten
+            .as_ref()
+            .is_some_and(|shorten| shorten.min == min && shorten.use_first == use_first)
+    }
+
+    let and_none = config.and == Some(AndOptions::None) || config.and.is_none();
+
     // APA: symbol "and", first author inverted, high et-al threshold
     if config.and == Some(AndOptions::Symbol)
         && config.display_as_sort == Some(DisplayAsSort::First)
@@ -73,15 +83,71 @@ pub fn detect_contributor_preset(config: &ContributorConfig) -> Option<Contribut
         return Some(ContributorPreset::Apa);
     }
 
-    // Vancouver/Springer: all inverted, no "and"
-    if config.display_as_sort == Some(DisplayAsSort::All)
-        && (config.and == Some(AndOptions::None) || config.and.is_none())
-    {
-        // Springer has space sort-separator and lower et-al threshold
+    // All family-first, no conjunction (Vancouver/Springer/numeric variants)
+    if config.display_as_sort == Some(DisplayAsSort::All) && and_none {
+        if config.demote_non_dropping_particle == Some(DemoteNonDroppingParticle::Never)
+            && config.sort_separator.as_deref() == Some(" ")
+            && config.initialize_with.as_deref() == Some("")
+            && config.shorten.is_none()
+        {
+            return Some(ContributorPreset::NumericAllAuthors);
+        }
+
+        if config.demote_non_dropping_particle == Some(DemoteNonDroppingParticle::Never)
+            && config.sort_separator.as_deref() == Some(" ")
+            && shorten_matches(config, 7, 5)
+        {
+            return Some(ContributorPreset::AnnualReviews);
+        }
+
+        if config.demote_non_dropping_particle == Some(DemoteNonDroppingParticle::SortOnly)
+            && config.sort_separator.as_deref() == Some(" ")
+            && config.initialize_with.as_deref() == Some("")
+        {
+            if shorten_matches(config, 7, 6) {
+                return Some(ContributorPreset::NumericCompact);
+            }
+            if shorten_matches(config, 4, 3) {
+                return Some(ContributorPreset::NumericMedium);
+            }
+            if shorten_matches(config, 7, 3) {
+                return Some(ContributorPreset::NumericTight);
+            }
+            if shorten_matches(config, 11, 10) {
+                return Some(ContributorPreset::NumericLarge);
+            }
+        }
+
+        if config.demote_non_dropping_particle == Some(DemoteNonDroppingParticle::SortOnly)
+            && config.sort_separator.as_deref() == Some(", ")
+            && config.initialize_with.as_deref() == Some(".")
+            && config.delimiter_precedes_last == Some(DelimiterPrecedesLast::Always)
+            && config.shorten.is_none()
+        {
+            return Some(ContributorPreset::MathPhys);
+        }
+
         if config.sort_separator.as_deref() == Some(" ") {
             return Some(ContributorPreset::Springer);
         }
         return Some(ContributorPreset::Vancouver);
+    }
+
+    // Given-first, no conjunction numeric variants.
+    if config.display_as_sort == Some(DisplayAsSort::None) && and_none {
+        if config.initialize_with.as_deref() == Some(".")
+            && config.delimiter.as_deref() == Some(", ")
+            && config.delimiter_precedes_last == Some(DelimiterPrecedesLast::Always)
+            && config.demote_non_dropping_particle == Some(DemoteNonDroppingParticle::SortOnly)
+        {
+            return Some(ContributorPreset::NumericGivenDot);
+        }
+
+        if config.initialize_with.as_deref() == Some(". ")
+            && config.demote_non_dropping_particle == Some(DemoteNonDroppingParticle::SortOnly)
+        {
+            return Some(ContributorPreset::PhysicsNumeric);
+        }
     }
 
     // IEEE: given-first format, text "and"
@@ -251,6 +317,60 @@ mod tests {
         assert_eq!(
             detect_contributor_preset(&config),
             Some(ContributorPreset::Ieee)
+        );
+    }
+
+    #[test]
+    fn test_detect_numeric_all_authors_contributor() {
+        let config = ContributorConfig {
+            and: Some(AndOptions::None),
+            display_as_sort: Some(DisplayAsSort::All),
+            initialize_with: Some("".to_string()),
+            sort_separator: Some(" ".to_string()),
+            demote_non_dropping_particle: Some(DemoteNonDroppingParticle::Never),
+            ..Default::default()
+        };
+        assert_eq!(
+            detect_contributor_preset(&config),
+            Some(ContributorPreset::NumericAllAuthors)
+        );
+    }
+
+    #[test]
+    fn test_detect_numeric_medium_contributor() {
+        let config = ContributorConfig {
+            and: Some(AndOptions::None),
+            display_as_sort: Some(DisplayAsSort::All),
+            initialize_with: Some("".to_string()),
+            sort_separator: Some(" ".to_string()),
+            demote_non_dropping_particle: Some(DemoteNonDroppingParticle::SortOnly),
+            shorten: Some(ShortenListOptions {
+                min: 4,
+                use_first: 3,
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+        assert_eq!(
+            detect_contributor_preset(&config),
+            Some(ContributorPreset::NumericMedium)
+        );
+    }
+
+    #[test]
+    fn test_detect_numeric_given_dot_contributor() {
+        let config = ContributorConfig {
+            and: Some(AndOptions::None),
+            display_as_sort: Some(DisplayAsSort::None),
+            initialize_with: Some(".".to_string()),
+            delimiter: Some(", ".to_string()),
+            delimiter_precedes_last: Some(DelimiterPrecedesLast::Always),
+            demote_non_dropping_particle: Some(DemoteNonDroppingParticle::SortOnly),
+            ..Default::default()
+        };
+        assert_eq!(
+            detect_contributor_preset(&config),
+            Some(ContributorPreset::NumericGivenDot)
         );
     }
 

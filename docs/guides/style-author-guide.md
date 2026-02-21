@@ -49,6 +49,8 @@ Each preset encodes name formatting conventions for a style family. Pick the clo
 | `numeric-medium` | All family-first | none | none | 4/3 | `Smith J, Jones M` |
 | `numeric-tight` | All family-first | none | none | 7/3 | `Smith J, Jones M, Brown A, et al.` |
 | `numeric-large` | All family-first | none | none | 11/10 | `Smith J, … [10 authors], et al.` |
+| `numeric-all-authors` | All family-first | none | none | none | `Smith JD, Jones MK, Brown AB` |
+| `numeric-given-dot` | All given-first | `.` (period only) | none | none | `J.D. Smith, M.K. Jones, A.B. Brown` |
 | `annual-reviews` | All family-first | none | none | 7/5, demote-never | `van der Berg J, Smith M, Jones A, Brown B, White C, et al.` |
 | `math-phys` | All family-first | `.` (period only) | none | none (set separately) | `Smith, J., Jones, M., Brown, A.` |
 | `soc-sci-first` | First family-first, rest given-first | `. ` (period-space) | none | none (set separately) | `Smith, J. D., M. K. Jones` |
@@ -56,12 +58,12 @@ Each preset encodes name formatting conventions for a style family. Pick the clo
 
 **Choosing between similar presets:**
 
-- Compact initials (`""`): `vancouver`, `numeric-compact`, `numeric-medium`, `numeric-tight`, `numeric-large`, `annual-reviews`, `springer`
-- Period-only initials (`"."`): `harvard`, `math-phys`
+- Compact initials (`""`): `vancouver`, `numeric-compact`, `numeric-medium`, `numeric-tight`, `numeric-large`, `numeric-all-authors`, `annual-reviews`, `springer`
+- Period-only initials (`"."`): `harvard`, `math-phys`, `numeric-given-dot`
 - Period-space initials (`". "`): `apa`, `ieee`, `soc-sci-first`, `physics-numeric`
-- Given-first (no inversion): `ieee`, `physics-numeric`
+- Given-first (no inversion): `ieee`, `physics-numeric`, `numeric-given-dot`
 - First-author-only inversion: `apa`, `chicago`, `soc-sci-first`
-- All inverted: everything else
+- All inverted: everything except `ieee`, `physics-numeric`, `numeric-given-dot`
 
 When you need a different et al. threshold than the preset provides, use the preset and add a `shorten:` override at the context level:
 

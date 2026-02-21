@@ -18,13 +18,7 @@ options:
       year-suffix: true
   strip-periods: true
   substitute: editor-translator-short
-  contributors:
-    display-as-sort: all
-    initialize-with: ""
-    delimiter: ", "
-    delimiter-precedes-last: always
-    demote-non-dropping-particle: never
-    sort-separator: " "
+  contributors: numeric-all-authors
   dates: short
   bibliography:
     hanging-indent: true

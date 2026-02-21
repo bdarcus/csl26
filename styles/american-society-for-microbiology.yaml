@@ -15,13 +15,7 @@ info:
   default-locale: en-US
 options:
   processing: numeric
-  contributors:
-    display-as-sort: all
-    initialize-with: ""
-    delimiter: ", "
-    delimiter-precedes-last: always
-    demote-non-dropping-particle: never
-    sort-separator: " "
+  contributors: numeric-all-authors
   dates: long
   bibliography:
     entry-suffix: .
