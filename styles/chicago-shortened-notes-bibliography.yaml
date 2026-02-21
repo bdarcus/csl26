@@ -57,6 +57,26 @@ bibliography:
         use-first: 3
         and-others: et-al
         delimiter-precedes-last: contextual
+  type-templates:
+    # Personal communications only appear in bibliography if reader can retrieve
+    # them (CMOS18 14.13, 14.111). Inaccessible items are in-text only.
+    personal-communication: []
+    # Patent entries: author, title, then "Patent [number], issued [full-date]"
+    # (CMOS18 14.158).
+    patent:
+      - contributor: author
+        form: long
+        name-order: family-first
+      - title: primary
+      - items:
+          - term: patent
+            suffix: " "
+          - number: number
+          - date: issued
+            form: full
+            prefix: ", issued "
+        delimiter: none
+        prefix: ". "
   template:
     - contributor: author
       form: long
