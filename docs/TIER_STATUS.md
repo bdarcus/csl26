@@ -1,7 +1,7 @@
 # CSLN Style Tier Status
 
 > **Living document** — updated after each significant batch oracle run.
-> Last updated: 2026-02-20
+> Last updated: 2026-02-21
 >
 > **Oracle scoring:** Strict 12-scenario citation set (`tests/fixtures/citations-expanded.json`).
 > Hard-fails on processor/style errors. Includes suppress-author, mixed locator/prefix/suffix
@@ -89,7 +89,7 @@ Wave aggregate:
 | baishideng-publishing-group | 12/12 | 31/32 | Citation template normalized |
 | royal-society-of-chemistry | 12/12 | 15/33 | Citation fixed; bibliography still major outlier |
 | association-for-computing-machinery | 12/12 | 31/32 | Locator citation formatting fixed |
-| chicago-shortened-notes-bibliography | 12/12 | 30/32 | Strong baseline retained |
+| chicago-shortened-notes-bibliography | 12/12 | 31/31 | Patent type-template + personal-comm suppression added |
 | nature | 12/12 | 31/32 | Citation template normalized |
 | copernicus-publications | 12/12 | 31/32 | Disambiguation + short-author citation pass |
 | springer-socpsych-brackets | 12/12 | 31/32 | Citation template normalized |
@@ -123,14 +123,55 @@ Preset extraction across the 58-style wave:
 - `options.substitute` presetized in `36` styles (`editor-*` variants)
 - contributor presetization in `11` styles (`numeric-compact`/`numeric-medium`)
 
-### Note Styles (Tier 3 — Future)
+### Note Styles (Tier 3 — Partial)
 
-Note styles (footnote-based) are ~19% of corpus. Not yet targeted.
+Note styles (footnote-based) are ~19% of corpus. One is now production-quality;
+full ibid/subsequent support requires `position` condition (not yet implemented).
 
 | Style | Status | Notes |
 |-------|--------|-------|
+| chicago-shortened-notes-bibliography | ✅ Production | 13/13 citations, 31/31 bibliography |
 | chicago-notes | ⏳ Queued | Requires `position` condition support |
 | oscola | ⏳ Queued | Legal citation support needed |
+
+### Author-Format (MLA)
+
+| Style | Status | Notes |
+|-------|--------|-------|
+| modern-language-association | 🔄 In Progress | Being authored via @styleauthor |
+
+## Embedded Styles (Built into Binary)
+
+Twelve priority styles are compiled into the `csln` binary via `include_bytes!`
+and can be used without any style file on disk.
+
+```bash
+# List all embedded styles
+csln styles list
+
+# Render using a builtin style
+csln render refs --builtin apa-7th -b refs.json
+```
+
+| Style | Format | Dependents | Corpus Impact |
+|-------|--------|-----------|---------------|
+| apa-7th | author-date | 783 | 9.8% |
+| elsevier-harvard | author-date | 665 | 8.3% |
+| elsevier-with-titles | numeric | 672 | 8.4% |
+| elsevier-vancouver | numeric | 502 | 6.3% |
+| springer-basic-author-date | author-date | 460 | 5.8% |
+| springer-vancouver-brackets | numeric | 472 | 5.9% |
+| springer-basic-brackets | numeric | 352 | 4.4% |
+| american-medical-association | numeric | 293 | 3.7% |
+| ieee | numeric | 176 | 2.2% |
+| taylor-and-francis-chicago-author-date | author-date | 234 | 2.9% |
+| chicago-shortened-notes-bibliography | note | 38 | 0.5% |
+| modern-language-association | author | — | — |
+
+**Total embedded coverage: ~4,647 dependents (~58% of the 7,987-style ecosystem)**
+
+Embedded locales: `en-US`, `de-DE`, `fr-FR`, `tr-TR` (~64 KB combined).
+Total binary size increase: ~121 KB raw YAML (~1.9% of the 6.4 MB release binary).
 
 ## Refresh Instructions
 

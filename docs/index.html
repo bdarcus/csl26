@@ -460,6 +460,36 @@
                             </div>
                         </div>
 
+                        <!-- Example 1e (Builtin) -->
+                        <div>
+                            <h4 class="font-bold text-slate-900 mb-2">Use a builtin style (no file needed)</h4>
+                            <div class="bg-slate-900 rounded-lg p-4 flex items-center justify-between group border border-slate-700 shadow-md">
+                                <code class="font-mono text-sm text-slate-300">
+                                    <span class="text-primary">$</span> csln render refs -b refs.json <span class="text-emerald-400">--builtin apa-7th</span>
+                                </code>
+                                <button class="text-slate-500 hover:text-white transition-colors"
+                                    onclick="navigator.clipboard.writeText('csln render refs -b refs.json --builtin apa-7th')"
+                                    title="Copy to clipboard">
+                                    <span class="material-icons text-base">content_copy</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Example 1f (List styles) -->
+                        <div>
+                            <h4 class="font-bold text-slate-900 mb-2">List all embedded styles</h4>
+                            <div class="bg-slate-900 rounded-lg p-4 flex items-center justify-between group border border-slate-700 shadow-md">
+                                <code class="font-mono text-sm text-slate-300">
+                                    <span class="text-primary">$</span> csln styles list
+                                </code>
+                                <button class="text-slate-500 hover:text-white transition-colors"
+                                    onclick="navigator.clipboard.writeText('csln styles list')"
+                                    title="Copy to clipboard">
+                                    <span class="material-icons text-base">content_copy</span>
+                                </button>
+                            </div>
+                        </div>
+
                         <!-- Example 2 -->
                         <div>
                             <h4 class="font-bold text-slate-900 mb-2">Convert to binary (Performance Mode)</h4>
