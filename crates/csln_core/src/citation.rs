@@ -32,18 +32,6 @@ pub enum CitationMode {
     NonIntegral,
 }
 
-/// Visibility modifier for a citation item.
-#[derive(Debug, Clone, Copy, Default, Deserialize, Serialize, PartialEq)]
-#[cfg_attr(feature = "schema", derive(JsonSchema))]
-#[serde(rename_all = "kebab-case")]
-pub enum ItemVisibility {
-    /// Show both author and year (default).
-    #[default]
-    Default,
-    /// Suppress the author name: "(2020)".
-    SuppressAuthor,
-}
-
 /// A citation containing one or more references.
 #[derive(Debug, Clone, Default, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
@@ -60,6 +48,12 @@ pub struct Citation {
     /// Only relevant for author-date styles.
     #[serde(default, skip_serializing_if = "is_default_mode")]
     pub mode: CitationMode,
+    /// Suppress the author name across all items in this citation.
+    /// Used when the author is already named in the prose: "Smith argues (2020)".
+    /// Applies uniformly to all items — per-item suppression is not supported
+    /// because mixed-visibility citations are typographically incoherent.
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub suppress_author: bool,
     /// Prefix text before all citation items.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub prefix: Option<String>,
@@ -88,9 +82,9 @@ fn is_default_mode(mode: &CitationMode) -> bool {
     *mode == CitationMode::NonIntegral
 }
 
-/// Helper for skip_serializing_if on visibility field.
-fn is_default_visibility(visibility: &ItemVisibility) -> bool {
-    *visibility == ItemVisibility::Default
+/// Helper for skip_serializing_if on bool fields that default to false.
+fn is_false(b: &bool) -> bool {
+    !b
 }
 
 /// Locator types for pinpoint citations.
@@ -125,9 +119,6 @@ pub enum LocatorType {
 pub struct CitationItem {
     /// The reference ID (citekey).
     pub id: String,
-    /// Visibility modifier for this item.
-    #[serde(default, skip_serializing_if = "is_default_visibility")]
-    pub visibility: ItemVisibility,
     /// Locator type (page, chapter, etc.)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub label: Option<LocatorType>,

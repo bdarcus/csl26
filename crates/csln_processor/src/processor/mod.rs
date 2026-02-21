@@ -308,7 +308,7 @@ impl Processor {
             locale: &self.locale,
             context: crate::values::RenderContext::Bibliography,
             mode: csln_core::citation::CitationMode::NonIntegral,
-            visibility: csln_core::citation::ItemVisibility::Default,
+            suppress_author: false,
             locator: None,
             locator_label: None,
         };
@@ -571,6 +571,7 @@ impl Processor {
                 template,
                 &citation.mode,
                 renderer_delimiter,
+                citation.suppress_author,
             )?
         } else {
             renderer.render_ungrouped_citation_with_format::<F>(
@@ -578,6 +579,7 @@ impl Processor {
                 template,
                 &citation.mode,
                 renderer_delimiter,
+                citation.suppress_author,
             )?
         };
 

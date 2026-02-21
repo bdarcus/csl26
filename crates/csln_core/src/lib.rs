@@ -22,7 +22,7 @@ pub mod embedded;
 // Declarative macros for AST and configurations
 pub mod macros;
 
-pub use citation::{Citation, CitationItem, CitationMode, Citations, ItemVisibility, LocatorType};
+pub use citation::{Citation, CitationItem, CitationMode, Citations, LocatorType};
 pub use grouping::{
     BibliographyGroup, CitedStatus, FieldMatcher, GroupHeading, GroupSelector, GroupSort,
     GroupSortKey, NameSortOrder, SortKey, TypeSelector,

@@ -174,7 +174,7 @@ fn test_visible_wins_over_silent() {
 
 #[test]
 fn test_repro_djot_parsing() {
-    use csln_core::citation::{CitationMode, ItemVisibility};
+    use csln_core::citation::CitationMode;
     let parser = DjotParser;
 
     // Bracketed citations (currently supported)
@@ -183,10 +183,7 @@ fn test_repro_djot_parsing() {
     assert_eq!(citations.len(), 2);
 
     assert_eq!(citations[0].2.mode, CitationMode::Integral);
-    assert_eq!(
-        citations[1].2.items[0].visibility,
-        ItemVisibility::SuppressAuthor
-    );
+    assert!(citations[1].2.suppress_author);
 
     // Non-bracketed citations (SHOULD NOT be supported)
     let content2 = "Test @item1 and +@item2 and -@item3 and !@item4";

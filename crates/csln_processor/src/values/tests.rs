@@ -50,7 +50,7 @@ fn test_contributor_values() {
         locale: &locale,
         context: RenderContext::Citation,
         mode: csln_core::citation::CitationMode::NonIntegral,
-        visibility: csln_core::citation::ItemVisibility::Default,
+        suppress_author: false,
         locator: None,
         locator_label: None,
     };
@@ -87,7 +87,7 @@ fn test_date_values() {
         locale: &locale,
         context: RenderContext::Citation,
         mode: csln_core::citation::CitationMode::NonIntegral,
-        visibility: csln_core::citation::ItemVisibility::Default,
+        suppress_author: false,
         locator: None,
         locator_label: None,
     };
@@ -119,7 +119,7 @@ fn test_et_al() {
         locale: &locale,
         context: RenderContext::Citation,
         mode: csln_core::citation::CitationMode::NonIntegral,
-        visibility: csln_core::citation::ItemVisibility::Default,
+        suppress_author: false,
         locator: None,
         locator_label: None,
     };
@@ -246,7 +246,7 @@ fn test_et_al_delimiter_never() {
         locale: &locale,
         context: RenderContext::Citation,
         mode: csln_core::citation::CitationMode::NonIntegral,
-        visibility: csln_core::citation::ItemVisibility::Default,
+        suppress_author: false,
         locator: None,
         locator_label: None,
     };
@@ -301,7 +301,7 @@ fn test_et_al_delimiter_always() {
         locale: &locale,
         context: RenderContext::Citation,
         mode: csln_core::citation::CitationMode::NonIntegral,
-        visibility: csln_core::citation::ItemVisibility::Default,
+        suppress_author: false,
         locator: None,
         locator_label: None,
     };
@@ -422,7 +422,7 @@ fn test_template_list_suppression() {
         locale: &locale,
         context: RenderContext::Citation,
         mode: csln_core::citation::CitationMode::NonIntegral,
-        visibility: csln_core::citation::ItemVisibility::Default,
+        suppress_author: false,
         locator: None,
         locator_label: None,
     };
@@ -469,7 +469,7 @@ fn test_et_al_use_last() {
         locale: &locale,
         context: RenderContext::Citation,
         mode: csln_core::citation::CitationMode::NonIntegral,
-        visibility: csln_core::citation::ItemVisibility::Default,
+        suppress_author: false,
         locator: None,
         locator_label: None,
     };
@@ -519,7 +519,7 @@ fn test_et_al_use_last_overlap() {
         locale: &locale,
         context: RenderContext::Citation,
         mode: csln_core::citation::CitationMode::NonIntegral,
-        visibility: csln_core::citation::ItemVisibility::Default,
+        suppress_author: false,
         locator: None,
         locator_label: None,
     };
@@ -562,7 +562,7 @@ fn test_title_hyperlink() {
         locale: &locale,
         context: RenderContext::Citation,
         mode: csln_core::citation::CitationMode::NonIntegral,
-        visibility: csln_core::citation::ItemVisibility::Default,
+        suppress_author: false,
         locator: None,
         locator_label: None,
     };
@@ -606,7 +606,7 @@ fn test_title_hyperlink_url_fallback() {
         locale: &locale,
         context: RenderContext::Citation,
         mode: csln_core::citation::CitationMode::NonIntegral,
-        visibility: csln_core::citation::ItemVisibility::Default,
+        suppress_author: false,
         locator: None,
         locator_label: None,
     };
@@ -649,7 +649,7 @@ fn test_variable_hyperlink() {
         locale: &locale,
         context: RenderContext::Bibliography,
         mode: csln_core::citation::CitationMode::NonIntegral,
-        visibility: csln_core::citation::ItemVisibility::Default,
+        suppress_author: false,
         locator: None,
         locator_label: None,
     };
@@ -710,7 +710,7 @@ fn test_editor_label_format() {
             locale: &locale,
             context: RenderContext::Bibliography,
             mode: csln_core::citation::CitationMode::NonIntegral,
-            visibility: csln_core::citation::ItemVisibility::Default,
+            suppress_author: false,
             locator: None,
             locator_label: None,
         };
@@ -731,7 +731,7 @@ fn test_editor_label_format() {
             locale: &locale,
             context: RenderContext::Bibliography,
             mode: csln_core::citation::CitationMode::NonIntegral,
-            visibility: csln_core::citation::ItemVisibility::Default,
+            suppress_author: false,
             locator: None,
             locator_label: None,
         };
@@ -752,7 +752,7 @@ fn test_editor_label_format() {
             locale: &locale,
             context: RenderContext::Bibliography,
             mode: csln_core::citation::CitationMode::NonIntegral,
-            visibility: csln_core::citation::ItemVisibility::Default,
+            suppress_author: false,
             locator: None,
             locator_label: None,
         };
@@ -773,7 +773,7 @@ fn test_term_values() {
         locale: &locale,
         context: RenderContext::Bibliography,
         mode: csln_core::citation::CitationMode::NonIntegral,
-        visibility: csln_core::citation::ItemVisibility::Default,
+        suppress_author: false,
         locator: None,
         locator_label: None,
     };
@@ -803,7 +803,7 @@ fn test_template_list_term_suppression() {
         locale: &locale,
         context: RenderContext::Bibliography,
         mode: csln_core::citation::CitationMode::NonIntegral,
-        visibility: csln_core::citation::ItemVisibility::Default,
+        suppress_author: false,
         locator: None,
         locator_label: None,
     };
@@ -842,7 +842,7 @@ fn test_date_fallback() {
         locale: &locale,
         context: RenderContext::Bibliography,
         mode: csln_core::citation::CitationMode::NonIntegral,
-        visibility: csln_core::citation::ItemVisibility::Default,
+        suppress_author: false,
         locator: None,
         locator_label: None,
     };
@@ -894,7 +894,7 @@ fn test_strip_periods_global_config() {
         locale: &locale,
         context: RenderContext::Bibliography,
         mode: csln_core::citation::CitationMode::NonIntegral,
-        visibility: csln_core::citation::ItemVisibility::Default,
+        suppress_author: false,
         locator: None,
         locator_label: None,
     };
@@ -934,7 +934,7 @@ fn test_strip_periods_component_override() {
         locale: &locale,
         context: RenderContext::Bibliography,
         mode: csln_core::citation::CitationMode::NonIntegral,
-        visibility: csln_core::citation::ItemVisibility::Default,
+        suppress_author: false,
         locator: None,
         locator_label: None,
     };
@@ -978,7 +978,7 @@ fn test_strip_periods_no_strip_by_default() {
         locale: &locale,
         context: RenderContext::Bibliography,
         mode: csln_core::citation::CitationMode::NonIntegral,
-        visibility: csln_core::citation::ItemVisibility::Default,
+        suppress_author: false,
         locator: None,
         locator_label: None,
     };
@@ -1018,7 +1018,7 @@ fn test_should_strip_periods_precedence() {
         locale: &locale,
         context: RenderContext::Bibliography,
         mode: csln_core::citation::CitationMode::NonIntegral,
-        visibility: csln_core::citation::ItemVisibility::Default,
+        suppress_author: false,
         locator: None,
         locator_label: None,
     };
@@ -1047,7 +1047,7 @@ fn test_should_strip_periods_precedence() {
         locale: &locale,
         context: RenderContext::Bibliography,
         mode: csln_core::citation::CitationMode::NonIntegral,
-        visibility: csln_core::citation::ItemVisibility::Default,
+        suppress_author: false,
         locator: None,
         locator_label: None,
     };

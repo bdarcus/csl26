@@ -1594,17 +1594,16 @@ fn test_label_integral_citation_uses_author_text() {
 #[test]
 fn test_citation_visibility_modifiers() {
     use csln_core::citation::CitationMode;
-    use csln_core::citation::ItemVisibility;
 
     let style = make_style();
     let bib = make_bibliography();
     let processor = Processor::new(style, bib);
 
-    // 1. Suppress Author
+    // 1. Suppress Author (citation-level flag applies to all items)
     let cit_suppress = Citation {
+        suppress_author: true,
         items: vec![crate::reference::CitationItem {
             id: "kuhn1962".to_string(),
-            visibility: ItemVisibility::SuppressAuthor,
             ..Default::default()
         }],
         ..Default::default()
@@ -1618,7 +1617,6 @@ fn test_citation_visibility_modifiers() {
         mode: CitationMode::Integral,
         items: vec![crate::reference::CitationItem {
             id: "kuhn1962".to_string(),
-            visibility: ItemVisibility::Default,
             ..Default::default()
         }],
         ..Default::default()

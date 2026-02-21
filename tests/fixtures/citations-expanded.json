@@ -47,10 +47,10 @@
     },
     {
         "id": "suppress-author",
+        "suppress-author": true,
         "items": [
             {
-                "id": "ITEM-1",
-                "visibility": "suppress-author"
+                "id": "ITEM-1"
             }
         ]
     },
@@ -66,11 +66,21 @@
         ]
     },
     {
-        "id": "mixed-visibility-and-prefix",
+        "id": "suppress-author-with-locator",
+        "suppress-author": true,
         "items": [
             {
                 "id": "ITEM-1",
-                "visibility": "suppress-author",
+                "locator": "44",
+                "label": "page"
+            }
+        ]
+    },
+    {
+        "id": "multi-item-with-prefix",
+        "items": [
+            {
+                "id": "ITEM-1",
                 "locator": "44",
                 "label": "page"
             },

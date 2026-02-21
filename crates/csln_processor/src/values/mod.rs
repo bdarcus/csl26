@@ -313,8 +313,9 @@ pub struct RenderOptions<'a> {
     pub locale: &'a Locale,
     pub context: RenderContext,
     pub mode: csln_core::citation::CitationMode,
-    /// Visibility modifier for this item.
-    pub visibility: csln_core::citation::ItemVisibility,
+    /// Whether to suppress the author name for this citation.
+    /// Set from the citation-level `suppress_author` flag.
+    pub suppress_author: bool,
     /// Optional locator value (e.g. "42")
     pub locator: Option<&'a str>,
     /// Optional locator label (e.g. page, section)

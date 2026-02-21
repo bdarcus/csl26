@@ -7,7 +7,7 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 
 use super::CitationParser;
 use crate::{Citation, CitationItem};
-use csln_core::citation::{CitationMode, ItemVisibility, LocatorType};
+use csln_core::citation::{CitationMode, LocatorType};
 use winnow::ascii::space0;
 use winnow::combinator::{opt, repeat};
 use winnow::error::ContextError;
@@ -24,12 +24,9 @@ impl Default for DjotParser {
     }
 }
 
-fn parse_visibility_modifier(input: &mut &str) -> winnow::Result<ItemVisibility, ContextError> {
+fn parse_suppress_author_modifier(input: &mut &str) -> winnow::Result<bool, ContextError> {
     let modifier: Option<char> = opt('-').parse_next(input)?;
-    match modifier {
-        Some('-') => Ok(ItemVisibility::SuppressAuthor),
-        _ => Ok(ItemVisibility::Default),
-    }
+    Ok(modifier.is_some())
 }
 
 fn parse_integral_modifier(input: &mut &str) -> winnow::Result<bool, ContextError> {
@@ -85,6 +82,7 @@ fn parse_parenthetical_citation(input: &mut &str) -> winnow::Result<Citation, Co
 fn parse_citation_content(input: &mut &str) -> winnow::Result<Citation, ContextError> {
     let mut citation = Citation::default();
     let mut detected_integral = false;
+    let mut suppress_author = false;
 
     // Split by semicolon for multiple items
     let inner: &str = take_until(0.., ']').parse_next(input)?;
@@ -96,6 +94,10 @@ fn parse_citation_content(input: &mut &str) -> winnow::Result<Citation, ContextE
         if is_integral {
             detected_integral = true;
         }
+        let suppress = parse_suppress_author_modifier(input)?;
+        if suppress {
+            suppress_author = true;
+        }
         let item = parse_citation_item_no_integral(input)?;
         let _ = opt(';').parse_next(input)?;
         let _ = space0.parse_next(input)?;
@@ -104,6 +106,7 @@ fn parse_citation_content(input: &mut &str) -> winnow::Result<Citation, ContextE
     .parse_next(&mut inner.trim())?;
 
     citation.items = items;
+    citation.suppress_author = suppress_author;
     if detected_integral {
         citation.mode = CitationMode::Integral;
     }
@@ -113,14 +116,12 @@ fn parse_citation_content(input: &mut &str) -> winnow::Result<Citation, ContextE
 
 fn parse_citation_item_no_integral(input: &mut &str) -> winnow::Result<CitationItem, ContextError> {
     let _ = space0.parse_next(input)?;
-    let visibility = parse_visibility_modifier(input)?;
     let _: char = '@'.parse_next(input)?;
     let key: &str =
         take_while(1.., |c: char| c.is_alphanumeric() || c == '_' || c == '-').parse_next(input)?;
 
     let mut item = CitationItem {
         id: key.to_string(),
-        visibility,
         ..Default::default()
     };
 
@@ -245,7 +246,7 @@ mod tests {
         assert_eq!(citations.len(), 1);
         let (_, _, citation) = &citations[0];
         assert_eq!(citation.items[0].id, "kuhn1962");
-        assert_eq!(citation.items[0].visibility, ItemVisibility::SuppressAuthor);
+        assert!(citation.suppress_author);
     }
 
     #[test]
@@ -258,7 +259,7 @@ mod tests {
         let (_, _, citation) = &citations[0];
         assert_eq!(citation.mode, CitationMode::Integral);
         assert_eq!(citation.items[0].id, "kuhn1962");
-        assert_eq!(citation.items[0].visibility, ItemVisibility::Default);
+        assert!(!citation.suppress_author);
     }
 
     #[test]
