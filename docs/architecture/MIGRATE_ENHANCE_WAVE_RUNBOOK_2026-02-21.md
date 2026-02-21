@@ -23,6 +23,14 @@ Use this as the canonical source for status, metrics, and next actions.
 
 Wave 2 citation status is now fully closed (`144/144`).
 
+### Wave 3 (author-date + author/label diversity, 12 styles)
+- Baseline: `458/541` combined (citations `114/156`, bibliography `344/385`)
+- Dominant citation mismatch clusters:
+  - `suppress-author-with-locator` (9)
+  - `et-al-with-locator` (9)
+  - `et-al-single-long-list` (9)
+  - `disambiguate-add-names-et-al` (9)
+
 ## Landed Enhancements
 
 ### Merge workflow (`scripts`)
@@ -47,14 +55,13 @@ Wave 2 citation status is now fully closed (`144/144`).
 
 ## Remaining Gaps
 - Wave 2 bibliography remains `374/384` (10 unmatched entries).
-- Wave 3 has not started (author-date + label/author diversity wave).
+- Wave 3 migration/processor promotion pass and rerun are pending.
 
 ## Next Execution Slice
-1. Start Wave 3 baseline generation for the planned 12 styles.
-2. Capture baseline oracle table and mismatch clusters.
-3. Apply migrate/processor promotion only for repeated (2+) mismatch patterns.
-4. Re-run wave and record baseline vs post-enhancement deltas.
-5. Re-check core quality drift:
+1. Apply migrate/processor promotion only for repeated (2+) Wave 3 mismatch
+   patterns.
+2. Re-run Wave 3 and record baseline vs post-enhancement deltas.
+3. Re-check core quality drift:
    - `node scripts/report-core.js > /tmp/core-report.json`
    - `node scripts/check-core-quality.js --report /tmp/core-report.json --baseline scripts/report-data/core-quality-baseline.json`
 
@@ -65,3 +72,4 @@ Tracked in bean: `csl26-w2n8`.
 - `docs/architecture/MIGRATE_ENHANCE_WAVE_STRATEGY_2026-02-21.md`
 - `docs/architecture/MIGRATE_ENHANCE_WAVE1_HANDOFF_2026-02-21.md`
 - `docs/architecture/MIGRATE_ENHANCE_WAVE2_HANDOFF_2026-02-21.md`
+- `docs/architecture/MIGRATE_ENHANCE_WAVE3_HANDOFF_2026-02-21.md`
