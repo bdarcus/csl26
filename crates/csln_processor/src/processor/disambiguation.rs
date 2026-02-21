@@ -112,7 +112,16 @@ impl<'a> Disambiguator<'a> {
 
         let refs: Vec<&Reference> = self.bibliography.values().collect();
         // Group by base citation key (e.g. "smith:2020")
-        let grouped = self.group_references(refs);
+        let grouped = self.group_references(refs.clone());
+
+        // Pre-calculate total works by each author key for `group_length`
+        let mut author_group_lengths = HashMap::new();
+        for reference in &refs {
+            let author_key = self.make_author_key(reference);
+            if !author_key.is_empty() {
+                *author_group_lengths.entry(author_key).or_insert(0) += 1;
+            }
+        }
 
         for (key, group) in grouped {
             let group_len = group.len();
@@ -147,17 +156,27 @@ impl<'a> Disambiguator<'a> {
 
                 // For label mode, skip name strategies and go straight to year-suffix
                 if is_label_mode && year_suffix {
-                    self.apply_year_suffix(&mut hints, &group, key, group_len, false);
+                    self.apply_year_suffix(
+                        &mut hints,
+                        &group,
+                        key,
+                        group_len,
+                        false,
+                        &author_group_lengths,
+                    );
                 } else {
                     // 1. Try expanding names (et-al expansion)
                     if add_names && let Some(n) = self.check_names_resolution(&group) {
                         for (i, reference) in group.iter().enumerate() {
+                            let author_key = self.make_author_key(reference);
+                            let global_author_length =
+                                author_group_lengths.get(&author_key).copied().unwrap_or(1);
                             hints.insert(
                                 reference.id().unwrap_or_default(),
                                 ProcHints {
                                     disamb_condition: false,
                                     group_index: i + 1,
-                                    group_length: group_len,
+                                    group_length: global_author_length,
                                     group_key: key.clone(),
                                     expand_given_names: false,
                                     min_names_to_show: Some(n),
@@ -171,12 +190,15 @@ impl<'a> Disambiguator<'a> {
                     // 2. Try expanding given names for the base name list
                     if !resolved && add_givenname && self.check_givenname_resolution(&group, None) {
                         for (i, reference) in group.iter().enumerate() {
+                            let author_key = self.make_author_key(reference);
+                            let global_author_length =
+                                author_group_lengths.get(&author_key).copied().unwrap_or(1);
                             hints.insert(
                                 reference.id().unwrap_or_default(),
                                 ProcHints {
                                     disamb_condition: false,
                                     group_index: i + 1,
-                                    group_length: group_len,
+                                    group_length: global_author_length,
                                     group_key: key.clone(),
                                     expand_given_names: true,
                                     min_names_to_show: None,
@@ -199,12 +221,15 @@ impl<'a> Disambiguator<'a> {
                         for n in 2..=max_authors {
                             if self.check_givenname_resolution(&group, Some(n)) {
                                 for (idx, reference) in group.iter().enumerate() {
+                                    let author_key = self.make_author_key(reference);
+                                    let global_author_length =
+                                        author_group_lengths.get(&author_key).copied().unwrap_or(1);
                                     hints.insert(
                                         reference.id().unwrap_or_default(),
                                         ProcHints {
                                             disamb_condition: false,
                                             group_index: idx + 1,
-                                            group_length: group_len,
+                                            group_length: global_author_length,
                                             group_key: key.clone(),
                                             expand_given_names: true,
                                             min_names_to_show: Some(n),
@@ -220,12 +245,28 @@ impl<'a> Disambiguator<'a> {
 
                     // 4. Fallback to year-suffix
                     if !resolved {
-                        self.apply_year_suffix(&mut hints, &group, key, group_len, false);
+                        self.apply_year_suffix(
+                            &mut hints,
+                            &group,
+                            key,
+                            group_len,
+                            false,
+                            &author_group_lengths,
+                        );
                     }
                 }
             } else {
                 // No collision
-                hints.insert(group[0].id().unwrap_or_default(), ProcHints::default());
+                let author_key = self.make_author_key(group[0]);
+                let global_author_length =
+                    author_group_lengths.get(&author_key).copied().unwrap_or(1);
+                hints.insert(
+                    group[0].id().unwrap_or_default(),
+                    ProcHints {
+                        group_length: global_author_length,
+                        ..Default::default()
+                    },
+                );
             }
         }
 
@@ -237,8 +278,9 @@ impl<'a> Disambiguator<'a> {
         hints: &mut HashMap<String, ProcHints>,
         group: &[&Reference],
         key: String,
-        len: usize,
+        _len: usize,
         expand_names: bool,
+        author_group_lengths: &HashMap<String, usize>,
     ) {
         let sorted_group = if let Some(sort_spec) = self.group_sort {
             // Use GroupSorter for per-group ordering
@@ -263,13 +305,27 @@ impl<'a> Disambiguator<'a> {
             sorted
         };
 
+        // Note: we still accept `len` as a parameter to keep the original signature,
+        // but wait, we need the global author length here too.
+        // We'll calculate it inside the loop. No need to pass it in. If we don't have author_group_lengths,
+        // we can't easily lookup. But `apply_year_suffix` uses `make_author_key` which we will create now.
+        // But we don't have `author_group_lengths` inside `apply_year_suffix`.
+        // Oh actually `apply_year_suffix` just blindly used `len`. To make `apply_year_suffix` use
+        // the correct value, since that could be expensive to recalculate here without the hashmap,
+        // let's pass a function or maybe just keep using `len` ... wait. If we are in `apply_year_suffix`
+        // the `len` was the collision group length.
+        // But if `disambiguate_only: true` is checking `group_length`, we MUST put the global author length there.
+        // So `apply_year_suffix` needs to know the global author length.
+        // Let's modify `apply_year_suffix` signature in the next chunk. Oh wait, I am already writing this chunk.
         for (i, reference) in sorted_group.iter().enumerate() {
+            let author_key = self.make_author_key(reference);
+            let global_author_length = author_group_lengths.get(&author_key).copied().unwrap_or(1);
             hints.insert(
                 reference.id().unwrap_or_default(),
                 ProcHints {
                     disamb_condition: true,
                     group_index: i + 1,
-                    group_length: len,
+                    group_length: global_author_length,
                     group_key: key.clone(),
                     expand_given_names: expand_names,
                     min_names_to_show: None,
@@ -362,23 +418,15 @@ impl<'a> Disambiguator<'a> {
         groups
     }
 
-    /// Create a grouping key for a reference based on its base citation form.
-    fn make_group_key(&self, reference: &Reference) -> String {
-        // In label mode, group by base label string rather than author-year.
-        // This ensures disambiguation happens at the label level (Knu84a/Knu84b)
-        // rather than the author-year level.
-        if let Some(csln_core::options::Processing::Label(config)) = &self.config.processing {
-            let params = config.effective_params();
-            return crate::processor::labels::generate_base_label(reference, &params);
-        }
-
+    /// Create a grouping key for a reference based on its author field.
+    fn make_author_key(&self, reference: &Reference) -> String {
         let shorten = self
             .config
             .contributors
             .as_ref()
             .and_then(|c| c.shorten.as_ref());
 
-        let author_key = if let Some(authors) = reference.author() {
+        if let Some(authors) = reference.author() {
             let names_vec = authors.to_names_vec();
             if let Some(opts) = shorten {
                 if names_vec.len() >= opts.min as usize {
@@ -406,7 +454,20 @@ impl<'a> Disambiguator<'a> {
             }
         } else {
             "".to_string()
-        };
+        }
+    }
+
+    /// Create a grouping key for a reference based on its base citation form.
+    fn make_group_key(&self, reference: &Reference) -> String {
+        // In label mode, group by base label string rather than author-year.
+        // This ensures disambiguation happens at the label level (Knu84a/Knu84b)
+        // rather than the author-year level.
+        if let Some(csln_core::options::Processing::Label(config)) = &self.config.processing {
+            let params = config.effective_params();
+            return crate::processor::labels::generate_base_label(reference, &params);
+        }
+
+        let author_key = self.make_author_key(reference);
 
         let year = reference
             .issued()
