@@ -19,6 +19,23 @@ options:
       - editor
       - translator
       - title
+  processing:
+    sort:
+      shorten-names: false
+      render-substitutions: false
+      template:
+        - key: year
+          ascending: true
+        - key: author
+          ascending: true
+    group:
+      template:
+        - year
+        - author
+    disambiguate:
+      names: false
+      add-givenname: false
+      year-suffix: true
   contributors:
     display-as-sort: first
     initialize-with: ". "
@@ -60,6 +77,9 @@ citation:
         use-first: 1
     - date: issued
       form: year
+      prefix: " "
+    - variable: locator
+      show-label: true
       prefix: " "
   wrap: parentheses
   delimiter: ". "

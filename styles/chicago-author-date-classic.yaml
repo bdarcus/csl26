@@ -13,6 +13,11 @@ info:
   title: Chicago Manual of Style 18th edition (author-date, classic variants)
   id: http://www.zotero.org/styles/chicago-author-date-classic
 options:
+  processing:
+    disambiguate:
+      names: true
+      add-givenname: true
+      year-suffix: true
   contributors:
     shorten:
       min: 7

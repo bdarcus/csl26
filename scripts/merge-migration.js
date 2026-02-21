@@ -80,11 +80,50 @@ function normalizeNumericLocatorPattern(baseData) {
     return false;
 }
 
+function templateHasLocator(template) {
+    if (!Array.isArray(template)) return false;
+    return template.some((component) => {
+        if (!component || typeof component !== 'object') return false;
+        if (component.variable === 'locator') return true;
+        if (Array.isArray(component.items)) return templateHasLocator(component.items);
+        return false;
+    });
+}
+
+function findLocatorComponent(template) {
+    if (!Array.isArray(template)) return null;
+    for (const component of template) {
+        if (!component || typeof component !== 'object') continue;
+        if (component.variable === 'locator') {
+            return JSON.parse(JSON.stringify(component));
+        }
+        if (Array.isArray(component.items)) {
+            const nested = findLocatorComponent(component.items);
+            if (nested) return nested;
+        }
+    }
+    return null;
+}
+
+function preserveLocatorComponentFromBase(baseCitationTemplate, mergedCitationTemplate) {
+    if (!Array.isArray(baseCitationTemplate) || !Array.isArray(mergedCitationTemplate)) return;
+    if (templateHasLocator(mergedCitationTemplate) || !templateHasLocator(baseCitationTemplate)) return;
+
+    const locatorComponent = findLocatorComponent(baseCitationTemplate);
+    if (!locatorComponent) return;
+
+    // Keep inferred structure as-is and append locator as a trailing component.
+    mergedCitationTemplate.push(locatorComponent);
+}
+
 try {
     // 1. Load Base YAML (from csln-migrate)
     if (!fs.existsSync(basePath)) throw new Error(`Base YAML not found: ${basePath}`);
     const baseContent = fs.readFileSync(basePath, 'utf8');
     const baseData = yaml.load(baseContent, { schema: CUSTOM_TAG_SCHEMA });
+    const baseCitationTemplate = Array.isArray(baseData?.citation?.template)
+        ? JSON.parse(JSON.stringify(baseData.citation.template))
+        : null;
 
     // 2. Load Inferred Templates (from infer-template.js)
     if (!fs.existsSync(citePath)) throw new Error(`Citation JSON not found: ${citePath}`);
@@ -103,6 +142,7 @@ try {
     if (hasInferredCitationTemplate) {
         if (!baseData.citation) baseData.citation = {};
         baseData.citation.template = citationTemplate;
+        preserveLocatorComponentFromBase(baseCitationTemplate, baseData.citation.template);
 
         // Merge other inferred citation properties if present and not in base
         // (e.g., wrap, delimiter)

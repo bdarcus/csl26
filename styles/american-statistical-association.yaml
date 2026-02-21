@@ -19,6 +19,23 @@ options:
     template:
       - editor
       - translator
+  processing:
+    sort:
+      shorten-names: false
+      render-substitutions: false
+      template:
+        - key: author
+          ascending: true
+        - key: year
+          ascending: true
+    group:
+      template:
+        - author
+        - year
+    disambiguate:
+      names: false
+      add-givenname: false
+      year-suffix: true
   contributors:
     display-as-sort: all
     initialize-with: ". "
@@ -69,6 +86,9 @@ citation:
     - date: issued
       form: year
       prefix: " "
+    - variable: locator
+      show-label: true
+      prefix: ","
   wrap: parentheses
   delimiter: ". "
   multi-cite-delimiter: "; "

@@ -1,7 +1,8 @@
-use csl_legacy::model::Style;
+use csl_legacy::model::{CslNode, Style};
 use csln_core::options::{
     Disambiguation, Group, Processing, ProcessingCustom, Sort, SortKey, SortSpec,
 };
+use std::collections::HashSet;
 
 pub fn detect_processing_mode(style: &Style) -> Option<Processing> {
     // 0. Note styles are explicit in CSL and should map directly.
@@ -33,34 +34,24 @@ pub fn detect_processing_mode(style: &Style) -> Option<Processing> {
     }
 
     // 2. Author-date style
-    // Check if citation uses year-suffix or disambiguation
-    let is_author_date = style.citation.layout.children.iter().any(|node| {
-        use csl_legacy::model::CslNode;
-        match node {
-            CslNode::Text(t) => t
-                .macro_name
-                .as_ref()
-                .is_some_and(|m| m.contains("year") || m.contains("date")),
-            CslNode::Group(g) => g.children.iter().any(|c| matches!(c, CslNode::Date(_))),
-            _ => false,
-        }
-    });
+    // Some styles hide date/year logic in nested macro trees. Follow macro calls
+    // recursively so we don't miss author-date processing config extraction.
+    let mut visited_macros = HashSet::new();
+    let is_author_date =
+        nodes_have_author_date_signal(&style.citation.layout.children, style, &mut visited_macros);
 
     if is_author_date {
         // Extract disambiguation settings from citation-level attributes.
-        let mut disamb = Disambiguation {
-            // Author-date styles commonly rely on year suffixes; allow explicit
-            // CSL settings to override this default.
+        // Legacy CSL defaults are effectively "no extra names / no extra given
+        // names" unless explicitly requested. Defaulting to names=true here
+        // causes over-disambiguation and suppresses expected et-al behavior.
+        let disamb = Disambiguation {
+            names: style.citation.disambiguate_add_names.unwrap_or(false),
+            add_givenname: style.citation.disambiguate_add_givenname.unwrap_or(false),
+            // Author-date styles commonly rely on year suffixes; keep this true
+            // unless legacy style explicitly disables it.
             year_suffix: style.citation.disambiguate_add_year_suffix.unwrap_or(true),
-            ..Default::default()
         };
-
-        if let Some(opt) = style.citation.disambiguate_add_names {
-            disamb.names = opt;
-        }
-        if let Some(opt) = style.citation.disambiguate_add_givenname {
-            disamb.add_givenname = opt;
-        }
 
         let sort = style.citation.sort.as_ref().and_then(extract_sort);
         let group = sort.as_ref().and_then(extract_group_from_sort);
@@ -73,6 +64,64 @@ pub fn detect_processing_mode(style: &Style) -> Option<Processing> {
     }
 
     None
+}
+
+fn nodes_have_author_date_signal(
+    nodes: &[CslNode],
+    style: &Style,
+    visited_macros: &mut HashSet<String>,
+) -> bool {
+    nodes
+        .iter()
+        .any(|node| node_has_author_date_signal(node, style, visited_macros))
+}
+
+fn node_has_author_date_signal(
+    node: &CslNode,
+    style: &Style,
+    visited_macros: &mut HashSet<String>,
+) -> bool {
+    match node {
+        CslNode::Date(_) => true,
+        CslNode::Text(t) => {
+            if t.variable.as_deref().is_some_and(|v| {
+                matches!(
+                    v,
+                    "issued" | "original-date" | "event-date" | "accessed" | "year-suffix"
+                )
+            }) {
+                return true;
+            }
+
+            if let Some(macro_name) = &t.macro_name {
+                let lowered = macro_name.to_ascii_lowercase();
+                if lowered.contains("year") || lowered.contains("date") {
+                    return true;
+                }
+
+                if visited_macros.insert(macro_name.clone())
+                    && let Some(macro_def) = style.macros.iter().find(|m| m.name == *macro_name)
+                    && nodes_have_author_date_signal(&macro_def.children, style, visited_macros)
+                {
+                    return true;
+                }
+            }
+
+            false
+        }
+        CslNode::Group(g) => nodes_have_author_date_signal(&g.children, style, visited_macros),
+        CslNode::Choose(c) => {
+            nodes_have_author_date_signal(&c.if_branch.children, style, visited_macros)
+                || c.else_if_branches
+                    .iter()
+                    .any(|b| nodes_have_author_date_signal(&b.children, style, visited_macros))
+                || c.else_branch.as_ref().is_some_and(|nodes| {
+                    nodes_have_author_date_signal(nodes, style, visited_macros)
+                })
+        }
+        CslNode::Names(n) => nodes_have_author_date_signal(&n.children, style, visited_macros),
+        _ => false,
+    }
 }
 
 fn extract_sort(legacy_sort: &csl_legacy::model::Sort) -> Option<Sort> {

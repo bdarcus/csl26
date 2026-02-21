@@ -19,6 +19,25 @@ fn test_extract_author_date_processing() {
 }
 
 #[test]
+fn test_extract_author_date_processing_from_nested_macro() {
+    let xml = r#"<style class="in-text">
+        <macro name="issued-year">
+            <date variable="issued"><date-part name="year"/></date>
+        </macro>
+        <macro name="author-date">
+            <names variable="author"><name/></names>
+            <text macro="issued-year" prefix=" "/>
+        </macro>
+        <citation><layout><text macro="author-date"/></layout></citation>
+        <bibliography><layout><text variable="title"/></layout></bibliography>
+    </style>"#;
+    let style = parse_csl(xml).unwrap();
+    let config = OptionsExtractor::extract(&style);
+
+    assert!(matches!(config.processing, Some(Processing::Custom(_))));
+}
+
+#[test]
 fn test_extract_et_al_from_citation() {
     let xml = r#"<style class="in-text">
         <citation><layout>
@@ -100,6 +119,28 @@ fn test_extract_processing_sort_and_disambiguation() {
         group.template,
         vec![SortKey::Author, SortKey::Year, SortKey::Title]
     );
+}
+
+#[test]
+fn test_extract_processing_disambiguation_defaults() {
+    let xml = r#"<style class="in-text">
+        <citation>
+            <layout><text macro="year"/></layout>
+        </citation>
+        <bibliography><layout><text variable="title"/></layout></bibliography>
+    </style>"#;
+    let style = parse_csl(xml).unwrap();
+    let config = OptionsExtractor::extract(&style);
+
+    let Processing::Custom(custom) = config.processing.unwrap() else {
+        panic!("expected custom processing mode");
+    };
+    let disamb = custom
+        .disambiguate
+        .expect("disambiguation should be present");
+    assert!(!disamb.names);
+    assert!(!disamb.add_givenname);
+    assert!(disamb.year_suffix);
 }
 
 #[test]

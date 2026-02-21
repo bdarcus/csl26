@@ -25,11 +25,13 @@ Wave 2 citation status is now fully closed (`144/144`).
 
 ### Wave 3 (author-date + author/label diversity, 12 styles)
 - Baseline: `458/541` combined (citations `114/156`, bibliography `344/385`)
+- Rust checkpoint 1: `473/541` combined (citations `129/156`, bibliography `344/385`)
+- Rust+merge checkpoint 2: `482/541` combined (citations `138/156`, bibliography `344/385`)
 - Dominant citation mismatch clusters:
-  - `suppress-author-with-locator` (9)
-  - `et-al-with-locator` (9)
-  - `et-al-single-long-list` (9)
-  - `disambiguate-add-names-et-al` (9)
+  - `et-al-with-locator` (4)
+  - `suppress-author-with-locator` (3)
+  - `et-al-single-long-list` (3)
+  - `disambiguate-add-names-et-al` (3)
 
 ## Landed Enhancements
 
@@ -46,6 +48,16 @@ Wave 2 citation status is now fully closed (`144/144`).
   - emit extracted sort into generated `bibliography.sort`
 - `crates/csln_migrate/src/options_extractor/tests.rs`
   - coverage for new bibliography sort extraction
+- `crates/csln_migrate/src/options_extractor/processing.rs`
+  - recursively detect author-date signals through macro trees
+  - default extracted disambiguation to legacy-safe values
+    (`names=false`, `add-givenname=false`, `year-suffix=true`)
+- `crates/csln_migrate/src/main.rs`
+  - add author-date citation locator component when legacy layout uses
+    `citation-locator` and inferred templates omit it
+- `scripts/merge-migration.js`
+  - preserve base locator component when inferred citation template lacks
+    locator, preventing merge-time regression
 
 ### Processor sorting (`csln-processor`)
 - `crates/csln_processor/src/grouping/sorting.rs`
@@ -55,12 +67,16 @@ Wave 2 citation status is now fully closed (`144/144`).
 
 ## Remaining Gaps
 - Wave 2 bibliography remains `374/384` (10 unmatched entries).
-- Wave 3 migration/processor promotion pass and rerun are pending.
+- Wave 3 citation gap reduced but still open (`129/156`).
+- Wave 3 citation gap reduced further (`138/156`) but still open.
+- Wave 3 bibliography remains `344/385`, driven by style-specific outliers
+  (`springer-physics-author-date` is the largest gap at `10/33`).
 
 ## Next Execution Slice
-1. Apply migrate/processor promotion only for repeated (2+) Wave 3 mismatch
-   patterns.
-2. Re-run Wave 3 and record baseline vs post-enhancement deltas.
+1. Target remaining repeated citation gap:
+   `suppress-author-with-locator` (9 styles).
+2. Start focused bibliography pass for Wave 3 outliers, beginning with
+   `springer-physics-author-date`.
 3. Re-check core quality drift:
    - `node scripts/report-core.js > /tmp/core-report.json`
    - `node scripts/check-core-quality.js --report /tmp/core-report.json --baseline scripts/report-data/core-quality-baseline.json`

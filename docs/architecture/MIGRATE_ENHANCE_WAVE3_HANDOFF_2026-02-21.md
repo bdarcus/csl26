@@ -74,6 +74,70 @@ All 12 baseline outputs currently omit `options.processing`, which forces
 processor defaults instead of style-specific disambiguation settings. This is
 the first repeated migrate gap to promote in Rust for Wave 3 rerun.
 
+## Post-Promotion Checkpoint (`csln-migrate`)
+
+Promotion applied:
+- `crates/csln_migrate/src/options_extractor/processing.rs`
+  - recurse into citation macro trees when detecting author-date processing
+  - default extracted disambiguation to:
+    - `names: false`
+    - `add-givenname: false`
+    - `year-suffix: true`
+
+Wave rerun aggregate after promotion:
+- Citations: `129/156` (82.7%) `(+15)`
+- Bibliography: `344/385` (89.4%) `(no regression)`
+- Combined: `473/541` (87.4%) `(+15)`
+
+Per-style citation deltas:
+- `american-fisheries-society`: `9/13` -> `11/13`
+- `american-statistical-association`: `9/13` -> `11/13`
+- `nlm-name-year`: `8/13` -> `10/13`
+- `springer-basic-author-date-no-et-al`: `10/13` -> `13/13`
+- `springer-physics-author-date`: `10/13` -> `13/13`
+- `the-company-of-biologists`: `9/13` -> `12/13`
+
+Citation mismatch clusters after promotion:
+1. `suppress-author-with-locator` (9 styles)
+2. `et-al-with-locator` (6 styles)
+3. `with-locator` (3 styles)
+4. `et-al-single-long-list` (3 styles)
+5. `disambiguate-add-names-et-al` (3 styles)
+6. `locator-section-with-suffix` (2 styles)
+
+Interpretation:
+- The `et-al`/disambiguation cluster was materially reduced by migrate-side
+  processing extraction fixes.
+- The next repeated citation gap is now dominated by
+  `suppress-author-with-locator`, which should drive the next promotion.
+
+## Locator Preservation Checkpoint
+
+Second promotion applied:
+- `crates/csln_migrate/src/main.rs`
+  - inject `locator` into author-date citation templates when legacy citation
+    layout uses locator but inferred templates omit it
+- `scripts/merge-migration.js`
+  - preserve locator component from base migration output during merge when
+    inferred citation template has no locator
+
+Wave rerun aggregate after this pass:
+- Citations: `138/156` (88.5%) `(+9 from checkpoint 1, +24 from baseline)`
+- Bibliography: `344/385` (89.4%) `(no regression)`
+- Combined: `482/541` (89.1%) `(+9 from checkpoint 1, +24 from baseline)`
+
+Citation mismatch clusters after locator preservation:
+1. `et-al-with-locator` (4 styles)
+2. `suppress-author-with-locator` (3 styles)
+3. `et-al-single-long-list` (3 styles)
+4. `disambiguate-add-names-et-al` (3 styles)
+5. `with-locator` (2 styles)
+6. `locator-section-with-suffix` (2 styles)
+
+Interpretation:
+- The `suppress-author-with-locator` cluster dropped from 9 styles to 3.
+- Remaining misses are now primarily et-al/locator composition edge cases.
+
 ## Useful Commands
 ```bash
 styles=(

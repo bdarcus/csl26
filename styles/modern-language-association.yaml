@@ -69,6 +69,9 @@ citation:
     - title: primary
       wrap: quotes
       prefix: ", "
+    - variable: locator
+      show-label: true
+      prefix: " "
   wrap: parentheses
   delimiter: ". "
   multi-cite-delimiter: "; "
