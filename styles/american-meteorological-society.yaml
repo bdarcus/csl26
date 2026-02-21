@@ -39,6 +39,11 @@ options:
     separator: ", "
 citation:
   options:
+    processing:
+      disambiguate:
+        names: false
+        add-givenname: false
+        year-suffix: true
     contributors:
       shorten:
         min: 3
@@ -59,8 +64,9 @@ citation:
       form: year
       prefix: " "
     - variable: locator
+      prefix: ", "
   wrap: parentheses
-  delimiter: ". "
+  delimiter: " "
   multi-cite-delimiter: "; "
 bibliography:
   options:

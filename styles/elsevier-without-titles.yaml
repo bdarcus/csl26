@@ -58,16 +58,76 @@ bibliography:
           prefix: "pp. "
       prefix: " "
     - title: primary
+      suppress: true
+      overrides:
+        book:
+          suppress: false
+        chapter:
+          suppress: false
+        paper-conference:
+          suppress: false
     - variable: publisher
+      overrides:
+        entry-encyclopedia:
+          suppress: true
+        report:
+          suppress: true
+        article-journal:
+          suppress: true
     - variable: publisher-place
+      overrides:
+        article-journal:
+          suppress: true
   type-templates:
-    patent:
-      - number: citation-number
-        wrap: brackets
+    chapter:
       - contributor: author
         form: long
+        name-order: given-first
+      - title: parent-monograph
+      - contributor: editor
+        form: verb
+      - variable: publisher
+      - date: issued
+        form: year
+      - number: pages
+        prefix: "pp. "
+    report:
+      - contributor: author
+        form: long
+        name-order: given-first
+      - title: primary
+      - variable: publisher
+      - variable: publisher-place
+      - date: issued
+        form: year
+    thesis:
+      - contributor: author
+        form: long
+        name-order: given-first
+      - title: primary
+      - variable: genre
+      - variable: publisher
+      - date: issued
+        form: year
+    legal-case:
       - title: primary
       - date: issued
         form: year
-      - term: no-date
-        form: short
+    motion-picture:
+      - contributor: author
+        form: long
+        name-order: given-first
+      - title: primary
+      - date: issued
+        form: year
+    broadcast:
+      - contributor: author
+        form: long
+        name-order: given-first
+      - title: primary
+      - date: issued
+        form: year
+    patent:
+      - number: patent-number
+      - date: issued
+        form: year

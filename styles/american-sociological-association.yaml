@@ -43,6 +43,11 @@ options:
   punctuation-in-quote: true
 citation:
   options:
+    processing:
+      disambiguate:
+        names: false
+        add-givenname: false
+        year-suffix: true
     contributors:
       initialize-with: ". "
       shorten:
@@ -56,7 +61,7 @@ citation:
       form: short
       name-order: family-first
       shorten:
-        min: 8
+        min: 4
         use-first: 1
         and-others: et-al
         delimiter-precedes-last: contextual
@@ -64,8 +69,10 @@ citation:
       form: year
       prefix: " "
     - variable: locator
+      show-label: false
+      prefix: ":"
   wrap: parentheses
-  delimiter: ". "
+  delimiter: " "
   multi-cite-delimiter: "; "
 bibliography:
   options:
