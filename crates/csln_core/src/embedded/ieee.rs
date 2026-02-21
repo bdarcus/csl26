@@ -4,25 +4,18 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 */
 
 use crate::options::AndOptions;
-use crate::template::{
-    ContributorForm, ContributorRole, DateForm, DateVariable, NumberVariable, Rendering,
-    TemplateComponent, TemplateContributor, TemplateDate, TemplateNumber, TemplateTitle, TitleType,
-    WrapPunctuation,
+use crate::{
+    tc_date, tc_number, tc_title,
+    template::{
+        ContributorForm, ContributorRole, TemplateComponent, TemplateContributor, WrapPunctuation,
+    },
 };
 
 /// Embedded citation template for IEEE style.
 ///
 /// Renders as: [1]
 pub fn citation() -> Vec<TemplateComponent> {
-    vec![TemplateComponent::Number(TemplateNumber {
-        number: NumberVariable::CitationNumber,
-        form: None,
-        rendering: Rendering {
-            wrap: Some(WrapPunctuation::Brackets),
-            ..Default::default()
-        },
-        ..Default::default()
-    })]
+    vec![tc_number!(CitationNumber, wrap = WrapPunctuation::Brackets)]
 }
 
 /// Embedded bibliography template for IEEE style.
@@ -31,91 +24,33 @@ pub fn citation() -> Vec<TemplateComponent> {
 pub fn bibliography() -> Vec<TemplateComponent> {
     vec![
         // [Citation number]
-        TemplateComponent::Number(TemplateNumber {
-            number: NumberVariable::CitationNumber,
-            form: None,
-            rendering: Rendering {
-                wrap: Some(WrapPunctuation::Brackets),
-                suffix: Some(" ".to_string()),
-                ..Default::default()
-            },
-            ..Default::default()
-        }),
+        tc_number!(
+            CitationNumber,
+            wrap = WrapPunctuation::Brackets,
+            suffix = " "
+        ),
         // Author
         TemplateComponent::Contributor(TemplateContributor {
             contributor: ContributorRole::Author,
             form: ContributorForm::Long,
             and: Some(AndOptions::Text),
-            rendering: Rendering {
+            rendering: crate::template::Rendering {
                 suffix: Some(", ".to_string()),
                 ..Default::default()
             },
             ..Default::default()
         }),
         // "Title,"
-        TemplateComponent::Title(TemplateTitle {
-            title: TitleType::Primary,
-            form: None,
-            rendering: Rendering {
-                quote: Some(true),
-                suffix: Some(" ".to_string()),
-                ..Default::default()
-            },
-            ..Default::default()
-        }),
+        tc_title!(Primary, quote = true, suffix = " "),
         // *Journal*,
-        TemplateComponent::Title(TemplateTitle {
-            title: TitleType::ParentSerial,
-            form: None,
-            rendering: Rendering {
-                emph: Some(true),
-                suffix: Some(", ".to_string()),
-                ..Default::default()
-            },
-            ..Default::default()
-        }),
+        tc_title!(ParentSerial, emph = true, suffix = ", "),
         // vol. X,
-        TemplateComponent::Number(TemplateNumber {
-            number: NumberVariable::Volume,
-            form: None,
-            rendering: Rendering {
-                prefix: Some("vol. ".to_string()),
-                suffix: Some(", ".to_string()),
-                ..Default::default()
-            },
-            ..Default::default()
-        }),
+        tc_number!(Volume, prefix = "vol. ", suffix = ", "),
         // no. Y,
-        TemplateComponent::Number(TemplateNumber {
-            number: NumberVariable::Issue,
-            form: None,
-            rendering: Rendering {
-                prefix: Some("no. ".to_string()),
-                suffix: Some(", ".to_string()),
-                ..Default::default()
-            },
-            ..Default::default()
-        }),
+        tc_number!(Issue, prefix = "no. ", suffix = ", "),
         // pp. Z–W,
-        TemplateComponent::Number(TemplateNumber {
-            number: NumberVariable::Pages,
-            form: None,
-            rendering: Rendering {
-                prefix: Some("pp. ".to_string()),
-                suffix: Some(", ".to_string()),
-                ..Default::default()
-            },
-            ..Default::default()
-        }),
+        tc_number!(Pages, prefix = "pp. ", suffix = ", "),
         // Year.
-        TemplateComponent::Date(TemplateDate {
-            date: DateVariable::Issued,
-            form: DateForm::Year,
-            rendering: Rendering {
-                suffix: Some(".".to_string()),
-                ..Default::default()
-            },
-            ..Default::default()
-        }),
+        tc_date!(Issued, Year, suffix = "."),
     ]
 }

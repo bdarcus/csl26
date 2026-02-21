@@ -94,42 +94,22 @@ pub struct Rendering {
 impl Rendering {
     /// Merge another rendering into this one, with the other taking precedence.
     pub fn merge(&mut self, other: &Rendering) {
-        if other.emph.is_some() {
-            self.emph = other.emph;
-        }
-        if other.quote.is_some() {
-            self.quote = other.quote;
-        }
-        if other.strong.is_some() {
-            self.strong = other.strong;
-        }
-        if other.small_caps.is_some() {
-            self.small_caps = other.small_caps;
-        }
-        if other.prefix.is_some() {
-            self.prefix = other.prefix.clone();
-        }
-        if other.suffix.is_some() {
-            self.suffix = other.suffix.clone();
-        }
-        if other.inner_prefix.is_some() {
-            self.inner_prefix = other.inner_prefix.clone();
-        }
-        if other.inner_suffix.is_some() {
-            self.inner_suffix = other.inner_suffix.clone();
-        }
-        if other.wrap.is_some() {
-            self.wrap = other.wrap.clone();
-        }
-        if other.suppress.is_some() {
-            self.suppress = other.suppress;
-        }
-        if other.initialize_with.is_some() {
-            self.initialize_with = other.initialize_with.clone();
-        }
-        if other.strip_periods.is_some() {
-            self.strip_periods = other.strip_periods;
-        }
+        crate::merge_options!(
+            self,
+            other,
+            emph,
+            quote,
+            strong,
+            small_caps,
+            prefix,
+            suffix,
+            inner_prefix,
+            inner_suffix,
+            wrap,
+            suppress,
+            initialize_with,
+            strip_periods,
+        );
     }
 }
 
@@ -205,28 +185,12 @@ impl Default for TemplateComponent {
 impl TemplateComponent {
     /// Get the rendering options for this component.
     pub fn rendering(&self) -> &Rendering {
-        match self {
-            TemplateComponent::Contributor(c) => &c.rendering,
-            TemplateComponent::Date(d) => &d.rendering,
-            TemplateComponent::Title(t) => &t.rendering,
-            TemplateComponent::Number(n) => &n.rendering,
-            TemplateComponent::Variable(v) => &v.rendering,
-            TemplateComponent::List(l) => &l.rendering,
-            TemplateComponent::Term(t) => &t.rendering,
-        }
+        crate::dispatch_component!(self, |inner| &inner.rendering)
     }
 
     /// Get the type-specific rendering overrides for this component.
     pub fn overrides(&self) -> Option<&HashMap<TypeSelector, ComponentOverride>> {
-        match self {
-            TemplateComponent::Contributor(c) => c.overrides.as_ref(),
-            TemplateComponent::Date(d) => d.overrides.as_ref(),
-            TemplateComponent::Title(t) => t.overrides.as_ref(),
-            TemplateComponent::Number(n) => n.overrides.as_ref(),
-            TemplateComponent::Variable(v) => v.overrides.as_ref(),
-            TemplateComponent::List(l) => l.overrides.as_ref(),
-            TemplateComponent::Term(t) => t.overrides.as_ref(),
-        }
+        crate::dispatch_component!(self, |inner| inner.overrides.as_ref())
     }
 }
 
@@ -331,53 +295,29 @@ pub enum ContributorForm {
     VerbShort,
 }
 
-/// Contributor roles.
-#[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "schema", derive(JsonSchema))]
-#[serde(rename_all = "kebab-case")]
-#[non_exhaustive]
-pub enum ContributorRole {
-    #[default]
-    Author,
-    Editor,
-    Translator,
-    Director,
-    Publisher,
-    Recipient,
-    Interviewer,
-    Interviewee,
-    Inventor,
-    Counsel,
-    Composer,
-    CollectionEditor,
-    ContainerAuthor,
-    EditorialDirector,
-    Illustrator,
-    OriginalAuthor,
-    ReviewedAuthor,
-}
-
-impl ContributorRole {
-    pub fn as_str(&self) -> &'static str {
-        match self {
-            ContributorRole::Author => "author",
-            ContributorRole::Editor => "editor",
-            ContributorRole::Translator => "translator",
-            ContributorRole::Director => "director",
-            ContributorRole::Publisher => "publisher",
-            ContributorRole::Recipient => "recipient",
-            ContributorRole::Interviewer => "interviewer",
-            ContributorRole::Interviewee => "interviewee",
-            ContributorRole::Inventor => "inventor",
-            ContributorRole::Counsel => "counsel",
-            ContributorRole::Composer => "composer",
-            ContributorRole::CollectionEditor => "collection-editor",
-            ContributorRole::ContainerAuthor => "container-author",
-            ContributorRole::EditorialDirector => "editorial-director",
-            ContributorRole::Illustrator => "illustrator",
-            ContributorRole::OriginalAuthor => "original-author",
-            ContributorRole::ReviewedAuthor => "reviewed-author",
-        }
+crate::str_enum! {
+    /// Contributor roles.
+    #[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq, Eq, Hash)]
+    #[cfg_attr(feature = "schema", derive(JsonSchema))]
+    #[serde(rename_all = "kebab-case")]
+    pub enum ContributorRole {
+        #[default] Author = "author",
+        Editor = "editor",
+        Translator = "translator",
+        Director = "director",
+        Publisher = "publisher",
+        Recipient = "recipient",
+        Interviewer = "interviewer",
+        Interviewee = "interviewee",
+        Inventor = "inventor",
+        Counsel = "counsel",
+        Composer = "composer",
+        CollectionEditor = "collection-editor",
+        ContainerAuthor = "container-author",
+        EditorialDirector = "editorial-director",
+        Illustrator = "illustrator",
+        OriginalAuthor = "original-author",
+        ReviewedAuthor = "reviewed-author"
     }
 }
 
