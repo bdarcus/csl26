@@ -3389,6 +3389,13 @@
           ],
           "additionalProperties": true
         },
+        "disambiguate-only": {
+          "description": "When true, suppress this title component unless the reference needs disambiguation (i.e. multiple works by the same author appear in the document). Used by author-class styles (e.g. MLA) where the title appears in citations only to resolve same-author ambiguity.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
         "emph": {
           "description": "Render in italics/emphasis.",
           "type": [
