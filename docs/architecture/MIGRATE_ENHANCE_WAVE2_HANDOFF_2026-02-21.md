@@ -1,5 +1,8 @@
 # Wave 2 Handoff: Numeric Variant Stress (2026-02-21)
 
+> Canonical status/next-actions now live in:
+> `docs/architecture/MIGRATE_ENHANCE_WAVE_RUNBOOK_2026-02-21.md`
+
 ## Branch
 `codex/migrate-enhance-wave-strategy`
 

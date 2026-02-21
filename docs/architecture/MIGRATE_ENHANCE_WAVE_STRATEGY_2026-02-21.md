@@ -1,5 +1,8 @@
 # Migrate+Enhance Wave Strategy (2026-02-21)
 
+> Canonical status/next-actions now live in:
+> `docs/architecture/MIGRATE_ENHANCE_WAVE_RUNBOOK_2026-02-21.md`
+
 ## Goal
 Raise `csln-migrate` conversion quality toward consistently high fidelity and high SQI by selecting legacy styles that maximize migration learning signal, not just dependent-count coverage.
 
