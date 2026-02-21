@@ -78,6 +78,33 @@ pub enum ContributorPreset {
     /// Numeric medium author list variant:
     /// same as `numeric-compact`, but et al. after 3 of 4+.
     NumericMedium,
+    /// Numeric tight: all family-first, no initials, et al. after 3 of 7+.
+    /// Tighter than `numeric-compact` (use-first: 3 vs 6).
+    /// Example: "Smith J, Jones M, Brown A, et al."
+    NumericTight,
+    /// Numeric large: all family-first, no initials, et al. after 10 of 11+.
+    /// For biomedical journals that show nearly all authors.
+    /// Example: "Smith J, Jones M, Brown A, [10 authors], et al."
+    NumericLarge,
+    /// Annual Reviews style: all family-first, no initials, et al. after 5 of 7+,
+    /// particle demotion never. Distinguishable by "never" demote policy.
+    /// Example: "van der Berg J, Smith M, Jones A, Brown B, White C, et al."
+    AnnualReviews,
+    /// Math/physics author-date: all family-first, period initial (no trailing
+    /// space), comma sort-separator, no conjunction. Used across Springer
+    /// math/physics and related author-date journals.
+    /// Example: "Smith, J., Jones, M., Brown, A."
+    MathPhys,
+    /// Social science first-author inversion: first author family-first,
+    /// remaining authors given-first, period-space initials, comma
+    /// sort-separator, no conjunction. Common in sociology and civil engineering.
+    /// Example: "Smith, J. D., M. K. Jones, A. B. Brown"
+    SocSciFirst,
+    /// Physics numeric given-first: no author inversion, period-space initial,
+    /// no conjunction, sort-only particle demotion. Used by numeric physics
+    /// journals like APS.
+    /// Example: "J. Smith, M. Jones, A. Brown"
+    PhysicsNumeric,
 }
 
 impl ContributorPreset {
@@ -174,6 +201,79 @@ impl ContributorPreset {
                     use_first: 3,
                     ..Default::default()
                 }),
+                ..Default::default()
+            },
+            ContributorPreset::NumericTight => ContributorConfig {
+                display_as_sort: Some(DisplayAsSort::All),
+                and: Some(AndOptions::None),
+                delimiter: Some(", ".to_string()),
+                delimiter_precedes_last: Some(DelimiterPrecedesLast::Always),
+                initialize_with: Some("".to_string()),
+                sort_separator: Some(" ".to_string()),
+                demote_non_dropping_particle: Some(DemoteNonDroppingParticle::SortOnly),
+                shorten: Some(ShortenListOptions {
+                    min: 7,
+                    use_first: 3,
+                    ..Default::default()
+                }),
+                ..Default::default()
+            },
+            ContributorPreset::NumericLarge => ContributorConfig {
+                display_as_sort: Some(DisplayAsSort::All),
+                and: Some(AndOptions::None),
+                delimiter: Some(", ".to_string()),
+                delimiter_precedes_last: Some(DelimiterPrecedesLast::Always),
+                initialize_with: Some("".to_string()),
+                sort_separator: Some(" ".to_string()),
+                demote_non_dropping_particle: Some(DemoteNonDroppingParticle::SortOnly),
+                shorten: Some(ShortenListOptions {
+                    min: 11,
+                    use_first: 10,
+                    ..Default::default()
+                }),
+                ..Default::default()
+            },
+            ContributorPreset::AnnualReviews => ContributorConfig {
+                display_as_sort: Some(DisplayAsSort::All),
+                and: Some(AndOptions::None),
+                delimiter: Some(", ".to_string()),
+                delimiter_precedes_last: Some(DelimiterPrecedesLast::Never),
+                initialize_with: Some("".to_string()),
+                sort_separator: Some(" ".to_string()),
+                demote_non_dropping_particle: Some(DemoteNonDroppingParticle::Never),
+                shorten: Some(ShortenListOptions {
+                    min: 7,
+                    use_first: 5,
+                    ..Default::default()
+                }),
+                ..Default::default()
+            },
+            ContributorPreset::MathPhys => ContributorConfig {
+                display_as_sort: Some(DisplayAsSort::All),
+                and: Some(AndOptions::None),
+                delimiter: Some(", ".to_string()),
+                delimiter_precedes_last: Some(DelimiterPrecedesLast::Always),
+                initialize_with: Some(".".to_string()),
+                sort_separator: Some(", ".to_string()),
+                demote_non_dropping_particle: Some(DemoteNonDroppingParticle::SortOnly),
+                ..Default::default()
+            },
+            ContributorPreset::SocSciFirst => ContributorConfig {
+                display_as_sort: Some(DisplayAsSort::First),
+                and: Some(AndOptions::None),
+                delimiter: Some(", ".to_string()),
+                delimiter_precedes_last: Some(DelimiterPrecedesLast::Always),
+                initialize_with: Some(". ".to_string()),
+                sort_separator: Some(", ".to_string()),
+                demote_non_dropping_particle: Some(DemoteNonDroppingParticle::SortOnly),
+                ..Default::default()
+            },
+            ContributorPreset::PhysicsNumeric => ContributorConfig {
+                display_as_sort: Some(DisplayAsSort::None),
+                and: Some(AndOptions::None),
+                delimiter: Some(", ".to_string()),
+                initialize_with: Some(". ".to_string()),
+                demote_non_dropping_particle: Some(DemoteNonDroppingParticle::SortOnly),
                 ..Default::default()
             },
         }
@@ -541,6 +641,12 @@ mod tests {
             ContributorPreset::Springer,
             ContributorPreset::NumericCompact,
             ContributorPreset::NumericMedium,
+            ContributorPreset::NumericTight,
+            ContributorPreset::NumericLarge,
+            ContributorPreset::AnnualReviews,
+            ContributorPreset::MathPhys,
+            ContributorPreset::SocSciFirst,
+            ContributorPreset::PhysicsNumeric,
         ];
         for preset in contributor_presets {
             let yaml = serde_yaml::to_string(&preset).unwrap();

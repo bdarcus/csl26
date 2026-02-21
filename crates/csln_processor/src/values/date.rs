@@ -215,18 +215,18 @@ impl ComponentValues for TemplateDate {
         let suffix = if hints.disamb_condition
             && formatted.as_ref().map(|s| s.len() == 4).unwrap_or(false)
         {
-            // Check if year suffix is enabled
+            // Check if year suffix is enabled. Fall back to AuthorDate default
+            // (year_suffix: true) when processing is not explicitly set, matching
+            // the behavior in disambiguation.rs which uses unwrap_or_default().
             let use_suffix = options
                 .config
                 .processing
                 .as_ref()
-                .map(|p| {
-                    p.config()
-                        .disambiguate
-                        .as_ref()
-                        .map(|d| d.year_suffix)
-                        .unwrap_or(false)
-                })
+                .unwrap_or(&csln_core::options::Processing::AuthorDate)
+                .config()
+                .disambiguate
+                .as_ref()
+                .map(|d| d.year_suffix)
                 .unwrap_or(false);
 
             if use_suffix {
