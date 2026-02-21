@@ -86,6 +86,12 @@ enum Commands {
     /// Convert between CSLN formats (YAML, JSON, CBOR)
     Convert(ConvertArgs),
 
+    /// List and inspect embedded (builtin) citation styles
+    Styles {
+        #[command(subcommand)]
+        command: StylesCommands,
+    },
+
     /// Generate JSON schema for CSLN models
     #[cfg(feature = "schema")]
     Schema {
@@ -114,6 +120,12 @@ enum RenderCommands {
 
     /// Render references/citations directly
     Refs(RenderRefsArgs),
+}
+
+#[derive(Subcommand)]
+enum StylesCommands {
+    /// List all embedded (builtin) style names
+    List,
 }
 
 #[derive(Args, Debug)]
@@ -157,6 +169,7 @@ struct RenderDocArgs {
 }
 
 #[derive(Args, Debug)]
+#[command(group = ArgGroup::new("style-source").required(true).args(["style", "builtin"]))]
 struct RenderRefsArgs {
     /// Path(s) to bibliography input files (repeat for multiple)
     #[arg(short = 'b', long, required = true, action = ArgAction::Append)]
@@ -164,7 +177,13 @@ struct RenderRefsArgs {
 
     /// Path to style file
     #[arg(short = 's', long)]
-    style: PathBuf,
+    style: Option<PathBuf>,
+
+    /// Use an embedded (builtin) style by name (e.g., apa-7th, ieee)
+    ///
+    /// Run `csln styles list` to see all available builtin styles.
+    #[arg(long)]
+    builtin: Option<String>,
 
     /// Path(s) to citations input files (repeat for multiple)
     #[arg(short = 'c', long, action = ArgAction::Append)]
@@ -289,6 +308,9 @@ fn run() -> Result<(), Box<dyn Error>> {
         },
         Commands::Check(args) => run_check(args),
         Commands::Convert(args) => run_convert(args),
+        Commands::Styles { command } => match command {
+            StylesCommands::List => run_styles_list(),
+        },
         #[cfg(feature = "schema")]
         Commands::Schema { r#type, out_dir } => run_schema(r#type, out_dir),
         Commands::Doc(args) => {
@@ -355,6 +377,17 @@ fn run_schema(r#type: Option<DataType>, out_dir: Option<PathBuf>) -> Result<(), 
     Err("Specify a type (style, bib, locale, citation) or --out-dir".into())
 }
 
+fn run_styles_list() -> Result<(), Box<dyn Error>> {
+    println!("Embedded (builtin) styles:");
+    println!();
+    for name in csln_core::embedded::EMBEDDED_STYLE_NAMES {
+        println!("  {}", name);
+    }
+    println!();
+    println!("Usage: csln render refs --builtin <name> -b refs.json");
+    Ok(())
+}
+
 fn run_render_doc(args: RenderDocArgs) -> Result<(), Box<dyn Error>> {
     let style_obj = load_style(&args.style, args.no_semantics)?;
     let bibliography = load_merged_bibliography(&args.bibliography)?;
@@ -392,7 +425,11 @@ fn run_render_doc(args: RenderDocArgs) -> Result<(), Box<dyn Error>> {
 }
 
 fn run_render_refs(args: RenderRefsArgs) -> Result<(), Box<dyn Error>> {
-    let style_obj = load_style(&args.style, args.no_semantics)?;
+    let style_obj = match (args.style.as_ref(), args.builtin.as_deref()) {
+        (Some(path), _) => load_style(path, args.no_semantics)?,
+        (_, Some(name)) => load_style_builtin(name)?,
+        _ => unreachable!("ArgGroup ensures --style or --builtin is provided"),
+    };
     let bibliography = load_merged_bibliography(&args.bibliography)?;
 
     let item_ids = if let Some(k) = args.keys.clone() {
@@ -407,19 +444,36 @@ fn run_render_refs(args: RenderRefsArgs) -> Result<(), Box<dyn Error>> {
         Some(load_merged_citations(&args.citations)?)
     };
 
-    let locales_dir = find_locales_dir(args.style.to_str().unwrap_or("."));
     let processor = if let Some(ref locale_id) = style_obj.info.default_locale {
-        let locale = Locale::load(locale_id, &locales_dir);
+        let locale = if let Some(ref path) = args.style {
+            // File-based style: search for locale on disk, fall back to embedded.
+            let locales_dir = find_locales_dir(path.to_str().unwrap_or("."));
+            let disk_locale = Locale::load(locale_id, &locales_dir);
+            // If disk load returned the en-US fallback but locale isn't en-US,
+            // try the embedded locale instead.
+            if disk_locale.locale == *locale_id || locale_id == "en-US" {
+                disk_locale
+            } else {
+                load_locale_builtin(locale_id)
+            }
+        } else {
+            // Builtin style: use embedded locale directly.
+            load_locale_builtin(locale_id)
+        };
         Processor::with_locale(style_obj, bibliography, locale)
     } else {
         Processor::new(style_obj, bibliography)
     };
 
-    let style_name = args
-        .style
-        .file_name()
-        .map(|s| s.to_string_lossy().to_string())
-        .unwrap_or_else(|| "unknown".to_string());
+    let style_name = if let Some(ref path) = args.style {
+        path.file_name()
+            .map(|s| s.to_string_lossy().to_string())
+            .unwrap_or_else(|| "unknown".to_string())
+    } else if let Some(ref name) = args.builtin {
+        name.clone()
+    } else {
+        "unknown".to_string()
+    };
 
     let output = if args.json {
         render_refs_json(
@@ -745,6 +799,29 @@ fn load_style(path: &Path, no_semantics: bool) -> Result<Style, Box<dyn Error>> 
     }
 
     Ok(style_obj)
+}
+
+/// Load a builtin (embedded) style by name.
+fn load_style_builtin(name: &str) -> Result<Style, Box<dyn Error>> {
+    csln_core::embedded::get_embedded_style(name)
+        .ok_or_else(|| {
+            format!(
+                "Unknown builtin style: '{}'. Run `csln styles list` to see available styles.",
+                name
+            )
+        })?
+        .map_err(|e| format!("Failed to parse embedded style '{}': {}", name, e).into())
+}
+
+/// Load a locale from embedded bytes, falling back to en-US.
+fn load_locale_builtin(locale_id: &str) -> Locale {
+    if let Some(bytes) = csln_core::embedded::get_locale_bytes(locale_id) {
+        let content = String::from_utf8_lossy(bytes);
+        Locale::from_yaml_str(&content).unwrap_or_else(|_| Locale::en_us())
+    } else {
+        // Locale not bundled — fall back to the hardcoded en-US default.
+        Locale::en_us()
+    }
 }
 
 fn load_merged_bibliography(paths: &[PathBuf]) -> Result<Bibliography, Box<dyn Error>> {

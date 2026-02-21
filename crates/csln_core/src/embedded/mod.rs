@@ -9,7 +9,9 @@ pub mod apa;
 pub mod chicago;
 pub mod harvard;
 pub mod ieee;
+pub mod locales;
 pub mod numeric;
+pub mod styles;
 pub mod vancouver;
 
 use crate::template::TemplateComponent;
@@ -24,7 +26,9 @@ pub use harvard::bibliography as harvard_bibliography;
 pub use harvard::citation as harvard_citation;
 pub use ieee::bibliography as ieee_bibliography;
 pub use ieee::citation as ieee_citation;
+pub use locales::{EMBEDDED_LOCALE_IDS, get_locale_bytes};
 pub use numeric::citation as numeric_citation;
+pub use styles::{EMBEDDED_STYLE_NAMES, get_embedded_style};
 pub use vancouver::bibliography as vancouver_bibliography;
 pub use vancouver::citation as vancouver_citation;
 

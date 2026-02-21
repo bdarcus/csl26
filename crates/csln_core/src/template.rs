@@ -378,6 +378,12 @@ pub struct TemplateTitle {
     pub title: TitleType,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub form: Option<TitleForm>,
+    /// When true, suppress this title component unless the reference needs
+    /// disambiguation (i.e. multiple works by the same author appear in the
+    /// document). Used by author-class styles (e.g. MLA) where the title
+    /// appears in citations only to resolve same-author ambiguity.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub disambiguate_only: Option<bool>,
     #[serde(flatten, default)]
     pub rendering: Rendering,
     /// Structured link options (DOI, URL).
