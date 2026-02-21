@@ -40,7 +40,7 @@ citation:
       delimiter-precedes-last: never
   template:
     - contributor: author
-      form: long
+      form: short
       name-order: family-first
     - title: primary
       prefix: ", "

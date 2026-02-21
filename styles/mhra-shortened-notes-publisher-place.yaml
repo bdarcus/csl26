@@ -29,7 +29,7 @@ options:
 citation:
   template:
     - contributor: author
-      form: long
+      form: short
       name-order: family-first
       shorten:
         min: 8

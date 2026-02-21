@@ -41,8 +41,7 @@ citation:
       initialize-with: ". "
   template:
     - contributor: author
-      form: long
-      name-order: given-first
+      form: short
       shorten:
         min: 8
         use-first: 1
@@ -54,6 +53,7 @@ citation:
       overrides:
         personal_communication:
           suppress: true
+    - variable: locator
   wrap: parentheses
   delimiter: ". "
   multi-cite-delimiter: "; "

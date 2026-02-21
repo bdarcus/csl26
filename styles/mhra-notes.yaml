@@ -41,8 +41,7 @@ citation:
       delimiter-precedes-last: contextual
   template:
     - contributor: author
-      form: long
-      name-order: given-first
+      form: short
       shorten:
         min: 8
         use-first: 1
@@ -56,7 +55,6 @@ citation:
       emph: true
     - contributor: editor
       form: verb
-      name-order: given-first
       shorten:
         min: 4
         use-first: 1

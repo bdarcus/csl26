@@ -14,6 +14,7 @@ info:
   id: http://www.zotero.org/styles/karger-journals-author-date
   default-locale: en-US
 options:
+  processing: author-date
   substitute: editor-title-long
   contributors: numeric-compact
   dates: short
@@ -37,15 +38,16 @@ citation:
       sort-separator: " "
   template:
     - contributor: author
-      form: long
-      name-order: family-first
+      form: short
       shorten:
         min: 3
         use-first: 1
         and-others: et-al
-        delimiter-precedes-last: contextual
+    - date: issued
+      form: year
+    - variable: locator
   wrap: brackets
-  delimiter: ". "
+  delimiter: ", "
   multi-cite-delimiter: "; "
 bibliography:
   options:

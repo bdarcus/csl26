@@ -34,7 +34,7 @@ citation:
       delimiter: ", "
   template:
     - contributor: author
-      form: long
+      form: short
       name-order: family-first
       shorten:
         min: 3
@@ -49,6 +49,7 @@ citation:
           suppress: true
         article-newspaper:
           suppress: true
+    - variable: locator
   wrap: parentheses
   delimiter: ". "
   multi-cite-delimiter: ", "

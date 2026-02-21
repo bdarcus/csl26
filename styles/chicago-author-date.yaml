@@ -38,21 +38,20 @@ citation:
         delimiter-precedes-last: contextual
   template:
     - contributor: author
-      form: long
-      name-order: given-first
+      form: short
       shorten:
         min: 3
         use-first: 1
         and-others: et-al
-        delimiter-precedes-last: contextual
     - date: issued
       form: year
       prefix: " "
       overrides:
         personal_communication:
           suppress: true
+    - variable: locator
   wrap: parentheses
-  delimiter: ". "
+  delimiter: ", "
   multi-cite-delimiter: "; "
 bibliography:
   options:

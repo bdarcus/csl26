@@ -53,7 +53,7 @@ citation:
       delimiter: ", "
   template:
     - contributor: author
-      form: long
+      form: short
       name-order: family-first
       shorten:
         min: 8
@@ -63,6 +63,7 @@ citation:
     - date: issued
       form: year
       prefix: " "
+    - variable: locator
   wrap: parentheses
   delimiter: ". "
   multi-cite-delimiter: "; "
