@@ -16,10 +16,7 @@ info:
 options:
   substitute: editor-translator-long
   processing: numeric
-  contributors:
-    initialize-with: ". "
-    delimiter: ", "
-    demote-non-dropping-particle: sort-only
+  contributors: physics-numeric
   dates: long
   titles: humanities
   bibliography:

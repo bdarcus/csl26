@@ -16,11 +16,7 @@ info:
 options:
   substitute: editor-translator-short
   processing: numeric
-  contributors:
-    initialize-with: .
-    delimiter: ", "
-    delimiter-precedes-last: always
-    demote-non-dropping-particle: sort-only
+  contributors: numeric-given-dot
   dates: long
   bibliography:
     entry-suffix: .

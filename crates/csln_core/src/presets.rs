@@ -86,6 +86,14 @@ pub enum ContributorPreset {
     /// For biomedical journals that show nearly all authors.
     /// Example: "Smith J, Jones M, Brown A, [10 authors], et al."
     NumericLarge,
+    /// Numeric all-authors: all family-first, no conjunction, compact initials,
+    /// no list shortening, particle demotion disabled.
+    /// Example: "Smith JD, Jones MK, Brown AB"
+    NumericAllAuthors,
+    /// Numeric given-first with period-only initials (no space), no conjunction,
+    /// and comma delimiters.
+    /// Example: "J.D. Smith, M.K. Jones, A.B. Brown"
+    NumericGivenDot,
     /// Annual Reviews style: all family-first, no initials, et al. after 5 of 7+,
     /// particle demotion never. Distinguishable by "never" demote policy.
     /// Example: "van der Berg J, Smith M, Jones A, Brown B, White C, et al."
@@ -231,6 +239,25 @@ impl ContributorPreset {
                     use_first: 10,
                     ..Default::default()
                 }),
+                ..Default::default()
+            },
+            ContributorPreset::NumericAllAuthors => ContributorConfig {
+                display_as_sort: Some(DisplayAsSort::All),
+                and: Some(AndOptions::None),
+                delimiter: Some(", ".to_string()),
+                delimiter_precedes_last: Some(DelimiterPrecedesLast::Always),
+                initialize_with: Some("".to_string()),
+                sort_separator: Some(" ".to_string()),
+                demote_non_dropping_particle: Some(DemoteNonDroppingParticle::Never),
+                ..Default::default()
+            },
+            ContributorPreset::NumericGivenDot => ContributorConfig {
+                display_as_sort: Some(DisplayAsSort::None),
+                and: Some(AndOptions::None),
+                delimiter: Some(", ".to_string()),
+                delimiter_precedes_last: Some(DelimiterPrecedesLast::Always),
+                initialize_with: Some(".".to_string()),
+                demote_non_dropping_particle: Some(DemoteNonDroppingParticle::SortOnly),
                 ..Default::default()
             },
             ContributorPreset::AnnualReviews => ContributorConfig {
@@ -582,6 +609,36 @@ mod tests {
     }
 
     #[test]
+    fn test_contributor_preset_numeric_all_authors() {
+        let config = ContributorPreset::NumericAllAuthors.config();
+        assert_eq!(config.and, Some(AndOptions::None));
+        assert_eq!(config.display_as_sort, Some(DisplayAsSort::All));
+        assert_eq!(config.sort_separator, Some(" ".to_string()));
+        assert_eq!(config.initialize_with, Some("".to_string()));
+        assert_eq!(
+            config.demote_non_dropping_particle,
+            Some(DemoteNonDroppingParticle::Never)
+        );
+        assert!(config.shorten.is_none());
+    }
+
+    #[test]
+    fn test_contributor_preset_numeric_given_dot() {
+        let config = ContributorPreset::NumericGivenDot.config();
+        assert_eq!(config.and, Some(AndOptions::None));
+        assert_eq!(config.display_as_sort, Some(DisplayAsSort::None));
+        assert_eq!(config.initialize_with, Some(".".to_string()));
+        assert_eq!(
+            config.demote_non_dropping_particle,
+            Some(DemoteNonDroppingParticle::SortOnly)
+        );
+        assert_eq!(
+            config.delimiter_precedes_last,
+            Some(DelimiterPrecedesLast::Always)
+        );
+    }
+
+    #[test]
     fn test_date_preset_long() {
         let config = DatePreset::Long.config();
         assert_eq!(config.month, MonthFormat::Long);
@@ -643,6 +700,8 @@ mod tests {
             ContributorPreset::NumericMedium,
             ContributorPreset::NumericTight,
             ContributorPreset::NumericLarge,
+            ContributorPreset::NumericAllAuthors,
+            ContributorPreset::NumericGivenDot,
             ContributorPreset::AnnualReviews,
             ContributorPreset::MathPhys,
             ContributorPreset::SocSciFirst,

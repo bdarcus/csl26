@@ -16,18 +16,7 @@ info:
 options:
   substitute: editor-long
   processing: numeric
-  contributors:
-    display-as-sort: all
-    initialize-with: ""
-    shorten:
-      min: 7
-      use-first: 3
-      and-others: et-al
-      delimiter-precedes-last: contextual
-    delimiter: ", "
-    delimiter-precedes-last: always
-    demote-non-dropping-particle: sort-only
-    sort-separator: " "
+  contributors: numeric-tight
   dates: short
   titles: journal-emphasis
   bibliography:

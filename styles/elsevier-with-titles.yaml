@@ -12,11 +12,7 @@ options:
     - editor
     - translator
   processing: numeric
-  contributors:
-    initialize-with: .
-    delimiter: ', '
-    delimiter-precedes-last: always
-    demote-non-dropping-particle: sort-only
+  contributors: numeric-given-dot
   dates: long
   titles: scientific
   bibliography:
