@@ -1,0 +1,81 @@
+version: ''
+info:
+  title: Alpha (biblatex-alpha)
+  id: https://github.com/citation-style-language/styles/alpha
+  default-locale: en-US
+options:
+  processing:
+    # Alpha preset: 3-char single-author, 1-char multi-author, et-al at 4, "+" marker
+    # Matches biblatex alpha.bbx / BibTeX alpha.bst conventions
+    label:
+      preset: alpha
+  substitute:
+    contributor-role-form: short
+    template:
+      - editor
+      - translator
+  contributors:
+    and: text
+    delimiter: ', '
+    delimiter-precedes-last: contextual
+    sort-separator: ', '
+  titles:
+    monograph:
+      emph: true
+    periodical:
+      emph: true
+    serial:
+      emph: true
+  bibliography:
+    entry-suffix: .
+    separator: ', '
+citation:
+  sort:
+    template:
+      - key: author
+  template:
+    - number: citation-label
+    - variable: locator
+      prefix: ', '
+  wrap: brackets
+  delimiter: ''
+  multi-cite-delimiter: ', '
+bibliography:
+  options:
+    contributors:
+      and: text
+      delimiter: ', '
+      delimiter-precedes-last: contextual
+      sort-separator: ', '
+  sort:
+    template:
+      - key: author
+      - key: issued
+  template:
+    - number: citation-label
+      wrap: brackets
+      suffix: ' '
+    - contributor: author
+      form: long
+      name-order: family-first
+    - title: primary
+    - title: parent-monograph
+    - title: parent-serial
+    - variable: publisher
+    - variable: publisher-place
+    - number: volume
+    - date: issued
+      form: year
+      overrides:
+        article-journal:
+          wrap: parentheses
+          prefix: ' '
+        chapter:
+          suppress: true
+    - number: pages
+      prefix: ' '
+      overrides:
+        chapter:
+          prefix: 'pp. '
+        paper-conference:
+          prefix: 'pp. '
