@@ -819,6 +819,7 @@
       "enum": [
         "long",
         "short",
+        "family-only",
         "verb",
         "verb-short"
       ]
@@ -1039,7 +1040,8 @@
         "year-month",
         "full",
         "month-day",
-        "year-month-day"
+        "year-month-day",
+        "day-month-abbr-year"
       ]
     },
     "DatePreset": {
