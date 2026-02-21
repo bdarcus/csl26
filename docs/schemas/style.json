@@ -881,6 +881,48 @@
           "enum": [
             "numeric-medium"
           ]
+        },
+        {
+          "description": "Numeric tight: all family-first, no initials, et al. after 3 of 7+. Tighter than `numeric-compact` (use-first: 3 vs 6). Example: \"Smith J, Jones M, Brown A, et al.\"",
+          "type": "string",
+          "enum": [
+            "numeric-tight"
+          ]
+        },
+        {
+          "description": "Numeric large: all family-first, no initials, et al. after 10 of 11+. For biomedical journals that show nearly all authors. Example: \"Smith J, Jones M, Brown A, [10 authors], et al.\"",
+          "type": "string",
+          "enum": [
+            "numeric-large"
+          ]
+        },
+        {
+          "description": "Annual Reviews style: all family-first, no initials, et al. after 5 of 7+, particle demotion never. Distinguishable by \"never\" demote policy. Example: \"van der Berg J, Smith M, Jones A, Brown B, White C, et al.\"",
+          "type": "string",
+          "enum": [
+            "annual-reviews"
+          ]
+        },
+        {
+          "description": "Math/physics author-date: all family-first, period initial (no trailing space), comma sort-separator, no conjunction. Used across Springer math/physics and related author-date journals. Example: \"Smith, J., Jones, M., Brown, A.\"",
+          "type": "string",
+          "enum": [
+            "math-phys"
+          ]
+        },
+        {
+          "description": "Social science first-author inversion: first author family-first, remaining authors given-first, period-space initials, comma sort-separator, no conjunction. Common in sociology and civil engineering. Example: \"Smith, J. D., M. K. Jones, A. B. Brown\"",
+          "type": "string",
+          "enum": [
+            "soc-sci-first"
+          ]
+        },
+        {
+          "description": "Physics numeric given-first: no author inversion, period-space initial, no conjunction, sort-only particle demotion. Used by numeric physics journals like APS. Example: \"J. Smith, M. Jones, A. Brown\"",
+          "type": "string",
+          "enum": [
+            "physics-numeric"
+          ]
         }
       ]
     },
