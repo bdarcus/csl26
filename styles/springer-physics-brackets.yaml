@@ -46,20 +46,89 @@ bibliography:
     - title: parent-serial
     - title: primary
       emph: true
+      suppress: true
+      overrides:
+        book:
+          suppress: false
+        chapter:
+          suppress: false
+        paper-conference:
+          suppress: false
+    - number: volume
+    - number: pages
     - variable: publisher
       prefix: " ("
+      overrides:
+        article-journal:
+          suppress: true
     - variable: publisher-place
+      overrides:
+        article-journal:
+          suppress: true
     - date: issued
       form: year
       wrap: parentheses
   type-templates:
-    patent:
-      - number: citation-number
-        suffix: ". "
+    chapter:
       - contributor: author
         form: long
-        and: text
+        name-order: given-first
+      - term: in
+      - title: parent-monograph
+      - contributor: editor
+        form: verb
+      - variable: publisher
       - date: issued
         form: year
-      - term: no-date
-        form: short
+      - number: pages
+        prefix: "pp. "
+    report:
+      - contributor: author
+        form: long
+        name-order: given-first
+      - title: primary
+      - variable: publisher
+      - variable: publisher-place
+      - date: issued
+        form: year
+        wrap: parentheses
+    thesis:
+      - contributor: author
+        form: long
+        name-order: given-first
+      - title: primary
+      - variable: genre
+      - variable: publisher
+      - date: issued
+        form: year
+    legal-case:
+      - title: primary
+      - date: issued
+        form: year
+        wrap: parentheses
+      - number: pages
+        prefix: ", p. "
+    patent:
+      - contributor: author
+        form: long
+        name-order: given-first
+      - number: patent-number
+      - date: issued
+        form: year
+        wrap: parentheses
+    motion-picture:
+      - contributor: author
+        form: long
+        name-order: given-first
+      - title: primary
+      - date: issued
+        form: year
+        wrap: parentheses
+    broadcast:
+      - contributor: author
+        form: long
+        name-order: given-first
+      - title: primary
+      - date: issued
+        form: year
+        wrap: parentheses

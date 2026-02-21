@@ -34,6 +34,11 @@ options:
   punctuation-in-quote: true
 citation:
   options:
+    processing:
+      disambiguate:
+        names: false
+        add-givenname: false
+        year-suffix: true
     contributors:
       initialize-with: ". "
       shorten:
@@ -54,8 +59,9 @@ citation:
       form: year
       prefix: ", "
     - variable: locator
+      prefix: ", "
   wrap: parentheses
-  delimiter: ". "
+  delimiter: " "
   multi-cite-delimiter: "; "
 bibliography:
   options:

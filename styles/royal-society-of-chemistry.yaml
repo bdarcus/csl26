@@ -14,66 +14,121 @@ info:
   id: http://www.zotero.org/styles/royal-society-of-chemistry
   default-locale: en-GB
 options:
-  substitute: editor-short
+  substitute: editor-translator-short
   processing: numeric
   contributors:
-    initialize-with: ". "
+    initialize-with: .
     delimiter: ", "
-    delimiter-precedes-last: never
+    delimiter-precedes-last: always
     demote-non-dropping-particle: sort-only
   dates: long
-  titles: humanities
   bibliography:
     entry-suffix: .
     separator: ", "
+  punctuation-in-quote: true
 citation:
   use-preset: numeric-citation
+  wrap: brackets
   multi-cite-delimiter: ","
 bibliography:
   options:
     contributors:
-      initialize-with: ". "
+      initialize-with: .
       delimiter: ", "
-      delimiter-precedes-last: never
+      delimiter-precedes-last: always
   template:
     - contributor: author
       form: long
-      name-order: family-first
+      overrides:
+        personal_communication:
+          prefix: "pp. "
+      name-order: given-first
     - title: parent-monograph
-      emph: true
     - title: parent-serial
-      emph: true
-    - variable: publisher
+    - number: volume
     - date: issued
       form: year
-    - number: volume
+      wrap: parentheses
+      prefix: " "
     - number: pages
       overrides:
         chapter:
           prefix: "pp. "
         paper-conference:
           prefix: "pp. "
+      prefix: " "
     - title: primary
-      emph: true
+      suppress: true
+      overrides:
+        book:
+          suppress: false
+        chapter:
+          suppress: false
+        paper-conference:
+          suppress: false
+    - variable: publisher
+      overrides:
+        entry-encyclopedia:
+          suppress: true
+        report:
+          suppress: true
+        article-journal:
+          suppress: true
     - variable: publisher-place
+      overrides:
+        article-journal:
+          suppress: true
   type-templates:
-    patent:
-      - number: citation-number
+    chapter:
+      - contributor: author
+        form: long
+        name-order: given-first
+      - title: parent-monograph
+      - contributor: editor
+        form: verb
       - variable: publisher
-      - title: parent-serial
-        emph: true
+      - date: issued
+        form: year
+      - number: pages
+        prefix: "pp. "
+    report:
+      - contributor: author
+        form: long
+        name-order: given-first
+      - title: primary
+      - variable: publisher
+      - variable: publisher-place
+      - date: issued
+        form: year
+    thesis:
+      - contributor: author
+        form: long
+        name-order: given-first
+      - variable: genre
+      - variable: publisher
+      - date: issued
+        form: year
+    legal-case:
+      - title: primary
       - date: issued
         form: year
       - number: volume
-      - number: pages
-    webpage:
-      - number: citation-number
+        prefix: ", vol. "
+    motion-picture:
       - contributor: author
         form: long
-        and: text
+        name-order: given-first
       - title: primary
-      - variable: url
-      - term: accessed
+      - date: issued
+        form: year
+    broadcast:
+      - contributor: author
         form: long
-      - date: accessed
-        form: full
+        name-order: given-first
+      - title: primary
+      - date: issued
+        form: year
+    patent:
+      - number: patent-number
+      - date: issued
+        form: year

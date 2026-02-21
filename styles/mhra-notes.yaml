@@ -88,6 +88,45 @@ citation:
   delimiter: ", "
   multi-cite-delimiter: "; "
 bibliography:
+  type-templates:
+    interview:
+      - contributor: author
+        form: long
+        name-order: family-first
+      - title: primary
+        wrap: quotes
+      - date: issued
+        form: full
+      - variable: url
+    patent:
+      - contributor: author
+        form: long
+        name-order: family-first
+      - title: primary
+      - number: patent-number
+        prefix: "Patent "
+      - date: issued
+        form: full
+        prefix: ", issued "
+    motion-picture:
+      - contributor: author
+        form: long
+        name-order: family-first
+      - title: primary
+      - date: issued
+        form: year
+        wrap: parentheses
+    book:
+      - contributor: author
+        form: long
+        name-order: family-first
+      - title: primary
+      - contributor: translator
+        form: verb
+      - variable: publisher
+      - date: issued
+        form: year
+        wrap: parentheses
   template:
     - contributor: author
       form: long

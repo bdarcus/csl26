@@ -58,6 +58,41 @@ citation:
   delimiter: ". "
   multi-cite-delimiter: "; "
 bibliography:
+  type-templates:
+    patent:
+      - contributor: author
+        form: long
+        name-order: family-first
+      - date: issued
+        form: year
+        prefix: ". "
+      - title: primary
+        prefix: ". "
+      - number: patent-number
+        prefix: ", Patent "
+      - date: issued
+        form: full
+        prefix: ", issued "
+    motion-picture:
+      - contributor: author
+        form: long
+        name-order: family-first
+      - date: issued
+        form: year
+        prefix: ". "
+      - title: primary
+        prefix: ". "
+    interview:
+      - contributor: author
+        form: long
+        name-order: family-first
+      - date: issued
+        form: year
+        prefix: ". "
+      - title: primary
+        wrap: quotes
+        prefix: ". "
+      - variable: url
   template:
     - contributor: author
       form: long

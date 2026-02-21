@@ -38,6 +38,11 @@ citation:
   wrap: parentheses
   multi-cite-delimiter: ", "
 bibliography:
+  sort:
+    template:
+      - key: author
+      - key: issued
+      - key: title
   options:
     contributors:
       display-as-sort: all
@@ -62,6 +67,9 @@ bibliography:
     - title: primary
     - items:
         - number: volume
+          overrides:
+            legal-case:
+              suppress: true
         - number: issue
           wrap: parentheses
           overrides:
@@ -79,12 +87,17 @@ bibliography:
           emph: true
     - title: parent-serial
       emph: true
+      overrides:
+        film:
+          suppress: true
     - number: pages
       overrides:
         chapter:
           prefix: "pp. "
         article-magazine:
           prefix: "pp. "
+        legal-case:
+          suppress: true
     - variable: publisher
   type-templates:
     patent:

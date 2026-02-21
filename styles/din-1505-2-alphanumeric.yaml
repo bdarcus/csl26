@@ -1,0 +1,83 @@
+version: ''
+info:
+  title: DIN 1505-2 (alphanumeric, Deutsch) - standard superseded by ISO-690
+  id: http://www.zotero.org/styles/din-1505-2-alphanumeric
+  default-locale: de-DE
+options:
+  processing:
+    label:
+      preset: din
+  contributors:
+    display-as-sort: all
+    shorten:
+      min: 9
+      use-first: 8
+      and-others: et-al
+      delimiter-precedes-last: contextual
+    delimiter: ' ; '
+    delimiter-precedes-last: always
+    demote-non-dropping-particle: sort-only
+    sort-separator: ', '
+  dates:
+    month: numeric
+  titles:
+    monograph:
+      emph: true
+    periodical:
+      emph: true
+    serial:
+      emph: true
+  bibliography:
+    separator: ' : '
+citation:
+  sort:
+    template:
+      - key: author
+  template:
+    - number: citation-label
+    - variable: locator
+      prefix: ', '
+  wrap: brackets
+  delimiter: ''
+  multi-cite-delimiter: ', '
+bibliography:
+  options:
+    contributors:
+      display-as-sort: all
+      shorten:
+        min: 9
+        use-first: 8
+        and-others: et-al
+        delimiter-precedes-last: contextual
+      delimiter: ' ; '
+      delimiter-precedes-last: always
+      sort-separator: ', '
+  template:
+    - contributor: author
+      form: long
+      name-order: family-first
+    - title: primary
+      prefix: ': '
+    - items:
+        - contributor: editor
+          form: verb
+          name-order: given-first
+        - title: parent-monograph
+          emph: true
+    - title: parent-serial
+      emph: true
+    - number: volume
+    - variable: publisher
+    - date: issued
+      form: year
+      prefix: ', '
+    - number: pages
+      prefix: ', '
+      overrides:
+        article-journal:
+          prefix: 'pp. '
+        paper-conference:
+          prefix: 'pp. '
+        chapter:
+          prefix: 'pp. '
+    - variable: publisher-place

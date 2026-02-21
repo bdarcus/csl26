@@ -39,6 +39,11 @@ options:
     separator: ", "
 citation:
   options:
+    processing:
+      disambiguate:
+        names: false
+        add-givenname: false
+        year-suffix: true
     contributors:
       initialize-with: ". "
       shorten:
@@ -61,10 +66,17 @@ citation:
       form: year
       prefix: ", "
     - variable: locator
+      show-label: false
+      prefix: ":"
   wrap: parentheses
-  delimiter: ". "
+  delimiter: " "
   multi-cite-delimiter: "; "
 bibliography:
+  sort:
+    template:
+      - key: author
+      - key: issued
+      - key: title
   options:
     contributors:
       display-as-sort: all
@@ -77,6 +89,31 @@ bibliography:
       delimiter: ", "
       delimiter-precedes-last: never
       sort-separator: ", "
+  type-templates:
+    article-journal:
+      - contributor: author
+        form: long
+        name-order: family-first
+        shorten:
+          min: 8
+          use-first: 6
+      - date: issued
+        form: year
+        wrap: parentheses
+        prefix: " "
+      - title: primary
+        prefix: " "
+      - title: parent-serial
+        emph: true
+      - items:
+          - number: volume
+          - number: issue
+            wrap: parentheses
+        delimiter: ""
+      - number: pages
+        prefix: ": "
+      - variable: doi
+        prefix: ", doi: doi.org/"
   template:
     - contributor: author
       form: long

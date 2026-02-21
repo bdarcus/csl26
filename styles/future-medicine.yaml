@@ -64,8 +64,26 @@ bibliography:
           suppress: true
     - title: parent-monograph
       emph: true
+      overrides:
+        article-newspaper:
+          suppress: true
+        film:
+          suppress: true
+        thesis:
+          suppress: true
+        patent:
+          suppress: true
     - title: parent-serial
       emph: true
+      overrides:
+        article-newspaper:
+          suppress: true
+        film:
+          suppress: true
+        thesis:
+          suppress: true
+        patent:
+          suppress: true
     - variable: publisher
     - variable: publisher-place
       prefix: ", "
@@ -111,6 +129,22 @@ bibliography:
           use-first: 3
           and-others: et-al
           delimiter-precedes-last: contextual
+      - number: patent-number
+      - date: issued
+        form: year
+        wrap: parentheses
+    thesis:
+      - number: citation-number
+      - contributor: author
+        form: long
+        sort-separator: " "
+        shorten:
+          min: 7
+          use-first: 3
+          and-others: et-al
+          delimiter-precedes-last: contextual
+      - variable: genre
+      - variable: publisher
       - date: issued
         form: year
         wrap: parentheses
