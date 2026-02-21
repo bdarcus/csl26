@@ -1,7 +1,7 @@
 ---
 # csl26-reux
 title: MLA-specific schema and rendering gaps
-status: todo
+status: completed
 type: feature
 priority: normal
 created_at: 2026-02-21T20:58:42Z

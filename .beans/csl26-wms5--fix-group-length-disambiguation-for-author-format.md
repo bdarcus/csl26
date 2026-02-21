@@ -1,7 +1,7 @@
 ---
 # csl26-wms5
 title: Fix group_length disambiguation for author-format styles
-status: todo
+status: completed
 type: bug
 priority: high
 created_at: 2026-02-21T20:58:13Z
