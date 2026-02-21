@@ -130,6 +130,9 @@ impl Processor {
     /// citeproc-js registers all bibliography items before citation rendering in
     /// the oracle workflow, so numeric labels are stable by reference registry
     /// order rather than first-citation order.
+    ///
+    /// When the style declares an explicit bibliography sort, citation numbers
+    /// must follow that sorted bibliography order.
     fn initialize_numeric_citation_numbers(&self) {
         let is_numeric = self
             .get_config()
@@ -145,7 +148,23 @@ impl Processor {
             return;
         }
 
-        for (index, ref_id) in self.bibliography.keys().enumerate() {
+        let ordered_ids: Vec<String> = if let Some(sort_spec) = self
+            .style
+            .bibliography
+            .as_ref()
+            .and_then(|b| b.sort.as_ref())
+        {
+            let sorter = crate::grouping::GroupSorter::new(&self.locale);
+            sorter
+                .sort_references(self.bibliography.values().collect(), sort_spec)
+                .into_iter()
+                .filter_map(|reference| reference.id())
+                .collect()
+        } else {
+            self.bibliography.keys().cloned().collect()
+        };
+
+        for (index, ref_id) in ordered_ids.into_iter().enumerate() {
             numbers.insert(ref_id.clone(), index + 1);
         }
     }
