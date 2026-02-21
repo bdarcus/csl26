@@ -5,7 +5,7 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 
 #[cfg(test)]
 mod tests {
-    use crate::render::component::{render_component_with_format, ProcTemplateComponent};
+    use crate::render::component::{ProcTemplateComponent, render_component_with_format};
     use crate::render::djot::Djot;
     use crate::render::html::Html;
     use csln_core::template::{

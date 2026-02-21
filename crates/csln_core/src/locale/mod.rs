@@ -415,12 +415,11 @@ impl Locale {
                 for entry in entries.flatten() {
                     let name = entry.file_name();
                     let name_str = name.to_string_lossy();
-                    if name_str.starts_with(base)
-                        && extensions.iter().any(|ext| name_str.ends_with(ext))
+                    if (name_str.starts_with(base)
+                        && extensions.iter().any(|ext| name_str.ends_with(ext)))
+                        && let Ok(locale) = Self::from_file(&entry.path())
                     {
-                        if let Ok(locale) = Self::from_file(&entry.path()) {
-                            return locale;
-                        }
+                        return locale;
                     }
                 }
             }
@@ -501,31 +500,31 @@ impl Locale {
                     }
                 }
                 "et_al" => {
-                    if let Some(forms) = Self::get_forms(value) {
-                        if let Some(v) = forms.get("long").and_then(|v| v.as_string()) {
-                            locale.terms.et_al = Some(v.to_string());
-                        }
+                    if let Some(forms) = Self::get_forms(value)
+                        && let Some(v) = forms.get("long").and_then(|v| v.as_string())
+                    {
+                        locale.terms.et_al = Some(v.to_string());
                     }
                 }
                 "and others" | "and_others" => {
-                    if let Some(forms) = Self::get_forms(value) {
-                        if let Some(v) = forms.get("long").and_then(|v| v.as_string()) {
-                            locale.terms.and_others = Some(v.to_string());
-                        }
+                    if let Some(forms) = Self::get_forms(value)
+                        && let Some(v) = forms.get("long").and_then(|v| v.as_string())
+                    {
+                        locale.terms.and_others = Some(v.to_string());
                     }
                 }
                 "accessed" => {
-                    if let Some(forms) = Self::get_forms(value) {
-                        if let Some(v) = forms.get("long").and_then(|v| v.as_string()) {
-                            locale.terms.accessed = Some(v.to_string());
-                        }
+                    if let Some(forms) = Self::get_forms(value)
+                        && let Some(v) = forms.get("long").and_then(|v| v.as_string())
+                    {
+                        locale.terms.accessed = Some(v.to_string());
                     }
                 }
                 "ibid" => {
-                    if let Some(forms) = Self::get_forms(value) {
-                        if let Some(v) = forms.get("long").and_then(|v| v.as_string()) {
-                            locale.terms.ibid = Some(v.to_string());
-                        }
+                    if let Some(forms) = Self::get_forms(value)
+                        && let Some(v) = forms.get("long").and_then(|v| v.as_string())
+                    {
+                        locale.terms.ibid = Some(v.to_string());
                     }
                 }
                 "no_date" | "no date" => {

@@ -83,10 +83,10 @@ impl Renderer {
         };
 
         if let Some(mut formatted) = active_val {
-            if let Some(init) = &block.options.initialize_with {
-                if !formatted.as_str().contains(init.as_str()) {
-                    formatted = format!("{} [Init: {}]", formatted, init);
-                }
+            if let Some(init) = &block.options.initialize_with
+                && !formatted.as_str().contains(init.as_str())
+            {
+                formatted = format!("{} [Init: {}]", formatted, init);
             }
 
             if let Some(order) = &block.options.name_as_sort_order {

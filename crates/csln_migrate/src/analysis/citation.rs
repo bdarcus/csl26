@@ -37,10 +37,10 @@ fn find_group_wrapping(
         if let CslNode::Group(g) = node {
             match (g.prefix.as_deref(), g.suffix.as_deref()) {
                 (Some("("), Some(")")) => {
-                    return Some((Some(WrapPunctuation::Parentheses), None, None))
+                    return Some((Some(WrapPunctuation::Parentheses), None, None));
                 }
                 (Some("["), Some("]")) => {
-                    return Some((Some(WrapPunctuation::Brackets), None, None))
+                    return Some((Some(WrapPunctuation::Brackets), None, None));
                 }
                 _ => {
                     // Recurse into nested groups
@@ -138,43 +138,42 @@ pub fn extract_citation_delimiter(layout: &Layout, macros: &[Macro]) -> Option<S
                 }
                 CslNode::Choose(c) => {
                     // Recurse into Choose branches to find groups inside
-                    if let Some(result) = find_deepest_delimiter(&c.if_branch.children, macros) {
-                        if best.is_none() || result.1 > best.as_ref().unwrap().1 {
+                    if let Some(result) = find_deepest_delimiter(&c.if_branch.children, macros)
+                        && (best.is_none() || result.1 > best.as_ref().unwrap().1)
+                    {
+                        best = Some(result);
+                    }
+                    for branch in &c.else_if_branches {
+                        if let Some(result) = find_deepest_delimiter(&branch.children, macros)
+                            && (best.is_none() || result.1 > best.as_ref().unwrap().1)
+                        {
                             best = Some(result);
                         }
                     }
-                    for branch in &c.else_if_branches {
-                        if let Some(result) = find_deepest_delimiter(&branch.children, macros) {
-                            if best.is_none() || result.1 > best.as_ref().unwrap().1 {
-                                best = Some(result);
-                            }
-                        }
-                    }
-                    if let Some(else_branch) = &c.else_branch {
-                        if let Some(result) = find_deepest_delimiter(else_branch, macros) {
-                            if best.is_none() || result.1 > best.as_ref().unwrap().1 {
-                                best = Some(result);
-                            }
-                        }
+                    if let Some(else_branch) = &c.else_branch
+                        && let Some(result) = find_deepest_delimiter(else_branch, macros)
+                        && (best.is_none() || result.1 > best.as_ref().unwrap().1)
+                    {
+                        best = Some(result);
                     }
                 }
                 CslNode::Text(t) => {
                     // Check if this is a macro call that contains both author and date
-                    if let Some(macro_name) = &t.macro_name {
-                        if macro_name.contains("author") && macro_name.contains("date") {
-                            // This macro likely contains both author and date
-                            // Expand it and search for delimiter inside
-                            if let Some(macro_def) = macros.iter().find(|m| &m.name == macro_name) {
-                                if let Some(result) =
-                                    find_deepest_delimiter(&macro_def.children, macros)
-                                {
-                                    // Found a delimiter in the macro
-                                    // Add depth for the macro boundary
-                                    let new_depth = result.1 + 1;
-                                    if best.is_none() || new_depth > best.as_ref().unwrap().1 {
-                                        best = Some((result.0, new_depth));
-                                    }
-                                }
+                    if let Some(macro_name) = &t.macro_name
+                        && macro_name.contains("author")
+                        && macro_name.contains("date")
+                    {
+                        // This macro likely contains both author and date
+                        // Expand it and search for delimiter inside
+                        if let Some(macro_def) = macros.iter().find(|m| &m.name == macro_name)
+                            && let Some(result) =
+                                find_deepest_delimiter(&macro_def.children, macros)
+                        {
+                            // Found a delimiter in the macro
+                            // Add depth for the macro boundary
+                            let new_depth = result.1 + 1;
+                            if best.is_none() || new_depth > best.as_ref().unwrap().1 {
+                                best = Some((result.0, new_depth));
                             }
                         }
                     }
@@ -194,12 +193,11 @@ pub fn extract_citation_delimiter(layout: &Layout, macros: &[Macro]) -> Option<S
     for node in &layout.children {
         if let CslNode::Group(g) = node {
             for child in &g.children {
-                if is_date_macro(child) {
-                    if let CslNode::Text(t) = child {
-                        if let Some(prefix) = &t.prefix {
-                            return Some(prefix.clone());
-                        }
-                    }
+                if is_date_macro(child)
+                    && let CslNode::Text(t) = child
+                    && let Some(prefix) = &t.prefix
+                {
+                    return Some(prefix.clone());
                 }
             }
         }

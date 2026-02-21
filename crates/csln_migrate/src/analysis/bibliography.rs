@@ -8,19 +8,19 @@ pub fn extract_author_suffix(layout: &Layout) -> Option<String> {
         // Check for group containing author macro call
         if let CslNode::Group(g) = node {
             for child in &g.children {
-                if let CslNode::Text(t) = child {
-                    if t.macro_name.as_deref() == Some("author") {
-                        // Found the author macro call - return its suffix
-                        return t.suffix.clone();
-                    }
+                if let CslNode::Text(t) = child
+                    && t.macro_name.as_deref() == Some("author")
+                {
+                    // Found the author macro call - return its suffix
+                    return t.suffix.clone();
                 }
             }
         }
         // Check for direct author macro call at top level
-        if let CslNode::Text(t) = node {
-            if t.macro_name.as_deref() == Some("author") {
-                return t.suffix.clone();
-            }
+        if let CslNode::Text(t) = node
+            && t.macro_name.as_deref() == Some("author")
+        {
+            return t.suffix.clone();
         }
     }
     None
@@ -30,11 +30,11 @@ pub fn extract_author_suffix(layout: &Layout) -> Option<String> {
 pub fn apply_author_suffix(components: &mut [TemplateComponent], suffix: Option<String>) {
     if let Some(suffix) = suffix {
         for component in components {
-            if let TemplateComponent::Contributor(c) = component {
-                if c.contributor == ContributorRole::Author {
-                    // Set or update the suffix
-                    c.rendering.suffix = Some(suffix.clone());
-                }
+            if let TemplateComponent::Contributor(c) = component
+                && c.contributor == ContributorRole::Author
+            {
+                // Set or update the suffix
+                c.rendering.suffix = Some(suffix.clone());
             }
         }
     }
@@ -43,17 +43,17 @@ pub fn apply_author_suffix(components: &mut [TemplateComponent], suffix: Option<
 /// Check if the bibliography name element has an 'and' attribute.
 pub fn extract_bibliography_and(style: &Style) -> Option<AndOptions> {
     for macro_def in &style.macros {
-        if macro_def.name == "author" {
-            if let Some(result) = find_name_and(&macro_def.children) {
-                return Some(result);
-            }
+        if macro_def.name == "author"
+            && let Some(result) = find_name_and(&macro_def.children)
+        {
+            return Some(result);
         }
     }
 
-    if let Some(bib) = &style.bibliography {
-        if let Some(result) = find_name_and(&bib.layout.children) {
-            return Some(result);
-        }
+    if let Some(bib) = &style.bibliography
+        && let Some(result) = find_name_and(&bib.layout.children)
+    {
+        return Some(result);
     }
 
     None
@@ -91,10 +91,10 @@ fn find_name_and(nodes: &[CslNode]) -> Option<AndOptions> {
                         return Some(result);
                     }
                 }
-                if let Some(else_branch) = &c.else_branch {
-                    if let Some(result) = find_name_and(else_branch) {
-                        return Some(result);
-                    }
+                if let Some(else_branch) = &c.else_branch
+                    && let Some(result) = find_name_and(else_branch)
+                {
+                    return Some(result);
                 }
             }
             CslNode::Substitute(s) => {
@@ -112,10 +112,10 @@ fn find_name_and(nodes: &[CslNode]) -> Option<AndOptions> {
 pub fn apply_bibliography_and(components: &mut [TemplateComponent], bib_and: Option<AndOptions>) {
     if let Some(bib_and) = bib_and {
         for component in components {
-            if let TemplateComponent::Contributor(c) = component {
-                if c.contributor == ContributorRole::Author {
-                    c.and = Some(bib_and.clone());
-                }
+            if let TemplateComponent::Contributor(c) = component
+                && c.contributor == ContributorRole::Author
+            {
+                c.and = Some(bib_and.clone());
             }
         }
     }

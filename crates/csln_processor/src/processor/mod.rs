@@ -34,10 +34,10 @@ use crate::error::ProcessorError;
 use crate::reference::{Bibliography, Citation, CitationItem, Reference};
 use crate::render::{ProcEntry, ProcTemplate};
 use crate::values::ProcHints;
+use csln_core::Style;
 use csln_core::locale::Locale;
 use csln_core::options::Config;
 use csln_core::template::WrapPunctuation;
-use csln_core::Style;
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 
@@ -246,21 +246,21 @@ impl Processor {
                 .unwrap_or(index + 1);
             if let Some(mut proc) = self.process_bibliography_entry(reference, entry_number) {
                 // Apply subsequent author substitution if enabled
-                if let Some(sub_string) = substitute {
-                    if let Some(prev) = prev_reference {
-                        // Check if primary contributor matches
-                        if self.contributors_match(prev, reference) {
-                            let bib_config = self.get_bibliography_config();
-                            let renderer = Renderer::new(
-                                &self.style,
-                                &self.bibliography,
-                                &self.locale,
-                                &bib_config,
-                                &self.hints,
-                                &self.citation_numbers,
-                            );
-                            renderer.apply_author_substitution(&mut proc, sub_string);
-                        }
+                if let Some(sub_string) = substitute
+                    && let Some(prev) = prev_reference
+                {
+                    // Check if primary contributor matches
+                    if self.contributors_match(prev, reference) {
+                        let bib_config = self.get_bibliography_config();
+                        let renderer = Renderer::new(
+                            &self.style,
+                            &self.bibliography,
+                            &self.locale,
+                            &bib_config,
+                            &self.hints,
+                            &self.citation_numbers,
+                        );
+                        renderer.apply_author_substitution(&mut proc, sub_string);
                     }
                 }
 
@@ -438,22 +438,20 @@ impl Processor {
             if let Some(mut proc) =
                 self.process_bibliography_entry_with_format::<F>(reference, entry_number)
             {
-                if let Some(sub_string) = substitute {
-                    if let Some(prev) = prev_reference {
-                        if self.contributors_match(prev, reference) {
-                            let bib_config = self.get_bibliography_config();
-                            let renderer = Renderer::new(
-                                &self.style,
-                                &self.bibliography,
-                                &self.locale,
-                                &bib_config,
-                                &self.hints,
-                                &self.citation_numbers,
-                            );
-                            renderer
-                                .apply_author_substitution_with_format::<F>(&mut proc, sub_string);
-                        }
-                    }
+                if let Some(sub_string) = substitute
+                    && let Some(prev) = prev_reference
+                    && self.contributors_match(prev, reference)
+                {
+                    let bib_config = self.get_bibliography_config();
+                    let renderer = Renderer::new(
+                        &self.style,
+                        &self.bibliography,
+                        &self.locale,
+                        &bib_config,
+                        &self.hints,
+                        &self.citation_numbers,
+                    );
+                    renderer.apply_author_substitution_with_format::<F>(&mut proc, sub_string);
                 }
 
                 bibliography.push(ProcEntry {
@@ -658,10 +656,10 @@ impl Processor {
         let processed = self.process_references();
 
         // Check if style defines custom groups
-        if let Some(bib_spec) = &self.style.bibliography {
-            if let Some(groups) = &bib_spec.groups {
-                return self.render_with_custom_groups::<F>(&processed.bibliography, groups);
-            }
+        if let Some(bib_spec) = &self.style.bibliography
+            && let Some(groups) = &bib_spec.groups
+        {
+            return self.render_with_custom_groups::<F>(&processed.bibliography, groups);
         }
 
         // Fallback to hardcoded cited/uncited grouping
@@ -842,10 +840,10 @@ impl Processor {
             if !result.is_empty() {
                 result.push_str("\n\n");
             }
-            if let Some(heading) = &group.heading {
-                if let Some(resolved_heading) = self.resolve_group_heading(heading) {
-                    result.push_str(&format!("# {}\n\n", resolved_heading));
-                }
+            if let Some(heading) = &group.heading
+                && let Some(resolved_heading) = self.resolve_group_heading(heading)
+            {
+                result.push_str(&format!("# {}\n\n", resolved_heading));
             }
 
             // Render entries

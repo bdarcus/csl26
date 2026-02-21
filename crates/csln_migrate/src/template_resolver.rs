@@ -218,22 +218,22 @@ fn resolve_section(
     section: TemplateSection,
     ctx: &ResolveContext<'_>,
 ) -> Option<ResolvedTemplateSection> {
-    if matches!(ctx.mode, TemplateMode::Auto | TemplateMode::Hand) {
-        if let Some(hand) = ctx.hand_authored {
-            let hand_template = match section {
-                TemplateSection::Bibliography => hand.bibliography.clone(),
-                TemplateSection::Citation => hand.citation.clone(),
-            };
-            if let Some(template) = hand_template {
-                return Some(ResolvedTemplateSection {
-                    source: TemplateSource::HandAuthored(hand.path.clone()),
-                    template,
-                    confidence: None,
-                    delimiter: None,
-                    entry_suffix: None,
-                    wrap: None,
-                });
-            }
+    if matches!(ctx.mode, TemplateMode::Auto | TemplateMode::Hand)
+        && let Some(hand) = ctx.hand_authored
+    {
+        let hand_template = match section {
+            TemplateSection::Bibliography => hand.bibliography.clone(),
+            TemplateSection::Citation => hand.citation.clone(),
+        };
+        if let Some(template) = hand_template {
+            return Some(ResolvedTemplateSection {
+                source: TemplateSource::HandAuthored(hand.path.clone()),
+                template,
+                confidence: None,
+                delimiter: None,
+                entry_suffix: None,
+                wrap: None,
+            });
         }
     }
 
@@ -335,16 +335,16 @@ fn parse_fragment(
     }?;
 
     let confidence = fragment.meta.as_ref().and_then(|m| m.confidence);
-    if let Some(score) = confidence {
-        if score < min_confidence {
-            eprintln!(
-                "  [template_resolver] Rejected {} template (confidence {:.2} < {:.2})",
-                section.as_str(),
-                score,
-                min_confidence
-            );
-            return None;
-        }
+    if let Some(score) = confidence
+        && score < min_confidence
+    {
+        eprintln!(
+            "  [template_resolver] Rejected {} template (confidence {:.2} < {:.2})",
+            section.as_str(),
+            score,
+            min_confidence
+        );
+        return None;
     }
 
     let delimiter = fragment.meta.as_ref().and_then(|m| m.delimiter.clone());

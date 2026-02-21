@@ -7,8 +7,8 @@ use std::fs;
 use std::path::Path;
 
 use csl_legacy::csl_json::Reference as LegacyReference;
-use csln_core::reference::InputReference;
 use csln_core::InputBibliography;
+use csln_core::reference::InputReference;
 
 use crate::{Bibliography, Citation, ProcessorError, Reference};
 

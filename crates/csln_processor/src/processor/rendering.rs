@@ -466,51 +466,51 @@ impl<'a> Renderer<'a> {
                 None
             };
 
-            if let Some(spec) = integral_spec {
-                if let Some(template) = spec.template.as_ref() {
-                    // Narrative mode with explicit template (e.g., APA 7th)
-                    let citation_number = self.get_or_assign_citation_number(&first_item.id);
-                    if let Some(proc) = self.process_template_with_number_with_format::<F>(
-                        first_ref,
-                        template,
-                        RenderContext::Citation,
-                        mode.clone(),
-                        first_item.visibility,
-                        citation_number,
-                        first_item.locator.as_deref(),
-                        first_item.label.clone(),
-                    ) {
-                        // Use integral-specific delimiter, defaulting to space for narrative
-                        let integral_delimiter = spec.delimiter.as_deref().unwrap_or(" ");
-                        let item_str = crate::render::citation::citation_to_string_with_format::<F>(
-                            &proc,
-                            None,
-                            None,
-                            None,
-                            Some(integral_delimiter),
-                        );
+            if let Some(spec) = integral_spec
+                && let Some(template) = spec.template.as_ref()
+            {
+                // Narrative mode with explicit template (e.g., APA 7th)
+                let citation_number = self.get_or_assign_citation_number(&first_item.id);
+                if let Some(proc) = self.process_template_with_number_with_format::<F>(
+                    first_ref,
+                    template,
+                    RenderContext::Citation,
+                    mode.clone(),
+                    first_item.visibility,
+                    citation_number,
+                    first_item.locator.as_deref(),
+                    first_item.label.clone(),
+                ) {
+                    // Use integral-specific delimiter, defaulting to space for narrative
+                    let integral_delimiter = spec.delimiter.as_deref().unwrap_or(" ");
+                    let item_str = crate::render::citation::citation_to_string_with_format::<F>(
+                        &proc,
+                        None,
+                        None,
+                        None,
+                        Some(integral_delimiter),
+                    );
 
-                        let ids: Vec<String> = group.iter().map(|item| item.id.clone()).collect();
-                        let prefix = first_item.prefix.as_deref().unwrap_or("");
-                        let suffix = first_item.suffix.as_deref().unwrap_or("");
+                    let ids: Vec<String> = group.iter().map(|item| item.id.clone()).collect();
+                    let prefix = first_item.prefix.as_deref().unwrap_or("");
+                    let suffix = first_item.suffix.as_deref().unwrap_or("");
 
-                        let formatted_prefix =
-                            if !prefix.is_empty() && !prefix.ends_with(char::is_whitespace) {
-                                format!("{} ", prefix)
-                            } else {
-                                prefix.to_string()
-                            };
-
-                        let content = if !prefix.is_empty() || !suffix.is_empty() {
-                            let spaced_suffix = self.ensure_suffix_spacing(suffix);
-                            fmt.affix(&formatted_prefix, item_str, &spaced_suffix)
+                    let formatted_prefix =
+                        if !prefix.is_empty() && !prefix.ends_with(char::is_whitespace) {
+                            format!("{} ", prefix)
                         } else {
-                            item_str
+                            prefix.to_string()
                         };
 
-                        rendered_groups.push(fmt.citation(ids, content));
-                        continue;
-                    }
+                    let content = if !prefix.is_empty() || !suffix.is_empty() {
+                        let spaced_suffix = self.ensure_suffix_spacing(suffix);
+                        fmt.affix(&formatted_prefix, item_str, &spaced_suffix)
+                    } else {
+                        item_str
+                    };
+
+                    rendered_groups.push(fmt.citation(ids, content));
+                    continue;
                 }
             }
 
@@ -728,10 +728,10 @@ impl<'a> Renderer<'a> {
                 .get(&reference.id().unwrap_or_default())
                 .cloned()
                 .unwrap_or_default();
-            if let Some(vals) = comp.values::<F>(reference, &hints, &options) {
-                if !vals.value.is_empty() {
-                    return vals.value;
-                }
+            if let Some(vals) = comp.values::<F>(reference, &hints, &options)
+                && !vals.value.is_empty()
+            {
+                return vals.value;
             }
         }
 
@@ -1050,12 +1050,12 @@ impl<'a> Renderer<'a> {
 
                 // If whole-entry linking is enabled and this component doesn't have a URL,
                 // try to resolve it from global config.
-                if values.url.is_none() {
-                    if let Some(links) = &options.config.links {
-                        use csln_core::options::LinkAnchor;
-                        if matches!(links.anchor, Some(LinkAnchor::Entry)) {
-                            values.url = crate::values::resolve_url(links, reference);
-                        }
+                if values.url.is_none()
+                    && let Some(links) = &options.config.links
+                {
+                    use csln_core::options::LinkAnchor;
+                    if matches!(links.anchor, Some(LinkAnchor::Entry)) {
+                        values.url = crate::values::resolve_url(links, reference);
                     }
                 }
 
@@ -1214,10 +1214,10 @@ fn resolve_component_for_ref_type(
 
     if !matched {
         for (selector, ov) in overrides {
-            if selector.matches("default") {
-                if let ComponentOverride::Component(c) = ov {
-                    replacement = Some((**c).clone());
-                }
+            if selector.matches("default")
+                && let ComponentOverride::Component(c) = ov
+            {
+                replacement = Some((**c).clone());
             }
         }
     }

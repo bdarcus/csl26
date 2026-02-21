@@ -917,9 +917,9 @@ fn test_apa_titles_config() {
 fn test_numeric_citation_numbers_with_repeated_refs() {
     // Citation numbers should remain stable once assigned.
     // Citing ref1, ref2, ref1 again should give numbers 1, 2, 1.
+    use csln_core::CitationSpec;
     use csln_core::options::{Config, Processing};
     use csln_core::template::{NumberVariable, TemplateNumber};
-    use csln_core::CitationSpec;
 
     let style = Style {
         citation: Some(CitationSpec {
@@ -1002,9 +1002,9 @@ fn test_numeric_citation_numbers_with_repeated_refs() {
 
 #[test]
 fn test_numeric_citation_numbers_follow_registry_order() {
+    use csln_core::CitationSpec;
     use csln_core::options::{Config, Processing};
     use csln_core::template::{NumberVariable, TemplateNumber};
-    use csln_core::CitationSpec;
 
     let style = Style {
         citation: Some(CitationSpec {
@@ -1359,7 +1359,9 @@ fn test_global_title_linking_html() {
 
     // The title should be automatically hyperlinked because of global config.
     // Note: In this test, title substitutes for author, so it gets csln-author class.
-    assert!(result.contains(r#"<span class="csln-author"><a href="https://doi.org/10.1001/test">"#));
+    assert!(
+        result.contains(r#"<span class="csln-author"><a href="https://doi.org/10.1001/test">"#)
+    );
     assert!(result.contains("Linked Title"));
 }
 

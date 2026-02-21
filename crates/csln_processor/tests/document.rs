@@ -7,16 +7,16 @@ mod common;
 use common::*;
 
 use csln_core::{
+    BibliographySpec, Style, StyleInfo,
     options::{BibliographyConfig, Config, Processing},
     template::{
         ContributorForm, ContributorRole, DateForm, DateVariable as TDateVar, Rendering,
         TemplateComponent, TemplateContributor, TemplateDate,
     },
-    BibliographySpec, Style, StyleInfo,
 };
 use csln_processor::{
-    processor::document::{djot::DjotParser, DocumentFormat},
     Processor,
+    processor::document::{DocumentFormat, djot::DjotParser},
 };
 
 #[test]

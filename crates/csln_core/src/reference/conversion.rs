@@ -1,7 +1,7 @@
+use crate::reference::InputReference;
 use crate::reference::contributor::{Contributor, ContributorList, SimpleName, StructuredName};
 use crate::reference::date::EdtfString;
 use crate::reference::types::*;
-use crate::reference::InputReference;
 use biblatex::{Chunk, Entry, Person};
 use url::Url;
 
@@ -383,22 +383,22 @@ impl From<csl_legacy::csl_json::DateVariable> for EdtfString {
         if let Some(literal) = date.literal {
             return EdtfString(literal);
         }
-        if let Some(parts) = date.date_parts {
-            if let Some(first) = parts.first() {
-                let year = first
-                    .first()
-                    .map(|y| format!("{:04}", y))
-                    .unwrap_or_default();
-                let month = first
-                    .get(1)
-                    .map(|m| format!("-{:02}", m))
-                    .unwrap_or_default();
-                let day = first
-                    .get(2)
-                    .map(|d| format!("-{:02}", d))
-                    .unwrap_or_default();
-                return EdtfString(format!("{}{}{}", year, month, day));
-            }
+        if let Some(parts) = date.date_parts
+            && let Some(first) = parts.first()
+        {
+            let year = first
+                .first()
+                .map(|y| format!("{:04}", y))
+                .unwrap_or_default();
+            let month = first
+                .get(1)
+                .map(|m| format!("-{:02}", m))
+                .unwrap_or_default();
+            let day = first
+                .get(2)
+                .map(|d| format!("-{:02}", d))
+                .unwrap_or_default();
+            return EdtfString(format!("{}{}{}", year, month, day));
         }
         EdtfString(String::new())
     }

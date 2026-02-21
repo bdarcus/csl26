@@ -1,6 +1,6 @@
 use crate::reference::Reference;
-use csln_core::options::{Config, Substitute, SubstituteKey};
 use csln_core::Style;
+use csln_core::options::{Config, Substitute, SubstituteKey};
 
 pub struct Matcher<'a> {
     style: &'a Style,

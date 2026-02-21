@@ -3,10 +3,10 @@ use csln_core::locale::RawLocale;
 use csln_core::reference::InputReference;
 use csln_core::{InputBibliography, Locale, Style};
 use csln_processor::{
+    Bibliography, Citation, CitationItem, DocumentFormat, Processor,
     io::{load_bibliography, load_citations},
     processor::document::djot::DjotParser,
     render::{djot::Djot, html::Html, latex::Latex, plain::PlainText},
-    Bibliography, Citation, CitationItem, DocumentFormat, Processor,
 };
 #[cfg(feature = "schema")]
 use schemars::schema_for;
@@ -384,7 +384,7 @@ fn run_render_doc(args: RenderDocArgs) -> Result<(), Box<dyn Error>> {
         InputFormat::Markdown => {
             return Err(
                 "Input format `markdown` is not implemented yet. Use --input-format djot.".into(),
-            )
+            );
         }
     };
 

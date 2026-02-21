@@ -150,24 +150,22 @@ impl<'a> Disambiguator<'a> {
                     self.apply_year_suffix(&mut hints, &group, key, group_len, false);
                 } else {
                     // 1. Try expanding names (et-al expansion)
-                    if add_names {
-                        if let Some(n) = self.check_names_resolution(&group) {
-                            for (i, reference) in group.iter().enumerate() {
-                                hints.insert(
-                                    reference.id().unwrap_or_default(),
-                                    ProcHints {
-                                        disamb_condition: false,
-                                        group_index: i + 1,
-                                        group_length: group_len,
-                                        group_key: key.clone(),
-                                        expand_given_names: false,
-                                        min_names_to_show: Some(n),
-                                        ..Default::default()
-                                    },
-                                );
-                            }
-                            resolved = true;
+                    if add_names && let Some(n) = self.check_names_resolution(&group) {
+                        for (i, reference) in group.iter().enumerate() {
+                            hints.insert(
+                                reference.id().unwrap_or_default(),
+                                ProcHints {
+                                    disamb_condition: false,
+                                    group_index: i + 1,
+                                    group_length: group_len,
+                                    group_key: key.clone(),
+                                    expand_given_names: false,
+                                    min_names_to_show: Some(n),
+                                    ..Default::default()
+                                },
+                            );
                         }
+                        resolved = true;
                     }
 
                     // 2. Try expanding given names for the base name list

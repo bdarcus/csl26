@@ -677,7 +677,7 @@ impl JsonSchema for DelimiterPunctuation {
         "DelimiterPunctuation".into()
     }
 
-    fn json_schema(_gen: &mut schemars::gen::SchemaGenerator) -> schemars::schema::Schema {
+    fn json_schema(_gen: &mut schemars::r#gen::SchemaGenerator) -> schemars::schema::Schema {
         use schemars::schema::{InstanceType, SchemaObject};
         SchemaObject {
             instance_type: Some(InstanceType::String.into()),

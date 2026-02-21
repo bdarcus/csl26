@@ -1,4 +1,4 @@
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use criterion::{Criterion, black_box, criterion_group, criterion_main};
 use csln_core::{InputBibliography, Style};
 use csln_processor::{Bibliography, Citation, CitationItem, Processor};
 use std::fs;

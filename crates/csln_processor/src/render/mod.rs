@@ -31,6 +31,6 @@ mod test_formats;
 pub use bibliography::{refs_to_string, refs_to_string_with_format};
 pub use citation::{citation_to_string, citation_to_string_with_format};
 pub use component::{
-    render_component, render_component_with_format_and_renderer, ProcEntry, ProcTemplate,
-    ProcTemplateComponent,
+    ProcEntry, ProcTemplate, ProcTemplateComponent, render_component,
+    render_component_with_format_and_renderer,
 };

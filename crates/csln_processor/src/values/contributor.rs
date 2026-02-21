@@ -881,12 +881,12 @@ pub fn format_single_name(
             // e.g. "van Beethoven" (unless demoted? CSL spec says demote only affects sorting/display of full names mostly?)
             // Spec: "demote-non-dropping-particle ... This attribute does not affect ... the short form"
             // So for short form, we keep ndp with family.
-            let full_family = if !ndp.is_empty() {
+
+            if !ndp.is_empty() {
                 format!("{} {}", ndp, family)
             } else {
                 family.to_string()
-            };
-            full_family
+            }
         }
         ContributorForm::Long | ContributorForm::Verb | ContributorForm::VerbShort => {
             // Determine parts based on demotion
@@ -927,11 +927,11 @@ pub fn format_single_name(
                     }
                 }
 
-                if !current_part.is_empty() {
-                    if let Some(first) = current_part.chars().next() {
-                        result.push(first);
-                        result.push_str(init);
-                    }
+                if !current_part.is_empty()
+                    && let Some(first) = current_part.chars().next()
+                {
+                    result.push(first);
+                    result.push_str(init);
                 }
                 result.trim().to_string()
             } else {

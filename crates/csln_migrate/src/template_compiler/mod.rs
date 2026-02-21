@@ -9,12 +9,12 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 //! into the clean, declarative TemplateComponent format.
 
 use csln_core::{
+    CslnNode, FormattingOptions, ItemType, Variable,
     template::{
         ContributorForm, ContributorRole, DateForm, DateVariable, DelimiterPunctuation,
         NumberVariable, Rendering, SimpleVariable, TemplateComponent, TemplateContributor,
         TemplateDate, TemplateList, TemplateNumber, TemplateTitle, TemplateVariable, TitleType,
     },
-    CslnNode, FormattingOptions, ItemType, Variable,
 };
 use indexmap::IndexMap;
 use std::collections::HashMap;
@@ -81,36 +81,33 @@ impl TemplateCompiler {
             let node = &nodes[i];
 
             // Lookahead merge for Text nodes
-            if let CslnNode::Text { value } = node {
-                if i + 1 < nodes.len() {
-                    if let Some(mut next_comp) = self.compile_node(&nodes[i + 1]) {
-                        // Merge text into prefix
-                        let mut rendering = self.get_component_rendering(&next_comp);
-                        let mut new_prefix = value.clone();
-                        if let Some(p) = rendering.prefix {
-                            new_prefix.push_str(&p);
-                        }
-                        rendering.prefix = Some(new_prefix);
-                        self.set_component_rendering(&mut next_comp, rendering);
-
-                        // Apply inherited wrap if applicable
-                        if inherited_wrap.0.is_some()
-                            && matches!(&next_comp, TemplateComponent::Date(_))
-                        {
-                            self.apply_wrap_to_component(&mut next_comp, inherited_wrap);
-                        }
-
-                        // Extract source_order from the next node
-                        let source_order = self.extract_source_order(&nodes[i + 1]);
-                        occurrences.push(ComponentOccurrence {
-                            component: next_comp,
-                            context: context.clone(),
-                            source_order,
-                        });
-                        i += 2;
-                        continue;
-                    }
+            if let CslnNode::Text { value } = node
+                && i + 1 < nodes.len()
+                && let Some(mut next_comp) = self.compile_node(&nodes[i + 1])
+            {
+                // Merge text into prefix
+                let mut rendering = self.get_component_rendering(&next_comp);
+                let mut new_prefix = value.clone();
+                if let Some(p) = rendering.prefix {
+                    new_prefix.push_str(&p);
                 }
+                rendering.prefix = Some(new_prefix);
+                self.set_component_rendering(&mut next_comp, rendering);
+
+                // Apply inherited wrap if applicable
+                if inherited_wrap.0.is_some() && matches!(&next_comp, TemplateComponent::Date(_)) {
+                    self.apply_wrap_to_component(&mut next_comp, inherited_wrap);
+                }
+
+                // Extract source_order from the next node
+                let source_order = self.extract_source_order(&nodes[i + 1]);
+                occurrences.push(ComponentOccurrence {
+                    component: next_comp,
+                    context: context.clone(),
+                    source_order,
+                });
+                i += 2;
+                continue;
             }
 
             if let Some(mut component) = self.compile_node(node) {
@@ -377,30 +374,30 @@ impl TemplateCompiler {
             let node = &nodes[i];
 
             // Lookahead merge for Text nodes
-            if let CslnNode::Text { value } = node {
-                if i + 1 < nodes.len() {
-                    // Try to compile next node
-                    if let Some(mut next_comp) = self.compile_node(&nodes[i + 1]) {
-                        // Merge text into prefix
-                        let mut rendering = self.get_component_rendering(&next_comp);
-                        let mut new_prefix = value.clone();
-                        if let Some(p) = rendering.prefix {
-                            new_prefix.push_str(&p);
-                        }
-                        rendering.prefix = Some(new_prefix);
-                        self.set_component_rendering(&mut next_comp, rendering);
-
-                        // Apply inherited wrap if applicable
-                        if inherited_wrap.0.is_some()
-                            && matches!(&next_comp, TemplateComponent::Date(_))
-                        {
-                            self.apply_wrap_to_component(&mut next_comp, inherited_wrap);
-                        }
-
-                        self.add_or_upgrade_component(&mut components, next_comp, current_types);
-                        i += 2;
-                        continue;
+            if let CslnNode::Text { value } = node
+                && i + 1 < nodes.len()
+            {
+                // Try to compile next node
+                if let Some(mut next_comp) = self.compile_node(&nodes[i + 1]) {
+                    // Merge text into prefix
+                    let mut rendering = self.get_component_rendering(&next_comp);
+                    let mut new_prefix = value.clone();
+                    if let Some(p) = rendering.prefix {
+                        new_prefix.push_str(&p);
                     }
+                    rendering.prefix = Some(new_prefix);
+                    self.set_component_rendering(&mut next_comp, rendering);
+
+                    // Apply inherited wrap if applicable
+                    if inherited_wrap.0.is_some()
+                        && matches!(&next_comp, TemplateComponent::Date(_))
+                    {
+                        self.apply_wrap_to_component(&mut next_comp, inherited_wrap);
+                    }
+
+                    self.add_or_upgrade_component(&mut components, next_comp, current_types);
+                    i += 2;
+                    continue;
                 }
             }
 
@@ -516,14 +513,14 @@ impl TemplateCompiler {
                 break;
             }
             // Also check inside Lists
-            if let TemplateComponent::List(ref mut list) = c {
-                if self.has_variable_recursive(&list.items, &new_component) {
-                    // Variable exists but is nested. We can't easily merge top-level into nested
-                    // without knowing the structure. For now, mark as "found" so we can add overrides.
-                    // Actually, let's just use a recursive mutation helper.
-                    self.add_overrides_recursive(c, &new_component, current_types);
-                    return;
-                }
+            if let TemplateComponent::List(list) = c
+                && self.has_variable_recursive(&list.items, &new_component)
+            {
+                // Variable exists but is nested. We can't easily merge top-level into nested
+                // without knowing the structure. For now, mark as "found" so we can add overrides.
+                // Actually, let's just use a recursive mutation helper.
+                self.add_overrides_recursive(c, &new_component, current_types);
+                return;
             }
         }
 
@@ -538,10 +535,10 @@ impl TemplateCompiler {
 
                 if let (TemplateComponent::Date(existing), TemplateComponent::Date(new)) =
                     (&components[idx], &new_component)
+                    && existing.rendering.wrap.is_none()
+                    && new.rendering.wrap.is_some()
                 {
-                    if existing.rendering.wrap.is_none() && new.rendering.wrap.is_some() {
-                        components[idx] = new_component.clone();
-                    }
+                    components[idx] = new_component.clone();
                 }
             } else {
                 // Add overrides to existing top-level component
@@ -584,10 +581,10 @@ impl TemplateCompiler {
             if self.same_variable(item, target) {
                 return true;
             }
-            if let TemplateComponent::List(list) = item {
-                if self.has_variable_recursive(&list.items, target) {
-                    return true;
-                }
+            if let TemplateComponent::List(list) = item
+                && self.has_variable_recursive(&list.items, target)
+            {
+                return true;
             }
         }
         false
@@ -604,7 +601,7 @@ impl TemplateCompiler {
     ) {
         for item in items.iter_mut() {
             match item {
-                TemplateComponent::List(ref mut nested_list) => {
+                TemplateComponent::List(nested_list) => {
                     // Recursively process nested lists
                     self.add_type_overrides_to_list_items(&mut nested_list.items, current_types);
                 }
@@ -646,7 +643,7 @@ impl TemplateCompiler {
             }
             return;
         }
-        if let TemplateComponent::List(ref mut list) = component {
+        if let TemplateComponent::List(list) = component {
             for item in &mut list.items {
                 self.add_overrides_recursive(item, new_comp, current_types);
             }
@@ -763,10 +760,8 @@ impl TemplateCompiler {
                                         break;
                                     }
                                 }
-                                if !found {
-                                    if let Some(ref else_nodes) = c.else_branch {
-                                        components.extend(self.compile_simple(else_nodes));
-                                    }
+                                if !found && let Some(ref else_nodes) = c.else_branch {
+                                    components.extend(self.compile_simple(else_nodes));
                                 }
                             }
                         }
@@ -955,19 +950,19 @@ impl TemplateCompiler {
         let mut visible_types = Vec::new();
 
         // If component has suppress=true by default, only count types with suppress=false overrides
-        if base_rendering.suppress == Some(true) {
-            if let Some(ovr) = overrides {
-                use csln_core::template::{ComponentOverride, TypeSelector};
-                for (selector, ov) in ovr {
-                    if let ComponentOverride::Rendering(rendering) = ov {
-                        if rendering.suppress != Some(true) {
-                            match selector {
-                                TypeSelector::Single(s) => visible_types.push(s),
-                                TypeSelector::Multiple(types) => {
-                                    for t in types {
-                                        visible_types.push(t);
-                                    }
-                                }
+        if base_rendering.suppress == Some(true)
+            && let Some(ovr) = overrides
+        {
+            use csln_core::template::{ComponentOverride, TypeSelector};
+            for (selector, ov) in ovr {
+                if let ComponentOverride::Rendering(rendering) = ov
+                    && rendering.suppress != Some(true)
+                {
+                    match selector {
+                        TypeSelector::Single(s) => visible_types.push(s),
+                        TypeSelector::Multiple(types) => {
+                            for t in types {
+                                visible_types.push(t);
                             }
                         }
                     }
@@ -2174,20 +2169,22 @@ mod tests {
         // Verify it has overrides for BOTH book and chapter
         fn check_overrides(items: &[TemplateComponent]) {
             for item in items {
-                if let TemplateComponent::Variable(v) = item {
-                    if v.variable == SimpleVariable::Publisher {
-                        use csln_core::template::TypeSelector;
-                        assert!(v
-                            .overrides
+                if let TemplateComponent::Variable(v) = item
+                    && v.variable == SimpleVariable::Publisher
+                {
+                    use csln_core::template::TypeSelector;
+                    assert!(
+                        v.overrides
                             .as_ref()
                             .unwrap()
-                            .contains_key(&TypeSelector::Single("book".to_string())));
-                        assert!(v
-                            .overrides
+                            .contains_key(&TypeSelector::Single("book".to_string()))
+                    );
+                    assert!(
+                        v.overrides
                             .as_ref()
                             .unwrap()
-                            .contains_key(&TypeSelector::Single("chapter".to_string())));
-                    }
+                            .contains_key(&TypeSelector::Single("chapter".to_string()))
+                    );
                 }
                 if let TemplateComponent::List(l) = item {
                     check_overrides(&l.items);

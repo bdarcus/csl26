@@ -15,8 +15,8 @@ use crate::reference::{Bibliography, Citation, Reference};
 use crate::render::html::Html;
 use crate::render::latex::Latex;
 use crate::render::plain::PlainText;
-use csln_core::locale::Locale;
 use csln_core::Style;
+use csln_core::locale::Locale;
 use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
 use std::ptr;
@@ -35,7 +35,7 @@ fn safe_c_string(s: String) -> *mut c_char {
 /// The caller must ensure that `style_json` and `bib_json` are valid
 /// null-terminated C strings. The returned pointer must be freed
 /// with `csln_processor_free`.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn csln_processor_new(
     style_json: *const c_char,
     bib_json: *const c_char,
@@ -44,12 +44,12 @@ pub unsafe extern "C" fn csln_processor_new(
         return ptr::null_mut();
     }
 
-    let style_str = match CStr::from_ptr(style_json).to_str() {
+    let style_str = match unsafe { CStr::from_ptr(style_json) }.to_str() {
         Ok(s) => s,
         Err(_) => return ptr::null_mut(),
     };
 
-    let bib_str = match CStr::from_ptr(bib_json).to_str() {
+    let bib_str = match unsafe { CStr::from_ptr(bib_json) }.to_str() {
         Ok(s) => s,
         Err(_) => return ptr::null_mut(),
     };
@@ -80,7 +80,7 @@ pub unsafe extern "C" fn csln_processor_new(
 ///
 /// # Safety
 /// The caller must ensure all string pointers are valid null-terminated C strings.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn csln_processor_new_with_locale(
     style_json: *const c_char,
     bib_json: *const c_char,
@@ -90,17 +90,17 @@ pub unsafe extern "C" fn csln_processor_new_with_locale(
         return ptr::null_mut();
     }
 
-    let style_str = match CStr::from_ptr(style_json).to_str() {
+    let style_str = match unsafe { CStr::from_ptr(style_json) }.to_str() {
         Ok(s) => s,
         Err(_) => return ptr::null_mut(),
     };
 
-    let bib_str = match CStr::from_ptr(bib_json).to_str() {
+    let bib_str = match unsafe { CStr::from_ptr(bib_json) }.to_str() {
         Ok(s) => s,
         Err(_) => return ptr::null_mut(),
     };
 
-    let locale_str = match CStr::from_ptr(locale_json).to_str() {
+    let locale_str = match unsafe { CStr::from_ptr(locale_json) }.to_str() {
         Ok(s) => s,
         Err(_) => return ptr::null_mut(),
     };
@@ -135,10 +135,10 @@ pub unsafe extern "C" fn csln_processor_new_with_locale(
 ///
 /// # Safety
 /// The pointer must have been created by a `csln_processor_new` function.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn csln_processor_free(processor: *mut Processor) {
     if !processor.is_null() {
-        let _ = Box::from_raw(processor);
+        let _ = unsafe { Box::from_raw(processor) };
     }
 }
 
@@ -148,7 +148,7 @@ pub unsafe extern "C" fn csln_processor_free(processor: *mut Processor) {
 /// The caller must ensure that `processor` is a valid pointer and
 /// `cite_json` is a valid null-terminated C string. The returned
 /// string must be freed with `csln_string_free`.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn csln_render_citation_latex(
     processor: *mut Processor,
     cite_json: *const c_char,
@@ -157,8 +157,8 @@ pub unsafe extern "C" fn csln_render_citation_latex(
         return ptr::null_mut();
     }
 
-    let processor = &*processor;
-    let cite_str = match CStr::from_ptr(cite_json).to_str() {
+    let processor = unsafe { &*processor };
+    let cite_str = match unsafe { CStr::from_ptr(cite_json) }.to_str() {
         Ok(s) => s,
         Err(_) => return ptr::null_mut(),
     };
@@ -180,7 +180,7 @@ pub unsafe extern "C" fn csln_render_citation_latex(
 /// The caller must ensure that `processor` is a valid pointer and
 /// `cite_json` is a valid null-terminated C string. The returned
 /// string must be freed with `csln_string_free`.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn csln_render_citation_html(
     processor: *mut Processor,
     cite_json: *const c_char,
@@ -189,8 +189,8 @@ pub unsafe extern "C" fn csln_render_citation_html(
         return ptr::null_mut();
     }
 
-    let processor = &*processor;
-    let cite_str = match CStr::from_ptr(cite_json).to_str() {
+    let processor = unsafe { &*processor };
+    let cite_str = match unsafe { CStr::from_ptr(cite_json) }.to_str() {
         Ok(s) => s,
         Err(_) => return ptr::null_mut(),
     };
@@ -212,7 +212,7 @@ pub unsafe extern "C" fn csln_render_citation_html(
 /// The caller must ensure that `processor` is a valid pointer and
 /// `cite_json` is a valid null-terminated C string. The returned
 /// string must be freed with `csln_string_free`.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn csln_render_citation_plain(
     processor: *mut Processor,
     cite_json: *const c_char,
@@ -221,8 +221,8 @@ pub unsafe extern "C" fn csln_render_citation_plain(
         return ptr::null_mut();
     }
 
-    let processor = &*processor;
-    let cite_str = match CStr::from_ptr(cite_json).to_str() {
+    let processor = unsafe { &*processor };
+    let cite_str = match unsafe { CStr::from_ptr(cite_json) }.to_str() {
         Ok(s) => s,
         Err(_) => return ptr::null_mut(),
     };
@@ -243,13 +243,13 @@ pub unsafe extern "C" fn csln_render_citation_plain(
 /// # Safety
 /// The caller must ensure that `processor` is a valid pointer.
 /// The returned string must be freed with `csln_string_free`.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn csln_render_bibliography_latex(processor: *mut Processor) -> *mut c_char {
     if processor.is_null() {
         return ptr::null_mut();
     }
 
-    let processor = &*processor;
+    let processor = unsafe { &*processor };
     let rendered = processor.render_bibliography_with_format::<Latex>();
     safe_c_string(rendered)
 }
@@ -259,13 +259,13 @@ pub unsafe extern "C" fn csln_render_bibliography_latex(processor: *mut Processo
 /// # Safety
 /// The caller must ensure that `processor` is a valid pointer.
 /// The returned string must be freed with `csln_string_free`.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn csln_render_bibliography_html(processor: *mut Processor) -> *mut c_char {
     if processor.is_null() {
         return ptr::null_mut();
     }
 
-    let processor = &*processor;
+    let processor = unsafe { &*processor };
     let rendered = processor.render_bibliography_with_format::<Html>();
     safe_c_string(rendered)
 }
@@ -275,13 +275,13 @@ pub unsafe extern "C" fn csln_render_bibliography_html(processor: *mut Processor
 /// # Safety
 /// The caller must ensure that `processor` is a valid pointer.
 /// The returned string must be freed with `csln_string_free`.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn csln_render_bibliography_plain(processor: *mut Processor) -> *mut c_char {
     if processor.is_null() {
         return ptr::null_mut();
     }
 
-    let processor = &*processor;
+    let processor = unsafe { &*processor };
     let rendered = processor.render_bibliography_with_format::<PlainText>();
     safe_c_string(rendered)
 }
@@ -290,9 +290,9 @@ pub unsafe extern "C" fn csln_render_bibliography_plain(processor: *mut Processo
 ///
 /// # Safety
 /// The pointer must have been returned by one of the rendering functions.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn csln_string_free(s: *mut c_char) {
     if !s.is_null() {
-        let _ = CString::from_raw(s);
+        let _ = unsafe { CString::from_raw(s) };
     }
 }

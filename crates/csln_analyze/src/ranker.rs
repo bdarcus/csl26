@@ -106,10 +106,10 @@ pub fn run_parent_ranker(styles_dir: &str, json_output: bool, format_filter: Opt
                 }
 
                 // Apply format filter if specified
-                if let Some(filter) = format_filter {
-                    if info.citation_format.as_deref() != Some(filter) {
-                        continue;
-                    }
+                if let Some(filter) = format_filter
+                    && info.citation_format.as_deref() != Some(filter)
+                {
+                    continue;
                 }
 
                 stats.total_dependent += 1;
@@ -230,10 +230,10 @@ fn extract_style_info(path: &Path) -> Result<StyleInfo, String> {
     for child in root.children() {
         if child.tag_name().name() == "info" {
             for info_child in child.children() {
-                if info_child.tag_name().name() == "category" {
-                    if let Some(fmt) = info_child.attribute("citation-format") {
-                        citation_format = Some(fmt.to_string());
-                    }
+                if info_child.tag_name().name() == "category"
+                    && let Some(fmt) = info_child.attribute("citation-format")
+                {
+                    citation_format = Some(fmt.to_string());
                 }
             }
         }

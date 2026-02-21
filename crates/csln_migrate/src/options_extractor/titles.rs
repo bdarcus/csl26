@@ -20,11 +20,7 @@ pub fn extract_title_config(style: &Style) -> Option<TitlesConfig> {
         }
     }
 
-    if has_config {
-        Some(config)
-    } else {
-        None
-    }
+    if has_config { Some(config) } else { None }
 }
 
 fn scan_for_title_formatting(
@@ -46,14 +42,11 @@ fn scan_for_title_formatting(
                         ..Default::default()
                     });
                 }
-                if let Some(macro_name) = &t.macro_name {
-                    if let Some(m) = style.macros.iter().find(|m| &m.name == macro_name) {
-                        if let Some(rendering) =
-                            scan_for_title_formatting(&m.children, style, var_name)
-                        {
-                            return Some(rendering);
-                        }
-                    }
+                if let Some(macro_name) = &t.macro_name
+                    && let Some(m) = style.macros.iter().find(|m| &m.name == macro_name)
+                    && let Some(rendering) = scan_for_title_formatting(&m.children, style, var_name)
+                {
+                    return Some(rendering);
                 }
             }
             CslNode::Group(g) => {
@@ -74,11 +67,10 @@ fn scan_for_title_formatting(
                         return Some(rendering);
                     }
                 }
-                if let Some(else_branch) = &c.else_branch {
-                    if let Some(rendering) = scan_for_title_formatting(else_branch, style, var_name)
-                    {
-                        return Some(rendering);
-                    }
+                if let Some(else_branch) = &c.else_branch
+                    && let Some(rendering) = scan_for_title_formatting(else_branch, style, var_name)
+                {
+                    return Some(rendering);
                 }
             }
             _ => {}

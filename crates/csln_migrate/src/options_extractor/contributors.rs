@@ -66,11 +66,7 @@ pub fn extract_contributor_config(style: &Style) -> Option<ContributorConfig> {
         has_config = true;
     }
 
-    if has_config {
-        Some(config)
-    } else {
-        None
-    }
+    if has_config { Some(config) } else { None }
 }
 
 pub fn extract_citation_contributor_overrides(style: &Style) -> Option<ContributorConfig> {
@@ -147,16 +143,13 @@ fn extract_name_options_from_nodes(
                 }
             }
             CslNode::Text(t) => {
-                if let Some(macro_name) = &t.macro_name {
-                    if target_macros.contains(macro_name) {
-                        if let Some(m) = style.macros.iter().find(|m| &m.name == macro_name) {
-                            if let Some(config) =
-                                extract_name_options_from_nodes(&m.children, style, target_macros)
-                            {
-                                return Some(config);
-                            }
-                        }
-                    }
+                if let Some(macro_name) = &t.macro_name
+                    && target_macros.contains(macro_name)
+                    && let Some(m) = style.macros.iter().find(|m| &m.name == macro_name)
+                    && let Some(config) =
+                        extract_name_options_from_nodes(&m.children, style, target_macros)
+                {
+                    return Some(config);
                 }
             }
             CslNode::Group(g) => {
@@ -179,12 +172,11 @@ fn extract_name_options_from_nodes(
                         return Some(config);
                     }
                 }
-                if let Some(else_branch) = &c.else_branch {
-                    if let Some(config) =
+                if let Some(else_branch) = &c.else_branch
+                    && let Some(config) =
                         extract_name_options_from_nodes(else_branch, style, target_macros)
-                    {
-                        return Some(config);
-                    }
+                {
+                    return Some(config);
                 }
             }
             _ => {}
@@ -208,11 +200,7 @@ fn extract_scope_contributor_overrides(
         has_config = true;
     }
 
-    if has_config {
-        Some(config)
-    } else {
-        None
-    }
+    if has_config { Some(config) } else { None }
 }
 
 fn apply_et_al_attributes(
@@ -370,11 +358,7 @@ fn extract_from_names(names: &Names) -> Option<ContributorConfig> {
         }
     }
 
-    if has_config {
-        Some(config)
-    } else {
-        None
-    }
+    if has_config { Some(config) } else { None }
 }
 
 pub fn extract_substitute_pattern(style: &Style) -> Option<CslnSubstitute> {
@@ -382,10 +366,10 @@ pub fn extract_substitute_pattern(style: &Style) -> Option<CslnSubstitute> {
     let cit_macros = collect_citation_macros(style);
 
     // Search bibliography first, then citation
-    if let Some(bib) = &style.bibliography {
-        if let Some(sub) = find_substitute_in_nodes(&bib.layout.children, style, &bib_macros) {
-            return Some(sub);
-        }
+    if let Some(bib) = &style.bibliography
+        && let Some(sub) = find_substitute_in_nodes(&bib.layout.children, style, &bib_macros)
+    {
+        return Some(sub);
     }
     find_substitute_in_nodes(&style.citation.layout.children, style, &cit_macros)
 }
@@ -413,16 +397,12 @@ fn find_substitute_in_nodes(
                 }
             }
             CslNode::Text(t) => {
-                if let Some(macro_name) = &t.macro_name {
-                    if target_macros.contains(macro_name) {
-                        if let Some(m) = style.macros.iter().find(|m| &m.name == macro_name) {
-                            if let Some(sub) =
-                                find_substitute_in_nodes(&m.children, style, target_macros)
-                            {
-                                return Some(sub);
-                            }
-                        }
-                    }
+                if let Some(macro_name) = &t.macro_name
+                    && target_macros.contains(macro_name)
+                    && let Some(m) = style.macros.iter().find(|m| &m.name == macro_name)
+                    && let Some(sub) = find_substitute_in_nodes(&m.children, style, target_macros)
+                {
+                    return Some(sub);
                 }
             }
             CslNode::Group(g) => {
@@ -443,10 +423,10 @@ fn find_substitute_in_nodes(
                         return Some(sub);
                     }
                 }
-                if let Some(else_branch) = &c.else_branch {
-                    if let Some(sub) = find_substitute_in_nodes(else_branch, style, target_macros) {
-                        return Some(sub);
-                    }
+                if let Some(else_branch) = &c.else_branch
+                    && let Some(sub) = find_substitute_in_nodes(else_branch, style, target_macros)
+                {
+                    return Some(sub);
                 }
             }
             _ => {}

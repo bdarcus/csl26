@@ -349,9 +349,24 @@
                     </div>
                     <h3 class="text-xl font-bold text-slate-900 mb-3">Performance</h3>
                     <p class="text-slate-500 leading-relaxed text-sm">
-                        Rust-native engine with binary CBOR support for near-instant loading of massive bibliographies.
+                        Rust 2024 edition engine with binary CBOR support for near-instant loading of massive
+                        bibliographies. Zero-overhead processing with lazy iterator pipelines.
                     </p>
                 </a>
+
+                <!-- JSON Server Mode (Roadmap) -->
+                <div class="feature-card p-8 rounded-xl border border-slate-200 border-dashed transition-all group">
+                    <div
+                        class="w-12 h-12 rounded-lg bg-slate-100 flex items-center justify-center text-slate-400 mb-6">
+                        <span class="material-icons">hub</span>
+                    </div>
+                    <h3 class="text-xl font-bold text-slate-900 mb-3">JSON Server Mode <span class="text-xs font-normal text-slate-400 ml-1">Roadmap</span></h3>
+                    <p class="text-slate-500 leading-relaxed text-sm">
+                        Planned async service mode: a long-running background process that eliminates startup latency
+                        for interactive editors (Word, Zotero, web apps). Modelled on Haskell citeproc&#8217;s server
+                        design, powered by Tokio and axum.
+                    </p>
+                </div>
 
                 <!-- Web Interactivity -->
                 <a href="examples.html#web-interactivity"

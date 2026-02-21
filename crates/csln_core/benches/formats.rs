@@ -1,4 +1,4 @@
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use criterion::{Criterion, black_box, criterion_group, criterion_main};
 use csln_core::{InputBibliography, Style};
 use std::fs;
 use std::path::PathBuf;
