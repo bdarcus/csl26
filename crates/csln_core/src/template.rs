@@ -291,6 +291,7 @@ pub enum ContributorForm {
     #[default]
     Long,
     Short,
+    FamilyOnly,
     Verb,
     VerbShort,
 }
@@ -368,6 +369,7 @@ pub enum DateForm {
     Full,
     MonthDay,
     YearMonthDay,
+    DayMonthAbbrYear,
 }
 
 /// A title component.
