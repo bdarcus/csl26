@@ -387,12 +387,76 @@ macro_rules! ref_article_authors {
     }};
 }
 
+/// Builds a `CitationItem` with optional named fields.
+///
+/// Supported fields: `locator`, `prefix`, `suffix`, `label`.
+///
+/// # Examples
+/// ```ignore
+/// let item = csln_core::citation_item!("kuhn1962");
+/// let item = csln_core::citation_item!("kuhn1962", locator = "42");
+/// let item = csln_core::citation_item!("kuhn1962", label = csln_core::citation::LocatorType::Page, locator = "42");
+/// let item = csln_core::citation_item!("smith2020", prefix = "cf. ");
+/// ```
+#[macro_export]
+macro_rules! citation_item {
+    ($id:expr $(, $key:ident = $val:expr)*) => {{
+        #[allow(unused_mut)]
+        let mut _item = $crate::citation::CitationItem {
+            id: $id.to_string(),
+            ..Default::default()
+        };
+        $( citation_item!(@set _item, $key, $val); )*
+        _item
+    }};
+    (@set $item:ident, locator, $val:expr) => { $item.locator = Some($val.to_string()); };
+    (@set $item:ident, prefix, $val:expr) => { $item.prefix = Some($val.to_string()); };
+    (@set $item:ident, suffix, $val:expr) => { $item.suffix = Some($val.to_string()); };
+    (@set $item:ident, label, $val:expr) => { $item.label = Some($val); };
+}
+
+/// Builds a `Citation` from a list of `CitationItem` expressions with optional named fields.
+///
+/// Supported citation fields: `mode`, `suppress_author`.
+///
+/// # Examples
+/// ```ignore
+/// // Two items, no options
+/// let c = csln_core::citation!([
+///     csln_core::citation_item!("item1"),
+///     csln_core::citation_item!("item2", locator = "42"),
+/// ]);
+///
+/// // Integral mode
+/// let c = csln_core::citation!(
+///     [csln_core::citation_item!("item1"), csln_core::citation_item!("item2")],
+///     mode = csln_core::citation::CitationMode::Integral,
+/// );
+///
+/// // Suppress author across all items
+/// let c = csln_core::citation!(
+///     [csln_core::citation_item!("item1")],
+///     suppress_author = true,
+/// );
+/// ```
+#[macro_export]
+macro_rules! citation {
+    ([$($item:expr),* $(,)?] $(, $key:ident = $val:expr)* $(,)?) => {
+        $crate::citation::Citation {
+            items: vec![$($item),*],
+            $($key: $val,)*
+            ..Default::default()
+        }
+    };
+}
+
 /// Builds a `Citation` with one `CitationItem`.
 ///
 /// # Examples
 /// ```ignore
 /// let c = csln_core::cite!("item1");
 /// let c = csln_core::cite!("item1", mode = csln_core::citation::CitationMode::Integral);
+/// let c = csln_core::cite!("item1", suppress_author = true);
 /// ```
 #[macro_export]
 macro_rules! cite {
@@ -405,13 +469,13 @@ macro_rules! cite {
             ..Default::default()
         }
     };
-    ($id:expr, mode = $mode:expr) => {
+    ($id:expr, $key:ident = $val:expr) => {
         $crate::citation::Citation {
             items: vec![$crate::citation::CitationItem {
                 id: $id.to_string(),
                 ..Default::default()
             }],
-            mode: $mode,
+            $key: $val,
             ..Default::default()
         }
     };

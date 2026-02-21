@@ -162,13 +162,14 @@ function renderWithCiteprocJs(stylePath, testItems, testCitations) {
   const citations = {};
   testCitations.forEach(cite => {
     // Convert CSLN citation items to citeproc-js format
+    const suppressAuthor = cite['suppress-author'] === true;
     const citeprocItems = cite.items.map(item => ({
       id: item.id,
       locator: item.locator,
       label: item.label,
       prefix: item.prefix,
       suffix: item.suffix,
-      'suppress-author': item.visibility === 'suppress-author'
+      'suppress-author': suppressAuthor
     }));
 
     // For narrative/integral citations, citeproc-js doesn't have a direct equivalent

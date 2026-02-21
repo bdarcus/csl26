@@ -133,7 +133,7 @@ impl<'a> Renderer<'a> {
             locale: self.locale,
             context: RenderContext::Citation,
             mode: csln_core::citation::CitationMode::Integral,
-            visibility: item.visibility,
+            suppress_author: false,
             locator: item.locator.as_deref(),
             locator_label: item.label.clone(),
         };
@@ -203,7 +203,7 @@ impl<'a> Renderer<'a> {
             locale: self.locale,
             context: RenderContext::Citation,
             mode: csln_core::citation::CitationMode::Integral,
-            visibility: item.visibility,
+            suppress_author: false,
             locator: item.locator.as_deref(),
             locator_label: item.label.clone(),
         };
@@ -248,12 +248,14 @@ impl<'a> Renderer<'a> {
         template: &[TemplateComponent],
         mode: &csln_core::citation::CitationMode,
         intra_delimiter: &str,
+        suppress_author: bool,
     ) -> Result<Vec<String>, ProcessorError> {
         self.render_ungrouped_citation_with_format::<crate::render::plain::PlainText>(
             items,
             template,
             mode,
             intra_delimiter,
+            suppress_author,
         )
     }
 
@@ -263,6 +265,7 @@ impl<'a> Renderer<'a> {
         template: &[TemplateComponent],
         mode: &csln_core::citation::CitationMode,
         intra_delimiter: &str,
+        suppress_author: bool,
     ) -> Result<Vec<String>, ProcessorError>
     where
         F: crate::render::format::OutputFormat<Output = String>,
@@ -359,7 +362,7 @@ impl<'a> Renderer<'a> {
                     effective_template,
                     RenderContext::Citation,
                     mode.clone(),
-                    item.visibility,
+                    suppress_author,
                     citation_number,
                     item.locator.as_deref(),
                     item.label.clone(),
@@ -404,12 +407,14 @@ impl<'a> Renderer<'a> {
         template: &[TemplateComponent],
         mode: &csln_core::citation::CitationMode,
         intra_delimiter: &str,
+        suppress_author: bool,
     ) -> Result<Vec<String>, ProcessorError> {
         self.render_grouped_citation_with_format::<crate::render::plain::PlainText>(
             items,
             template,
             mode,
             intra_delimiter,
+            suppress_author,
         )
     }
 
@@ -419,6 +424,7 @@ impl<'a> Renderer<'a> {
         template: &[TemplateComponent],
         mode: &csln_core::citation::CitationMode,
         intra_delimiter: &str,
+        suppress_author: bool,
     ) -> Result<Vec<String>, ProcessorError>
     where
         F: crate::render::format::OutputFormat<Output = String>,
@@ -476,7 +482,7 @@ impl<'a> Renderer<'a> {
                     template,
                     RenderContext::Citation,
                     mode.clone(),
-                    first_item.visibility,
+                    suppress_author,
                     citation_number,
                     first_item.locator.as_deref(),
                     first_item.label.clone(),
@@ -533,7 +539,7 @@ impl<'a> Renderer<'a> {
                         template,
                         RenderContext::Citation,
                         mode.clone(),
-                        item.visibility,
+                        suppress_author,
                         citation_number,
                         item.locator.as_deref(),
                         item.label.clone(),
@@ -585,7 +591,7 @@ impl<'a> Renderer<'a> {
                     &filtered_template,
                     RenderContext::Citation,
                     mode.clone(),
-                    item.visibility,
+                    suppress_author,
                     citation_number,
                     item.locator.as_deref(),
                     item.label.clone(),
@@ -618,10 +624,7 @@ impl<'a> Renderer<'a> {
                 let content = match mode {
                     csln_core::citation::CitationMode::Integral => {
                         // Check for visibility overrides
-                        if matches!(
-                            first_item.visibility,
-                            csln_core::citation::ItemVisibility::SuppressAuthor
-                        ) {
+                        if suppress_author {
                             // Should theoretically not happen in narrative mode, but handle gracefully
                             format!("({})", joined_items)
                         } else {
@@ -630,10 +633,7 @@ impl<'a> Renderer<'a> {
                         }
                     }
                     csln_core::citation::CitationMode::NonIntegral => {
-                        if matches!(
-                            first_item.visibility,
-                            csln_core::citation::ItemVisibility::SuppressAuthor
-                        ) {
+                        if suppress_author {
                             // Parenthetical SuppressAuthor: 1962
                             joined_items
                         } else {
@@ -714,7 +714,7 @@ impl<'a> Renderer<'a> {
             locale: self.locale,
             context: RenderContext::Citation,
             mode: mode.clone(),
-            visibility: csln_core::citation::ItemVisibility::Default,
+            suppress_author: false,
             locator: None,
             locator_label: None,
         };
@@ -898,7 +898,7 @@ impl<'a> Renderer<'a> {
             locale: self.locale,
             context: RenderContext::Bibliography,
             mode: csln_core::citation::CitationMode::NonIntegral,
-            visibility: csln_core::citation::ItemVisibility::Default,
+            suppress_author: false,
             locator: None,
             locator_label: None,
         };
@@ -919,7 +919,7 @@ impl<'a> Renderer<'a> {
         template: &[TemplateComponent],
         context: RenderContext,
         mode: csln_core::citation::CitationMode,
-        visibility: csln_core::citation::ItemVisibility,
+        suppress_author: bool,
         citation_number: usize,
         locator: Option<&str>,
         locator_label: Option<csln_core::citation::LocatorType>,
@@ -929,7 +929,7 @@ impl<'a> Renderer<'a> {
             template,
             context,
             mode,
-            visibility,
+            suppress_author,
             citation_number,
             locator,
             locator_label,
@@ -944,7 +944,7 @@ impl<'a> Renderer<'a> {
         template: &[TemplateComponent],
         context: RenderContext,
         mode: csln_core::citation::CitationMode,
-        visibility: csln_core::citation::ItemVisibility,
+        suppress_author: bool,
         citation_number: usize,
         locator: Option<&str>,
         locator_label: Option<csln_core::citation::LocatorType>,
@@ -957,7 +957,7 @@ impl<'a> Renderer<'a> {
             locale: self.locale,
             context,
             mode,
-            visibility,
+            suppress_author,
             locator,
             locator_label,
         };

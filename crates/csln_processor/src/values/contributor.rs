@@ -92,10 +92,7 @@ impl ComponentValues for TemplateContributor {
 
         let contributor = match &component.contributor {
             ContributorRole::Author => {
-                if matches!(
-                    options.visibility,
-                    csln_core::citation::ItemVisibility::SuppressAuthor
-                ) {
+                if options.suppress_author {
                     None
                 } else {
                     reference.author()
@@ -128,10 +125,7 @@ impl ComponentValues for TemplateContributor {
         // If author is suppressed, don't attempt substitution or formatting
         if names_vec.is_empty()
             && matches!(component.contributor, ContributorRole::Author)
-            && matches!(
-                options.visibility,
-                csln_core::citation::ItemVisibility::SuppressAuthor
-            )
+            && options.suppress_author
         {
             return None;
         }
