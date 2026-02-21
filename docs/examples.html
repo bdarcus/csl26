@@ -1,50 +1,46 @@
 <!doctype html>
 <html lang="en" class="scroll-smooth">
-    <head>
-        <meta charset="utf-8" />
-        <meta content="width=device-width, initial-scale=1.0" name="viewport" />
-        <title>Examples | CSLN</title>
 
-        <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries,typography"></script>
-        <link
-            href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap"
-            rel="stylesheet"
-        />
-        <link
-            href="https://fonts.googleapis.com/icon?family=Material+Icons"
-            rel="stylesheet"
-        />
-        <link
-            href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
-            rel="stylesheet"
-        />
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Examples | CSLN</title>
 
-        <script>
-            tailwind.config = {
-                darkMode: "class",
-                theme: {
-                    extend: {
-                        colors: {
-                            primary: "#2a94d6", // Desaturated blue
-                            "background-light": "#fdfbf7", // Soft cream off-white
-                            "accent-cream": "#f5f2eb",
-                        },
-                        fontFamily: {
-                            display: ["Inter", "sans-serif"],
-                            mono: ["JetBrains Mono", "monospace"],
-                        },
-                        borderRadius: {
-                            DEFAULT: "0.25rem",
-                            lg: "0.5rem",
-                            xl: "0.75rem",
-                            full: "9999px",
-                        },
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries,typography"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap"
+        rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#2a94d6", // Desaturated blue
+                        "background-light": "#fdfbf7", // Soft cream off-white
+                        "accent-cream": "#f5f2eb",
+                    },
+                    fontFamily: {
+                        display: ["Inter", "sans-serif"],
+                        mono: ["JetBrains Mono", "monospace"],
+                    },
+                    borderRadius: {
+                        DEFAULT: "0.25rem",
+                        lg: "0.5rem",
+                        xl: "0.75rem",
+                        full: "9999px",
                     },
                 },
-            };
-        </script>
-        <style type="text/tailwindcss">
-            body {
+            },
+        };
+    </script>
+    <style type="text/tailwindcss">
+        body {
                 font-family: "Inter", sans-serif;
                 color: #374151;
             }
@@ -68,217 +64,159 @@
                     0 2px 4px -1px rgba(0, 0, 0, 0.06);
             }
         </style>
-    </head>
+</head>
 
-    <body class="bg-background-light text-slate-700 selection:bg-primary/20">
-        <!-- Navigation -->
-        <nav class="fixed top-0 w-full z-50 glass-nav">
-            <div
-                class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between"
-            >
-                <div class="flex items-center gap-2">
-                    <a href="index.html" class="flex items-center gap-2 group">
-                        <div
-                            class="w-8 h-8 bg-primary rounded flex items-center justify-center group-hover:brightness-110 transition-all"
-                        >
-                            <span class="text-white font-mono font-bold"
-                                >C</span
-                            >
-                        </div>
-                        <span
-                            class="font-mono text-xl font-bold tracking-tight text-slate-900"
-                            >CSLN</span
-                        >
-                    </a>
-                </div>
-                <div class="hidden md:flex items-center gap-8">
-                    <a
-                        class="text-sm font-medium hover:text-primary transition-colors text-slate-600"
-                        href="index.html#features"
-                        >Features</a
-                    >
-                    <a
-                        class="text-sm font-medium hover:text-primary transition-colors text-slate-600"
-                        href="compat.html"
-                        >Compat</a
-                    >
-                    <a
-                        class="text-sm font-medium hover:text-primary transition-colors text-slate-600"
-                        href="interactive-demo.html"
-                        >Demo</a
-                    >
-                    <a
-                        class="text-sm font-medium text-primary"
-                        href="examples.html"
-                        >Examples</a
-                    >
-                    <a
-                        class="text-sm font-medium hover:text-primary transition-colors text-slate-600"
-                        href="guides/style-author-guide.html"
-                        >Style Guide</a
-                    >
-                    <a
-                        class="text-sm font-medium hover:text-primary transition-colors text-slate-600"
-                        href="https://github.com/bdarcus/csl26"
-                        >GitHub</a
-                    >
-                    <a
-                        class="bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded font-medium text-sm flex items-center gap-2 transition-all"
-                        href="https://github.com/bdarcus/csl26"
-                    >
-                        <svg
-                            class="w-4 h-4"
-                            fill="currentColor"
-                            viewBox="0 0 24 24"
-                        >
-                            <path
-                                d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"
-                            ></path>
-                        </svg>
-                        Source
-                    </a>
-                </div>
-            </div>
-        </nav>
-
-        <!-- Header -->
-        <header class="pt-32 pb-16 px-6">
-            <div class="max-w-4xl mx-auto text-center">
-                <h1
-                    class="text-4xl md:text-5xl font-mono font-bold tracking-tight text-slate-900 mb-6"
-                >
-                    Feature Examples
-                </h1>
-                <p
-                    class="text-xl text-slate-500 max-w-2xl mx-auto leading-relaxed"
-                >
-                    See how CSLN's YAML syntax handles complex citation
-                    requirements with elegant, readable configuration.
-                </p>
-                <p class="text-sm text-slate-500 mt-5">
-                    For current oracle fidelity and SQI status, see
-                    <a class="text-primary hover:underline" href="compat.html">compatibility report</a>
-                    and
-                    <a class="text-primary hover:underline" href="TIER_STATUS.md">tier status</a>.
-                </p>
-            </div>
-        </header>
-
-        <!-- Examples Grid -->
-        <section class="max-w-6xl mx-auto px-6 pb-24 grid gap-12">
-            <!-- Document Processing -->
-            <article
-                id="document-processing"
-                class="example-card rounded-xl overflow-hidden shadow-sm scroll-mt-24"
-            >
-                <div class="p-8 bg-slate-50 border-b border-slate-200">
-                    <div class="flex items-center gap-3 mb-4">
-                        <div
-                            class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary"
-                        >
-                            <span class="material-icons">description</span>
-                        </div>
-                        <h2 class="text-2xl font-bold text-slate-900">
-                            Document Processing
-                        </h2>
+<body class="bg-background-light text-slate-700 selection:bg-primary/20">
+    <!-- Navigation -->
+    <nav class="fixed top-0 w-full z-50 glass-nav">
+        <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <a href="index.html" class="flex items-center gap-2 group">
+                    <div
+                        class="w-8 h-8 bg-primary rounded flex items-center justify-center group-hover:brightness-110 transition-all">
+                        <span class="text-white font-mono font-bold">C</span>
                     </div>
-                    <p class="text-slate-600 leading-relaxed mb-6">
-                        CSLN can process full documents by extracting citations using a high-performance 
-                        <code class="text-xs bg-slate-200 px-1 rounded">winnow</code> parser. It supports 
-                        the <strong class="text-slate-900">draft Djot citation syntax</strong>, including multi-cites and narrative (integral) modes.
-                    </p>
-                </div>
+                    <span class="font-mono text-xl font-bold tracking-tight text-slate-900">CSLN</span>
+                </a>
+            </div>
+            <div class="hidden md:flex items-center gap-8">
+                <a class="text-sm font-medium hover:text-primary transition-colors text-slate-600"
+                    href="index.html#features">Features</a>
+                <a class="text-sm font-medium hover:text-primary transition-colors text-slate-600"
+                    href="compat.html">Compat</a>
+                <a class="text-sm font-medium hover:text-primary transition-colors text-slate-600"
+                    href="interactive-demo.html">Demo</a>
+                <a class="text-sm font-medium text-primary" href="examples.html">Examples</a>
+                <a class="text-sm font-medium hover:text-primary transition-colors text-slate-600"
+                    href="guides/style-author-guide.html">Style Guide</a>
+                <a class="text-sm font-medium hover:text-primary transition-colors text-slate-600"
+                    href="https://github.com/bdarcus/csl26">GitHub</a>
+                <a class="bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded font-medium text-sm flex items-center gap-2 transition-all"
+                    href="https://github.com/bdarcus/csl26">
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                        <path
+                            d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z">
+                        </path>
+                    </svg>
+                    Source
+                </a>
+            </div>
+        </div>
+    </nav>
 
-                <div class="p-6 bg-white">
-                    <div class="grid gap-6">
-                        <!-- Djot Input -->
-                        <div class="border-l-4 border-slate-300 pl-4">
-                            <div
-                                class="text-xs font-semibold text-slate-500 uppercase mb-1"
-                            >
-                                Djot Input (paper.djot)
-                            </div>
-                            <div class="bg-slate-900 rounded p-3 overflow-x-auto mt-1">
-                                <pre class="font-mono text-xs text-slate-300 leading-relaxed">
+    <!-- Header -->
+    <header class="pt-32 pb-16 px-6">
+        <div class="max-w-4xl mx-auto text-center">
+            <h1 class="text-4xl md:text-5xl font-mono font-bold tracking-tight text-slate-900 mb-6">
+                Feature Examples
+            </h1>
+            <p class="text-xl text-slate-500 max-w-2xl mx-auto leading-relaxed">
+                See how CSLN's YAML syntax handles complex citation
+                requirements with elegant, readable configuration.
+            </p>
+            <p class="text-sm text-slate-500 mt-5">
+                For current oracle fidelity and SQI status, see
+                <a class="text-primary hover:underline" href="compat.html">compatibility report</a>
+                and
+                <a class="text-primary hover:underline" href="TIER_STATUS.md">tier status</a>.
+            </p>
+        </div>
+    </header>
+
+    <!-- Examples Grid -->
+    <section class="max-w-6xl mx-auto px-6 pb-24 grid gap-12">
+        <!-- Document Processing -->
+        <article id="document-processing" class="example-card rounded-xl overflow-hidden shadow-sm scroll-mt-24">
+            <div class="p-8 bg-slate-50 border-b border-slate-200">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                        <span class="material-icons">description</span>
+                    </div>
+                    <h2 class="text-2xl font-bold text-slate-900">
+                        Document Processing
+                    </h2>
+                </div>
+                <p class="text-slate-600 leading-relaxed mb-6">
+                    CSLN can process full documents by extracting citations using a high-performance
+                    <code class="text-xs bg-slate-200 px-1 rounded">winnow</code> parser. It supports
+                    the <strong class="text-slate-900">draft Djot citation syntax</strong>, including multi-cites and
+                    narrative (integral) modes.
+                </p>
+            </div>
+
+            <div class="p-6 bg-white">
+                <div class="grid gap-6">
+                    <!-- Djot Input -->
+                    <div class="border-l-4 border-slate-300 pl-4">
+                        <div class="text-xs font-semibold text-slate-500 uppercase mb-1">
+                            Djot Input (paper.djot)
+                        </div>
+                        <div class="bg-slate-900 rounded p-3 overflow-x-auto mt-1">
+                            <pre class="font-mono text-xs text-slate-300 leading-relaxed">
 According to @kuhn1962[p. 10], revolutions are...
 Multi-cite: [see ;@kuhn1962; @watson1953, chapter: 2].
 Structured: [@kuhn1962, section: 5].</pre>
-                            </div>
                         </div>
+                    </div>
 
-                        <!-- Rendered Output -->
-                        <div class="border-l-4 border-emerald-500 pl-4">
-                            <div
-                                class="text-xs font-semibold text-slate-500 uppercase mb-1"
-                            >
-                                Rendered Output (Plain Text)
-                            </div>
-                            <div class="font-mono text-sm text-slate-900 mt-1">
-                                According to Kuhn (1962, p. 10), revolutions are...<br/>
-                                Multi-cite: (see Kuhn, 1962; Watson & Crick, 1953, ch. 2).
-                            </div>
+                    <!-- Rendered Output -->
+                    <div class="border-l-4 border-emerald-500 pl-4">
+                        <div class="text-xs font-semibold text-slate-500 uppercase mb-1">
+                            Rendered Output (Plain Text)
+                        </div>
+                        <div class="font-mono text-sm text-slate-900 mt-1">
+                            According to Kuhn (1962, p. 10), revolutions are...<br />
+                            Multi-cite: (see Kuhn, 1962; Watson & Crick, 1953, ch. 2).
                         </div>
                     </div>
                 </div>
-            </article>
+            </div>
+        </article>
 
-            <!-- Advanced Citations: Narrative, Infix & Conjunctions -->
-            <article
-                id="advanced-citations"
-                class="example-card rounded-xl overflow-hidden shadow-sm scroll-mt-24"
-            >
-                <div class="p-8 bg-slate-50 border-b border-slate-200">
-                    <div class="flex items-center gap-3 mb-4">
-                        <div
-                            class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary"
-                        >
-                            <span class="material-icons">auto_awesome</span>
-                        </div>
-                        <h2 class="text-2xl font-bold text-slate-900">
-                            Advanced Citations
-                        </h2>
+        <!-- Advanced Citations: Narrative, Infix & Conjunctions -->
+        <article id="advanced-citations" class="example-card rounded-xl overflow-hidden shadow-sm scroll-mt-24">
+            <div class="p-8 bg-slate-50 border-b border-slate-200">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                        <span class="material-icons">auto_awesome</span>
                     </div>
-                    <p class="text-slate-600 leading-relaxed mb-6">
-                        CSLN supports sophisticated citation patterns, including
-                        narrative (integral) vs. parenthetical (non-integral) 
-                        modes, mid-citation "infix" text, and context-aware 
-                        conjunctions (e.g., APA's "and" vs. "&").
-                    </p>
+                    <h2 class="text-2xl font-bold text-slate-900">
+                        Advanced Citations
+                    </h2>
                 </div>
+                <p class="text-slate-600 leading-relaxed mb-6">
+                    CSLN supports sophisticated citation patterns, including
+                    narrative (integral) vs. parenthetical (non-integral)
+                    modes, mid-citation "infix" text, and context-aware
+                    conjunctions (e.g., APA's "and" vs. "&").
+                </p>
+            </div>
 
-                <!-- Mode-Dependent Conjunctions -->
-                <div class="border-b border-slate-200">
-                    <div class="px-8 py-4 bg-slate-100">
-                        <h3
-                            class="text-sm font-semibold text-slate-700 uppercase tracking-wide"
-                        >
-                            Mode-Dependent Conjunctions (APA Style)
-                        </h3>
-                    </div>
-                    <div class="bg-slate-900 p-6 overflow-x-auto">
-                        <pre
-                            class="font-mono text-sm text-slate-300 leading-relaxed"
-                        >
+            <!-- Mode-Dependent Conjunctions -->
+            <div class="border-b border-slate-200">
+                <div class="px-8 py-4 bg-slate-100">
+                    <h3 class="text-sm font-semibold text-slate-700 uppercase tracking-wide">
+                        Mode-Dependent Conjunctions (APA Style)
+                    </h3>
+                </div>
+                <div class="bg-slate-900 p-6 overflow-x-auto">
+                    <pre class="font-mono text-sm text-slate-300 leading-relaxed">
 <span class="text-indigo-400">options</span>:
   <span class="text-primary">contributors</span>:
     <span class="text-primary">and</span>: <span class="text-emerald-400">!mode-dependent</span>
       <span class="text-primary">integral</span>: <span class="text-emerald-400">text</span>      <span class="text-slate-500"># "Smith and Jones (2024)"</span>
       <span class="text-primary">non-integral</span>: <span class="text-emerald-400">symbol</span>  <span class="text-slate-500"># "(Smith & Jones, 2024)"</span></pre>
-                    </div>
                 </div>
+            </div>
 
-                <div class="border-b border-slate-200">
-                    <div class="px-8 py-4 bg-slate-100">
-                        <h3
-                            class="text-sm font-semibold text-slate-700 uppercase tracking-wide"
-                        >
-                            Template Contexts & Infix Support
-                        </h3>
-                    </div>
-                    <div class="bg-slate-900 p-6 overflow-x-auto">
-                        <pre
-                            class="font-mono text-sm text-slate-300 leading-relaxed"
-                        >
+            <div class="border-b border-slate-200">
+                <div class="px-8 py-4 bg-slate-100">
+                    <h3 class="text-sm font-semibold text-slate-700 uppercase tracking-wide">
+                        Template Contexts & Infix Support
+                    </h3>
+                </div>
+                <div class="bg-slate-900 p-6 overflow-x-auto">
+                    <pre class="font-mono text-sm text-slate-300 leading-relaxed">
 <span class="text-indigo-400">citation</span>:
   <span class="text-primary">integral</span>:
     <span class="text-primary">template</span>:
@@ -288,81 +226,73 @@ Structured: [@kuhn1962, section: 5].</pre>
       - <span class="text-primary">date</span>: <span class="text-emerald-400">issued</span>
         <span class="text-primary">wrap</span>: <span class="text-emerald-400">parentheses</span>
         <span class="text-primary">prefix</span>: <span class="text-emerald-400">" "</span></pre>
-                    </div>
                 </div>
+            </div>
 
-                <!-- Visual Output -->
-                <div>
-                    <div class="px-8 py-4 bg-slate-100">
-                        <h3
-                            class="text-sm font-semibold text-slate-700 uppercase tracking-wide"
-                        >
-                            Rendered Examples (Draft Djot Syntax)
-                        </h3>
-                    </div>
-                    <div class="p-6 bg-white">
-                        <div class="grid gap-4">
-                            <div class="border-l-4 border-primary pl-4">
-                                <div class="text-xs font-semibold text-slate-500 uppercase mb-1">Narrative with Infix</div>
-                                <div class="font-mono text-xs text-slate-400 mb-1">Source: @kuhn1962(notes that)[p. 10]</div>
-                                <div class="font-mono text-sm text-slate-900">Kuhn notes that (1962, p. 10)</div>
-                            </div>
-                            <div class="border-l-4 border-emerald-500 pl-4">
-                                <div class="text-xs font-semibold text-slate-500 uppercase mb-1">Narrative (Multiple Authors)</div>
-                                <div class="font-mono text-xs text-slate-400 mb-1">Source: @weinberg1971</div>
-                                <div class="font-mono text-sm text-slate-900">Weinberg and Freedman (1971)</div>
-                            </div>
-                            <div class="border-l-4 border-indigo-500 pl-4">
-                                <div class="text-xs font-semibold text-slate-500 uppercase mb-1">Parenthetical (APA Conjunction)</div>
-                                <div class="font-mono text-xs text-slate-400 mb-1">Source: [@weinberg1971]</div>
-                                <div class="font-mono text-sm text-slate-900">(Weinberg & Freedman, 1971)</div>
-                            </div>
-                            <div class="border-l-4 border-rose-500 pl-4">
-                                <div class="text-xs font-semibold text-slate-500 uppercase mb-1">Multi-cite (Parenthetical)</div>
-                                <div class="font-mono text-xs text-slate-400 mb-1">Source: [@kuhn1962; @weinberg1971]</div>
-                                <div class="font-mono text-sm text-slate-900">(Kuhn, 1962; Weinberg & Freedman, 1971)</div>
-                            </div>
-                        </div>
-                    </div>
+            <!-- Visual Output -->
+            <div>
+                <div class="px-8 py-4 bg-slate-100">
+                    <h3 class="text-sm font-semibold text-slate-700 uppercase tracking-wide">
+                        Rendered Examples (Draft Djot Syntax)
+                    </h3>
                 </div>
-            </article>
-
-            <!-- Bibliography Grouping -->
-            <article
-                id="bibliography-grouping"
-                class="example-card rounded-xl overflow-hidden shadow-sm scroll-mt-24"
-            >
-                <div class="p-8 bg-slate-50 border-b border-slate-200">
-                    <div class="flex items-center gap-3 mb-4">
-                        <div
-                            class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary"
-                        >
-                            <span class="material-icons">library_books</span>
-                        </div>
-                        <h2 class="text-2xl font-bold text-slate-900">
-                            Bibliography Grouping
-                        </h2>
-                    </div>
-                    <p class="text-slate-600 leading-relaxed mb-6">
-                        Divide bibliographies into labeled sections with distinct sorting rules. Essential for legal hierarchies (Bluebook), multilingual bibliographies, and primary/secondary source divisions.
-                    </p>
-                </div>
-
                 <div class="p-6 bg-white">
-                    <div class="grid gap-6">
-                        <!-- Legal Hierarchy Example -->
-                        <div class="border-l-4 border-indigo-500 pl-4">
-                            <div
-                                class="text-xs font-semibold text-slate-500 uppercase mb-2"
-                            >
-                                Legal Hierarchy (Type-Based Grouping)
+                    <div class="grid gap-4">
+                        <div class="border-l-4 border-primary pl-4">
+                            <div class="text-xs font-semibold text-slate-500 uppercase mb-1">Narrative with Infix</div>
+                            <div class="font-mono text-xs text-slate-400 mb-1">Source: @kuhn1962(notes that)[p. 10]
                             </div>
-                            <div
-                                class="bg-slate-900 rounded p-4 overflow-x-auto mt-1"
-                            >
-                                <pre
-                                    class="font-mono text-xs text-slate-300 leading-relaxed"
-                                ><span class="text-indigo-400">bibliography</span>:
+                            <div class="font-mono text-sm text-slate-900">Kuhn notes that (1962, p. 10)</div>
+                        </div>
+                        <div class="border-l-4 border-emerald-500 pl-4">
+                            <div class="text-xs font-semibold text-slate-500 uppercase mb-1">Narrative (Multiple
+                                Authors)</div>
+                            <div class="font-mono text-xs text-slate-400 mb-1">Source: @weinberg1971</div>
+                            <div class="font-mono text-sm text-slate-900">Weinberg and Freedman (1971)</div>
+                        </div>
+                        <div class="border-l-4 border-indigo-500 pl-4">
+                            <div class="text-xs font-semibold text-slate-500 uppercase mb-1">Parenthetical (APA
+                                Conjunction)</div>
+                            <div class="font-mono text-xs text-slate-400 mb-1">Source: [@weinberg1971]</div>
+                            <div class="font-mono text-sm text-slate-900">(Weinberg & Freedman, 1971)</div>
+                        </div>
+                        <div class="border-l-4 border-rose-500 pl-4">
+                            <div class="text-xs font-semibold text-slate-500 uppercase mb-1">Multi-cite (Parenthetical)
+                            </div>
+                            <div class="font-mono text-xs text-slate-400 mb-1">Source: [@kuhn1962; @weinberg1971]</div>
+                            <div class="font-mono text-sm text-slate-900">(Kuhn, 1962; Weinberg & Freedman, 1971)</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </article>
+
+        <!-- Bibliography Grouping -->
+        <article id="bibliography-grouping" class="example-card rounded-xl overflow-hidden shadow-sm scroll-mt-24">
+            <div class="p-8 bg-slate-50 border-b border-slate-200">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                        <span class="material-icons">library_books</span>
+                    </div>
+                    <h2 class="text-2xl font-bold text-slate-900">
+                        Bibliography Grouping
+                    </h2>
+                </div>
+                <p class="text-slate-600 leading-relaxed mb-6">
+                    Divide bibliographies into labeled sections with distinct sorting rules. Essential for legal
+                    hierarchies (Bluebook), multilingual bibliographies, and primary/secondary source divisions.
+                </p>
+            </div>
+
+            <div class="p-6 bg-white">
+                <div class="grid gap-6">
+                    <!-- Legal Hierarchy Example -->
+                    <div class="border-l-4 border-indigo-500 pl-4">
+                        <div class="text-xs font-semibold text-slate-500 uppercase mb-2">
+                            Legal Hierarchy (Type-Based Grouping)
+                        </div>
+                        <div class="bg-slate-900 rounded p-4 overflow-x-auto mt-1">
+                            <pre class="font-mono text-xs text-slate-300 leading-relaxed"><span class="text-indigo-400">bibliography</span>:
   <span class="text-primary">groups</span>:
     - <span class="text-primary">id</span>: <span class="text-emerald-400">primary-legal</span>
       <span class="text-primary">heading</span>: <span class="text-emerald-400">"Primary Sources"</span>
@@ -373,25 +303,21 @@ Structured: [@kuhn1962, section: 5].</pre>
           - <span class="text-primary">key</span>: <span class="text-emerald-400">type</span>
             <span class="text-primary">order</span>: [<span class="text-emerald-400">legal-case, statute, treaty</span>]
           - <span class="text-primary">key</span>: <span class="text-emerald-400">issued</span></pre>
-                            </div>
-                            <p class="text-xs text-slate-500 mt-2">
-                                Explicit type ordering ensures legal-case appears before statute, regardless of alphabetical content.
-                            </p>
                         </div>
+                        <p class="text-xs text-slate-500 mt-2">
+                            Explicit type ordering ensures legal-case appears before statute, regardless of alphabetical
+                            content.
+                        </p>
+                    </div>
 
-                        <!-- Multilingual Example -->
-                        <div class="border-l-4 border-purple-500 pl-4">
-                            <div
-                                class="text-xs font-semibold text-slate-500 uppercase mb-2"
-                            >
-                                Multilingual (Per-Group Name Ordering)
-                            </div>
-                            <div
-                                class="bg-slate-900 rounded p-4 overflow-x-auto mt-1"
-                            >
-                                <pre
-                                    class="font-mono text-xs text-slate-300 leading-relaxed"
-                                ><span class="text-indigo-400">bibliography</span>:
+                    <!-- Multilingual Example -->
+                    <div class="border-l-4 border-purple-500 pl-4">
+                        <div class="text-xs font-semibold text-slate-500 uppercase mb-2">
+                            Multilingual (Per-Group Name Ordering)
+                        </div>
+                        <div class="bg-slate-900 rounded p-4 overflow-x-auto mt-1">
+                            <pre
+                                class="font-mono text-xs text-slate-300 leading-relaxed"><span class="text-indigo-400">bibliography</span>:
   <span class="text-primary">groups</span>:
     - <span class="text-primary">id</span>: <span class="text-emerald-400">vietnamese</span>
       <span class="text-primary">heading</span>: <span class="text-emerald-400">"Tài liệu tiếng Việt"</span>
@@ -413,25 +339,19 @@ Structured: [@kuhn1962, section: 5].</pre>
         <span class="text-primary">template</span>:
           - <span class="text-primary">key</span>: <span class="text-emerald-400">author</span>
             <span class="text-primary">sort-order</span>: <span class="text-emerald-400">family-given</span>  <span class="text-slate-500"># Western convention</span></pre>
-                            </div>
-                            <p class="text-xs text-slate-500 mt-2">
-                                Vietnamese names use given-family ordering, Western names use family-given ordering.
-                            </p>
                         </div>
+                        <p class="text-xs text-slate-500 mt-2">
+                            Vietnamese names use given-family ordering, Western names use family-given ordering.
+                        </p>
+                    </div>
 
-                        <!-- Localized Disambiguation Example -->
-                        <div class="border-l-4 border-amber-500 pl-4">
-                            <div
-                                class="text-xs font-semibold text-slate-500 uppercase mb-2"
-                            >
-                                Localized Disambiguation (Per-Group Year Suffixes)
-                            </div>
-                            <div
-                                class="bg-slate-900 rounded p-4 overflow-x-auto mt-1"
-                            >
-                                <pre
-                                    class="font-mono text-xs text-slate-300 leading-relaxed"
-                                ><span class="text-indigo-400">bibliography</span>:
+                    <!-- Localized Disambiguation Example -->
+                    <div class="border-l-4 border-amber-500 pl-4">
+                        <div class="text-xs font-semibold text-slate-500 uppercase mb-2">
+                            Localized Disambiguation (Per-Group Year Suffixes)
+                        </div>
+                        <div class="bg-slate-900 rounded p-4 overflow-x-auto mt-1">
+                            <pre class="font-mono text-xs text-slate-300 leading-relaxed"><span class="text-indigo-400">bibliography</span>:
   <span class="text-primary">groups</span>:
     - <span class="text-primary">id</span>: <span class="text-emerald-400">cited</span>
       <span class="text-primary">heading</span>: <span class="text-emerald-400">"Cited Works"</span>
@@ -444,92 +364,78 @@ Structured: [@kuhn1962, section: 5].</pre>
       <span class="text-primary">disambiguate</span>: <span class="text-emerald-400">locally</span>  <span class="text-slate-500"># Start fresh from "a"</span>
       <span class="text-primary">selector</span>:
         <span class="text-primary">status</span>: <span class="text-emerald-400">silent</span></pre>
-                            </div>
-                            <p class="text-xs text-slate-500 mt-2">
-                                Isolating disambiguation prevents collisions across bibliography sections, allowing independent suffix assignment in each group.
-                            </p>
                         </div>
+                        <p class="text-xs text-slate-500 mt-2">
+                            Isolating disambiguation prevents collisions across bibliography sections, allowing
+                            independent suffix assignment in each group.
+                        </p>
                     </div>
                 </div>
+            </div>
 
-                <div class="bg-slate-50 p-6 border-t border-slate-200">
-                    <div class="flex items-start gap-3">
-                        <div
-                            class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary flex-shrink-0 mt-1"
-                        >
-                            <span class="material-icons text-sm"
-                                >lightbulb</span
-                            >
-                        </div>
-                        <div class="text-sm text-slate-600 leading-relaxed">
-                            <strong class="text-slate-900"
-                                >Key Features:</strong
-                            >
-                            First-match semantics prevent duplication. Selectors support type matching, field matching (language, keywords), citation status (visible/silent), and negation for fallback groups. See <a href="https://github.com/bdarcus/csl26/blob/main/docs/architecture/design/BIBLIOGRAPHY_GROUPING.md" class="text-primary hover:underline">design document</a> for full details.
-                        </div>
+            <div class="bg-slate-50 p-6 border-t border-slate-200">
+                <div class="flex items-start gap-3">
+                    <div
+                        class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary flex-shrink-0 mt-1">
+                        <span class="material-icons text-sm">lightbulb</span>
+                    </div>
+                    <div class="text-sm text-slate-600 leading-relaxed">
+                        <strong class="text-slate-900">Key Features:</strong>
+                        First-match semantics prevent duplication. Selectors support type matching, field matching
+                        (language, keywords), citation status (visible/silent), and negation for fallback groups. See <a
+                            href="https://github.com/bdarcus/csl26/blob/main/docs/architecture/design/BIBLIOGRAPHY_GROUPING.md"
+                            class="text-primary hover:underline">design document</a> for full details.
                     </div>
                 </div>
-            </article>
+            </div>
+        </article>
 
-            <!-- Multilingual Support -->
-            <article
-                id="multilingual-support"
-                class="example-card rounded-xl overflow-hidden shadow-sm scroll-mt-24"
-            >
-                <div class="p-8 bg-slate-50 border-b border-slate-200">
-                    <div class="flex items-center gap-3 mb-4">
-                        <div
-                            class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary"
-                        >
-                            <span class="material-icons">translate</span>
-                        </div>
-                        <h2 class="text-2xl font-bold text-slate-900">
-                            Multilingual Support
-                        </h2>
+        <!-- Multilingual Support -->
+        <article id="multilingual-support" class="example-card rounded-xl overflow-hidden shadow-sm scroll-mt-24">
+            <div class="p-8 bg-slate-50 border-b border-slate-200">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                        <span class="material-icons">translate</span>
                     </div>
-                    <p class="text-slate-600 leading-relaxed mb-6">
-                        CSLN handles multilingual metadata with BCP 47 language
-                        tags, supporting original scripts, transliterations
-                        (Pinyin, Hepburn, ALA-LC), and translations. Styles
-                        declaratively specify rendering preferences with
-                        automatic fallback.
-                    </p>
+                    <h2 class="text-2xl font-bold text-slate-900">
+                        Multilingual Support
+                    </h2>
                 </div>
+                <p class="text-slate-600 leading-relaxed mb-6">
+                    CSLN handles multilingual metadata with BCP 47 language
+                    tags, supporting original scripts, transliterations
+                    (Pinyin, Hepburn, ALA-LC), and translations. Styles
+                    declaratively specify rendering preferences with
+                    automatic fallback.
+                </p>
+            </div>
 
-                <!-- Style Configuration -->
-                <div class="border-b border-slate-200">
-                    <div class="px-8 py-4 bg-slate-100">
-                        <h3
-                            class="text-sm font-semibold text-slate-700 uppercase tracking-wide"
-                        >
-                            Style Configuration
-                        </h3>
-                    </div>
-                    <div class="bg-slate-900 p-6 overflow-x-auto">
-                        <pre
-                            class="font-mono text-sm text-slate-300 leading-relaxed"
-                        >
+            <!-- Style Configuration -->
+            <div class="border-b border-slate-200">
+                <div class="px-8 py-4 bg-slate-100">
+                    <h3 class="text-sm font-semibold text-slate-700 uppercase tracking-wide">
+                        Style Configuration
+                    </h3>
+                </div>
+                <div class="bg-slate-900 p-6 overflow-x-auto">
+                    <pre class="font-mono text-sm text-slate-300 leading-relaxed">
 <span class="text-indigo-400">options</span>:
   <span class="text-primary">multilingual</span>:
     <span class="text-primary">title-mode</span>: <span class="text-emerald-400">transliterated</span>  <span class="text-slate-500"># primary | transliterated | translated | combined</span>
     <span class="text-primary">name-mode</span>: <span class="text-emerald-400">transliterated</span>
     <span class="text-primary">preferred-script</span>: <span class="text-emerald-400">Latn</span>       <span class="text-slate-500"># Latin script for romanization</span></pre>
-                    </div>
                 </div>
+            </div>
 
-                <!-- Reference Data -->
-                <div class="border-b border-slate-200">
-                    <div class="px-8 py-4 bg-slate-100">
-                        <h3
-                            class="text-sm font-semibold text-slate-700 uppercase tracking-wide"
-                        >
-                            Reference Data (YAML)
-                        </h3>
-                    </div>
-                    <div class="bg-slate-900 p-6 overflow-x-auto">
-                        <pre
-                            class="font-mono text-sm text-slate-300 leading-relaxed"
-                        >
+            <!-- Reference Data -->
+            <div class="border-b border-slate-200">
+                <div class="px-8 py-4 bg-slate-100">
+                    <h3 class="text-sm font-semibold text-slate-700 uppercase tracking-wide">
+                        Reference Data (YAML)
+                    </h3>
+                </div>
+                <div class="bg-slate-900 p-6 overflow-x-auto">
+                    <pre class="font-mono text-sm text-slate-300 leading-relaxed">
 <span class="text-indigo-400">id</span>: war-peace-zh
 <span class="text-indigo-400">type</span>: book
 <span class="text-indigo-400">title</span>:
@@ -548,219 +454,194 @@ Structured: [@kuhn1962, section: 5].</pre>
     <span class="text-primary">Latn</span>:
       <span class="text-primary">family</span>: <span class="text-emerald-400">"Tolstoy"</span>
       <span class="text-primary">given</span>: <span class="text-emerald-400">"Leo"</span></pre>
-                    </div>
                 </div>
+            </div>
 
-                <!-- Rendering Examples -->
-                <div>
-                    <div class="px-8 py-4 bg-slate-100">
-                        <h3
-                            class="text-sm font-semibold text-slate-700 uppercase tracking-wide"
-                        >
-                            Rendered Output by Mode
-                        </h3>
-                    </div>
-                    <div class="p-6 bg-white">
-                        <div class="grid gap-4">
-                            <div class="border-l-4 border-primary pl-4">
-                                <div
-                                    class="text-xs font-semibold text-slate-500 uppercase mb-1"
-                                >
-                                    Primary Mode
-                                </div>
-                                <div class="font-mono text-sm text-slate-900">
-                                    战争与和平. Лев Толстой (1869)
-                                </div>
-                                <div class="text-xs text-slate-500 mt-1">
-                                    Original scripts preserved
-                                </div>
-                            </div>
-                            <div class="border-l-4 border-emerald-500 pl-4">
-                                <div
-                                    class="text-xs font-semibold text-slate-500 uppercase mb-1"
-                                >
-                                    Transliterated Mode
-                                </div>
-                                <div class="font-mono text-sm text-slate-900">
-                                    Zhànzhēng yǔ Hépíng. Leo Tolstoy (1869)
-                                </div>
-                                <div class="text-xs text-slate-500 mt-1">
-                                    Romanized for Western readers
-                                </div>
-                            </div>
-                            <div class="border-l-4 border-indigo-500 pl-4">
-                                <div
-                                    class="text-xs font-semibold text-slate-500 uppercase mb-1"
-                                >
-                                    Translated Mode
-                                </div>
-                                <div class="font-mono text-sm text-slate-900">
-                                    War and Peace. Leo Tolstoy (1869)
-                                </div>
-                                <div class="text-xs text-slate-500 mt-1">
-                                    English translation when available
-                                </div>
-                            </div>
-                            <div class="border-l-4 border-amber-500 pl-4">
-                                <div
-                                    class="text-xs font-semibold text-slate-500 uppercase mb-1"
-                                >
-                                    Combined Mode
-                                </div>
-                                <div class="font-mono text-sm text-slate-900">
-                                    Zhànzhēng yǔ Hépíng [War and Peace]. Leo
-                                    Tolstoy (1869)
-                                </div>
-                                <div class="text-xs text-slate-500 mt-1">
-                                    Both romanization and translation
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+            <!-- Rendering Examples -->
+            <div>
+                <div class="px-8 py-4 bg-slate-100">
+                    <h3 class="text-sm font-semibold text-slate-700 uppercase tracking-wide">
+                        Rendered Output by Mode
+                    </h3>
                 </div>
-
-                <!-- BCP 47 Matching -->
-                <div class="bg-slate-50 p-6 border-t border-slate-200">
-                    <div class="flex items-start gap-3">
-                        <div
-                            class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary flex-shrink-0 mt-1"
-                        >
-                            <span class="material-icons text-sm">info</span>
-                        </div>
-                        <div class="text-sm text-slate-600 leading-relaxed">
-                            <strong class="text-slate-900"
-                                >BCP 47 Fallback Strategy:</strong
-                            ><br />
-                            1. Exact tag match (<code
-                                class="text-xs bg-slate-200 px-1 rounded"
-                                >"ja-Latn-hepburn"</code
-                            >)<br />
-                            2. Substring match (<code
-                                class="text-xs bg-slate-200 px-1 rounded"
-                                >"Latn"</code
-                            >
-                            matches any Latin script)<br />
-                            3. Fallback to
-                            <code class="text-xs bg-slate-200 px-1 rounded"
-                                >original</code
-                            >
-                            field
-                        </div>
-                    </div>
-                </div>
-            </article>
-
-            <!-- Advanced Dates -->
-            <article
-                id="advanced-dates"
-                class="example-card rounded-xl overflow-hidden shadow-sm scroll-mt-24"
-            >
-                <div class="p-8 bg-slate-50 border-b border-slate-200">
-                    <div class="flex items-center gap-3 mb-4">
-                        <div
-                            class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary"
-                        >
-                            <span class="material-icons">event</span>
-                        </div>
-                        <h2 class="text-2xl font-bold text-slate-900">
-                            Advanced Dates
-                        </h2>
-                    </div>
-                    <p class="text-slate-600 leading-relaxed mb-6">
-                        CSLN supports native <strong class="text-slate-900">EDTF (Extended Date/Time Format)</strong> 
-                        for handling complex historical ranges, uncertain or approximate dates, 
-                        and seasons.
-                    </p>
-                </div>
-
                 <div class="p-6 bg-white">
-                    <div class="grid gap-8">
-                        <!-- Date Ranges -->
+                    <div class="grid gap-4">
                         <div class="border-l-4 border-primary pl-4">
-                            <div class="text-xs font-semibold text-slate-500 uppercase mb-2">Date Intervals (Level 0)</div>
-                            <div class="bg-slate-900 rounded p-4 overflow-x-auto mt-1">
-                                <pre class="font-mono text-xs text-slate-300 leading-relaxed"><span class="text-indigo-400">issued</span>: <span class="text-emerald-400">"2023-05/2024-06"</span>  <span class="text-slate-500"># Closed interval</span>
+                            <div class="text-xs font-semibold text-slate-500 uppercase mb-1">
+                                Primary Mode
+                            </div>
+                            <div class="font-mono text-sm text-slate-900">
+                                战争与和平. Лев Толстой (1869)
+                            </div>
+                            <div class="text-xs text-slate-500 mt-1">
+                                Original scripts preserved
+                            </div>
+                        </div>
+                        <div class="border-l-4 border-emerald-500 pl-4">
+                            <div class="text-xs font-semibold text-slate-500 uppercase mb-1">
+                                Transliterated Mode
+                            </div>
+                            <div class="font-mono text-sm text-slate-900">
+                                Zhànzhēng yǔ Hépíng. Leo Tolstoy (1869)
+                            </div>
+                            <div class="text-xs text-slate-500 mt-1">
+                                Romanized for Western readers
+                            </div>
+                        </div>
+                        <div class="border-l-4 border-indigo-500 pl-4">
+                            <div class="text-xs font-semibold text-slate-500 uppercase mb-1">
+                                Translated Mode
+                            </div>
+                            <div class="font-mono text-sm text-slate-900">
+                                War and Peace. Leo Tolstoy (1869)
+                            </div>
+                            <div class="text-xs text-slate-500 mt-1">
+                                English translation when available
+                            </div>
+                        </div>
+                        <div class="border-l-4 border-amber-500 pl-4">
+                            <div class="text-xs font-semibold text-slate-500 uppercase mb-1">
+                                Combined Mode
+                            </div>
+                            <div class="font-mono text-sm text-slate-900">
+                                Zhànzhēng yǔ Hépíng [War and Peace]. Leo
+                                Tolstoy (1869)
+                            </div>
+                            <div class="text-xs text-slate-500 mt-1">
+                                Both romanization and translation
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- BCP 47 Matching -->
+            <div class="bg-slate-50 p-6 border-t border-slate-200">
+                <div class="flex items-start gap-3">
+                    <div
+                        class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary flex-shrink-0 mt-1">
+                        <span class="material-icons text-sm">info</span>
+                    </div>
+                    <div class="text-sm text-slate-600 leading-relaxed">
+                        <strong class="text-slate-900">BCP 47 Fallback Strategy:</strong><br />
+                        1. Exact tag match (<code
+                            class="text-xs bg-slate-200 px-1 rounded">"ja-Latn-hepburn"</code>)<br />
+                        2. Substring match (<code class="text-xs bg-slate-200 px-1 rounded">"Latn"</code>
+                        matches any Latin script)<br />
+                        3. Fallback to
+                        <code class="text-xs bg-slate-200 px-1 rounded">original</code>
+                        field
+                    </div>
+                </div>
+            </div>
+        </article>
+
+        <!-- Advanced Dates -->
+        <article id="advanced-dates" class="example-card rounded-xl overflow-hidden shadow-sm scroll-mt-24">
+            <div class="p-8 bg-slate-50 border-b border-slate-200">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                        <span class="material-icons">event</span>
+                    </div>
+                    <h2 class="text-2xl font-bold text-slate-900">
+                        Advanced Dates
+                    </h2>
+                </div>
+                <p class="text-slate-600 leading-relaxed mb-6">
+                    CSLN supports native <strong class="text-slate-900">EDTF (Extended Date/Time Format)</strong>
+                    for handling complex historical ranges, uncertain or approximate dates,
+                    and seasons.
+                </p>
+            </div>
+
+            <div class="p-6 bg-white">
+                <div class="grid gap-8">
+                    <!-- Date Ranges -->
+                    <div class="border-l-4 border-primary pl-4">
+                        <div class="text-xs font-semibold text-slate-500 uppercase mb-2">Date Intervals (Level 0)</div>
+                        <div class="bg-slate-900 rounded p-4 overflow-x-auto mt-1">
+                            <pre
+                                class="font-mono text-xs text-slate-300 leading-relaxed"><span class="text-indigo-400">issued</span>: <span class="text-emerald-400">"2023-05/2024-06"</span>  <span class="text-slate-500"># Closed interval</span>
 <span class="text-indigo-400">issued</span>: <span class="text-emerald-400">"2023-05/.."</span>        <span class="text-slate-500"># Open start</span>
 <span class="text-indigo-400">issued</span>: <span class="text-emerald-400">"../2023-05"</span>        <span class="text-slate-500"># Open end</span></pre>
-                            </div>
                         </div>
+                    </div>
 
-                        <!-- Uncertain & Approximate -->
-                        <div class="border-l-4 border-emerald-500 pl-4">
-                            <div class="text-xs font-semibold text-slate-500 uppercase mb-2">Uncertain & Approximate (Level 1)</div>
-                            <div class="bg-slate-900 rounded p-4 overflow-x-auto mt-1">
-                                <pre class="font-mono text-xs text-slate-300 leading-relaxed"><span class="text-indigo-400">issued</span>: <span class="text-emerald-400">"2004?"</span>              <span class="text-slate-500"># Uncertain year (2004?)</span>
+                    <!-- Uncertain & Approximate -->
+                    <div class="border-l-4 border-emerald-500 pl-4">
+                        <div class="text-xs font-semibold text-slate-500 uppercase mb-2">Uncertain & Approximate (Level
+                            1)</div>
+                        <div class="bg-slate-900 rounded p-4 overflow-x-auto mt-1">
+                            <pre
+                                class="font-mono text-xs text-slate-300 leading-relaxed"><span class="text-indigo-400">issued</span>: <span class="text-emerald-400">"2004?"</span>              <span class="text-slate-500"># Uncertain year (2004?)</span>
 <span class="text-indigo-400">issued</span>: <span class="text-emerald-400">"2004~"</span>              <span class="text-slate-500"># Approximate year (ca. 2004)</span>
 <span class="text-indigo-400">issued</span>: <span class="text-emerald-400">"2004%"</span>              <span class="text-slate-500"># Uncertain & approximate</span>
 <span class="text-indigo-400">issued</span>: <span class="text-emerald-400">"2004-06-11?"</span>        <span class="text-slate-500"># Uncertain day only</span></pre>
-                            </div>
                         </div>
+                    </div>
 
-                        <!-- Seasons -->
-                        <div class="border-l-4 border-indigo-500 pl-4">
-                            <div class="text-xs font-semibold text-slate-500 uppercase mb-2">Seasons (Level 1)</div>
-                            <div class="bg-slate-900 rounded p-4 overflow-x-auto mt-1">
-                                <pre class="font-mono text-xs text-slate-300 leading-relaxed"><span class="text-indigo-400">issued</span>: <span class="text-emerald-400">"2023-21"</span>           <span class="text-slate-500"># Spring 2023</span>
+                    <!-- Seasons -->
+                    <div class="border-l-4 border-indigo-500 pl-4">
+                        <div class="text-xs font-semibold text-slate-500 uppercase mb-2">Seasons (Level 1)</div>
+                        <div class="bg-slate-900 rounded p-4 overflow-x-auto mt-1">
+                            <pre
+                                class="font-mono text-xs text-slate-300 leading-relaxed"><span class="text-indigo-400">issued</span>: <span class="text-emerald-400">"2023-21"</span>           <span class="text-slate-500"># Spring 2023</span>
 <span class="text-indigo-400">issued</span>: <span class="text-emerald-400">"2023-22"</span>           <span class="text-slate-500"># Summer 2023</span>
 <span class="text-indigo-400">issued</span>: <span class="text-emerald-400">"2023-23"</span>           <span class="text-slate-500"># Autumn 2023</span>
 <span class="text-indigo-400">issued</span>: <span class="text-emerald-400">"2023-24"</span>           <span class="text-slate-500"># Winter 2023</span></pre>
-                            </div>
                         </div>
+                    </div>
 
-                        <!-- Unspecified Digits -->
-                        <div class="border-l-4 border-rose-500 pl-4">
-                            <div class="text-xs font-semibold text-slate-500 uppercase mb-2">Unspecified Digits (Level 1)</div>
-                            <div class="bg-slate-900 rounded p-4 overflow-x-auto mt-1">
-                                <pre class="font-mono text-xs text-slate-300 leading-relaxed"><span class="text-indigo-400">issued</span>: <span class="text-emerald-400">"199u"</span>              <span class="text-slate-500"># Some time in the 1990s</span>
+                    <!-- Unspecified Digits -->
+                    <div class="border-l-4 border-rose-500 pl-4">
+                        <div class="text-xs font-semibold text-slate-500 uppercase mb-2">Unspecified Digits (Level 1)
+                        </div>
+                        <div class="bg-slate-900 rounded p-4 overflow-x-auto mt-1">
+                            <pre
+                                class="font-mono text-xs text-slate-300 leading-relaxed"><span class="text-indigo-400">issued</span>: <span class="text-emerald-400">"199u"</span>              <span class="text-slate-500"># Some time in the 1990s</span>
 <span class="text-indigo-400">issued</span>: <span class="text-emerald-400">"2004-uu-uu"</span>        <span class="text-slate-500"># Some time in 2004 (month/day unknown)</span></pre>
-                            </div>
                         </div>
                     </div>
                 </div>
+            </div>
 
-                <div class="bg-slate-50 p-6 border-t border-slate-200">
-                    <div class="flex items-start gap-3">
-                        <div
-                            class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary flex-shrink-0 mt-1"
-                        >
-                            <span class="material-icons text-sm">history_edu</span>
-                        </div>
-                        <div class="text-sm text-slate-600 leading-relaxed">
-                            <strong class="text-slate-900">Fidelity First:</strong>
-                            Unlike CSL 1.0's structured date objects, CSLN uses EDTF strings as the primary exchange format, ensuring that semantic nuances like "approximate" or "unspecified" are preserved and can be localized by the processor according to the style's locale.
-                        </div>
+            <div class="bg-slate-50 p-6 border-t border-slate-200">
+                <div class="flex items-start gap-3">
+                    <div
+                        class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary flex-shrink-0 mt-1">
+                        <span class="material-icons text-sm">history_edu</span>
+                    </div>
+                    <div class="text-sm text-slate-600 leading-relaxed">
+                        <strong class="text-slate-900">Fidelity First:</strong>
+                        Unlike CSL 1.0's structured date objects, CSLN uses EDTF strings as the primary exchange format,
+                        ensuring that semantic nuances like "approximate" or "unspecified" are preserved and can be
+                        localized by the processor according to the style's locale.
                     </div>
                 </div>
-            </article>
+            </div>
+        </article>
 
-            <!-- Options-Level Presets -->
-            <article
-                id="options-presets"
-                class="example-card rounded-xl overflow-hidden shadow-sm scroll-mt-24"
-            >
-                <div class="p-8 bg-slate-50 border-b border-slate-200">
-                    <div class="flex items-center gap-3 mb-4">
-                        <div
-                            class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary"
-                        >
-                            <span class="material-icons">tune</span>
-                        </div>
-                        <h2 class="text-2xl font-bold text-slate-900">
-                            Options-Level Presets
-                        </h2>
+        <!-- Options-Level Presets -->
+        <article id="options-presets" class="example-card rounded-xl overflow-hidden shadow-sm scroll-mt-24">
+            <div class="p-8 bg-slate-50 border-b border-slate-200">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                        <span class="material-icons">tune</span>
                     </div>
-                    <p class="text-slate-600 leading-relaxed mb-6">
-                        Common configuration patterns for contributors, dates,
-                        and titles can be expressed as a single preset name
-                        instead of spelling out every field. Mix preset
-                        shorthand with explicit overrides for maximum clarity
-                        and concision.
-                    </p>
+                    <h2 class="text-2xl font-bold text-slate-900">
+                        Options-Level Presets
+                    </h2>
                 </div>
-                <div class="bg-slate-900 p-6 overflow-x-auto">
-                    <pre
-                        class="font-mono text-sm text-slate-300 leading-relaxed"
-                    >
+                <p class="text-slate-600 leading-relaxed mb-6">
+                    Common configuration patterns for contributors, dates,
+                    and titles can be expressed as a single preset name
+                    instead of spelling out every field. Mix preset
+                    shorthand with explicit overrides for maximum clarity
+                    and concision.
+                </p>
+            </div>
+            <div class="bg-slate-900 p-6 overflow-x-auto">
+                <pre class="font-mono text-sm text-slate-300 leading-relaxed">
 <span class="text-slate-500"># Named presets replace verbose config blocks</span>
 <span class="text-indigo-400">options</span>:
   <span class="text-primary">contributors</span>:            <span class="text-slate-500"># Explicit config (verbose)</span>
@@ -777,46 +658,37 @@ Structured: [@kuhn1962, section: 5].</pre>
 <span class="text-slate-500">#   titles:       apa | chicago | humanities | ieee | journal-emphasis | scientific</span>
 <span class="text-slate-500">#   substitute:   standard | editor-* | editor-translator-* | editor-title-* | editor-translator-title-*</span>
 <span class="text-slate-500">#   citation:     use-preset: numeric-citation</span></pre>
-                </div>
-            </article>
+            </div>
+        </article>
 
-            <!-- Title Formatting & Declarative Links -->
-            <article
-                id="titles-links"
-                class="example-card rounded-xl overflow-hidden shadow-sm scroll-mt-24"
-            >
-                <div class="p-8 bg-slate-50 border-b border-slate-200">
-                    <div class="flex items-center gap-3 mb-4">
-                        <div
-                            class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary"
-                        >
-                            <span class="material-icons">title</span>
-                        </div>
-                        <h2 class="text-2xl font-bold text-slate-900">
-                            Titles & Links
-                        </h2>
+        <!-- Title Formatting & Declarative Links -->
+        <article id="titles-links" class="example-card rounded-xl overflow-hidden shadow-sm scroll-mt-24">
+            <div class="p-8 bg-slate-50 border-b border-slate-200">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                        <span class="material-icons">title</span>
                     </div>
-                    <p class="text-slate-600 leading-relaxed mb-6">
-                        CSLN separates title content from its role (primary,
-                        parent-monograph, parent-serial) and uses declarative
-                        global formatting rules for consistency across item
-                        types.
-                    </p>
+                    <h2 class="text-2xl font-bold text-slate-900">
+                        Titles & Links
+                    </h2>
                 </div>
+                <p class="text-slate-600 leading-relaxed mb-6">
+                    CSLN separates title content from its role (primary,
+                    parent-monograph, parent-serial) and uses declarative
+                    global formatting rules for consistency across item
+                    types.
+                </p>
+            </div>
 
-                <div class="grid md:grid-cols-2 border-b border-slate-200">
-                    <div class="border-r border-slate-200">
-                        <div class="px-8 py-4 bg-slate-100">
-                            <h3
-                                class="text-sm font-semibold text-slate-700 uppercase tracking-wide"
-                            >
-                                Global Formatting (options.titles)
-                            </h3>
-                        </div>
-                        <div class="bg-slate-900 p-6 h-full">
-                            <pre
-                                class="font-mono text-sm text-slate-300 leading-relaxed"
-                            >
+            <div class="grid md:grid-cols-2 border-b border-slate-200">
+                <div class="border-r border-slate-200">
+                    <div class="px-8 py-4 bg-slate-100">
+                        <h3 class="text-sm font-semibold text-slate-700 uppercase tracking-wide">
+                            Global Formatting (options.titles)
+                        </h3>
+                    </div>
+                    <div class="bg-slate-900 p-6 h-full">
+                        <pre class="font-mono text-sm text-slate-300 leading-relaxed">
 <span class="text-indigo-400">titles</span>:
   <span class="text-primary">monograph</span>:
     <span class="text-primary">emph</span>: <span class="text-emerald-400">true</span>      <span class="text-slate-500"># Italics for books</span>
@@ -824,20 +696,16 @@ Structured: [@kuhn1962, section: 5].</pre>
     <span class="text-primary">emph</span>: <span class="text-emerald-400">true</span>      <span class="text-slate-500"># Italics for journals</span>
   <span class="text-primary">component</span>:
     <span class="text-primary">emph</span>: <span class="text-emerald-400">false</span>     <span class="text-slate-500"># Plain for articles</span></pre>
-                        </div>
                     </div>
-                    <div>
-                        <div class="px-8 py-4 bg-slate-100">
-                            <h3
-                                class="text-sm font-semibold text-slate-700 uppercase tracking-wide"
-                            >
-                                Template Usage & Links
-                            </h3>
-                        </div>
-                        <div class="bg-slate-900 p-6 h-full">
-                            <pre
-                                class="font-mono text-sm text-slate-300 leading-relaxed"
-                            >
+                </div>
+                <div>
+                    <div class="px-8 py-4 bg-slate-100">
+                        <h3 class="text-sm font-semibold text-slate-700 uppercase tracking-wide">
+                            Template Usage & Links
+                        </h3>
+                    </div>
+                    <div class="bg-slate-900 p-6 h-full">
+                        <pre class="font-mono text-sm text-slate-300 leading-relaxed">
 <span class="text-indigo-400">template</span>:
   - <span class="text-primary">title</span>: <span class="text-emerald-400">primary</span>
     <span class="text-primary">links</span>:
@@ -845,40 +713,31 @@ Structured: [@kuhn1962, section: 5].</pre>
       <span class="text-primary">anchor</span>: <span class="text-emerald-400">component</span>
   - <span class="text-primary">title</span>: <span class="text-emerald-400">parent-serial</span>
     <span class="text-primary">suffix</span>: <span class="text-emerald-400">","</span></pre>
-                        </div>
                     </div>
                 </div>
-            </article>
+            </div>
+        </article>
 
-            <!-- Type-Specific Overrides -->
-            <article
-                id="overrides"
-                class="example-card rounded-xl overflow-hidden shadow-sm scroll-mt-24"
-            >
-                <div class="p-8 bg-slate-50 border-b border-slate-200">
-                    <div class="flex items-center gap-3 mb-4">
-                        <div
-                            class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary"
-                        >
-                            <span class="material-icons"
-                                >settings_input_component</span
-                            >
-                        </div>
-                        <h2 class="text-2xl font-bold text-slate-900">
-                            Type-Specific Overrides
-                        </h2>
+        <!-- Type-Specific Overrides -->
+        <article id="overrides" class="example-card rounded-xl overflow-hidden shadow-sm scroll-mt-24">
+            <div class="p-8 bg-slate-50 border-b border-slate-200">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                        <span class="material-icons">settings_input_component</span>
                     </div>
-                    <p class="text-slate-600 leading-relaxed mb-6">
-                        Avoid complex conditional logic. Components in CSLN can
-                        declaratively override their behavior or suppress
-                        themselves based on the item type. Use concise list syntax 
-                        to apply the same rule to multiple types.
-                    </p>
+                    <h2 class="text-2xl font-bold text-slate-900">
+                        Type-Specific Overrides
+                    </h2>
                 </div>
-                <div class="bg-slate-900 p-6 overflow-x-auto">
-                    <pre
-                        class="font-mono text-sm text-slate-300 leading-relaxed"
-                    >
+                <p class="text-slate-600 leading-relaxed mb-6">
+                    Avoid complex conditional logic. Components in CSLN can
+                    declaratively override their behavior or suppress
+                    themselves based on the item type. Use concise list syntax
+                    to apply the same rule to multiple types.
+                </p>
+            </div>
+            <div class="bg-slate-900 p-6 overflow-x-auto">
+                <pre class="font-mono text-sm text-slate-300 leading-relaxed">
 <span class="text-indigo-400">bibliography</span>:
   <span class="text-primary">template</span>:
     - <span class="text-primary">variable</span>: <span class="text-emerald-400">publisher</span>
@@ -889,320 +748,274 @@ Structured: [@kuhn1962, section: 5].</pre>
         <span class="text-primary">[chapter, report, entry-encyclopedia]</span>:
           <span class="text-primary">prefix</span>: <span class="text-emerald-400">"pp. "</span>
           <span class="text-primary">wrap</span>: <span class="text-emerald-400">parentheses</span></pre>
-                </div>
-            </article>
+            </div>
+        </article>
 
-            <!-- Output Formats -->
-            <article
-                id="output-formats"
-                class="example-card rounded-xl overflow-hidden shadow-sm scroll-mt-24"
-            >
-                <div class="p-8 bg-slate-50 border-b border-slate-200">
-                    <div class="flex items-center gap-3 mb-4">
-                        <div
-                            class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary"
-                        >
-                            <span class="material-icons">html</span>
-                        </div>
-                        <h2 class="text-2xl font-bold text-slate-900">
-                            Pluggable Output Formats
-                        </h2>
+        <!-- Output Formats -->
+        <article id="output-formats" class="example-card rounded-xl overflow-hidden shadow-sm scroll-mt-24">
+            <div class="p-8 bg-slate-50 border-b border-slate-200">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                        <span class="material-icons">html</span>
                     </div>
-                    <p class="text-slate-600 leading-relaxed mb-6">
-                        CSLN supports multiple output formats with a pluggable
-                        architecture. Generate semantic HTML, native LaTeX, flexible Djot for
-                        static site generators, or clean Plain Text.
-                    </p>
+                    <h2 class="text-2xl font-bold text-slate-900">
+                        Pluggable Output Formats
+                    </h2>
                 </div>
+                <p class="text-slate-600 leading-relaxed mb-6">
+                    CSLN supports multiple output formats with a pluggable
+                    architecture. Generate semantic HTML, native LaTeX, flexible Djot for
+                    static site generators, or clean Plain Text.
+                </p>
+            </div>
 
-                <div class="p-6 bg-white">
-                    <div class="grid gap-6">
-                        <!-- Plain Text -->
-                        <div class="border-l-4 border-slate-300 pl-4">
-                            <div
-                                class="text-xs font-semibold text-slate-500 uppercase mb-1"
-                            >
-                                Plain Text (-O plain)
-                            </div>
-                            <div class="font-mono text-sm text-slate-900">
-                                Smith, J. A. (2023). The Future of Citations.
-                                Academic Press.
-                            </div>
+            <div class="p-6 bg-white">
+                <div class="grid gap-6">
+                    <!-- Plain Text -->
+                    <div class="border-l-4 border-slate-300 pl-4">
+                        <div class="text-xs font-semibold text-slate-500 uppercase mb-1">
+                            Plain Text (-f plain)
                         </div>
+                        <div class="font-mono text-sm text-slate-900">
+                            Smith, J. A. (2023). The Future of Citations.
+                            Academic Press.
+                        </div>
+                    </div>
 
-                        <!-- LaTeX -->
-                        <div class="border-l-4 border-indigo-500 pl-4">
-                            <div
-                                class="text-xs font-semibold text-slate-500 uppercase mb-1"
-                            >
-                                Native LaTeX (-O latex)
-                            </div>
-                            <div
-                                class="bg-slate-900 rounded p-3 overflow-x-auto mt-1"
-                            >
-                                <pre
-                                    class="font-mono text-xs text-slate-300 leading-relaxed"
-                                >
+                    <!-- LaTeX -->
+                    <div class="border-l-4 border-indigo-500 pl-4">
+                        <div class="text-xs font-semibold text-slate-500 uppercase mb-1">
+                            Native LaTeX (-f latex)
+                        </div>
+                        <div class="bg-slate-900 rounded p-3 overflow-x-auto mt-1">
+                            <pre class="font-mono text-xs text-slate-300 leading-relaxed">
 Smith, J. A. (2023). \textit{The Future of Citations}. Academic Press.</pre>
-                            </div>
                         </div>
+                    </div>
 
-                        <!-- HTML -->
-                        <div class="border-l-4 border-primary pl-4">
-                            <div
-                                class="text-xs font-semibold text-slate-500 uppercase mb-1"
-                            >
-                                Semantic HTML (-O html)
-                            </div>
-                            <div
-                                class="bg-slate-900 rounded p-3 overflow-x-auto mt-1"
-                            >
-                                <pre
-                                    class="font-mono text-xs text-slate-300 leading-relaxed"
-                                >
+                    <!-- HTML -->
+                    <div class="border-l-4 border-primary pl-4">
+                        <div class="text-xs font-semibold text-slate-500 uppercase mb-1">
+                            Semantic HTML (-f html)
+                        </div>
+                        <div class="bg-slate-900 rounded p-3 overflow-x-auto mt-1">
+                            <pre class="font-mono text-xs text-slate-300 leading-relaxed">
 &lt;<span class="text-indigo-400">span</span> <span class="text-primary">class</span>=<span class="text-emerald-400">"csln-entry"</span>&gt;
   &lt;<span class="text-indigo-400">span</span> <span class="text-primary">class</span>=<span class="text-emerald-400">"csln-author"</span>&gt;Smith, J. A.&lt;/<span class="text-indigo-400">span</span>&gt; (2023).
   &lt;<span class="text-indigo-400">i</span> <span class="text-primary">class</span>=<span class="text-emerald-400">"csln-title"</span>&gt;The Future of Citations&lt;/<span class="text-indigo-400">i</span>&gt;. Academic Press.
 &lt;/<span class="text-indigo-400">span</span>&gt;</pre>
-                            </div>
                         </div>
+                    </div>
 
-                        <!-- Djot -->
-                        <div class="border-l-4 border-emerald-500 pl-4">
-                            <div
-                                class="text-xs font-semibold text-slate-500 uppercase mb-1"
-                            >
-                                Djot (-O djot)
-                            </div>
-                            <div
-                                class="bg-slate-900 rounded p-3 overflow-x-auto mt-1"
-                            >
-                                <pre
-                                    class="font-mono text-xs text-slate-300 leading-relaxed"
-                                >
+                    <!-- Djot -->
+                    <div class="border-l-4 border-emerald-500 pl-4">
+                        <div class="text-xs font-semibold text-slate-500 uppercase mb-1">
+                            Djot (-f djot)
+                        </div>
+                        <div class="bg-slate-900 rounded p-3 overflow-x-auto mt-1">
+                            <pre class="font-mono text-xs text-slate-300 leading-relaxed">
 [Smith, J. A.]<span class="text-primary">{.csln-author}</span> (2023). _The Future of Citations_<span class="text-primary">{.csln-title}</span>. Academic Press.</pre>
-                            </div>
                         </div>
-                    </div>
-                </div>
-
-                <div class="bg-slate-50 p-6 border-t border-slate-200">
-                    <div class="flex items-start gap-3">
-                        <div
-                            class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary flex-shrink-0 mt-1"
-                        >
-                            <span class="material-icons text-sm"
-                                >rocket_launch</span
-                            >
-                        </div>
-                        <div class="text-sm text-slate-600 leading-relaxed">
-                            <strong class="text-slate-900"
-                                >Consistent Rendering:</strong
-                            >
-                            The pluggable renderer system ensures that complex CSL rules (sorting, disambiguation, name formatting) are applied identically regardless of the output target. LaTeX support includes native escaping for TeX special characters.
-                        </div>
-                    </div>
-                </div>
-            </article>
-
-            <!-- Binary Performance -->
-            <article
-                id="binary-performance"
-                class="example-card rounded-xl overflow-hidden shadow-sm scroll-mt-24"
-            >
-                <div class="p-8 bg-slate-50 border-b border-slate-200">
-                    <div class="flex items-center gap-3 mb-4">
-                        <div
-                            class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary"
-                        >
-                            <span class="material-icons">speed</span>
-                        </div>
-                        <h2 class="text-2xl font-bold text-slate-900">
-                            Binary Performance (CBOR)
-                        </h2>
-                    </div>
-                    <p class="text-slate-600 leading-relaxed mb-6">
-                        For production environments, CSLN styles and
-                        bibliographies can be compiled into binary CBOR (Concise
-                        Binary Object Representation) for near-instant loading.
-                    </p>
-                </div>
-                <div class="p-8 bg-white">
-                    <div class="grid md:grid-cols-2 gap-8">
-                        <div>
-                            <h4
-                                class="font-bold text-slate-900 mb-3 text-sm uppercase tracking-wider"
-                            >
-                                Compilation
-                            </h4>
-                            <div
-                                class="bg-slate-900 rounded-lg p-4 font-mono text-xs text-slate-300"
-                            >
-                                <span class="text-primary">$</span> csln convert
-                                styles/apa-7th.yaml --output /tmp/apa-7th.cbor
-                            </div>
-                            <p class="text-xs text-slate-500 mt-2 italic">
-                                Binary formats can reduce parse overhead for
-                                large styles and bibliographies.
-                            </p>
-                        </div>
-                        <div>
-                            <h4
-                                class="font-bold text-slate-900 mb-3 text-sm uppercase tracking-wider"
-                            >
-                                Processing
-                            </h4>
-                            <div
-                                class="bg-slate-900 rounded-lg p-4 font-mono text-xs text-slate-300"
-                            >
-                                <span class="text-primary">$</span> csln render refs
-                                -b data.cbor -s style.cbor
-                            </div>
-                            <p class="text-xs text-slate-500 mt-2 italic">
-                                Full binary pipeline for maximum throughput.
-                            </p>
-                        </div>
-                    </div>
-                    <div class="mt-8 p-4 bg-slate-50 border border-slate-200 rounded-lg">
-                        <h4 class="font-bold text-slate-900 mb-2 text-sm uppercase tracking-wider">
-                            Schema Generation (Optional Feature)
-                        </h4>
-                        <div class="bg-slate-900 rounded-lg p-4 font-mono text-xs text-slate-300 overflow-x-auto">
-                            <span class="text-primary">$</span> cargo run --bin csln --features schema -- schema &gt; csln.schema.json
-                        </div>
-                        <p class="text-xs text-slate-500 mt-2 italic">
-                            Use this only when generating schemas locally; published schemas are already available on the project website.
-                        </p>
-                    </div>
-                </div>
-            </article>
-
-            <!-- Web Interactivity -->
-            <article
-                id="web-interactivity"
-                class="example-card rounded-xl overflow-hidden shadow-sm scroll-mt-24"
-            >
-                <div class="p-8 bg-slate-50 border-b border-slate-200">
-                    <div class="flex items-center gap-3 mb-4">
-                        <div
-                            class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary"
-                        >
-                            <span class="material-icons">mouse</span>
-                        </div>
-                        <h2 class="text-2xl font-bold text-slate-900">
-                            Web Interactivity
-                        </h2>
-                    </div>
-                    <p class="text-slate-600 leading-relaxed mb-6">
-                        CSLN provides optional JS/CSS assets that enrich semantic HTML output with interactive behaviors. They target data attributes injected by the processor, providing a <strong class="text-slate-900">progressive enhancement</strong> layer for web-based citation views.
-                    </p>
-                    <a href="interactive-demo.html" class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:brightness-105 transition-all text-sm font-semibold">
-                        Explore Enhancements
-                        <span class="material-icons text-sm">auto_fix_high</span>
-                    </a>
-                </div>
-                <div class="p-6 bg-white">
-                    <div class="grid md:grid-cols-2 gap-6">
-                        <div class="border-l-4 border-indigo-500 pl-4">
-                            <div class="text-xs font-semibold text-slate-500 uppercase mb-2">Bidirectional Navigation</div>
-                            <p class="text-sm text-slate-600">Click a citation to scroll to its bibliography entry. Hover an entry to highlight all its citations in the document.</p>
-                        </div>
-                        <div class="border-l-4 border-emerald-500 pl-4">
-                            <div class="text-xs font-semibold text-slate-500 uppercase mb-2">Hover Tooltips</div>
-                            <p class="text-sm text-slate-600">Instant reference previews on citation hover, utilizing metadata attributes stored directly in the entry container.</p>
-                        </div>
-                        <div class="border-l-4 border-amber-500 pl-4">
-                            <div class="text-xs font-semibold text-slate-500 uppercase mb-2">Sidebar Layouts</div>
-                            <p class="text-sm text-slate-600">Optimized for note-style documents. Bibliographies can be pulled into a sticky sidebar on large screens.</p>
-                        </div>
-                        <div class="border-l-4 border-rose-500 pl-4">
-                            <div class="text-xs font-semibold text-slate-500 uppercase mb-2">Theming</div>
-                            <p class="text-sm text-slate-600">Fully customizable via CSS variables. Includes high-contrast support and clean print styles.</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Integration Guide -->
-                <div class="bg-slate-50 p-8 border-t border-slate-200">
-                    <h3 class="text-lg font-bold text-slate-900 mb-4">Quick Start Integration</h3>
-                    <p class="text-slate-600 text-sm mb-6">To add interactivity to your own site, simply include the following tags in your HTML. These link to the latest assets via the JSDelivr CDN.</p>
-                    
-                    <div class="space-y-4">
-                        <div>
-                            <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">1. CSS (Place in &lt;head&gt;)</div>
-                            <div class="bg-slate-900 rounded p-3 overflow-x-auto">
-                                <pre class="font-mono text-xs text-emerald-400">&lt;link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/bdarcus/csl26@main/docs/assets/csln-interactive.css"&gt;</pre>
-                            </div>
-                        </div>
-                        <div>
-                            <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">2. JS (Place before &lt;/body&gt;)</div>
-                            <div class="bg-slate-900 rounded p-3 overflow-x-auto">
-                                <pre class="font-mono text-xs text-emerald-400">&lt;script src="https://cdn.jsdelivr.net/gh/bdarcus/csl26@main/docs/assets/csln-interactive.js"&gt;&lt;/script&gt;</pre>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="mt-8 grid md:grid-cols-2 gap-6">
-                        <div class="bg-white p-4 rounded-lg border border-slate-200">
-                            <h4 class="font-bold text-slate-900 text-sm mb-2 flex items-center gap-2">
-                                <span class="material-icons text-primary text-base">auto_fix_high</span>
-                                Requirements
-                            </h4>
-                            <p class="text-xs text-slate-500">Requires HTML output generated by the CSLN processor (including v0.6.0+), which includes the semantic classes and data attributes used by the interactive layer.</p>
-                        </div>
-                        <div class="bg-white p-4 rounded-lg border border-slate-200">
-                            <h4 class="font-bold text-slate-900 text-sm mb-2 flex items-center gap-2">
-                                <span class="material-icons text-primary text-base">view_sidebar</span>
-                                Sidebar Layout
-                            </h4>
-                            <p class="text-xs text-slate-500">To enable the sidebar mode on large screens, wrap your content and bibliography in a container with the class <code class="bg-slate-100 px-1 rounded">csln-with-sidebar</code>.</p>
-                        </div>
-                    </div>
-                </div>
-            </article>
-
-        </section>
-
-        <!-- Footer -->
-        <footer class="py-12 px-6 border-t border-slate-200 bg-white">
-            <div class="max-w-7xl mx-auto">
-                <div
-                    class="flex flex-col md:flex-row justify-between items-center gap-8"
-                >
-                    <div class="flex items-center gap-2">
-                        <div
-                            class="w-6 h-6 bg-primary rounded flex items-center justify-center"
-                        >
-                            <span class="text-white font-mono text-xs font-bold"
-                                >C</span
-                            >
-                        </div>
-                        <span class="font-mono text-lg font-bold text-slate-900"
-                            >CSLN</span
-                        >
-                    </div>
-                    <div class="flex gap-8 text-sm font-medium text-slate-500">
-                        <a
-                            class="hover:text-primary transition-colors"
-                            href="https://github.com/bdarcus/csl26"
-                            >GitHub</a
-                        >
-                        <a
-                            class="hover:text-primary transition-colors"
-                            href="examples.html"
-                            >Examples</a
-                        >
-                        <a
-                            class="hover:text-primary transition-colors"
-                            href="https://github.com/bdarcus/style-hub"
-                            >Styles Registry</a
-                        >
-                    </div>
-                    <div class="text-sm text-slate-400">
-                        © 2026 CSLN Project. MPL-2.0.
                     </div>
                 </div>
             </div>
-        </footer>
-    </body>
+
+            <div class="bg-slate-50 p-6 border-t border-slate-200">
+                <div class="flex items-start gap-3">
+                    <div
+                        class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary flex-shrink-0 mt-1">
+                        <span class="material-icons text-sm">rocket_launch</span>
+                    </div>
+                    <div class="text-sm text-slate-600 leading-relaxed">
+                        <strong class="text-slate-900">Consistent Rendering:</strong>
+                        The pluggable renderer system ensures that complex CSL rules (sorting, disambiguation, name
+                        formatting) are applied identically regardless of the output target. LaTeX support includes
+                        native escaping for TeX special characters.
+                    </div>
+                </div>
+            </div>
+        </article>
+
+        <!-- Binary Performance -->
+        <article id="binary-performance" class="example-card rounded-xl overflow-hidden shadow-sm scroll-mt-24">
+            <div class="p-8 bg-slate-50 border-b border-slate-200">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                        <span class="material-icons">speed</span>
+                    </div>
+                    <h2 class="text-2xl font-bold text-slate-900">
+                        Binary Performance (CBOR)
+                    </h2>
+                </div>
+                <p class="text-slate-600 leading-relaxed mb-6">
+                    For production environments, CSLN styles and
+                    bibliographies can be compiled into binary CBOR (Concise
+                    Binary Object Representation) for near-instant loading.
+                </p>
+            </div>
+            <div class="p-8 bg-white">
+                <div class="grid md:grid-cols-2 gap-8">
+                    <div>
+                        <h4 class="font-bold text-slate-900 mb-3 text-sm uppercase tracking-wider">
+                            Compilation
+                        </h4>
+                        <div class="bg-slate-900 rounded-lg p-4 font-mono text-xs text-slate-300">
+                            <span class="text-primary">$</span> csln convert
+                            styles/apa-7th.yaml --output /tmp/apa-7th.cbor
+                        </div>
+                        <p class="text-xs text-slate-500 mt-2 italic">
+                            Binary formats can reduce parse overhead for
+                            large styles and bibliographies.
+                        </p>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-slate-900 mb-3 text-sm uppercase tracking-wider">
+                            Processing
+                        </h4>
+                        <div class="bg-slate-900 rounded-lg p-4 font-mono text-xs text-slate-300">
+                            <span class="text-primary">$</span> csln render refs
+                            -b data.cbor -s style.cbor
+                        </div>
+                        <p class="text-xs text-slate-500 mt-2 italic">
+                            Full binary pipeline for maximum throughput.
+                        </p>
+                    </div>
+                </div>
+                <div class="mt-8 p-4 bg-slate-50 border border-slate-200 rounded-lg">
+                    <h4 class="font-bold text-slate-900 mb-2 text-sm uppercase tracking-wider">
+                        Schema Generation (Optional Feature)
+                    </h4>
+                    <div class="bg-slate-900 rounded-lg p-4 font-mono text-xs text-slate-300 overflow-x-auto">
+                        <span class="text-primary">$</span> cargo run --bin csln --features schema -- schema &gt;
+                        csln.schema.json
+                    </div>
+                    <p class="text-xs text-slate-500 mt-2 italic">
+                        Use this only when generating schemas locally; published schemas are already available on the
+                        project website.
+                    </p>
+                </div>
+            </div>
+        </article>
+
+        <!-- Web Interactivity -->
+        <article id="web-interactivity" class="example-card rounded-xl overflow-hidden shadow-sm scroll-mt-24">
+            <div class="p-8 bg-slate-50 border-b border-slate-200">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                        <span class="material-icons">mouse</span>
+                    </div>
+                    <h2 class="text-2xl font-bold text-slate-900">
+                        Web Interactivity
+                    </h2>
+                </div>
+                <p class="text-slate-600 leading-relaxed mb-6">
+                    CSLN provides optional JS/CSS assets that enrich semantic HTML output with interactive behaviors.
+                    They target data attributes injected by the processor, providing a <strong
+                        class="text-slate-900">progressive enhancement</strong> layer for web-based citation views.
+                </p>
+                <a href="interactive-demo.html"
+                    class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:brightness-105 transition-all text-sm font-semibold">
+                    Explore Enhancements
+                    <span class="material-icons text-sm">auto_fix_high</span>
+                </a>
+            </div>
+            <div class="p-6 bg-white">
+                <div class="grid md:grid-cols-2 gap-6">
+                    <div class="border-l-4 border-indigo-500 pl-4">
+                        <div class="text-xs font-semibold text-slate-500 uppercase mb-2">Bidirectional Navigation</div>
+                        <p class="text-sm text-slate-600">Click a citation to scroll to its bibliography entry. Hover an
+                            entry to highlight all its citations in the document.</p>
+                    </div>
+                    <div class="border-l-4 border-emerald-500 pl-4">
+                        <div class="text-xs font-semibold text-slate-500 uppercase mb-2">Hover Tooltips</div>
+                        <p class="text-sm text-slate-600">Instant reference previews on citation hover, utilizing
+                            metadata attributes stored directly in the entry container.</p>
+                    </div>
+                    <div class="border-l-4 border-amber-500 pl-4">
+                        <div class="text-xs font-semibold text-slate-500 uppercase mb-2">Sidebar Layouts</div>
+                        <p class="text-sm text-slate-600">Optimized for note-style documents. Bibliographies can be
+                            pulled into a sticky sidebar on large screens.</p>
+                    </div>
+                    <div class="border-l-4 border-rose-500 pl-4">
+                        <div class="text-xs font-semibold text-slate-500 uppercase mb-2">Theming</div>
+                        <p class="text-sm text-slate-600">Fully customizable via CSS variables. Includes high-contrast
+                            support and clean print styles.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Integration Guide -->
+            <div class="bg-slate-50 p-8 border-t border-slate-200">
+                <h3 class="text-lg font-bold text-slate-900 mb-4">Quick Start Integration</h3>
+                <p class="text-slate-600 text-sm mb-6">To add interactivity to your own site, simply include the
+                    following tags in your HTML. These link to the latest assets via the JSDelivr CDN.</p>
+
+                <div class="space-y-4">
+                    <div>
+                        <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">1. CSS (Place
+                            in &lt;head&gt;)</div>
+                        <div class="bg-slate-900 rounded p-3 overflow-x-auto">
+                            <pre
+                                class="font-mono text-xs text-emerald-400">&lt;link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/bdarcus/csl26@main/docs/assets/csln-interactive.css"&gt;</pre>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">2. JS (Place
+                            before &lt;/body&gt;)</div>
+                        <div class="bg-slate-900 rounded p-3 overflow-x-auto">
+                            <pre
+                                class="font-mono text-xs text-emerald-400">&lt;script src="https://cdn.jsdelivr.net/gh/bdarcus/csl26@main/docs/assets/csln-interactive.js"&gt;&lt;/script&gt;</pre>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-8 grid md:grid-cols-2 gap-6">
+                    <div class="bg-white p-4 rounded-lg border border-slate-200">
+                        <h4 class="font-bold text-slate-900 text-sm mb-2 flex items-center gap-2">
+                            <span class="material-icons text-primary text-base">auto_fix_high</span>
+                            Requirements
+                        </h4>
+                        <p class="text-xs text-slate-500">Requires HTML output generated by the CSLN processor
+                            (including v0.6.0+), which includes the semantic classes and data attributes used by the
+                            interactive layer.</p>
+                    </div>
+                    <div class="bg-white p-4 rounded-lg border border-slate-200">
+                        <h4 class="font-bold text-slate-900 text-sm mb-2 flex items-center gap-2">
+                            <span class="material-icons text-primary text-base">view_sidebar</span>
+                            Sidebar Layout
+                        </h4>
+                        <p class="text-xs text-slate-500">To enable the sidebar mode on large screens, wrap your content
+                            and bibliography in a container with the class <code
+                                class="bg-slate-100 px-1 rounded">csln-with-sidebar</code>.</p>
+                    </div>
+                </div>
+            </div>
+        </article>
+
+    </section>
+
+    <!-- Footer -->
+    <footer class="py-12 px-6 border-t border-slate-200 bg-white">
+        <div class="max-w-7xl mx-auto">
+            <div class="flex flex-col md:flex-row justify-between items-center gap-8">
+                <div class="flex items-center gap-2">
+                    <div class="w-6 h-6 bg-primary rounded flex items-center justify-center">
+                        <span class="text-white font-mono text-xs font-bold">C</span>
+                    </div>
+                    <span class="font-mono text-lg font-bold text-slate-900">CSLN</span>
+                </div>
+                <div class="flex gap-8 text-sm font-medium text-slate-500">
+                    <a class="hover:text-primary transition-colors" href="https://github.com/bdarcus/csl26">GitHub</a>
+                    <a class="hover:text-primary transition-colors" href="examples.html">Examples</a>
+                    <a class="hover:text-primary transition-colors" href="https://github.com/bdarcus/style-hub">Styles
+                        Registry</a>
+                </div>
+                <div class="text-sm text-slate-400">
+                    © 2026 CSLN Project. MPL-2.0.
+                </div>
+            </div>
+        </div>
+    </footer>
+</body>
+
 </html>
