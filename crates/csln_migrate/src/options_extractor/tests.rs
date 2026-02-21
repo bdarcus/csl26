@@ -1,5 +1,6 @@
 use super::*;
 use csl_legacy::parser::parse_style;
+use csln_core::grouping::SortKey as GroupSortKey;
 use csln_core::options::{Processing, SortKey, SubstituteConfig, SubstituteKey};
 use roxmltree::Document;
 
@@ -147,4 +148,54 @@ fn test_extract_note_processing_mode() {
     let style = parse_csl(xml).unwrap();
     let config = OptionsExtractor::extract(&style);
     assert!(matches!(config.processing, Some(Processing::Note)));
+}
+
+#[test]
+fn test_extract_group_sort_from_bibliography_macros() {
+    let xml = r#"<style class="in-text">
+        <citation><layout><text variable="citation-number"/></layout></citation>
+        <bibliography>
+            <sort>
+                <key macro="author"/>
+                <key macro="title"/>
+                <key variable="issued"/>
+            </sort>
+            <layout><text variable="title"/></layout>
+        </bibliography>
+    </style>"#;
+    let style = parse_csl(xml).unwrap();
+    let legacy_sort = style
+        .bibliography
+        .as_ref()
+        .and_then(|b| b.sort.as_ref())
+        .expect("legacy bibliography sort should exist");
+
+    let sort = super::bibliography::extract_group_sort_from_bibliography(legacy_sort)
+        .expect("group sort should be extracted");
+    assert_eq!(sort.template.len(), 3);
+    assert!(matches!(sort.template[0].key, GroupSortKey::Author));
+    assert!(matches!(sort.template[1].key, GroupSortKey::Title));
+    assert!(matches!(sort.template[2].key, GroupSortKey::Issued));
+}
+
+#[test]
+fn test_extract_group_sort_ignores_citation_number_only() {
+    let xml = r#"<style class="in-text">
+        <citation><layout><text variable="citation-number"/></layout></citation>
+        <bibliography>
+            <sort>
+                <key variable="citation-number"/>
+            </sort>
+            <layout><text variable="title"/></layout>
+        </bibliography>
+    </style>"#;
+    let style = parse_csl(xml).unwrap();
+    let legacy_sort = style
+        .bibliography
+        .as_ref()
+        .and_then(|b| b.sort.as_ref())
+        .expect("legacy bibliography sort should exist");
+
+    let sort = super::bibliography::extract_group_sort_from_bibliography(legacy_sort);
+    assert!(sort.is_none());
 }

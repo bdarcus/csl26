@@ -411,6 +411,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             ..Default::default()
         });
 
+    // Preserve legacy bibliography sort semantics at the CSLN bibliography spec level.
+    // This is required for numeric alphabetical variants where citation numbers
+    // follow bibliography order rather than reference registry order.
+    let bibliography_sort = legacy_style
+        .bibliography
+        .as_ref()
+        .and_then(|bib| bib.sort.as_ref())
+        .and_then(
+            csln_migrate::options_extractor::bibliography::extract_group_sort_from_bibliography,
+        );
+
     let style = Style {
         info: StyleInfo {
             title: Some(legacy_style.info.title.clone()),
@@ -438,6 +449,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             use_preset: None,
             template: Some(new_bib),
             type_templates,
+            sort: bibliography_sort,
             ..Default::default()
         }),
         ..Default::default()
