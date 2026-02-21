@@ -12,10 +12,6 @@ use csln_core::{
         BibliographyConfig, Config, ContributorConfig, DisplayAsSort, Processing, ProcessingCustom,
         Sort, SortKey, SortSpec,
     },
-    template::{
-        ContributorForm, ContributorRole, DateForm, DateVariable as TDateVar, NumberVariable,
-        Rendering, TemplateComponent, TemplateContributor, TemplateDate, TemplateNumber,
-    },
 };
 use csln_processor::Processor;
 
@@ -33,39 +29,15 @@ fn build_numeric_style() -> Style {
             ..Default::default()
         }),
         citation: Some(CitationSpec {
-            template: Some(vec![TemplateComponent::Number(TemplateNumber {
-                number: NumberVariable::CitationNumber,
-                rendering: Rendering::default(),
-                ..Default::default()
-            })]),
+            template: Some(vec![csln_core::tc_number!(CitationNumber)]),
             wrap: Some(csln_core::template::WrapPunctuation::Brackets),
             ..Default::default()
         }),
         bibliography: Some(BibliographySpec {
             template: Some(vec![
-                TemplateComponent::Number(TemplateNumber {
-                    number: NumberVariable::CitationNumber,
-                    rendering: Rendering {
-                        suffix: Some(". ".to_string()),
-                        ..Default::default()
-                    },
-                    ..Default::default()
-                }),
-                TemplateComponent::Contributor(TemplateContributor {
-                    contributor: ContributorRole::Author,
-                    form: ContributorForm::Long,
-                    ..Default::default()
-                }),
-                TemplateComponent::Date(TemplateDate {
-                    date: TDateVar::Issued,
-                    form: DateForm::Year,
-                    rendering: Rendering {
-                        prefix: Some(" (".to_string()),
-                        suffix: Some(")".to_string()),
-                        ..Default::default()
-                    },
-                    ..Default::default()
-                }),
+                csln_core::tc_number!(CitationNumber, suffix = ". "),
+                csln_core::tc_contributor!(Author, Long),
+                csln_core::tc_date!(Issued, Year, prefix = " (", suffix = ")"),
             ]),
             ..Default::default()
         }),
@@ -97,20 +69,8 @@ fn build_sorted_style(sort: Vec<SortSpec>) -> Style {
         }),
         bibliography: Some(BibliographySpec {
             template: Some(vec![
-                TemplateComponent::Contributor(TemplateContributor {
-                    contributor: ContributorRole::Author,
-                    form: ContributorForm::Long,
-                    ..Default::default()
-                }),
-                TemplateComponent::Date(TemplateDate {
-                    date: TDateVar::Issued,
-                    form: DateForm::Year,
-                    rendering: Rendering {
-                        prefix: Some(" ".to_string()),
-                        ..Default::default()
-                    },
-                    ..Default::default()
-                }),
+                csln_core::tc_contributor!(Author, Long),
+                csln_core::tc_date!(Issued, Year, prefix = " "),
             ]),
             ..Default::default()
         }),
@@ -143,17 +103,8 @@ fn make_style_with_substitute(substitute: Option<String>) -> Style {
         bibliography: Some(BibliographySpec {
             options: None,
             template: Some(vec![
-                TemplateComponent::Contributor(TemplateContributor {
-                    contributor: ContributorRole::Author,
-                    form: ContributorForm::Long,
-                    ..Default::default()
-                }),
-                TemplateComponent::Date(TemplateDate {
-                    date: TDateVar::Issued,
-                    form: DateForm::Year,
-                    rendering: Rendering::default(),
-                    ..Default::default()
-                }),
+                csln_core::tc_contributor!(Author, Long),
+                csln_core::tc_date!(Issued, Year),
             ]),
             ..Default::default()
         }),

@@ -4,10 +4,11 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 */
 
 use crate::options::AndOptions;
-use crate::template::{
-    ContributorForm, ContributorRole, DateForm, DateVariable, NumberVariable, Rendering,
-    SimpleVariable, TemplateComponent, TemplateContributor, TemplateDate, TemplateNumber,
-    TemplateTitle, TemplateVariable, TitleType, WrapPunctuation,
+use crate::{
+    tc_contributor, tc_date, tc_number, tc_title, tc_variable,
+    template::{
+        ContributorForm, ContributorRole, TemplateComponent, TemplateContributor, WrapPunctuation,
+    },
 };
 
 /// Embedded citation template for Chicago author-date style.
@@ -22,15 +23,7 @@ pub fn author_date_citation() -> Vec<TemplateComponent> {
             and: Some(AndOptions::Text),
             ..Default::default()
         }),
-        TemplateComponent::Date(TemplateDate {
-            date: DateVariable::Issued,
-            form: DateForm::Year,
-            rendering: Rendering {
-                prefix: Some(" ".to_string()),
-                ..Default::default()
-            },
-            ..Default::default()
-        }),
+        tc_date!(Issued, Year, prefix = " "),
     ]
 }
 
@@ -41,83 +34,20 @@ pub fn author_date_citation() -> Vec<TemplateComponent> {
 pub fn author_date_bibliography() -> Vec<TemplateComponent> {
     vec![
         // Author
-        TemplateComponent::Contributor(TemplateContributor {
-            contributor: ContributorRole::Author,
-            form: ContributorForm::Long,
-            rendering: Rendering {
-                suffix: Some(". ".to_string()),
-                ..Default::default()
-            },
-            ..Default::default()
-        }),
+        tc_contributor!(Author, Long, suffix = ". "),
         // Year.
-        TemplateComponent::Date(TemplateDate {
-            date: DateVariable::Issued,
-            form: DateForm::Year,
-            rendering: Rendering {
-                suffix: Some(". ".to_string()),
-                ..Default::default()
-            },
-            ..Default::default()
-        }),
+        tc_date!(Issued, Year, suffix = ". "),
         // "Title" - quoted for articles
-        TemplateComponent::Title(TemplateTitle {
-            title: TitleType::Primary,
-            form: None,
-            rendering: Rendering {
-                quote: Some(true),
-                suffix: Some(" ".to_string()),
-                ..Default::default()
-            },
-            ..Default::default()
-        }),
+        tc_title!(Primary, quote = true, suffix = " "),
         // Journal Title - italicized
-        TemplateComponent::Title(TemplateTitle {
-            title: TitleType::ParentSerial,
-            form: None,
-            rendering: Rendering {
-                emph: Some(true),
-                suffix: Some(" ".to_string()),
-                ..Default::default()
-            },
-            ..Default::default()
-        }),
+        tc_title!(ParentSerial, emph = true, suffix = " "),
         // Volume
-        TemplateComponent::Number(TemplateNumber {
-            number: NumberVariable::Volume,
-            form: None,
-            rendering: Rendering::default(),
-            ..Default::default()
-        }),
+        tc_number!(Volume),
         // (Issue)
-        TemplateComponent::Number(TemplateNumber {
-            number: NumberVariable::Issue,
-            form: None,
-            rendering: Rendering {
-                wrap: Some(WrapPunctuation::Parentheses),
-                ..Default::default()
-            },
-            ..Default::default()
-        }),
+        tc_number!(Issue, wrap = WrapPunctuation::Parentheses),
         // : Pages
-        TemplateComponent::Number(TemplateNumber {
-            number: NumberVariable::Pages,
-            form: None,
-            rendering: Rendering {
-                prefix: Some(": ".to_string()),
-                suffix: Some(". ".to_string()),
-                ..Default::default()
-            },
-            ..Default::default()
-        }),
+        tc_number!(Pages, prefix = ": ", suffix = ". "),
         // DOI
-        TemplateComponent::Variable(TemplateVariable {
-            variable: SimpleVariable::Doi,
-            rendering: Rendering {
-                prefix: Some("https://doi.org/".to_string()),
-                ..Default::default()
-            },
-            ..Default::default()
-        }),
+        tc_variable!(Doi, prefix = "https://doi.org/"),
     ]
 }

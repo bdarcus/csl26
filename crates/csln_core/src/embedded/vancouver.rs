@@ -3,25 +3,16 @@ SPDX-License-Identifier: MPL-2.0
 SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 */
 
-use crate::template::{
-    ContributorForm, ContributorRole, DateForm, DateVariable, NumberVariable, Rendering,
-    TemplateComponent, TemplateContributor, TemplateDate, TemplateNumber, TemplateTitle, TitleType,
-    WrapPunctuation,
+use crate::{
+    tc_contributor, tc_date, tc_number, tc_title,
+    template::{TemplateComponent, WrapPunctuation},
 };
 
 /// Embedded citation template for Vancouver (numeric) style.
 ///
 /// Renders as: [1]
 pub fn citation() -> Vec<TemplateComponent> {
-    vec![TemplateComponent::Number(TemplateNumber {
-        number: NumberVariable::CitationNumber,
-        form: None,
-        rendering: Rendering {
-            wrap: Some(WrapPunctuation::Brackets),
-            ..Default::default()
-        },
-        ..Default::default()
-    })]
+    vec![tc_number!(CitationNumber, wrap = WrapPunctuation::Brackets)]
 }
 
 /// Embedded bibliography template for Vancouver style.
@@ -30,82 +21,20 @@ pub fn citation() -> Vec<TemplateComponent> {
 pub fn bibliography() -> Vec<TemplateComponent> {
     vec![
         // Citation number.
-        TemplateComponent::Number(TemplateNumber {
-            number: NumberVariable::CitationNumber,
-            form: None,
-            rendering: Rendering {
-                suffix: Some(". ".to_string()),
-                ..Default::default()
-            },
-            ..Default::default()
-        }),
+        tc_number!(CitationNumber, suffix = ". "),
         // Author (Vancouver format - all initials, no periods)
-        TemplateComponent::Contributor(TemplateContributor {
-            contributor: ContributorRole::Author,
-            form: ContributorForm::Long,
-            rendering: Rendering {
-                suffix: Some(". ".to_string()),
-                ..Default::default()
-            },
-            ..Default::default()
-        }),
+        tc_contributor!(Author, Long, suffix = ". "),
         // Title
-        TemplateComponent::Title(TemplateTitle {
-            title: TitleType::Primary,
-            form: None,
-            rendering: Rendering {
-                suffix: Some(". ".to_string()),
-                ..Default::default()
-            },
-            ..Default::default()
-        }),
+        tc_title!(Primary, suffix = ". "),
         // Journal
-        TemplateComponent::Title(TemplateTitle {
-            title: TitleType::ParentSerial,
-            form: None,
-            rendering: Rendering {
-                suffix: Some(". ".to_string()),
-                ..Default::default()
-            },
-            ..Default::default()
-        }),
+        tc_title!(ParentSerial, suffix = ". "),
         // Year;
-        TemplateComponent::Date(TemplateDate {
-            date: DateVariable::Issued,
-            form: DateForm::Year,
-            rendering: Rendering {
-                suffix: Some(";".to_string()),
-                ..Default::default()
-            },
-            ..Default::default()
-        }),
+        tc_date!(Issued, Year, suffix = ";"),
         // Volume
-        TemplateComponent::Number(TemplateNumber {
-            number: NumberVariable::Volume,
-            form: None,
-            rendering: Rendering::default(),
-            ..Default::default()
-        }),
+        tc_number!(Volume),
         // (Issue)
-        TemplateComponent::Number(TemplateNumber {
-            number: NumberVariable::Issue,
-            form: None,
-            rendering: Rendering {
-                wrap: Some(WrapPunctuation::Parentheses),
-                ..Default::default()
-            },
-            ..Default::default()
-        }),
+        tc_number!(Issue, wrap = WrapPunctuation::Parentheses),
         // :Pages
-        TemplateComponent::Number(TemplateNumber {
-            number: NumberVariable::Pages,
-            form: None,
-            rendering: Rendering {
-                prefix: Some(":".to_string()),
-                suffix: Some(".".to_string()),
-                ..Default::default()
-            },
-            ..Default::default()
-        }),
+        tc_number!(Pages, prefix = ":", suffix = "."),
     ]
 }

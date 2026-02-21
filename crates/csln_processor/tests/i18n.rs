@@ -11,10 +11,6 @@ use csln_core::{
     options::{Config, MultilingualConfig, MultilingualMode, Processing},
     reference::contributor::{Contributor, MultilingualName, StructuredName},
     reference::types::{MultilingualComplex, MultilingualString},
-    template::{
-        ContributorForm, ContributorRole, DateForm, DateVariable as TDateVar, Rendering,
-        TemplateComponent, TemplateContributor, TemplateDate,
-    },
 };
 use csln_processor::Processor;
 use csln_processor::values::resolve_multilingual_string;
@@ -40,17 +36,8 @@ fn build_ml_style(name_mode: MultilingualMode, preferred_script: Option<String>)
         }),
         citation: Some(CitationSpec {
             template: Some(vec![
-                TemplateComponent::Contributor(TemplateContributor {
-                    contributor: ContributorRole::Author,
-                    form: ContributorForm::Short,
-                    ..Default::default()
-                }),
-                TemplateComponent::Date(TemplateDate {
-                    date: TDateVar::Issued,
-                    form: DateForm::Year,
-                    rendering: Rendering::default(),
-                    ..Default::default()
-                }),
+                csln_core::tc_contributor!(Author, Short),
+                csln_core::tc_date!(Issued, Year),
             ]),
             delimiter: Some(", ".to_string()),
             ..Default::default()
@@ -493,11 +480,7 @@ fn test_multilingual_rendering_numeric_integral_translated() {
     let mut style = build_ml_style(MultilingualMode::Translated, None);
     style.options.as_mut().unwrap().processing = Some(Processing::Numeric);
     style.citation.as_mut().unwrap().template =
-        Some(vec![TemplateComponent::Contributor(TemplateContributor {
-            contributor: ContributorRole::Author,
-            form: ContributorForm::Short,
-            ..Default::default()
-        })]);
+        Some(vec![csln_core::tc_contributor!(Author, Short)]);
 
     let mut bib = indexmap::IndexMap::new();
     let mut translations = HashMap::new();

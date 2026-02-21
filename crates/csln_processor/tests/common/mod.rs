@@ -364,10 +364,7 @@ pub fn build_author_date_style(
     use csln_core::options::{
         Config, ContributorConfig, Disambiguation, Processing, ProcessingCustom, ShortenListOptions,
     };
-    use csln_core::template::{
-        ContributorForm, ContributorRole, DateForm, DateVariable, Rendering, TemplateComponent,
-        TemplateContributor, TemplateDate, WrapPunctuation,
-    };
+    use csln_core::template::WrapPunctuation;
 
     // Build disambiguation config
     let disambiguate = if disambiguate_year_suffix || disambiguate_names || disambiguate_givenname {
@@ -397,20 +394,8 @@ pub fn build_author_date_style(
 
     // Citation template: Author (Year)
     let citation_template = vec![
-        TemplateComponent::Contributor(TemplateContributor {
-            contributor: ContributorRole::Author,
-            form: ContributorForm::Short,
-            ..Default::default()
-        }),
-        TemplateComponent::Date(TemplateDate {
-            date: DateVariable::Issued,
-            form: DateForm::Year,
-            rendering: Rendering {
-                wrap: Some(WrapPunctuation::Parentheses),
-                ..Default::default()
-            },
-            ..Default::default()
-        }),
+        csln_core::tc_contributor!(Author, Short),
+        csln_core::tc_date!(Issued, Year, wrap = WrapPunctuation::Parentheses),
     ];
 
     Style {

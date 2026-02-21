@@ -9,7 +9,6 @@ use common::*;
 use csln_core::{
     CitationSpec, Style, StyleInfo,
     options::{Config, Processing},
-    template::{NumberVariable, Rendering, TemplateComponent, TemplateNumber},
 };
 use csln_processor::Processor;
 
@@ -27,11 +26,7 @@ fn build_numeric_style() -> Style {
             ..Default::default()
         }),
         citation: Some(CitationSpec {
-            template: Some(vec![TemplateComponent::Number(TemplateNumber {
-                number: NumberVariable::CitationNumber,
-                rendering: Rendering::default(),
-                ..Default::default()
-            })]),
+            template: Some(vec![csln_core::tc_number!(CitationNumber)]),
             wrap: Some(csln_core::template::WrapPunctuation::Brackets),
             ..Default::default()
         }),

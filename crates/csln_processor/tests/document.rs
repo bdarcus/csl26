@@ -9,10 +9,6 @@ use common::*;
 use csln_core::{
     BibliographySpec, Style, StyleInfo,
     options::{BibliographyConfig, Config, Processing},
-    template::{
-        ContributorForm, ContributorRole, DateForm, DateVariable as TDateVar, Rendering,
-        TemplateComponent, TemplateContributor, TemplateDate,
-    },
 };
 use csln_processor::{
     Processor,
@@ -40,17 +36,8 @@ fn test_document_html_output_contains_heading() {
         citation: None,
         bibliography: Some(BibliographySpec {
             template: Some(vec![
-                TemplateComponent::Contributor(TemplateContributor {
-                    contributor: ContributorRole::Author,
-                    form: ContributorForm::Long,
-                    ..Default::default()
-                }),
-                TemplateComponent::Date(TemplateDate {
-                    date: TDateVar::Issued,
-                    form: DateForm::Year,
-                    rendering: Rendering::default(),
-                    ..Default::default()
-                }),
+                csln_core::tc_contributor!(Author, Long),
+                csln_core::tc_date!(Issued, Year),
             ]),
             ..Default::default()
         }),
@@ -123,17 +110,8 @@ fn test_document_djot_output_unmodified() {
         citation: None,
         bibliography: Some(BibliographySpec {
             template: Some(vec![
-                TemplateComponent::Contributor(TemplateContributor {
-                    contributor: ContributorRole::Author,
-                    form: ContributorForm::Long,
-                    ..Default::default()
-                }),
-                TemplateComponent::Date(TemplateDate {
-                    date: TDateVar::Issued,
-                    form: DateForm::Year,
-                    rendering: Rendering::default(),
-                    ..Default::default()
-                }),
+                csln_core::tc_contributor!(Author, Long),
+                csln_core::tc_date!(Issued, Year),
             ]),
             ..Default::default()
         }),

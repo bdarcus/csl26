@@ -186,18 +186,24 @@ impl Config {
     /// Used for combining global options with context-specific (citation/bibliography) options.
     /// Only non-None fields from `other` override fields in `self`.
     pub fn merge(&mut self, other: &Config) {
-        if other.substitute.is_some() {
-            self.substitute = other.substitute.clone();
-        }
-        if other.processing.is_some() {
-            self.processing = other.processing.clone();
-        }
-        if other.localize.is_some() {
-            self.localize = other.localize.clone();
-        }
-        if other.multilingual.is_some() {
-            self.multilingual = other.multilingual.clone();
-        }
+        crate::merge_options!(
+            self,
+            other,
+            substitute,
+            processing,
+            localize,
+            multilingual,
+            dates,
+            titles,
+            page_range_format,
+            bibliography,
+            links,
+            volume_pages_delimiter,
+            semantic_classes,
+            strip_periods,
+            custom,
+        );
+
         if let Some(other_contributors) = &other.contributors {
             if let Some(this_contributors) = &mut self.contributors {
                 this_contributors.merge(other_contributors);
@@ -205,32 +211,9 @@ impl Config {
                 self.contributors = Some(other_contributors.clone());
             }
         }
-        if other.dates.is_some() {
-            self.dates = other.dates.clone();
-        }
-        if other.titles.is_some() {
-            self.titles = other.titles.clone();
-        }
-        if other.page_range_format.is_some() {
-            self.page_range_format = other.page_range_format.clone();
-        }
-        if other.bibliography.is_some() {
-            self.bibliography = other.bibliography.clone();
-        }
-        if other.links.is_some() {
-            self.links = other.links.clone();
-        }
+
         if other.punctuation_in_quote {
             self.punctuation_in_quote = true;
-        }
-        if other.volume_pages_delimiter.is_some() {
-            self.volume_pages_delimiter = other.volume_pages_delimiter.clone();
-        }
-        if other.semantic_classes.is_some() {
-            self.semantic_classes = other.semantic_classes;
-        }
-        if other.strip_periods.is_some() {
-            self.strip_periods = other.strip_periods;
         }
     }
 

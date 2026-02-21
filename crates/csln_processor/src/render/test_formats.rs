@@ -8,22 +8,12 @@ mod tests {
     use crate::render::component::{ProcTemplateComponent, render_component_with_format};
     use crate::render::djot::Djot;
     use crate::render::html::Html;
-    use csln_core::template::{
-        ContributorRole, Rendering, TemplateComponent, TemplateContributor, TemplateTitle,
-        TitleType,
-    };
+    use csln_core::{tc_contributor, tc_title, tc_variable};
 
     #[test]
     fn test_html_title() {
         let component = ProcTemplateComponent {
-            template_component: TemplateComponent::Title(TemplateTitle {
-                title: TitleType::Primary,
-                rendering: Rendering {
-                    emph: Some(true),
-                    ..Default::default()
-                },
-                ..Default::default()
-            }),
+            template_component: tc_title!(Primary, emph = true),
             value: "My Title".to_string(),
             ..Default::default()
         };
@@ -35,14 +25,7 @@ mod tests {
     #[test]
     fn test_html_contributor() {
         let component = ProcTemplateComponent {
-            template_component: TemplateComponent::Contributor(TemplateContributor {
-                contributor: ContributorRole::Author,
-                rendering: Rendering {
-                    small_caps: Some(true),
-                    ..Default::default()
-                },
-                ..Default::default()
-            }),
+            template_component: tc_contributor!(Author, Long, small_caps = true),
             value: "Smith".to_string(),
             ..Default::default()
         };
@@ -57,14 +40,7 @@ mod tests {
     #[test]
     fn test_djot_title() {
         let component = ProcTemplateComponent {
-            template_component: TemplateComponent::Title(TemplateTitle {
-                title: TitleType::Primary,
-                rendering: Rendering {
-                    emph: Some(true),
-                    ..Default::default()
-                },
-                ..Default::default()
-            }),
+            template_component: tc_title!(Primary, emph = true),
             value: "My Title".to_string(),
             ..Default::default()
         };
@@ -76,14 +52,7 @@ mod tests {
     #[test]
     fn test_djot_contributor() {
         let component = ProcTemplateComponent {
-            template_component: TemplateComponent::Contributor(TemplateContributor {
-                contributor: ContributorRole::Author,
-                rendering: Rendering {
-                    small_caps: Some(true),
-                    ..Default::default()
-                },
-                ..Default::default()
-            }),
+            template_component: tc_contributor!(Author, Long, small_caps = true),
             value: "Smith".to_string(),
             ..Default::default()
         };
@@ -95,12 +64,7 @@ mod tests {
     #[test]
     fn test_html_link() {
         let component = ProcTemplateComponent {
-            template_component: TemplateComponent::Variable(
-                csln_core::template::TemplateVariable {
-                    variable: csln_core::template::SimpleVariable::Url,
-                    ..Default::default()
-                },
-            ),
+            template_component: tc_variable!(Url),
             value: "https://example.com".to_string(),
             url: Some("https://example.com".to_string()),
             ..Default::default()
@@ -115,9 +79,12 @@ mod tests {
 
     #[test]
     fn test_html_title_link_doi() {
-        use csln_core::options::{LinkAnchor, LinkTarget, LinksConfig};
+        use csln_core::{
+            options::{LinkAnchor, LinkTarget, LinksConfig},
+            template::{TemplateTitle, TitleType},
+        };
         let component = ProcTemplateComponent {
-            template_component: TemplateComponent::Title(TemplateTitle {
+            template_component: csln_core::template::TemplateComponent::Title(TemplateTitle {
                 title: TitleType::Primary,
                 links: Some(LinksConfig {
                     target: Some(LinkTarget::Doi),
