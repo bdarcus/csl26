@@ -34,12 +34,12 @@ impl Upsampler {
         while i < legacy_nodes.len() {
             let node = &legacy_nodes[i];
 
-            if let LNode::Group(group) = node {
-                if let Some(collapsed) = self.try_collapse_label_variable(group) {
-                    csln_nodes.push(collapsed);
-                    i += 1;
-                    continue;
-                }
+            if let LNode::Group(group) = node
+                && let Some(collapsed) = self.try_collapse_label_variable(group)
+            {
+                csln_nodes.push(collapsed);
+                i += 1;
+                continue;
             }
 
             if let Some(mapped) = self.map_node(node) {
@@ -55,29 +55,29 @@ impl Upsampler {
     fn map_node(&self, node: &LNode) -> Option<csln::CslnNode> {
         match node {
             LNode::Text(t) => {
-                if let Some(var_str) = &t.variable {
-                    if let Some(var) = self.map_variable(var_str) {
-                        if let Some(ref prov) = self.provenance {
-                            let var_name = format!("{:?}", var).to_lowercase();
-                            prov.record_upsampling(&var_name, "Text", "Variable");
-                        }
-                        eprintln!(
-                            "Upsampler: Text({:?}) macro_call_order={:?}",
-                            var, t.macro_call_order
-                        );
-                        return Some(csln::CslnNode::Variable(csln::VariableBlock {
-                            variable: var,
-                            label: None,
-                            formatting: self.map_formatting(
-                                &t.formatting,
-                                &t.prefix,
-                                &t.suffix,
-                                t.quotes,
-                            ),
-                            overrides: HashMap::new(),
-                            source_order: t.macro_call_order,
-                        }));
+                if let Some(var_str) = &t.variable
+                    && let Some(var) = self.map_variable(var_str)
+                {
+                    if let Some(ref prov) = self.provenance {
+                        let var_name = format!("{:?}", var).to_lowercase();
+                        prov.record_upsampling(&var_name, "Text", "Variable");
                     }
+                    eprintln!(
+                        "Upsampler: Text({:?}) macro_call_order={:?}",
+                        var, t.macro_call_order
+                    );
+                    return Some(csln::CslnNode::Variable(csln::VariableBlock {
+                        variable: var,
+                        label: None,
+                        formatting: self.map_formatting(
+                            &t.formatting,
+                            &t.prefix,
+                            &t.suffix,
+                            t.quotes,
+                        ),
+                        overrides: HashMap::new(),
+                        source_order: t.macro_call_order,
+                    }));
                 }
                 if let Some(term) = &t.term {
                     if let Some(general_term) = csln::locale::Locale::parse_general_term(term) {
@@ -219,10 +219,10 @@ impl Upsampler {
                 }
                 LNode::Substitute(sub) => {
                     for sub_node in &sub.children {
-                        if let LNode::Names(sub_names) = sub_node {
-                            if let Some(sub_var) = self.map_variable(&sub_names.variable) {
-                                options.substitute.push(sub_var);
-                            }
+                        if let LNode::Names(sub_names) = sub_node
+                            && let Some(sub_var) = self.map_variable(&sub_names.variable)
+                        {
+                            options.substitute.push(sub_var);
                         }
                     }
                 }
@@ -264,21 +264,21 @@ impl Upsampler {
     }
 
     fn map_label(&self, l: &legacy::Label) -> Option<csln::CslnNode> {
-        if let Some(var_str) = &l.variable {
-            if let Some(var) = self.map_variable(var_str) {
-                return Some(csln::CslnNode::Variable(csln::VariableBlock {
-                    variable: var.clone(),
-                    label: Some(csln::LabelOptions {
-                        variable: var,
-                        form: self.map_label_form(&l.form),
-                        pluralize: true,
-                        formatting: self.map_formatting(&l.formatting, &l.prefix, &l.suffix, None),
-                    }),
-                    formatting: FormattingOptions::default(),
-                    overrides: HashMap::new(),
-                    source_order: l.macro_call_order,
-                }));
-            }
+        if let Some(var_str) = &l.variable
+            && let Some(var) = self.map_variable(var_str)
+        {
+            return Some(csln::CslnNode::Variable(csln::VariableBlock {
+                variable: var.clone(),
+                label: Some(csln::LabelOptions {
+                    variable: var,
+                    form: self.map_label_form(&l.form),
+                    pluralize: true,
+                    formatting: self.map_formatting(&l.formatting, &l.prefix, &l.suffix, None),
+                }),
+                formatting: FormattingOptions::default(),
+                overrides: HashMap::new(),
+                source_order: l.macro_call_order,
+            }));
         }
         None
     }
@@ -474,35 +474,23 @@ impl Upsampler {
             let first = &group.children[0];
             let second = &group.children[1];
 
-            if let (LNode::Label(l), LNode::Text(t)) = (first, second) {
-                if let (Some(l_var), Some(t_var)) = (&l.variable, &t.variable) {
-                    if l_var == t_var {
-                        if let Some(var) = self.map_variable(t_var) {
-                            return Some(csln::CslnNode::Variable(csln::VariableBlock {
-                                variable: var.clone(),
-                                label: Some(csln::LabelOptions {
-                                    variable: var,
-                                    form: self.map_label_form(&l.form),
-                                    pluralize: true,
-                                    formatting: self.map_formatting(
-                                        &l.formatting,
-                                        &l.prefix,
-                                        &l.suffix,
-                                        None,
-                                    ),
-                                }),
-                                formatting: self.map_formatting(
-                                    &t.formatting,
-                                    &t.prefix,
-                                    &t.suffix,
-                                    t.quotes,
-                                ),
-                                overrides: HashMap::new(),
-                                source_order: t.macro_call_order,
-                            }));
-                        }
-                    }
-                }
+            if let (LNode::Label(l), LNode::Text(t)) = (first, second)
+                && let (Some(l_var), Some(t_var)) = (&l.variable, &t.variable)
+                && l_var == t_var
+                && let Some(var) = self.map_variable(t_var)
+            {
+                return Some(csln::CslnNode::Variable(csln::VariableBlock {
+                    variable: var.clone(),
+                    label: Some(csln::LabelOptions {
+                        variable: var,
+                        form: self.map_label_form(&l.form),
+                        pluralize: true,
+                        formatting: self.map_formatting(&l.formatting, &l.prefix, &l.suffix, None),
+                    }),
+                    formatting: self.map_formatting(&t.formatting, &t.prefix, &t.suffix, t.quotes),
+                    overrides: HashMap::new(),
+                    source_order: t.macro_call_order,
+                }));
             }
         }
         None

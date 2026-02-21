@@ -1,6 +1,6 @@
 use csl_legacy::model::{CslNode, Formatting, Text};
-use csln_core::locale::{GeneralTerm, TermForm};
 use csln_core::CslnNode;
+use csln_core::locale::{GeneralTerm, TermForm};
 use csln_migrate::Upsampler;
 
 #[test]

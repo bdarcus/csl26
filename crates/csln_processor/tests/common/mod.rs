@@ -6,13 +6,13 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 #![allow(dead_code)]
 
 use csln_core::{
+    CitationSpec, Style, StyleInfo,
     citation::{Citation, CitationItem, CitationMode},
     reference::{
         Contributor, ContributorList, EdtfString, InputReference as Reference, Monograph,
         MonographType, MultilingualString, Parent, Serial, SerialComponent, SerialComponentType,
         SerialType, StructuredName, Title,
     },
-    CitationSpec, Style, StyleInfo,
 };
 use csln_processor::Processor;
 

@@ -78,7 +78,7 @@ pub use error::ProcessorError;
 pub use processor::document::DocumentFormat;
 pub use processor::{ProcessedReferences, Processor};
 pub use reference::{Bibliography, Citation, CitationItem, Reference};
-pub use render::{citation_to_string, refs_to_string, ProcTemplate, ProcTemplateComponent};
+pub use render::{ProcTemplate, ProcTemplateComponent, citation_to_string, refs_to_string};
 pub use values::{ComponentValues, ProcHints, ProcValues, RenderContext, RenderOptions};
 
 // Re-export Locale from csln_core for convenience

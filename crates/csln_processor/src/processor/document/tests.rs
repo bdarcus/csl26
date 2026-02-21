@@ -1,5 +1,5 @@
-use crate::processor::document::{djot::DjotParser, CitationParser, DocumentFormat};
 use crate::processor::Processor;
+use crate::processor::document::{CitationParser, DocumentFormat, djot::DjotParser};
 use crate::reference::{Bibliography, Reference};
 use crate::render::plain::PlainText;
 use csl_legacy::csl_json::{DateVariable, Name, Reference as LegacyReference};
@@ -35,11 +35,11 @@ fn make_test_bib() -> Bibliography {
 #[test]
 fn test_bibliography_grouping() {
     use csln_core::{
+        BibliographySpec, CitationSpec,
         template::{
             ContributorForm, ContributorRole, DateForm, DateVariable, Rendering, TemplateComponent,
             TemplateContributor, TemplateDate, WrapPunctuation,
         },
-        BibliographySpec, CitationSpec,
     };
     let style = Style {
         citation: Some(CitationSpec {
@@ -103,11 +103,11 @@ fn test_bibliography_grouping() {
 #[test]
 fn test_visible_wins_over_silent() {
     use csln_core::{
+        BibliographySpec, CitationSpec,
         template::{
             ContributorForm, ContributorRole, DateForm, DateVariable, Rendering, TemplateComponent,
             TemplateContributor, TemplateDate, WrapPunctuation,
         },
-        BibliographySpec, CitationSpec,
     };
     let style = Style {
         citation: Some(CitationSpec {
@@ -201,11 +201,11 @@ fn test_repro_djot_parsing() {
 #[test]
 fn test_repro_djot_rendering() {
     use csln_core::{
+        CitationSpec,
         template::{
             ContributorForm, ContributorRole, DateForm, DateVariable, Rendering, TemplateComponent,
             TemplateContributor, TemplateDate, TemplateList, WrapPunctuation,
         },
-        CitationSpec,
     };
     let style = Style {
         citation: Some(CitationSpec {

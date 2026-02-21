@@ -47,19 +47,19 @@ impl ComponentValues for TemplateDate {
             let ref_type = reference.ref_type();
             let mut match_found = false;
             for (selector, ov) in overrides {
-                if selector.matches(&ref_type) {
-                    if let ComponentOverride::Rendering(r) = ov {
-                        effective_rendering.merge(r);
-                        match_found = true;
-                    }
+                if selector.matches(&ref_type)
+                    && let ComponentOverride::Rendering(r) = ov
+                {
+                    effective_rendering.merge(r);
+                    match_found = true;
                 }
             }
             if !match_found {
                 for (selector, ov) in overrides {
-                    if selector.matches("default") {
-                        if let ComponentOverride::Rendering(r) = ov {
-                            effective_rendering.merge(r);
-                        }
+                    if selector.matches("default")
+                        && let ComponentOverride::Rendering(r) = ov
+                    {
+                        effective_rendering.merge(r);
                     }
                 }
             }
@@ -138,11 +138,7 @@ impl ComponentValues for TemplateDate {
             match effective_form {
                 DateForm::Year => {
                     let year = date.year();
-                    if year.is_empty() {
-                        None
-                    } else {
-                        Some(year)
-                    }
+                    if year.is_empty() { None } else { Some(year) }
                 }
                 DateForm::YearMonth => {
                     let year = date.year();
@@ -198,15 +194,15 @@ impl ComponentValues for TemplateDate {
 
         // Apply uncertainty and approximation markers
         let formatted = formatted.map(|mut value| {
-            if date.is_approximate() {
-                if let Some(marker) = date_config.and_then(|c| c.approximation_marker.as_ref()) {
-                    value = format!("{}{}", marker, value);
-                }
+            if date.is_approximate()
+                && let Some(marker) = date_config.and_then(|c| c.approximation_marker.as_ref())
+            {
+                value = format!("{}{}", marker, value);
             }
-            if date.is_uncertain() {
-                if let Some(marker) = date_config.and_then(|c| c.uncertainty_marker.as_ref()) {
-                    value = format!("{}{}", value, marker);
-                }
+            if date.is_uncertain()
+                && let Some(marker) = date_config.and_then(|c| c.uncertainty_marker.as_ref())
+            {
+                value = format!("{}{}", value, marker);
             }
             value
         });

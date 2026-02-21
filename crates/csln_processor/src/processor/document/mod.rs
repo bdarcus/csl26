@@ -10,8 +10,8 @@ pub mod djot;
 #[cfg(test)]
 mod tests;
 
-use crate::processor::Processor;
 use crate::Citation;
+use crate::processor::Processor;
 
 /// A trait for document parsers that can identify citations.
 pub trait CitationParser {

@@ -7,13 +7,13 @@ mod common;
 use common::*;
 
 use csln_core::{
+    CitationSpec, Style, StyleInfo,
     locale::{GeneralTerm, TermForm},
     options::{Config, ContributorConfig, Processing, ShortenListOptions},
     template::{
         ContributorForm, ContributorRole, DateForm, DateVariable as TDateVar, TemplateComponent,
         TemplateContributor, TemplateDate, TemplateTerm,
     },
-    CitationSpec, Style, StyleInfo,
 };
 use csln_processor::Processor;
 
@@ -163,10 +163,10 @@ fn test_name_rendering_particles() {
 
     let mut bib = indexmap::IndexMap::new();
     let mut item = make_book("item1", "Gogh", "Vincent", 1888, "Title");
-    if let csln_core::reference::InputReference::Monograph(m) = &mut item {
-        if let Some(csln_core::reference::Contributor::StructuredName(n)) = &mut m.author {
-            n.non_dropping_particle = Some("van".to_string());
-        }
+    if let csln_core::reference::InputReference::Monograph(m) = &mut item
+        && let Some(csln_core::reference::Contributor::StructuredName(n)) = &mut m.author
+    {
+        n.non_dropping_particle = Some("van".to_string());
     }
     bib.insert("item1".to_string(), item);
 

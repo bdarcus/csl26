@@ -64,10 +64,10 @@ pub fn detect_contributor_preset(config: &ContributorConfig) -> Option<Contribut
         && config.display_as_sort == Some(DisplayAsSort::First)
     {
         // Check for APA's characteristic et-al threshold (21 min, 19 use-first)
-        if let Some(ref shorten) = config.shorten {
-            if shorten.min >= 20 {
-                return Some(ContributorPreset::Apa);
-            }
+        if let Some(ref shorten) = config.shorten
+            && shorten.min >= 20
+        {
+            return Some(ContributorPreset::Apa);
         }
         // Even without high threshold, symbol "and" + first-sort is APA-like
         return Some(ContributorPreset::Apa);
@@ -95,13 +95,12 @@ pub fn detect_contributor_preset(config: &ContributorConfig) -> Option<Contribut
     }
 
     // Chicago: first inverted, text "and", contextual comma
-    if config.display_as_sort == Some(DisplayAsSort::First) && config.and == Some(AndOptions::Text)
+    if config.display_as_sort == Some(DisplayAsSort::First)
+        && config.and == Some(AndOptions::Text)
+        && let Some(dpl) = &config.delimiter_precedes_last
+        && *dpl == csln_core::options::DelimiterPrecedesLast::Contextual
     {
-        if let Some(dpl) = &config.delimiter_precedes_last {
-            if *dpl == csln_core::options::DelimiterPrecedesLast::Contextual {
-                return Some(ContributorPreset::Chicago);
-            }
-        }
+        return Some(ContributorPreset::Chicago);
     }
 
     None

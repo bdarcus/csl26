@@ -220,16 +220,16 @@ impl MacroInliner {
     /// This ensures nested macro nodes keep their own order while non-macro nodes get the parent order.
     fn assign_macro_order_if_none(&self, node: &mut CslNode, order: usize) {
         match node {
-            CslNode::Text(ref mut text) if text.macro_call_order.is_none() => {
+            CslNode::Text(text) if text.macro_call_order.is_none() => {
                 text.macro_call_order = Some(order);
             }
-            CslNode::Date(ref mut date) if date.macro_call_order.is_none() => {
+            CslNode::Date(date) if date.macro_call_order.is_none() => {
                 date.macro_call_order = Some(order);
             }
-            CslNode::Label(ref mut label) if label.macro_call_order.is_none() => {
+            CslNode::Label(label) if label.macro_call_order.is_none() => {
                 label.macro_call_order = Some(order);
             }
-            CslNode::Names(ref mut names) => {
+            CslNode::Names(names) => {
                 if names.macro_call_order.is_none() {
                     names.macro_call_order = Some(order);
                 }
@@ -238,7 +238,7 @@ impl MacroInliner {
                     self.assign_macro_order_if_none(child, order);
                 }
             }
-            CslNode::Group(ref mut group) => {
+            CslNode::Group(group) => {
                 if group.macro_call_order.is_none() {
                     group.macro_call_order = Some(order);
                 }
@@ -247,10 +247,10 @@ impl MacroInliner {
                     self.assign_macro_order_if_none(child, order);
                 }
             }
-            CslNode::Number(ref mut number) if number.macro_call_order.is_none() => {
+            CslNode::Number(number) if number.macro_call_order.is_none() => {
                 number.macro_call_order = Some(order);
             }
-            CslNode::Choose(ref mut choose) => {
+            CslNode::Choose(choose) => {
                 // Recursively assign to all branches
                 for child in &mut choose.if_branch.children {
                     self.assign_macro_order_if_none(child, order);
@@ -266,7 +266,7 @@ impl MacroInliner {
                     }
                 }
             }
-            CslNode::Substitute(ref mut sub) => {
+            CslNode::Substitute(sub) => {
                 // Recursively assign to children
                 for child in &mut sub.children {
                     self.assign_macro_order_if_none(child, order);
@@ -281,33 +281,33 @@ impl MacroInliner {
     #[allow(dead_code)]
     fn assign_macro_order(&self, node: &mut CslNode, order: usize) {
         match node {
-            CslNode::Text(ref mut text) => {
+            CslNode::Text(text) => {
                 text.macro_call_order = Some(order);
             }
-            CslNode::Date(ref mut date) => {
+            CslNode::Date(date) => {
                 date.macro_call_order = Some(order);
             }
-            CslNode::Label(ref mut label) => {
+            CslNode::Label(label) => {
                 label.macro_call_order = Some(order);
             }
-            CslNode::Names(ref mut names) => {
+            CslNode::Names(names) => {
                 names.macro_call_order = Some(order);
                 // Recursively assign to children
                 for child in &mut names.children {
                     self.assign_macro_order(child, order);
                 }
             }
-            CslNode::Group(ref mut group) => {
+            CslNode::Group(group) => {
                 group.macro_call_order = Some(order);
                 // Recursively assign to children
                 for child in &mut group.children {
                     self.assign_macro_order(child, order);
                 }
             }
-            CslNode::Number(ref mut number) => {
+            CslNode::Number(number) => {
                 number.macro_call_order = Some(order);
             }
-            CslNode::Choose(ref mut choose) => {
+            CslNode::Choose(choose) => {
                 // Recursively assign to all branches
                 for child in &mut choose.if_branch.children {
                     self.assign_macro_order(child, order);
@@ -317,13 +317,13 @@ impl MacroInliner {
                         self.assign_macro_order(child, order);
                     }
                 }
-                if let Some(ref mut else_children) = choose.else_branch {
+                if let Some(else_children) = &mut choose.else_branch {
                     for child in else_children {
                         self.assign_macro_order(child, order);
                     }
                 }
             }
-            CslNode::Substitute(ref mut sub) => {
+            CslNode::Substitute(sub) => {
                 // Recursively assign to children
                 for child in &mut sub.children {
                     self.assign_macro_order(child, order);
@@ -339,16 +339,16 @@ impl MacroInliner {
     fn assign_layout_order(&self, nodes: &mut [CslNode], order_counter: &mut usize) {
         for node in nodes {
             match node {
-                CslNode::Text(ref mut text) if text.macro_name.is_some() => {
+                CslNode::Text(text) if text.macro_name.is_some() => {
                     // This is a macro call - assign it the current order
                     text.macro_call_order = Some(*order_counter);
                     *order_counter += 1;
                 }
-                CslNode::Group(ref mut group) => {
+                CslNode::Group(group) => {
                     // Recurse into groups to find macro calls
                     self.assign_layout_order(&mut group.children, order_counter);
                 }
-                CslNode::Choose(ref mut choose) => {
+                CslNode::Choose(choose) => {
                     // For layout order assignment, we want ALL macro calls to get unique sequential orders
                     // even across Choose branches, because we're tracking SOURCE order, not runtime order.
                     // At runtime only one branch executes, but we need to track where each macro appeared
@@ -359,14 +359,14 @@ impl MacroInliner {
                         self.assign_layout_order(&mut branch.children, order_counter);
                     }
 
-                    if let Some(ref mut else_children) = choose.else_branch {
+                    if let Some(else_children) = &mut choose.else_branch {
                         self.assign_layout_order(else_children, order_counter);
                     }
                 }
-                CslNode::Names(ref mut names) => {
+                CslNode::Names(names) => {
                     self.assign_layout_order(&mut names.children, order_counter);
                 }
-                CslNode::Substitute(ref mut sub) => {
+                CslNode::Substitute(sub) => {
                     self.assign_layout_order(&mut sub.children, order_counter);
                 }
                 _ => {}

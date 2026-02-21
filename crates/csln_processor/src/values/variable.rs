@@ -97,19 +97,19 @@ impl ComponentValues for TemplateVariable {
                 let ref_type = reference.ref_type();
                 let mut match_found = false;
                 for (selector, ov) in overrides {
-                    if selector.matches(&ref_type) {
-                        if let ComponentOverride::Rendering(r) = ov {
-                            effective_rendering.merge(r);
-                            match_found = true;
-                        }
+                    if selector.matches(&ref_type)
+                        && let ComponentOverride::Rendering(r) = ov
+                    {
+                        effective_rendering.merge(r);
+                        match_found = true;
                     }
                 }
                 if !match_found {
                     for (selector, ov) in overrides {
-                        if selector.matches("default") {
-                            if let ComponentOverride::Rendering(r) = ov {
-                                effective_rendering.merge(r);
-                            }
+                        if selector.matches("default")
+                            && let ComponentOverride::Rendering(r) = ov
+                        {
+                            effective_rendering.merge(r);
                         }
                     }
                 }
@@ -130,19 +130,19 @@ impl ComponentValues for TemplateVariable {
             );
 
             // Fallback for simple legacy config
-            if url.is_none() {
-                if let Some(links) = &self.links {
-                    if self.variable == SimpleVariable::Url
-                        && (links.url == Some(true)
-                            || matches!(links.target, Some(LinkTarget::Url | LinkTarget::UrlOrDoi)))
-                    {
-                        url = reference.url().map(|u| u.to_string());
-                    } else if self.variable == SimpleVariable::Doi
-                        && (links.doi == Some(true)
-                            || matches!(links.target, Some(LinkTarget::Doi | LinkTarget::UrlOrDoi)))
-                    {
-                        url = reference.doi().map(|d| format!("https://doi.org/{}", d));
-                    }
+            if url.is_none()
+                && let Some(links) = &self.links
+            {
+                if self.variable == SimpleVariable::Url
+                    && (links.url == Some(true)
+                        || matches!(links.target, Some(LinkTarget::Url | LinkTarget::UrlOrDoi)))
+                {
+                    url = reference.url().map(|u| u.to_string());
+                } else if self.variable == SimpleVariable::Doi
+                    && (links.doi == Some(true)
+                        || matches!(links.target, Some(LinkTarget::Doi | LinkTarget::UrlOrDoi)))
+                {
+                    url = reference.doi().map(|d| format!("https://doi.org/{}", d));
                 }
             }
 

@@ -253,12 +253,11 @@ pub fn resolve_effective_url(
     }
 
     // 2. Fall back to global links if anchor matches this component type
-    if let Some(links) = global_links {
-        if let Some(anchor) = &links.anchor {
-            if *anchor == component_anchor {
-                return resolve_url(links, reference);
-            }
-        }
+    if let Some(links) = global_links
+        && let Some(anchor) = &links.anchor
+        && *anchor == component_anchor
+    {
+        return resolve_url(links, reference);
     }
 
     None

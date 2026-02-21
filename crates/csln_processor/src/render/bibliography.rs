@@ -3,7 +3,7 @@ SPDX-License-Identifier: MPL-2.0
 SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 */
 
-use crate::render::component::{render_component_with_format, ProcEntry};
+use crate::render::component::{ProcEntry, render_component_with_format};
 use crate::render::format::OutputFormat;
 use crate::render::plain::PlainText;
 use std::fmt::Write;

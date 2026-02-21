@@ -7,9 +7,9 @@ mod common;
 use common::*;
 
 use csln_core::{
+    CitationSpec, Style, StyleInfo,
     options::{Config, Processing},
     template::{NumberVariable, Rendering, TemplateComponent, TemplateNumber},
-    CitationSpec, Style, StyleInfo,
 };
 use csln_processor::Processor;
 

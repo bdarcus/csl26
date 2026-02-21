@@ -3,16 +3,16 @@ use csl_legacy::{
     parser::parse_style,
 };
 use csln_core::{
+    BibliographySpec, CitationSpec, Style, StyleInfo,
     template::{
         DateVariable, DelimiterPunctuation, Rendering, SimpleVariable, TemplateComponent,
         TemplateList, TemplateVariable, TitleType, TypeSelector, WrapPunctuation,
     },
-    BibliographySpec, CitationSpec, Style, StyleInfo,
 };
 use csln_migrate::{
-    analysis, debug_output::DebugOutputFormatter, passes, preset_detector,
-    provenance::ProvenanceTracker, template_resolver, Compressor, MacroInliner, OptionsExtractor,
-    TemplateCompiler, Upsampler,
+    Compressor, MacroInliner, OptionsExtractor, TemplateCompiler, Upsampler, analysis,
+    debug_output::DebugOutputFormatter, passes, preset_detector, provenance::ProvenanceTracker,
+    template_resolver,
 };
 use roxmltree::Document;
 use std::fs;
@@ -199,22 +199,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             Some(csln_core::options::Processing::AuthorDate)
         );
 
-    if should_normalize_author_year_citations {
-        if let Some(resolved_cit) = resolved.citation.as_mut() {
-            let is_inferred_source = matches!(
-                resolved_cit.source,
-                template_resolver::TemplateSource::InferredCached(_)
-                    | template_resolver::TemplateSource::InferredLive
+    if should_normalize_author_year_citations && let Some(resolved_cit) = resolved.citation.as_mut()
+    {
+        let is_inferred_source = matches!(
+            resolved_cit.source,
+            template_resolver::TemplateSource::InferredCached(_)
+                | template_resolver::TemplateSource::InferredLive
+        );
+        if is_inferred_source
+            && citation_template_is_author_year_only(&resolved_cit.template)
+            && normalize_contributor_form_to_short(&mut resolved_cit.template)
+        {
+            eprintln!(
+                "Normalized citation contributor form to short for {} (author-year inferred citation template).",
+                style_name
             );
-            if is_inferred_source
-                && citation_template_is_author_year_only(&resolved_cit.template)
-                && normalize_contributor_form_to_short(&mut resolved_cit.template)
-            {
-                eprintln!(
-                    "Normalized citation contributor form to short for {} (author-year inferred citation template).",
-                    style_name
-                );
-            }
         }
     }
 
@@ -1190,12 +1189,11 @@ fn should_merge_inferred_type_template(
 fn scrub_inferred_literal_artifacts(component: &mut TemplateComponent) {
     match component {
         TemplateComponent::Title(title) => {
-            if title.title == TitleType::Primary {
-                if let Some(prefix) = title.rendering.prefix.as_ref() {
-                    if let Some(cleaned) = scrub_year_only_prefix(prefix) {
-                        title.rendering.prefix = Some(cleaned);
-                    }
-                }
+            if title.title == TitleType::Primary
+                && let Some(prefix) = title.rendering.prefix.as_ref()
+                && let Some(cleaned) = scrub_year_only_prefix(prefix)
+            {
+                title.rendering.prefix = Some(cleaned);
             }
             if let Some(overrides) = title.overrides.as_mut() {
                 for override_value in overrides.values_mut() {
@@ -1204,12 +1202,11 @@ fn scrub_inferred_literal_artifacts(component: &mut TemplateComponent) {
             }
         }
         TemplateComponent::Number(number) => {
-            if number.number == csln_core::template::NumberVariable::Pages {
-                if let Some(prefix) = number.rendering.prefix.as_ref() {
-                    if let Some(cleaned) = scrub_pages_year_literal_prefix(prefix) {
-                        number.rendering.prefix = Some(cleaned);
-                    }
-                }
+            if number.number == csln_core::template::NumberVariable::Pages
+                && let Some(prefix) = number.rendering.prefix.as_ref()
+                && let Some(cleaned) = scrub_pages_year_literal_prefix(prefix)
+            {
+                number.rendering.prefix = Some(cleaned);
             }
             if let Some(overrides) = number.overrides.as_mut() {
                 for override_value in overrides.values_mut() {
@@ -1337,13 +1334,12 @@ fn component_targets_type(component: &TemplateComponent, target_type: &str) -> b
         _ => None,
     };
 
-    if let Some(overrides) = overrides {
-        if overrides
+    if let Some(overrides) = overrides
+        && overrides
             .keys()
             .any(|selector| selector.matches(target_type))
-        {
-            return true;
-        }
+    {
+        return true;
     }
 
     if let TemplateComponent::List(list) = component {

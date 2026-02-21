@@ -25,11 +25,7 @@ pub fn extract_date_config(style: &Style) -> Option<DateConfig> {
         }
     }
 
-    if found_date {
-        Some(config)
-    } else {
-        None
-    }
+    if found_date { Some(config) } else { None }
 }
 
 fn scan_for_any_date(nodes: &[CslNode], style: &Style) -> bool {
@@ -37,12 +33,11 @@ fn scan_for_any_date(nodes: &[CslNode], style: &Style) -> bool {
         match node {
             CslNode::Date(_) => return true,
             CslNode::Text(t) => {
-                if let Some(macro_name) = &t.macro_name {
-                    if let Some(m) = style.macros.iter().find(|m| &m.name == macro_name) {
-                        if scan_for_any_date(&m.children, style) {
-                            return true;
-                        }
-                    }
+                if let Some(macro_name) = &t.macro_name
+                    && let Some(m) = style.macros.iter().find(|m| &m.name == macro_name)
+                    && scan_for_any_date(&m.children, style)
+                {
+                    return true;
                 }
             }
             CslNode::Group(g) => {
@@ -59,10 +54,10 @@ fn scan_for_any_date(nodes: &[CslNode], style: &Style) -> bool {
                         return true;
                     }
                 }
-                if let Some(else_branch) = &c.else_branch {
-                    if scan_for_any_date(else_branch, style) {
-                        return true;
-                    }
+                if let Some(else_branch) = &c.else_branch
+                    && scan_for_any_date(else_branch, style)
+                {
+                    return true;
                 }
             }
             _ => {}
@@ -84,24 +79,23 @@ fn scan_for_month_format(nodes: &[CslNode], style: &Style) -> Option<MonthFormat
                 }
                 // Check parts for month form
                 for part in &d.parts {
-                    if part.name == "month" {
-                        if let Some(form) = &part.form {
-                            return Some(match form.as_str() {
-                                "short" => MonthFormat::Short,
-                                "numeric" | "numeric-leading-zeros" => MonthFormat::Numeric,
-                                _ => MonthFormat::Long,
-                            });
-                        }
+                    if part.name == "month"
+                        && let Some(form) = &part.form
+                    {
+                        return Some(match form.as_str() {
+                            "short" => MonthFormat::Short,
+                            "numeric" | "numeric-leading-zeros" => MonthFormat::Numeric,
+                            _ => MonthFormat::Long,
+                        });
                     }
                 }
             }
             CslNode::Text(t) => {
-                if let Some(macro_name) = &t.macro_name {
-                    if let Some(m) = style.macros.iter().find(|m| &m.name == macro_name) {
-                        if let Some(format) = scan_for_month_format(&m.children, style) {
-                            return Some(format);
-                        }
-                    }
+                if let Some(macro_name) = &t.macro_name
+                    && let Some(m) = style.macros.iter().find(|m| &m.name == macro_name)
+                    && let Some(format) = scan_for_month_format(&m.children, style)
+                {
+                    return Some(format);
                 }
             }
             CslNode::Group(g) => {
@@ -118,10 +112,10 @@ fn scan_for_month_format(nodes: &[CslNode], style: &Style) -> Option<MonthFormat
                         return Some(format);
                     }
                 }
-                if let Some(else_branch) = &c.else_branch {
-                    if let Some(format) = scan_for_month_format(else_branch, style) {
-                        return Some(format);
-                    }
+                if let Some(else_branch) = &c.else_branch
+                    && let Some(format) = scan_for_month_format(else_branch, style)
+                {
+                    return Some(format);
                 }
             }
             _ => {}

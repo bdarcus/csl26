@@ -36,10 +36,10 @@ pub fn reorder_serial_components(components: &mut Vec<TemplateComponent>) {
                 });
 
                 // If volume is before parent-serial, swap them
-                if let (Some(vol_pos), Some(ps_pos)) = (volume_pos, parent_serial_pos) {
-                    if vol_pos < ps_pos {
-                        list.items.swap(vol_pos, ps_pos);
-                    }
+                if let (Some(vol_pos), Some(ps_pos)) = (volume_pos, parent_serial_pos)
+                    && vol_pos < ps_pos
+                {
+                    list.items.swap(vol_pos, ps_pos);
                 }
             }
 
@@ -87,10 +87,10 @@ pub fn reorder_serial_components_in_list(list: &mut TemplateList) {
         });
 
         // If volume is before parent-serial, swap them
-        if let (Some(vol_pos), Some(ps_pos)) = (volume_pos, parent_serial_pos) {
-            if vol_pos < ps_pos {
-                list.items.swap(vol_pos, ps_pos);
-            }
+        if let (Some(vol_pos), Some(ps_pos)) = (volume_pos, parent_serial_pos)
+            && vol_pos < ps_pos
+        {
+            list.items.swap(vol_pos, ps_pos);
         }
     }
 }
@@ -112,12 +112,12 @@ pub fn reorder_pages_for_serials(components: &mut Vec<TemplateComponent>) {
     let serial_list_pos = components.iter().position(contains_parent_serial_recursive);
 
     // If pages is BEFORE the serial list, move it to right after
-    if let (Some(p_pos), Some(s_pos)) = (pages_pos, serial_list_pos) {
-        if p_pos < s_pos {
-            let pages_component = components.remove(p_pos);
-            // After removal, indices shift - insert at s_pos (which is now s_pos - 1 + 1 = s_pos)
-            components.insert(s_pos, pages_component);
-        }
+    if let (Some(p_pos), Some(s_pos)) = (pages_pos, serial_list_pos)
+        && p_pos < s_pos
+    {
+        let pages_component = components.remove(p_pos);
+        // After removal, indices shift - insert at s_pos (which is now s_pos - 1 + 1 = s_pos)
+        components.insert(s_pos, pages_component);
     }
 
     fn contains_parent_serial_recursive(component: &TemplateComponent) -> bool {
@@ -168,19 +168,19 @@ pub fn reorder_publisher_place_for_chicago(
     });
 
     // If we found both, move publisher-place to right after parent-serial
-    if let (Some(pp_pos), Some(ps_pos)) = (publisher_place_pos, parent_serial_pos) {
-        if pp_pos > ps_pos {
-            // Remove the publisher-place List
-            let mut publisher_place_component = components.remove(pp_pos);
+    if let (Some(pp_pos), Some(ps_pos)) = (publisher_place_pos, parent_serial_pos)
+        && pp_pos > ps_pos
+    {
+        // Remove the publisher-place List
+        let mut publisher_place_component = components.remove(pp_pos);
 
-            // Add space suffix to prevent default period separator
-            if let TemplateComponent::List(ref mut list) = publisher_place_component {
-                list.rendering.suffix = Some(" ".to_string());
-            }
-
-            // Insert it right after parent-serial
-            components.insert(ps_pos + 1, publisher_place_component);
+        // Add space suffix to prevent default period separator
+        if let TemplateComponent::List(ref mut list) = publisher_place_component {
+            list.rendering.suffix = Some(" ".to_string());
         }
+
+        // Insert it right after parent-serial
+        components.insert(ps_pos + 1, publisher_place_component);
     }
 }
 
@@ -214,39 +214,39 @@ pub fn reorder_chapters_for_apa(
         )
     });
 
-    if let (Some(ed_pos), Some(pm_pos)) = (editor_pos, parent_monograph_pos) {
-        if ed_pos > pm_pos {
-            // Swap them: move editor before parent-monograph
-            let editor_comp = components.remove(ed_pos);
-            components.insert(pm_pos, editor_comp);
+    if let (Some(ed_pos), Some(pm_pos)) = (editor_pos, parent_monograph_pos)
+        && ed_pos > pm_pos
+    {
+        // Swap them: move editor before parent-monograph
+        let editor_comp = components.remove(ed_pos);
+        components.insert(pm_pos, editor_comp);
 
-            // Re-calculate positions after move
-            let ed_pos = pm_pos;
+        // Re-calculate positions after move
+        let ed_pos = pm_pos;
 
-            // Apply APA chapter formatting
-            if let Some(TemplateComponent::Contributor(ref mut ed)) = components.get_mut(ed_pos) {
-                ed.name_order = Some(csln_core::template::NameOrder::GivenFirst);
-                let overrides = ed
-                    .overrides
-                    .get_or_insert_with(std::collections::HashMap::new);
-                use csln_core::template::{ComponentOverride, TypeSelector};
-                overrides.insert(
-                    TypeSelector::Single("chapter".to_string()),
-                    ComponentOverride::Rendering(csln_core::template::Rendering {
-                        prefix: Some("In ".to_string()),
-                        suffix: Some(", ".to_string()),
-                        ..Default::default()
-                    }),
-                );
-                overrides.insert(
-                    TypeSelector::Single("paper-conference".to_string()),
-                    ComponentOverride::Rendering(csln_core::template::Rendering {
-                        prefix: Some("In ".to_string()),
-                        suffix: Some(", ".to_string()),
-                        ..Default::default()
-                    }),
-                );
-            }
+        // Apply APA chapter formatting
+        if let Some(TemplateComponent::Contributor(ed)) = components.get_mut(ed_pos) {
+            ed.name_order = Some(csln_core::template::NameOrder::GivenFirst);
+            let overrides = ed
+                .overrides
+                .get_or_insert_with(std::collections::HashMap::new);
+            use csln_core::template::{ComponentOverride, TypeSelector};
+            overrides.insert(
+                TypeSelector::Single("chapter".to_string()),
+                ComponentOverride::Rendering(csln_core::template::Rendering {
+                    prefix: Some("In ".to_string()),
+                    suffix: Some(", ".to_string()),
+                    ..Default::default()
+                }),
+            );
+            overrides.insert(
+                TypeSelector::Single("paper-conference".to_string()),
+                ComponentOverride::Rendering(csln_core::template::Rendering {
+                    prefix: Some("In ".to_string()),
+                    suffix: Some(", ".to_string()),
+                    ..Default::default()
+                }),
+            );
         }
     }
 }
@@ -282,53 +282,53 @@ pub fn reorder_chapters_for_chicago(
     });
 
     // If we found both and editor comes before parent-monograph, swap them
-    if let (Some(editor_pos), Some(pm_pos)) = (editor_pos, parent_monograph_pos) {
-        if editor_pos < pm_pos {
-            // Get mutable references to both components
-            let editor_component = components.remove(editor_pos);
-            let pm_component = components.remove(pm_pos - 1); // Adjust index after removal
+    if let (Some(editor_pos), Some(pm_pos)) = (editor_pos, parent_monograph_pos)
+        && editor_pos < pm_pos
+    {
+        // Get mutable references to both components
+        let editor_component = components.remove(editor_pos);
+        let pm_component = components.remove(pm_pos - 1); // Adjust index after removal
 
-            // Add "In " prefix and ", " suffix to parent-monograph for chapters
-            let mut pm_with_prefix = pm_component.clone();
-            if let TemplateComponent::Title(ref mut title) = pm_with_prefix {
-                // Use type-specific override to add "In " prefix and ", " suffix for chapters
-                let mut overrides = title.overrides.clone().unwrap_or_default();
-                use csln_core::template::{ComponentOverride, TypeSelector};
-                overrides.insert(
-                    TypeSelector::Single("chapter".to_string()),
-                    ComponentOverride::Rendering(csln_core::template::Rendering {
-                        prefix: Some("In ".to_string()),
-                        suffix: Some(", ".to_string()),
-                        ..Default::default()
-                    }),
-                );
-                title.overrides = Some(overrides);
-            }
-
-            // Adjust editor for chapters: use ". " suffix and given-first name order
-            let mut editor_with_suffix = editor_component.clone();
-            if let TemplateComponent::Contributor(ref mut contrib) = editor_with_suffix {
-                // For chapters, editors should use given-first name order
-                use csln_core::template::NameOrder;
-                contrib.name_order = Some(NameOrder::GivenFirst);
-
-                // Add override to change suffix for chapters
-                let mut overrides = contrib.overrides.clone().unwrap_or_default();
-                use csln_core::template::{ComponentOverride, TypeSelector};
-                overrides.insert(
-                    TypeSelector::Single("chapter".to_string()),
-                    ComponentOverride::Rendering(csln_core::template::Rendering {
-                        suffix: Some(". ".to_string()),
-                        ..Default::default()
-                    }),
-                );
-                contrib.overrides = Some(overrides);
-            }
-
-            // Re-insert in new order: parent-monograph, then editor
-            components.insert(editor_pos, pm_with_prefix);
-            components.insert(editor_pos + 1, editor_with_suffix);
+        // Add "In " prefix and ", " suffix to parent-monograph for chapters
+        let mut pm_with_prefix = pm_component.clone();
+        if let TemplateComponent::Title(ref mut title) = pm_with_prefix {
+            // Use type-specific override to add "In " prefix and ", " suffix for chapters
+            let mut overrides = title.overrides.clone().unwrap_or_default();
+            use csln_core::template::{ComponentOverride, TypeSelector};
+            overrides.insert(
+                TypeSelector::Single("chapter".to_string()),
+                ComponentOverride::Rendering(csln_core::template::Rendering {
+                    prefix: Some("In ".to_string()),
+                    suffix: Some(", ".to_string()),
+                    ..Default::default()
+                }),
+            );
+            title.overrides = Some(overrides);
         }
+
+        // Adjust editor for chapters: use ". " suffix and given-first name order
+        let mut editor_with_suffix = editor_component.clone();
+        if let TemplateComponent::Contributor(ref mut contrib) = editor_with_suffix {
+            // For chapters, editors should use given-first name order
+            use csln_core::template::NameOrder;
+            contrib.name_order = Some(NameOrder::GivenFirst);
+
+            // Add override to change suffix for chapters
+            let mut overrides = contrib.overrides.clone().unwrap_or_default();
+            use csln_core::template::{ComponentOverride, TypeSelector};
+            overrides.insert(
+                TypeSelector::Single("chapter".to_string()),
+                ComponentOverride::Rendering(csln_core::template::Rendering {
+                    suffix: Some(". ".to_string()),
+                    ..Default::default()
+                }),
+            );
+            contrib.overrides = Some(overrides);
+        }
+
+        // Re-insert in new order: parent-monograph, then editor
+        components.insert(editor_pos, pm_with_prefix);
+        components.insert(editor_pos + 1, editor_with_suffix);
     }
 }
 
@@ -363,18 +363,18 @@ pub fn propagate_list_overrides(components: &mut [TemplateComponent]) {
         // For each type that exists in any item, ensure all items have it
         for type_key in &all_override_types {
             for item in items.iter_mut() {
-                if let Some(overrides) = get_component_overrides_mut(item) {
-                    if !overrides.contains_key(type_key) {
-                        use csln_core::template::ComponentOverride;
-                        // Add the override with suppress: false
-                        overrides.insert(
-                            type_key.clone(),
-                            ComponentOverride::Rendering(csln_core::template::Rendering {
-                                suppress: Some(false),
-                                ..Default::default()
-                            }),
-                        );
-                    }
+                if let Some(overrides) = get_component_overrides_mut(item)
+                    && !overrides.contains_key(type_key)
+                {
+                    use csln_core::template::ComponentOverride;
+                    // Add the override with suppress: false
+                    overrides.insert(
+                        type_key.clone(),
+                        ComponentOverride::Rendering(csln_core::template::Rendering {
+                            suppress: Some(false),
+                            ..Default::default()
+                        }),
+                    );
                 }
             }
         }
@@ -485,15 +485,14 @@ pub fn add_volume_prefix_after_serial(components: &mut [TemplateComponent]) {
             Some(TemplateComponent::Title(t)) if t.title == TitleType::ParentSerial
         );
 
-        if prev_is_serial {
-            if let Some(TemplateComponent::Number(ref mut num)) = components.get_mut(i) {
-                if num.number == NumberVariable::Volume {
-                    eprintln!("DEBUG: Adding space prefix to volume after parent-serial");
-                    // Add space prefix if not already present
-                    if num.rendering.prefix.is_none() {
-                        num.rendering.prefix = Some(" ".to_string());
-                    }
-                }
+        if prev_is_serial
+            && let Some(TemplateComponent::Number(num)) = components.get_mut(i)
+            && num.number == NumberVariable::Volume
+        {
+            eprintln!("DEBUG: Adding space prefix to volume after parent-serial");
+            // Add space prefix if not already present
+            if num.rendering.prefix.is_none() {
+                num.rendering.prefix = Some(" ".to_string());
             }
         }
     }
@@ -506,10 +505,10 @@ pub fn move_access_components_to_end(components: &mut Vec<TemplateComponent>) {
     // Find indices of access components (DOI, URL)
     let mut access_indices: Vec<usize> = Vec::new();
     for (i, c) in components.iter().enumerate() {
-        if let TemplateComponent::Variable(v) = c {
-            if matches!(v.variable, SimpleVariable::Doi | SimpleVariable::Url) {
-                access_indices.push(i);
-            }
+        if let TemplateComponent::Variable(v) = c
+            && matches!(v.variable, SimpleVariable::Doi | SimpleVariable::Url)
+        {
+            access_indices.push(i);
         }
         // Also check for List items containing accessed date (URL + accessed date pattern)
         if let TemplateComponent::List(list) = c {

@@ -242,7 +242,7 @@ impl<'de> Deserialize<'de> for Processing {
                                 return Err(de::Error::unknown_field(
                                     &key,
                                     &["sort", "group", "disambiguate"],
-                                ))
+                                ));
                             }
                         }
 
@@ -256,7 +256,7 @@ impl<'de> Deserialize<'de> for Processing {
                                     return Err(de::Error::unknown_field(
                                         other,
                                         &["sort", "group", "disambiguate"],
-                                    ))
+                                    ));
                                 }
                             }
                         }

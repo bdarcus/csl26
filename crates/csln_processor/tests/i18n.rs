@@ -7,6 +7,7 @@ mod common;
 use common::*;
 
 use csln_core::{
+    CitationSpec, Style, StyleInfo,
     options::{Config, MultilingualConfig, MultilingualMode, Processing},
     reference::contributor::{Contributor, MultilingualName, StructuredName},
     reference::types::{MultilingualComplex, MultilingualString},
@@ -14,10 +15,9 @@ use csln_core::{
         ContributorForm, ContributorRole, DateForm, DateVariable as TDateVar, Rendering,
         TemplateComponent, TemplateContributor, TemplateDate,
     },
-    CitationSpec, Style, StyleInfo,
 };
-use csln_processor::values::resolve_multilingual_string;
 use csln_processor::Processor;
+use csln_processor::values::resolve_multilingual_string;
 use std::collections::HashMap;
 
 // --- Helper Functions ---

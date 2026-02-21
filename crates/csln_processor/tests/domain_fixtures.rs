@@ -3,10 +3,10 @@ SPDX-License-Identifier: MPL-2.0
 SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 */
 
-use csln_core::citation::{Citation, CitationItem};
 use csln_core::Style;
-use csln_processor::io::load_bibliography;
+use csln_core::citation::{Citation, CitationItem};
 use csln_processor::Processor;
+use csln_processor::io::load_bibliography;
 use std::fs;
 use std::path::{Path, PathBuf};
 

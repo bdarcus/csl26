@@ -3,7 +3,7 @@ SPDX-License-Identifier: MPL-2.0
 SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus
 */
 
-use crate::render::component::{render_component_with_format, ProcTemplate};
+use crate::render::component::{ProcTemplate, render_component_with_format};
 use crate::render::format::OutputFormat;
 use crate::render::plain::PlainText;
 use csln_core::template::WrapPunctuation;

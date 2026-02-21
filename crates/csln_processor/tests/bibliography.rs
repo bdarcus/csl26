@@ -7,6 +7,7 @@ mod common;
 use common::*;
 
 use csln_core::{
+    BibliographySpec, CitationSpec, Style, StyleInfo,
     options::{
         BibliographyConfig, Config, ContributorConfig, DisplayAsSort, Processing, ProcessingCustom,
         Sort, SortKey, SortSpec,
@@ -15,7 +16,6 @@ use csln_core::{
         ContributorForm, ContributorRole, DateForm, DateVariable as TDateVar, NumberVariable,
         Rendering, TemplateComponent, TemplateContributor, TemplateDate, TemplateNumber,
     },
-    BibliographySpec, CitationSpec, Style, StyleInfo,
 };
 use csln_processor::Processor;
 

@@ -122,11 +122,10 @@ pub fn deduplicate_lists_in_items(items: &mut Vec<TemplateComponent>) {
         while j < items.len() {
             if let (TemplateComponent::List(l1), TemplateComponent::List(l2)) =
                 (&items[i], &items[j])
+                && list_signature(l1) == list_signature(l2)
             {
-                if list_signature(l1) == list_signature(l2) {
-                    items.remove(j);
-                    continue;
-                }
+                items.remove(j);
+                continue;
             }
             j += 1;
         }
@@ -183,24 +182,24 @@ fn suppress_issue_in_parent_monograph_list(items: &mut [TemplateComponent]) {
     if has_parent_monograph {
         // Suppress issue for article-journal in this list
         for item in items.iter_mut() {
-            if let TemplateComponent::Number(n) = item {
-                if n.number == NumberVariable::Issue {
-                    let overrides = n
-                        .overrides
-                        .get_or_insert_with(std::collections::HashMap::new);
-                    use csln_core::template::{ComponentOverride, TypeSelector};
-                    let key = TypeSelector::Single("article-journal".to_string());
-                    if let Some(ComponentOverride::Rendering(rendering)) = overrides.get_mut(&key) {
-                        rendering.suppress = Some(true);
-                    } else {
-                        overrides.insert(
-                            key,
-                            ComponentOverride::Rendering(csln_core::template::Rendering {
-                                suppress: Some(true),
-                                ..Default::default()
-                            }),
-                        );
-                    }
+            if let TemplateComponent::Number(n) = item
+                && n.number == NumberVariable::Issue
+            {
+                let overrides = n
+                    .overrides
+                    .get_or_insert_with(std::collections::HashMap::new);
+                use csln_core::template::{ComponentOverride, TypeSelector};
+                let key = TypeSelector::Single("article-journal".to_string());
+                if let Some(ComponentOverride::Rendering(rendering)) = overrides.get_mut(&key) {
+                    rendering.suppress = Some(true);
+                } else {
+                    overrides.insert(
+                        key,
+                        ComponentOverride::Rendering(csln_core::template::Rendering {
+                            suppress: Some(true),
+                            ..Default::default()
+                        }),
+                    );
                 }
             }
             // Recursively check nested lists

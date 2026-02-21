@@ -51,21 +51,17 @@ pub fn extract_bibliography_config(style: &Style) -> Option<BibliographyConfig> 
     }
 
     // Sort extraction
-    if let Some(sort) = &bib.sort {
-        if let Some(csln_sort) = extract_sort_from_bibliography(sort) {
-            // Note: BibliographyConfig in csln_core might not have a sort field if it's handled globally
-            // For now, I'll assume it's NOT in BibliographyConfig and should be ignored or moved
-            // to global config if necessary. The error said 'sort' is unknown on 'BibliographyConfig'.
-            // I'll skip setting it on the config struct but keep the helper.
-            let _ = csln_sort;
-        }
+    if let Some(sort) = &bib.sort
+        && let Some(csln_sort) = extract_sort_from_bibliography(sort)
+    {
+        // Note: BibliographyConfig in csln_core might not have a sort field if it's handled globally
+        // For now, I'll assume it's NOT in BibliographyConfig and should be ignored or moved
+        // to global config if necessary. The error said 'sort' is unknown on 'BibliographyConfig'.
+        // I'll skip setting it on the config struct but keep the helper.
+        let _ = csln_sort;
     }
 
-    if has_config {
-        Some(config)
-    } else {
-        None
-    }
+    if has_config { Some(config) } else { None }
 }
 
 pub fn should_suppress_period_after_url(style: &Style, layout: &Layout) -> bool {
@@ -115,10 +111,10 @@ fn nodes_have_doi_without_period(nodes: &[CslNode]) -> bool {
                         return true;
                     }
                 }
-                if let Some(else_branch) = &c.else_branch {
-                    if nodes_have_doi_without_period(else_branch) {
-                        return true;
-                    }
+                if let Some(else_branch) = &c.else_branch
+                    && nodes_have_doi_without_period(else_branch)
+                {
+                    return true;
                 }
             }
             _ => {}
@@ -160,10 +156,10 @@ pub fn extract_bibliography_separator_from_layout(
     // 2. Second priority: the delimiter of the FIRST group in the layout
     // (Many styles wrap everything in a top-level group with a delimiter)
     for node in &layout.children {
-        if let CslNode::Group(g) = node {
-            if let Some(delim) = &g.delimiter {
-                return Some(DelimiterPunctuation::from_csl_string(delim));
-            }
+        if let CslNode::Group(g) = node
+            && let Some(delim) = &g.delimiter
+        {
+            return Some(DelimiterPunctuation::from_csl_string(delim));
         }
     }
 
@@ -213,39 +209,34 @@ pub fn extract_bibliography_separator_from_layout(
                     // Search all branches of choose blocks
                     if let Some(result) =
                         find_deepest_group_delimiter(&c.if_branch.children, macros)
+                        && (best.is_none() || result.1 > best.as_ref().unwrap().1)
                     {
-                        if best.is_none() || result.1 > best.as_ref().unwrap().1 {
-                            best = Some(result);
-                        }
+                        best = Some(result);
                     }
                     for branch in &c.else_if_branches {
                         if let Some(result) = find_deepest_group_delimiter(&branch.children, macros)
+                            && (best.is_none() || result.1 > best.as_ref().unwrap().1)
                         {
-                            if best.is_none() || result.1 > best.as_ref().unwrap().1 {
-                                best = Some(result);
-                            }
+                            best = Some(result);
                         }
                     }
-                    if let Some(else_branch) = &c.else_branch {
-                        if let Some(result) = find_deepest_group_delimiter(else_branch, macros) {
-                            if best.is_none() || result.1 > best.as_ref().unwrap().1 {
-                                best = Some(result);
-                            }
-                        }
+                    if let Some(else_branch) = &c.else_branch
+                        && let Some(result) = find_deepest_group_delimiter(else_branch, macros)
+                        && (best.is_none() || result.1 > best.as_ref().unwrap().1)
+                    {
+                        best = Some(result);
                     }
                 }
                 CslNode::Text(t) => {
                     // Expand macro calls to find delimiters inside
-                    if let Some(macro_name) = &t.macro_name {
-                        if let Some(macro_def) = macros.iter().find(|m| &m.name == macro_name) {
-                            if let Some((delim, depth)) =
-                                find_deepest_group_delimiter(&macro_def.children, macros)
-                            {
-                                let new_depth = depth + 1;
-                                if best.is_none() || new_depth > best.as_ref().unwrap().1 {
-                                    best = Some((delim, new_depth));
-                                }
-                            }
+                    if let Some(macro_name) = &t.macro_name
+                        && let Some(macro_def) = macros.iter().find(|m| &m.name == macro_name)
+                        && let Some((delim, depth)) =
+                            find_deepest_group_delimiter(&macro_def.children, macros)
+                    {
+                        let new_depth = depth + 1;
+                        if best.is_none() || new_depth > best.as_ref().unwrap().1 {
+                            best = Some((delim, new_depth));
                         }
                     }
                 }

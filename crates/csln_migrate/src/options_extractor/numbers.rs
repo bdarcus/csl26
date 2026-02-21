@@ -8,10 +8,10 @@ pub fn extract_volume_pages_delimiter(
     bib_macros: &HashSet<String>,
 ) -> Option<DelimiterPunctuation> {
     for macro_def in &style.macros {
-        if bib_macros.contains(&macro_def.name) {
-            if let Some(delimiter) = find_volume_pages_delimiter_in_nodes(&macro_def.children) {
-                return Some(DelimiterPunctuation::from_csl_string(&delimiter));
-            }
+        if bib_macros.contains(&macro_def.name)
+            && let Some(delimiter) = find_volume_pages_delimiter_in_nodes(&macro_def.children)
+        {
+            return Some(DelimiterPunctuation::from_csl_string(&delimiter));
         }
     }
     None
@@ -29,10 +29,11 @@ fn find_volume_pages_delimiter_in_nodes(nodes: &[CslNode]) -> Option<String> {
                 let has_page = group_directly_contains_variable(&g.children, "page")
                     || group_contains_macro_with_page(&g.children);
 
-                if has_volume && has_page {
-                    if let Some(delim) = &g.delimiter {
-                        return Some(delim.clone());
-                    }
+                if has_volume
+                    && has_page
+                    && let Some(delim) = &g.delimiter
+                {
+                    return Some(delim.clone());
                 }
             }
             CslNode::Choose(c) => {
@@ -44,10 +45,10 @@ fn find_volume_pages_delimiter_in_nodes(nodes: &[CslNode]) -> Option<String> {
                         return Some(d);
                     }
                 }
-                if let Some(else_children) = &c.else_branch {
-                    if let Some(d) = find_volume_pages_delimiter_in_nodes(else_children) {
-                        return Some(d);
-                    }
+                if let Some(else_children) = &c.else_branch
+                    && let Some(d) = find_volume_pages_delimiter_in_nodes(else_children)
+                {
+                    return Some(d);
                 }
             }
             _ => {}
@@ -95,10 +96,10 @@ fn group_directly_contains_variable(nodes: &[CslNode], var_name: &str) -> bool {
                         return true;
                     }
                 }
-                if let Some(else_children) = &c.else_branch {
-                    if group_directly_contains_variable(else_children, var_name) {
-                        return true;
-                    }
+                if let Some(else_children) = &c.else_branch
+                    && group_directly_contains_variable(else_children, var_name)
+                {
+                    return true;
                 }
             }
             _ => {}
@@ -109,15 +110,13 @@ fn group_directly_contains_variable(nodes: &[CslNode], var_name: &str) -> bool {
 
 fn group_contains_macro_with_page(nodes: &[CslNode]) -> bool {
     for node in nodes {
-        if let CslNode::Text(t) = node {
-            if let Some(macro_name) = &t.macro_name {
-                if macro_name.contains("locator")
-                    || macro_name.contains("page")
-                    || macro_name.contains("pages")
-                {
-                    return true;
-                }
-            }
+        if let CslNode::Text(t) = node
+            && let Some(macro_name) = &t.macro_name
+            && (macro_name.contains("locator")
+                || macro_name.contains("page")
+                || macro_name.contains("pages"))
+        {
+            return true;
         }
     }
     false

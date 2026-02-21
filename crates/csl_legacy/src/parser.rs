@@ -60,7 +60,7 @@ pub fn parse_style(node: Node) -> Result<Style, String> {
                 return Err(format!(
                     "Unknown top-level tag: {}",
                     child.tag_name().name()
-                ))
+                ));
             }
         }
     }

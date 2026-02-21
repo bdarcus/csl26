@@ -220,16 +220,14 @@ pub fn get_effective_rendering(component: &ProcTemplateComponent) -> Rendering {
                 }
             }
             TemplateComponent::Contributor(c) => {
-                if let Some(contributors_config) = &config.contributors {
-                    if let Some(role_config) = &contributors_config.role {
-                        if let Some(role_rendering) = role_config
-                            .roles
-                            .as_ref()
-                            .and_then(|r| r.get(c.contributor.as_str()))
-                        {
-                            effective.merge(&role_rendering.to_rendering());
-                        }
-                    }
+                if let Some(contributors_config) = &config.contributors
+                    && let Some(role_config) = &contributors_config.role
+                    && let Some(role_rendering) = role_config
+                        .roles
+                        .as_ref()
+                        .and_then(|r| r.get(c.contributor.as_str()))
+                {
+                    effective.merge(&role_rendering.to_rendering());
                 }
             }
             // Add other component types here as we expand Config
@@ -241,29 +239,29 @@ pub fn get_effective_rendering(component: &ProcTemplateComponent) -> Rendering {
     effective.merge(component.template_component.rendering());
 
     // 3. Layer type-specific overrides
-    if let Some(ref_type) = &component.ref_type {
-        if let Some(overrides) = component.template_component.overrides() {
-            use csln_core::template::ComponentOverride;
+    if let Some(ref_type) = &component.ref_type
+        && let Some(overrides) = component.template_component.overrides()
+    {
+        use csln_core::template::ComponentOverride;
 
-            // Try explicit match first
-            let mut match_found = false;
-            for (selector, ov) in overrides {
-                if selector.matches(ref_type) {
-                    if let ComponentOverride::Rendering(r) = ov {
-                        effective.merge(r);
-                        match_found = true;
-                    }
-                }
+        // Try explicit match first
+        let mut match_found = false;
+        for (selector, ov) in overrides {
+            if selector.matches(ref_type)
+                && let ComponentOverride::Rendering(r) = ov
+            {
+                effective.merge(r);
+                match_found = true;
             }
+        }
 
-            // Fallback to default if no specific match found
-            if !match_found {
-                for (selector, ov) in overrides {
-                    if selector.matches("default") {
-                        if let ComponentOverride::Rendering(r) = ov {
-                            effective.merge(r);
-                        }
-                    }
+        // Fallback to default if no specific match found
+        if !match_found {
+            for (selector, ov) in overrides {
+                if selector.matches("default")
+                    && let ComponentOverride::Rendering(r) = ov
+                {
+                    effective.merge(r);
                 }
             }
         }

@@ -3,8 +3,8 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use crate::locale::{GeneralTerm, TermForm};
 use crate::Template;
+use crate::locale::{GeneralTerm, TermForm};
 
 /// A bibliography group with selector, optional heading, and per-group sorting.
 ///

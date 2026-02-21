@@ -75,10 +75,10 @@ pub fn group_volume_and_issue(
     if let Some(issue_idx) = issue_pos {
         // First, find which List index contains volume (immutable borrow)
         let list_idx = components.iter().enumerate().find_map(|(idx, c)| {
-            if let TemplateComponent::List(list) = c {
-                if find_volume_in_list(list).is_some() {
-                    return Some(idx);
-                }
+            if let TemplateComponent::List(list) = c
+                && find_volume_in_list(list).is_some()
+            {
+                return Some(idx);
             }
             None
         });
@@ -162,16 +162,15 @@ pub fn group_volume_and_issue(
 
             // Find the list containing volume and add issue to it
             for component in components.iter_mut() {
-                if let TemplateComponent::List(list) = component {
-                    if find_volume_in_list(list).is_some()
-                        && insert_issue_after_volume(
-                            &mut list.items,
-                            issue_with_parens.clone(),
-                            vol_issue_delimiter.clone(),
-                        )
-                    {
-                        break;
-                    }
+                if let TemplateComponent::List(list) = component
+                    && find_volume_in_list(list).is_some()
+                    && insert_issue_after_volume(
+                        &mut list.items,
+                        issue_with_parens.clone(),
+                        vol_issue_delimiter.clone(),
+                    )
+                {
+                    break;
                 }
             }
         }
@@ -227,10 +226,10 @@ pub fn insert_issue_after_volume(
 
     // Otherwise, recurse into nested lists
     for item in items.iter_mut() {
-        if let TemplateComponent::List(inner_list) = item {
-            if insert_issue_after_volume(&mut inner_list.items, issue.clone(), delimiter.clone()) {
-                return true;
-            }
+        if let TemplateComponent::List(inner_list) = item
+            && insert_issue_after_volume(&mut inner_list.items, issue.clone(), delimiter.clone())
+        {
+            return true;
         }
     }
 

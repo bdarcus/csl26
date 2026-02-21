@@ -79,19 +79,19 @@ impl ComponentValues for TemplateNumber {
                 let ref_type = reference.ref_type();
                 let mut match_found = false;
                 for (selector, ov) in overrides {
-                    if selector.matches(&ref_type) {
-                        if let ComponentOverride::Rendering(r) = ov {
-                            effective_rendering.merge(r);
-                            match_found = true;
-                        }
+                    if selector.matches(&ref_type)
+                        && let ComponentOverride::Rendering(r) = ov
+                    {
+                        effective_rendering.merge(r);
+                        match_found = true;
                     }
                 }
                 if !match_found {
                     for (selector, ov) in overrides {
-                        if selector.matches("default") {
-                            if let ComponentOverride::Rendering(r) = ov {
-                                effective_rendering.merge(r);
-                            }
+                        if selector.matches("default")
+                            && let ComponentOverride::Rendering(r) = ov
+                        {
+                            effective_rendering.merge(r);
                         }
                     }
                 }

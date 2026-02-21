@@ -221,24 +221,24 @@ fn test_style(path: &Path) -> TestResult {
 
 fn categorize_error(err: &str) -> String {
     // Extract meaningful error category from error message
-    if err.contains("unknown attribute") {
-        if let Some(attr) = err.split("unknown attribute: ").nth(1) {
-            return format!(
-                "unknown attr: {}",
-                attr.split_whitespace().next().unwrap_or("?")
-            );
-        }
+    if err.contains("unknown attribute")
+        && let Some(attr) = err.split("unknown attribute: ").nth(1)
+    {
+        return format!(
+            "unknown attr: {}",
+            attr.split_whitespace().next().unwrap_or("?")
+        );
     }
     if err.contains("Unknown top-level tag") {
         return "unknown top-level tag".to_string();
     }
-    if err.contains("missing field") {
-        if let Some(field) = err.split("missing field").nth(1) {
-            return format!(
-                "missing field:{}",
-                field.chars().take(20).collect::<String>()
-            );
-        }
+    if err.contains("missing field")
+        && let Some(field) = err.split("missing field").nth(1)
+    {
+        return format!(
+            "missing field:{}",
+            field.chars().take(20).collect::<String>()
+        );
     }
     if err.contains("unknown variant") {
         return "unknown variant".to_string();
