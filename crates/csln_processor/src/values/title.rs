@@ -32,9 +32,17 @@ impl ComponentValues for TemplateTitle {
     fn values<F: crate::render::format::OutputFormat<Output = String>>(
         &self,
         reference: &Reference,
-        _hints: &ProcHints,
+        hints: &ProcHints,
         options: &RenderOptions<'_>,
     ) -> Option<ProcValues<F::Output>> {
+        // Suppress title when disambiguate_only is set and only one work by
+        // this author appears in the document (no disambiguation needed).
+        // Used by author-class styles like MLA where the title in citations
+        // exists solely to resolve same-author ambiguity.
+        if self.disambiguate_only == Some(true) && hints.group_length <= 1 {
+            return None;
+        }
+
         // Get the raw title based on type and template requirement
         let raw_title = match self.title {
             TitleType::Primary => reference.title(),

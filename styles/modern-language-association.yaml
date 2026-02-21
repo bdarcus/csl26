@@ -103,6 +103,10 @@ bibliography:
             use-first: 1
         - title: parent-monograph
           emph: true
+    - contributor: translator
+      form: verb
+      name-order: given-first
+      prefix: ". "
     - title: parent-serial
       emph: true
     - number: volume
