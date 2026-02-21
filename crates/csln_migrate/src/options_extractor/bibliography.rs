@@ -1,4 +1,5 @@
 use csl_legacy::model::{CslNode, Layout, Macro, Sort as LegacySort, Style};
+use csln_core::grouping::{GroupSort, GroupSortKey, SortKey as GroupSortKeyType};
 use csln_core::options::{
     BibliographyConfig, Sort, SortKey, SortSpec, SubsequentAuthorSubstituteRule,
 };
@@ -272,5 +273,64 @@ pub fn extract_sort_from_bibliography(sort: &LegacySort) -> Option<Sort> {
         None
     } else {
         Some(csln_sort)
+    }
+}
+
+/// Extract bibliography sort into the top-level CSLN bibliography.sort shape.
+///
+/// This mapping is used by processor numeric citation-number assignment, where
+/// citation numbers follow bibliography order when a sort spec is present.
+pub fn extract_group_sort_from_bibliography(sort: &LegacySort) -> Option<GroupSort> {
+    let template: Vec<GroupSortKey> = sort
+        .keys
+        .iter()
+        .filter_map(|key| {
+            let key_kind = key
+                .variable
+                .as_ref()
+                .and_then(|name| parse_group_sort_key(name))
+                .or_else(|| {
+                    key.macro_name
+                        .as_ref()
+                        .and_then(|name| parse_group_sort_key(name))
+                })?;
+
+            Some(GroupSortKey {
+                key: key_kind,
+                ascending: key.sort.as_deref() != Some("descending"),
+                order: None,
+                sort_order: None,
+            })
+        })
+        .collect();
+
+    if template.is_empty() {
+        None
+    } else {
+        Some(GroupSort { template })
+    }
+}
+
+fn parse_group_sort_key(name: &str) -> Option<GroupSortKeyType> {
+    let lowered = name.to_ascii_lowercase();
+
+    if lowered == "author"
+        || lowered.contains("author")
+        || lowered == "editor"
+        || lowered.contains("editor")
+    {
+        Some(GroupSortKeyType::Author)
+    } else if lowered == "issued"
+        || lowered == "year"
+        || lowered.contains("year")
+        || lowered.contains("date")
+    {
+        Some(GroupSortKeyType::Issued)
+    } else if lowered == "title" || lowered.contains("title") {
+        Some(GroupSortKeyType::Title)
+    } else if lowered == "type" {
+        Some(GroupSortKeyType::RefType)
+    } else {
+        None
     }
 }
