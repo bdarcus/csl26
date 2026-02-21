@@ -106,6 +106,16 @@ impl ComponentValues for TemplateDate {
                         (false, Some(d)) => format!("{}, {} {}", year, month, d),
                     }
                 }
+                DateForm::DayMonthAbbrYear => {
+                    let year = date.year();
+                    let month = date.month(&locale.dates.months.short);
+                    let day = date.day();
+                    match (month.is_empty(), day) {
+                        (true, _) => year,
+                        (false, None) => format!("{} {}", month, year),
+                        (false, Some(d)) => format!("{} {} {}", d, month, year),
+                    }
+                }
             };
 
             if date.is_open_range() {
@@ -187,6 +197,19 @@ impl ComponentValues for TemplateDate {
                         (true, _) => Some(year),
                         (false, None) => Some(format!("{}, {}", year, month)),
                         (false, Some(d)) => Some(format!("{}, {} {}", year, month, d)),
+                    }
+                }
+                DateForm::DayMonthAbbrYear => {
+                    let year = date.year();
+                    if year.is_empty() {
+                        return None;
+                    }
+                    let month = date.month(&locale.dates.months.short);
+                    let day = date.day();
+                    match (month.is_empty(), day) {
+                        (true, _) => Some(year),
+                        (false, None) => Some(format!("{} {}", month, year)),
+                        (false, Some(d)) => Some(format!("{} {} {}", d, month, year)),
                     }
                 }
             }

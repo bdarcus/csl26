@@ -870,6 +870,10 @@ pub fn format_single_name(
     };
 
     match effective_form {
+        ContributorForm::FamilyOnly => {
+            // FamilyOnly form strictly outputs literally just the family name without non-dropping particles.
+            family.to_string()
+        }
         ContributorForm::Short => {
             // Short form usually just family name, but includes non-dropping particle
             // e.g. "van Beethoven" (unless demoted? CSL spec says demote only affects sorting/display of full names mostly?)
