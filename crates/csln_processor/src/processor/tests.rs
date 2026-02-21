@@ -1439,6 +1439,72 @@ fn test_numeric_non_integral_citation_number() {
 }
 
 #[test]
+fn test_numeric_citation_numbers_follow_bibliography_sort() {
+    let mut style = make_style();
+    style.options = Some(Config {
+        processing: Some(Processing::Numeric),
+        ..Default::default()
+    });
+    style.citation = Some(csln_core::CitationSpec {
+        template: Some(vec![TemplateComponent::Number(
+            csln_core::template::TemplateNumber {
+                number: csln_core::template::NumberVariable::CitationNumber,
+                ..Default::default()
+            },
+        )]),
+        wrap: Some(WrapPunctuation::Brackets),
+        ..Default::default()
+    });
+    style.bibliography = Some(BibliographySpec {
+        sort: Some(csln_core::grouping::GroupSort {
+            template: vec![csln_core::grouping::GroupSortKey {
+                key: csln_core::grouping::SortKey::Author,
+                ascending: true,
+                order: None,
+                sort_order: None,
+            }],
+        }),
+        ..Default::default()
+    });
+
+    let mut bib = Bibliography::new();
+    // Insert in reverse alphabetical order to verify numbering uses sort, not insertion.
+    bib.insert(
+        "smith2020".to_string(),
+        Reference::from(LegacyReference {
+            id: "smith2020".to_string(),
+            ref_type: "book".to_string(),
+            author: Some(vec![Name::new("Smith", "Jane")]),
+            issued: Some(DateVariable::year(2020)),
+            ..Default::default()
+        }),
+    );
+    bib.insert(
+        "adams2021".to_string(),
+        Reference::from(LegacyReference {
+            id: "adams2021".to_string(),
+            ref_type: "book".to_string(),
+            author: Some(vec![Name::new("Adams", "Amy")]),
+            issued: Some(DateVariable::year(2021)),
+            ..Default::default()
+        }),
+    );
+
+    let processor = Processor::new(style, bib);
+    let citation = Citation {
+        mode: csln_core::citation::CitationMode::NonIntegral,
+        items: vec![crate::reference::CitationItem {
+            id: "adams2021".to_string(),
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+
+    let result = processor.process_citation(&citation).unwrap();
+    assert_eq!(result, "[1]");
+}
+
+#[test]
 fn test_numeric_integral_with_multiple_items() {
     use csln_core::options::Processing;
 
