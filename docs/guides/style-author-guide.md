@@ -33,18 +33,97 @@ Fidelity is the hard gate. SQI helps choose between equally correct solutions.
 
 Use presets first, then override only what is style-specific.
 
-Option presets:
+### Contributor presets (`options.contributors`)
 
-- `contributors`: `apa`, `chicago`, `vancouver`, `ieee`, `harvard`, `springer`, `numeric-compact`, `numeric-medium`
-- `dates`: `long`, `short`, `numeric`, `iso`
-- `titles`: `apa`, `chicago`, `ieee`, `humanities`, `journal-emphasis`, `scientific`
-- `substitute`: `standard`, `editor-first`, `title-first`, `editor-short`, `editor-long`, `editor-translator-short`, `editor-translator-long`, `editor-title-short`, `editor-title-long`, `editor-translator-title-short`, `editor-translator-title-long`
+Each preset encodes name formatting conventions for a style family. Pick the closest match; add explicit overrides for fields that differ.
 
-Template presets:
+| Preset | Format | Initials | Conjunction | et al. | Example |
+|--------|--------|----------|-------------|--------|---------|
+| `apa` | First family-first | `. ` (period-space) | `&` symbol | 21/19 | `Smith, J. D., & Jones, M. K.` |
+| `chicago` | First family-first | none (full names) | `and` text | none | `Smith, John D., and Mary K. Jones` |
+| `vancouver` | All family-first | none | none | 7/6 | `Smith JD, Jones MK` |
+| `ieee` | All given-first | `. ` (period-space) | `and` text | none | `J. D. Smith, M. K. Jones` |
+| `harvard` | All family-first | `.` (period only) | `and` text | none | `Smith, J.D., Jones, M.K.` |
+| `springer` | All family-first | none | none | 5/3 | `Smith JD, Jones MK` |
+| `numeric-compact` | All family-first | none | none | 7/6 | `Smith J, Jones M` |
+| `numeric-medium` | All family-first | none | none | 4/3 | `Smith J, Jones M` |
+| `numeric-tight` | All family-first | none | none | 7/3 | `Smith J, Jones M, Brown A, et al.` |
+| `numeric-large` | All family-first | none | none | 11/10 | `Smith J, … [10 authors], et al.` |
+| `annual-reviews` | All family-first | none | none | 7/5, demote-never | `van der Berg J, Smith M, Jones A, Brown B, White C, et al.` |
+| `math-phys` | All family-first | `.` (period only) | none | none (set separately) | `Smith, J., Jones, M., Brown, A.` |
+| `soc-sci-first` | First family-first, rest given-first | `. ` (period-space) | none | none (set separately) | `Smith, J. D., M. K. Jones` |
+| `physics-numeric` | All given-first | `. ` (period-space) | none | none (set separately) | `J. Smith, M. Jones, A. Brown` |
+
+**Choosing between similar presets:**
+
+- Compact initials (`""`): `vancouver`, `numeric-compact`, `numeric-medium`, `numeric-tight`, `numeric-large`, `annual-reviews`, `springer`
+- Period-only initials (`"."`): `harvard`, `math-phys`
+- Period-space initials (`". "`): `apa`, `ieee`, `soc-sci-first`, `physics-numeric`
+- Given-first (no inversion): `ieee`, `physics-numeric`
+- First-author-only inversion: `apa`, `chicago`, `soc-sci-first`
+- All inverted: everything else
+
+When you need a different et al. threshold than the preset provides, use the preset and add a `shorten:` override at the context level:
+
+```yaml
+options:
+  contributors: math-phys       # all family-first, period initial, comma sort-sep
+bibliography:
+  options:
+    contributors:
+      shorten: { min: 11, use-first: 10 }   # override et al. threshold
+```
+
+### Date presets (`options.dates`)
+
+| Preset | Month format | EDTF markers | Example |
+|--------|-------------|--------------|---------|
+| `long` | Full names | Yes (`ca.`, `?`, en-dash ranges) | `January 15, 2024` |
+| `short` | Abbreviated | Yes | `Jan 15, 2024` |
+| `numeric` | Numbers | Yes | `1/15/2024` |
+| `iso` | Numbers | No | `2024-01-15` |
+
+### Title presets (`options.titles`)
+
+| Preset | Article/component | Book/monograph | Journal/periodical |
+|--------|------------------|---------------|--------------------|
+| `apa` | plain | *italic* | *italic* |
+| `chicago` | "quoted" | *italic* | *italic* |
+| `ieee` | "quoted" | *italic* | *italic* |
+| `humanities` | plain | *italic* | *italic* |
+| `journal-emphasis` | plain | plain | *italic* |
+| `scientific` | plain | plain | plain |
+
+### Substitute presets (`options.substitute`)
+
+Controls what replaces the author when it is missing:
+
+- `standard`: Editor → Title → Translator (most styles)
+- `editor-first`: Editor → Translator → Title
+- `title-first`: Title → Editor → Translator
+- `editor-short` / `editor-long`: Editor only, with short or long role label
+- `editor-translator-short` / `editor-translator-long`: Editor then Translator
+- `editor-title-short` / `editor-title-long`: Editor then Title
+- `editor-translator-title-short` / `editor-translator-title-long`: Full chain
+
+### Template presets
 
 - `citation.use-preset: numeric-citation` for numeric styles that render citation numbers via style-level wrapping (`[1]`, `(1)`, or superscript contexts).
 
-Example:
+### Example combining presets
+
+```yaml
+options:
+  processing: author-date
+  contributors: math-phys         # Springer math/physics family-first with period initial
+  dates: short
+  titles: apa
+  substitute: standard
+bibliography:
+  options:
+    contributors:
+      shorten: { min: 3, use-first: 1 }   # override et al. threshold only
+```
 
 ```yaml
 options:
