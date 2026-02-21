@@ -409,15 +409,12 @@ fn test_multilingual_rendering_original() {
     );
 
     let processor = Processor::new(style, bib);
-    let citation = csln_core::citation::Citation {
-        items: vec![csln_core::citation::CitationItem {
-            id: "item1".to_string(),
-            ..Default::default()
-        }],
-        ..Default::default()
-    };
-
-    assert_eq!(processor.process_citation(&citation).unwrap(), "東京, 2020");
+    assert_eq!(
+        processor
+            .process_citation(&csln_core::cite!("item1"))
+            .unwrap(),
+        "東京, 2020"
+    );
 }
 
 #[test]
@@ -433,16 +430,10 @@ fn test_multilingual_rendering_transliterated() {
     );
 
     let processor = Processor::new(style, bib);
-    let citation = csln_core::citation::Citation {
-        items: vec![csln_core::citation::CitationItem {
-            id: "item1".to_string(),
-            ..Default::default()
-        }],
-        ..Default::default()
-    };
-
     assert_eq!(
-        processor.process_citation(&citation).unwrap(),
+        processor
+            .process_citation(&csln_core::cite!("item1"))
+            .unwrap(),
         "Tokyo, 2020"
     );
 }
@@ -460,17 +451,11 @@ fn test_multilingual_rendering_combined() {
     );
 
     let processor = Processor::new(style, bib);
-    let citation = csln_core::citation::Citation {
-        items: vec![csln_core::citation::CitationItem {
-            id: "item1".to_string(),
-            ..Default::default()
-        }],
-        ..Default::default()
-    };
-
     // Note: Combined mode for names is currently transliterated only in resolve_multilingual_name
     assert_eq!(
-        processor.process_citation(&citation).unwrap(),
+        processor
+            .process_citation(&csln_core::cite!("item1"))
+            .unwrap(),
         "Tokyo, 2020"
     );
 }
@@ -533,17 +518,13 @@ fn test_multilingual_rendering_numeric_integral_translated() {
     );
 
     let processor = Processor::new(style, bib);
-    let citation = csln_core::citation::Citation {
-        mode: csln_core::citation::CitationMode::Integral,
-        items: vec![csln_core::citation::CitationItem {
-            id: "item1".to_string(),
-            ..Default::default()
-        }],
-        ..Default::default()
-    };
-
     assert_eq!(
-        processor.process_citation(&citation).unwrap(),
+        processor
+            .process_citation(&csln_core::cite!(
+                "item1",
+                mode = csln_core::citation::CitationMode::Integral
+            ))
+            .unwrap(),
         "Tolstoy [1]"
     );
 }

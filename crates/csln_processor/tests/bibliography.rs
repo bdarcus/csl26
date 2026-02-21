@@ -202,13 +202,10 @@ fn test_sorting_multiple_keys() {
 fn test_subsequent_author_substitute() {
     let style = make_style_with_substitute(Some("———".to_string()));
 
-    let mut bib = indexmap::IndexMap::new();
-    let ref1 = make_book("ref1", "Smith", "John", 2020, "Book A");
-    let ref2 = make_book("ref2", "Smith", "John", 2021, "Book B");
-
-    bib.insert("ref1".to_string(), ref1);
-    bib.insert("ref2".to_string(), ref2);
-
+    let bib = csln_core::bib_map![
+        "ref1" => make_book("ref1", "Smith", "John", 2020, "Book A"),
+        "ref2" => make_book("ref2", "Smith", "John", 2021, "Book B"),
+    ];
     let processor = Processor::new(style, bib);
     let result = processor.render_bibliography();
 
@@ -222,12 +219,10 @@ fn test_subsequent_author_substitute() {
 fn test_no_substitute_if_different() {
     let style = make_style_with_substitute(Some("———".to_string()));
 
-    let mut bib = indexmap::IndexMap::new();
-    let ref1 = make_book("ref1", "Smith", "John", 2020, "Book A");
-    let ref2 = make_book("ref2", "Doe", "Jane", 2021, "Book B");
-
-    bib.insert("ref1".to_string(), ref1);
-    bib.insert("ref2".to_string(), ref2);
+    let bib = csln_core::bib_map![
+        "ref1" => make_book("ref1", "Smith", "John", 2020, "Book A"),
+        "ref2" => make_book("ref2", "Doe", "Jane", 2021, "Book B"),
+    ];
 
     let processor = Processor::new(style, bib);
     let result = processor.render_bibliography();
@@ -243,23 +238,12 @@ fn test_no_substitute_if_different() {
 fn test_numeric_bibliography() {
     let style = build_numeric_style();
 
-    let mut bib = indexmap::IndexMap::new();
-    bib.insert(
-        "item1".to_string(),
-        make_book("item1", "Smith", "John", 2020, "Title A"),
-    );
-
+    let bib = csln_core::bib_map!["item1" => make_book("item1", "Smith", "John", 2020, "Title A")];
     let processor = Processor::new(style, bib);
-
     // Must process citation to assign number
-    let citation = csln_core::citation::Citation {
-        items: vec![csln_core::citation::CitationItem {
-            id: "item1".to_string(),
-            ..Default::default()
-        }],
-        ..Default::default()
-    };
-    processor.process_citation(&citation).unwrap();
+    processor
+        .process_citation(&csln_core::cite!("item1"))
+        .unwrap();
 
     let result = processor.render_bibliography();
     assert_eq!(result, "1. John Smith (2020)");
