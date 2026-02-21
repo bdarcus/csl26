@@ -80,44 +80,28 @@ fn build_date_style(form: DateForm) -> Style {
 fn test_name_rendering_basic() {
     let style = build_name_style(ContributorForm::Long, None);
 
-    let mut bib = indexmap::IndexMap::new();
-    bib.insert(
-        "item1".to_string(),
-        make_book("item1", "Smith", "John", 2020, "Title"),
-    );
-
+    let bib = csln_core::bib_map!["item1" => make_book("item1", "Smith", "John", 2020, "Title")];
     let processor = Processor::new(style, bib);
-    let citation = csln_core::citation::Citation {
-        items: vec![csln_core::citation::CitationItem {
-            id: "item1".to_string(),
-            ..Default::default()
-        }],
-        ..Default::default()
-    };
-
-    assert_eq!(processor.process_citation(&citation).unwrap(), "John Smith");
+    assert_eq!(
+        processor
+            .process_citation(&csln_core::cite!("item1"))
+            .unwrap(),
+        "John Smith"
+    );
 }
 
 #[test]
 fn test_name_rendering_short() {
     let style = build_name_style(ContributorForm::Short, None);
 
-    let mut bib = indexmap::IndexMap::new();
-    bib.insert(
-        "item1".to_string(),
-        make_book("item1", "Smith", "John", 2020, "Title"),
-    );
-
+    let bib = csln_core::bib_map!["item1" => make_book("item1", "Smith", "John", 2020, "Title")];
     let processor = Processor::new(style, bib);
-    let citation = csln_core::citation::Citation {
-        items: vec![csln_core::citation::CitationItem {
-            id: "item1".to_string(),
-            ..Default::default()
-        }],
-        ..Default::default()
-    };
-
-    assert_eq!(processor.process_citation(&citation).unwrap(), "Smith");
+    assert_eq!(
+        processor
+            .process_citation(&csln_core::cite!("item1"))
+            .unwrap(),
+        "Smith"
+    );
 }
 
 #[test]
@@ -143,16 +127,10 @@ fn test_name_rendering_et_al() {
     );
 
     let processor = Processor::new(style, bib);
-    let citation = csln_core::citation::Citation {
-        items: vec![csln_core::citation::CitationItem {
-            id: "item1".to_string(),
-            ..Default::default()
-        }],
-        ..Default::default()
-    };
-
     assert_eq!(
-        processor.process_citation(&citation).unwrap(),
+        processor
+            .process_citation(&csln_core::cite!("item1"))
+            .unwrap(),
         "Smith et al."
     );
 }
@@ -171,16 +149,10 @@ fn test_name_rendering_particles() {
     bib.insert("item1".to_string(), item);
 
     let processor = Processor::new(style, bib);
-    let citation = csln_core::citation::Citation {
-        items: vec![csln_core::citation::CitationItem {
-            id: "item1".to_string(),
-            ..Default::default()
-        }],
-        ..Default::default()
-    };
-
     assert_eq!(
-        processor.process_citation(&citation).unwrap(),
+        processor
+            .process_citation(&csln_core::cite!("item1"))
+            .unwrap(),
         "Vincent van Gogh"
     );
 }
@@ -204,16 +176,10 @@ fn test_name_rendering_corporate() {
     bib.insert("item1".to_string(), item);
 
     let processor = Processor::new(style, bib);
-    let citation = csln_core::citation::Citation {
-        items: vec![csln_core::citation::CitationItem {
-            id: "item1".to_string(),
-            ..Default::default()
-        }],
-        ..Default::default()
-    };
-
     assert_eq!(
-        processor.process_citation(&citation).unwrap(),
+        processor
+            .process_citation(&csln_core::cite!("item1"))
+            .unwrap(),
         "World Health Organization"
     );
 }
@@ -224,22 +190,14 @@ fn test_name_rendering_corporate() {
 fn test_date_rendering_year() {
     let style = build_date_style(DateForm::Year);
 
-    let mut bib = indexmap::IndexMap::new();
-    bib.insert(
-        "item1".to_string(),
-        make_book("item1", "Smith", "J", 2020, "Title"),
-    );
-
+    let bib = csln_core::bib_map!["item1" => make_book("item1", "Smith", "J", 2020, "Title")];
     let processor = Processor::new(style, bib);
-    let citation = csln_core::citation::Citation {
-        items: vec![csln_core::citation::CitationItem {
-            id: "item1".to_string(),
-            ..Default::default()
-        }],
-        ..Default::default()
-    };
-
-    assert_eq!(processor.process_citation(&citation).unwrap(), "2020");
+    assert_eq!(
+        processor
+            .process_citation(&csln_core::cite!("item1"))
+            .unwrap(),
+        "2020"
+    );
 }
 
 #[test]
@@ -255,17 +213,11 @@ fn test_date_rendering_full() {
     bib.insert("item1".to_string(), item);
 
     let processor = Processor::new(style, bib);
-    let citation = csln_core::citation::Citation {
-        items: vec![csln_core::citation::CitationItem {
-            id: "item1".to_string(),
-            ..Default::default()
-        }],
-        ..Default::default()
-    };
-
     // Default en-US full: "May 15, 2020"
     assert_eq!(
-        processor.process_citation(&citation).unwrap(),
+        processor
+            .process_citation(&csln_core::cite!("item1"))
+            .unwrap(),
         "May 15, 2020"
     );
 }
@@ -283,16 +235,13 @@ fn test_date_rendering_range() {
     bib.insert("item1".to_string(), item);
 
     let processor = Processor::new(style, bib);
-    let citation = csln_core::citation::Citation {
-        items: vec![csln_core::citation::CitationItem {
-            id: "item1".to_string(),
-            ..Default::default()
-        }],
-        ..Default::default()
-    };
-
     // Range en-dash: "2020–2022"
-    assert_eq!(processor.process_citation(&citation).unwrap(), "2020–2022");
+    assert_eq!(
+        processor
+            .process_citation(&csln_core::cite!("item1"))
+            .unwrap(),
+        "2020–2022"
+    );
 }
 
 #[test]
@@ -308,17 +257,11 @@ fn test_date_rendering_open_range() {
     bib.insert("item1".to_string(), item);
 
     let processor = Processor::new(style, bib);
-    let citation = csln_core::citation::Citation {
-        items: vec![csln_core::citation::CitationItem {
-            id: "item1".to_string(),
-            ..Default::default()
-        }],
-        ..Default::default()
-    };
-
     // Open range: "2020–present" (using locale term)
     assert_eq!(
-        processor.process_citation(&citation).unwrap(),
+        processor
+            .process_citation(&csln_core::cite!("item1"))
+            .unwrap(),
         "2020–present"
     );
 }
@@ -336,13 +279,10 @@ fn test_date_rendering_fallback() {
     bib.insert("item1".to_string(), item);
 
     let processor = Processor::new(style, bib);
-    let citation = csln_core::citation::Citation {
-        items: vec![csln_core::citation::CitationItem {
-            id: "item1".to_string(),
-            ..Default::default()
-        }],
-        ..Default::default()
-    };
-
-    assert_eq!(processor.process_citation(&citation).unwrap(), "n.d.");
+    assert_eq!(
+        processor
+            .process_citation(&csln_core::cite!("item1"))
+            .unwrap(),
+        "n.d."
+    );
 }

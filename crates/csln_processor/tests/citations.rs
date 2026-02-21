@@ -301,35 +301,23 @@ fn test_disambiguate_yearsuffixfiftytwoentries() {
 fn test_numeric_citation() {
     let style = build_numeric_style();
 
-    let mut bib = indexmap::IndexMap::new();
-    bib.insert(
-        "item1".to_string(),
-        make_book("item1", "Smith", "John", 2020, "Title A"),
-    );
-    bib.insert(
-        "item2".to_string(),
-        make_book("item2", "Doe", "Jane", 2021, "Title B"),
-    );
-
+    let bib = csln_core::bib_map![
+        "item1" => make_book("item1", "Smith", "John", 2020, "Title A"),
+        "item2" => make_book("item2", "Doe", "Jane", 2021, "Title B"),
+    ];
     let processor = Processor::new(style, bib);
-
-    let citation1 = csln_core::citation::Citation {
-        items: vec![csln_core::citation::CitationItem {
-            id: "item1".to_string(),
-            ..Default::default()
-        }],
-        ..Default::default()
-    };
-    let citation2 = csln_core::citation::Citation {
-        items: vec![csln_core::citation::CitationItem {
-            id: "item2".to_string(),
-            ..Default::default()
-        }],
-        ..Default::default()
-    };
-
-    assert_eq!(processor.process_citation(&citation1).unwrap(), "[1]");
-    assert_eq!(processor.process_citation(&citation2).unwrap(), "[2]");
+    assert_eq!(
+        processor
+            .process_citation(&csln_core::cite!("item1"))
+            .unwrap(),
+        "[1]"
+    );
+    assert_eq!(
+        processor
+            .process_citation(&csln_core::cite!("item2"))
+            .unwrap(),
+        "[2]"
+    );
 }
 
 // --- Sorting and Grouping Tests ---

@@ -20,36 +20,7 @@ use csln_processor::Processor;
 
 /// Create a native Reference for a book with minimal fields.
 pub fn make_book(id: &str, family: &str, given: &str, year: i32, title: &str) -> Reference {
-    Reference::Monograph(Box::new(Monograph {
-        id: Some(id.to_string()),
-        r#type: MonographType::Book,
-        title: Title::Single(title.to_string()),
-        author: Some(Contributor::StructuredName(StructuredName {
-            family: MultilingualString::Simple(family.to_string()),
-            given: MultilingualString::Simple(given.to_string()),
-            suffix: None,
-            dropping_particle: None,
-            non_dropping_particle: None,
-        })),
-        editor: None,
-        translator: None,
-        issued: EdtfString(year.to_string()),
-        publisher: None,
-        url: None,
-        accessed: None,
-        language: None,
-        note: None,
-        isbn: None,
-        doi: None,
-        edition: None,
-        report_number: None,
-        collection_number: None,
-        genre: None,
-        medium: None,
-        keywords: None,
-        original_date: None,
-        original_title: None,
-    }))
+    csln_core::ref_book!(id, family, given, year, title)
 }
 
 /// Create a native Reference with multiple authors.
@@ -100,38 +71,7 @@ pub fn make_book_multi_author(
 
 /// Create a native Reference for an article-journal.
 pub fn make_article(id: &str, family: &str, given: &str, year: i32, title: &str) -> Reference {
-    Reference::SerialComponent(Box::new(SerialComponent {
-        id: Some(id.to_string()),
-        r#type: SerialComponentType::Article,
-        title: Some(Title::Single(title.to_string())),
-        author: Some(Contributor::StructuredName(StructuredName {
-            family: MultilingualString::Simple(family.to_string()),
-            given: MultilingualString::Simple(given.to_string()),
-            suffix: None,
-            dropping_particle: None,
-            non_dropping_particle: None,
-        })),
-        translator: None,
-        issued: EdtfString(year.to_string()),
-        parent: Parent::Embedded(Serial {
-            r#type: SerialType::AcademicJournal,
-            title: Title::Single(String::new()),
-            editor: None,
-            publisher: None,
-            issn: None,
-        }),
-        url: None,
-        accessed: None,
-        language: None,
-        note: None,
-        doi: None,
-        pages: None,
-        volume: None,
-        issue: None,
-        genre: None,
-        medium: None,
-        keywords: None,
-    }))
+    csln_core::ref_article!(id, family, given, year, title)
 }
 
 /// Create a native Reference for an article-journal with multiple authors.
