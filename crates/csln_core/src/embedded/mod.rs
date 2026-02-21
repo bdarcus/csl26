@@ -28,7 +28,9 @@ pub use ieee::bibliography as ieee_bibliography;
 pub use ieee::citation as ieee_citation;
 pub use locales::{EMBEDDED_LOCALE_IDS, get_locale_bytes};
 pub use numeric::citation as numeric_citation;
-pub use styles::{EMBEDDED_STYLE_NAMES, get_embedded_style};
+pub use styles::{
+    EMBEDDED_STYLE_ALIASES, EMBEDDED_STYLE_NAMES, get_embedded_style, resolve_embedded_style_name,
+};
 pub use vancouver::bibliography as vancouver_bibliography;
 pub use vancouver::citation as vancouver_citation;
 

@@ -150,7 +150,16 @@ dependencies = [
  "anstream",
  "anstyle",
  "clap_lex",
- "strsim",
+ "strsim 0.11.1",
+]
+
+[[package]]
+name = "clap_complete"
+version = "4.5.66"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c757a3b7e39161a4e56f9365141ada2a6c915a8622c408ab6bb4b5d047371031"
+dependencies = [
+ "clap",
 ]
 
 [[package]]
@@ -259,6 +268,7 @@ name = "csln"
 version = "0.6.0"
 dependencies = [
  "clap",
+ "clap_complete",
  "csln_core",
  "csln_processor",
  "indexmap",
@@ -267,6 +277,8 @@ dependencies = [
  "serde_cbor",
  "serde_json",
  "serde_yaml",
+ "strsim 0.10.0",
+ "walkdir",
 ]
 
 [[package]]
@@ -884,6 +896,12 @@ name = "stable_deref_trait"
 version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6ce2be8dc25455e1f91df71bfa12ad37d7af1092ae736f3a6cd0e37bc7810596"
+
+[[package]]
+name = "strsim"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "73473c0e59e6d5812c5dfe2a064a6444949f089e20eec9a2e5506596494e4623"
 
 [[package]]
 name = "strsim"

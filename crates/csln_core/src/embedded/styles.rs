@@ -45,13 +45,41 @@ fn get_style_bytes(name: &str) -> Option<&'static [u8]> {
     }
 }
 
-/// Parse an embedded style by name.
+/// A mapping of short aliases to full embedded style names.
+pub const EMBEDDED_STYLE_ALIASES: &[(&str, &str)] = &[
+    ("apa", "apa-7th"),
+    ("mla", "modern-language-association"),
+    ("ieee", "ieee"),
+    ("ama", "american-medical-association"),
+    ("chicago", "chicago-shortened-notes-bibliography"),
+    (
+        "chicago-author-date",
+        "taylor-and-francis-chicago-author-date",
+    ),
+    ("vancouver", "elsevier-vancouver"),
+    ("harvard", "elsevier-harvard"),
+];
+
+/// Resolve a style name or alias to the full embedded style name.
+pub fn resolve_embedded_style_name(name: &str) -> Option<&'static str> {
+    if let Some(n) = EMBEDDED_STYLE_NAMES.iter().find(|&&n| n == name) {
+        return Some(*n);
+    }
+    EMBEDDED_STYLE_ALIASES
+        .iter()
+        .find(|(alias, _)| *alias == name)
+        .map(|(_, full)| *full)
+}
+
+/// Parse an embedded style by name or alias.
 ///
-/// Returns `None` if `name` is not a known builtin.
+/// Returns `None` if `name` is not a known builtin or alias.
 /// Returns `Some(Err(_))` only if the embedded YAML is malformed (should not
 /// happen for styles that passed CI).
 pub fn get_embedded_style(name: &str) -> Option<Result<Style, serde_yaml::Error>> {
-    get_style_bytes(name).map(serde_yaml::from_slice)
+    resolve_embedded_style_name(name)
+        .and_then(get_style_bytes)
+        .map(serde_yaml::from_slice)
 }
 
 /// All available embedded (builtin) style names, ordered by corpus impact

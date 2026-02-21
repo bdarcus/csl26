@@ -1,4 +1,5 @@
-use clap::{ArgAction, ArgGroup, Args, Parser, Subcommand, ValueEnum};
+use clap::{ArgAction, Args, CommandFactory, Parser, Subcommand, ValueEnum};
+use clap_complete::{Shell, generate};
 use csln_core::locale::RawLocale;
 use csln_core::reference::InputReference;
 use csln_core::{InputBibliography, Locale, Style};
@@ -75,12 +76,6 @@ enum Commands {
     },
 
     /// Validate style, bibliography, and citations files
-    #[command(
-        group = ArgGroup::new("inputs")
-            .required(true)
-            .multiple(true)
-            .args(["style", "bibliography", "citations", "builtin"])
-    )]
     Check(CheckArgs),
 
     /// Convert between CSLN formats (YAML, JSON, CBOR)
@@ -89,19 +84,17 @@ enum Commands {
     /// List and inspect embedded (builtin) citation styles
     Styles {
         #[command(subcommand)]
-        command: StylesCommands,
+        command: Option<StylesCommands>,
     },
 
     /// Generate JSON schema for CSLN models
     #[cfg(feature = "schema")]
-    Schema {
-        /// Data type (style, bib, locale, citations)
-        #[arg(index = 1, value_enum)]
-        r#type: Option<DataType>,
+    Schema(SchemaArgs),
 
-        /// Output directory to export all schemas
-        #[arg(short, long)]
-        out_dir: Option<PathBuf>,
+    /// Generate shell completion scripts
+    Completions {
+        /// The shell to generate completions for
+        shell: Shell,
     },
 
     /// Legacy alias for `render doc`
@@ -129,25 +122,18 @@ enum StylesCommands {
 }
 
 #[derive(Args, Debug)]
-#[command(group = ArgGroup::new("style-source").required(true).args(["style", "builtin"]))]
 struct RenderDocArgs {
     /// Path to input document
-    #[arg(short = 'i', long)]
+    #[arg(index = 1)]
     input: PathBuf,
 
-    /// Path to style file
-    #[arg(short = 's', long)]
-    style: Option<PathBuf>,
-
-    /// Use an embedded (builtin) style by name (e.g., apa-7th, ieee)
-    #[arg(long)]
-    builtin: Option<String>,
+    /// Style file path or builtin name (apa, mla, ieee, etc.)
+    #[arg(short, long, required = true)]
+    style: String,
 
     /// Path(s) to bibliography input files (repeat for multiple)
-    #[arg(short = 'b', long, required = true, action = ArgAction::Append)]
+    #[arg(short, long, required = true, action = ArgAction::Append)]
     bibliography: Vec<PathBuf>,
-
-    /// Path(s) to citations input files (repeat for multiple)
     #[arg(short = 'c', long, action = ArgAction::Append)]
     citations: Vec<PathBuf>,
 
@@ -157,12 +143,12 @@ struct RenderDocArgs {
 
     /// Output format
     #[arg(
-        short = 'O',
-        long = "output-format",
+        short,
+        long,
         value_enum,
         default_value_t = OutputFormat::Plain
     )]
-    output_format: OutputFormat,
+    format: OutputFormat,
 
     /// Write output to file (defaults to stdout)
     #[arg(short = 'o', long)]
@@ -174,21 +160,14 @@ struct RenderDocArgs {
 }
 
 #[derive(Args, Debug)]
-#[command(group = ArgGroup::new("style-source").required(true).args(["style", "builtin"]))]
 struct RenderRefsArgs {
     /// Path(s) to bibliography input files (repeat for multiple)
-    #[arg(short = 'b', long, required = true, action = ArgAction::Append)]
+    #[arg(short, long, required = true, action = ArgAction::Append)]
     bibliography: Vec<PathBuf>,
 
-    /// Path to style file
-    #[arg(short = 's', long)]
-    style: Option<PathBuf>,
-
-    /// Use an embedded (builtin) style by name (e.g., apa-7th, ieee)
-    ///
-    /// Run `csln styles list` to see all available builtin styles.
-    #[arg(long)]
-    builtin: Option<String>,
+    /// Style file path or builtin name (apa, mla, ieee, etc.)
+    #[arg(short, long, required = true)]
+    style: String,
 
     /// Path(s) to citations input files (repeat for multiple)
     #[arg(short = 'c', long, action = ArgAction::Append)]
@@ -212,12 +191,12 @@ struct RenderRefsArgs {
 
     /// Output format
     #[arg(
-        short = 'O',
-        long = "output-format",
+        short,
+        long,
         value_enum,
         default_value_t = OutputFormat::Plain
     )]
-    output_format: OutputFormat,
+    format: OutputFormat,
 
     /// Write output to file (defaults to stdout)
     #[arg(short = 'o', long)]
@@ -230,16 +209,12 @@ struct RenderRefsArgs {
 
 #[derive(Args, Debug)]
 struct CheckArgs {
-    /// Path to style file
-    #[arg(short = 's', long)]
-    style: Option<PathBuf>,
-
-    /// Use an embedded (builtin) style by name (e.g., apa-7th, ieee)
-    #[arg(long)]
-    builtin: Option<String>,
+    /// Style file path or builtin name (apa, mla, ieee, etc.)
+    #[arg(short, long)]
+    style: Option<String>,
 
     /// Path(s) to bibliography input files (repeat for multiple)
-    #[arg(short = 'b', long, action = ArgAction::Append)]
+    #[arg(short, long, action = ArgAction::Append)]
     bibliography: Vec<PathBuf>,
 
     /// Path(s) to citations input files (repeat for multiple)
@@ -247,8 +222,20 @@ struct CheckArgs {
     citations: Vec<PathBuf>,
 
     /// Output as JSON
-    #[arg(short = 'j', long)]
+    #[arg(long)]
     json: bool,
+}
+
+#[cfg(feature = "schema")]
+#[derive(Args, Debug)]
+struct SchemaArgs {
+    /// Data type (style, bib, locale, citations)
+    #[arg(index = 1, value_enum)]
+    r#type: Option<DataType>,
+
+    /// Output directory to export all schemas
+    #[arg(short, long)]
+    out_dir: Option<PathBuf>,
 }
 
 #[derive(Args, Debug)]
@@ -317,21 +304,28 @@ fn run() -> Result<(), Box<dyn Error>> {
         },
         Commands::Check(args) => run_check(args),
         Commands::Convert(args) => run_convert(args),
-        Commands::Styles { command } => match command {
+        Commands::Styles { command } => match command.unwrap_or(StylesCommands::List) {
             StylesCommands::List => run_styles_list(),
         },
         #[cfg(feature = "schema")]
-        Commands::Schema { r#type, out_dir } => run_schema(r#type, out_dir),
+        Commands::Schema(args) => run_schema(args),
+        Commands::Completions { shell } => {
+            let mut cmd = Cli::command();
+            let name = cmd.get_name().to_string();
+            generate(shell, &mut cmd, name, &mut std::io::stdout());
+            Ok(())
+        }
         Commands::Doc(args) => {
-            eprintln!("Warning: `csln doc` is deprecated. Use `csln render doc` with -i/-b/-s.");
+            eprintln!(
+                "Warning: `csln doc` is deprecated. Use `csln render doc` with positional input."
+            );
             let doc_args = RenderDocArgs {
                 input: args.document,
-                style: Some(args.style),
-                builtin: None,
+                style: args.style.display().to_string(),
                 bibliography: vec![args.references],
                 citations: Vec::new(),
                 input_format: InputFormat::Djot,
-                output_format: args.format,
+                format: args.format,
                 output: None,
                 no_semantics: false,
             };
@@ -340,8 +334,7 @@ fn run() -> Result<(), Box<dyn Error>> {
         Commands::Validate(args) => {
             eprintln!("Warning: `csln validate` is deprecated. Use `csln check --style`.");
             run_check(CheckArgs {
-                style: Some(args.path),
-                builtin: None,
+                style: Some(args.path.display().to_string()),
                 bibliography: Vec::new(),
                 citations: Vec::new(),
                 json: false,
@@ -351,8 +344,8 @@ fn run() -> Result<(), Box<dyn Error>> {
 }
 
 #[cfg(feature = "schema")]
-fn run_schema(r#type: Option<DataType>, out_dir: Option<PathBuf>) -> Result<(), Box<dyn Error>> {
-    if let Some(dir) = out_dir {
+fn run_schema(args: SchemaArgs) -> Result<(), Box<dyn Error>> {
+    if let Some(dir) = args.out_dir {
         fs::create_dir_all(&dir)?;
         let types = [
             (DataType::Style, "style.json"),
@@ -374,7 +367,7 @@ fn run_schema(r#type: Option<DataType>, out_dir: Option<PathBuf>) -> Result<(), 
         return Ok(());
     }
 
-    if let Some(t) = r#type {
+    if let Some(t) = args.r#type {
         let schema = match t {
             DataType::Style => schema_for!(Style),
             DataType::Bib => schema_for!(InputBibliography),
@@ -389,22 +382,43 @@ fn run_schema(r#type: Option<DataType>, out_dir: Option<PathBuf>) -> Result<(), 
 }
 
 fn run_styles_list() -> Result<(), Box<dyn Error>> {
-    println!("Embedded (builtin) styles:");
+    println!("Embedded (builtin) citation styles:");
     println!();
+    println!("  {:<10} {:<40} {:<30}", "Alias", "Title", "Full Name");
+    println!("  {}", "-".repeat(82));
+
     for name in csln_core::embedded::EMBEDDED_STYLE_NAMES {
-        println!("  {}", name);
+        let style = csln_core::embedded::get_embedded_style(name)
+            .ok_or_else(|| format!("failed to load builtin style: {}", name))??;
+
+        let alias = csln_core::embedded::EMBEDDED_STYLE_ALIASES
+            .iter()
+            .find(|(_, full)| *full == *name)
+            .map(|(a, _)| *a)
+            .unwrap_or("-");
+
+        let title = style.info.title.as_deref().unwrap_or("-");
+
+        println!("  {:<10} {:<40} {:<30}", alias, truncate(title, 38), name);
     }
+
     println!();
-    println!("Usage: csln render refs --builtin <name> -b refs.json");
+    println!("Usage:");
+    println!("  csln render refs -s <alias|name> -b refs.json");
+    println!("  csln render doc <doc.dj> -s <alias|name> -b refs.json");
     Ok(())
 }
 
+fn truncate(s: &str, max_len: usize) -> String {
+    if s.len() <= max_len {
+        s.to_string()
+    } else {
+        format!("{}...", &s[..max_len - 3])
+    }
+}
+
 fn run_render_doc(args: RenderDocArgs) -> Result<(), Box<dyn Error>> {
-    let style_obj = match (args.style.as_ref(), args.builtin.as_deref()) {
-        (Some(path), _) => load_style(path, args.no_semantics)?,
-        (_, Some(name)) => load_style_builtin(name)?,
-        _ => unreachable!("ArgGroup ensures --style or --builtin is provided"),
-    };
+    let style_obj = load_any_style(&args.style, args.no_semantics)?;
     let bibliography = load_merged_bibliography(&args.bibliography)?;
 
     if !args.citations.is_empty() {
@@ -413,33 +427,14 @@ fn run_render_doc(args: RenderDocArgs) -> Result<(), Box<dyn Error>> {
         );
     }
 
-    let processor = if let Some(ref locale_id) = style_obj.info.default_locale {
-        let locale = if let Some(ref path) = args.style {
-            // File-based style: search for locale on disk, fall back to embedded.
-            let locales_dir = find_locales_dir(path.to_str().unwrap_or("."));
-            let disk_locale = Locale::load(locale_id, &locales_dir);
-            // If disk load returned the en-US fallback but locale isn't en-US,
-            // try the embedded locale instead.
-            if disk_locale.locale == *locale_id || locale_id == "en-US" {
-                disk_locale
-            } else {
-                load_locale_builtin(locale_id)
-            }
-        } else {
-            // Builtin style: use embedded locale directly.
-            load_locale_builtin(locale_id)
-        };
-        Processor::with_locale(style_obj, bibliography, locale)
-    } else {
-        Processor::new(style_obj, bibliography)
-    };
+    let processor = create_processor(style_obj, bibliography, &args.style);
 
     let doc_content = fs::read_to_string(&args.input)?;
     let output = match args.input_format {
         InputFormat::Djot => render_doc_with_output_format(
             &processor,
             &doc_content,
-            args.output_format,
+            args.format,
             DocumentInput::Djot,
         )?,
         InputFormat::Markdown => {
@@ -453,11 +448,7 @@ fn run_render_doc(args: RenderDocArgs) -> Result<(), Box<dyn Error>> {
 }
 
 fn run_render_refs(args: RenderRefsArgs) -> Result<(), Box<dyn Error>> {
-    let style_obj = match (args.style.as_ref(), args.builtin.as_deref()) {
-        (Some(path), _) => load_style(path, args.no_semantics)?,
-        (_, Some(name)) => load_style_builtin(name)?,
-        _ => unreachable!("ArgGroup ensures --style or --builtin is provided"),
-    };
+    let style_obj = load_any_style(&args.style, args.no_semantics)?;
     let bibliography = load_merged_bibliography(&args.bibliography)?;
 
     let item_ids = if let Some(k) = args.keys.clone() {
@@ -472,35 +463,17 @@ fn run_render_refs(args: RenderRefsArgs) -> Result<(), Box<dyn Error>> {
         Some(load_merged_citations(&args.citations)?)
     };
 
-    let processor = if let Some(ref locale_id) = style_obj.info.default_locale {
-        let locale = if let Some(ref path) = args.style {
-            // File-based style: search for locale on disk, fall back to embedded.
-            let locales_dir = find_locales_dir(path.to_str().unwrap_or("."));
-            let disk_locale = Locale::load(locale_id, &locales_dir);
-            // If disk load returned the en-US fallback but locale isn't en-US,
-            // try the embedded locale instead.
-            if disk_locale.locale == *locale_id || locale_id == "en-US" {
-                disk_locale
-            } else {
-                load_locale_builtin(locale_id)
-            }
-        } else {
-            // Builtin style: use embedded locale directly.
-            load_locale_builtin(locale_id)
-        };
-        Processor::with_locale(style_obj, bibliography, locale)
-    } else {
-        Processor::new(style_obj, bibliography)
-    };
+    let processor = create_processor(style_obj, bibliography, &args.style);
 
-    let style_name = if let Some(ref path) = args.style {
-        path.file_name()
-            .map(|s| s.to_string_lossy().to_string())
-            .unwrap_or_else(|| "unknown".to_string())
-    } else if let Some(ref name) = args.builtin {
-        name.clone()
-    } else {
-        "unknown".to_string()
+    let style_name = {
+        let path = Path::new(&args.style);
+        if path.exists() {
+            path.file_name()
+                .map(|s: &std::ffi::OsStr| s.to_string_lossy().to_string())
+                .unwrap_or_else(|| "unknown".to_string())
+        } else {
+            args.style.clone()
+        }
     };
 
     let output = if args.json {
@@ -510,7 +483,7 @@ fn run_render_refs(args: RenderRefsArgs) -> Result<(), Box<dyn Error>> {
             args.mode,
             &item_ids,
             input_citations,
-            args.output_format,
+            args.format,
         )?
     } else {
         render_refs_human(
@@ -520,46 +493,84 @@ fn run_render_refs(args: RenderRefsArgs) -> Result<(), Box<dyn Error>> {
             &item_ids,
             input_citations,
             args.show_keys,
-            args.output_format,
+            args.format,
         )?
     };
 
     write_output(&output, args.output.as_ref())
 }
 
+fn create_processor(style: Style, bib: Bibliography, style_input: &str) -> Processor {
+    if let Some(ref locale_id) = style.info.default_locale {
+        let path = Path::new(style_input);
+        let locale = if path.exists() && path.is_file() {
+            // File-based style: search for locale on disk, fall back to embedded.
+            let locales_dir = find_locales_dir(style_input);
+            let disk_locale = Locale::load(locale_id, &locales_dir);
+            if disk_locale.locale == *locale_id || locale_id == "en-US" {
+                disk_locale
+            } else {
+                load_locale_builtin(locale_id)
+            }
+        } else {
+            // Builtin style: use embedded locale directly.
+            load_locale_builtin(locale_id)
+        };
+        Processor::with_locale(style, bib, locale)
+    } else {
+        Processor::new(style, bib)
+    }
+}
+
+/// Load a style from a file path, or fallback to builtin name / alias.
+fn load_any_style(style_input: &str, no_semantics: bool) -> Result<Style, Box<dyn Error>> {
+    let path = Path::new(style_input);
+    if path.exists() && path.is_file() {
+        return load_style(path, no_semantics);
+    }
+
+    if let Some(res) = csln_core::embedded::get_embedded_style(style_input) {
+        return res.map_err(|e| e.into());
+    }
+
+    // Fuzzy matching suggestion
+    let suggestions: Vec<_> = csln_core::embedded::EMBEDDED_STYLE_NAMES
+        .iter()
+        .chain(
+            csln_core::embedded::EMBEDDED_STYLE_ALIASES
+                .iter()
+                .map(|(a, _)| a),
+        )
+        .filter(|&&name| strsim::jaro_winkler(style_input, name) > 0.8)
+        .collect();
+
+    let mut msg = format!("style not found: '{}'", style_input);
+    if !suggestions.is_empty() {
+        msg.push_str("\n\nDid you mean one of these?");
+        for s in suggestions {
+            msg.push_str(&format!("\n  - {}", s));
+        }
+    } else {
+        msg.push_str("\n\nUse `csln styles list` to see all available builtin styles.");
+    }
+
+    Err(msg.into())
+}
+
 fn run_check(args: CheckArgs) -> Result<(), Box<dyn Error>> {
     let mut checks = Vec::<CheckItem>::new();
 
-    if let Some(style) = args.style {
-        let style_display = style.display().to_string();
-        let status = match load_style(&style, false) {
+    if let Some(style_input) = args.style {
+        let status = match load_any_style(&style_input, false) {
             Ok(_) => CheckItem {
                 kind: "style",
-                path: style_display,
+                path: style_input,
                 ok: true,
                 error: None,
             },
             Err(e) => CheckItem {
                 kind: "style",
-                path: style_display,
-                ok: false,
-                error: Some(e.to_string()),
-            },
-        };
-        checks.push(status);
-    }
-
-    if let Some(builtin) = args.builtin {
-        let status = match load_style_builtin(&builtin) {
-            Ok(_) => CheckItem {
-                kind: "style",
-                path: format!("builtin:{}", builtin),
-                ok: true,
-                error: None,
-            },
-            Err(e) => CheckItem {
-                kind: "style",
-                path: format!("builtin:{}", builtin),
+                path: style_input,
                 ok: false,
                 error: Some(e.to_string()),
             },
@@ -845,18 +856,6 @@ fn load_style(path: &Path, no_semantics: bool) -> Result<Style, Box<dyn Error>> 
     }
 
     Ok(style_obj)
-}
-
-/// Load a builtin (embedded) style by name.
-fn load_style_builtin(name: &str) -> Result<Style, Box<dyn Error>> {
-    csln_core::embedded::get_embedded_style(name)
-        .ok_or_else(|| {
-            format!(
-                "Unknown builtin style: '{}'. Run `csln styles list` to see available styles.",
-                name
-            )
-        })?
-        .map_err(|e| format!("Failed to parse embedded style '{}': {}", name, e).into())
 }
 
 /// Load a locale from embedded bytes, falling back to en-US.

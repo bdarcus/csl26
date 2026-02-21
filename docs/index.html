@@ -405,10 +405,10 @@
                             <h4 class="font-bold text-slate-900 mb-2">Render references (HTML)</h4>
                             <div class="bg-slate-900 rounded-lg p-4 flex items-center justify-between group border border-slate-700 shadow-md">
                                 <code class="font-mono text-sm text-slate-300">
-                                    <span class="text-primary">$</span> csln render refs -b tests/fixtures/references-expanded.json -s styles/apa-7th.yaml <span class="text-emerald-400">-O html</span>
+                                    <span class="text-primary">$</span> csln render refs -b tests/fixtures/references-expanded.json -s mla <span class="text-emerald-400">-f html</span>
                                 </code>
                                 <button class="text-slate-500 hover:text-white transition-colors"
-                                    onclick="navigator.clipboard.writeText('csln render refs -b tests/fixtures/references-expanded.json -s styles/apa-7th.yaml -O html')"
+                                    onclick="navigator.clipboard.writeText('csln render refs -b tests/fixtures/references-expanded.json -s mla -f html')"
                                     title="Copy to clipboard">
                                     <span class="material-icons text-base">content_copy</span>
                                 </button>
@@ -420,10 +420,10 @@
                             <h4 class="font-bold text-slate-900 mb-2">Render for static sites (Djot)</h4>
                             <div class="bg-slate-900 rounded-lg p-4 flex items-center justify-between group border border-slate-700 shadow-md">
                                 <code class="font-mono text-sm text-slate-300">
-                                    <span class="text-primary">$</span> csln render refs -b tests/fixtures/references-expanded.json -s styles/apa-7th.yaml <span class="text-emerald-400">-O djot</span>
+                                    <span class="text-primary">$</span> csln render refs -b tests/fixtures/references-expanded.json -s mla <span class="text-emerald-400">-f djot</span>
                                 </code>
                                 <button class="text-slate-500 hover:text-white transition-colors"
-                                    onclick="navigator.clipboard.writeText('csln render refs -b tests/fixtures/references-expanded.json -s styles/apa-7th.yaml -O djot')"
+                                    onclick="navigator.clipboard.writeText('csln render refs -b tests/fixtures/references-expanded.json -s mla -f djot')"
                                     title="Copy to clipboard">
                                     <span class="material-icons text-base">content_copy</span>
                                 </button>
@@ -435,10 +435,10 @@
                             <h4 class="font-bold text-slate-900 mb-2">Render for LaTeX (Native Escaping)</h4>
                             <div class="bg-slate-900 rounded-lg p-4 flex items-center justify-between group border border-slate-700 shadow-md">
                                 <code class="font-mono text-sm text-slate-300">
-                                    <span class="text-primary">$</span> csln render refs -b tests/fixtures/references-expanded.json -s styles/apa-7th.yaml <span class="text-emerald-400">-O latex</span>
+                                    <span class="text-primary">$</span> csln render refs -b tests/fixtures/references-expanded.json -s mla <span class="text-emerald-400">-f latex</span>
                                 </code>
                                 <button class="text-slate-500 hover:text-white transition-colors"
-                                    onclick="navigator.clipboard.writeText('csln render refs -b tests/fixtures/references-expanded.json -s styles/apa-7th.yaml -O latex')"
+                                    onclick="navigator.clipboard.writeText('csln render refs -b tests/fixtures/references-expanded.json -s mla -f latex')"
                                     title="Copy to clipboard">
                                     <span class="material-icons text-base">content_copy</span>
                                 </button>
@@ -450,10 +450,10 @@
                             <h4 class="font-bold text-slate-900 mb-2">Render full document (Djot draft syntax)</h4>
                             <div class="bg-slate-900 rounded-lg p-4 flex items-center justify-between group border border-slate-700 shadow-md">
                                 <code class="font-mono text-sm text-slate-300">
-                                    <span class="text-primary">$</span> csln render doc -i examples/document.djot -b examples/document-refs.json -s styles/apa-7th.yaml
+                                    <span class="text-primary">$</span> csln render doc examples/document.djot -b examples/document-refs.json -s mla
                                 </code>
                                 <button class="text-slate-500 hover:text-white transition-colors"
-                                    onclick="navigator.clipboard.writeText('csln render doc -i examples/document.djot -b examples/document-refs.json -s styles/apa-7th.yaml')"
+                                    onclick="navigator.clipboard.writeText('csln render doc examples/document.djot -b examples/document-refs.json -s mla')"
                                     title="Copy to clipboard">
                                     <span class="material-icons text-base">content_copy</span>
                                 </button>
@@ -465,10 +465,10 @@
                             <h4 class="font-bold text-slate-900 mb-2">Use a builtin style (no file needed)</h4>
                             <div class="bg-slate-900 rounded-lg p-4 flex items-center justify-between group border border-slate-700 shadow-md">
                                 <code class="font-mono text-sm text-slate-300">
-                                    <span class="text-primary">$</span> csln render refs -b refs.json <span class="text-emerald-400">--builtin apa-7th</span>
+                                    <span class="text-primary">$</span> csln render refs -b refs.json <span class="text-emerald-400">-s apa</span>
                                 </code>
                                 <button class="text-slate-500 hover:text-white transition-colors"
-                                    onclick="navigator.clipboard.writeText('csln render refs -b refs.json --builtin apa-7th')"
+                                    onclick="navigator.clipboard.writeText('csln render refs -b refs.json -s apa')"
                                     title="Copy to clipboard">
                                     <span class="material-icons text-base">content_copy</span>
                                 </button>
