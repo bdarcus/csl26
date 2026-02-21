@@ -15,6 +15,7 @@ use csln_migrate::{
     template_resolver,
 };
 use roxmltree::Document;
+use std::collections::HashSet;
 use std::fs;
 use std::path::PathBuf;
 
@@ -389,6 +390,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             &legacy_style.citation.layout,
             &mut new_cit,
             &mut citation_wrap,
+        );
+    } else if legacy_style.class == "in-text" {
+        ensure_author_date_locator_citation_component(
+            &legacy_style.citation.layout,
+            &legacy_style.macros,
+            &mut new_cit,
         );
     }
 
@@ -947,6 +954,94 @@ fn ensure_numeric_locator_citation_component(layout: &Layout, template: &mut [Te
             }
         }
     }
+}
+
+fn ensure_author_date_locator_citation_component(
+    layout: &Layout,
+    macros: &[csl_legacy::model::Macro],
+    template: &mut Vec<TemplateComponent>,
+) {
+    if !layout_uses_citation_locator(layout) || citation_template_has_locator(template) {
+        return;
+    }
+
+    let mut visited = HashSet::new();
+    let locator_prefix = infer_locator_prefix_from_nodes(&layout.children, macros, &mut visited)
+        .unwrap_or(" ".to_string());
+
+    template.push(TemplateComponent::Variable(TemplateVariable {
+        variable: SimpleVariable::Locator,
+        show_label: Some(true),
+        rendering: Rendering {
+            prefix: Some(locator_prefix),
+            ..Default::default()
+        },
+        ..Default::default()
+    }));
+}
+
+fn infer_locator_prefix_from_nodes(
+    nodes: &[CslNode],
+    macros: &[csl_legacy::model::Macro],
+    visited_macros: &mut HashSet<String>,
+) -> Option<String> {
+    for node in nodes {
+        match node {
+            CslNode::Text(t) => {
+                let is_locator = t.variable.as_deref() == Some("locator")
+                    || t.macro_name
+                        .as_deref()
+                        .is_some_and(|name| name.contains("citation-locator"));
+                if !is_locator {
+                    continue;
+                }
+
+                if let Some(prefix) = t.prefix.as_ref()
+                    && !prefix.is_empty()
+                {
+                    return Some(prefix.clone());
+                }
+
+                if let Some(macro_name) = t.macro_name.as_ref()
+                    && visited_macros.insert(macro_name.clone())
+                    && let Some(macro_def) = macros.iter().find(|m| m.name == *macro_name)
+                    && let Some(prefix) =
+                        infer_locator_prefix_from_nodes(&macro_def.children, macros, visited_macros)
+                {
+                    return Some(prefix);
+                }
+            }
+            CslNode::Group(g) => {
+                if let Some(prefix) =
+                    infer_locator_prefix_from_nodes(&g.children, macros, visited_macros)
+                {
+                    return Some(prefix);
+                }
+            }
+            CslNode::Choose(c) => {
+                if let Some(prefix) =
+                    infer_locator_prefix_from_nodes(&c.if_branch.children, macros, visited_macros)
+                {
+                    return Some(prefix);
+                }
+                for branch in &c.else_if_branches {
+                    if let Some(prefix) =
+                        infer_locator_prefix_from_nodes(&branch.children, macros, visited_macros)
+                    {
+                        return Some(prefix);
+                    }
+                }
+                if let Some(else_branch) = c.else_branch.as_ref()
+                    && let Some(prefix) =
+                        infer_locator_prefix_from_nodes(else_branch, macros, visited_macros)
+                {
+                    return Some(prefix);
+                }
+            }
+            _ => {}
+        }
+    }
+    None
 }
 
 fn move_group_wrap_to_citation_items(

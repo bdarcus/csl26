@@ -19,6 +19,23 @@ options:
     template:
       - editor
       - translator
+  processing:
+    sort:
+      shorten-names: false
+      render-substitutions: false
+      template:
+        - key: year
+          ascending: true
+        - key: author
+          ascending: true
+    group:
+      template:
+        - year
+        - author
+    disambiguate:
+      names: false
+      add-givenname: false
+      year-suffix: true
   contributors:
     display-as-sort: all
     initialize-with: ""

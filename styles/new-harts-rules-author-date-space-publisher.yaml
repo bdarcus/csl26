@@ -21,9 +21,14 @@ options:
       manuscript: []
       classic: []
       song: []
-      webpage: []
-      event performance speech: []
       standard: []
+      event performance speech: []
+      webpage: []
+  processing:
+    disambiguate:
+      names: true
+      add-givenname: true
+      year-suffix: true
   contributors:
     initialize-with: ". "
     and: text
