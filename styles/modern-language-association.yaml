@@ -13,36 +13,11 @@ info:
   title: MLA Handbook 9th edition (in-text citations)
   id: http://www.zotero.org/styles/modern-language-association
 options:
-  substitute:
-    template:
-      - editor
-      - translator
-    overrides:
-      standard: []
-  contributors:
-    display-as-sort: first
-    initialize-with: ". "
-    shorten:
-      min: 3
-      use-first: 1
-      and-others: et-al
-      delimiter-precedes-last: contextual
-    and: text
-    delimiter-precedes-last: always
-    delimiter-precedes-et-al: always
-    demote-non-dropping-particle: never
-  dates:
-    month: long
-    uncertainty-marker: "?"
-    approximation-marker: "ca. "
-    range-delimiter: –
-  titles:
-    monograph:
-      emph: true
-    periodical:
-      emph: true
-    serial:
-      emph: true
+  processing: author-date
+  substitute: standard
+  contributors: chicago
+  dates: long
+  titles: chicago
   page-range-format: minimal-two
   bibliography:
     subsequent-author-substitute: ———
@@ -53,27 +28,23 @@ options:
 citation:
   options:
     contributors:
-      initialize-with: ". "
       shorten:
         min: 3
         use-first: 1
         and-others: et-al
-        delimiter-precedes-last: contextual
+        delimiter-precedes-et-al: never
   template:
-    - contributor: author
-      form: family-only
-      name-order: family-first
-      shorten:
-        min: 3
-        use-first: 1
-    - title: primary
-      wrap: quotes
-      prefix: ", "
+    - items:
+        - contributor: author
+          form: family-only
+        - title: primary
+          disambiguate-only: true
+          wrap: quotes
+          prefix: ", "
     - variable: locator
-      show-label: true
+      show-label: false
       prefix: " "
   wrap: parentheses
-  delimiter: ". "
   multi-cite-delimiter: "; "
 bibliography:
   options:
