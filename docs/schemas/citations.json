@@ -57,6 +57,10 @@
             "string",
             "null"
           ]
+        },
+        "suppress-author": {
+          "description": "Suppress the author name across all items in this citation. Used when the author is already named in the prose: \"Smith argues (2020)\". Applies uniformly to all items — per-item suppression is not supported because mixed-visibility citations are typographically incoherent.",
+          "type": "boolean"
         }
       }
     },
@@ -102,14 +106,6 @@
             "string",
             "null"
           ]
-        },
-        "visibility": {
-          "description": "Visibility modifier for this item.",
-          "allOf": [
-            {
-              "$ref": "#/definitions/ItemVisibility"
-            }
-          ]
         }
       }
     },
@@ -128,25 +124,6 @@
           "type": "string",
           "enum": [
             "non-integral"
-          ]
-        }
-      ]
-    },
-    "ItemVisibility": {
-      "description": "Visibility modifier for a citation item.",
-      "oneOf": [
-        {
-          "description": "Show both author and year (default).",
-          "type": "string",
-          "enum": [
-            "default"
-          ]
-        },
-        {
-          "description": "Suppress the author name: \"(2020)\".",
-          "type": "string",
-          "enum": [
-            "suppress-author"
           ]
         }
       ]

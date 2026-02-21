@@ -897,6 +897,20 @@
           ]
         },
         {
+          "description": "Numeric all-authors: all family-first, no conjunction, compact initials, no list shortening, particle demotion disabled. Example: \"Smith JD, Jones MK, Brown AB\"",
+          "type": "string",
+          "enum": [
+            "numeric-all-authors"
+          ]
+        },
+        {
+          "description": "Numeric given-first with period-only initials (no space), no conjunction, and comma delimiters. Example: \"J.D. Smith, M.K. Jones, A.B. Brown\"",
+          "type": "string",
+          "enum": [
+            "numeric-given-dot"
+          ]
+        },
+        {
           "description": "Annual Reviews style: all family-first, no initials, et al. after 5 of 7+, particle demotion never. Distinguishable by \"never\" demote policy. Example: \"van der Berg J, Smith M, Jones A, Brown B, White C, et al.\"",
           "type": "string",
           "enum": [
