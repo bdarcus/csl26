@@ -74,12 +74,20 @@ This project leverages global Claude Code agents from `~/.claude/` while adding 
 - **@builder**: Implementation specialist (2-retry cap, no questions) - use for coding tasks
 - **@reviewer**: QA specialist with conflict detection - use proactively after code changes
 
-**Specialized Style Agents (via `/styleauthor`):**
+**Specialized Style Agents (via `/style-evolve`):**
 - **@dstyleplan**: Deep research and architectural design for new styles.
 - **@styleplan**: Maintenance, bug fixes, and technical build planning.
-- **@styleauthor**: High-speed implementation (Haiku) for style templates.
+- **@styleauthor**: High-speed implementation (Sonnet) for style templates.
 
-  **Auto-Approval Note:** The `@styleauthor` agent operates with autonomous command approval for the style development workflow. See **[Autonomous Command Whitelist](../skills/styleauthor/SKILL.md#autonomous-command-whitelist)** in the styleauthor skill for approved safe operations (style editing, oracle tests, code formatting, feature branch commits). Destructive operations and main branch pushes still require confirmation.
+Human-facing style command:
+- Use **`/style-evolve`** for all style tasks.
+- Modes: `upgrade`, `migrate`, `create`.
+- `/styleauthor` is a legacy alias only.
+
+Internal style workflow skills:
+- **Router**: `style-evolve` (entrypoint and delegation)
+- **Pipeline**: `style-maintain`, `style-migrate-enhance`, `style-qa`
+- **Workflow**: `pr-workflow-fast`
 
 **Project-Specific Context Layers:**
 When invoking these agents, they automatically receive CSL domain knowledge and Rust expertise from this file. The global agents handle general development workflow while project-specific instructions guide CSL/citation processing decisions.
@@ -187,13 +195,13 @@ See **[docs/architecture/MIGRATION_STRATEGY_ANALYSIS.md](./docs/architecture/MIG
 
 **Strategy:**
 1. **Keep XML pipeline for OPTIONS** - Options extractor, preset detector, locale handling (~2,500 lines working code)
-2. **LLM-author templates for top parent styles** - Using `/styleauthor` skill or `@styleauthor` agent to create styles from reference materials with iterative test-fix loops. Validated with APA 7th (5/5 citation + bibliography match).
+2. **LLM-author templates for top parent styles** - Using `/style-evolve` (or style agents) to create styles from reference materials with iterative test-fix loops. Validated with APA 7th (5/5 citation + bibliography match).
 3. **Build output-driven template generator** - Use citeproc-js output + input data cross-referencing for component structure and ordering
 4. **Retain XML compiler as fallback** - For rare reference types and validation
 5. **Cross-validation** - Where both approaches agree, confidence is high
-6. **Agent-assisted migration** - Use `./scripts/prep-migration.sh` to provide high-fidelity context (citeproc-js output + migration baseline) to the `@styleauthor` agent for hand-authoring top styles.
+6. **Agent-assisted migration** - Use `./scripts/prep-migration.sh` to provide high-fidelity context for `/style-evolve migrate` when hand-authoring top styles.
 
-**Current state:** The hybrid strategy is validated and deployed (PR #193). Top parent styles are being hand-authored via the `/styleauthor` workflow. See `docs/TIER_STATUS.md` for live fidelity metrics.
+**Current state:** The hybrid strategy is validated and deployed (PR #193). Top parent styles are being hand-authored via the `/style-evolve` workflow. See `docs/TIER_STATUS.md` for live fidelity metrics.
 
 ## Development Principles
 
@@ -465,7 +473,10 @@ Specialized expertise is available via the following skills in `.claude/skills/`
 
 - **[rust-pro](./.claude/skills/rust-pro/SKILL.md)**: Modern Rust engineering (1.75+), async patterns, and performance optimization. Use proactively for core processor development.
 - **[git-advanced-workflows](./.claude/skills/git-advanced-workflows/SKILL.md)**: Advanced Git operations (rebasing, cherry-picking, bisecting).
-- **[styleauthor](./.claude/skills/styleauthor/SKILL.md)**: LLM-driven style creation from reference materials. Iterative 5-phase workflow: research, author, test, evolve processor if needed, verify. Also available as `@styleauthor` agent for autonomous style creation. For portfolio SQI sequencing, pair with **[SQI_REFINEMENT_PLAN.md](./docs/architecture/SQI_REFINEMENT_PLAN.md)**.
+- **[style-evolve](./.claude/skills/style-evolve/SKILL.md)**: Human-facing style command (`upgrade`, `migrate`, `create`) with required style+processor co-evolution checks.
+- **[styleauthor](./.claude/skills/styleauthor/SKILL.md)**: Legacy alias for `/style-evolve`.
+- **Internal pipeline skills**: `style-maintain`, `style-migrate-enhance`, `style-qa`, `pr-workflow-fast`.
+- **Human onboarding guide**: [STYLE_EVOLVE_WORKFLOW.md](./docs/guides/STYLE_EVOLVE_WORKFLOW.md).
 
 ### Style Classes
 - **in-text**: 2,302 styles (80.9%) - author-date

@@ -3,7 +3,14 @@
 Working on **creating or updating CSLN citation styles** (YAML files).
 
 ## Workflow
-Use the `/styleauthor` skill (`.claude/skills/styleauthor/SKILL.md`) or the `@styleauthor` agent for the full 5-phase workflow: research → author → test → evolve processor → verify.
+Human-facing entrypoint:
+- Use `/style-evolve` for all style workflows.
+- Treat `/styleauthor` as a legacy alias only.
+
+Internal routing:
+- `style-maintain` for single-style fixes and updates
+- `style-migrate-enhance` for batch migration waves
+- `style-qa` as required verification gate before completion
 
 ## Gold-Standard Reference
 - `styles/apa-7th.yaml` — the canonical example style (5/5 citation + bibliography match)

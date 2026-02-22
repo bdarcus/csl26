@@ -5,7 +5,7 @@ Working on the **CSL 1.0 → CSLN conversion** pipeline.
 ## Hybrid Strategy
 1. **XML pipeline for options** — Extract global options (name formatting, et-al rules, dates, locales) from CSL 1.0 XML. Achieves 87-100% citation match.
 2. **Output-driven template generation** — Use citeproc-js output + input data cross-referencing for template structure and ordering.
-3. **LLM-authored templates** — For top parent styles, use `@styleauthor` agent with `prep-migration.sh` context.
+3. **LLM-authored templates** — For top parent styles, use `/style-evolve migrate` with `prep-migration.sh` context (implemented by the style agents).
 4. **XML compiler as fallback** — For rare reference types and validation.
 
 ## Key Crates
