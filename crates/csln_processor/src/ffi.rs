@@ -17,8 +17,10 @@ use crate::render::latex::Latex;
 use crate::render::plain::PlainText;
 use csln_core::Style;
 use csln_core::locale::Locale;
+use csln_core::reference::InputReference;
 use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
+use std::path::Path;
 use std::ptr;
 
 /// Helper to safely create a C string from a Rust string, returning null if it contains null bytes.
@@ -128,6 +130,106 @@ pub unsafe extern "C" fn csln_processor_new_with_locale(
     };
 
     let processor = Box::new(Processor::with_locale(style, bib, locale));
+    Box::into_raw(processor)
+}
+
+/// Create a new processor from CSLN YAML files on disk (primary format).
+///
+/// Reads the style from `style_yaml_path` and the bibliography from
+/// `bib_yaml_path`. Both are CSLN YAML files.
+///
+/// # Safety
+/// Both path pointers must be valid null-terminated UTF-8 C strings.
+/// The returned pointer must be freed with `csln_processor_free`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn csln_processor_new_from_yaml(
+    style_yaml_path: *const c_char,
+    bib_yaml_path: *const c_char,
+) -> *mut Processor {
+    if style_yaml_path.is_null() || bib_yaml_path.is_null() {
+        return ptr::null_mut();
+    }
+
+    let style_path_str = match unsafe { CStr::from_ptr(style_yaml_path) }.to_str() {
+        Ok(s) => s,
+        Err(_) => return ptr::null_mut(),
+    };
+    let bib_path_str = match unsafe { CStr::from_ptr(bib_yaml_path) }.to_str() {
+        Ok(s) => s,
+        Err(_) => return ptr::null_mut(),
+    };
+
+    let style_src = match std::fs::read_to_string(Path::new(style_path_str)) {
+        Ok(s) => s,
+        Err(_) => return ptr::null_mut(),
+    };
+    let style: Style = match serde_yaml::from_str(&style_src) {
+        Ok(s) => s,
+        Err(_) => return ptr::null_mut(),
+    };
+
+    let bib = match crate::io::load_bibliography(Path::new(bib_path_str)) {
+        Ok(b) => b,
+        Err(_) => return ptr::null_mut(),
+    };
+
+    let processor = Box::new(Processor::new(style, bib));
+    Box::into_raw(processor)
+}
+
+/// Create a new processor from a CSLN YAML style and a biblatex `.bib` file.
+///
+/// Reads the style from `style_yaml_path` (CSLN YAML) and the bibliography
+/// from `bib_path` (biblatex `.bib`). Entries are converted via
+/// `InputReference::from_biblatex`.
+///
+/// # Safety
+/// Both path pointers must be valid null-terminated UTF-8 C strings.
+/// The returned pointer must be freed with `csln_processor_free`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn csln_processor_new_from_bib(
+    style_yaml_path: *const c_char,
+    bib_path: *const c_char,
+) -> *mut Processor {
+    if style_yaml_path.is_null() || bib_path.is_null() {
+        return ptr::null_mut();
+    }
+
+    let style_path_str = match unsafe { CStr::from_ptr(style_yaml_path) }.to_str() {
+        Ok(s) => s,
+        Err(_) => return ptr::null_mut(),
+    };
+    let bib_path_str = match unsafe { CStr::from_ptr(bib_path) }.to_str() {
+        Ok(s) => s,
+        Err(_) => return ptr::null_mut(),
+    };
+
+    let style_src = match std::fs::read_to_string(Path::new(style_path_str)) {
+        Ok(s) => s,
+        Err(_) => return ptr::null_mut(),
+    };
+    let style: Style = match serde_yaml::from_str(&style_src) {
+        Ok(s) => s,
+        Err(_) => return ptr::null_mut(),
+    };
+
+    let bib_src = match std::fs::read_to_string(Path::new(bib_path_str)) {
+        Ok(s) => s,
+        Err(_) => return ptr::null_mut(),
+    };
+    let bibliography_parsed = match biblatex::Bibliography::parse(&bib_src) {
+        Ok(b) => b,
+        Err(_) => return ptr::null_mut(),
+    };
+
+    let mut bib: Bibliography = indexmap::IndexMap::new();
+    for entry in bibliography_parsed.iter() {
+        let key = entry.key.clone();
+        let reference = InputReference::from_biblatex(entry);
+        bib.insert(key, reference);
+    }
+
+    let processor = Box::new(Processor::new(style, bib));
     Box::into_raw(processor)
 }
 

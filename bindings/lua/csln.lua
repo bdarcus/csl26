@@ -7,33 +7,46 @@ local ffi = require("ffi")
 ffi.cdef[[
     typedef struct Processor Processor;
 
+    /* Constructors (in-memory JSON data) */
     Processor* csln_processor_new(const char* style_json, const char* bib_json);
+    Processor* csln_processor_new_with_locale(const char* style_json,
+                                              const char* bib_json,
+                                              const char* locale_json);
+
+    /* File-based constructors (preferred for LaTeX integration) */
+    Processor* csln_processor_new_from_yaml(const char* style_yaml_path,
+                                            const char* bib_yaml_path);
+    Processor* csln_processor_new_from_bib(const char* style_yaml_path,
+                                           const char* bib_path);
+
     void csln_processor_free(Processor* processor);
-    
+
+    /* Citation rendering */
     char* csln_render_citation_latex(Processor* processor, const char* cite_json);
+    char* csln_render_citation_html(Processor* processor, const char* cite_json);
+    char* csln_render_citation_plain(Processor* processor, const char* cite_json);
+
+    /* Bibliography rendering */
     char* csln_render_bibliography_latex(Processor* processor);
-    
+    char* csln_render_bibliography_html(Processor* processor);
+    char* csln_render_bibliography_plain(Processor* processor);
+
     void csln_string_free(char* s);
 ]]
 
 local CSLN = {}
 CSLN.__index = CSLN
 
-local function is_windows()
-    return jit and jit.os == "Windows"
-end
+-- ---------------------------------------------------------------------------
+-- Library resolution
+-- ---------------------------------------------------------------------------
 
-local function is_macos()
-    return jit and jit.os == "OSX"
-end
+local function is_windows() return jit and jit.os == "Windows" end
+local function is_macos()   return jit and jit.os == "OSX"     end
 
 local function shared_lib_name()
-    if is_windows() then
-        return "csln_processor.dll"
-    end
-    if is_macos() then
-        return "libcsln_processor.dylib"
-    end
+    if is_windows() then return "csln_processor.dll"          end
+    if is_macos()   then return "libcsln_processor.dylib"     end
     return "libcsln_processor.so"
 end
 
@@ -45,10 +58,8 @@ local function resolve_library()
     if env_path and #env_path > 0 then
         table.insert(candidates, env_path)
     end
-
-    -- Prefer release builds for normal use, with debug fallback.
     table.insert(candidates, "target/release/" .. lib_name)
-    table.insert(candidates, "target/debug/" .. lib_name)
+    table.insert(candidates, "target/debug/"   .. lib_name)
     table.insert(candidates, lib_name)
 
     local required_symbols = {
@@ -65,20 +76,15 @@ local function resolve_library()
         if ok then
             local symbols_ok = true
             local missing = nil
-            for _, symbol in ipairs(required_symbols) do
-                local has_symbol = pcall(function()
-                    return loaded[symbol]
-                end)
-                if not has_symbol then
+            for _, sym in ipairs(required_symbols) do
+                local has = pcall(function() return loaded[sym] end)
+                if not has then
                     symbols_ok = false
-                    missing = symbol
+                    missing = sym
                     break
                 end
             end
-
-            if symbols_ok then
-                return loaded, candidate
-            end
+            if symbols_ok then return loaded, candidate end
             table.insert(load_errors, candidate .. " (missing symbol: " .. tostring(missing) .. ")")
         else
             table.insert(load_errors, candidate .. " (" .. tostring(loaded) .. ")")
@@ -99,16 +105,129 @@ if lib == nil then
     )
 end
 
+-- ---------------------------------------------------------------------------
+-- Internal helpers
+-- ---------------------------------------------------------------------------
+
+--- Copy a C string returned by Rust, free it, return a Lua string.
+local function consume_c_str(c_str)
+    if c_str == nil then return nil end
+    local s = ffi.string(c_str)
+    lib.csln_string_free(c_str)
+    return s
+end
+
+--- Escape a string for safe embedding inside a JSON string literal.
+local function json_escape(s)
+    s = tostring(s)
+    s = s:gsub('\\', '\\\\')
+    s = s:gsub('"',  '\\"')
+    s = s:gsub('\n', '\\n')
+    s = s:gsub('\r', '\\r')
+    s = s:gsub('\t', '\\t')
+    return s
+end
+
+--- Build a CSLN Citation JSON string from a Lua options table.
+--
+-- opts fields (all optional except items):
+--   mode            = "integral" | "non-integral"   (default: "non-integral")
+--   suppress_author = true | false
+--   prefix, suffix  = strings (citation-level affix)
+--   items           = list of { id, label, locator, prefix, suffix }
+--
+-- Single-key shorthand: if opts is a plain string it is treated as a bare key.
+local function build_citation_json(opts)
+    if type(opts) == "string" then
+        opts = { items = { { id = opts } } }
+    end
+
+    local parts = {}
+
+    if opts.mode and opts.mode ~= "non-integral" then
+        table.insert(parts, '"mode":"' .. json_escape(opts.mode) .. '"')
+    end
+    if opts.suppress_author then
+        table.insert(parts, '"suppress-author":true')
+    end
+    if opts.prefix then
+        table.insert(parts, '"prefix":"' .. json_escape(opts.prefix) .. '"')
+    end
+    if opts.suffix then
+        table.insert(parts, '"suffix":"' .. json_escape(opts.suffix) .. '"')
+    end
+
+    -- Build items array
+    local item_strs = {}
+    for _, item in ipairs(opts.items or {}) do
+        local ip = {}
+        table.insert(ip, '"id":"' .. json_escape(item.id) .. '"')
+        if item.label then
+            table.insert(ip, '"label":"' .. json_escape(item.label) .. '"')
+        end
+        if item.locator then
+            table.insert(ip, '"locator":"' .. json_escape(item.locator) .. '"')
+        end
+        if item.prefix then
+            table.insert(ip, '"prefix":"' .. json_escape(item.prefix) .. '"')
+        end
+        if item.suffix then
+            table.insert(ip, '"suffix":"' .. json_escape(item.suffix) .. '"')
+        end
+        table.insert(item_strs, "{" .. table.concat(ip, ",") .. "}")
+    end
+    table.insert(parts, '"items":[' .. table.concat(item_strs, ",") .. "]")
+
+    return "{" .. table.concat(parts, ",") .. "}"
+end
+
+-- ---------------------------------------------------------------------------
+-- Processor constructors
+-- ---------------------------------------------------------------------------
+
+--- Create a processor from in-memory JSON strings (low-level).
 function CSLN.new(style_json, bib_json)
     local self = setmetatable({}, CSLN)
     self.ptr = lib.csln_processor_new(style_json, bib_json)
-    if self.ptr == nil then
-        return nil, "Failed to initialize CSLN processor"
-    end
-    self.ptr = ffi.gc(self.ptr, lib.csln_processor_free)
+    if self.ptr == nil then return nil, "Failed to initialise CSLN processor" end
+    self.ptr      = ffi.gc(self.ptr, lib.csln_processor_free)
     self.lib_path = loaded_path
     return self
 end
+
+--- Create a processor from CSLN YAML files on disk (primary format).
+-- @param style_path  path to a CSLN YAML style file
+-- @param bib_path    path to a CSLN YAML bibliography file
+function CSLN.from_yaml(style_path, bib_path)
+    local self = setmetatable({}, CSLN)
+    self.ptr = lib.csln_processor_new_from_yaml(style_path, bib_path)
+    if self.ptr == nil then
+        return nil, "Failed to initialise CSLN processor from YAML files: "
+            .. tostring(style_path) .. ", " .. tostring(bib_path)
+    end
+    self.ptr      = ffi.gc(self.ptr, lib.csln_processor_free)
+    self.lib_path = loaded_path
+    return self
+end
+
+--- Create a processor from a CSLN YAML style and a biblatex .bib file.
+-- @param style_path  path to a CSLN YAML style file
+-- @param bib_path    path to a biblatex .bib file
+function CSLN.from_bib(style_path, bib_path)
+    local self = setmetatable({}, CSLN)
+    self.ptr = lib.csln_processor_new_from_bib(style_path, bib_path)
+    if self.ptr == nil then
+        return nil, "Failed to initialise CSLN processor from .bib file: "
+            .. tostring(bib_path)
+    end
+    self.ptr      = ffi.gc(self.ptr, lib.csln_processor_free)
+    self.lib_path = loaded_path
+    return self
+end
+
+-- ---------------------------------------------------------------------------
+-- Processor methods
+-- ---------------------------------------------------------------------------
 
 function CSLN:free()
     if self.ptr then
@@ -118,22 +237,44 @@ function CSLN:free()
     end
 end
 
-function CSLN:render_citation(cite_json)
+--- Render a citation to a LaTeX string.
+-- @param opts  string (bare key) or table — see build_citation_json above.
+function CSLN:render_citation(opts)
+    local cite_json = build_citation_json(opts)
     local c_str = lib.csln_render_citation_latex(self.ptr, cite_json)
-    if c_str == nil then return nil end
-    
-    local lua_str = ffi.string(c_str)
-    lib.csln_string_free(c_str)
-    return lua_str
+    return consume_c_str(c_str)
 end
 
+--- Render a citation to an HTML string.
+function CSLN:render_citation_html(opts)
+    local cite_json = build_citation_json(opts)
+    local c_str = lib.csln_render_citation_html(self.ptr, cite_json)
+    return consume_c_str(c_str)
+end
+
+--- Render a citation to a plain-text string.
+function CSLN:render_citation_plain(opts)
+    local cite_json = build_citation_json(opts)
+    local c_str = lib.csln_render_citation_plain(self.ptr, cite_json)
+    return consume_c_str(c_str)
+end
+
+--- Render the full bibliography as a LaTeX string.
 function CSLN:render_bibliography()
     local c_str = lib.csln_render_bibliography_latex(self.ptr)
-    if c_str == nil then return nil end
-    
-    local lua_str = ffi.string(c_str)
-    lib.csln_string_free(c_str)
-    return lua_str
+    return consume_c_str(c_str)
+end
+
+--- Render the full bibliography as an HTML string.
+function CSLN:render_bibliography_html()
+    local c_str = lib.csln_render_bibliography_html(self.ptr)
+    return consume_c_str(c_str)
+end
+
+--- Render the full bibliography as a plain-text string.
+function CSLN:render_bibliography_plain()
+    local c_str = lib.csln_render_bibliography_plain(self.ptr)
+    return consume_c_str(c_str)
 end
 
 return CSLN

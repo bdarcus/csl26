@@ -1,0 +1,288 @@
+% csln.sty — CSLN LaTeX Package for LuaLaTeX
+%
+% Integrates the CSLN Rust citation processor into LuaLaTeX via LuaJIT FFI.
+% No Biber, no .bbl file, no shell-escape required.
+%
+% Usage:
+%   \usepackage[style=apa-7th, bibfile=refs]{csln}            % CSLN YAML bib
+%   \usepackage[style=apa-7th, bibfile=refs.bib]{csln}        % biblatex .bib
+%
+% SPDX-License-Identifier: MPL-2.0
+% SPDX-FileCopyrightText: © 2023–2026 Bruce D'Arcus
+
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{csln}[2026/02/21 v0.1.0-poc CSLN citation processor]
+
+% Require LuaLaTeX
+\RequirePackage{ifluatex}
+\ifluatex\else
+  \PackageError{csln}{csln requires LuaLaTeX}\relax
+\fi
+
+\RequirePackage{kvoptions}
+
+% ---------------------------------------------------------------------------
+% Package options
+% ---------------------------------------------------------------------------
+\SetupKeyvalOptions{family=csln,prefix=csln@}
+
+% Path to a CSLN YAML style file (without extension, resolved via kpse, or
+% an absolute path).  E.g. style=apa-7th  or  style=/full/path/to/my.yaml
+\DeclareStringOption[apa-7th]{style}
+
+% Path to the bibliography file.  Extension determines format:
+%   .bib  → biblatex format   (uses csln_processor_new_from_bib)
+%   other → CSLN YAML format  (uses csln_processor_new_from_yaml)
+% Omit extension to default to CSLN YAML (.yaml).
+\DeclareStringOption[refs]{bibfile}
+
+\ProcessKeyvalOptions*
+
+% ---------------------------------------------------------------------------
+% Lua-side initialisation (runs once at \begin{document})
+% ---------------------------------------------------------------------------
+\directlua{
+  -- Locate csln.lua: check CSLN_LUA_PATH env, then the package directory,
+  -- then fall back to kpse.
+  local function find_csln_lua()
+    local env = os.getenv("CSLN_LUA_PATH")
+    if env and env ~= "" then return env end
+
+    -- Resolve relative to the .sty file location if possible
+    local sty_dir = kpse.find_file("csln.sty", "tex") or ""
+    sty_dir = sty_dir:match("^(.*[\\/])") or ""
+    local candidate = sty_dir .. "csln.lua"
+    local f = io.open(candidate, "r")
+    if f then f:close(); return candidate end
+
+    return nil
+  end
+
+  local csln_lua = find_csln_lua()
+  if not csln_lua then
+    error("csln.sty: cannot find csln.lua. "
+      .. "Set CSLN_LUA_PATH to its absolute path, or place csln.lua "
+      .. "in the same directory as csln.sty.")
+  end
+  csln_module = dofile(csln_lua)
+}
+
+\AtBeginDocument{%
+  \directlua{
+    local style_opt  = "\csln@style"
+    local bibfile    = "\csln@bibfile"
+
+    -- Resolve the style file: try as-is, then append .yaml, then kpse.
+    local function resolve_style(s)
+      local function try(p)
+        local f = io.open(p, "r")
+        if f then f:close(); return p end
+        return nil
+      end
+      return try(s)
+          or try(s .. ".yaml")
+          or kpse.find_file(s,         "tex")
+          or kpse.find_file(s..".yaml","tex")
+          or s  -- last resort: pass through and let Rust error
+    end
+
+    local style_path = resolve_style(style_opt)
+
+    -- Choose constructor based on file extension
+    local is_bib = bibfile:match("%.bib$")
+    local bib_path = bibfile
+    if not is_bib then
+      -- Try with / without .yaml extension
+      local function try(p)
+        local f = io.open(p, "r")
+        if f then f:close(); return p end
+        return nil
+      end
+      bib_path = try(bibfile)
+             or  try(bibfile .. ".yaml")
+             or  bibfile
+    end
+
+    if is_bib then
+      csln_proc, err = csln_module.from_bib(style_path, bib_path)
+    else
+      csln_proc, err = csln_module.from_yaml(style_path, bib_path)
+    end
+
+    if not csln_proc then
+      error("csln.sty: failed to initialise processor. "
+        .. tostring(err) .. "\n"
+        .. "  style: " .. style_path .. "\n"
+        .. "  bib:   " .. bib_path)
+    end
+  }%
+}
+
+% ---------------------------------------------------------------------------
+% Locator label lookup table (biblatex optional-arg conventions → CSLN labels)
+% ---------------------------------------------------------------------------
+\directlua{
+  csln_locator_labels = {
+    ["p."]   = "page",   ["pp."]  = "page",
+    ["ch."]  = "chapter",["chap."]= "chapter",
+    ["sec."] = "section",["S"]    = "section",  ["\167"] = "section",
+    ["vol."] = "volume", ["v."]   = "volume",
+    ["no."]  = "number", ["n."]   = "number",
+    ["fig."] = "figure", ["f."]   = "figure",
+    ["l."]   = "line",
+    ["fn."]  = "note",   ["n"]    = "note",
+  }
+
+  -- Infer a locator label and value from a raw optional argument string.
+  -- E.g. "p. 23" -> label="page", locator="23"
+  --      "23"    -> label="page", locator="23"  (bare number defaults to page)
+  function csln_parse_locator(s)
+    if not s or s == "" then return nil, nil end
+    for prefix, label in pairs(csln_locator_labels) do
+      local esc = prefix:gsub("[%(%)%.%%%+%-%*%?%[%^%$]", "%%%1")
+      local rest = s:match("^" .. esc .. "%s*(.*)")
+      if rest then return label, rest end
+    end
+    -- Bare number → page
+    if s:match("^%d") then return "page", s end
+    return "page", s
+  end
+}
+
+% ---------------------------------------------------------------------------
+% Internal Lua rendering helpers
+% ---------------------------------------------------------------------------
+\directlua{
+  -- Render and tex.sprint() a single citation.
+  -- cite_opts is a table suitable for csln_module's build_citation_json helper.
+  function csln_do_cite(cite_opts)
+    if not csln_proc then
+      tex.sprint("[csln: processor not initialised]")
+      return
+    end
+    local result = csln_proc:render_citation(cite_opts)
+    if result then
+      tex.sprint(result)
+    else
+      tex.sprint("[csln: render error for " .. tostring(cite_opts) .. "]")
+    end
+  end
+}
+
+% ---------------------------------------------------------------------------
+% Citation commands
+% ---------------------------------------------------------------------------
+
+% \cite[locator]{key}  — style-driven (non-integral) citation
+% Accepts an optional biblatex-style locator: \cite[p.~23]{key}
+\newcommand{\cite}[2][]{%
+  \directlua{
+    local raw_loc = "\luaescapestring{#1}"
+    local label, locator = csln_parse_locator(raw_loc)
+    local item = { id = "\luaescapestring{#2}" }
+    if locator then item.label = label; item.locator = locator end
+    csln_do_cite({ items = { item } })
+  }%
+}
+
+% \cites[pre][suf]{k1}[pre][suf]{k2}...  — multi-item non-integral citation
+% Use \citeitem{key} / \citeitem[loc]{key} inside \cites{...} for each item.
+% Because TeX cannot loop over variable-length argument lists cleanly, we
+% expose a two-step API matching biblatex's \cites syntax via a Lua accumulator.
+\newcommand{\citestart}{%
+  \directlua{ csln_cites_items = {} }%
+}
+\newcommand{\citeitem}[2][]{%
+  \directlua{
+    local raw_loc = "\luaescapestring{#1}"
+    local label, locator = csln_parse_locator(raw_loc)
+    local item = { id = "\luaescapestring{#2}" }
+    if locator then item.label = label; item.locator = locator end
+    table.insert(csln_cites_items, item)
+  }%
+}
+\newcommand{\citeend}{%
+  \directlua{
+    csln_do_cite({ items = csln_cites_items })
+  }%
+}
+
+% \cites convenience wrapper: \cites{k1}{k2}  (no per-item locators)
+% For per-item locators use \citestart / \citeitem / \citeend.
+\newcommand{\cites}[1]{%
+  \citestart
+  % #1 is treated as a comma-separated list of keys for the simple case
+  \directlua{
+    local keys = "\luaescapestring{#1}"
+    for k in keys:gmatch("[^,]+") do
+      k = k:match("^%s*(.-)%s*$")  -- trim whitespace
+      table.insert(csln_cites_items, { id = k })
+    end
+  }%
+  \citeend
+}
+
+% \textcite[locator]{key}  — integral (author in running text) citation
+\newcommand{\textcite}[2][]{%
+  \directlua{
+    local raw_loc = "\luaescapestring{#1}"
+    local label, locator = csln_parse_locator(raw_loc)
+    local item = { id = "\luaescapestring{#2}" }
+    if locator then item.label = label; item.locator = locator end
+    csln_do_cite({ mode = "integral", items = { item } })
+  }%
+}
+
+% \textcites{k1}{k2} — multi-key integral citation
+\newcommand{\textcites}[1]{%
+  \citestart
+  \directlua{
+    local keys = "\luaescapestring{#1}"
+    for k in keys:gmatch("[^,]+") do
+      k = k:match("^%s*(.-)%s*$")
+      table.insert(csln_cites_items, { id = k })
+    end
+  }%
+  \directlua{
+    csln_do_cite({ mode = "integral", items = csln_cites_items })
+  }%
+}
+
+% \addbibresource{file} — biblatex compat shim (overrides \bibfile option at runtime)
+\newcommand{\addbibresource}[1]{%
+  \directlua{
+    -- re-initialise with the supplied bib file
+    local bibfile = "\luaescapestring{#1}"
+    local is_bib  = bibfile:match("%.bib$")
+    local style   = "\csln@style"
+    local stypath = kpse.find_file(style, "tex")
+               or kpse.find_file(style .. ".yaml", "tex")
+               or style
+    if is_bib then
+      csln_proc = csln_module.from_bib(stypath, bibfile)
+    else
+      csln_proc = csln_module.from_yaml(stypath, bibfile)
+    end
+  }%
+}
+
+% ---------------------------------------------------------------------------
+% Bibliography
+% ---------------------------------------------------------------------------
+
+\newcommand{\printcslnbibliography}{%
+  \directlua{
+    if not csln_proc then
+      tex.sprint("[csln: processor not initialised]")
+    else
+      local bbl = csln_proc:render_bibliography()
+      if bbl then tex.sprint(bbl)
+      else tex.sprint("[csln: bibliography render error]") end
+    end
+  }%
+}
+
+% Also define \printbibliography as an alias for easier migration from biblatex
+\let\printbibliography\printcslnbibliography
+
+\endinput

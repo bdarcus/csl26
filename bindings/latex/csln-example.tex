@@ -1,0 +1,131 @@
+% csln-example.tex — Full demonstration of the CSLN LuaLaTeX package
+%
+% Compile with:
+%   lualatex csln-example.tex
+%
+% Prerequisites:
+%   1. Build the shared library:
+%        cargo build --package csln_processor --release --features ffi
+%   2. Either set CSLN_LIB_PATH to the full path of libcsln_processor.dylib/.so,
+%      or copy/symlink it into this directory.
+%   3. Either set CSLN_LUA_PATH to the full path of csln.lua,
+%      or place csln.lua and csln.sty in the same directory as this file.
+%
+% The style path below resolves relative to this file; adjust if needed.
+
+\documentclass[12pt, a4paper]{article}
+
+% ---------------------------------------------------------------------------
+% CSLN citation package
+%   style   = path to a CSLN YAML style file (extension optional)
+%   bibfile = path to a CSLN YAML bibliography (extension optional)
+%             Use bibfile=refs.bib for a biblatex .bib file instead.
+% ---------------------------------------------------------------------------
+\usepackage[
+  style   = ../../styles/apa-7th,
+  bibfile = example-refs
+]{csln}
+
+% Standard LaTeX preamble
+\usepackage{fontspec}              % LuaLaTeX font support
+\usepackage[hidelinks]{hyperref}   % clickable DOIs / URLs without coloured boxes
+\usepackage{microtype}             % better typography
+\usepackage{geometry}
+\geometry{margin=2.5cm}
+
+\setmainfont{Latin Modern Roman}
+
+\title{Paradigm Shifts and Machine Learning:\\
+       A Demonstration of CSLN in \LuaLaTeX}
+\author{Example Author}
+\date{2026}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+This document demonstrates the CSLN (\textit{Citation Style Language Next})
+citation package for \LuaLaTeX{}.
+Citations are rendered live by the CSLN Rust processor via a LuaJIT~FFI
+call --- no Biber invocation, no \texttt{.bbl} file, and no shell-escape
+are required.
+The bibliography at the end of this document is likewise produced entirely
+within a single \texttt{lualatex} pass.
+\end{abstract}
+
+% ---------------------------------------------------------------------------
+\section{Introduction}
+% ---------------------------------------------------------------------------
+
+The history of science does not progress by the simple accumulation of
+facts.
+\textcite{kuhn1962} argued instead that mature scientific disciplines are
+organised around \emph{paradigms} --- shared frameworks of concepts,
+methods, and exemplars that define what counts as a legitimate problem and
+a legitimate solution.
+Normal science, in this account, is puzzle-solving within a paradigm
+\cite{kuhn1962}.
+
+% ---------------------------------------------------------------------------
+\section{Neural Networks as a Paradigm Shift}
+% ---------------------------------------------------------------------------
+
+Modern deep learning constitutes, by Kuhn's criteria, a paradigm shift
+in how we approach pattern recognition and inference
+\cite{lecun2015}.
+The transformer architecture \cite{vaswani2017} has since displaced
+recurrent models across virtually every natural-language processing task,
+and Hawking's popular account of physics \cite{hawking1988} provides a
+useful counterpoint illustrating how conceptual frameworks reach lay
+audiences.
+
+\subsection{Multi-cite and locator examples}
+
+Multiple works can be cited together in a single parenthetical:
+\cites{kuhn1962, lecun2015, vaswani2017}
+
+Pinpoint citations with locators also work.
+The canonical argument for deliberate practice appears in
+\textcite[p.~690]{ericsson2006}, and the statistical details of deep
+learning are spelled out at \cite[pp.~438--440]{lecun2015}.
+
+Affixes on individual citation items use the \cs{citestart}/\cs{citeitem}/%
+\cs{citeend} API for full control:
+%
+\citestart
+  \citeitem[p.~5999]{vaswani2017}
+  \citeitem[p.~437]{lecun2015}
+\citeend
+
+% ---------------------------------------------------------------------------
+\section{Expertise and Deliberate Practice}
+% ---------------------------------------------------------------------------
+
+The Ericsson model of expert performance \cite{ericsson2006} holds that
+domain mastery requires structured, goal-directed practice rather than
+mere repetition.
+Weinberg and Freedman's classic study of programmer behaviour
+\cite{weinberg1971} reached analogous conclusions in the context of
+software development.
+
+For macro-level development trends, institutional sources play a similar
+evidential role \cite{worldbank2023}.
+
+% ---------------------------------------------------------------------------
+\section{Conclusion}
+% ---------------------------------------------------------------------------
+
+The CSLN processor renders these citations --- non-integral parentheticals,
+integral (\texttt{textcite}) forms, multi-key groups, and page-level
+locators --- directly from Rust during the \LuaLaTeX{} run.
+No external bibliography processor is required.
+
+% ---------------------------------------------------------------------------
+% Bibliography
+% ---------------------------------------------------------------------------
+\newpage
+\section*{References}
+\printcslnbibliography
+
+\end{document}
