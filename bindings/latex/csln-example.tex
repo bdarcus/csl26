@@ -1,7 +1,10 @@
 % csln-example.tex — Full demonstration of the CSLN LuaLaTeX package
 %
 % Compile with:
-%   lualatex csln-example.tex
+%   lualatex --shell-escape csln-example.tex
+%
+% Note: --shell-escape is required because the CSLN package uses LuaTeX's
+% FFI to load a native shared library.  Without it, ffi.load is blocked.
 %
 % Prerequisites:
 %   1. Build the shared library:

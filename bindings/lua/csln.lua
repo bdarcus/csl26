@@ -41,12 +41,34 @@ CSLN.__index = CSLN
 -- Library resolution
 -- ---------------------------------------------------------------------------
 
-local function is_windows() return jit and jit.os == "Windows" end
-local function is_macos()   return jit and jit.os == "OSX"     end
+--- Detect the current OS, compatible with both LuaJIT (jit.os) and
+--- LuaTeX standard Lua (os.uname).
+local function detect_os()
+    -- LuaJIT exposes jit.os
+    if jit then
+        return jit.os  -- "OSX", "Windows", "Linux", etc.
+    end
+    -- Standard LuaTeX exposes os.uname()
+    if os.uname then
+        local ok, info = pcall(os.uname)
+        if ok and type(info) == "table" then
+            local s = info.sysname or ""
+            if s == "Darwin" then return "OSX" end
+            if s == "Windows_NT" or s:find("MINGW") or s:find("MSYS") then
+                return "Windows"
+            end
+            return "Linux"
+        end
+    end
+    -- Last resort: path separator
+    if package.config:sub(1, 1) == "\\" then return "Windows" end
+    return "Linux"
+end
 
 local function shared_lib_name()
-    if is_windows() then return "csln_processor.dll"          end
-    if is_macos()   then return "libcsln_processor.dylib"     end
+    local os_name = detect_os()
+    if os_name == "Windows" then return "csln_processor.dll" end
+    if os_name == "OSX"     then return "libcsln_processor.dylib" end
     return "libcsln_processor.so"
 end
 

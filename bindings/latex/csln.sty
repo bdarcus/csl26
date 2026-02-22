@@ -64,7 +64,16 @@
       .. "Set CSLN_LUA_PATH to its absolute path, or place csln.lua "
       .. "in the same directory as csln.sty.")
   end
-  csln_module = dofile(csln_lua)
+  local ok, result = pcall(dofile, csln_lua)
+  if not ok then
+    error("csln.sty: failed to load csln.lua: " .. tostring(result)
+      .. " -- if you see an ffi error, compile with: lualatex --shell-escape")
+  end
+  csln_module = result
+  if not csln_module then
+    error("csln.sty: csln.lua loaded but returned nil. "
+      .. "Check that libcsln_processor is built and findable.")
+  end
 }
 
 \AtBeginDocument{%
