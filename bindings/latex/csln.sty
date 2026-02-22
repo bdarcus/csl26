@@ -175,7 +175,8 @@
 
 % \cite[locator]{key}  — style-driven (non-integral) citation
 % Accepts an optional biblatex-style locator: \cite[p.~23]{key}
-\newcommand{\cite}[2][]{%
+% NB: \cite is defined in the LaTeX kernel, so we must \renewcommand.
+\renewcommand{\cite}[2][]{%
   \directlua{
     local raw_loc = "\luaescapestring{#1}"
     local label, locator = csln_parse_locator(raw_loc)
@@ -282,7 +283,8 @@
   }%
 }
 
-% Also define \printbibliography as an alias for easier migration from biblatex
-\let\printbibliography\printcslnbibliography
+% Also provide \printbibliography as an alias for easier migration from biblatex.
+% Use \providecommand so we don't clash if biblatex is already loaded.
+\providecommand{\printbibliography}{\printcslnbibliography}
 
 \endinput
