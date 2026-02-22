@@ -42,37 +42,29 @@
 % Lua-side initialisation (runs once at \begin{document})
 % ---------------------------------------------------------------------------
 \directlua{
-  -- Locate csln.lua: check CSLN_LUA_PATH env, then the package directory,
-  -- then fall back to kpse.
   local function find_csln_lua()
     local env = os.getenv("CSLN_LUA_PATH")
     if env and env ~= "" then return env end
-
-    -- Resolve relative to the .sty file location if possible
-    local sty_dir = kpse.find_file("csln.sty", "tex") or ""
-    sty_dir = sty_dir:match("^(.*[\\/])") or ""
-    local candidate = sty_dir .. "csln.lua"
+    local sty_path = kpse.find_file("csln.sty", "tex") or ""
+    local last_slash = sty_path:match("^(.*/)") or "./"
+    local candidate = last_slash .. "csln.lua"
     local f = io.open(candidate, "r")
     if f then f:close(); return candidate end
-
     return nil
   end
-
   local csln_lua = find_csln_lua()
   if not csln_lua then
     error("csln.sty: cannot find csln.lua. "
-      .. "Set CSLN_LUA_PATH to its absolute path, or place csln.lua "
-      .. "in the same directory as csln.sty.")
+      .. "Set CSLN_LUA_PATH or place csln.lua next to csln.sty.")
   end
   local ok, result = pcall(dofile, csln_lua)
   if not ok then
     error("csln.sty: failed to load csln.lua: " .. tostring(result)
-      .. " -- if you see an ffi error, compile with: lualatex --shell-escape")
+      .. " (compile with: lualatex --shell-escape)")
   end
   csln_module = result
   if not csln_module then
-    error("csln.sty: csln.lua loaded but returned nil. "
-      .. "Check that libcsln_processor is built and findable.")
+    error("csln.sty: csln.lua returned nil. Check libcsln_processor is built.")
   end
 }
 
