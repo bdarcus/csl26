@@ -111,9 +111,9 @@
 
     if not csln_proc then
       error("csln.sty: failed to initialise processor. "
-        .. tostring(err) .. "\n"
-        .. "  style: " .. style_path .. "\n"
-        .. "  bib:   " .. bib_path)
+        .. tostring(err)
+        .. " | style=" .. tostring(style_path)
+        .. " | bib="   .. tostring(bib_path))
     end
   }%
 }
