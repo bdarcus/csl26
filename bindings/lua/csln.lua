@@ -277,4 +277,55 @@ function CSLN:render_bibliography_plain()
     return consume_c_str(c_str)
 end
 
+-- ---------------------------------------------------------------------------
+-- Locator helpers (consumed by the LaTeX package)
+-- ---------------------------------------------------------------------------
+
+--- Map of biblatex optional-argument prefixes to CSLN LocatorType strings.
+CSLN.locator_labels = {
+    ["p."]    = "page",    ["pp."]   = "page",
+    ["ch."]   = "chapter", ["chap."] = "chapter",
+    ["sec."]  = "section", ["S"]     = "section", ["\xc2\xa7"] = "section",
+    ["vol."]  = "volume",  ["v."]    = "volume",
+    ["no."]   = "number",  ["n."]    = "number",
+    ["fig."]  = "figure",  ["f."]    = "figure",
+    ["l."]    = "line",
+    ["fn."]   = "note",    ["n"]     = "note",
+}
+
+--- Infer a CSLN locator label and value from a raw biblatex optional-arg string.
+-- E.g. "p. 23"  -> "page",  "23"
+--      "ch. 3"  -> "chapter", "3"
+--      "23"     -> "page",  "23"  (bare number defaults to page)
+-- Returns label, locator  (both nil if input is empty)
+function CSLN.parse_locator(s)
+    if not s or s == "" then return nil, nil end
+    for prefix, label in pairs(CSLN.locator_labels) do
+        local esc  = prefix:gsub("[%(%)%.%%%+%-%*%?%[%^%$]", "%%%1")
+        local rest = s:match("^" .. esc .. "%s*(.*)")
+        if rest then return label, rest end
+    end
+    if s:match("^%d") then return "page", s end
+    return "page", s
+end
+
+--- Render a citation and push it into the TeX output stream.
+-- proc     : a CSLN processor object
+-- cite_opts: string (bare key) or table — see build_citation_json
+function CSLN.do_cite(proc, cite_opts)
+    if not proc then
+        tex.sprint("[csln: processor not initialised]")
+        return
+    end
+    local result = proc:render_citation(cite_opts)
+    if result then
+        tex.sprint(result)
+    else
+        local key = type(cite_opts) == "string" and cite_opts
+                    or (cite_opts.items and cite_opts.items[1] and cite_opts.items[1].id)
+                    or tostring(cite_opts)
+        tex.sprint("[csln: render error for " .. key .. "]")
+    end
+end
+
 return CSLN

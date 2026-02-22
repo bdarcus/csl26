@@ -118,56 +118,7 @@
   }%
 }
 
-% ---------------------------------------------------------------------------
-% Locator label lookup table (biblatex optional-arg conventions → CSLN labels)
-% ---------------------------------------------------------------------------
-\directlua{
-  csln_locator_labels = {
-    ["p."]   = "page",   ["pp."]  = "page",
-    ["ch."]  = "chapter",["chap."]= "chapter",
-    ["sec."] = "section",["S"]    = "section",  ["§"]    = "section",
-    ["vol."] = "volume", ["v."]   = "volume",
-    ["no."]  = "number", ["n."]   = "number",
-    ["fig."] = "figure", ["f."]   = "figure",
-    ["l."]   = "line",
-    ["fn."]  = "note",   ["n"]    = "note",
-  }
-
-  -- Infer a locator label and value from a raw optional argument string.
-  -- E.g. "p. 23" -> label="page", locator="23"
-  --      "23"    -> label="page", locator="23"  (bare number defaults to page)
-  function csln_parse_locator(s)
-    if not s or s == "" then return nil, nil end
-    for prefix, label in pairs(csln_locator_labels) do
-      local esc = prefix:gsub("[%(%)%.%%%+%-%*%?%[%^%$]", "%%%1")
-      local rest = s:match("^" .. esc .. "%s*(.*)")
-      if rest then return label, rest end
-    end
-    -- Bare number → page
-    if s:match("^%d") then return "page", s end
-    return "page", s
-  end
-}
-
-% ---------------------------------------------------------------------------
-% Internal Lua rendering helpers
-% ---------------------------------------------------------------------------
-\directlua{
-  -- Render and tex.sprint() a single citation.
-  -- cite_opts is a table suitable for csln_module's build_citation_json helper.
-  function csln_do_cite(cite_opts)
-    if not csln_proc then
-      tex.sprint("[csln: processor not initialised]")
-      return
-    end
-    local result = csln_proc:render_citation(cite_opts)
-    if result then
-      tex.sprint(result)
-    else
-      tex.sprint("[csln: render error for " .. tostring(cite_opts) .. "]")
-    end
-  end
-}
+% parse_locator and do_cite are defined in csln.lua and accessible via csln_module.
 
 % ---------------------------------------------------------------------------
 % Citation commands
@@ -179,10 +130,10 @@
 \renewcommand{\cite}[2][]{%
   \directlua{
     local raw_loc = "\luaescapestring{#1}"
-    local label, locator = csln_parse_locator(raw_loc)
+    local label, locator = csln_module.parse_locator(raw_loc)
     local item = { id = "\luaescapestring{#2}" }
     if locator then item.label = label; item.locator = locator end
-    csln_do_cite({ items = { item } })
+    csln_module.do_cite(csln_proc, { items = { item } })
   }%
 }
 
@@ -196,7 +147,7 @@
 \newcommand{\citeitem}[2][]{%
   \directlua{
     local raw_loc = "\luaescapestring{#1}"
-    local label, locator = csln_parse_locator(raw_loc)
+    local label, locator = csln_module.parse_locator(raw_loc)
     local item = { id = "\luaescapestring{#2}" }
     if locator then item.label = label; item.locator = locator end
     table.insert(csln_cites_items, item)
@@ -204,7 +155,7 @@
 }
 \newcommand{\citeend}{%
   \directlua{
-    csln_do_cite({ items = csln_cites_items })
+    csln_module.do_cite(csln_proc, { items = csln_cites_items })
   }%
 }
 
@@ -227,10 +178,10 @@
 \newcommand{\textcite}[2][]{%
   \directlua{
     local raw_loc = "\luaescapestring{#1}"
-    local label, locator = csln_parse_locator(raw_loc)
+    local label, locator = csln_module.parse_locator(raw_loc)
     local item = { id = "\luaescapestring{#2}" }
     if locator then item.label = label; item.locator = locator end
-    csln_do_cite({ mode = "integral", items = { item } })
+    csln_module.do_cite(csln_proc, { mode = "integral", items = { item } })
   }%
 }
 
@@ -245,7 +196,7 @@
     end
   }%
   \directlua{
-    csln_do_cite({ mode = "integral", items = csln_cites_items })
+    csln_module.do_cite(csln_proc, { mode = "integral", items = csln_cites_items })
   }%
 }
 
