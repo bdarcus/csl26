@@ -1,0 +1,117 @@
+references:
+  - type: article-journal
+    id: kuhn1962
+    title: "The Structure of Scientific Revolutions"
+    author:
+      - family: Kuhn
+        given: "Thomas S."
+    issued: "1962"
+    parent:
+      type: serial
+      title: "International Encyclopedia of Unified Science"
+      volume: "2"
+      issue: "2"
+
+  - type: book
+    id: hawking1988
+    title: "A Brief History of Time"
+    author:
+      - family: Hawking
+        given: Stephen
+    issued: "1988"
+    publisher:
+      name: "Bantam Dell Publishing Group"
+      location: "New York"
+
+  - type: article-journal
+    id: lecun2015
+    title: "Deep Learning"
+    author:
+      - family: LeCun
+        given: Yann
+      - family: Bengio
+        given: Yoshua
+      - family: Hinton
+        given: Geoffrey
+    issued: "2015"
+    parent:
+      type: serial
+      title: Nature
+      volume: "521"
+    pages: "436–444"
+    doi: "10.1038/nature14539"
+
+  - type: serial-component
+    id: vaswani2017
+    title: "Attention Is All You Need"
+    author:
+      - family: Vaswani
+        given: Ashish
+      - family: Shazeer
+        given: Noam
+      - family: Parmar
+        given: Niki
+      - family: Uszkoreit
+        given: Jakob
+      - family: Jones
+        given: Llion
+      - family: Gomez
+        given: "Aidan N."
+      - family: Kaiser
+        given: Lukasz
+      - family: Polosukhin
+        given: Illia
+    issued: "2017"
+    parent:
+      type: serial
+      title: "Advances in Neural Information Processing Systems"
+      volume: "30"
+    pages: "5998–6008"
+
+  - type: monograph
+    id: weinberg1971
+    title: "The Psychology of Computer Programming"
+    author:
+      - family: Weinberg
+        given: "Gerald M."
+      - family: Freedman
+        given: "Daniel P."
+    issued: "1971"
+    edition: "Silver Anniversary Edition"
+    publisher:
+      name: "Van Nostrand Reinhold"
+      location: "New York"
+
+  - type: collection-component
+    id: ericsson2006
+    title: "The Role of Deliberate Practice"
+    author:
+      - family: Ericsson
+        given: "K. Anders"
+    issued: "2006"
+    pages: "683–703"
+    parent:
+      type: collection
+      title: "The Cambridge Handbook of Expertise and Expert Performance"
+      editor:
+        - family: Ericsson
+          given: "K. Anders"
+        - family: Charness
+          given: Neil
+        - family: Feltovich
+          given: "Paul J."
+        - family: Hoffman
+          given: "Robert R."
+      publisher:
+        name: "Cambridge University Press"
+
+  - type: monograph
+    id: worldbank2023
+    title: "World Development Report 2023"
+    author:
+      - name: "World Bank"
+    issued: "2023"
+    type: report
+    publisher:
+      name: "World Bank Group"
+      location: "Washington, DC"
