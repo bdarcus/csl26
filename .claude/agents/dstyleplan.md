@@ -3,7 +3,7 @@ name: dstyleplan
 description: Deep style strategy specialist for complex migration, new style architecture, and core semantic gaps.
 model: sonnet
 permissionMode: plan
-tools: sequential-thinking, Read, Glob, Grep
+tools: Read, Glob, Grep
 disallowedTools: Write, Edit, Bash
 ---
 
