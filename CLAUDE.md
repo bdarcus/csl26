@@ -104,8 +104,7 @@ Do not duplicate root instruction content between `CLAUDE.md` and `AGENTS.md`.
 Keep `AGENTS.md` symlinked to this file unless a future spec moves both
 entrypoints to a shared source.
 
-Style tasks: `/style-evolve` (`upgrade`, `migrate`, `create`). Rust quality:
-`/rust-simplify` (size/dup) or `/rust-refine` (API shape).
+Style tasks: `/style-evolve` (`upgrade`, `migrate`, `create`).
 
 ## Task Management
 

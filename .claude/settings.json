@@ -1,18 +1,34 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
-  "defaultMode": "bypassPermissions",
   "hooks": {
     "SessionStart": [
-      { "hooks": [{ "type": "command", "command": "beans prime" }] }
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "beans prime"
+          }
+        ]
+      }
     ],
     "PreCompact": [
-      { "hooks": [{ "type": "command", "command": "beans prime" }] }
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "beans prime"
+          }
+        ]
+      }
     ],
     "PostToolUse": [
       {
         "matcher": "Read|Grep|Glob",
         "hooks": [
-          { "type": "command", "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/jcm-nudge.sh" }
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/jcm-nudge.sh"
+          }
         ]
       }
     ]
@@ -23,7 +39,6 @@
       "Search(*)",
       "Edit(*)",
       "Write(*)",
-
       "Bash(beans *)",
       "Bash(.beans)",
       "Bash(node *)",
@@ -46,7 +61,7 @@
       "Bash(mkdir *)",
       "Bash(ls *)"
     ],
-  "deny": [
+    "deny": [
       "Bash(rm -rf /*)",
       "Bash(sudo *)",
       "Bash(curl *)",
