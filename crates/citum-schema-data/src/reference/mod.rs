@@ -6,6 +6,7 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus and Citum contributors
 //! A reference is a bibliographic item, such as a book, article, or web page.
 //! It is the basic unit of bibliographic data.
 
+pub mod citeproc_markup;
 pub mod contributor;
 #[cfg(feature = "legacy-convert")]
 pub mod conversion;

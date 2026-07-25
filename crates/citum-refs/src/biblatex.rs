@@ -11,6 +11,7 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus and Citum contributors
 use biblatex as biblatex_crate;
 use citum_schema::reference::{
     InputReference, LangID, Numbering, NumberingType, Publisher, RefID, RichText, WorkRelation,
+    citeproc_markup::html_markup_to_djot,
     contributor::{Contributor, ContributorList, StructuredName},
     date::DateValue,
     types::{
@@ -33,12 +34,21 @@ struct BibRefContext<'a> {
     publisher: Option<Publisher>,
     language: Option<LangID>,
     field_str: &'a dyn Fn(&str) -> Option<String>,
+    /// Like `field_str`, but converts citeproc-js's literal HTML rich-text
+    /// convention (`<span class="nocase">`, `<i>`, `<b>`, `<sc>`, `<sup>`,
+    /// `<sub>`) to Djot. Zotero's builtin BibTeX/BibLaTeX exporter escapes
+    /// these as `{\textless}span class="nocase"{\textgreater}…`, which the
+    /// `biblatex` parser unescapes back to literal HTML before Citum sees
+    /// it (`csl26-6eoi`) -- so free-text fields need the same conversion
+    /// the CSL-JSON path applies, not just `field_str`.
+    rich_field_str: &'a dyn Fn(&str) -> Option<String>,
 }
 
 /// Build a `CollectionComponent` from a biblatex inbook/incollection/inproceedings entry.
 fn build_inbook_reference(ctx: BibRefContext<'_>) -> InputReference {
     let field_str = ctx.field_str;
-    let parent_title = field_str("booktitle").map(Title::Single);
+    let rich_field_str = ctx.rich_field_str;
+    let parent_title = rich_field_str("booktitle").map(Title::Single);
 
     let mut parent_numbering = Vec::new();
     if let Some(n) = field_str("number") {
@@ -81,7 +91,7 @@ fn build_inbook_reference(ctx: BibRefContext<'_>) -> InputReference {
         field_languages: HashMap::new(),
         note: field_str("note").map(RichText::Plain),
         doi: field_str("doi"),
-        genre: field_str("type"),
+        genre: rich_field_str("type"),
         ..Default::default()
     }))
 }
@@ -89,8 +99,9 @@ fn build_inbook_reference(ctx: BibRefContext<'_>) -> InputReference {
 /// Build a `SerialComponent` from a biblatex article entry.
 fn build_article_reference(ctx: BibRefContext<'_>) -> InputReference {
     let field_str = ctx.field_str;
-    let parent_title = field_str("journaltitle")
-        .or_else(|| field_str("journal"))
+    let rich_field_str = ctx.rich_field_str;
+    let parent_title = rich_field_str("journaltitle")
+        .or_else(|| rich_field_str("journal"))
         .map(Title::Single);
 
     let mut component_numbering = Vec::new();
@@ -143,7 +154,7 @@ fn build_article_reference(ctx: BibRefContext<'_>) -> InputReference {
         doi: field_str("doi"),
         ads_bibcode: field_str("bibcode"),
         pages: field_str("pages"),
-        genre: field_str("type"),
+        genre: rich_field_str("type"),
         ..Default::default()
     }))
 }
@@ -167,8 +178,9 @@ pub fn input_reference_from_biblatex(entry: &biblatex_crate::Entry) -> InputRefe
                 .collect::<String>()
         })
     };
+    let rich_field_str = |key: &str| field_str(key).map(|s| html_markup_to_djot(&s));
 
-    let title = match (field_str("title"), field_str("subtitle")) {
+    let title = match (rich_field_str("title"), rich_field_str("subtitle")) {
         (Some(main), Some(sub)) => Some(Title::Structured(StructuredTitle {
             full: None,
             main,
@@ -178,13 +190,13 @@ pub fn input_reference_from_biblatex(entry: &biblatex_crate::Entry) -> InputRefe
         (None, _) => None,
     };
     let issued = field_str("date").map_or(DateValue::new(String::new()), DateValue::new);
-    let publisher = field_str("publisher")
-        .or_else(|| field_str("institution"))
-        .or_else(|| field_str("organization"))
-        .or_else(|| field_str("school"))
+    let publisher = rich_field_str("publisher")
+        .or_else(|| rich_field_str("institution"))
+        .or_else(|| rich_field_str("organization"))
+        .or_else(|| rich_field_str("school"))
         .map(|p| Publisher {
             name: p.into(),
-            place: field_str("location").map(Into::into),
+            place: rich_field_str("location").map(Into::into),
         });
 
     let author = entry
@@ -217,6 +229,7 @@ pub fn input_reference_from_biblatex(entry: &biblatex_crate::Entry) -> InputRefe
         publisher,
         language,
         field_str: &field_str,
+        rich_field_str: &rich_field_str,
     };
 
     match entry_type.as_str() {
@@ -252,6 +265,7 @@ fn biblatex_monograph(
     ctx: BibRefContext<'_>,
 ) -> Monograph {
     let field_str = ctx.field_str;
+    let rich_field_str = ctx.rich_field_str;
 
     let mut numbering = Vec::new();
     if let Some(ed) = field_str("edition") {
@@ -291,7 +305,7 @@ fn biblatex_monograph(
         language: ctx.language,
         field_languages: HashMap::new(),
         note: field_str("note").map(RichText::Plain),
-        abstract_text: field_str("abstract").map(RichText::Plain),
+        abstract_text: rich_field_str("abstract").map(RichText::Plain),
         isbn: field_str("isbn"),
         doi: field_str("doi"),
         ads_bibcode: field_str("bibcode"),
@@ -303,7 +317,7 @@ fn biblatex_monograph(
                 .collect()
         }),
         numbering,
-        genre: field_str("type"),
+        genre: rich_field_str("type"),
         ..Default::default()
     }
 }
@@ -497,6 +511,60 @@ mod tests {
             WorkRelation::Id(_) => panic!("expected an embedded container, not an id reference"),
         };
         assert_eq!(parent.isbn, Some("978-0-13-468599-1".to_string()));
+    }
+
+    #[test]
+    fn given_biblatex_title_with_escaped_html_nocase_span_when_converted_then_becomes_djot_case_protection()
+     {
+        // Zotero's builtin BibTeX/BibLaTeX exporter escapes citeproc-js's
+        // HTML rich-text convention as `{\textless}span
+        // class="nocase"{\textgreater}...`; the `biblatex` parser unescapes
+        // it back to literal `<span ...>` before Citum sees it. Confirms the
+        // biblatex path (bean csl26-6eoi) converts to Djot on ingestion,
+        // matching the CSL-JSON path, rather than leaking verbatim into
+        // rendered output.
+        let entry = parse_single_entry(
+            r#"@book{b4, title = {The genome of {\textless}span class="nocase"{\textgreater}Eucalyptus grandis{\textless}/span{\textgreater}}, date = {2014}}"#,
+        );
+
+        let converted = input_reference_from_biblatex(&entry);
+
+        assert_eq!(
+            converted.title(),
+            Some(Title::Single(
+                "The genome of [Eucalyptus grandis]{.nocase}".to_string()
+            ))
+        );
+    }
+
+    #[test]
+    fn given_biblatex_booktitle_with_escaped_html_nocase_spans_when_converted_then_parent_collection_title_becomes_djot_case_protection()
+     {
+        // The gb7714-bench regression (entry gbt7714.8.6.1:5, bean
+        // csl26-6eoi): `booktitle` carries the same escaped citeproc-js
+        // convention as `title`, but through `build_inbook_reference`'s
+        // parent-collection path, which `build_title` never sees.
+        let entry = parse_single_entry(
+            r#"@inproceedings{c1, title = {Advances in holographic photoelasticity}, booktitle = {{\textless}span class="nocase"{\textgreater}Symposium on Applications of Holography in Mechanics{\textless}/span{\textgreater}}, date = {1971}}"#,
+        );
+
+        let converted = input_reference_from_biblatex(&entry);
+
+        let component = converted
+            .as_collection_component()
+            .expect("expected a CollectionComponent");
+        let parent = match component.container.as_ref().expect("expected a container") {
+            WorkRelation::Embedded(inner) => inner
+                .as_collection()
+                .expect("expected an embedded Collection"),
+            WorkRelation::Id(_) => panic!("expected an embedded container, not an id reference"),
+        };
+        assert_eq!(
+            parent.title,
+            Some(Title::Single(
+                "[Symposium on Applications of Holography in Mechanics]{.nocase}".to_string()
+            ))
+        );
     }
 
     #[rstest]
