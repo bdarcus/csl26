@@ -278,6 +278,28 @@ pub struct Monograph {
     pub unknown_fields: std::collections::BTreeMap<String, serde_json::Value>,
 }
 
+impl Monograph {
+    /// Fold the `author`/`editor`/`translator` shorthands into the canonical
+    /// `contributors` vec and re-derive the per-role views.
+    ///
+    /// Deserialized values are already normalized by `From<MonographDeser>`; this
+    /// exists for references built directly in Rust (e.g. the biblatex converter),
+    /// whose shorthand fields are `skip_serializing` and would otherwise be lost
+    /// on write. Idempotent — safe to call on an already-normalized value.
+    pub(crate) fn normalize_contributors(&mut self) {
+        let (contributors, views) = reconcile_contributors(
+            std::mem::take(&mut self.contributors),
+            self.author.take(),
+            self.editor.take(),
+            self.translator.take(),
+        );
+        self.contributors = contributors;
+        self.author = views.author;
+        self.editor = views.editor;
+        self.translator = views.translator;
+    }
+}
+
 #[derive(Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[cfg_attr(feature = "bindings", derive(Type))]
@@ -361,8 +383,6 @@ struct MonographDeser {
 
 impl From<MonographDeser> for Monograph {
     fn from(raw: MonographDeser) -> Self {
-        let (contributors, views) =
-            reconcile_contributors(raw.contributors, raw.author, raw.editor, raw.translator);
         let mut monograph = Self {
             id: raw.id,
             r#type: raw.r#type,
@@ -370,10 +390,10 @@ impl From<MonographDeser> for Monograph {
             short_title: raw.short_title,
             volume_title: raw.volume_title,
             container: raw.container,
-            author: views.author,
-            editor: views.editor,
-            translator: views.translator,
-            contributors,
+            author: raw.author,
+            editor: raw.editor,
+            translator: raw.translator,
+            contributors: raw.contributors,
             created: raw.created,
             issued: raw.issued,
             publisher: raw.publisher,
@@ -415,6 +435,7 @@ impl From<MonographDeser> for Monograph {
             pages: raw.pages,
             unknown_fields: raw.unknown_fields,
         };
+        monograph.normalize_contributors();
         monograph.normalize_numbering();
         monograph
     }
@@ -557,6 +578,23 @@ pub struct Collection {
     pub unknown_fields: std::collections::BTreeMap<String, serde_json::Value>,
 }
 
+impl Collection {
+    /// Fold the `editor`/`translator` shorthands into the canonical `contributors`
+    /// vec and re-derive the per-role views. See [`Monograph::normalize_contributors`]
+    /// for why this exists. Idempotent.
+    pub(crate) fn normalize_contributors(&mut self) {
+        let (contributors, views) = reconcile_contributors(
+            std::mem::take(&mut self.contributors),
+            None,
+            self.editor.take(),
+            self.translator.take(),
+        );
+        self.contributors = contributors;
+        self.editor = views.editor;
+        self.translator = views.translator;
+    }
+}
+
 #[derive(Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[cfg_attr(feature = "bindings", derive(Type))]
@@ -612,17 +650,15 @@ struct CollectionDeser {
 
 impl From<CollectionDeser> for Collection {
     fn from(raw: CollectionDeser) -> Self {
-        let (contributors, views) =
-            reconcile_contributors(raw.contributors, None, raw.editor, raw.translator);
         let mut collection = Self {
             id: raw.id,
             r#type: raw.r#type,
             title: raw.title,
             short_title: raw.short_title,
             container: raw.container,
-            editor: views.editor,
-            translator: views.translator,
-            contributors,
+            editor: raw.editor,
+            translator: raw.translator,
+            contributors: raw.contributors,
             created: raw.created,
             issued: raw.issued,
             publisher: raw.publisher,
@@ -644,6 +680,7 @@ impl From<CollectionDeser> for Collection {
             keywords: raw.keywords,
             unknown_fields: raw.unknown_fields,
         };
+        collection.normalize_contributors();
         collection.normalize_numbering();
         collection
     }
@@ -783,6 +820,23 @@ pub struct CollectionComponent {
     pub unknown_fields: std::collections::BTreeMap<String, serde_json::Value>,
 }
 
+impl CollectionComponent {
+    /// Fold the `author`/`translator` shorthands into the canonical `contributors`
+    /// vec and re-derive the per-role views. See [`Monograph::normalize_contributors`]
+    /// for why this exists. Idempotent.
+    pub(crate) fn normalize_contributors(&mut self) {
+        let (contributors, views) = reconcile_contributors(
+            std::mem::take(&mut self.contributors),
+            self.author.take(),
+            None,
+            self.translator.take(),
+        );
+        self.contributors = contributors;
+        self.author = views.author;
+        self.translator = views.translator;
+    }
+}
+
 #[derive(Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[cfg_attr(feature = "bindings", derive(Type))]
@@ -843,15 +897,13 @@ struct CollectionComponentDeser {
 
 impl From<CollectionComponentDeser> for CollectionComponent {
     fn from(raw: CollectionComponentDeser) -> Self {
-        let (contributors, views) =
-            reconcile_contributors(raw.contributors, raw.author, None, raw.translator);
         let mut component = Self {
             id: raw.id,
             r#type: raw.r#type,
             title: raw.title,
-            author: views.author,
-            translator: views.translator,
-            contributors,
+            author: raw.author,
+            translator: raw.translator,
+            contributors: raw.contributors,
             created: raw.created,
             issued: raw.issued,
             container: raw.container,
@@ -880,6 +932,7 @@ impl From<CollectionComponentDeser> for CollectionComponent {
             original: raw.original,
             unknown_fields: raw.unknown_fields,
         };
+        component.normalize_contributors();
         component.normalize_numbering();
         component
     }
@@ -1035,6 +1088,23 @@ pub struct SerialComponent {
     pub unknown_fields: std::collections::BTreeMap<String, serde_json::Value>,
 }
 
+impl SerialComponent {
+    /// Fold the `author`/`translator` shorthands into the canonical `contributors`
+    /// vec and re-derive the per-role views. See [`Monograph::normalize_contributors`]
+    /// for why this exists. Idempotent.
+    pub(crate) fn normalize_contributors(&mut self) {
+        let (contributors, views) = reconcile_contributors(
+            std::mem::take(&mut self.contributors),
+            self.author.take(),
+            None,
+            self.translator.take(),
+        );
+        self.contributors = contributors;
+        self.author = views.author;
+        self.translator = views.translator;
+    }
+}
+
 #[derive(Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[cfg_attr(feature = "bindings", derive(Type))]
@@ -1102,15 +1172,13 @@ struct SerialComponentDeser {
 
 impl From<SerialComponentDeser> for SerialComponent {
     fn from(raw: SerialComponentDeser) -> Self {
-        let (contributors, views) =
-            reconcile_contributors(raw.contributors, raw.author, None, raw.translator);
         let mut component = Self {
             id: raw.id,
             r#type: raw.r#type,
             title: raw.title,
-            author: views.author,
-            translator: views.translator,
-            contributors,
+            author: raw.author,
+            translator: raw.translator,
+            contributors: raw.contributors,
             created: raw.created,
             issued: raw.issued,
             container: raw.container,
@@ -1145,6 +1213,7 @@ impl From<SerialComponentDeser> for SerialComponent {
             original: raw.original,
             unknown_fields: raw.unknown_fields,
         };
+        component.normalize_contributors();
         component.normalize_numbering();
         component
     }
@@ -1224,6 +1293,22 @@ pub struct Serial {
     pub unknown_fields: std::collections::BTreeMap<String, serde_json::Value>,
 }
 
+impl Serial {
+    /// Fold the `editor` shorthand into the canonical `contributors` vec and
+    /// re-derive the per-role view. See [`Monograph::normalize_contributors`]
+    /// for why this exists. Idempotent.
+    pub(crate) fn normalize_contributors(&mut self) {
+        let (contributors, views) = reconcile_contributors(
+            std::mem::take(&mut self.contributors),
+            None,
+            self.editor.take(),
+            None,
+        );
+        self.contributors = contributors;
+        self.editor = views.editor;
+    }
+}
+
 #[derive(Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[cfg_attr(feature = "bindings", derive(Type))]
@@ -1254,16 +1339,14 @@ struct SerialDeser {
 
 impl From<SerialDeser> for Serial {
     fn from(raw: SerialDeser) -> Self {
-        let (contributors, views) =
-            reconcile_contributors(raw.contributors, None, raw.editor, None);
-        Self {
+        let mut serial = Self {
             id: raw.id,
             r#type: raw.r#type,
             title: raw.title,
             short_title: raw.short_title,
             container: raw.container,
-            editor: views.editor,
-            contributors,
+            editor: raw.editor,
+            contributors: raw.contributors,
             publisher: raw.publisher,
             url: raw.url,
             accessed: raw.accessed,
@@ -1272,7 +1355,9 @@ impl From<SerialDeser> for Serial {
             note: raw.note,
             issn: raw.issn,
             unknown_fields: raw.unknown_fields,
-        }
+        };
+        serial.normalize_contributors();
+        serial
     }
 }
 

@@ -1647,6 +1647,48 @@ impl InputReference {
             _ => r.r#type.as_str().to_string(),
         }
     }
+
+    /// Fold legacy contributor shorthands (`author`, `editor`, `translator`)
+    /// into the canonical `contributors` vec on this reference and, when it has
+    /// one, on its embedded `container`.
+    ///
+    /// Deserialized references are already normalized as part of their
+    /// `#[serde(from = "...Deser")]` conversion; this exists for references
+    /// built directly in Rust — such as the biblatex converter — whose
+    /// shorthand fields are `skip_serializing` and would otherwise be silently
+    /// dropped on write. Idempotent — safe to call on an already-normalized
+    /// reference.
+    ///
+    /// Recurses into `container` only; `original`, `event`, and `reviewed`
+    /// relations are not visited.
+    pub fn normalize_contributors(&mut self) {
+        let container = match &mut self.extension {
+            ClassExtension::Monograph(r) => {
+                r.normalize_contributors();
+                &mut r.container
+            }
+            ClassExtension::Collection(r) => {
+                r.normalize_contributors();
+                &mut r.container
+            }
+            ClassExtension::Serial(r) => {
+                r.normalize_contributors();
+                &mut r.container
+            }
+            ClassExtension::CollectionComponent(r) => {
+                r.normalize_contributors();
+                &mut r.container
+            }
+            ClassExtension::SerialComponent(r) => {
+                r.normalize_contributors();
+                &mut r.container
+            }
+            _ => return,
+        };
+        if let Some(WorkRelation::Embedded(container)) = container {
+            container.normalize_contributors();
+        }
+    }
 }
 
 fn collection_component_ref_type(r: &CollectionComponent) -> String {
@@ -1734,4 +1776,58 @@ fn collect_contributors_by_role(
         .cloned()
         .collect();
     Some(Contributor::ContributorList(ContributorList(list)))
+}
+
+#[cfg(test)]
+#[allow(
+    clippy::unwrap_used,
+    clippy::expect_used,
+    clippy::panic,
+    clippy::indexing_slicing,
+    reason = "Panicking is acceptable and often desired in tests."
+)]
+mod tests {
+    use super::*;
+    use crate::reference::contributor::SimpleName;
+
+    #[test]
+    fn given_monograph_with_embedded_container_when_normalized_then_container_contributors_fold_too()
+     {
+        // Regression test: `normalize_contributors` must recurse into `container`
+        // for every structural type that has one (Monograph/Collection/Serial),
+        // not just the component types -- a nested container built directly in
+        // Rust (bypassing deserialization) has the same skip_serializing shorthand
+        // problem as the top-level reference.
+        let container_monograph = Monograph {
+            r#type: MonographType::Book,
+            editor: Some(Contributor::SimpleName(SimpleName {
+                name: "Series Editor".into(),
+                location: None,
+                short_name: None,
+            })),
+            ..Default::default()
+        };
+        let outer_monograph = Monograph {
+            r#type: MonographType::Book,
+            container: Some(WorkRelation::Embedded(Box::new(InputReference::Monograph(
+                Box::new(container_monograph),
+            )))),
+            ..Default::default()
+        };
+        let mut reference = InputReference::Monograph(Box::new(outer_monograph));
+
+        reference.normalize_contributors();
+
+        let outer = reference.as_monograph().expect("expected a Monograph");
+        let container = match outer.container.as_ref().expect("expected a container") {
+            WorkRelation::Embedded(inner) => inner.as_monograph().expect("expected a Monograph"),
+            WorkRelation::Id(_) => panic!("expected an embedded container, not an id reference"),
+        };
+        assert_eq!(container.contributors.len(), 1);
+        assert!(
+            container.contributors[0]
+                .roles
+                .contains(&ContributorRole::Editor)
+        );
+    }
 }
