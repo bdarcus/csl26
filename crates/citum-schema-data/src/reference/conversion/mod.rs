@@ -28,6 +28,7 @@ mod scholarly;
 
 pub use scholarly::input_reference_from_legacy_edited_book;
 
+use crate::reference::citeproc_markup::html_markup_to_djot;
 use crate::reference::contributor::{
     Contributor, ContributorEntry, ContributorList, ContributorRole, SimpleName, StructuredName,
 };
@@ -388,147 +389,17 @@ fn normalize_broadcast_issue(
     csl_legacy::csl_json::StringOrNumber::String(normalized)
 }
 
-/// Djot equivalent of one of the fixed HTML tags citeproc-js authors as
-/// title rich-text markup.
-#[derive(Clone, Copy)]
-enum DjotTag {
-    Emph,
-    Strong,
-    SmallCaps,
-    Superscript,
-    Subscript,
-    NoCase,
-    /// A `<span>` with no recognized class/style -- kept for stack bookkeeping
-    /// so its matching `</span>` doesn't pop an unrelated tag's closer.
-    Passthrough,
-}
-
-impl DjotTag {
-    fn open(self) -> &'static str {
-        match self {
-            Self::Emph => "_",
-            Self::Strong => "*",
-            Self::SmallCaps | Self::Superscript | Self::Subscript | Self::NoCase => "[",
-            Self::Passthrough => "",
-        }
-    }
-
-    fn close(self) -> &'static str {
-        match self {
-            Self::Emph => "_",
-            Self::Strong => "*",
-            // `.superscript`/`.subscript`/`.smallcaps` spans are not yet
-            // interpreted by every `render/rich_text.rs` output format --
-            // an existing engine gap, out of scope here. Converting still
-            // drops the literal tag from output, which is strictly better
-            // than the raw HTML leak this function exists to fix.
-            Self::SmallCaps => "]{.smallcaps}",
-            Self::Superscript => "]{.superscript}",
-            Self::Subscript => "]{.subscript}",
-            Self::NoCase => "]{.nocase}",
-            Self::Passthrough => "",
-        }
-    }
-}
-
-/// Tag names citeproc-js is known to emit for title rich-text markup.
-const RECOGNIZED_HTML_TAG_NAMES: [&str; 6] = ["i", "b", "sc", "sup", "sub", "span"];
-
-/// Classify a parsed opening-tag body (without `<`/`>`), e.g. `span
-/// class="nocase"`, returning `None` for tag names outside the fixed
-/// citeproc set.
-fn classify_open_tag(tag_inner: &str) -> Option<DjotTag> {
-    let name = tag_inner.split_whitespace().next()?.to_ascii_lowercase();
-    if !RECOGNIZED_HTML_TAG_NAMES.contains(&name.as_str()) {
-        return None;
-    }
-    Some(match name.as_str() {
-        "i" => DjotTag::Emph,
-        "b" => DjotTag::Strong,
-        "sc" => DjotTag::SmallCaps,
-        "sup" => DjotTag::Superscript,
-        "sub" => DjotTag::Subscript,
-        _ => {
-            let attrs = tag_inner.to_ascii_lowercase();
-            if attrs.contains("nocase") {
-                DjotTag::NoCase
-            } else if attrs.contains("small-caps") || attrs.contains("smallcaps") {
-                DjotTag::SmallCaps
-            } else {
-                DjotTag::Passthrough
-            }
-        }
-    })
-}
-
-/// Convert citeproc-js's fixed HTML rich-text tag set to Djot inline markup.
-///
-/// citeproc-js authors title case-protection and inline formatting as literal
-/// HTML (`<span class="nocase">`, `<i>`, `<b>`, `<sc>`, `<sup>`, `<sub>`)
-/// rather than Djot, Citum's canonical inline markup for free-text fields. Left
-/// unconverted, these tags leak verbatim into rendered output instead of being
-/// interpreted (`csl26-zaqk`). Only this fixed tag set is converted -- never a
-/// generic `<...>` strip, since titles may legitimately contain literal
-/// `<`/`>` characters outside it.
-#[allow(
-    clippy::string_slice,
-    reason = "every slice boundary here is a byte offset of an ASCII '<' or '>' delimiter \
-              (from char_indices()/find('>')), which is always a valid char boundary"
-)]
-fn html_markup_to_djot(text: &str) -> String {
-    if !text.contains('<') {
-        return text.to_string();
-    }
-
-    let mut output = String::with_capacity(text.len());
-    let mut closers: Vec<&'static str> = Vec::new();
-    let mut chars = text.char_indices();
-
-    while let Some((start, ch)) = chars.next() {
-        if ch != '<' {
-            output.push(ch);
-            continue;
-        }
-        let Some(rel_end) = text[start..].find('>') else {
-            // Unterminated tag: keep the remainder literal.
-            output.push_str(&text[start..]);
-            break;
-        };
-        let end = start + rel_end;
-        let tag_inner = &text[start + 1..end];
-        let tag_char_len = text[start..=end].chars().count();
-        for _ in 1..tag_char_len {
-            chars.next();
-        }
-
-        if let Some(name) = tag_inner.strip_prefix('/') {
-            let name = name.trim().to_ascii_lowercase();
-            if RECOGNIZED_HTML_TAG_NAMES.contains(&name.as_str()) {
-                match closers.pop() {
-                    Some(closer) => output.push_str(closer),
-                    // Stray/mismatched close tag: keep it literal rather than
-                    // silently dropping content.
-                    None => output.push_str(&text[start..=end]),
-                }
-            } else {
-                output.push_str(&text[start..=end]);
-            }
-            continue;
-        }
-
-        match classify_open_tag(tag_inner) {
-            Some(tag) => {
-                output.push_str(tag.open());
-                closers.push(tag.close());
-            }
-            None => output.push_str(&text[start..=end]),
-        }
-    }
-
-    output
-}
-
 /// Build a title, optionally structured if short_title is present and title contains a colon.
+///
+/// `html_markup_to_djot` runs again here even though `normalize_rich_text_markup`
+/// (called earlier, in `From<csl_legacy::csl_json::Reference>`) already converts
+/// `legacy.title`/`legacy.title_short` -- this function is also reached with
+/// `part_title`, sourced from `legacy_extra_str(&legacy, "part-title")`
+/// (`scholarly.rs`), which lives in the `extra` map the central pass
+/// deliberately skips (see `normalize_rich_text_markup`'s doc comment). The
+/// call is idempotent on already-converted text -- recognized tags leave no
+/// `<` behind, and any text already in Djot has none to begin with -- so the
+/// redundancy for the already-normalized case is free.
 fn build_title(title: Option<String>, short_title: Option<String>) -> Option<Title> {
     let title = title.map(|t| html_markup_to_djot(&t));
     let short_title = short_title.map(|t| html_markup_to_djot(&t));
@@ -681,6 +552,64 @@ fn legacy_type_uses_created(ref_type: &str) -> bool {
     )
 }
 
+/// Convert citeproc-js's literal HTML rich-text convention to Djot across
+/// every free-text CSL-JSON field that legitimately carries it, in place.
+///
+/// citeproc-js flip-flops HTML rich-text markup (`<span class="nocase">`,
+/// `<i>`, `<b>`, `<sc>`, `<sup>`, `<sub>`) into text variables generally, not
+/// just `title` -- this benchmark's own `container-title` carries `nocase`
+/// spans (`csl26-6eoi`). Verified directly against the `citeproc` npm
+/// package (the reference implementation) for every field below: each
+/// strips `<span class="nocase">` the same way `title` does. Bean
+/// `csl26-zaqk` converted `title` and `short_title` at the `build_title`
+/// call site; this is the remaining scope that bean explicitly deferred.
+/// Runs once, immediately after `parse_note_field_hacks()` and before any
+/// per-type converter reads the reference, so no future conversion path
+/// can bypass it.
+///
+/// Deliberately does **not** touch:
+/// - `note` -- `parse_note_field_hacks()` parses it for extra-field
+///   key/value overrides; converting first would corrupt that parse.
+/// - `doi`, `url`, `isbn`, `issn`, `language` -- identifiers, not rich text.
+/// - `number` -- despite the CSL test suite's `flipflop_NumericField.json`
+///   fixture name, real citeproc-js does *not* flip-flop this field:
+///   `<number variable="number"/>` on `"number": "1<sup>er</sup>"` renders
+///   the tag literally, HTML-escaped (`1&#60;sup&#62;er&#60;/sup&#62;`),
+///   confirmed by running the fixture through the real `citeproc` engine.
+///   `number` is a CSL number-type variable, not a plain text one, and is
+///   exempt from flip-flop -- converting it here would be a regression, not
+///   a fix.
+/// - `page`, `volume`, `issue`, `edition` (the latter three `StringOrNumber`)
+///   -- real citeproc-js *does* flip-flop these (verified the same way as
+///   above), but no fixture in this repo's corpus carries rich text there;
+///   recorded as a follow-up in `csl26-6eoi` rather than guessed at here.
+/// - The `extra` map (`issued-note-literal`, `available-date`,
+///   `original-author`, etc.) -- not verified; same follow-up.
+fn normalize_rich_text_markup(legacy: &mut csl_legacy::csl_json::Reference) {
+    for value in [
+        &mut legacy.title,
+        &mut legacy.container_title,
+        &mut legacy.collection_title,
+        &mut legacy.original_title,
+        &mut legacy.publisher,
+        &mut legacy.publisher_place,
+        &mut legacy.event,
+        &mut legacy.genre,
+        &mut legacy.medium,
+        &mut legacy.section,
+        &mut legacy.authority,
+        &mut legacy.abstract_text,
+        &mut legacy.archive,
+        &mut legacy.archive_location,
+        &mut legacy.dimensions,
+    ]
+    .into_iter()
+    .flatten()
+    {
+        *value = html_markup_to_djot(value);
+    }
+}
+
 impl From<csl_legacy::csl_json::Reference> for InputReference {
     #[allow(
         clippy::too_many_lines,
@@ -688,6 +617,7 @@ impl From<csl_legacy::csl_json::Reference> for InputReference {
     )]
     fn from(mut legacy: csl_legacy::csl_json::Reference) -> Self {
         legacy.parse_note_field_hacks();
+        normalize_rich_text_markup(&mut legacy);
         let cstr = legacy_extra_str(&legacy, "CSTR");
         // GB/T 7714 §7.5.4.3 publication-year substitutes, used when the
         // true issue date is unknown. Copyright is a top-level `c<year>`
@@ -1502,48 +1432,6 @@ mod tests {
     }
 
     #[test]
-    fn html_markup_to_djot_leaves_plain_text_unchanged() {
-        assert_eq!(
-            html_markup_to_djot("plain text with no markup"),
-            "plain text with no markup"
-        );
-    }
-
-    #[test]
-    fn html_markup_to_djot_converts_nocase_span() {
-        // The exact convention citeproc-js emits and the CSL test suite's
-        // own fixtures use, e.g. `textcase_TitleCaseWithFinalNocase.txt`.
-        assert_eq!(
-            html_markup_to_djot(r#"a <span class="nocase">Smith</span> pencil"#),
-            "a [Smith]{.nocase} pencil"
-        );
-    }
-
-    #[test]
-    fn html_markup_to_djot_converts_emphasis_and_strong() {
-        assert_eq!(html_markup_to_djot("<i>Homo Sapiens</i>"), "_Homo Sapiens_");
-        assert_eq!(html_markup_to_djot("<b>Loud</b>"), "*Loud*");
-    }
-
-    #[test]
-    fn html_markup_to_djot_converts_nested_emphasis_inside_nocase_span() {
-        assert_eq!(
-            html_markup_to_djot(r#"<span class="nocase"><i>DNA</i></span> Replication"#),
-            "[_DNA_]{.nocase} Replication"
-        );
-    }
-
-    #[test]
-    fn html_markup_to_djot_leaves_unrecognized_tags_and_bare_angle_brackets_literal() {
-        // Titles may legitimately contain `<`/`>` outside the fixed citeproc
-        // tag set (e.g. a math/comparison expression) -- must not be stripped.
-        assert_eq!(
-            html_markup_to_djot("<em>ignored</em> a < b"),
-            "<em>ignored</em> a < b"
-        );
-    }
-
-    #[test]
     fn legacy_title_with_nocase_html_span_converts_to_djot_case_protection() {
         // Confirms the bean csl26-zaqk regression at the conversion boundary:
         // CSL-JSON titles carry citeproc-js's literal HTML rich-text
@@ -1561,6 +1449,61 @@ mod tests {
         assert_eq!(
             converted.title(),
             Some(Title::Single("[Library of Congress]{.nocase}".to_string()))
+        );
+    }
+
+    #[test]
+    fn legacy_container_title_with_nocase_html_spans_converts_to_djot_case_protection() {
+        // The gb7714-bench regression (bean csl26-6eoi): entry gbt7714.8.6.1:5's
+        // `container-title` carries citeproc-js's literal HTML rich-text
+        // convention, same as `title` in the csl26-zaqk case above, but through
+        // a field `build_title` never sees. Must become Djot on ingestion
+        // rather than leaking verbatim into rendered output.
+        let legacy = csl_legacy::csl_json::Reference {
+            id: "gbt7714.8.6.1:5".to_string(),
+            ref_type: "book".to_string(),
+            title: Some("Advances in holographic photoelasticity".to_string()),
+            container_title: Some(
+                r#"<span class="nocase">Symposium on Applications of Holography in Mechanics</span>, August 23-25, 1971, <span class="nocase">University of Southern California</span>, <span class="nocase">Los Angeles, California</span>"#
+                    .to_string(),
+            ),
+            ..Default::default()
+        };
+
+        let converted = InputReference::from(legacy);
+
+        assert_eq!(
+            converted.container_title(),
+            Some(Title::Single(
+                "[Symposium on Applications of Holography in Mechanics]{.nocase}, \
+                 August 23-25, 1971, [University of Southern California]{.nocase}, \
+                 [Los Angeles, California]{.nocase}"
+                    .to_string()
+            ))
+        );
+    }
+
+    #[test]
+    fn normalize_rich_text_markup_converts_collection_title_and_leaves_note_untouched() {
+        // Direct test of the new central pass: confirms it reaches a field
+        // beyond `title`/`container-title` (collection-title, i.e. a book
+        // series) and confirms the deliberate exclusion of `note`, which
+        // `parse_note_field_hacks()` depends on parsing unconverted.
+        let mut legacy = csl_legacy::csl_json::Reference {
+            collection_title: Some(r#"<i>Springer Monographs</i>"#.to_string()),
+            note: Some(r#"CSTR: <span class="nocase">unrelated</span>"#.to_string()),
+            ..Default::default()
+        };
+
+        normalize_rich_text_markup(&mut legacy);
+
+        assert_eq!(
+            legacy.collection_title,
+            Some("_Springer Monographs_".to_string())
+        );
+        assert_eq!(
+            legacy.note,
+            Some(r#"CSTR: <span class="nocase">unrelated</span>"#.to_string())
         );
     }
 }
