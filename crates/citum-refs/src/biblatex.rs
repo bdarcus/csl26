@@ -12,7 +12,7 @@ use biblatex as biblatex_crate;
 use citum_schema::reference::{
     InputReference, LangID, Numbering, NumberingType, Publisher, RefID, RichText, WorkRelation,
     citeproc_markup::html_markup_to_djot,
-    contributor::{Contributor, ContributorList, StructuredName},
+    contributor::{Contributor, ContributorList, SimpleName, StructuredName},
     date::DateValue,
     types::{
         Collection, CollectionComponent, CollectionType, Monograph, MonographComponentType,
@@ -63,7 +63,11 @@ fn build_inbook_reference(ctx: BibRefContext<'_>) -> InputReference {
         r#type: MonographComponentType::Chapter,
         title: ctx.title,
         author: ctx.author,
-        translator: None,
+        // The chapter's translator belongs to the chapter, not the edited
+        // volume: `InputReference::translator()` has no container fallback
+        // (unlike `publisher()`), so a parent-only translator would be
+        // unreachable. See bean csl26-7ab8.
+        translator: ctx.translator,
         created: DateValue::new(String::new()),
         issued: ctx.issued,
         container: Some(WorkRelation::Embedded(Box::new(
@@ -74,7 +78,7 @@ fn build_inbook_reference(ctx: BibRefContext<'_>) -> InputReference {
                 short_title: None,
                 container: None,
                 editor: ctx.editor,
-                translator: ctx.translator,
+                translator: None,
                 created: DateValue::new(String::new()),
                 issued: DateValue::new(String::new()),
                 publisher: ctx.publisher,
@@ -133,7 +137,11 @@ fn build_article_reference(ctx: BibRefContext<'_>) -> InputReference {
                 title: parent_title,
                 short_title: None,
                 container: None,
-                editor: None,
+                // Journal/issue editor: `editor()` falls back to the container
+                // for `SerialComponent`, so storing it here is both correct
+                // (biblatex `editor` on `@article` names the journal editor)
+                // and reachable. See bean csl26-7ab8.
+                editor: ctx.editor,
                 contributors: Vec::new(),
                 publisher: None,
                 url: None,
@@ -203,10 +211,18 @@ pub fn input_reference_from_biblatex(entry: &biblatex_crate::Entry) -> InputRefe
         .author()
         .ok()
         .map(|p| contributors_from_biblatex_persons(&p));
-    let editor = entry.editors().ok().map(|e| {
+    let editor = entry.editors().ok().and_then(|e| {
+        // `entry.editors()` returns `Ok(vec![])` rather than `Err` when the
+        // entry has no `editor` field at all, so an empty person list must be
+        // treated as "no editor" — otherwise a bogus `contributor: []` leaks
+        // into every reference (see bean csl26-7ab8).
         let all_persons: Vec<biblatex_crate::Person> =
             e.into_iter().flat_map(|(persons, _)| persons).collect();
-        contributors_from_biblatex_persons(&all_persons)
+        if all_persons.is_empty() {
+            None
+        } else {
+            Some(contributors_from_biblatex_persons(&all_persons))
+        }
     });
     let translator = entry
         .translator()
@@ -232,7 +248,7 @@ pub fn input_reference_from_biblatex(entry: &biblatex_crate::Entry) -> InputRefe
         rich_field_str: &rich_field_str,
     };
 
-    match entry_type.as_str() {
+    let mut reference = match entry_type.as_str() {
         "book" | "mvbook" | "collection" | "mvcollection" | "manual" | "report" | "thesis"
         | "online" | "unpublished" | "proceedings" | "mvproceedings" => {
             let mono_type = match entry_type.as_str() {
@@ -252,7 +268,14 @@ pub fn input_reference_from_biblatex(entry: &biblatex_crate::Entry) -> InputRefe
             &entry_type,
             ctx,
         ))),
-    }
+    };
+    // The builders above construct references directly rather than through
+    // deserialization, so the `author`/`editor`/`translator` shorthands they set
+    // are never folded into the canonical `contributors` vec. That vec is the
+    // only field serialization preserves — without this call, contributors
+    // silently vanish on write (bean csl26-7ab8).
+    reference.normalize_contributors();
+    reference
 }
 
 /// Build a Monograph reference with common fields from biblatex.
@@ -318,36 +341,61 @@ fn biblatex_monograph(
         }),
         numbering,
         genre: rich_field_str("type"),
+        // biblatex allows `pages` on `@book` (GB/T 7714 引文页码); see
+        // `Monograph::pages` doc comment.
+        pages: field_str("pages").map(NumOrStr::Str),
         ..Default::default()
     }
 }
 
-/// Convert biblatex persons (authors/editors) to a Contributor list.
+/// Convert biblatex persons (authors/editors/translators) to a `Contributor`.
 ///
-/// Maps biblatex Person data (given name, family name, prefix, suffix)
-/// to Citum's `StructuredName` contributors wrapped in a `ContributorList`.
+/// Each person maps to a `StructuredName`, or to a `SimpleName` literal when
+/// there is no given name, prefix, or suffix to structure (see
+/// [`contributor_from_person`]). A single contributor is returned bare rather
+/// than wrapped, matching the shape `push_legacy_contributor` produces for
+/// CSL-JSON/RIS input; two or more are wrapped in a `ContributorList`.
 pub fn contributors_from_biblatex_persons(persons: &[biblatex_crate::Person]) -> Contributor {
-    let contributors: Vec<Contributor> = persons
-        .iter()
-        .map(|p| {
-            Contributor::StructuredName(StructuredName {
-                given: p.given_name.clone().into(),
-                family: p.name.clone().into(),
-                suffix: if p.suffix.is_empty() {
-                    None
-                } else {
-                    Some(p.suffix.clone())
-                },
-                dropping_particle: None,
-                non_dropping_particle: if p.prefix.is_empty() {
-                    None
-                } else {
-                    Some(p.prefix.clone())
-                },
-            })
-        })
-        .collect();
+    let mut contributors: Vec<Contributor> = persons.iter().map(contributor_from_person).collect();
+    // Match the shape the CSL-JSON/RIS paths produce (`push_legacy_contributor`,
+    // crates/citum-schema-data/src/reference/conversion/mod.rs): a single
+    // contributor serializes bare, not as a one-element `ContributorList`.
+    if contributors.len() == 1 {
+        return contributors.remove(0);
+    }
     Contributor::ContributorList(ContributorList(contributors))
+}
+
+/// Convert a single biblatex `Person` to a `Contributor`.
+///
+/// Biblatex parses a comma-less name (e.g. `{Plato}`) as family-only — the same
+/// shape institutional authors arrive in. When there is no given name, prefix,
+/// or suffix to structure, the name is emitted as a `SimpleName` literal rather
+/// than a `StructuredName` with an empty `given`, so it round-trips as an
+/// authorable mononym instead of a malformed structured name.
+fn contributor_from_person(p: &biblatex_crate::Person) -> Contributor {
+    if p.given_name.is_empty() && p.prefix.is_empty() && p.suffix.is_empty() {
+        return Contributor::SimpleName(SimpleName {
+            name: p.name.clone().into(),
+            location: None,
+            short_name: None,
+        });
+    }
+    Contributor::StructuredName(StructuredName {
+        given: p.given_name.clone().into(),
+        family: p.name.clone().into(),
+        suffix: if p.suffix.is_empty() {
+            None
+        } else {
+            Some(p.suffix.clone())
+        },
+        dropping_particle: None,
+        non_dropping_particle: if p.prefix.is_empty() {
+            None
+        } else {
+            Some(p.prefix.clone())
+        },
+    })
 }
 
 #[cfg(test)]
@@ -443,15 +491,13 @@ mod tests {
         let monograph = converted.as_monograph().expect("expected a Monograph");
         assert_eq!(
             monograph.translator,
-            Some(Contributor::ContributorList(ContributorList(vec![
-                Contributor::StructuredName(StructuredName {
-                    given: "Jane".into(),
-                    family: "Doe".into(),
-                    suffix: None,
-                    dropping_particle: None,
-                    non_dropping_particle: None,
-                })
-            ])))
+            Some(Contributor::StructuredName(StructuredName {
+                given: "Jane".into(),
+                family: "Doe".into(),
+                suffix: None,
+                dropping_particle: None,
+                non_dropping_particle: None,
+            }))
         );
     }
 
@@ -579,5 +625,180 @@ mod tests {
         let converted = input_reference_from_biblatex(&entry);
 
         assert_eq!(converted.ref_type(), expected_ref_type);
+    }
+
+    /// Serialize `reference` to YAML the same way `citum convert refs` does.
+    fn to_yaml(reference: &InputReference) -> String {
+        serde_yaml::to_string(reference).expect("reference should serialize")
+    }
+
+    #[test]
+    fn given_article_with_mononym_author_when_serialized_then_author_is_a_simple_name() {
+        // Regression test for bean csl26-7ab8: the biblatex converter builds
+        // `InputReference`s directly rather than through deserialization, so the
+        // legacy `author` shorthand it filled was never folded into the
+        // canonical `contributors` vec and vanished on write. Asserting on
+        // `.author()` (which falls back to the shorthand) would not have caught
+        // this — the assertion must cross the serialization boundary.
+        let entry = parse_single_entry("@article{key, author = {Author}, title = {Title} }");
+
+        let converted = input_reference_from_biblatex(&entry);
+
+        assert_eq!(
+            to_yaml(&converted),
+            "class: serial-component\n\
+             id: key\n\
+             type: article\n\
+             title: Title\n\
+             contributors:\n\
+             - roles:\n  \
+             - author\n  \
+             contributor:\n    \
+             name: Author\n\
+             container:\n  \
+             class: serial\n  \
+             type: academic-journal\n"
+        );
+    }
+
+    #[test]
+    fn given_article_with_structured_author_when_serialized_then_single_contributor_is_unwrapped() {
+        // A single contributor must serialize bare (`contributor: {..}`), matching
+        // the shape `push_legacy_contributor` produces for CSL-JSON/RIS input —
+        // not as a one-element `ContributorList` sequence.
+        let entry = parse_single_entry("@article{key, author = {Smith, Jane}, title = {Title} }");
+
+        let converted = input_reference_from_biblatex(&entry);
+
+        assert_eq!(
+            to_yaml(&converted),
+            "class: serial-component\n\
+             id: key\n\
+             type: article\n\
+             title: Title\n\
+             contributors:\n\
+             - roles:\n  \
+             - author\n  \
+             contributor:\n    \
+             given: Jane\n    \
+             family: Smith\n\
+             container:\n  \
+             class: serial\n  \
+             type: academic-journal\n"
+        );
+    }
+
+    #[test]
+    fn given_article_with_editor_when_serialized_then_editor_is_on_the_parent_serial() {
+        let entry = parse_single_entry(
+            "@article{key, author = {Smith, Jane}, editor = {Doe, John}, title = {Title} }",
+        );
+
+        let converted = input_reference_from_biblatex(&entry);
+
+        assert_eq!(
+            to_yaml(&converted),
+            "class: serial-component\n\
+             id: key\n\
+             type: article\n\
+             title: Title\n\
+             contributors:\n\
+             - roles:\n  \
+             - author\n  \
+             contributor:\n    \
+             given: Jane\n    \
+             family: Smith\n\
+             container:\n  \
+             class: serial\n  \
+             type: academic-journal\n  \
+             contributors:\n  \
+             - roles:\n    \
+             - editor\n    \
+             contributor:\n      \
+             given: John\n      \
+             family: Doe\n"
+        );
+    }
+
+    #[test]
+    fn given_incollection_with_translator_when_serialized_then_translator_is_on_the_component_only()
+    {
+        let entry = parse_single_entry(
+            "@incollection{key, author = {Smith, Jane}, translator = {Doe, John}, \
+             title = {Title}, booktitle = {Book} }",
+        );
+
+        let converted = input_reference_from_biblatex(&entry);
+
+        assert_eq!(
+            to_yaml(&converted),
+            "class: collection-component\n\
+             id: key\n\
+             type: chapter\n\
+             title: Title\n\
+             contributors:\n\
+             - roles:\n  \
+             - author\n  \
+             contributor:\n    \
+             given: Jane\n    \
+             family: Smith\n\
+             - roles:\n  \
+             - translator\n  \
+             contributor:\n    \
+             given: John\n    \
+             family: Doe\n\
+             container:\n  \
+             class: collection\n  \
+             type: edited-book\n  \
+             title: Book\n"
+        );
+    }
+
+    #[test]
+    fn given_book_with_pages_and_translator_when_serialized_then_both_are_present() {
+        let entry = parse_single_entry(
+            "@book{key, author = {Smith, Jane}, translator = {Doe, John}, title = {Title}, \
+             pages = {1-20} }",
+        );
+
+        let converted = input_reference_from_biblatex(&entry);
+
+        assert_eq!(
+            to_yaml(&converted),
+            "class: monograph\n\
+             id: key\n\
+             type: book\n\
+             title: Title\n\
+             contributors:\n\
+             - roles:\n  \
+             - author\n  \
+             contributor:\n    \
+             given: Jane\n    \
+             family: Smith\n\
+             - roles:\n  \
+             - translator\n  \
+             contributor:\n    \
+             given: John\n    \
+             family: Doe\n\
+             pages: 1-20\n"
+        );
+    }
+
+    #[test]
+    fn given_converted_reference_when_round_tripped_through_yaml_then_it_is_unchanged() {
+        // Proves the emitted YAML is readable by the deserializer and that
+        // `normalize_contributors` is idempotent (re-normalizing an already
+        // normalized reference must not change it).
+        let entry = parse_single_entry(
+            "@incollection{key, author = {Smith, Jane}, editor = {Doe, John}, \
+             translator = {Lee, Kim}, title = {Title}, booktitle = {Book} }",
+        );
+        let converted = input_reference_from_biblatex(&entry);
+
+        let yaml = to_yaml(&converted);
+        let round_tripped: InputReference =
+            serde_yaml::from_str(&yaml).expect("emitted YAML should deserialize");
+
+        assert_eq!(converted, round_tripped);
     }
 }
