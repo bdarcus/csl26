@@ -609,6 +609,22 @@ pub enum LinkAnchor {
 }
 
 impl Config {
+    /// Merge `other`'s multilingual block field-wise rather than replacing it.
+    ///
+    /// Replacing the whole block means a style that extends a parent and sets
+    /// any single multilingual key silently discards every inherited one — see
+    /// [`MultilingualConfig::merge`] and bean `csl26-p7kj`.
+    fn merge_multilingual(&mut self, other: &Config) {
+        let Some(other_multilingual) = &other.multilingual else {
+            return;
+        };
+        if let Some(multilingual) = &mut self.multilingual {
+            multilingual.merge(other_multilingual);
+        } else {
+            self.multilingual = Some(other_multilingual.clone());
+        }
+    }
+
     fn merge_punctuation(&mut self, other: &Config) {
         let Some(other_punctuation) = &other.punctuation else {
             return;
@@ -639,7 +655,6 @@ impl Config {
             processing,
             locale_override,
             localize,
-            multilingual,
             dates,
             titles,
             locators,
@@ -655,6 +670,7 @@ impl Config {
             custom,
         );
 
+        self.merge_multilingual(other);
         self.merge_punctuation(other);
         self.messages.extend(other.messages.clone());
 
@@ -1098,6 +1114,7 @@ impl<'de> Deserialize<'de> for Config {
 )]
 mod tests {
     use super::*;
+    use rstest::rstest;
 
     #[test]
     fn test_config_default() {
@@ -1647,5 +1664,66 @@ multilingual:
         let yaml2 = serde_yaml::to_string(&config).unwrap();
         let config2: Config = serde_yaml::from_str(&yaml2).unwrap();
         assert_eq!(config2.multilingual, config.multilingual);
+    }
+
+    /// An overlay that names one multilingual key must not discard the rest of
+    /// the inherited block. Regression for bean `csl26-p7kj`: `multilingual`
+    /// was merged whole-value, so a style extending `gb-t-7714-2025-numeric`
+    /// and adding an unrelated `scripts` entry silently dropped the inherited
+    /// `punctuation-width: mixed`, reverting Chinese punctuation to half-width.
+    #[rstest]
+    #[case::scripts_overlay(
+        "multilingual:\n  scripts:\n    Hang:\n      use-native-ordering: true\n",
+        "Hang"
+    )]
+    #[case::term_locale_overlay("multilingual:\n  term-locale: item\n", "Hani")]
+    fn given_partial_multilingual_overlay_when_merging_then_inherited_fields_survive(
+        #[case] overlay_yaml: &str,
+        #[case] expected_script_key: &str,
+    ) {
+        // given: a parent declaring several multilingual fields at once
+        let base_yaml = "\
+multilingual:
+  punctuation-width: mixed
+  preferred-script: Latn
+  scripts:
+    Hani:
+      use-native-ordering: true
+";
+        let mut base: Config = serde_yaml::from_str(base_yaml).unwrap();
+
+        // when: an overlay names only one of them
+        let overlay: Config = serde_yaml::from_str(overlay_yaml).unwrap();
+        base.merge(&overlay);
+
+        // then: the inherited fields the overlay never mentioned are preserved
+        let merged = base.multilingual.expect("merged multilingual block");
+        assert_eq!(
+            merged.punctuation_width,
+            Some(PunctuationWidth::Mixed),
+            "inherited punctuation-width must survive a partial overlay"
+        );
+        assert_eq!(merged.preferred_script.as_deref(), Some("Latn"));
+        assert!(
+            merged.scripts.contains_key(expected_script_key),
+            "expected scripts key {expected_script_key:?}, got {:?}",
+            merged.scripts.keys().collect::<Vec<_>>()
+        );
+    }
+
+    /// An overlay that does name a field still wins over the inherited value.
+    #[test]
+    fn given_multilingual_overlay_setting_a_field_when_merging_then_overlay_wins() {
+        let mut base: Config =
+            serde_yaml::from_str("multilingual:\n  punctuation-width: mixed\n").unwrap();
+        let overlay: Config =
+            serde_yaml::from_str("multilingual:\n  punctuation-width: bylan\n").unwrap();
+
+        base.merge(&overlay);
+
+        assert_eq!(
+            base.multilingual.unwrap().punctuation_width,
+            Some(PunctuationWidth::Bylan)
+        );
     }
 }
