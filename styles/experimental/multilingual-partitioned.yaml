@@ -1,7 +1,29 @@
-# Minimal style to demonstrate automatic script partitioning
+# Minimal style to demonstrate automatic bibliography partitioning.
+#
+# Partitions by LANGUAGE, not by script.
+#
+# Script partitioning (`by: script`) derives its key from the characters of
+# the author sort key and deliberately folds every CJK script into a single
+# `Hani` bucket (see `script_code_for_char` in
+# crates/citum-engine/src/sort_partitioning.rs), so it cannot separate Chinese
+# from Japanese. That is a real limitation, not a configuration mistake:
+# character evidence alone cannot answer the question. As the Unicode
+# Consortium puts it, asking whether a Han character is Chinese or Japanese is
+# "largely impossible and the attempt basically meaningless" — the same
+# character is shared by both writing systems.
+#
+# Chinese and Japanese are different languages and must be listed separately;
+# GB/T 7714—2025 §9.3.2.1 requires exactly that grouping (Chinese, Japanese,
+# Western languages, Russian, and others). Language partitioning uses the
+# item's declared `language` — positive metadata evidence — and separates them
+# correctly. Domain-expert review in discussion #828 confirmed both points.
+#
+# Note that every language you expect must appear in `order` and `headings`.
+# An unlisted language still forms its own partition, but renders with no
+# heading, so its entries read as though they belong to the section above.
 version: "0.10.0"
 info:
-  title: Multilingual Script Partitioning Demo
+  title: Multilingual Language Partitioning Demo
   id: multilingual-partitioned-demo
 extends: modern-language-association
 
@@ -13,15 +35,19 @@ options:
 bibliography:
   options:
     sort-partitioning:
-      by: script
+      by: language
       mode: sort-and-sections
-      order: [Latn, Arab, Hani, Hang]
+      order: [en, vi, ar, zh, ja, ko]
       headings:
-        Latn:
+        en:
           literal: "Western Sources"
-        Arab:
+        vi:
+          literal: "Vietnamese Sources"
+        ar:
           literal: "Arabic Sources"
-        Hani:
-          literal: "Chinese & Japanese Sources"
-        Hang:
+        zh:
+          literal: "Chinese Sources"
+        ja:
+          literal: "Japanese Sources"
+        ko:
           literal: "Korean Sources"

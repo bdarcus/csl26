@@ -116,7 +116,17 @@ references:
       name: "Nhà xuất bản Giáo dục Việt Nam"
     language: "vi"
 
-  # 7. Chinese book with Pinyin transliteration
+  # 7. Chinese book with Pinyin transliteration.
+  #
+  # 孔子 is a single, indivisible name: 孔 is the family name and 子 an
+  # honorific, NOT a given name, so it must never render as "Kǒng, Z."
+  # A name that cannot be decomposed is written as `name:` — a whole-name
+  # string — rather than `family:`/`given:` parts. `name:` still accepts the
+  # full multilingual form, so the romanization and the conventional English
+  # form ("Confucius") travel with it.
+  #
+  # Corrected per domain-expert review in discussion #828: the pinyin for
+  # 论语 is Lúnyǔ (second tone), not Lùnyǔ.
   - id: confucius_analects
     class: monograph
     type: book
@@ -124,22 +134,17 @@ references:
       original: "论语"
       lang: "zh"
       transliterations:
-        zh-Latn-pinyin: "Lùnyǔ"
+        zh-Latn-pinyin: "Lúnyǔ"
       translations:
         en: "Analects of Confucius"
     author:
-      - original:
-          family: "孔"
-          given: "子"
-        lang: "zh"
-        transliterations:
-          zh-Latn-pinyin:
-            family: "Kǒng"
-            given: "Zǐ"
-        translations:
-          en:
-            family: "Confucius"
-            given: ""
+      - name:
+          original: "孔子"
+          lang: "zh"
+          transliterations:
+            zh-Latn-pinyin: "Kǒngzǐ"
+          translations:
+            en: "Confucius"
     issued: "500 BCE"
     publisher:
       name: "人民文学出版社"
