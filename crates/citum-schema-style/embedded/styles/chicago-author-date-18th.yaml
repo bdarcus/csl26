@@ -32,7 +32,7 @@ info:
   short-name: "Chicago Author-Date"
   edition: "18th edition"
 options:
-  # multilingual, page-range-format, punctuation-in-quote, and
+  # multilingual, page-range-format, dates, punctuation-in-quote, and
   # contributors.demote-non-dropping-particle are inherited from chicago-18-base.
   locators: note
   # Chicago author-date disambiguation profile (CMOS 18): add names + global
@@ -54,7 +54,6 @@ options:
     role:
       omit:
       - translator
-  dates: long
   titles:
     # CMOS 18 title-cases nearly every reference-type title (article, book,
     # broadcast, manuscript, motion picture, song, webpage); the engine's

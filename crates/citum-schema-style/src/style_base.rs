@@ -499,7 +499,7 @@ citation:
 
     #[test]
     fn chicago_18_base_carries_shared_component_options() {
-        use crate::options::PageRangeFormat;
+        use crate::options::{DateRangeFormat, PageRangeFormat};
 
         let resolved = StyleBase::Chicago18Base.base().into_resolved();
         let options = resolved.options.expect("chicago-18-base has options");
@@ -508,6 +508,10 @@ citation:
             Some(PageRangeFormat::Chicago16),
             "shared page-range-format must be present"
         );
+        assert!(matches!(
+            options.dates.as_ref().map(|dates| &dates.range_format),
+            Some(DateRangeFormat::Chicago)
+        ));
         assert!(
             options.punctuation_in_quote,
             "shared punctuation-in-quote must be present"

@@ -3,12 +3,18 @@ info:
   description: >-
     Hidden Chicago 18 component base. Carries only the options-level rules
     shared identically by the CMOS author-date and notes heads
-    (page-range format, punctuation-in-quote, demote-non-dropping-particle,
+    (page- and date-range format, punctuation-in-quote, demote-non-dropping-particle,
     multilingual). Never rendered or discovered directly — both heads
     extend it. Rendered order stays per-style; see csl26-40n4.
 options:
   multilingual: romanized-translated
   page-range-format: chicago16
+  dates:
+    month: long
+    uncertainty-marker: "?"
+    approximation-marker: "ca. "
+    range-delimiter: "–"
+    range-format: chicago
   punctuation-in-quote: true
   contributors:
     demote-non-dropping-particle: display-and-sort

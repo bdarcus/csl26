@@ -30,7 +30,7 @@ pub use contributors::{
     NameForm, RoleLabelDefaults, RoleLabelPresentation, RoleLabelPreset, RoleOptions,
     RoleOptionsEntry, RoleRendering, ShortenListOptions,
 };
-pub use dates::{DateConfig, DateConfigEntry, NoDateForm};
+pub use dates::{DateConfig, DateConfigEntry, DateRangeFormat, NoDateForm};
 pub use integral_name_memory::{
     IntegralNameContexts, IntegralNameMemoryConfig, IntegralNameScope, OrgAbbreviationMemoryConfig,
     ResolvedIntegralNameMemoryConfig, ResolvedOrgAbbreviationMemoryConfig, ShortNameDisplay,

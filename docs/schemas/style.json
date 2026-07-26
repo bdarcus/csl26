@@ -5260,6 +5260,11 @@
           "type": "string",
           "default": "–"
         },
+        "range-format": {
+          "description": "Formatting policy for closed year ranges (default: expanded).",
+          "$ref": "#/$defs/DateRangeFormat",
+          "default": "expanded"
+        },
         "open-range-marker": {
           "description": "Marker for open-ended ranges (e.g., \"–present\"). None uses locale default.",
           "type": [
@@ -5346,6 +5351,21 @@
         "long",
         "short",
         "numeric"
+      ]
+    },
+    "DateRangeFormat": {
+      "description": "Formatting policy for closed EDTF year ranges.",
+      "oneOf": [
+        {
+          "description": "Render both endpoints in full (for example, `2021–2026`).",
+          "type": "string",
+          "const": "expanded"
+        },
+        {
+          "description": "Apply Chicago inclusive-number condensation (for example, `2021–26`).",
+          "type": "string",
+          "const": "chicago"
+        }
       ]
     },
     "NoDateForm": {

@@ -317,6 +317,12 @@ messages:
   pattern.date-year-month-day: "{$year}, {$day} de {$month}"
   pattern.date-day-month-abbr-year: "{$day} {$month} de {$year}"
   pattern.date-month-abbr-day-year: "{$month} {$day} de {$year}"
+  # Shared-year intervals keep the year outside both endpoint fragments.
+  pattern.date-range-year-month: "{$start} a {$end}, {$year}"
+  pattern.date-range-full: "{$start} a {$end} de {$year}"
+  pattern.date-range-year-month-day: "{$start} a {$end} de {$year}"
+  pattern.date-range-day-month-abbr-year: "{$start} a {$end} de {$year}"
+  pattern.date-range-month-abbr-day-year: "{$start} a {$end} de {$year}"
   date.open-ended: "presente"
 
 date-formats:
