@@ -318,6 +318,29 @@ fn test_date_rendering_range() {
 }
 
 #[test]
+fn chicago_18_condenses_edtf_year_ranges() {
+    announce_behavior(
+        "Chicago 18 condenses a closed EDTF year range using inclusive-number rules.",
+    );
+    let style = load_style("styles/embedded/chicago-author-date-18th.yaml");
+
+    let mut bib = indexmap::IndexMap::new();
+    let mut item = make_book("item1", "Smith", "J", 2021, "Title");
+    if let ClassExtension::Monograph(monograph) = item.extension_mut() {
+        monograph.issued = citum_schema::reference::DateValue::new("2021/2026".to_string());
+    }
+    bib.insert("item1".to_string(), item);
+
+    let processor = Processor::new(style, bib);
+    assert_eq!(
+        processor
+            .process_citation(&citum_schema::cite!("item1"))
+            .unwrap(),
+        "(Smith 2021–26)"
+    );
+}
+
+#[test]
 fn test_date_rendering_negative_year() {
     announce_behavior("Negative EDTF years render historical years with a locale era suffix.");
     let style = build_date_style(DateForm::Year);

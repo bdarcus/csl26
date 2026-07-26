@@ -34,14 +34,13 @@ info:
   short-name: "Chicago Notes"
   edition: "18th edition"
 options:
-  # multilingual, page-range-format, punctuation-in-quote, and
+  # multilingual, page-range-format, dates, punctuation-in-quote, and
   # contributors.demote-non-dropping-particle are inherited from chicago-18-base.
   processing: note
   substitute: editor-translator-short
   contributors:
     and: text
     delimiter-precedes-last: contextual
-  dates: long
   titles: chicago
 citation:
   delimiter: ""

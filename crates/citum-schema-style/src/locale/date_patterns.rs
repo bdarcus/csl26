@@ -44,4 +44,31 @@ impl Locale {
         };
         self.evaluator.evaluate(message, &args)
     }
+
+    /// Resolve a shared-year `pattern.date-range-*` message with pre-formatted
+    /// endpoint fragments and their common year.
+    ///
+    /// The message is evaluated only for MF2 locales. Callers fall back to
+    /// their established date-form assembly when a locale has not authored
+    /// the requested interval pattern.
+    pub fn resolve_date_range_pattern(
+        &self,
+        message_id: &str,
+        start: &str,
+        end: &str,
+        year: Option<&str>,
+    ) -> Option<String> {
+        let message = self.messages.get(message_id)?;
+        if self.evaluation.message_syntax == MessageSyntax::Static {
+            return None;
+        }
+
+        let args = MessageArgs {
+            start: (!start.is_empty()).then_some(start),
+            end: (!end.is_empty()).then_some(end),
+            year: year.filter(|value| !value.is_empty()),
+            ..MessageArgs::default()
+        };
+        self.evaluator.evaluate(message, &args)
+    }
 }

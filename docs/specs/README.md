@@ -133,6 +133,7 @@ note. The `—` marker in the Tests column means no targeted test exists yet.
 | [`CSL_TYPE_CONVERSION_CONTRACT.md`](./CSL_TYPE_CONVERSION_CONTRACT.md) — CSL 1.0.2 type vocabulary, routing closure, and note-override validation | Active | `crates/citum-schema-data/src/reference/conversion/contract_tests.rs` |
 | [`GENERALIZED_RELATIONAL_CONTAINER_MODEL.md`](./GENERALIZED_RELATIONAL_CONTAINER_MODEL.md) — recursive relational container model replacing flat variables | Active | `metadata.rs` |
 | [`DATE_MODEL.md`](./DATE_MODEL.md) — refined date model for created vs. issued distinction | Active | `metadata.rs` |
+| [`EDTF_DATE_RANGE_FORMATTING.md`](./EDTF_DATE_RANGE_FORMATTING.md) — style-configurable condensed EDTF year ranges | Active | `date.rs`, `metadata.rs` |
 | [`CALENDAR_DATE_ANNOTATIONS.md`](./CALENDAR_DATE_ANNOTATIONS.md) — EDTF dates with an optional, style-controlled opaque note | Active | `crates/citum-schema-data/src/reference/date.rs`, `crates/citum-engine/tests/date_annotations.rs` |
 | [`NUMBERING_SEMANTICS.md`](./NUMBERING_SEMANTICS.md) — canonical semantics for numbering, report, and part fields | Active | `metadata.rs` |
 | [`ARCHIVAL_UNPUBLISHED_SUPPORT.md`](./ARCHIVAL_UNPUBLISHED_SUPPORT.md) — ArchiveInfo and EprintInfo first-class source support | Active | `metadata.rs` |

@@ -121,7 +121,8 @@ limitation applies to other gendered locales, including French and Arabic.
 | `pattern.retrieved-from`, `pattern.available-at` | `$url` | Spec'd; not yet consumed by the engine |
 | `pattern.date-full` | `$year`, `$month`, `$day` | Active. See "Date assembly" below. |
 | `pattern.date-month-day` | `$month`, `$day` | Active. |
-| `pattern.date-year-month`, `pattern.date-year-month-day`, `pattern.date-day-month-abbr-year`, `pattern.date-month-abbr-day-year` | as named | Reserved — see spec `LOCALE_MESSAGES.md` §1.5. |
+| `pattern.date-year-month`, `pattern.date-year-month-day`, `pattern.date-day-month-abbr-year`, `pattern.date-month-abbr-day-year` | as named | Active. See spec `LOCALE_MESSAGES.md` §2. |
+| `pattern.date-range-<form>` | `$start`, `$end`, optional `$year` | Active for shared-year EDTF intervals. |
 | `date.open-ended` | none | "present" / "heute" / "presente" |
 
 > **Note on `pattern.*` messages.** No engine call site currently passes
@@ -174,6 +175,22 @@ A pattern that references a missing component (e.g. `pattern.date-full` uses
 `{$day}` but the input has no day) returns `None`, and the engine falls back
 to its English assembly. Author a separate `pattern.date-year-month` once
 that ID is wired if you need a no-day form to stay locale-shaped.
+
+### Shared-year date ranges
+
+For a closed range whose endpoints share a year, locales can control the
+connector and year placement with `pattern.date-range-<form>`. The engine
+passes pre-formatted endpoint fragments as `$start` and `$end`; `$year` is
+available when the selected date form normally displays a year.
+
+```yaml
+# es-ES
+messages:
+  pattern.date-range-year-month: "{$start} a {$end}, {$year}"
+```
+
+This renders a May-to-June 2026 interval as `mayo a junio, 2026`. Distinct-year
+ranges remain separately formatted endpoints in this release.
 
 ### Sourcing minority-language grammar
 

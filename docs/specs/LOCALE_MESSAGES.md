@@ -398,7 +398,7 @@ message evaluation suppresses the component rather than emitting partial glue.
 
 #### Supported `pattern.date-*` IDs
 
-One ID per engine `DateForm` variant. All six are **Active** —
+One ID per year- or day-bearing engine `DateForm` variant. All six are **Active** —
 the engine consults each pattern before falling through to hardcoded English
 assembly when the locale does not author the ID.
 
@@ -416,6 +416,26 @@ A pattern that references a missing component (e.g. `pattern.date-full` uses
 and the engine falls back to its hardcoded assembly. For inflected locales
 needing year-month-only output, author `pattern.date-year-month` (see
 `es-ES.yaml` and `eu-ES.yaml` for examples).
+
+#### Supported shared-year `pattern.date-range-*` IDs
+
+The engine evaluates these interval messages only for closed ranges whose
+endpoints share a year and include a month or season, plus `DateForm::Year`.
+`$start` and `$end` are
+reduced endpoint fragments; `$year` is supplied only for date forms that
+display a year. Without an authored interval message, the engine preserves its
+existing date-form fallback layout.
+
+| Message ID | Variables | `DateForm` | Status |
+|---|---|---|---|
+| `pattern.date-range-year` | `$start`, `$end`, `$year` | `Year` | **Active** |
+| `pattern.date-range-month` | `$start`, `$end` | `Month` | **Active** |
+| `pattern.date-range-month-day` | `$start`, `$end` | `MonthDay` | **Active** |
+| `pattern.date-range-year-month` | `$start`, `$end`, `$year` | `YearMonth` | **Active** |
+| `pattern.date-range-full` | `$start`, `$end`, `$year` | `Full` | **Active** |
+| `pattern.date-range-year-month-day` | `$start`, `$end`, `$year` | `YearMonthDay` | **Active** |
+| `pattern.date-range-day-month-abbr-year` | `$start`, `$end`, `$year` | `DayMonthAbbrYear` | **Active** |
+| `pattern.date-range-month-abbr-day-year` | `$start`, `$end`, `$year` | `MonthAbbrDayYear` | **Active** |
 
 Legacy CSL-style term keys (`page`, `et_al`, `no_date`, …) remain accessible
 via the `legacyTermAliases` map on `LocalePreset`, which redirects old keys to

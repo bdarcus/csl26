@@ -541,7 +541,7 @@ pub fn format_page_range(
                 PageRangeFormat::Minimal => format_minimal(start, end, 1),
                 PageRangeFormat::MinimalTwo => format_minimal(start, end, 2),
                 PageRangeFormat::Chicago | PageRangeFormat::Chicago16 => {
-                    format_chicago_page_range_end(s, e)
+                    format_chicago_range_end(s, e)
                 }
                 _ => end.to_string(), // Future variants: default to expanded
             };
@@ -579,9 +579,9 @@ pub fn format_minimal(start: &str, end: &str, min_digits: usize) -> String {
         .collect()
 }
 
-/// Format the second number in a Chicago Manual of Style page range.
+/// Format the second number in a Chicago Manual of Style inclusive-number range.
 #[must_use]
-fn format_chicago_page_range_end(start: u32, end: u32) -> String {
+pub(crate) fn format_chicago_range_end(start: u32, end: u32) -> String {
     // Chicago rules:
     // - start < 100: use all digits
     // - start exact multiple of 100: use all digits
@@ -614,10 +614,10 @@ fn format_chicago_page_range_end(start: u32, end: u32) -> String {
     }
 }
 
-/// Format a Chicago Manual of Style page range end.
+/// Format a Chicago Manual of Style inclusive-number range end.
 #[must_use]
 pub fn format_chicago(start: u32, end: u32) -> String {
-    format_chicago_page_range_end(start, end)
+    format_chicago_range_end(start, end)
 }
 
 #[cfg(test)]
@@ -654,7 +654,7 @@ mod tests {
             (13792, 13803, "803"),
             (12991, 13001, "3001"),
         ] {
-            assert_eq!(format_chicago_page_range_end(start, end), expected);
+            assert_eq!(format_chicago_range_end(start, end), expected);
         }
     }
 

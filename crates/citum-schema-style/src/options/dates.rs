@@ -46,6 +46,18 @@ pub enum NegativeUnspecifiedYears {
     Fuzzy,
 }
 
+/// Formatting policy for closed EDTF year ranges.
+#[derive(Debug, PartialEq, Clone, Default, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+#[serde(rename_all = "kebab-case")]
+pub enum DateRangeFormat {
+    /// Render both endpoints in full (for example, `2021–2026`).
+    #[default]
+    Expanded,
+    /// Apply Chicago inclusive-number condensation (for example, `2021–26`).
+    Chicago,
+}
+
 /// Term form for the "no date" fallback when `issued` is empty.
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
@@ -112,6 +124,9 @@ pub struct DateConfig {
     /// Delimiter for date ranges (default: en-dash "–").
     #[serde(default = "default_range_delimiter")]
     pub range_delimiter: String,
+    /// Formatting policy for closed year ranges (default: expanded).
+    #[serde(default)]
+    pub range_format: DateRangeFormat,
     /// Marker for open-ended ranges (e.g., "–present"). None uses locale default.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub open_range_marker: Option<String>,
@@ -175,6 +190,7 @@ impl Default for DateConfig {
             approximation_marker: Some("ca. ".to_string()),
             approximation_marker_suffix: None,
             range_delimiter: default_range_delimiter(),
+            range_format: DateRangeFormat::default(),
             open_range_marker: None,
             no_date_form: None,
             no_date_year_suffix_delimiter: default_no_date_year_suffix_delimiter(),
@@ -209,6 +225,25 @@ future-key: true
     #[test]
     fn defaults_no_date_year_suffix_delimiter_to_hyphen() {
         assert_eq!(DateConfig::default().no_date_year_suffix_delimiter, "-");
+    }
+
+    #[test]
+    fn defaults_range_format_to_expanded() {
+        assert!(matches!(
+            DateConfig::default().range_format,
+            DateRangeFormat::Expanded
+        ));
+    }
+
+    #[test]
+    fn parses_chicago_range_format() {
+        let yaml = r#"
+month: long
+range-format: chicago
+"#;
+        let cfg: DateConfig = serde_yaml::from_str(yaml).unwrap();
+
+        assert!(matches!(cfg.range_format, DateRangeFormat::Chicago));
     }
 
     #[test]

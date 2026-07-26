@@ -12,7 +12,7 @@ use crate::reference::{DateValue, Reference};
 use crate::values::{ComponentValues, ProcHints, ProcValues, RenderOptions};
 use citum_edtf::{Edtf, Timezone, UnspecifiedYear, Year};
 use citum_schema::locale::{GeneralTerm, TermForm};
-use citum_schema::options::dates::TimeFormat;
+use citum_schema::options::dates::{DateRangeFormat, TimeFormat};
 use citum_schema::reference::types::RefDate;
 use citum_schema::reference::{ClassExtension, WorkRelation};
 use citum_schema::template::{
@@ -324,12 +324,18 @@ fn format_closed_range(
     date_config: Option<&citum_schema::options::dates::DateConfig>,
     delimiter: &str,
 ) -> Option<String> {
+    if let Some(rendered) =
+        format_chicago_year_range(interval, form, locale, date_config, delimiter)
+    {
+        return Some(rendered);
+    }
+
     let same_year = interval.start.year.value == interval.end.year.value;
     let both_have_month =
         interval.start.month_or_season.is_some() && interval.end.month_or_season.is_some();
 
     if same_year
-        && both_have_month
+        && (both_have_month || matches!(form, DateForm::Year))
         && let Some(collapsed) = format_same_year_range(
             &interval.start,
             &interval.end,
@@ -358,12 +364,82 @@ fn format_closed_range(
     }
 }
 
+/// Format a closed year interval with Chicago's inclusive-number abbreviation.
+///
+/// EDTF represents BCE years astronomically, so this deliberately formats the
+/// displayed historical numbers rather than relying on ascending numeric input.
+fn format_chicago_year_range(
+    interval: &citum_edtf::Interval,
+    form: &DateForm,
+    locale: &citum_schema::locale::Locale,
+    date_config: Option<&citum_schema::options::dates::DateConfig>,
+    delimiter: &str,
+) -> Option<String> {
+    if !matches!(form, DateForm::Year)
+        || !matches!(
+            date_config.map(|config| &config.range_format),
+            Some(DateRangeFormat::Chicago)
+        )
+        || interval.start.year.unspecified != UnspecifiedYear::None
+        || interval.end.year.unspecified != UnspecifiedYear::None
+        || interval.start.month_or_season.is_some()
+        || interval.end.month_or_season.is_some()
+    {
+        return None;
+    }
+
+    let start_is_bce = interval.start.year.value <= 0;
+    let end_is_bce = interval.end.year.value <= 0;
+    if start_is_bce != end_is_bce || interval.end.year.value <= interval.start.year.value {
+        return None;
+    }
+
+    let start = display_year_number(interval.start.year.value)?;
+    let end = display_year_number(interval.end.year.value)?;
+    let abbreviated_end = crate::values::number::format_chicago_range_end(start, end);
+    let era = chicago_year_range_era_suffix(start_is_bce, locale, date_config);
+    Some(format!("{start}{delimiter}{abbreviated_end}{era}"))
+}
+
+fn display_year_number(year: i64) -> Option<u32> {
+    let historical_year = if year <= 0 {
+        1_i64.checked_sub(year)?
+    } else {
+        year
+    };
+    u32::try_from(historical_year).ok()
+}
+
+fn chicago_year_range_era_suffix(
+    is_bce: bool,
+    locale: &citum_schema::locale::Locale,
+    date_config: Option<&citum_schema::options::dates::DateConfig>,
+) -> String {
+    use citum_schema::options::dates::EraLabels;
+
+    let era_labels = date_config
+        .map(|config| &config.era_labels)
+        .unwrap_or(&EraLabels::Default);
+    let label = match (is_bce, era_labels) {
+        (true, EraLabels::Default) => locale.dates.before_era.as_deref(),
+        (true, EraLabels::BcAd) => locale.dates.bc.as_deref(),
+        (true, EraLabels::BceCe) => locale.dates.bce.as_deref(),
+        (false, EraLabels::Default) => None,
+        (false, EraLabels::BcAd) => locale.dates.ad.as_deref(),
+        (false, EraLabels::BceCe) => locale.dates.ce.as_deref(),
+    };
+    label
+        .filter(|value| !value.is_empty())
+        .map(|value| format!(" {value}"))
+        .unwrap_or_default()
+}
+
 /// Format a closed range whose endpoints share a year, suppressing the
 /// redundant year on one side (e.g. "May 14–June 2, 2023").
 ///
-/// Only forms with a defined month-suppressed companion collapse; other
-/// forms (e.g. abbreviated-month forms with no such companion) return
-/// `None` so the caller falls back to the uncollapsed rendering.
+/// Locale interval patterns receive reduced endpoints and the common year.
+/// When a locale has no pattern, the pre-existing English layouts remain the
+/// fallback for forms that already supported same-year suppression.
 fn format_same_year_range(
     start: &citum_edtf::Date,
     end: &citum_edtf::Date,
@@ -372,26 +448,104 @@ fn format_same_year_range(
     date_config: Option<&citum_schema::options::dates::DateConfig>,
     delimiter: &str,
 ) -> Option<String> {
-    let (start_form, end_form) = match form {
-        DateForm::Full => (DateForm::MonthDay, DateForm::Full),
-        DateForm::YearMonth => (DateForm::Month, DateForm::YearMonth),
-        DateForm::YearMonthDay => (DateForm::YearMonthDay, DateForm::MonthDay),
-        _ => return None,
-    };
+    let start_date = DateValue::new(start.to_string());
+    let end_date = DateValue::new(end.to_string());
+    let start_fragment = format_same_year_fragment(&start_date, form, locale, date_config)?;
+    let end_fragment = format_same_year_fragment(&end_date, form, locale, date_config)?;
+    let shared_year = date_form_displays_year(form)
+        .then(|| format_single_date(&start_date, &DateForm::Year, locale, date_config))
+        .flatten();
 
-    let start_str = format_single_date(
-        &DateValue::new(start.to_string()),
-        &start_form,
-        locale,
-        date_config,
-    )?;
-    let end_str = format_single_date(
-        &DateValue::new(end.to_string()),
-        &end_form,
-        locale,
-        date_config,
-    )?;
-    Some(format!("{start_str}{delimiter}{end_str}"))
+    if let Some(pattern_id) = date_range_pattern_id(form)
+        && let Some(rendered) = locale.resolve_date_range_pattern(
+            pattern_id,
+            &start_fragment,
+            &end_fragment,
+            shared_year.as_deref(),
+        )
+    {
+        return Some(rendered);
+    }
+
+    match form {
+        DateForm::Full => {
+            let end_full = format_single_date(&end_date, &DateForm::Full, locale, date_config)?;
+            Some(format!("{start_fragment}{delimiter}{end_full}"))
+        }
+        DateForm::YearMonth => {
+            let end_full =
+                format_single_date(&end_date, &DateForm::YearMonth, locale, date_config)?;
+            Some(format!("{start_fragment}{delimiter}{end_full}"))
+        }
+        DateForm::YearMonthDay => {
+            let start_full =
+                format_single_date(&start_date, &DateForm::YearMonthDay, locale, date_config)?;
+            Some(format!("{start_full}{delimiter}{end_fragment}"))
+        }
+        _ => None,
+    }
+}
+
+fn date_range_pattern_id(form: &DateForm) -> Option<&'static str> {
+    match form {
+        DateForm::Year => Some("pattern.date-range-year"),
+        DateForm::Month => Some("pattern.date-range-month"),
+        DateForm::MonthDay => Some("pattern.date-range-month-day"),
+        DateForm::YearMonth => Some("pattern.date-range-year-month"),
+        DateForm::Full => Some("pattern.date-range-full"),
+        DateForm::YearMonthDay => Some("pattern.date-range-year-month-day"),
+        DateForm::DayMonthAbbrYear => Some("pattern.date-range-day-month-abbr-year"),
+        DateForm::MonthAbbrDayYear => Some("pattern.date-range-month-abbr-day-year"),
+        _ => None,
+    }
+}
+
+fn format_same_year_fragment(
+    date: &DateValue,
+    form: &DateForm,
+    locale: &citum_schema::locale::Locale,
+    date_config: Option<&citum_schema::options::dates::DateConfig>,
+) -> Option<String> {
+    match form {
+        DateForm::Year => format_single_date(date, &DateForm::Year, locale, date_config),
+        DateForm::Month | DateForm::YearMonth => {
+            format_single_date(date, &DateForm::Month, locale, date_config)
+        }
+        DateForm::Full | DateForm::MonthDay | DateForm::YearMonthDay => {
+            format_single_date(date, &DateForm::MonthDay, locale, date_config)
+        }
+        DateForm::DayMonthAbbrYear | DateForm::MonthAbbrDayYear => {
+            format_abbreviated_month_day_fragment(date, form, locale, date_config)
+        }
+        _ => None,
+    }
+}
+
+fn format_abbreviated_month_day_fragment(
+    date: &DateValue,
+    form: &DateForm,
+    locale: &citum_schema::locale::Locale,
+    date_config: Option<&citum_schema::options::dates::DateConfig>,
+) -> Option<String> {
+    let numeric_months = date_config
+        .is_some_and(|config| config.month == citum_schema::options::MonthFormat::Numeric);
+    if numeric_months && let Some(month) = extract_month_numeric(date) {
+        return Some(match date.day() {
+            Some(day) => format!("{month}-{day:02}"),
+            None => month,
+        });
+    }
+
+    let month = extract_month(date, &locale.dates.months.short, &locale.dates.seasons);
+    if month.is_empty() {
+        return None;
+    }
+    match (form, date.day()) {
+        (DateForm::DayMonthAbbrYear, Some(day)) => Some(format!("{day} {month}")),
+        (DateForm::MonthAbbrDayYear, Some(day)) => Some(format!("{month} {day}")),
+        (_, None) => Some(month),
+        _ => None,
+    }
 }
 
 /// Append a date's opaque `note` (e.g. a source-calendar annotation), wrapped
@@ -1717,6 +1871,7 @@ mod numeric_month_tests {
 mod range_tests {
     use super::*;
     use citum_schema::locale::Locale;
+    use citum_schema::options::dates::{DateConfig, EraLabels};
 
     fn en_us() -> Locale {
         Locale::from_yaml_str(include_str!("../../../../locales/en-US.yaml"))
@@ -1732,6 +1887,33 @@ mod range_tests {
         format_date_range(&DateValue::new(edtf.to_string()), &form, locale, None)
     }
 
+    fn chicago_range(locale: &Locale, edtf: &str, form: DateForm) -> Option<String> {
+        let config = DateConfig {
+            range_format: DateRangeFormat::Chicago,
+            ..Default::default()
+        };
+        format_date_range(
+            &DateValue::new(edtf.to_string()),
+            &form,
+            locale,
+            Some(&config),
+        )
+    }
+
+    fn range_with_config(
+        locale: &Locale,
+        edtf: &str,
+        form: DateForm,
+        config: &DateConfig,
+    ) -> Option<String> {
+        format_date_range(
+            &DateValue::new(edtf.to_string()),
+            &form,
+            locale,
+            Some(config),
+        )
+    }
+
     #[test]
     fn closed_range_year_form_regression() {
         // given a closed range with distinct years and the Year form
@@ -1739,6 +1921,96 @@ mod range_tests {
         assert_eq!(
             range(&en_us(), "2020/2022", DateForm::Year).as_deref(),
             Some("2020–2022")
+        );
+    }
+
+    #[test]
+    fn chicago_year_range_condenses_the_end_year() {
+        assert_eq!(
+            chicago_range(&en_us(), "2021/2026", DateForm::Year).as_deref(),
+            Some("2021–26")
+        );
+    }
+
+    #[test]
+    fn chicago_range_format_keeps_cross_year_month_ranges_expanded() {
+        assert_eq!(
+            chicago_range(&en_us(), "2021-05/2026-06", DateForm::YearMonth).as_deref(),
+            Some("May 2021–June 2026")
+        );
+    }
+
+    #[test]
+    fn shared_year_month_range_uses_spanish_mf2_pattern() {
+        assert_eq!(
+            range(&es_es(), "2026-05/2026-06", DateForm::YearMonth).as_deref(),
+            Some("mayo a junio, 2026")
+        );
+    }
+
+    #[test]
+    fn shared_year_full_range_uses_spanish_mf2_pattern() {
+        assert_eq!(
+            range(&es_es(), "2026-05-14/2026-06-02", DateForm::Full).as_deref(),
+            Some("14 de mayo a 2 de junio de 2026")
+        );
+    }
+
+    #[test]
+    fn chicago_year_range_condenses_same_era_bce_years() {
+        let config = DateConfig {
+            range_format: DateRangeFormat::Chicago,
+            era_labels: EraLabels::BceCe,
+            ..Default::default()
+        };
+        assert_eq!(
+            range_with_config(&en_us(), "-0326/-0020", DateForm::Year, &config).as_deref(),
+            Some("327–21 BCE")
+        );
+    }
+
+    #[test]
+    fn expanded_same_era_bce_years_keep_both_endpoints() {
+        let config = DateConfig {
+            era_labels: EraLabels::BceCe,
+            ..Default::default()
+        };
+        assert_eq!(
+            range_with_config(&en_us(), "-0326/-0020", DateForm::Year, &config).as_deref(),
+            Some("327 BCE–21 BCE")
+        );
+    }
+
+    #[test]
+    fn chicago_year_range_preserves_cross_era_endpoints() {
+        let config = DateConfig {
+            range_format: DateRangeFormat::Chicago,
+            era_labels: EraLabels::BcAd,
+            ..Default::default()
+        };
+        assert_eq!(
+            range_with_config(&en_us(), "-0114/0010", DateForm::Year, &config).as_deref(),
+            Some("115 BC–10 AD")
+        );
+    }
+
+    #[test]
+    fn chicago_year_range_keeps_reversed_input_expanded() {
+        assert_eq!(
+            chicago_range(&en_us(), "2026/2021", DateForm::Year).as_deref(),
+            Some("2026–2021")
+        );
+    }
+
+    #[test]
+    fn chicago_range_format_does_not_condense_non_four_digit_or_unspecified_years() {
+        assert_eq!(
+            chicago_range(&en_us(), "0999/1000", DateForm::Year).as_deref(),
+            Some("999–1000")
+        );
+        assert_eq!(
+            chicago_range(&en_us(), "202u/203u", DateForm::Year).as_deref(),
+            Some("202X–203X")
         );
     }
 
@@ -1800,6 +2072,14 @@ mod range_tests {
         assert_eq!(
             range(&en_us(), "2023-05/2023-06", DateForm::YearMonth).as_deref(),
             Some("May–June 2023")
+        );
+    }
+
+    #[test]
+    fn chicago_range_format_keeps_same_year_month_ranges_locale_driven() {
+        assert_eq!(
+            chicago_range(&en_us(), "2026-05/2026-06", DateForm::YearMonth).as_deref(),
+            Some("May–June 2026")
         );
     }
 
