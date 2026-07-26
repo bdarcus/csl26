@@ -57,6 +57,49 @@ pub struct MultilingualConfig {
     pub term_locale: TermLocale,
 }
 
+impl MultilingualConfig {
+    /// Merge another `MultilingualConfig` into this one, with `other` taking
+    /// precedence field by field.
+    ///
+    /// Without this, `Config::merge` replaces the whole block, so a style that
+    /// extends a parent and sets any single multilingual key silently discards
+    /// every inherited one — e.g. adding a `scripts` entry to a style extending
+    /// `gb-t-7714-2025-numeric` dropped the inherited `punctuation-width: mixed`
+    /// and reverted Chinese punctuation to half-width (bean `csl26-p7kj`).
+    ///
+    /// `scripts` merges per key, so an overlay redefines only the scripts it
+    /// names. `realization_default` and `term_locale` are not `Option`, and
+    /// their defaults are indistinguishable from "unset" — both are
+    /// `skip_serializing_if`-elided at their default, so this treats a default
+    /// value as "not specified" and leaves the inherited value in place.
+    pub fn merge(&mut self, other: &MultilingualConfig) {
+        if other.title_mode.is_some() {
+            self.title_mode = other.title_mode.clone();
+        }
+        if other.name_mode.is_some() {
+            self.name_mode = other.name_mode.clone();
+        }
+        if other.preferred_script.is_some() {
+            self.preferred_script = other.preferred_script.clone();
+        }
+        if other.preferred_transliteration.is_some() {
+            self.preferred_transliteration = other.preferred_transliteration.clone();
+        }
+        if other.punctuation_width.is_some() {
+            self.punctuation_width = other.punctuation_width;
+        }
+        for (script, config) in &other.scripts {
+            self.scripts.insert(script.clone(), config.clone());
+        }
+        if !other.realization_default.is_latin() {
+            self.realization_default = other.realization_default;
+        }
+        if !other.term_locale.is_style() {
+            self.term_locale = other.term_locale;
+        }
+    }
+}
+
 /// Which locale a style's engine-supplied terms/messages/date patterns
 /// resolve against: the style's own locale, or each rendered item's
 /// effective language (the biblatex `autolang` analogue). See
