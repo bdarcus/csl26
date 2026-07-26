@@ -36,6 +36,7 @@ The citum-core workspace. Read this first to orient — then descend into the re
 |---|---|
 | `citum-analyze` | Analytic passes used in tooling and tests. |
 | `citum-edtf` | EDTF (Extended Date/Time Format) parsing. |
+| [`citum-refs`](citum-refs/README.md) | Multi-format reference ingestion (Citum YAML/JSON/CBOR, CSL-JSON, BibLaTeX, RIS); no `citum-engine` dependency. |
 
 ## Where work usually happens
 
@@ -45,6 +46,7 @@ The citum-core workspace. Read this first to orient — then descend into the re
 | Style YAML model change | `citum-schema-style` |
 | Reference / data field addition | `citum-schema-data`, then bindings |
 | New converter behavior | `citum-migrate` |
+| New input format / ingestion bug | `citum-refs` |
 | CLI command / flag | `citum-cli` |
 | FFI / bindings | `citum-engine/src/ffi/` then `citum-bindings/` |
 
