@@ -3,12 +3,22 @@ SPDX-License-Identifier: MIT OR Apache-2.0
 SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus and Citum contributors
 */
 
-//! BibLaTeX bibliography loading helpers.
+//! BibLaTeX bibliography loading and entry/field mapping helpers.
+//!
+//! [`load_biblatex`] and [`parse_biblatex_str`] are the I/O entry points; the
+//! entry/field → `InputReference` conversion logic lives in a private
+//! `mapping` submodule and is re-exported here
+//! ([`input_reference_from_biblatex`],
+//! [`contributors_from_biblatex_persons`]).
+
+mod mapping;
 
 use std::fs;
 use std::path::Path;
 
 use citum_schema::InputBibliography;
+
+pub use mapping::{contributors_from_biblatex_persons, input_reference_from_biblatex};
 
 use crate::RefsError;
 
@@ -25,7 +35,7 @@ pub fn parse_biblatex_str(src: &str) -> Result<InputBibliography, RefsError> {
         .map_err(|e| RefsError::ParseError("BibLaTeX".to_string(), e.to_string()))?;
     let references = bibliography
         .iter()
-        .map(crate::biblatex::input_reference_from_biblatex)
+        .map(mapping::input_reference_from_biblatex)
         .collect();
     Ok(InputBibliography {
         references,

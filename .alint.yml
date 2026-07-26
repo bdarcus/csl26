@@ -106,7 +106,7 @@ rules:
 
   - id: conventional-commits
     kind: git_commit_message
-    pattern: '^(Revert ".+"|fixup! .+|squash! .+|(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\((edtf|engine|schema|migrate|store|cli|server|styles|locale|i18n|ci|hooks|beans|scripts|tooling|spec|docs|release|report|examples|bindings|security|demo)\))?(!)?: [a-z].+)'
+    pattern: '^(Revert ".+"|fixup! .+|squash! .+|(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\((edtf|engine|schema|migrate|store|cli|server|styles|locale|i18n|ci|hooks|beans|scripts|tooling|spec|docs|release|refs|report|examples|bindings|security|demo)\))?(!)?: [a-z].+)'
     subject_max_length: 50
     requires_body: true
     since: "{{env.ALINT_BASE_SHA | default('origin/main')}}"

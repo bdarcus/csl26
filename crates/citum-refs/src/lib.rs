@@ -11,7 +11,7 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus and Citum contributors
 //! `citum-bindings`) may depend on it directly.
 //!
 //! BibLaTeX parsing is provided via [`formats::biblatex::load_biblatex`] and the
-//! conversion helpers in [`biblatex`].
+//! conversion helpers in [`formats::biblatex`].
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -19,8 +19,9 @@ use std::path::{Path, PathBuf};
 use indexmap::IndexMap;
 use thiserror::Error;
 
-pub mod biblatex;
 pub mod formats;
+
+pub use formats::biblatex;
 
 pub use citum_schema::InputBibliography;
 pub use citum_schema::reference::InputReference as Reference;
