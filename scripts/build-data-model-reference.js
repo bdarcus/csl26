@@ -195,12 +195,12 @@ function buildBiblatexMapping(typeMap) {
         '',
         '## Entry Type Mapping',
         '',
-        '| BibLaTeX Entry Type | Builder | Monograph Type | Notes |',
-        '|---|---|---|---|',
+        '| BibLaTeX Entry Type | Builder | Monograph Type | Collection Type | Serial Type | Notes |',
+        '|---|---|---|---|---|---|',
     ];
     for (const row of typeMap.biblatex_entry_types) {
         lines.push(
-            `| \`@${row.entry_type}\` | \`${row.builder}\` | ${row.monograph_type ? `\`${row.monograph_type}\`` : '—'} | ${row.note ? collapse(row.note) : '—'} |`
+            `| \`@${row.entry_type}\` | \`${row.builder}\` | ${row.monograph_type ? `\`${row.monograph_type}\`` : '—'} | ${row.collection_type ? `\`${row.collection_type}\`` : '—'} | ${row.serial_type ? `\`${row.serial_type}\`` : '—'} | ${row.note ? collapse(row.note) : '—'} |`
         );
     }
 

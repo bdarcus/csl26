@@ -4,97 +4,193 @@
       "entry_type": "book",
       "builder": "monograph",
       "monograph_type": "book",
+      "collection_type": null,
+      "serial_type": null,
       "note": null
     },
     {
       "entry_type": "mvbook",
       "builder": "monograph",
       "monograph_type": "book",
+      "collection_type": null,
+      "serial_type": null,
       "note": "Multi-volume book; volume-level structure is not yet modeled distinctly from a single-volume book."
     },
     {
       "entry_type": "collection",
-      "builder": "monograph",
-      "monograph_type": "book",
-      "note": "Not routed to the `Collection` reference class despite the name — a bare `@collection` carries no per-chapter structure to justify one. Whether it should be is a modeling decision, not a mapping gap."
+      "builder": "collection",
+      "monograph_type": null,
+      "collection_type": "edited-book",
+      "serial_type": null,
+      "note": null
     },
     {
       "entry_type": "mvcollection",
-      "builder": "monograph",
-      "monograph_type": "book",
-      "note": "Same as `collection`."
+      "builder": "collection",
+      "monograph_type": null,
+      "collection_type": "edited-book",
+      "serial_type": null,
+      "note": "Multi-volume collection; volume-level structure is not yet modeled distinctly."
     },
     {
       "entry_type": "manual",
       "builder": "monograph",
       "monograph_type": "manual",
+      "collection_type": null,
+      "serial_type": null,
       "note": null
     },
     {
       "entry_type": "report",
       "builder": "monograph",
       "monograph_type": "report",
+      "collection_type": null,
+      "serial_type": null,
       "note": "`techreport` aliases to `report` in the `biblatex` crate before this table sees it."
     },
     {
       "entry_type": "thesis",
       "builder": "monograph",
       "monograph_type": "thesis",
+      "collection_type": null,
+      "serial_type": null,
       "note": "`phdthesis`/`mastersthesis` alias to `thesis` in the `biblatex` crate before this table sees it."
     },
     {
       "entry_type": "online",
       "builder": "monograph",
       "monograph_type": "webpage",
+      "collection_type": null,
+      "serial_type": null,
       "note": null
     },
     {
       "entry_type": "unpublished",
       "builder": "monograph",
       "monograph_type": "manuscript",
+      "collection_type": null,
+      "serial_type": null,
       "note": null
     },
     {
       "entry_type": "proceedings",
-      "builder": "monograph",
-      "monograph_type": "book",
-      "note": "Not routed to `Collection`; see the `collection` row above."
+      "builder": "collection",
+      "monograph_type": null,
+      "collection_type": "proceedings",
+      "serial_type": null,
+      "note": "A journal-like recurring proceedings (ISSN, cited as vol(issue): pages) arrives as `@article` with a `journaltitle` instead, and is already routed to `Serial` — `@proceedings` is BibLaTeX's edited-volume case (ISBN), the same distinction the manual draws between `@article` and `@inproceedings`. `SerialType::Proceedings` exists for the journal-like case but has no BibLaTeX producer for exactly this reason."
     },
     {
       "entry_type": "mvproceedings",
-      "builder": "monograph",
-      "monograph_type": "book",
+      "builder": "collection",
+      "monograph_type": null,
+      "collection_type": "proceedings",
+      "serial_type": null,
       "note": "Same as `proceedings`."
     },
     {
       "entry_type": "inbook",
       "builder": "inbook",
       "monograph_type": null,
+      "collection_type": null,
+      "serial_type": null,
       "note": null
     },
     {
       "entry_type": "incollection",
       "builder": "inbook",
       "monograph_type": null,
+      "collection_type": null,
+      "serial_type": null,
       "note": null
     },
     {
       "entry_type": "inproceedings",
       "builder": "inbook",
       "monograph_type": null,
+      "collection_type": null,
+      "serial_type": null,
       "note": "`eventtitle`/`venue`/`eventdate` (the conference itself, distinct from `booktitle`, the proceedings volume) map onto the synthesized parent `Collection`'s `event` field (an embedded `Event`), the same shape the CSL-JSON `paper-conference` path uses. The parent `Collection` is `CollectionType::Proceedings` here, vs. `EditedBook` for `inbook`/`incollection`."
     },
     {
       "entry_type": "article",
       "builder": "article",
       "monograph_type": null,
+      "collection_type": null,
+      "serial_type": null,
       "note": null
+    },
+    {
+      "entry_type": "patent",
+      "builder": "patent",
+      "monograph_type": null,
+      "collection_type": null,
+      "serial_type": null,
+      "note": "`number` is required by the native `Patent` shape. Missing, empty, or whitespace-only values retain the generic `Document` fallback rather than creating an invalid patent."
+    },
+    {
+      "entry_type": "dataset",
+      "builder": "dataset",
+      "monograph_type": null,
+      "collection_type": null,
+      "serial_type": null,
+      "note": null
+    },
+    {
+      "entry_type": "software",
+      "builder": "software",
+      "monograph_type": null,
+      "collection_type": null,
+      "serial_type": null,
+      "note": null
+    },
+    {
+      "entry_type": "standard",
+      "builder": "standard",
+      "monograph_type": null,
+      "collection_type": null,
+      "serial_type": null,
+      "note": "Not a core BibLaTeX/BibTeX entry type -- arrives as `EntryType::Unknown(\"standard\")`. Reachable here because entry-type dispatch reads the raw string for unknown types. `number` is required by the native `Standard` shape; missing, empty, or whitespace-only values retain the generic `Document` fallback."
+    },
+    {
+      "entry_type": "periodical",
+      "builder": "monograph",
+      "monograph_type": "document",
+      "collection_type": null,
+      "serial_type": null,
+      "note": "A complete periodical issue, represented by the existing `Document` compatibility contract with canonical genre `periodical` so its issued date and back-mapped type survive. This is intentionally lossy: the current model cannot express issue → journal hierarchy or retain ISSN canonically."
+    },
+    {
+      "entry_type": "reference",
+      "builder": "monograph",
+      "monograph_type": "book",
+      "collection_type": null,
+      "serial_type": null,
+      "note": "A work of reference (encyclopedia, dictionary); same shape as `@book`."
+    },
+    {
+      "entry_type": "mvreference",
+      "builder": "monograph",
+      "monograph_type": "book",
+      "collection_type": null,
+      "serial_type": null,
+      "note": "Same as `reference`."
+    },
+    {
+      "entry_type": "inreference",
+      "builder": "inbook",
+      "monograph_type": null,
+      "collection_type": null,
+      "serial_type": null,
+      "note": "An entry in a work of reference. Uses the collection-component chapter shape with canonical genre `entry`, which back-maps to the `entry` reference type."
     },
     {
       "entry_type": "*",
       "builder": "monograph",
       "monograph_type": "document",
-      "note": "Fallback for every entry type with no dedicated builder above. Each of these is a candidate for its own builder/`ReferenceClass` — `Patent`, `Dataset`, `Software`, and `Standard` already exist as standalone reference classes in citum-schema-data::reference::types::specialized, just unused by BibLaTeX conversion today."
+      "collection_type": null,
+      "serial_type": null,
+      "note": "Fallback for every entry type with no dedicated builder above. `booklet`/`bookinbook`/`suppbook`/`suppperiodical` are candidates for their own builder rows in a future pass."
     }
   ],
   "biblatex_fields": [
@@ -145,7 +241,7 @@
       "datatype": "literal-list",
       "crate_accessor": "entry.publisher()",
       "target": "publisher.name",
-      "note": "biblatex `publisher` is an `and`-separated literal list (multiple publishers). `literal_list_str` splits and rejoins with `\"; \"`, but `Publisher.name` remains a single `MultilingualString`."
+      "note": "biblatex `publisher` is an `and`-separated literal list (multiple publishers). `literal_list_str` splits and rejoins with `\"; \"`, but `Publisher.name` is a single `MultilingualString` -- a genuine multi-publisher entry still collapses to one string; only the join delimiter changed (`\"; \"` instead of leaking the literal `and`), not the underlying single-valued field. See bean csl26-11h2's follow-ups."
     },
     {
       "field": "institution",
@@ -173,7 +269,7 @@
       "datatype": "literal-list",
       "crate_accessor": "entry.location()",
       "target": "publisher.place",
-      "note": "Alias of `address`. Same list-join handling as `publisher`; `Publisher.place` remains single-valued."
+      "note": "Alias of `address`. Same list-join handling as `publisher`, and the same single-valued-field caveat (`Publisher.place` is a single `Place`)."
     },
     {
       "field": "url",
@@ -215,7 +311,7 @@
       "datatype": "separated-value",
       "crate_accessor": null,
       "target": "keywords",
-      "note": "Split on `,` in `biblatex_monograph`; not applied outside the `Monograph` builder."
+      "note": "Split on `,` for Monograph, Collection, Patent, Dataset, Software, and Standard outputs. CollectionComponent and SerialComponent builders do not currently retain keywords."
     },
     {
       "field": "edition",
@@ -313,7 +409,7 @@
       "datatype": "verbatim",
       "crate_accessor": "entry.eprint()",
       "target": "eprint.id",
-      "note": "A nonblank identifier populates `EprintInfo` on Monograph, CollectionComponent, and SerialComponent outputs. A missing `eprinttype` is represented by an empty server. It separately promotes an otherwise generic container-less entry to `Preprint`; blank identifiers are ignored."
+      "note": "A nonblank identifier populates `EprintInfo` on Monograph, CollectionComponent, and SerialComponent outputs. A missing `eprinttype` is represented by an empty server. Separately flips the entry's `MonographType` to `Preprint`, but only when `eprint` is nonblank and there is no container signal: an `@article` with no `journaltitle`/`journal`, or a `misc`/`unpublished`/`online`/fallback entry. Other output classes do not retain eprint metadata."
     },
     {
       "field": "eprinttype",
@@ -403,8 +499,8 @@
       "field": "holder",
       "datatype": "name",
       "crate_accessor": "entry.holder()",
-      "target": null,
-      "note": "Patent holder. `Patent` already exists as a standalone reference class in citum-schema-data::reference::types::specialized, unused by BibLaTeX conversion today (see `BIBLATEX_FALLBACK`)."
+      "target": "Patent.assignee",
+      "note": "Patent holder/assignee. Only read for `@patent`."
     },
     {
       "field": "gender",
