@@ -12,6 +12,7 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus and Citum contributors
 //! [`contributors_from_biblatex_persons`]).
 
 mod mapping;
+mod tables;
 
 use std::fs;
 use std::path::Path;
@@ -19,6 +20,10 @@ use std::path::Path;
 use citum_schema::InputBibliography;
 
 pub use mapping::{contributors_from_biblatex_persons, input_reference_from_biblatex};
+pub use tables::{
+    BiblatexEntryTypeDescriptor, BiblatexFieldDescriptor, biblatex_entry_type_descriptors,
+    biblatex_field_descriptors,
+};
 
 use crate::RefsError;
 

@@ -1,0 +1,658 @@
+{
+  "biblatex_entry_types": [
+    {
+      "entry_type": "book",
+      "builder": "monograph",
+      "monograph_type": "book",
+      "note": null
+    },
+    {
+      "entry_type": "mvbook",
+      "builder": "monograph",
+      "monograph_type": "book",
+      "note": "Multi-volume book; volume-level structure is not yet modeled distinctly from a single-volume book."
+    },
+    {
+      "entry_type": "collection",
+      "builder": "monograph",
+      "monograph_type": "book",
+      "note": "Not routed to the `Collection` reference class despite the name — a bare `@collection` carries no per-chapter structure to justify one. Whether it should be is a modeling decision, not a mapping gap."
+    },
+    {
+      "entry_type": "mvcollection",
+      "builder": "monograph",
+      "monograph_type": "book",
+      "note": "Same as `collection`."
+    },
+    {
+      "entry_type": "manual",
+      "builder": "monograph",
+      "monograph_type": "manual",
+      "note": null
+    },
+    {
+      "entry_type": "report",
+      "builder": "monograph",
+      "monograph_type": "report",
+      "note": "`techreport` aliases to `report` in the `biblatex` crate before this table sees it."
+    },
+    {
+      "entry_type": "thesis",
+      "builder": "monograph",
+      "monograph_type": "thesis",
+      "note": "`phdthesis`/`mastersthesis` alias to `thesis` in the `biblatex` crate before this table sees it."
+    },
+    {
+      "entry_type": "online",
+      "builder": "monograph",
+      "monograph_type": "webpage",
+      "note": null
+    },
+    {
+      "entry_type": "unpublished",
+      "builder": "monograph",
+      "monograph_type": "manuscript",
+      "note": null
+    },
+    {
+      "entry_type": "proceedings",
+      "builder": "monograph",
+      "monograph_type": "book",
+      "note": "Not routed to `Collection`; see the `collection` row above."
+    },
+    {
+      "entry_type": "mvproceedings",
+      "builder": "monograph",
+      "monograph_type": "book",
+      "note": "Same as `proceedings`."
+    },
+    {
+      "entry_type": "inbook",
+      "builder": "inbook",
+      "monograph_type": null,
+      "note": null
+    },
+    {
+      "entry_type": "incollection",
+      "builder": "inbook",
+      "monograph_type": null,
+      "note": null
+    },
+    {
+      "entry_type": "inproceedings",
+      "builder": "inbook",
+      "monograph_type": null,
+      "note": "`eventtitle`/`venue` (the conference itself, distinct from `booktitle`, the proceedings volume) are not read — no schema slot on `CollectionComponent` today. See `BIBLATEX_FIELDS`."
+    },
+    {
+      "entry_type": "article",
+      "builder": "article",
+      "monograph_type": null,
+      "note": null
+    },
+    {
+      "entry_type": "*",
+      "builder": "monograph",
+      "monograph_type": "document",
+      "note": "Fallback for every entry type with no dedicated builder above. Each of these is a candidate for its own builder/`ReferenceClass` — `Patent`, `Dataset`, `Software`, and `Standard` already exist as standalone reference classes in citum-schema-data::reference::types::specialized, just unused by BibLaTeX conversion today."
+    }
+  ],
+  "biblatex_fields": [
+    {
+      "field": "title",
+      "datatype": "literal",
+      "crate_accessor": "entry.title()",
+      "target": "title",
+      "note": "Read via `rich_field_str`, not the crate's `title()` accessor: converts citeproc-js HTML rich-text markup (e.g. `<span class=\"nocase\">`) to Djot (bean csl26-6eoi)."
+    },
+    {
+      "field": "subtitle",
+      "datatype": "literal",
+      "crate_accessor": "entry.subtitle()",
+      "target": "title.sub",
+      "note": "Combined with `title` into a `Title::Structured` when both are present."
+    },
+    {
+      "field": "booktitle",
+      "datatype": "literal",
+      "crate_accessor": "entry.book_title()",
+      "target": "container.title (inbook/incollection/inproceedings only)",
+      "note": null
+    },
+    {
+      "field": "journaltitle",
+      "datatype": "literal",
+      "crate_accessor": "entry.journal_title()",
+      "target": "container.title (article only)",
+      "note": "Falls back to the BibTeX alias `journal` when absent."
+    },
+    {
+      "field": "date",
+      "datatype": "date",
+      "crate_accessor": "entry.date()",
+      "target": "issued",
+      "note": "Extraction reads `field_str(\"date\")` directly rather than the crate's typed `Date` accessor, so the value is stored as a raw string handed to `DateValue::new` rather than a parsed EDTF value."
+    },
+    {
+      "field": "urldate",
+      "datatype": "date",
+      "crate_accessor": "entry.url_date()",
+      "target": "accessed",
+      "note": "Same raw-string caveat as `date`."
+    },
+    {
+      "field": "publisher",
+      "datatype": "literal-list",
+      "crate_accessor": "entry.publisher()",
+      "target": "publisher.name",
+      "note": "biblatex `publisher` is an `and`-separated literal list (multiple publishers); extraction concatenates it to a single string via `rich_field_str`, discarding list structure."
+    },
+    {
+      "field": "institution",
+      "datatype": "literal-list",
+      "crate_accessor": "entry.institution()",
+      "target": "publisher.name (fallback)",
+      "note": "Falls back to `organization`, then `school`, when `publisher` is absent. Same list-flattening caveat as `publisher`."
+    },
+    {
+      "field": "organization",
+      "datatype": "literal-list",
+      "crate_accessor": "entry.fields.get(\"organization\") => Vec<Chunks>",
+      "target": "publisher.name (fallback)",
+      "note": "Same list-flattening caveat as `publisher`."
+    },
+    {
+      "field": "school",
+      "datatype": "literal-list",
+      "crate_accessor": "entry.school()",
+      "target": "publisher.name (fallback)",
+      "note": "Same list-flattening caveat as `publisher`."
+    },
+    {
+      "field": "location",
+      "datatype": "literal-list",
+      "crate_accessor": "entry.location()",
+      "target": "publisher.place",
+      "note": "Alias of `address`. Same list-flattening caveat as `publisher`."
+    },
+    {
+      "field": "url",
+      "datatype": "uri",
+      "crate_accessor": "entry.url()",
+      "target": "url",
+      "note": null
+    },
+    {
+      "field": "isbn",
+      "datatype": "verbatim",
+      "crate_accessor": null,
+      "target": "isbn",
+      "note": null
+    },
+    {
+      "field": "doi",
+      "datatype": "verbatim",
+      "crate_accessor": "entry.doi()",
+      "target": "doi",
+      "note": null
+    },
+    {
+      "field": "note",
+      "datatype": "literal",
+      "crate_accessor": null,
+      "target": "note",
+      "note": "Extracted via untyped `field_str`, not `rich_field_str` — unlike `title`/`abstract`, embedded rich-text markup in `note` is not converted to Djot."
+    },
+    {
+      "field": "abstract",
+      "datatype": "literal",
+      "crate_accessor": null,
+      "target": "abstract-text",
+      "note": null
+    },
+    {
+      "field": "keywords",
+      "datatype": "separated-value",
+      "crate_accessor": null,
+      "target": "keywords",
+      "note": "Split on `,` in `biblatex_monograph`; not applied outside the `Monograph` builder."
+    },
+    {
+      "field": "edition",
+      "datatype": "integer",
+      "crate_accessor": "entry.edition()",
+      "target": "numbering[Edition]",
+      "note": "Read via untyped `field_str`, not the crate's `PermissiveType<i64>` accessor."
+    },
+    {
+      "field": "number",
+      "datatype": "literal",
+      "crate_accessor": null,
+      "target": "numbering[Report|Number|Volume|Issue], context-dependent",
+      "note": "Overloaded by builder: `Report` on `@report`, `Number` on other monographs, `Volume` on inbook/incollection/inproceedings' parent, `Issue` on `@article`."
+    },
+    {
+      "field": "volume",
+      "datatype": "integer",
+      "crate_accessor": "entry.volume()",
+      "target": "numbering[Volume] (article only)",
+      "note": "Read via untyped `field_str`, not the crate's `PermissiveType<i64>` accessor."
+    },
+    {
+      "field": "pages",
+      "datatype": "range",
+      "crate_accessor": "entry.pages()",
+      "target": "pages",
+      "note": "Read via untyped `field_str` as a raw string; the crate's typed `PermissiveType<Vec<Range<u32>>>` accessor is not used, so a parsed page range is not available to extraction."
+    },
+    {
+      "field": "issn",
+      "datatype": "literal",
+      "crate_accessor": null,
+      "target": "container.issn (article only)",
+      "note": null
+    },
+    {
+      "field": "bibcode",
+      "datatype": "verbatim",
+      "crate_accessor": null,
+      "target": "ads-bibcode",
+      "note": "Not a BibLaTeX manual field; a nonstandard extension some astronomy-adjacent exporters emit."
+    },
+    {
+      "field": "version",
+      "datatype": "literal",
+      "crate_accessor": null,
+      "target": "version",
+      "note": null
+    },
+    {
+      "field": "type",
+      "datatype": "key",
+      "crate_accessor": "entry.type_()",
+      "target": "genre",
+      "note": null
+    },
+    {
+      "field": "langid",
+      "datatype": "key",
+      "crate_accessor": "entry.langid()",
+      "target": "language",
+      "note": null
+    },
+    {
+      "field": "language",
+      "datatype": "key",
+      "crate_accessor": "entry.language()",
+      "target": "language (fallback)",
+      "note": "Falls back from `langid` when absent."
+    },
+    {
+      "field": "author",
+      "datatype": "name",
+      "crate_accessor": "entry.author()",
+      "target": "author / contributors[author]",
+      "note": null
+    },
+    {
+      "field": "editor",
+      "datatype": "name",
+      "crate_accessor": "entry.editors()",
+      "target": "editor / contributors[editor]",
+      "note": "`entry.editors()` also returns `editora`/`editorb`/`editorc` and each field's `EditorType` (`editortype` etc: Compiler, Founder, Continuator, Redactor, Reviser, Collaborator, Organizer, Director); extraction flattens all of it to a single undifferentiated editor list and discards the `EditorType`. See bean csl26-qtur's contributor-roles follow-up."
+    },
+    {
+      "field": "translator",
+      "datatype": "name",
+      "crate_accessor": "entry.translator()",
+      "target": "translator / contributors[translator]",
+      "note": null
+    },
+    {
+      "field": "eprint",
+      "datatype": "verbatim",
+      "crate_accessor": "entry.eprint()",
+      "target": null,
+      "note": "No producer of `MonographType::Preprint` reads this. Needs a precedence rule: whether `eprint` on an otherwise-typed entry overrides the entry-type-driven mapping, or only applies to generic/misc entries."
+    },
+    {
+      "field": "eprinttype",
+      "datatype": "key",
+      "crate_accessor": "entry.eprint_type()",
+      "target": null,
+      "note": "Alias of `archiveprefix`. See `eprint`."
+    },
+    {
+      "field": "series",
+      "datatype": "literal",
+      "crate_accessor": null,
+      "target": null,
+      "note": "§2.2.1 datatype is literal, not entrykey — prior art against modeling a BibLaTeX series as a fully embedded parent `Collection`; a flat `series` field on `Monograph`/`Collection` matches the manual's own model more closely."
+    },
+    {
+      "field": "eventtitle",
+      "datatype": "literal",
+      "crate_accessor": null,
+      "target": null,
+      "note": "The conference/event name for `@inproceedings`, distinct from `booktitle` (the proceedings volume). No schema slot on `CollectionComponent` today."
+    },
+    {
+      "field": "venue",
+      "datatype": "literal",
+      "crate_accessor": null,
+      "target": null,
+      "note": "Same schema-slot gap as `eventtitle`."
+    },
+    {
+      "field": "chapter",
+      "datatype": "literal",
+      "crate_accessor": null,
+      "target": null,
+      "note": "No schema slot on `CollectionComponent` today."
+    },
+    {
+      "field": "afterword",
+      "datatype": "name",
+      "crate_accessor": "entry.afterword()",
+      "target": null,
+      "note": "Editorial sub-role field with its own typed accessor; not read."
+    },
+    {
+      "field": "annotator",
+      "datatype": "name",
+      "crate_accessor": "entry.annotator()",
+      "target": null,
+      "note": "Editorial sub-role field with its own typed accessor; not read."
+    },
+    {
+      "field": "commentator",
+      "datatype": "name",
+      "crate_accessor": "entry.commentator()",
+      "target": null,
+      "note": "Editorial sub-role field with its own typed accessor; not read."
+    },
+    {
+      "field": "foreword",
+      "datatype": "name",
+      "crate_accessor": "entry.foreword()",
+      "target": null,
+      "note": "Editorial sub-role field with its own typed accessor; not read."
+    },
+    {
+      "field": "introduction",
+      "datatype": "name",
+      "crate_accessor": "entry.introduction()",
+      "target": null,
+      "note": "Editorial sub-role field with its own typed accessor; not read."
+    },
+    {
+      "field": "holder",
+      "datatype": "name",
+      "crate_accessor": "entry.holder()",
+      "target": null,
+      "note": "Patent holder. `Patent` already exists as a standalone reference class in citum-schema-data::reference::types::specialized, unused by BibLaTeX conversion today (see `BIBLATEX_FALLBACK`)."
+    },
+    {
+      "field": "gender",
+      "datatype": "pattern",
+      "crate_accessor": "entry.gender()",
+      "target": null,
+      "note": "Documented divergence, not a pending mapping: biblatex `Gender` has six values conflating number × gender (singular/plural × feminine/masculine/neuter); Citum's `ContributorGender` has four (masculine/feminine/neuter/common), no number axis, and a `Common` value biblatex lacks. See docs/specs/GENDERED_LOCALE_TERMS.md."
+    },
+    {
+      "field": "crossref",
+      "datatype": "entrykey",
+      "crate_accessor": null,
+      "target": null,
+      "note": "Resolved transparently by `biblatex::Bibliography::parse` before Citum's mapping runs — fields inherited from the crossref'd parent are merged into `entry.fields` — so this is not a `WorkRelation` Citum needs to construct itself, unlike `related`/`relatedtype` below."
+    },
+    {
+      "field": "xdata",
+      "datatype": "entrykey",
+      "crate_accessor": null,
+      "target": null,
+      "note": "Field-splicing mechanism, resolved and removed by `biblatex::Bibliography::parse` before Citum's mapping runs, like `crossref`."
+    },
+    {
+      "field": "related",
+      "datatype": "entrykey",
+      "crate_accessor": null,
+      "target": null,
+      "note": "Typed relation to another entry (paired with `relatedtype`: `multivolume`/`origpub`/`reprint`/`translationof`/`reviewof`/…), *not* resolved by the crate. Closest BibLaTeX prior art to `WorkRelation`. See docs/specs/ORIGINAL_PUBLICATION_RELATION_SUPPORT.md."
+    },
+    {
+      "field": "relatedtype",
+      "datatype": "key",
+      "crate_accessor": null,
+      "target": null,
+      "note": "Names the relation kind for `related`; see `related`."
+    }
+  ],
+  "csl_type_map": [
+    {
+      "csl_type": "article",
+      "citum_ref_type": "preprint",
+      "note": "Bare `article` carries no container-title, so the converter treats it as a standalone preprint rather than a truncated journal article — this mirrors real-world CSL-JSON exports where a container-less `article` is an arXiv/SSRN-style preprint. See `from_preprint_ref`."
+    },
+    {
+      "csl_type": "article-journal",
+      "citum_ref_type": "article-journal",
+      "note": null
+    },
+    {
+      "csl_type": "article-magazine",
+      "citum_ref_type": "article-magazine",
+      "note": null
+    },
+    {
+      "csl_type": "article-newspaper",
+      "citum_ref_type": "article-newspaper",
+      "note": null
+    },
+    {
+      "csl_type": "bill",
+      "citum_ref_type": "document",
+      "note": "A minimal `bill` (no `authority`, `chapter-number`, or `container-title`/`volume`/`page` combination) carries none of the shape signals `from_bill_ref` uses to distinguish a hearing, bill-proceeding, or bill-record from a generic government document. See `reference/tests.rs` for the shapes that do round-trip distinctly (`test_parse_csl_bill_*`)."
+    },
+    {
+      "csl_type": "book",
+      "citum_ref_type": "book",
+      "note": null
+    },
+    {
+      "csl_type": "broadcast",
+      "citum_ref_type": "broadcast",
+      "note": null
+    },
+    {
+      "csl_type": "chapter",
+      "citum_ref_type": "chapter",
+      "note": null
+    },
+    {
+      "csl_type": "classic",
+      "citum_ref_type": "classic",
+      "note": null
+    },
+    {
+      "csl_type": "collection",
+      "citum_ref_type": "collection",
+      "note": null
+    },
+    {
+      "csl_type": "dataset",
+      "citum_ref_type": "dataset",
+      "note": null
+    },
+    {
+      "csl_type": "document",
+      "citum_ref_type": "document",
+      "note": null
+    },
+    {
+      "csl_type": "entry",
+      "citum_ref_type": "entry",
+      "note": null
+    },
+    {
+      "csl_type": "entry-dictionary",
+      "citum_ref_type": "entry-dictionary",
+      "note": null
+    },
+    {
+      "csl_type": "entry-encyclopedia",
+      "citum_ref_type": "entry-encyclopedia",
+      "note": null
+    },
+    {
+      "csl_type": "event",
+      "citum_ref_type": "event",
+      "note": null
+    },
+    {
+      "csl_type": "figure",
+      "citum_ref_type": "figure",
+      "note": null
+    },
+    {
+      "csl_type": "graphic",
+      "citum_ref_type": "graphic",
+      "note": null
+    },
+    {
+      "csl_type": "hearing",
+      "citum_ref_type": "hearing",
+      "note": null
+    },
+    {
+      "csl_type": "interview",
+      "citum_ref_type": "interview",
+      "note": null
+    },
+    {
+      "csl_type": "legal_case",
+      "citum_ref_type": "legal-case",
+      "note": "The CSL 1.0.2 spelling uses an underscore; it canonicalizes to the hyphenated `legal-case` on output, matching this codebase's convention of canonicalizing underscore CSL spellings to hyphens (see also `motion_picture`, `musical_score`, `personal_communication`)."
+    },
+    {
+      "csl_type": "legislation",
+      "citum_ref_type": "statute",
+      "note": "`legislation` is the CSL 1.0.2 closed-vocabulary type; it routes to the same converter as the `statute` extension spelling and shares its canonical output."
+    },
+    {
+      "csl_type": "manuscript",
+      "citum_ref_type": "manuscript",
+      "note": null
+    },
+    {
+      "csl_type": "map",
+      "citum_ref_type": "map",
+      "note": null
+    },
+    {
+      "csl_type": "motion_picture",
+      "citum_ref_type": "motion-picture",
+      "note": "Underscore CSL spelling canonicalizes to hyphenated output; see `legal_case`."
+    },
+    {
+      "csl_type": "musical_score",
+      "citum_ref_type": "musical-score",
+      "note": "Underscore CSL spelling canonicalizes to hyphenated output; see `legal_case`."
+    },
+    {
+      "csl_type": "pamphlet",
+      "citum_ref_type": "pamphlet",
+      "note": null
+    },
+    {
+      "csl_type": "paper-conference",
+      "citum_ref_type": "paper-conference",
+      "note": null
+    },
+    {
+      "csl_type": "patent",
+      "citum_ref_type": "patent",
+      "note": null
+    },
+    {
+      "csl_type": "performance",
+      "citum_ref_type": "performance",
+      "note": null
+    },
+    {
+      "csl_type": "periodical",
+      "citum_ref_type": "periodical",
+      "note": null
+    },
+    {
+      "csl_type": "personal_communication",
+      "citum_ref_type": "personal-communication",
+      "note": "Underscore CSL spelling canonicalizes to hyphenated output; see `legal_case`."
+    },
+    {
+      "csl_type": "post",
+      "citum_ref_type": "post",
+      "note": null
+    },
+    {
+      "csl_type": "post-weblog",
+      "citum_ref_type": "post-weblog",
+      "note": null
+    },
+    {
+      "csl_type": "regulation",
+      "citum_ref_type": "regulation",
+      "note": null
+    },
+    {
+      "csl_type": "report",
+      "citum_ref_type": "report",
+      "note": null
+    },
+    {
+      "csl_type": "review",
+      "citum_ref_type": "review",
+      "note": null
+    },
+    {
+      "csl_type": "review-book",
+      "citum_ref_type": "review-book",
+      "note": null
+    },
+    {
+      "csl_type": "software",
+      "citum_ref_type": "software",
+      "note": null
+    },
+    {
+      "csl_type": "song",
+      "citum_ref_type": "song",
+      "note": null
+    },
+    {
+      "csl_type": "speech",
+      "citum_ref_type": "speech",
+      "note": null
+    },
+    {
+      "csl_type": "standard",
+      "citum_ref_type": "standard",
+      "note": null
+    },
+    {
+      "csl_type": "thesis",
+      "citum_ref_type": "thesis",
+      "note": null
+    },
+    {
+      "csl_type": "treaty",
+      "citum_ref_type": "treaty",
+      "note": null
+    },
+    {
+      "csl_type": "webpage",
+      "citum_ref_type": "webpage",
+      "note": null
+    }
+  ]
+}

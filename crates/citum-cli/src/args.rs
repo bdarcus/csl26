@@ -84,6 +84,13 @@ pub(crate) enum SchemaType {
     AbbrevMap,
     /// JSON-RPC server method parameter schemas
     Server,
+    /// Declarative BibLaTeX/CSL-JSON ↔ Citum type and field mapping tables
+    /// (not a JSON Schema — a data dump consumed by
+    /// `scripts/build-data-model-reference.js` to generate
+    /// `docs/reference/BIBLATEX_MAPPING.md` and
+    /// `docs/reference/generated/CSL_JSON_MAPPING.md`).
+    #[value(name = "type-map")]
+    TypeMap,
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum, Debug)]
