@@ -1,0 +1,9 @@
+# Structural class: serial — a serial publication (journal, magazine,
+# newspaper) treated as a standalone reference, e.g. for citing a journal's
+# editorial policy rather than one of its articles.
+references:
+  - id: nature-journal
+    class: serial
+    type: academic-journal
+    title: Nature
+    issn: "0028-0836"

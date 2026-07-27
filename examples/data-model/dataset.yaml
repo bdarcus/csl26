@@ -1,0 +1,13 @@
+# Flat class: dataset — a specialized reference class outside the five
+# structural classes, with no `type` discriminator at all: `required` on this
+# class is just `class` itself.
+references:
+  - id: gapminder2023
+    class: dataset
+    title: Gapminder World Development Indicators
+    author:
+      - name: Gapminder Foundation
+    issued: "2023"
+    version: "2023-08"
+    doi: "10.5281/zenodo.8253260"
+    repository: Zenodo

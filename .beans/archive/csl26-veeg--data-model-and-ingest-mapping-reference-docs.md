@@ -1,7 +1,7 @@
 ---
 # csl26-veeg
 title: Data model and ingest mapping reference docs
-status: todo
+status: completed
 type: task
 priority: normal
 tags:
@@ -9,7 +9,7 @@ tags:
     - schema
     - conversion
 created_at: 2026-07-27T12:20:16Z
-updated_at: 2026-07-27T13:54:14Z
+updated_at: 2026-07-27T14:24:27Z
 blocked_by:
     - csl26-qtur
 ---
@@ -195,3 +195,48 @@ required frontmatter for `docs/reference/`.
 `csl26-11h2` should be updated (not closed) once those land: its editor-roles,
 series, and field_str/Chunk::Math items are superseded by the beans above; the
 remaining items become tractable against the generated gap table this PR produces.
+
+## Summary of Changes
+
+Delivered all five deliverables from the bean body, generated from PR 1's
+(csl26-qtur) declarative BibLaTeX/CSL-type mapping tables:
+
+- `scripts/build-data-model-reference.js` — new generator reading
+  `docs/schemas/bib.json` and `docs/schemas/type-map.json`.
+- `docs/reference/generated/DATA_MODEL_FIELDS.md` — field tables + closed
+  vocabularies for all 18 `InputReference` classes, generated from the
+  JSON Schema.
+- `docs/reference/generated/CSL_JSON_MAPPING.md` — CSL 1.0.2 type mapping
+  table, generated from `type-map.json`'s `csl_type_map`.
+- `docs/reference/BIBLATEX_MAPPING.md` — fully replaced with generated
+  content (entry-type table, currently-read field table, "Not Yet Mapped"
+  gap table) from the same source.
+- `docs/reference/DATA_MODEL.md` — hand-written narrative (ingest
+  architecture, reference classes, class discriminator, containers,
+  contributors, dates/titles/rich-text/forward-compat, BibLaTeX §2.2.1
+  prior-art table); added to `scripts/build-doc-pages.js`'s `PAGES` so it
+  renders as `docs/reference/data-model.html`.
+- `docs/reference/NATIVE_FORMAT.md` — generated from 7 worked examples
+  under `examples/data-model/*.yaml` (5 structural classes + patent +
+  dataset), verified by a new round-trip test
+  (`crates/citum-refs/tests/verify_data_model_examples.rs`).
+- Drift control: `just schema-gen` now also runs the generator; a new CI
+  step in `rust-ci` diffs generator output (via `--out-dir`) against the
+  committed files; manually confirmed the gate fails on a tampered
+  `type-map.json` row.
+- `docs/reference.html`, `docs/README.md` updated with cards/index entries.
+- One line added to `CLAUDE.md`'s schema-regeneration rule.
+
+Verification: `just pre-commit` green (2215 tests), drift gate confirmed to
+actually fail on tampered input, all doc-page builds idempotent on unrelated
+pages.
+
+Follow-ups from the bean's own "Follow-up beans to create after this PR"
+list were **not** filed as new beans (flagged by Bruce mid-session as
+PR/bean-proliferation risk). Instead: the BibLaTeX-conversion-code items
+(datatype-driven extraction rewrite, EditorType-discarding, series field)
+were folded into the existing `csl26-11h2` bean, which already tracked
+overlapping ground — see its new "Cross-reference" section. The two
+docs-only items (RIS mapping reference, `TYPE_SYSTEM_ARCHITECTURE.md` Draft
+status) are left as prose in `DATA_MODEL.md`'s own Follow-ups section rather
+than tracked separately.

@@ -17,7 +17,8 @@ test:
 # Regenerate schemas when crates/citum-cli or schema crates change
 schema-gen:
     ./scripts/dev-env.sh cargo run --bin citum --features schema -- schema --out-dir docs/schemas
-    git add docs/schemas/
+    node scripts/build-data-model-reference.js
+    git add docs/schemas/ docs/reference/
 
 # Bootstrap the development environment (setup can be 'minimal' or 'full')
 bootstrap setup="minimal":
