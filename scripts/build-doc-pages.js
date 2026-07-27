@@ -45,7 +45,39 @@ const PAGES = [
         description:
             'Current strategy for migrating CSL 1.0 styles into Citum: hybrid XML pipeline and LLM-authored templates.',
     },
+    {
+        src: 'reference/NATIVE_FORMAT.md',
+        out: 'reference/native-format.html',
+        title: 'Native format examples',
+        kicker: 'Reference',
+        description: 'Worked, test-backed native-YAML examples for every InputReference class.',
+    },
+    {
+        src: 'reference/BIBLATEX_MAPPING.md',
+        out: 'reference/biblatex-mapping.html',
+        title: 'BibLaTeX field mapping',
+        kicker: 'Reference',
+        description: 'Reference mapping between biblatex field names and the Citum input data model.',
+    },
+    {
+        src: 'reference/generated/DATA_MODEL_FIELDS.md',
+        out: 'reference/generated/data-model-fields.html',
+        title: 'Data model field reference',
+        kicker: 'Reference',
+        description: 'Generated field tables and closed vocabularies for every InputReference class.',
+    },
+    {
+        src: 'reference/generated/CSL_JSON_MAPPING.md',
+        out: 'reference/generated/csl-json-mapping.html',
+        title: 'CSL-JSON type mapping',
+        kicker: 'Reference',
+        description: 'Generated mapping from CSL 1.0.2 types to Citum reference types.',
+    },
 ];
+
+// src -> out, used to rewrite cross-page markdown links (e.g. "NATIVE_FORMAT.md")
+// to the rendered .html path instead of leaving them pointed at raw markdown.
+const PAGE_MAP = new Map(PAGES.map((p) => [p.src, p.out]));
 
 const renderer = new marked.Renderer();
 
@@ -63,7 +95,55 @@ renderer.heading = function (arg1, arg2) {
     return `<h${level}>${marked.parseInline(text)}</h${level}>`;
 };
 
+// Mutable per-page context the link renderer below closes over; set before
+// each marked.parse() call in build().
+let currentSrcDir = '';
+let currentRootPrefix = '';
+
+const baseLink = renderer.link.bind(renderer);
+
+// Rewrite relative .md links that resolve to another page in PAGES (e.g.
+// DATA_MODEL.md linking to "NATIVE_FORMAT.md") to that page's rendered .html
+// path. Links to markdown that isn't in PAGES (most "see also" references)
+// are left as-is, since raw GitHub markdown is still the correct target for
+// those until they're added here too.
+renderer.link = function (token) {
+    const href = token.href || '';
+    const isRelative = !/^([a-z][a-z0-9+.-]*:)?\/\//i.test(href) && !href.startsWith('#');
+    if (isRelative) {
+        const hashIndex = href.indexOf('#');
+        const pathPart = hashIndex === -1 ? href : href.slice(0, hashIndex);
+        const hash = hashIndex === -1 ? '' : href.slice(hashIndex);
+        if (pathPart.endsWith('.md')) {
+            const resolvedSrc = path.posix.normalize(path.posix.join(currentSrcDir, pathPart));
+            const mappedOut = PAGE_MAP.get(resolvedSrc);
+            if (mappedOut) {
+                return baseLink({ ...token, href: currentRootPrefix + mappedOut + hash });
+            }
+        }
+    }
+    return baseLink(token);
+};
+
+const baseTable = renderer.table.bind(renderer);
+
+// Wrap generated tables in the themed shell (border, rounded corners, its own
+// horizontal scroll) instead of a bare <table> — needed for the wide field
+// tables in generated/DATA_MODEL_FIELDS.md so the page body never scrolls
+// sideways.
+renderer.table = function (token) {
+    const html = baseTable(token).replace('<table>', '<table class="doc-table">');
+    return `<div class="doc-table-shell">${html}</div>`;
+};
+
 marked.setOptions({ renderer });
+
+// The four generated reference docs open with a "do not edit" banner comment
+// meant for repo contributors, not site readers; strip any single leading
+// HTML comment line before rendering.
+function stripLeadingComment(md) {
+    return md.replace(/^<!--[^\n]*-->\n+/, '');
+}
 
 const TEMPLATE = `<!-- PAGE_ID: docs -->
 <!doctype html>
@@ -117,9 +197,12 @@ function build() {
             process.exit(1);
         }
 
-        const md = fs.readFileSync(srcPath, 'utf8');
-        const body = marked.parse(md);
+        const md = stripLeadingComment(fs.readFileSync(srcPath, 'utf8'));
         const rootPrefix = rootPrefixFor(page.out);
+
+        currentSrcDir = path.posix.dirname(page.src);
+        currentRootPrefix = rootPrefix;
+        const body = marked.parse(md);
 
         const html = TEMPLATE
             .replace(/{{TITLE}}/g, page.title)

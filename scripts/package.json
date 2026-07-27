@@ -1,6 +1,7 @@
 {
   "scripts": {
     "build:docs": "node build-author-guide.js",
+    "build:pages": "node build-doc-pages.js",
     "build:layout": "node build-layout.js",
     "build:embedded-template-runtime": "node build-embedded-template-runtime.js"
   },

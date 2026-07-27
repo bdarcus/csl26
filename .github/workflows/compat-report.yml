@@ -75,6 +75,7 @@ jobs:
 
       - name: Build documentation guides
         run: |
+          npm run build:pages --prefix scripts
           npm run build:layout --prefix scripts
           npm run build:docs --prefix scripts
 

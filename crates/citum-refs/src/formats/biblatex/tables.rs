@@ -340,7 +340,7 @@ pub(super) const BIBLATEX_FIELDS: &[BiblatexFieldMapping] = &[
         crate_accessor: Some("entry.title()"),
         target: BiblatexFieldTarget::Mapped("title"),
         note: Some(
-            "Read via `rich_field_str`, not the crate's `title()` accessor: converts citeproc-js HTML rich-text markup (e.g. `<span class=\"nocase\">`) to Djot (bean csl26-6eoi).",
+            "Read via `rich_field_str`, not the crate's `title()` accessor: converts citeproc-js HTML rich-text markup (e.g. `<span class=\"nocase\">`) to Djot.",
         ),
     },
     BiblatexFieldMapping {
@@ -388,7 +388,7 @@ pub(super) const BIBLATEX_FIELDS: &[BiblatexFieldMapping] = &[
         crate_accessor: Some("entry.publisher()"),
         target: BiblatexFieldTarget::Mapped("publisher.name"),
         note: Some(
-            "biblatex `publisher` is an `and`-separated literal list (multiple publishers). `literal_list_str` splits and rejoins with `\"; \"`, but `Publisher.name` is a single `MultilingualString` -- a genuine multi-publisher entry still collapses to one string; only the join delimiter changed (`\"; \"` instead of leaking the literal `and`), not the underlying single-valued field. See bean csl26-11h2's follow-ups.",
+            "biblatex `publisher` is an `and`-separated literal list (multiple publishers). `literal_list_str` splits and rejoins with `\"; \"`, but `Publisher.name` is a single `MultilingualString` -- a genuine multi-publisher entry still collapses to one string; only the join delimiter changed (`\"; \"` instead of leaking the literal `and`), not the underlying single-valued field.",
         ),
     },
     BiblatexFieldMapping {

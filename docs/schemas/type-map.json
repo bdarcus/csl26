@@ -199,7 +199,7 @@
       "datatype": "literal",
       "crate_accessor": "entry.title()",
       "target": "title",
-      "note": "Read via `rich_field_str`, not the crate's `title()` accessor: converts citeproc-js HTML rich-text markup (e.g. `<span class=\"nocase\">`) to Djot (bean csl26-6eoi)."
+      "note": "Read via `rich_field_str`, not the crate's `title()` accessor: converts citeproc-js HTML rich-text markup (e.g. `<span class=\"nocase\">`) to Djot."
     },
     {
       "field": "subtitle",
@@ -241,7 +241,7 @@
       "datatype": "literal-list",
       "crate_accessor": "entry.publisher()",
       "target": "publisher.name",
-      "note": "biblatex `publisher` is an `and`-separated literal list (multiple publishers). `literal_list_str` splits and rejoins with `\"; \"`, but `Publisher.name` is a single `MultilingualString` -- a genuine multi-publisher entry still collapses to one string; only the join delimiter changed (`\"; \"` instead of leaking the literal `and`), not the underlying single-valued field. See bean csl26-11h2's follow-ups."
+      "note": "biblatex `publisher` is an `and`-separated literal list (multiple publishers). `literal_list_str` splits and rejoins with `\"; \"`, but `Publisher.name` is a single `MultilingualString` -- a genuine multi-publisher entry still collapses to one string; only the join delimiter changed (`\"; \"` instead of leaking the literal `and`), not the underlying single-valued field."
     },
     {
       "field": "institution",
