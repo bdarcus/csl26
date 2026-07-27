@@ -11,24 +11,32 @@ generated; do not hand-edit rows here, edit `tables.rs` and run
 
 ## Entry Type Mapping
 
-| BibLaTeX Entry Type | Builder | Monograph Type | Notes |
-|---|---|---|---|
-| `@book` | `monograph` | `book` | — |
-| `@mvbook` | `monograph` | `book` | Multi-volume book; volume-level structure is not yet modeled distinctly from a single-volume book. |
-| `@collection` | `monograph` | `book` | Not routed to the `Collection` reference class despite the name — a bare `@collection` carries no per-chapter structure to justify one. Whether it should be is a modeling decision, not a mapping gap. |
-| `@mvcollection` | `monograph` | `book` | Same as `collection`. |
-| `@manual` | `monograph` | `manual` | — |
-| `@report` | `monograph` | `report` | `techreport` aliases to `report` in the `biblatex` crate before this table sees it. |
-| `@thesis` | `monograph` | `thesis` | `phdthesis`/`mastersthesis` alias to `thesis` in the `biblatex` crate before this table sees it. |
-| `@online` | `monograph` | `webpage` | — |
-| `@unpublished` | `monograph` | `manuscript` | — |
-| `@proceedings` | `monograph` | `book` | Not routed to `Collection`; see the `collection` row above. |
-| `@mvproceedings` | `monograph` | `book` | Same as `proceedings`. |
-| `@inbook` | `inbook` | — | — |
-| `@incollection` | `inbook` | — | — |
-| `@inproceedings` | `inbook` | — | `eventtitle`/`venue`/`eventdate` (the conference itself, distinct from `booktitle`, the proceedings volume) map onto the synthesized parent `Collection`'s `event` field (an embedded `Event`), the same shape the CSL-JSON `paper-conference` path uses. The parent `Collection` is `CollectionType::Proceedings` here, vs. `EditedBook` for `inbook`/`incollection`. |
-| `@article` | `article` | — | — |
-| `@*` | `monograph` | `document` | Fallback for every entry type with no dedicated builder above. Each of these is a candidate for its own builder/`ReferenceClass` — `Patent`, `Dataset`, `Software`, and `Standard` already exist as standalone reference classes in citum-schema-data::reference::types::specialized, just unused by BibLaTeX conversion today. |
+| BibLaTeX Entry Type | Builder | Monograph Type | Collection Type | Serial Type | Notes |
+|---|---|---|---|---|---|
+| `@book` | `monograph` | `book` | — | — | — |
+| `@mvbook` | `monograph` | `book` | — | — | Multi-volume book; volume-level structure is not yet modeled distinctly from a single-volume book. |
+| `@collection` | `collection` | — | `edited-book` | — | — |
+| `@mvcollection` | `collection` | — | `edited-book` | — | Multi-volume collection; volume-level structure is not yet modeled distinctly. |
+| `@manual` | `monograph` | `manual` | — | — | — |
+| `@report` | `monograph` | `report` | — | — | `techreport` aliases to `report` in the `biblatex` crate before this table sees it. |
+| `@thesis` | `monograph` | `thesis` | — | — | `phdthesis`/`mastersthesis` alias to `thesis` in the `biblatex` crate before this table sees it. |
+| `@online` | `monograph` | `webpage` | — | — | — |
+| `@unpublished` | `monograph` | `manuscript` | — | — | — |
+| `@proceedings` | `collection` | — | `proceedings` | — | A journal-like recurring proceedings (ISSN, cited as vol(issue): pages) arrives as `@article` with a `journaltitle` instead, and is already routed to `Serial` — `@proceedings` is BibLaTeX's edited-volume case (ISBN), the same distinction the manual draws between `@article` and `@inproceedings`. `SerialType::Proceedings` exists for the journal-like case but has no BibLaTeX producer for exactly this reason. |
+| `@mvproceedings` | `collection` | — | `proceedings` | — | Same as `proceedings`. |
+| `@inbook` | `inbook` | — | — | — | — |
+| `@incollection` | `inbook` | — | — | — | — |
+| `@inproceedings` | `inbook` | — | — | — | `eventtitle`/`venue`/`eventdate` (the conference itself, distinct from `booktitle`, the proceedings volume) map onto the synthesized parent `Collection`'s `event` field (an embedded `Event`), the same shape the CSL-JSON `paper-conference` path uses. The parent `Collection` is `CollectionType::Proceedings` here, vs. `EditedBook` for `inbook`/`incollection`. |
+| `@article` | `article` | — | — | — | — |
+| `@patent` | `patent` | — | — | — | `number` is required by the native `Patent` shape. Missing, empty, or whitespace-only values retain the generic `Document` fallback rather than creating an invalid patent. |
+| `@dataset` | `dataset` | — | — | — | — |
+| `@software` | `software` | — | — | — | — |
+| `@standard` | `standard` | — | — | — | Not a core BibLaTeX/BibTeX entry type -- arrives as `EntryType::Unknown("standard")`. Reachable here because entry-type dispatch reads the raw string for unknown types. `number` is required by the native `Standard` shape; missing, empty, or whitespace-only values retain the generic `Document` fallback. |
+| `@periodical` | `monograph` | `document` | — | — | A complete periodical issue, represented by the existing `Document` compatibility contract with canonical genre `periodical` so its issued date and back-mapped type survive. This is intentionally lossy: the current model cannot express issue → journal hierarchy or retain ISSN canonically. |
+| `@reference` | `monograph` | `book` | — | — | A work of reference (encyclopedia, dictionary); same shape as `@book`. |
+| `@mvreference` | `monograph` | `book` | — | — | Same as `reference`. |
+| `@inreference` | `inbook` | — | — | — | An entry in a work of reference. Uses the collection-component chapter shape with canonical genre `entry`, which back-maps to the `entry` reference type. |
+| `@*` | `monograph` | `document` | — | — | Fallback for every entry type with no dedicated builder above. `booklet`/`bookinbook`/`suppbook`/`suppperiodical` are candidates for their own builder rows in a future pass. |
 
 ## Field Mapping: Currently Read
 
@@ -40,17 +48,17 @@ generated; do not hand-edit rows here, edit `tables.rs` and run
 | `journaltitle` | literal | `entry.journal_title()` | container.title (article only) | Falls back to the BibTeX alias `journal` when absent. |
 | `date` | date | `entry.date()` | issued | Extraction reads `field_str("date")` directly rather than the crate's typed `Date` accessor, so the value is stored as a raw string handed to `DateValue::new` rather than a parsed EDTF value. |
 | `urldate` | date | `entry.url_date()` | accessed | Same raw-string caveat as `date`. |
-| `publisher` | literal-list | `entry.publisher()` | publisher.name | biblatex `publisher` is an `and`-separated literal list (multiple publishers). `literal_list_str` splits and rejoins with `"; "`, but `Publisher.name` remains a single `MultilingualString`. |
+| `publisher` | literal-list | `entry.publisher()` | publisher.name | biblatex `publisher` is an `and`-separated literal list (multiple publishers). `literal_list_str` splits and rejoins with `"; "`, but `Publisher.name` is a single `MultilingualString` -- a genuine multi-publisher entry still collapses to one string; only the join delimiter changed (`"; "` instead of leaking the literal `and`), not the underlying single-valued field. See bean csl26-11h2's follow-ups. |
 | `institution` | literal-list | `entry.institution()` | publisher.name (fallback) | Falls back to `organization`, then `school`, when `publisher` is absent. Same list-join handling as `publisher`. |
 | `organization` | literal-list | `entry.fields.get("organization") => Vec<Chunks>` | publisher.name (fallback) | Same list-join handling as `publisher`. |
 | `school` | literal-list | `entry.school()` | publisher.name (fallback) | Same list-join handling as `publisher`. |
-| `location` | literal-list | `entry.location()` | publisher.place | Alias of `address`. Same list-join handling as `publisher`; `Publisher.place` remains single-valued. |
+| `location` | literal-list | `entry.location()` | publisher.place | Alias of `address`. Same list-join handling as `publisher`, and the same single-valued-field caveat (`Publisher.place` is a single `Place`). |
 | `url` | uri | `entry.url()` | url | — |
 | `isbn` | verbatim | — | isbn | — |
 | `doi` | verbatim | `entry.doi()` | doi | — |
 | `note` | literal | — | note | Extracted via untyped `field_str`, not `rich_field_str` — unlike `title`/`abstract`, embedded rich-text markup in `note` is not converted to Djot. |
 | `abstract` | literal | — | abstract-text | — |
-| `keywords` | separated-value | — | keywords | Split on `,` in `biblatex_monograph`; not applied outside the `Monograph` builder. |
+| `keywords` | separated-value | — | keywords | Split on `,` for Monograph, Collection, Patent, Dataset, Software, and Standard outputs. CollectionComponent and SerialComponent builders do not currently retain keywords. |
 | `edition` | integer | `entry.edition()` | numbering[Edition] | Read via untyped `field_str`, not the crate's `PermissiveType<i64>` accessor. |
 | `number` | literal | — | numbering[Report|Number|Volume|Issue], context-dependent | Overloaded by builder: `Report` on `@report`, `Number` on other monographs, `Volume` on inbook/incollection/inproceedings' parent, `Issue` on `@article`. |
 | `volume` | integer | `entry.volume()` | numbering[Volume] (article only) | Read via untyped `field_str`, not the crate's `PermissiveType<i64>` accessor. |
@@ -64,7 +72,7 @@ generated; do not hand-edit rows here, edit `tables.rs` and run
 | `author` | name | `entry.author()` | author / contributors[author] | — |
 | `editor` | name | `entry.editors()` | editor / contributors[editor] | `entry.editors()` also returns `editora`/`editorb`/`editorc` and each group's `EditorType` (`editortype` etc). Only `EditorType::Editor`-tagged groups become the `editor` shorthand; `Compiler`/`Director` groups are tagged `contributors[compiler]`/`contributors[director]`, and `Founder`/`Continuator`/`Redactor`/`Reviser`/`Collaborator`/`Organizer` (no dedicated `ContributorRole` variant) degrade to `contributors[Unknown(<name>)]`, which still round-trips and is selectable by a style as a custom role. |
 | `translator` | name | `entry.translator()` | translator / contributors[translator] | — |
-| `eprint` | verbatim | `entry.eprint()` | eprint.id | A nonblank identifier populates `EprintInfo` on Monograph, CollectionComponent, and SerialComponent outputs. A missing `eprinttype` is represented by an empty server. It separately promotes an otherwise generic container-less entry to `Preprint`; blank identifiers are ignored. |
+| `eprint` | verbatim | `entry.eprint()` | eprint.id | A nonblank identifier populates `EprintInfo` on Monograph, CollectionComponent, and SerialComponent outputs. A missing `eprinttype` is represented by an empty server. Separately flips the entry's `MonographType` to `Preprint`, but only when `eprint` is nonblank and there is no container signal: an `@article` with no `journaltitle`/`journal`, or a `misc`/`unpublished`/`online`/fallback entry. Other output classes do not retain eprint metadata. |
 | `eprinttype` | key | `entry.eprint_type()` | eprint.server | Alias of `archiveprefix`. Lowercased on extraction. See `eprint`. |
 | `eprintclass` | literal | `entry.eprint_class()` | eprint.class | Alias of `primaryclass`. See `eprint`. |
 | `series` | literal | `entry.series()` | container[…].container (collection-title) | Reuses the CSL-JSON conversion path's shape for a `collection-title` (`relation_collection_title`): an embedded, title-only `Collection` wrapping the series name. For `@book`/etc. (no intermediate container-title), wraps in a title-less parent first, matching the CSL-JSON path's identical `container-title`-less case. For `@incollection`/`@inproceedings`/`@article` the series attaches directly to the already-synthesized parent Collection/Serial. A `number` alongside `series` becomes `NumberingType::Volume` (volume-in-series) rather than a generic document number. |
@@ -77,6 +85,7 @@ generated; do not hand-edit rows here, edit `tables.rs` and run
 | `commentator` | name | `entry.commentator()` | contributors[commentator] | — |
 | `foreword` | name | `entry.foreword()` | contributors[foreword-author] | — |
 | `introduction` | name | `entry.introduction()` | contributors[introduction-author] | — |
+| `holder` | name | `entry.holder()` | Patent.assignee | Patent holder/assignee. Only read for `@patent`. |
 
 ## Not Yet Mapped
 
@@ -87,7 +96,6 @@ in the mapping tables.
 
 | BibLaTeX Field | Datatype | Crate Accessor | Notes |
 |---|---|---|---|
-| `holder` | name | `entry.holder()` | Patent holder. `Patent` already exists as a standalone reference class in citum-schema-data::reference::types::specialized, unused by BibLaTeX conversion today (see `BIBLATEX_FALLBACK`). |
 | `gender` | pattern | `entry.gender()` | Documented divergence, not a pending mapping: biblatex `Gender` has six values conflating number × gender (singular/plural × feminine/masculine/neuter); Citum's `ContributorGender` has four (masculine/feminine/neuter/common), no number axis, and a `Common` value biblatex lacks. See docs/specs/GENDERED_LOCALE_TERMS.md. |
 | `crossref` | entrykey | — | Resolved transparently by `biblatex::Bibliography::parse` before Citum's mapping runs — fields inherited from the crossref'd parent are merged into `entry.fields` — so this is not a `WorkRelation` Citum needs to construct itself, unlike `related`/`relatedtype` below. |
 | `xdata` | entrykey | — | Field-splicing mechanism, resolved and removed by `biblatex::Bibliography::parse` before Citum's mapping runs, like `crossref`. |

@@ -16,18 +16,26 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus and Citum contributors
 //! runs through the untyped `field_str`/`rich_field_str` closures and the
 //! handful of typed `biblatex` crate accessors it already calls — this table
 //! does not drive extraction. `BiblatexDataType` is not consulted at
-//! extraction time (no `match datatype { ... }` dispatch); the two narrow
-//! fixes it motivated -- preserving `Chunk::Math` and joining
+//! extraction time (no `match datatype { ... }` dispatch); the two remaining
+//! narrow fixes it motivated -- `Chunk::Math` no longer discarded, and
 //! `LiteralList` fields (`publisher`/`institution`/`organization`/`school`/
-//! `location`) with `"; "` -- are applied directly in `mapping.rs`.
-//! `Date`/`Range`/`Integer` fields deliberately still use hand-rolled string
-//! extraction rather than the crate's typed accessors because those
-//! normalize input and may change existing rendered output.
+//! `location`) joined with `"; "` instead of leaking BibLaTeX's `and`
+//! separator -- were applied
+//! directly in `mapping.rs` (`chunk_to_string`/`literal_list_str`) rather
+//! than through a generic per-datatype dispatcher, since only those two
+//! datatypes needed different handling from plain concatenation. `Date`/
+//! `Range`/`Integer` fields deliberately still use hand-rolled string
+//! extraction, not the crate's typed accessors (`entry.date()`,
+//! `entry.pages()`, ...): those normalize their input, which would change
+//! rendered output for already-mapped fields and risk the gb7714 fidelity
+//! baseline. See bean csl26-qtur's follow-ups for the fuller typed-dispatch
+//! refactor this stops short of.
 //!
 //! [`BIBLATEX_ENTRY_TYPES`] **does** drive dispatch — [`biblatex_entry_mapping`]
 //! replaces the previous inline `match` in
-//! `super::mapping::input_reference_from_biblatex`; each row documents the
-//! native reference shape selected for that entry type.
+//! `super::mapping::input_reference_from_biblatex`. Some rows intentionally
+//! change the native reference class to preserve BibLaTeX semantics more
+//! accurately; the generated mapping reference documents those decisions.
 //!
 //! The `datatype`/`crate_accessor` columns are populated from the BibLaTeX
 //! manual §2.2.1/§2.2.2, not inferred from the `biblatex` crate — the crate
@@ -35,7 +43,7 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus and Citum contributors
 //! narrowly. Where the two disagree, the manual's datatype wins and the
 //! crate's actual accessor is recorded separately in `crate_accessor`.
 
-use citum_schema::reference::types::MonographType;
+use citum_schema::reference::types::{CollectionType, MonographType};
 
 /// How a BibLaTeX entry type is converted into an `InputReference`.
 #[derive(Debug)]
@@ -49,6 +57,19 @@ pub(super) enum BiblatexBuilder {
     /// `mapping::build_article_reference` — a `SerialComponent` embedded in
     /// a synthesized parent `Serial`.
     Article,
+    /// `mapping::build_collection_reference` — a standalone `Collection` of
+    /// the given `CollectionType`.
+    Collection(CollectionType),
+    /// `mapping::build_patent_reference` — a standalone `Patent` when
+    /// `number` is nonblank, otherwise the generic document fallback.
+    Patent,
+    /// `mapping::build_dataset_reference` — a standalone `Dataset`.
+    Dataset,
+    /// `mapping::build_software_reference` — a standalone `Software`.
+    Software,
+    /// `mapping::build_standard_reference` — a standalone `Standard` when
+    /// `number` is nonblank, otherwise the generic document fallback.
+    Standard,
 }
 
 impl BiblatexBuilder {
@@ -58,6 +79,11 @@ impl BiblatexBuilder {
             Self::Monograph(_) => "monograph",
             Self::Inbook => "inbook",
             Self::Article => "article",
+            Self::Collection(_) => "collection",
+            Self::Patent => "patent",
+            Self::Dataset => "dataset",
+            Self::Software => "software",
+            Self::Standard => "standard",
         }
     }
 }
@@ -65,11 +91,11 @@ impl BiblatexBuilder {
 /// One row of the BibLaTeX entry-type → Citum reference-shape mapping.
 #[derive(Debug)]
 pub(super) struct BiblatexEntryMapping {
-    /// The lowercased, alias-resolved BibLaTeX entry type
-    /// (`entry.entry_type.to_biblatex().to_string().to_lowercase()`) — e.g.
-    /// `phdthesis`/`mastersthesis`/`techreport` never appear here because the
-    /// `biblatex` crate already canonicalizes them (to `thesis`/`report`)
-    /// before dispatch sees them.
+    /// The lowercased, alias-resolved BibLaTeX entry type. Known types use
+    /// `to_biblatex()` canonicalization, so `phdthesis`/`mastersthesis`/
+    /// `techreport` arrive as `thesis`/`report`; `EntryType::Unknown(raw)`
+    /// uses its raw payload so non-core rows such as `standard` remain
+    /// reachable.
     pub(super) entry_type: &'static str,
     pub(super) builder: BiblatexBuilder,
     /// Rationale surfaced in the generated doc; `None` when the mapping is
@@ -97,15 +123,15 @@ pub(super) const BIBLATEX_ENTRY_TYPES: &[BiblatexEntryMapping] = &[
     },
     BiblatexEntryMapping {
         entry_type: "collection",
-        builder: BiblatexBuilder::Monograph(MonographType::Book),
-        note: Some(
-            "Not routed to the `Collection` reference class despite the name — a bare `@collection` carries no per-chapter structure to justify one. Whether it should be is a modeling decision, not a mapping gap.",
-        ),
+        builder: BiblatexBuilder::Collection(CollectionType::EditedBook),
+        note: None,
     },
     BiblatexEntryMapping {
         entry_type: "mvcollection",
-        builder: BiblatexBuilder::Monograph(MonographType::Book),
-        note: Some("Same as `collection`."),
+        builder: BiblatexBuilder::Collection(CollectionType::EditedBook),
+        note: Some(
+            "Multi-volume collection; volume-level structure is not yet modeled distinctly.",
+        ),
     },
     BiblatexEntryMapping {
         entry_type: "manual",
@@ -138,12 +164,14 @@ pub(super) const BIBLATEX_ENTRY_TYPES: &[BiblatexEntryMapping] = &[
     },
     BiblatexEntryMapping {
         entry_type: "proceedings",
-        builder: BiblatexBuilder::Monograph(MonographType::Book),
-        note: Some("Not routed to `Collection`; see the `collection` row above."),
+        builder: BiblatexBuilder::Collection(CollectionType::Proceedings),
+        note: Some(
+            "A journal-like recurring proceedings (ISSN, cited as vol(issue): pages) arrives as `@article` with a `journaltitle` instead, and is already routed to `Serial` — `@proceedings` is BibLaTeX's edited-volume case (ISBN), the same distinction the manual draws between `@article` and `@inproceedings`. `SerialType::Proceedings` exists for the journal-like case but has no BibLaTeX producer for exactly this reason.",
+        ),
     },
     BiblatexEntryMapping {
         entry_type: "mvproceedings",
-        builder: BiblatexBuilder::Monograph(MonographType::Book),
+        builder: BiblatexBuilder::Collection(CollectionType::Proceedings),
         note: Some("Same as `proceedings`."),
     },
     BiblatexEntryMapping {
@@ -168,12 +196,59 @@ pub(super) const BIBLATEX_ENTRY_TYPES: &[BiblatexEntryMapping] = &[
         builder: BiblatexBuilder::Article,
         note: None,
     },
+    BiblatexEntryMapping {
+        entry_type: "patent",
+        builder: BiblatexBuilder::Patent,
+        note: Some(
+            "`number` is required by the native `Patent` shape. Missing, empty, or whitespace-only values retain the generic `Document` fallback rather than creating an invalid patent.",
+        ),
+    },
+    BiblatexEntryMapping {
+        entry_type: "dataset",
+        builder: BiblatexBuilder::Dataset,
+        note: None,
+    },
+    BiblatexEntryMapping {
+        entry_type: "software",
+        builder: BiblatexBuilder::Software,
+        note: None,
+    },
+    BiblatexEntryMapping {
+        entry_type: "standard",
+        builder: BiblatexBuilder::Standard,
+        note: Some(
+            "Not a core BibLaTeX/BibTeX entry type -- arrives as `EntryType::Unknown(\"standard\")`. Reachable here because entry-type dispatch reads the raw string for unknown types. `number` is required by the native `Standard` shape; missing, empty, or whitespace-only values retain the generic `Document` fallback.",
+        ),
+    },
+    BiblatexEntryMapping {
+        entry_type: "periodical",
+        builder: BiblatexBuilder::Monograph(MonographType::Document),
+        note: Some(
+            "A complete periodical issue, represented by the existing `Document` compatibility contract with canonical genre `periodical` so its issued date and back-mapped type survive. This is intentionally lossy: the current model cannot express issue → journal hierarchy or retain ISSN canonically.",
+        ),
+    },
+    BiblatexEntryMapping {
+        entry_type: "reference",
+        builder: BiblatexBuilder::Monograph(MonographType::Book),
+        note: Some("A work of reference (encyclopedia, dictionary); same shape as `@book`."),
+    },
+    BiblatexEntryMapping {
+        entry_type: "mvreference",
+        builder: BiblatexBuilder::Monograph(MonographType::Book),
+        note: Some("Same as `reference`."),
+    },
+    BiblatexEntryMapping {
+        entry_type: "inreference",
+        builder: BiblatexBuilder::Inbook,
+        note: Some(
+            "An entry in a work of reference. Uses the collection-component chapter shape with canonical genre `entry`, which back-maps to the `entry` reference type.",
+        ),
+    },
 ];
 
 /// Fallback row for every BibLaTeX entry type not listed in
-/// [`BIBLATEX_ENTRY_TYPES`] (e.g. `booklet`, `misc`, `patent`, `dataset`,
-/// `software`, `standard`, `periodical`, `reference`, `inreference`,
-/// `bookinbook`, `suppbook`, `suppperiodical`, `mvreference`).
+/// [`BIBLATEX_ENTRY_TYPES`] (e.g. `booklet`, `misc`, `bookinbook`,
+/// `suppbook`, `suppperiodical`).
 ///
 /// Kept as a named `const` rather than folded into dispatch as a bare `_`
 /// arm, purely so it renders as an explicit row in the generated
@@ -182,7 +257,7 @@ pub(super) const BIBLATEX_FALLBACK: BiblatexEntryMapping = BiblatexEntryMapping 
     entry_type: "*",
     builder: BiblatexBuilder::Monograph(MonographType::Document),
     note: Some(
-        "Fallback for every entry type with no dedicated builder above. Each of these is a candidate for its own builder/`ReferenceClass` — `Patent`, `Dataset`, `Software`, and `Standard` already exist as standalone reference classes in citum-schema-data::reference::types::specialized, just unused by BibLaTeX conversion today.",
+        "Fallback for every entry type with no dedicated builder above. `booklet`/`bookinbook`/`suppbook`/`suppperiodical` are candidates for their own builder rows in a future pass.",
     ),
 };
 
@@ -257,8 +332,7 @@ pub(super) struct BiblatexFieldMapping {
 
 /// Declarative field table. Mapped rows document today's extraction path
 /// (still the untyped `field_str`/`rich_field_str` closures for most
-/// fields); `Unmapped` rows are the gap list — this *is* the enumerated form
-/// of bean csl26-11h2's open items.
+/// fields); `Unmapped` rows are the remaining gap list.
 pub(super) const BIBLATEX_FIELDS: &[BiblatexFieldMapping] = &[
     BiblatexFieldMapping {
         field: "title",
@@ -314,7 +388,7 @@ pub(super) const BIBLATEX_FIELDS: &[BiblatexFieldMapping] = &[
         crate_accessor: Some("entry.publisher()"),
         target: BiblatexFieldTarget::Mapped("publisher.name"),
         note: Some(
-            "biblatex `publisher` is an `and`-separated literal list (multiple publishers). `literal_list_str` splits and rejoins with `\"; \"`, but `Publisher.name` remains a single `MultilingualString`.",
+            "biblatex `publisher` is an `and`-separated literal list (multiple publishers). `literal_list_str` splits and rejoins with `\"; \"`, but `Publisher.name` is a single `MultilingualString` -- a genuine multi-publisher entry still collapses to one string; only the join delimiter changed (`\"; \"` instead of leaking the literal `and`), not the underlying single-valued field. See bean csl26-11h2's follow-ups.",
         ),
     },
     BiblatexFieldMapping {
@@ -346,7 +420,7 @@ pub(super) const BIBLATEX_FIELDS: &[BiblatexFieldMapping] = &[
         crate_accessor: Some("entry.location()"),
         target: BiblatexFieldTarget::Mapped("publisher.place"),
         note: Some(
-            "Alias of `address`. Same list-join handling as `publisher`; `Publisher.place` remains single-valued.",
+            "Alias of `address`. Same list-join handling as `publisher`, and the same single-valued-field caveat (`Publisher.place` is a single `Place`).",
         ),
     },
     BiblatexFieldMapping {
@@ -392,7 +466,7 @@ pub(super) const BIBLATEX_FIELDS: &[BiblatexFieldMapping] = &[
         crate_accessor: None,
         target: BiblatexFieldTarget::Mapped("keywords"),
         note: Some(
-            "Split on `,` in `biblatex_monograph`; not applied outside the `Monograph` builder.",
+            "Split on `,` for Monograph, Collection, Patent, Dataset, Software, and Standard outputs. CollectionComponent and SerialComponent builders do not currently retain keywords.",
         ),
     },
     BiblatexFieldMapping {
@@ -496,14 +570,14 @@ pub(super) const BIBLATEX_FIELDS: &[BiblatexFieldMapping] = &[
         target: BiblatexFieldTarget::Mapped("translator / contributors[translator]"),
         note: None,
     },
-    // --- Unmapped: the enumerated gap list (bean csl26-11h2's open items) ---
+    // --- Conversion-breadth fields completed by bean csl26-11h2 ---
     BiblatexFieldMapping {
         field: "eprint",
         datatype: BiblatexDataType::Verbatim,
         crate_accessor: Some("entry.eprint()"),
         target: BiblatexFieldTarget::Mapped("eprint.id"),
         note: Some(
-            "A nonblank identifier populates `EprintInfo` on Monograph, CollectionComponent, and SerialComponent outputs. A missing `eprinttype` is represented by an empty server. It separately promotes an otherwise generic container-less entry to `Preprint`; blank identifiers are ignored.",
+            "A nonblank identifier populates `EprintInfo` on Monograph, CollectionComponent, and SerialComponent outputs. A missing `eprinttype` is represented by an empty server. Separately flips the entry's `MonographType` to `Preprint`, but only when `eprint` is nonblank and there is no container signal: an `@article` with no `journaltitle`/`journal`, or a `misc`/`unpublished`/`online`/fallback entry. Other output classes do not retain eprint metadata.",
         ),
     },
     BiblatexFieldMapping {
@@ -598,10 +672,8 @@ pub(super) const BIBLATEX_FIELDS: &[BiblatexFieldMapping] = &[
         field: "holder",
         datatype: BiblatexDataType::Name,
         crate_accessor: Some("entry.holder()"),
-        target: BiblatexFieldTarget::Unmapped,
-        note: Some(
-            "Patent holder. `Patent` already exists as a standalone reference class in citum-schema-data::reference::types::specialized, unused by BibLaTeX conversion today (see `BIBLATEX_FALLBACK`).",
-        ),
+        target: BiblatexFieldTarget::Mapped("Patent.assignee"),
+        note: Some("Patent holder/assignee. Only read for `@patent`."),
     },
     BiblatexFieldMapping {
         field: "gender",
@@ -656,12 +728,18 @@ pub struct BiblatexEntryTypeDescriptor {
     /// The lowercased, alias-resolved BibLaTeX entry type, or `"*"` for the
     /// fallback row.
     pub entry_type: &'static str,
-    /// Which builder converts this entry type: `"monograph"`, `"inbook"`, or
-    /// `"article"`.
+    /// Which builder converts this entry type: `"monograph"`, `"inbook"`,
+    /// `"article"`, `"collection"`, `"patent"`, `"dataset"`, `"software"`,
+    /// or `"standard"`.
     pub builder: &'static str,
     /// The resulting `MonographType` wire value, when `builder` is
     /// `"monograph"`.
     pub monograph_type: Option<String>,
+    /// The resulting `CollectionType` wire value, when `builder` is
+    /// `"collection"`.
+    pub collection_type: Option<String>,
+    /// Reserved for compatibility with generated type-map consumers.
+    pub serial_type: Option<String>,
     /// Rationale; `None` when the mapping is unremarkable.
     pub note: Option<&'static str>,
 }
@@ -670,12 +748,32 @@ impl From<&BiblatexEntryMapping> for BiblatexEntryTypeDescriptor {
     fn from(row: &BiblatexEntryMapping) -> Self {
         let monograph_type = match &row.builder {
             BiblatexBuilder::Monograph(mono_type) => Some(mono_type.as_str().to_string()),
-            BiblatexBuilder::Inbook | BiblatexBuilder::Article => None,
+            BiblatexBuilder::Inbook
+            | BiblatexBuilder::Article
+            | BiblatexBuilder::Collection(_)
+            | BiblatexBuilder::Patent
+            | BiblatexBuilder::Dataset
+            | BiblatexBuilder::Software
+            | BiblatexBuilder::Standard => None,
+        };
+        let collection_type = match &row.builder {
+            BiblatexBuilder::Collection(collection_type) => {
+                Some(collection_type.as_str().to_string())
+            }
+            BiblatexBuilder::Monograph(_)
+            | BiblatexBuilder::Inbook
+            | BiblatexBuilder::Article
+            | BiblatexBuilder::Patent
+            | BiblatexBuilder::Dataset
+            | BiblatexBuilder::Software
+            | BiblatexBuilder::Standard => None,
         };
         Self {
             entry_type: row.entry_type,
             builder: row.builder.name(),
             monograph_type,
+            collection_type,
+            serial_type: None,
             note: row.note,
         }
     }
@@ -785,7 +883,7 @@ mod tests {
 
     #[test]
     fn given_unknown_entry_type_when_looked_up_then_returns_the_fallback_row() {
-        let row = biblatex_entry_mapping("patent");
+        let row = biblatex_entry_mapping("booklet");
 
         assert_eq!(row.entry_type, "*");
         assert!(matches!(

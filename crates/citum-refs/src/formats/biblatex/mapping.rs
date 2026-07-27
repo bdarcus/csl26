@@ -18,9 +18,9 @@ use citum_schema::reference::{
     },
     date::DateValue,
     types::{
-        Collection, CollectionComponent, CollectionType, EprintInfo, Event, Monograph,
-        MonographComponentType, MonographType, NumOrStr, Serial, SerialComponent,
-        SerialComponentType, SerialType, StructuredTitle, Subtitle, Title,
+        Collection, CollectionComponent, CollectionType, Dataset, EprintInfo, Event, Monograph,
+        MonographComponentType, MonographType, NumOrStr, Patent, Serial, SerialComponent,
+        SerialComponentType, SerialType, Software, Standard, StructuredTitle, Subtitle, Title,
     },
 };
 use std::collections::HashMap;
@@ -50,6 +50,9 @@ struct BibRefContext<'a> {
     /// flip (decided in `input_reference_from_biblatex`, before a builder is
     /// chosen), storing this metadata doesn't depend on the entry's type.
     eprint: Option<EprintInfo>,
+    /// Patent holder (biblatex `holder`), for `Patent.assignee`. Only
+    /// meaningful on `@patent`; unread by every other builder.
+    assignee: Option<Contributor>,
     field_str: &'a dyn Fn(&str) -> Option<String>,
     /// Like `field_str`, but converts citeproc-js's literal HTML rich-text
     /// convention (`<span class="nocase">`, `<i>`, `<b>`, `<sc>`, `<sup>`,
@@ -59,6 +62,12 @@ struct BibRefContext<'a> {
     /// it (`csl26-6eoi`) -- so free-text fields need the same conversion
     /// the CSL-JSON path applies, not just `field_str`.
     rich_field_str: &'a dyn Fn(&str) -> Option<String>,
+    /// Like `rich_field_str`, but for BibLaTeX `LiteralList`-datatype fields
+    /// (`publisher`, `institution`, `organization`, `school`, `location`) --
+    /// see `literal_list_str`.
+    /// Joins multi-entity values with `"; "` instead of leaking the literal
+    /// `and` separator.
+    rich_literal_list_str: &'a dyn Fn(&str) -> Option<String>,
 }
 
 /// Build a `CollectionComponent` from a biblatex inbook/incollection/inproceedings entry.
@@ -68,6 +77,11 @@ fn build_inbook_reference(entry_type: &str, ctx: BibRefContext<'_>) -> InputRefe
     let contributors = ctx.contributors;
     let parent_title = rich_field_str("booktitle").map(Title::Single);
     let is_inproceedings = entry_type == "inproceedings";
+    let component_type = if is_inproceedings {
+        MonographComponentType::Document
+    } else {
+        MonographComponentType::Chapter
+    };
 
     let mut parent_numbering = Vec::new();
     if let Some(n) = field_str("number") {
@@ -107,7 +121,7 @@ fn build_inbook_reference(entry_type: &str, ctx: BibRefContext<'_>) -> InputRefe
 
     InputReference::CollectionComponent(Box::new(CollectionComponent {
         id: ctx.id,
-        r#type: MonographComponentType::Chapter,
+        r#type: component_type,
         title: ctx.title,
         author: ctx.author,
         // The chapter's translator belongs to the chapter, not the edited
@@ -149,7 +163,11 @@ fn build_inbook_reference(entry_type: &str, ctx: BibRefContext<'_>) -> InputRefe
         field_languages: HashMap::new(),
         note: field_str("note").map(RichText::Plain),
         doi: field_str("doi"),
-        genre: rich_field_str("type"),
+        genre: if entry_type == "inreference" {
+            Some("entry".to_string())
+        } else {
+            rich_field_str("type")
+        },
         ..Default::default()
     }))
 }
@@ -224,7 +242,98 @@ fn build_article_reference(ctx: BibRefContext<'_>) -> InputReference {
     }))
 }
 
-/// Convert one BibLaTeX chunk without discarding inline math.
+/// Build a standalone `Collection` from a biblatex `@collection`/
+/// `@mvcollection`/`@proceedings`/`@mvproceedings` entry.
+///
+/// Unlike `build_inbook_reference`/`build_article_reference`, there is no
+/// component embedded in a synthesized parent -- the entry itself *is* the
+/// `Collection` (it has no per-chapter structure of its own).
+fn build_collection_reference(r#type: CollectionType, ctx: BibRefContext<'_>) -> InputReference {
+    let field_str = ctx.field_str;
+    let rich_field_str = ctx.rich_field_str;
+    let contributors = ctx.contributors;
+    let is_proceedings = matches!(r#type, CollectionType::Proceedings);
+    let series = field_str("series");
+
+    let mut numbering = Vec::new();
+    if let Some(ed) = field_str("edition") {
+        numbering.push(Numbering {
+            r#type: NumberingType::Edition,
+            value: ed,
+        });
+    }
+    if let Some(n) = field_str("number") {
+        let numbering_type = if series.is_some() {
+            NumberingType::Volume
+        } else {
+            NumberingType::Number
+        };
+        numbering.push(Numbering {
+            r#type: numbering_type,
+            value: n,
+        });
+    }
+
+    // See `build_inbook_reference` for the same event-field rationale;
+    // `Collection` carries `event` directly rather than needing a synthesized
+    // parent, since this reference *is* the proceedings volume.
+    let event = is_proceedings
+        .then(|| {
+            let title = rich_field_str("eventtitle");
+            let location = rich_field_str("venue");
+            let date = field_str("eventdate").map(DateValue::new);
+            (title.is_some() || location.is_some() || date.is_some()).then(|| {
+                WorkRelation::Embedded(Box::new(InputReference::Event(Box::new(Event {
+                    title: title.map(Title::Single),
+                    location,
+                    date,
+                    ..Default::default()
+                }))))
+            })
+        })
+        .flatten();
+
+    InputReference::Collection(Box::new(Collection {
+        id: ctx.id,
+        r#type,
+        title: ctx.title,
+        short_title: None,
+        container: series_relation(series),
+        editor: ctx.editor,
+        translator: ctx.translator,
+        contributors,
+        created: DateValue::new(String::new()),
+        issued: ctx.issued,
+        publisher: ctx.publisher,
+        numbering,
+        url: field_str("url").and_then(|u| Url::parse(&u).ok()),
+        accessed: field_str("urldate").map(DateValue::new),
+        language: ctx.language,
+        field_languages: HashMap::new(),
+        note: field_str("note").map(RichText::Plain),
+        isbn: field_str("isbn"),
+        event,
+        keywords: split_keywords(field_str("keywords")),
+        ..Default::default()
+    }))
+}
+
+/// Split biblatex's comma-separated `keywords` field into a keyword list,
+/// trimming whitespace and dropping empty entries.
+fn split_keywords(raw: Option<String>) -> Option<Vec<String>> {
+    raw.map(|k| {
+        k.split(',')
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty())
+            .collect()
+    })
+}
+
+/// Convert a single biblatex chunk to its string content. `Chunk::Math` is
+/// wrapped as Djot inline math (`$...$`) rather than discarded to an empty
+/// string -- the `biblatex` crate already strips the delimiting `$...$` from
+/// the source when parsing, so this puts them back in Citum's own
+/// inline-math convention.
 fn chunk_to_string(chunk: &biblatex_crate::Chunk) -> String {
     match chunk {
         biblatex_crate::Chunk::Normal(s) | biblatex_crate::Chunk::Verbatim(s) => s.clone(),
@@ -232,15 +341,19 @@ fn chunk_to_string(chunk: &biblatex_crate::Chunk) -> String {
     }
 }
 
-/// Concatenate a chunk sequence into a single string.
+/// Concatenate a chunk sequence into a single string via [`chunk_to_string`].
 fn chunks_to_string(chunks: &[biblatex_crate::Spanned<biblatex_crate::Chunk>]) -> String {
-    chunks
-        .iter()
-        .map(|chunk| chunk_to_string(&chunk.v))
-        .collect()
+    chunks.iter().map(|c| chunk_to_string(&c.v)).collect()
 }
 
-/// Read and join a BibLaTeX `LiteralList` field.
+/// Read a BibLaTeX `LiteralList`-datatype field (`publisher`, `institution`,
+/// `organization`, `school`, `location`), which the manual's §2.2.1 allows
+/// to name more than one entity separated by `and`. Joins the parsed items with `"; "` rather than
+/// concatenating the whole field verbatim, so `location = {Boston} and
+/// {London}` becomes `"Boston; London"` instead of leaking the literal
+/// `"and"` separator into the string. Every other field stays on plain
+/// concatenation (`field_str`/`rich_field_str`) -- this is deliberately
+/// narrow, not a general typed-field rewrite; see the module doc.
 fn literal_list_str(entry: &biblatex_crate::Entry, key: &str) -> Option<String> {
     let chunks = entry.get(key)?;
     let items = chunks.parse::<Vec<biblatex_crate::Chunks>>().ok()?;
@@ -251,6 +364,207 @@ fn literal_list_str(entry: &biblatex_crate::Entry, key: &str) -> Option<String> 
             .collect::<Vec<_>>()
             .join("; "),
     )
+}
+
+/// Build a standalone `Patent` from a biblatex `@patent` entry. `number` is
+/// required by `Patent.patent_number` (non-`Option`) -- callers must confirm
+/// it is present first (see the dispatch guard in
+/// `input_reference_from_biblatex`).
+fn build_patent_reference(patent_number: String, ctx: BibRefContext<'_>) -> InputReference {
+    let field_str = ctx.field_str;
+    let rich_literal_list_str = ctx.rich_literal_list_str;
+    InputReference::Patent(Box::new(Patent {
+        id: ctx.id,
+        title: ctx.title,
+        author: ctx.author,
+        assignee: ctx.assignee,
+        original: None,
+        patent_number,
+        application_number: None,
+        pages: field_str("pages"),
+        created: DateValue::new(String::new()),
+        filing_date: None,
+        issued: ctx.issued,
+        jurisdiction: rich_literal_list_str("location"),
+        authority: rich_literal_list_str("organization")
+            .or_else(|| rich_literal_list_str("institution")),
+        url: field_str("url").and_then(|u| Url::parse(&u).ok()),
+        accessed: field_str("urldate").map(DateValue::new),
+        language: ctx.language,
+        field_languages: HashMap::new(),
+        note: field_str("note").map(RichText::Plain),
+        keywords: split_keywords(field_str("keywords")),
+        unknown_fields: Default::default(),
+    }))
+}
+
+/// Build a standalone `Dataset` from a biblatex `@dataset` entry.
+fn build_dataset_reference(ctx: BibRefContext<'_>) -> InputReference {
+    let field_str = ctx.field_str;
+    let rich_field_str = ctx.rich_field_str;
+    InputReference::Dataset(Box::new(Dataset {
+        id: ctx.id,
+        title: ctx.title,
+        author: ctx.author,
+        original: None,
+        created: DateValue::new(String::new()),
+        issued: ctx.issued,
+        publisher: ctx.publisher,
+        version: field_str("version"),
+        genre: rich_field_str("type"),
+        format: None,
+        size: None,
+        repository: None,
+        doi: field_str("doi"),
+        url: field_str("url").and_then(|u| Url::parse(&u).ok()),
+        accessed: field_str("urldate").map(DateValue::new),
+        language: ctx.language,
+        field_languages: HashMap::new(),
+        note: field_str("note").map(RichText::Plain),
+        keywords: split_keywords(field_str("keywords")),
+        unknown_fields: Default::default(),
+    }))
+}
+
+/// Build a standalone `Software` from a biblatex `@software` entry.
+fn build_software_reference(ctx: BibRefContext<'_>) -> InputReference {
+    let field_str = ctx.field_str;
+    InputReference::Software(Box::new(Software {
+        id: ctx.id,
+        title: ctx.title,
+        original: None,
+        author: ctx.author,
+        created: DateValue::new(String::new()),
+        issued: ctx.issued,
+        publisher: ctx.publisher,
+        version: field_str("version"),
+        repository: None,
+        license: None,
+        platform: None,
+        doi: field_str("doi"),
+        url: field_str("url").and_then(|u| Url::parse(&u).ok()),
+        accessed: field_str("urldate").map(DateValue::new),
+        language: ctx.language,
+        field_languages: HashMap::new(),
+        note: field_str("note").map(RichText::Plain),
+        keywords: split_keywords(field_str("keywords")),
+        unknown_fields: Default::default(),
+    }))
+}
+
+/// Build a standalone `Standard` from a biblatex `@standard` entry (not a
+/// core biblatex type; arrives as `EntryType::Unknown("standard")`).
+/// `standard_number` is required (non-`Option`) -- callers must confirm it
+/// is present first (see the dispatch guard in
+/// `input_reference_from_biblatex`).
+fn build_standard_reference(standard_number: String, ctx: BibRefContext<'_>) -> InputReference {
+    let field_str = ctx.field_str;
+    let rich_literal_list_str = ctx.rich_literal_list_str;
+    InputReference::Standard(Box::new(Standard {
+        id: ctx.id,
+        title: ctx.title,
+        original: None,
+        authority: rich_literal_list_str("organization")
+            .or_else(|| rich_literal_list_str("institution")),
+        standard_number,
+        created: DateValue::new(String::new()),
+        issued: ctx.issued,
+        status: None,
+        publisher: ctx.publisher,
+        doi: field_str("doi"),
+        url: field_str("url").and_then(|u| Url::parse(&u).ok()),
+        accessed: field_str("urldate").map(DateValue::new),
+        language: ctx.language,
+        field_languages: HashMap::new(),
+        note: field_str("note").map(RichText::Plain),
+        keywords: split_keywords(field_str("keywords")),
+        unknown_fields: Default::default(),
+    }))
+}
+
+/// Resolve the lowercased, alias-resolved BibLaTeX entry-type string used to
+/// look up a row in `BIBLATEX_ENTRY_TYPES`.
+///
+/// `EntryType::to_string()` discards the payload of `Unknown(_)` -- it
+/// prints the literal string `"unknown"`, not the source's actual type name
+/// -- and `.to_biblatex()` additionally collapses every `Unknown` variant to
+/// `Misc`. Both would make any non-core vocabulary (e.g. the GB/T
+/// 7714-style `@standard`) permanently unreachable in `BIBLATEX_ENTRY_TYPES`,
+/// silently landing on the fallback under the wrong identity. Read the
+/// original string directly for `Unknown` types; canonical types (including
+/// the phdthesis/mastersthesis/techreport aliases) still go through
+/// `to_biblatex()` as before.
+fn biblatex_entry_type_key(entry: &biblatex_crate::Entry) -> String {
+    match &entry.entry_type {
+        biblatex_crate::EntryType::Unknown(raw) => raw.to_lowercase(),
+        other => other.to_biblatex().to_string().to_lowercase(),
+    }
+}
+
+/// Dispatch to the builder named by `biblatex_entry_mapping(entry_type)`,
+/// applying the two type-flip overrides that depend on entry-level state the
+/// static table can't express: the container-less-`@article` and
+/// carries-an-`eprint` preprint rules, and the `Patent`/`Standard`
+/// nonblank-required-field fallback.
+fn dispatch_biblatex_builder(
+    entry_type: &str,
+    has_eprint: bool,
+    article_is_container_less: bool,
+    ctx: BibRefContext<'_>,
+) -> InputReference {
+    if article_is_container_less {
+        return InputReference::Monograph(Box::new(biblatex_monograph(
+            MonographType::Preprint,
+            entry_type,
+            ctx,
+        )));
+    }
+    let field_str = ctx.field_str;
+    match &biblatex_entry_mapping(entry_type).builder {
+        BiblatexBuilder::Monograph(mono_type) => {
+            // A `misc`/`unpublished`/`online`/fallback entry carrying an
+            // `eprint` is a preprint, not a generic document/manuscript/
+            // webpage. Doesn't apply to types with more specific semantics
+            // (`@book`, `@thesis`, ...) -- a stray `eprint` there doesn't
+            // override the entry-type-driven mapping.
+            let mono_type = if has_eprint && is_document_like_monograph_type(mono_type) {
+                MonographType::Preprint
+            } else {
+                mono_type.clone()
+            };
+            InputReference::Monograph(Box::new(biblatex_monograph(mono_type, entry_type, ctx)))
+        }
+        BiblatexBuilder::Inbook => build_inbook_reference(entry_type, ctx),
+        BiblatexBuilder::Article => build_article_reference(ctx),
+        BiblatexBuilder::Collection(collection_type) => {
+            build_collection_reference(collection_type.clone(), ctx)
+        }
+        // `Patent.patent_number`/`Standard.standard_number` are required
+        // (non-`Option`) fields; an entry with no nonblank `number` stays on
+        // the generic fallback rather than being given an empty identifier.
+        BiblatexBuilder::Patent => {
+            match field_str("number").filter(|number| !number.trim().is_empty()) {
+                Some(number) => build_patent_reference(number, ctx),
+                None => InputReference::Monograph(Box::new(biblatex_monograph(
+                    MonographType::Document,
+                    entry_type,
+                    ctx,
+                ))),
+            }
+        }
+        BiblatexBuilder::Dataset => build_dataset_reference(ctx),
+        BiblatexBuilder::Software => build_software_reference(ctx),
+        BiblatexBuilder::Standard => {
+            match field_str("number").filter(|number| !number.trim().is_empty()) {
+                Some(number) => build_standard_reference(number, ctx),
+                None => InputReference::Monograph(Box::new(biblatex_monograph(
+                    MonographType::Document,
+                    entry_type,
+                    ctx,
+                ))),
+            }
+        }
+    }
 }
 
 /// Convert a biblatex entry into an `InputReference`.
@@ -306,8 +620,12 @@ pub fn input_reference_from_biblatex(entry: &biblatex_crate::Entry) -> InputRefe
         .map(Into::into);
     let eprint = eprint_info_from_biblatex(&field_str);
     let has_eprint = eprint.is_some();
+    let assignee = entry
+        .holder()
+        .ok()
+        .map(|p| contributors_from_biblatex_persons(&p));
 
-    let entry_type = entry.entry_type.to_biblatex().to_string().to_lowercase();
+    let entry_type = biblatex_entry_type_key(entry);
     // An `@article` with no `journaltitle`/`journal` *and* an `eprint` is
     // treated as a standalone preprint rather than a truncated journal
     // article -- loosely mirroring `CSL_TYPE_MAP`'s rule for a bare CSL-JSON
@@ -332,35 +650,14 @@ pub fn input_reference_from_biblatex(entry: &biblatex_crate::Entry) -> InputRefe
         publisher,
         language,
         eprint,
+        assignee,
         field_str: &field_str,
         rich_field_str: &rich_field_str,
+        rich_literal_list_str: &rich_literal_list_str,
     };
 
-    let mut reference = if article_is_container_less {
-        InputReference::Monograph(Box::new(biblatex_monograph(
-            MonographType::Preprint,
-            &entry_type,
-            ctx,
-        )))
-    } else {
-        match &biblatex_entry_mapping(&entry_type).builder {
-            BiblatexBuilder::Monograph(mono_type) => {
-                // A `misc`/`unpublished`/`online`/fallback entry carrying an
-                // `eprint` is a preprint, not a generic document/manuscript/
-                // webpage. Doesn't apply to types with more specific semantics
-                // (`@book`, `@thesis`, ...) -- a stray `eprint` there doesn't
-                // override the entry-type-driven mapping.
-                let mono_type = if has_eprint && is_document_like_monograph_type(mono_type) {
-                    MonographType::Preprint
-                } else {
-                    mono_type.clone()
-                };
-                InputReference::Monograph(Box::new(biblatex_monograph(mono_type, &entry_type, ctx)))
-            }
-            BiblatexBuilder::Inbook => build_inbook_reference(&entry_type, ctx),
-            BiblatexBuilder::Article => build_article_reference(ctx),
-        }
-    };
+    let mut reference =
+        dispatch_biblatex_builder(&entry_type, has_eprint, article_is_container_less, ctx);
     // The builders above construct references directly rather than through
     // deserialization, so the `author`/`editor`/`translator` shorthands they set
     // are never folded into the canonical `contributors` vec. That vec is the
@@ -596,14 +893,13 @@ fn biblatex_monograph(
         doi: field_str("doi"),
         ads_bibcode: field_str("bibcode"),
         version: field_str("version"),
-        keywords: field_str("keywords").map(|k| {
-            k.split(',')
-                .map(|s| s.trim().to_string())
-                .filter(|s| !s.is_empty())
-                .collect()
-        }),
+        keywords: split_keywords(field_str("keywords")),
         numbering,
-        genre: rich_field_str("type"),
+        genre: if entry_type == "periodical" {
+            Some("periodical".to_string())
+        } else {
+            rich_field_str("type")
+        },
         // biblatex allows `pages` on `@book` (GB/T 7714 引文页码); see
         // `Monograph::pages` doc comment.
         pages: field_str("pages").map(NumOrStr::Str),
@@ -711,7 +1007,7 @@ mod tests {
     }
 
     #[test]
-    fn given_book_with_series_when_converted_then_series_becomes_collection_title() {
+    fn book_series_becomes_collection_title() {
         let entry = parse_single_entry(
             "@book{k1, title = {T}, date = {2024}, series = {Studies in Examples}}",
         );
@@ -725,7 +1021,7 @@ mod tests {
     }
 
     #[test]
-    fn given_book_with_series_and_number_when_converted_then_number_becomes_the_volume_in_series() {
+    fn book_series_and_number_becomes_volume_in_series() {
         let entry = parse_single_entry(
             "@book{k1, title = {T}, date = {2024}, series = {Studies in Examples}, \
              number = {12}}",
@@ -738,7 +1034,7 @@ mod tests {
     }
 
     #[test]
-    fn given_book_with_number_and_no_series_when_converted_then_number_stays_generic() {
+    fn book_number_without_series_stays_generic() {
         let entry = parse_single_entry("@book{k1, title = {T}, date = {2024}, number = {12}}");
 
         let converted = input_reference_from_biblatex(&entry);
@@ -748,11 +1044,27 @@ mod tests {
     }
 
     #[test]
-    fn given_incollection_with_series_when_converted_then_series_is_on_the_parent_collection() {
+    fn incollection_series_is_on_parent_collection() {
         let entry = parse_single_entry(
             "@incollection{k1, title = {Chapter}, booktitle = {Book}, date = {2024}, \
              series = {Studies in Examples}}",
         );
+
+        let converted = input_reference_from_biblatex(&entry);
+
+        assert_eq!(
+            converted.collection_title(),
+            Some(Title::Single("Studies in Examples".to_string()))
+        );
+    }
+
+    #[rstest]
+    #[case::collection("@collection{k1, title = {Collected Work}, series = {Studies in Examples}}")]
+    #[case::proceedings(
+        "@proceedings{k1, title = {Conference Proceedings}, series = {Studies in Examples}}"
+    )]
+    fn standalone_collection_series_is_accessible(#[case] source: &str) {
+        let entry = parse_single_entry(source);
 
         let converted = input_reference_from_biblatex(&entry);
 
@@ -855,6 +1167,56 @@ mod tests {
     }
 
     #[test]
+    fn math_chunk_becomes_djot_inline_math() {
+        // `Chunk::Math` used to be discarded to an empty string; the
+        // `biblatex` crate strips the delimiting `$...$` when parsing, so
+        // this must put them back rather than silently dropping the content.
+        let entry = parse_single_entry("@book{k1, title = {Energy: $E=mc^2$}, date = {2024}}");
+
+        let converted = input_reference_from_biblatex(&entry);
+
+        assert_eq!(
+            converted.title(),
+            Some(Title::Single("Energy: $E=mc^2$".to_string()))
+        );
+    }
+
+    #[test]
+    fn multiple_locations_are_joined_with_semicolon() {
+        // BibLaTeX's `location`/`organization`/`publisher` are `LiteralList`
+        // fields: a bare `and` inside one field value names two places, not
+        // the literal text "Boston and London".
+        let entry = parse_single_entry(
+            "@book{k1, title = {T}, date = {2024}, publisher = {Acme}, \
+             location = {Boston and London}}",
+        );
+
+        let converted = input_reference_from_biblatex(&entry);
+
+        let monograph = converted.as_monograph().expect("expected a Monograph");
+        assert_eq!(
+            monograph.publisher,
+            Some(Publisher {
+                name: "Acme".into(),
+                place: Some("Boston; London".into()),
+            })
+        );
+    }
+
+    #[test]
+    fn multiple_organizations_are_joined_with_semicolon() {
+        let entry = parse_single_entry(
+            "@standard{s1, title = {T}, date = {2024}, number = {ISO 8601}, \
+             organization = {ISO and IEC}}",
+        );
+
+        let converted = input_reference_from_biblatex(&entry);
+
+        let standard = converted.as_standard().expect("expected a Standard");
+        assert_eq!(standard.authority, Some("ISO; IEC".to_string()));
+    }
+
+    #[test]
     fn given_incollection_with_isbn_when_converted_then_isbn_is_on_the_parent_collection() {
         let entry = parse_single_entry(
             "@incollection{c1, title = {Chapter}, booktitle = {Book}, date = {2024}, isbn = {978-0-13-468599-1}}",
@@ -875,8 +1237,7 @@ mod tests {
     }
 
     #[test]
-    fn given_inproceedings_with_event_fields_when_converted_then_event_is_on_the_parent_collection()
-    {
+    fn inproceedings_event_fields_are_on_parent_collection() {
         let entry = parse_single_entry(
             "@inproceedings{p1, title = {Paper}, booktitle = {Proceedings}, date = {2024}, \
              eventtitle = {Symposium on Examples}, venue = {Springfield}, \
@@ -908,7 +1269,7 @@ mod tests {
     }
 
     #[test]
-    fn given_incollection_with_eventtitle_when_converted_then_event_is_not_read() {
+    fn incollection_eventtitle_is_not_read() {
         // `eventtitle`/`venue`/`eventdate` are only meaningful for the
         // conference itself; an `@incollection` (not a proceedings paper)
         // must not pick them up even if present in the source.
@@ -933,7 +1294,7 @@ mod tests {
     }
 
     #[test]
-    fn given_incollection_with_chapter_number_when_converted_then_chapter_becomes_numbering() {
+    fn incollection_chapter_becomes_numbering() {
         let entry = parse_single_entry(
             "@incollection{c1, title = {Chapter}, booktitle = {Book}, date = {2024}, \
              chapter = {7}}",
@@ -1008,9 +1369,17 @@ mod tests {
     }
 
     #[rstest]
-    #[case::proceedings_maps_to_book("@proceedings{p1, title={T}, date={2024}}", "book")]
-    #[case::mvproceedings_maps_to_book("@mvproceedings{p1, title={T}, date={2024}}", "book")]
-    fn given_proceedings_entry_type_when_converted_then_maps_to_book(
+    #[case::proceedings_maps_to_collection(
+        "@proceedings{p1, title={T}, date={2024}}",
+        "collection"
+    )]
+    #[case::mvproceedings_maps_to_collection(
+        "@mvproceedings{p1, title={T}, date={2024}}",
+        "collection"
+    )]
+    #[case::collection_maps_to_book("@collection{p1, title={T}, date={2024}}", "book")]
+    #[case::mvcollection_maps_to_book("@mvcollection{p1, title={T}, date={2024}}", "book")]
+    fn collection_and_proceedings_entry_types_map_to_collection_class(
         #[case] source: &str,
         #[case] expected_ref_type: &str,
     ) {
@@ -1019,41 +1388,221 @@ mod tests {
         let converted = input_reference_from_biblatex(&entry);
 
         assert_eq!(converted.ref_type(), expected_ref_type);
+        assert!(converted.as_collection().is_some());
     }
 
     #[test]
-    fn math_chunk_becomes_djot_inline_math() {
-        let entry = parse_single_entry("@book{k1, title = {Energy: $E=mc^2$}, date = {2024}}");
-
-        let converted = input_reference_from_biblatex(&entry);
-
-        assert_eq!(
-            converted.title(),
-            Some(Title::Single("Energy: $E=mc^2$".to_string()))
-        );
-    }
-
-    #[test]
-    fn multiple_locations_are_joined_with_semicolon() {
+    fn standalone_proceedings_sets_event_and_editor() {
         let entry = parse_single_entry(
-            "@book{k1, title = {T}, date = {2024}, publisher = {Acme}, \
-             location = {Boston and London}}",
+            "@proceedings{p1, title = {Proceedings of Examples}, editor = {Doe, John}, \
+             date = {2024}, eventtitle = {Symposium on Examples}, venue = {Springfield}, \
+             eventdate = {2023-06-01}}",
         );
 
         let converted = input_reference_from_biblatex(&entry);
 
-        let monograph = converted.as_monograph().expect("expected a Monograph");
+        let collection = converted.as_collection().expect("expected a Collection");
+        assert_eq!(collection.r#type, CollectionType::Proceedings);
+        let event = match collection.event.as_ref().expect("expected an event") {
+            WorkRelation::Embedded(inner) => inner.as_event().expect("expected an Event"),
+            WorkRelation::Id(_) => panic!("expected an embedded event, not an id reference"),
+        };
         assert_eq!(
-            monograph.publisher,
+            event.title,
+            Some(Title::Single("Symposium on Examples".to_string()))
+        );
+        assert_eq!(event.location, Some("Springfield".to_string()));
+        assert_eq!(
+            converted.editor(),
+            Some(Contributor::StructuredName(StructuredName {
+                given: "John".into(),
+                family: "Doe".into(),
+                suffix: None,
+                dropping_particle: None,
+                non_dropping_particle: None,
+            }))
+        );
+    }
+
+    #[test]
+    fn patent_with_number_and_holder_maps_to_patent() {
+        // Double braces protect the corporate name from BibTeX's
+        // comma-less "Given Family" name-splitting convention, matching how
+        // real .bib files mark up an institutional holder.
+        let entry = parse_single_entry(
+            "@patent{p1, title = {Widget}, date = {2024}, number = {US7,347,809}, \
+             holder = {{Acme Corp}}, location = {US}}",
+        );
+
+        let converted = input_reference_from_biblatex(&entry);
+
+        assert_eq!(converted.ref_type(), "patent");
+        let patent = converted.as_patent().expect("expected a Patent");
+        assert_eq!(patent.patent_number, "US7,347,809");
+        assert_eq!(
+            patent.assignee,
+            Some(Contributor::SimpleName(SimpleName {
+                name: "Acme Corp".into(),
+                location: None,
+                short_name: None,
+            }))
+        );
+        assert_eq!(patent.jurisdiction, Some("US".to_string()));
+    }
+
+    #[rstest]
+    #[case::missing("@patent{p1, title = {Widget}, date = {2024}}")]
+    #[case::empty("@patent{p1, title = {Widget}, date = {2024}, number = {}}")]
+    #[case::whitespace("@patent{p1, title = {Widget}, date = {2024}, number = {   }}")]
+    fn patent_without_nonblank_number_stays_on_fallback(#[case] source: &str) {
+        // `Patent.patent_number` is required (non-`Option`); a `@patent`
+        // with no nonblank `number` must not be given an empty identifier.
+        let entry = parse_single_entry(source);
+
+        let converted = input_reference_from_biblatex(&entry);
+
+        assert_eq!(converted.ref_type(), "document");
+        assert!(converted.as_patent().is_none());
+    }
+
+    #[test]
+    fn dataset_maps_to_dataset() {
+        let entry = parse_single_entry(
+            "@dataset{d1, title = {Survey Data}, date = {2024}, version = {1.2}, \
+             publisher = {Zenodo}}",
+        );
+
+        let converted = input_reference_from_biblatex(&entry);
+
+        assert_eq!(converted.ref_type(), "dataset");
+        let dataset = converted.as_dataset().expect("expected a Dataset");
+        assert_eq!(dataset.version, Some("1.2".to_string()));
+        assert_eq!(
+            dataset.publisher,
             Some(Publisher {
-                name: "Acme".into(),
-                place: Some("Boston; London".into()),
+                name: "Zenodo".into(),
+                place: None,
             })
         );
     }
 
     #[test]
-    fn given_article_with_no_journal_and_an_eprint_when_converted_then_becomes_a_preprint() {
+    fn software_maps_to_software() {
+        let entry = parse_single_entry(
+            "@software{s1, title = {Widget Toolkit}, date = {2024}, version = {4.1.0}}",
+        );
+
+        let converted = input_reference_from_biblatex(&entry);
+
+        assert_eq!(converted.ref_type(), "software");
+        let software = converted.as_software().expect("expected Software");
+        assert_eq!(software.version, Some("4.1.0".to_string()));
+    }
+
+    #[test]
+    fn standard_with_number_maps_to_standard() {
+        let entry = parse_single_entry(
+            "@standard{s1, title = {Date and Time Format}, date = {2024}, number = {ISO 8601}, \
+             organization = {ISO}}",
+        );
+
+        let converted = input_reference_from_biblatex(&entry);
+
+        assert_eq!(converted.ref_type(), "standard");
+        let standard = converted.as_standard().expect("expected a Standard");
+        assert_eq!(standard.standard_number, "ISO 8601");
+        assert_eq!(standard.authority, Some("ISO".to_string()));
+    }
+
+    #[rstest]
+    #[case::missing("@standard{s1, title = {Untitled Standard}, date = {2024}}")]
+    #[case::empty("@standard{s1, title = {Untitled Standard}, date = {2024}, number = {}}")]
+    #[case::whitespace("@standard{s1, title = {Untitled Standard}, date = {2024}, number = {   }}")]
+    fn standard_without_nonblank_number_stays_on_fallback(#[case] source: &str) {
+        let entry = parse_single_entry(source);
+
+        let converted = input_reference_from_biblatex(&entry);
+
+        assert_eq!(converted.ref_type(), "document");
+        assert!(converted.as_standard().is_none());
+    }
+
+    #[test]
+    fn periodical_uses_document_compatibility_contract() {
+        // The current model cannot represent issue → journal hierarchy, so
+        // preserve the established document contract and canonical genre.
+        let entry = parse_single_entry(
+            "@periodical{p1, title = {Journal of Examples}, date = {2024}, issn = {1234-5678}}",
+        );
+
+        let converted = input_reference_from_biblatex(&entry);
+
+        assert_eq!(converted.ref_type(), "periodical");
+        assert_eq!(converted.issued(), Some(DateValue::new("2024".to_string())));
+        let monograph = converted.as_monograph().expect("expected a Monograph");
+        assert_eq!(
+            monograph.title,
+            Some(Title::Single("Journal of Examples".to_string()))
+        );
+        assert_eq!(monograph.genre.as_deref(), Some("periodical"));
+    }
+
+    #[rstest]
+    #[case::reference_maps_to_book("@reference{r1, title={T}, date={2024}}", "book")]
+    #[case::mvreference_maps_to_book("@mvreference{r1, title={T}, date={2024}}", "book")]
+    fn reference_entry_types_map_to_book(#[case] source: &str, #[case] expected_ref_type: &str) {
+        let entry = parse_single_entry(source);
+
+        let converted = input_reference_from_biblatex(&entry);
+
+        assert_eq!(converted.ref_type(), expected_ref_type);
+    }
+
+    #[test]
+    fn inreference_maps_like_incollection() {
+        let entry = parse_single_entry(
+            "@inreference{i1, title = {Entry}, booktitle = {Encyclopedia}, date = {2024}}",
+        );
+
+        let converted = input_reference_from_biblatex(&entry);
+
+        let component = converted
+            .as_collection_component()
+            .expect("expected a CollectionComponent");
+        let parent = match component.container.as_ref().expect("expected a container") {
+            WorkRelation::Embedded(inner) => inner
+                .as_collection()
+                .expect("expected an embedded Collection"),
+            WorkRelation::Id(_) => panic!("expected an embedded container, not an id reference"),
+        };
+        assert_eq!(parent.r#type, CollectionType::EditedBook);
+        assert_eq!(
+            parent.title,
+            Some(Title::Single("Encyclopedia".to_string()))
+        );
+        assert_eq!(converted.ref_type(), "entry");
+    }
+
+    #[test]
+    fn inproceedings_maps_to_paper_conference() {
+        let entry = parse_single_entry(
+            "@inproceedings{p1, title = {Paper}, booktitle = {Proceedings}, date = {2024}}",
+        );
+
+        let converted = input_reference_from_biblatex(&entry);
+
+        assert_eq!(converted.ref_type(), "paper-conference");
+        assert_eq!(
+            converted
+                .as_collection_component()
+                .expect("expected a CollectionComponent")
+                .r#type,
+            MonographComponentType::Document
+        );
+    }
+
+    #[test]
+    fn article_with_no_journal_and_an_eprint_becomes_a_preprint() {
         // Mirrors `CSL_TYPE_MAP`'s rule that a container-less CSL-JSON
         // `article` is a standalone preprint, not a truncated journal article.
         let entry = parse_single_entry(
@@ -1076,8 +1625,7 @@ mod tests {
     }
 
     #[test]
-    fn given_article_with_a_journal_and_an_eprint_when_converted_then_stays_a_journal_article_with_eprint_metadata()
-     {
+    fn article_with_a_journal_and_an_eprint_keeps_eprint_metadata() {
         let entry = parse_single_entry(
             "@article{k1, title = {T}, date = {2024}, journaltitle = {J}, \
              eprint = {2301.00001}, eprinttype = {arXiv}, eprintclass = {cs.DL}}",
@@ -1116,7 +1664,7 @@ mod tests {
         "@book{k1, title = {T}, date = {2024}, eprint = {2301.00001}}",
         "book"
     )]
-    fn given_biblatex_entry_with_an_eprint_field_when_converted_then_type_flip_follows_the_precedence_rule(
+    fn eprint_field_type_flip_follows_precedence_rule(
         #[case] source: &str,
         #[case] expected_ref_type: &str,
     ) {
@@ -1332,7 +1880,7 @@ mod tests {
     #[case::foreword("foreword", "foreword-author")]
     #[case::introduction("introduction", "introduction-author")]
     #[case::afterword("afterword", "afterword-author")]
-    fn given_biblatex_editorial_sub_role_field_when_converted_then_maps_to_typed_contributor_role(
+    fn editorial_sub_role_field_maps_to_typed_contributor_role(
         #[case] biblatex_field: &str,
         #[case] expected_role: &str,
     ) {
@@ -1361,8 +1909,7 @@ mod tests {
     }
 
     #[test]
-    fn given_editor_and_editora_with_different_editor_types_when_converted_then_roles_stay_distinct()
-     {
+    fn editor_and_editora_with_different_editor_types_stay_distinct() {
         // Regression: `entry.editors()` returns one group per editor* field
         // plus its `EditorType`; extraction used to flatten all of it into a
         // single undifferentiated `editor` field, discarding the type. Only
@@ -1398,8 +1945,7 @@ mod tests {
     }
 
     #[test]
-    fn given_editora_with_an_editor_type_lacking_a_typed_role_when_converted_then_degrades_to_unknown_role()
-     {
+    fn editora_with_untyped_editor_type_degrades_to_unknown_role() {
         let entry = parse_single_entry(
             "@book{k1, title = {T}, date = {2024}, editora = {Roe, Sam}, editoratype = {organizer}}",
         );
