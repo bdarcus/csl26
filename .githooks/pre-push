@@ -34,8 +34,18 @@ while read -r local_ref local_sha remote_ref remote_sha; do
 
   # Validate conventional commits (scope allowlist, format, body) via alint.
   # The authoritative scope list lives in .alint.yml — no duplication here.
+  #
+  # Deliberately no `--base`/`--changed` CLI flag: those restrict which
+  # files alint's *content* rules (e.g. `broken-markdown-links`) treat as
+  # existing to the diff's changed-file set, so a correct, untouched
+  # cross-reference in a touched doc gets reported as broken (see bean
+  # csl26-8jtn). The `conventional-commits` rule needs no CLI help to scope
+  # itself to this push's commit range — its own `since:` field already
+  # reads `ALINT_BASE_SHA` (see .alint.yml) — so passing just the env var
+  # and nothing else matches CI's own `commit-policy.yml` invocation, which
+  # never passes `--base` either.
   if command -v alint &>/dev/null; then
-    if ! ALINT_BASE_SHA="$policy_base" alint check --base "$policy_base" \
+    if ! ALINT_BASE_SHA="$policy_base" alint check \
         "$ROOT_DIR" 2>&1; then
       printf '[ERROR] alint check failed.\n' >&2
       exit 1
