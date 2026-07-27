@@ -82,7 +82,7 @@
       "entry_type": "inproceedings",
       "builder": "inbook",
       "monograph_type": null,
-      "note": "`eventtitle`/`venue` (the conference itself, distinct from `booktitle`, the proceedings volume) are not read — no schema slot on `CollectionComponent` today. See `BIBLATEX_FIELDS`."
+      "note": "`eventtitle`/`venue`/`eventdate` (the conference itself, distinct from `booktitle`, the proceedings volume) map onto the synthesized parent `Collection`'s `event` field (an embedded `Event`), the same shape the CSL-JSON `paper-conference` path uses. The parent `Collection` is `CollectionType::Proceedings` here, vs. `EditedBook` for `inbook`/`incollection`."
     },
     {
       "entry_type": "article",
@@ -145,35 +145,35 @@
       "datatype": "literal-list",
       "crate_accessor": "entry.publisher()",
       "target": "publisher.name",
-      "note": "biblatex `publisher` is an `and`-separated literal list (multiple publishers); extraction concatenates it to a single string via `rich_field_str`, discarding list structure."
+      "note": "biblatex `publisher` is an `and`-separated literal list (multiple publishers). `literal_list_str` splits and rejoins with `\"; \"`, but `Publisher.name` remains a single `MultilingualString`."
     },
     {
       "field": "institution",
       "datatype": "literal-list",
       "crate_accessor": "entry.institution()",
       "target": "publisher.name (fallback)",
-      "note": "Falls back to `organization`, then `school`, when `publisher` is absent. Same list-flattening caveat as `publisher`."
+      "note": "Falls back to `organization`, then `school`, when `publisher` is absent. Same list-join handling as `publisher`."
     },
     {
       "field": "organization",
       "datatype": "literal-list",
       "crate_accessor": "entry.fields.get(\"organization\") => Vec<Chunks>",
       "target": "publisher.name (fallback)",
-      "note": "Same list-flattening caveat as `publisher`."
+      "note": "Same list-join handling as `publisher`."
     },
     {
       "field": "school",
       "datatype": "literal-list",
       "crate_accessor": "entry.school()",
       "target": "publisher.name (fallback)",
-      "note": "Same list-flattening caveat as `publisher`."
+      "note": "Same list-join handling as `publisher`."
     },
     {
       "field": "location",
       "datatype": "literal-list",
       "crate_accessor": "entry.location()",
       "target": "publisher.place",
-      "note": "Alias of `address`. Same list-flattening caveat as `publisher`."
+      "note": "Alias of `address`. Same list-join handling as `publisher`; `Publisher.place` remains single-valued."
     },
     {
       "field": "url",
@@ -299,7 +299,7 @@
       "datatype": "name",
       "crate_accessor": "entry.editors()",
       "target": "editor / contributors[editor]",
-      "note": "`entry.editors()` also returns `editora`/`editorb`/`editorc` and each field's `EditorType` (`editortype` etc: Compiler, Founder, Continuator, Redactor, Reviser, Collaborator, Organizer, Director); extraction flattens all of it to a single undifferentiated editor list and discards the `EditorType`. See bean csl26-qtur's contributor-roles follow-up."
+      "note": "`entry.editors()` also returns `editora`/`editorb`/`editorc` and each group's `EditorType` (`editortype` etc). Only `EditorType::Editor`-tagged groups become the `editor` shorthand; `Compiler`/`Director` groups are tagged `contributors[compiler]`/`contributors[director]`, and `Founder`/`Continuator`/`Redactor`/`Reviser`/`Collaborator`/`Organizer` (no dedicated `ContributorRole` variant) degrade to `contributors[Unknown(<name>)]`, which still round-trips and is selectable by a style as a custom role."
     },
     {
       "field": "translator",
@@ -312,78 +312,92 @@
       "field": "eprint",
       "datatype": "verbatim",
       "crate_accessor": "entry.eprint()",
-      "target": null,
-      "note": "No producer of `MonographType::Preprint` reads this. Needs a precedence rule: whether `eprint` on an otherwise-typed entry overrides the entry-type-driven mapping, or only applies to generic/misc entries."
+      "target": "eprint.id",
+      "note": "A nonblank identifier populates `EprintInfo` on Monograph, CollectionComponent, and SerialComponent outputs. A missing `eprinttype` is represented by an empty server. It separately promotes an otherwise generic container-less entry to `Preprint`; blank identifiers are ignored."
     },
     {
       "field": "eprinttype",
       "datatype": "key",
       "crate_accessor": "entry.eprint_type()",
-      "target": null,
-      "note": "Alias of `archiveprefix`. See `eprint`."
+      "target": "eprint.server",
+      "note": "Alias of `archiveprefix`. Lowercased on extraction. See `eprint`."
+    },
+    {
+      "field": "eprintclass",
+      "datatype": "literal",
+      "crate_accessor": "entry.eprint_class()",
+      "target": "eprint.class",
+      "note": "Alias of `primaryclass`. See `eprint`."
     },
     {
       "field": "series",
       "datatype": "literal",
-      "crate_accessor": null,
-      "target": null,
-      "note": "§2.2.1 datatype is literal, not entrykey — prior art against modeling a BibLaTeX series as a fully embedded parent `Collection`; a flat `series` field on `Monograph`/`Collection` matches the manual's own model more closely."
+      "crate_accessor": "entry.series()",
+      "target": "container[…].container (collection-title)",
+      "note": "Reuses the CSL-JSON conversion path's shape for a `collection-title` (`relation_collection_title`): an embedded, title-only `Collection` wrapping the series name. For `@book`/etc. (no intermediate container-title), wraps in a title-less parent first, matching the CSL-JSON path's identical `container-title`-less case. For `@incollection`/`@inproceedings`/`@article` the series attaches directly to the already-synthesized parent Collection/Serial. A `number` alongside `series` becomes `NumberingType::Volume` (volume-in-series) rather than a generic document number."
     },
     {
       "field": "eventtitle",
       "datatype": "literal",
-      "crate_accessor": null,
-      "target": null,
-      "note": "The conference/event name for `@inproceedings`, distinct from `booktitle` (the proceedings volume). No schema slot on `CollectionComponent` today."
+      "crate_accessor": "entry.eventtitle()",
+      "target": "container.event.title",
+      "note": "The conference/event name for `@inproceedings`, distinct from `booktitle` (the proceedings volume). Only read for `@inproceedings`; see the entry-type table."
     },
     {
       "field": "venue",
       "datatype": "literal",
-      "crate_accessor": null,
-      "target": null,
-      "note": "Same schema-slot gap as `eventtitle`."
+      "crate_accessor": "entry.venue()",
+      "target": "container.event.location",
+      "note": "Same event shape as `eventtitle`."
+    },
+    {
+      "field": "eventdate",
+      "datatype": "date",
+      "crate_accessor": "entry.event_date()",
+      "target": "container.event.date",
+      "note": "Same event shape as `eventtitle`."
     },
     {
       "field": "chapter",
       "datatype": "literal",
-      "crate_accessor": null,
-      "target": null,
-      "note": "No schema slot on `CollectionComponent` today."
+      "crate_accessor": "entry.chapter()",
+      "target": "numbering[chapter]",
+      "note": null
     },
     {
       "field": "afterword",
       "datatype": "name",
       "crate_accessor": "entry.afterword()",
-      "target": null,
-      "note": "Editorial sub-role field with its own typed accessor; not read."
+      "target": "contributors[afterword-author]",
+      "note": null
     },
     {
       "field": "annotator",
       "datatype": "name",
       "crate_accessor": "entry.annotator()",
-      "target": null,
-      "note": "Editorial sub-role field with its own typed accessor; not read."
+      "target": "contributors[annotator]",
+      "note": null
     },
     {
       "field": "commentator",
       "datatype": "name",
       "crate_accessor": "entry.commentator()",
-      "target": null,
-      "note": "Editorial sub-role field with its own typed accessor; not read."
+      "target": "contributors[commentator]",
+      "note": null
     },
     {
       "field": "foreword",
       "datatype": "name",
       "crate_accessor": "entry.foreword()",
-      "target": null,
-      "note": "Editorial sub-role field with its own typed accessor; not read."
+      "target": "contributors[foreword-author]",
+      "note": null
     },
     {
       "field": "introduction",
       "datatype": "name",
       "crate_accessor": "entry.introduction()",
-      "target": null,
-      "note": "Editorial sub-role field with its own typed accessor; not read."
+      "target": "contributors[introduction-author]",
+      "note": null
     },
     {
       "field": "holder",

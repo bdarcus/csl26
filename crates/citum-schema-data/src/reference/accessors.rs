@@ -1159,6 +1159,12 @@ impl InputReference {
 
         match &self.extension {
             ClassExtension::Monograph(r) => r.container.as_ref().and_then(nested_collection_title),
+            ClassExtension::Collection(r) => {
+                r.container.as_ref().and_then(|relation| match relation {
+                    WorkRelation::Embedded(collection) => collection.title(),
+                    WorkRelation::Id(_) => None,
+                })
+            }
             ClassExtension::CollectionComponent(r) => {
                 r.container.as_ref().and_then(nested_collection_title)
             }

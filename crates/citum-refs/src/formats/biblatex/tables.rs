@@ -15,16 +15,19 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus and Citum contributors
 //! extraction (in `super::mapping`) currently sends it, but extraction still
 //! runs through the untyped `field_str`/`rich_field_str` closures and the
 //! handful of typed `biblatex` crate accessors it already calls — this table
-//! does not drive extraction. Rewiring extraction to dispatch on
-//! [`BiblatexDataType`] is a follow-up (see bean csl26-qtur's follow-ups),
-//! since it changes conversion output (typed dates, real page ranges,
-//! list-valued publishers) and so does not belong in this refactor.
+//! does not drive extraction. `BiblatexDataType` is not consulted at
+//! extraction time (no `match datatype { ... }` dispatch); the two narrow
+//! fixes it motivated -- preserving `Chunk::Math` and joining
+//! `LiteralList` fields (`publisher`/`institution`/`organization`/`school`/
+//! `location`) with `"; "` -- are applied directly in `mapping.rs`.
+//! `Date`/`Range`/`Integer` fields deliberately still use hand-rolled string
+//! extraction rather than the crate's typed accessors because those
+//! normalize input and may change existing rendered output.
 //!
 //! [`BIBLATEX_ENTRY_TYPES`] **does** drive dispatch — [`biblatex_entry_mapping`]
 //! replaces the previous inline `match` in
-//! `super::mapping::input_reference_from_biblatex`. This part of the
-//! refactor is behavior-preserving: every row reproduces exactly the
-//! `MonographType`/builder the old `match` produced for that entry type.
+//! `super::mapping::input_reference_from_biblatex`; each row documents the
+//! native reference shape selected for that entry type.
 //!
 //! The `datatype`/`crate_accessor` columns are populated from the BibLaTeX
 //! manual §2.2.1/§2.2.2, not inferred from the `biblatex` crate — the crate
@@ -157,7 +160,7 @@ pub(super) const BIBLATEX_ENTRY_TYPES: &[BiblatexEntryMapping] = &[
         entry_type: "inproceedings",
         builder: BiblatexBuilder::Inbook,
         note: Some(
-            "`eventtitle`/`venue` (the conference itself, distinct from `booktitle`, the proceedings volume) are not read — no schema slot on `CollectionComponent` today. See `BIBLATEX_FIELDS`.",
+            "`eventtitle`/`venue`/`eventdate` (the conference itself, distinct from `booktitle`, the proceedings volume) map onto the synthesized parent `Collection`'s `event` field (an embedded `Event`), the same shape the CSL-JSON `paper-conference` path uses. The parent `Collection` is `CollectionType::Proceedings` here, vs. `EditedBook` for `inbook`/`incollection`.",
         ),
     },
     BiblatexEntryMapping {
@@ -311,7 +314,7 @@ pub(super) const BIBLATEX_FIELDS: &[BiblatexFieldMapping] = &[
         crate_accessor: Some("entry.publisher()"),
         target: BiblatexFieldTarget::Mapped("publisher.name"),
         note: Some(
-            "biblatex `publisher` is an `and`-separated literal list (multiple publishers); extraction concatenates it to a single string via `rich_field_str`, discarding list structure.",
+            "biblatex `publisher` is an `and`-separated literal list (multiple publishers). `literal_list_str` splits and rejoins with `\"; \"`, but `Publisher.name` remains a single `MultilingualString`.",
         ),
     },
     BiblatexFieldMapping {
@@ -320,7 +323,7 @@ pub(super) const BIBLATEX_FIELDS: &[BiblatexFieldMapping] = &[
         crate_accessor: Some("entry.institution()"),
         target: BiblatexFieldTarget::Mapped("publisher.name (fallback)"),
         note: Some(
-            "Falls back to `organization`, then `school`, when `publisher` is absent. Same list-flattening caveat as `publisher`.",
+            "Falls back to `organization`, then `school`, when `publisher` is absent. Same list-join handling as `publisher`.",
         ),
     },
     BiblatexFieldMapping {
@@ -328,21 +331,23 @@ pub(super) const BIBLATEX_FIELDS: &[BiblatexFieldMapping] = &[
         datatype: BiblatexDataType::LiteralList,
         crate_accessor: Some("entry.fields.get(\"organization\") => Vec<Chunks>"),
         target: BiblatexFieldTarget::Mapped("publisher.name (fallback)"),
-        note: Some("Same list-flattening caveat as `publisher`."),
+        note: Some("Same list-join handling as `publisher`."),
     },
     BiblatexFieldMapping {
         field: "school",
         datatype: BiblatexDataType::LiteralList,
         crate_accessor: Some("entry.school()"),
         target: BiblatexFieldTarget::Mapped("publisher.name (fallback)"),
-        note: Some("Same list-flattening caveat as `publisher`."),
+        note: Some("Same list-join handling as `publisher`."),
     },
     BiblatexFieldMapping {
         field: "location",
         datatype: BiblatexDataType::LiteralList,
         crate_accessor: Some("entry.location()"),
         target: BiblatexFieldTarget::Mapped("publisher.place"),
-        note: Some("Alias of `address`. Same list-flattening caveat as `publisher`."),
+        note: Some(
+            "Alias of `address`. Same list-join handling as `publisher`; `Publisher.place` remains single-valued.",
+        ),
     },
     BiblatexFieldMapping {
         field: "url",
@@ -481,7 +486,7 @@ pub(super) const BIBLATEX_FIELDS: &[BiblatexFieldMapping] = &[
         crate_accessor: Some("entry.editors()"),
         target: BiblatexFieldTarget::Mapped("editor / contributors[editor]"),
         note: Some(
-            "`entry.editors()` also returns `editora`/`editorb`/`editorc` and each field's `EditorType` (`editortype` etc: Compiler, Founder, Continuator, Redactor, Reviser, Collaborator, Organizer, Director); extraction flattens all of it to a single undifferentiated editor list and discards the `EditorType`. See bean csl26-qtur's contributor-roles follow-up.",
+            "`entry.editors()` also returns `editora`/`editorb`/`editorc` and each group's `EditorType` (`editortype` etc). Only `EditorType::Editor`-tagged groups become the `editor` shorthand; `Compiler`/`Director` groups are tagged `contributors[compiler]`/`contributors[director]`, and `Founder`/`Continuator`/`Redactor`/`Reviser`/`Collaborator`/`Organizer` (no dedicated `ContributorRole` variant) degrade to `contributors[Unknown(<name>)]`, which still round-trips and is selectable by a style as a custom role.",
         ),
     },
     BiblatexFieldMapping {
@@ -496,84 +501,98 @@ pub(super) const BIBLATEX_FIELDS: &[BiblatexFieldMapping] = &[
         field: "eprint",
         datatype: BiblatexDataType::Verbatim,
         crate_accessor: Some("entry.eprint()"),
-        target: BiblatexFieldTarget::Unmapped,
+        target: BiblatexFieldTarget::Mapped("eprint.id"),
         note: Some(
-            "No producer of `MonographType::Preprint` reads this. Needs a precedence rule: whether `eprint` on an otherwise-typed entry overrides the entry-type-driven mapping, or only applies to generic/misc entries.",
+            "A nonblank identifier populates `EprintInfo` on Monograph, CollectionComponent, and SerialComponent outputs. A missing `eprinttype` is represented by an empty server. It separately promotes an otherwise generic container-less entry to `Preprint`; blank identifiers are ignored.",
         ),
     },
     BiblatexFieldMapping {
         field: "eprinttype",
         datatype: BiblatexDataType::Key,
         crate_accessor: Some("entry.eprint_type()"),
-        target: BiblatexFieldTarget::Unmapped,
-        note: Some("Alias of `archiveprefix`. See `eprint`."),
+        target: BiblatexFieldTarget::Mapped("eprint.server"),
+        note: Some("Alias of `archiveprefix`. Lowercased on extraction. See `eprint`."),
+    },
+    BiblatexFieldMapping {
+        field: "eprintclass",
+        datatype: BiblatexDataType::Literal,
+        crate_accessor: Some("entry.eprint_class()"),
+        target: BiblatexFieldTarget::Mapped("eprint.class"),
+        note: Some("Alias of `primaryclass`. See `eprint`."),
     },
     BiblatexFieldMapping {
         field: "series",
         datatype: BiblatexDataType::Literal,
-        crate_accessor: None,
-        target: BiblatexFieldTarget::Unmapped,
+        crate_accessor: Some("entry.series()"),
+        target: BiblatexFieldTarget::Mapped("container[…].container (collection-title)"),
         note: Some(
-            "§2.2.1 datatype is literal, not entrykey — prior art against modeling a BibLaTeX series as a fully embedded parent `Collection`; a flat `series` field on `Monograph`/`Collection` matches the manual's own model more closely.",
+            "Reuses the CSL-JSON conversion path's shape for a `collection-title` (`relation_collection_title`): an embedded, title-only `Collection` wrapping the series name. For `@book`/etc. (no intermediate container-title), wraps in a title-less parent first, matching the CSL-JSON path's identical `container-title`-less case. For `@incollection`/`@inproceedings`/`@article` the series attaches directly to the already-synthesized parent Collection/Serial. A `number` alongside `series` becomes `NumberingType::Volume` (volume-in-series) rather than a generic document number.",
         ),
     },
     BiblatexFieldMapping {
         field: "eventtitle",
         datatype: BiblatexDataType::Literal,
-        crate_accessor: None,
-        target: BiblatexFieldTarget::Unmapped,
+        crate_accessor: Some("entry.eventtitle()"),
+        target: BiblatexFieldTarget::Mapped("container.event.title"),
         note: Some(
-            "The conference/event name for `@inproceedings`, distinct from `booktitle` (the proceedings volume). No schema slot on `CollectionComponent` today.",
+            "The conference/event name for `@inproceedings`, distinct from `booktitle` (the proceedings volume). Only read for `@inproceedings`; see the entry-type table.",
         ),
     },
     BiblatexFieldMapping {
         field: "venue",
         datatype: BiblatexDataType::Literal,
-        crate_accessor: None,
-        target: BiblatexFieldTarget::Unmapped,
-        note: Some("Same schema-slot gap as `eventtitle`."),
+        crate_accessor: Some("entry.venue()"),
+        target: BiblatexFieldTarget::Mapped("container.event.location"),
+        note: Some("Same event shape as `eventtitle`."),
+    },
+    BiblatexFieldMapping {
+        field: "eventdate",
+        datatype: BiblatexDataType::Date,
+        crate_accessor: Some("entry.event_date()"),
+        target: BiblatexFieldTarget::Mapped("container.event.date"),
+        note: Some("Same event shape as `eventtitle`."),
     },
     BiblatexFieldMapping {
         field: "chapter",
         datatype: BiblatexDataType::Literal,
-        crate_accessor: None,
-        target: BiblatexFieldTarget::Unmapped,
-        note: Some("No schema slot on `CollectionComponent` today."),
+        crate_accessor: Some("entry.chapter()"),
+        target: BiblatexFieldTarget::Mapped("numbering[chapter]"),
+        note: None,
     },
     BiblatexFieldMapping {
         field: "afterword",
         datatype: BiblatexDataType::Name,
         crate_accessor: Some("entry.afterword()"),
-        target: BiblatexFieldTarget::Unmapped,
-        note: Some("Editorial sub-role field with its own typed accessor; not read."),
+        target: BiblatexFieldTarget::Mapped("contributors[afterword-author]"),
+        note: None,
     },
     BiblatexFieldMapping {
         field: "annotator",
         datatype: BiblatexDataType::Name,
         crate_accessor: Some("entry.annotator()"),
-        target: BiblatexFieldTarget::Unmapped,
-        note: Some("Editorial sub-role field with its own typed accessor; not read."),
+        target: BiblatexFieldTarget::Mapped("contributors[annotator]"),
+        note: None,
     },
     BiblatexFieldMapping {
         field: "commentator",
         datatype: BiblatexDataType::Name,
         crate_accessor: Some("entry.commentator()"),
-        target: BiblatexFieldTarget::Unmapped,
-        note: Some("Editorial sub-role field with its own typed accessor; not read."),
+        target: BiblatexFieldTarget::Mapped("contributors[commentator]"),
+        note: None,
     },
     BiblatexFieldMapping {
         field: "foreword",
         datatype: BiblatexDataType::Name,
         crate_accessor: Some("entry.foreword()"),
-        target: BiblatexFieldTarget::Unmapped,
-        note: Some("Editorial sub-role field with its own typed accessor; not read."),
+        target: BiblatexFieldTarget::Mapped("contributors[foreword-author]"),
+        note: None,
     },
     BiblatexFieldMapping {
         field: "introduction",
         datatype: BiblatexDataType::Name,
         crate_accessor: Some("entry.introduction()"),
-        target: BiblatexFieldTarget::Unmapped,
-        note: Some("Editorial sub-role field with its own typed accessor; not read."),
+        target: BiblatexFieldTarget::Mapped("contributors[introduction-author]"),
+        note: None,
     },
     BiblatexFieldMapping {
         field: "holder",

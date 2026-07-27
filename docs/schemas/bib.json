@@ -3941,6 +3941,31 @@
             "producer",
             "writer"
           ]
+        },
+        {
+          "description": "Author of annotations accompanying the work (BibLaTeX `annotator`).",
+          "type": "string",
+          "const": "annotator"
+        },
+        {
+          "description": "Author of a commentary on the work (BibLaTeX `commentator`).",
+          "type": "string",
+          "const": "commentator"
+        },
+        {
+          "description": "Author of a foreword (BibLaTeX `foreword`).",
+          "type": "string",
+          "const": "foreword-author"
+        },
+        {
+          "description": "Author of an introduction (BibLaTeX `introduction`).",
+          "type": "string",
+          "const": "introduction-author"
+        },
+        {
+          "description": "Author of an afterword (BibLaTeX `afterword`).",
+          "type": "string",
+          "const": "afterword-author"
         }
       ]
     },

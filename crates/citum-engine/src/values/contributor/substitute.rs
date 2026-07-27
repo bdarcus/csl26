@@ -166,6 +166,18 @@ fn data_role_for_custom(role: &str) -> DataRole {
         "host" => DataRole::Host,
         "producer" | "executive-producer" => DataRole::Producer,
         "writer" => DataRole::Writer,
+        // Editorial sub-roles (BibLaTeX annotator/commentator/foreword/introduction/
+        // afterword). These must stay in lockstep with the typed `ContributorRole`
+        // variants added for the same fields (citum-schema-data::contributor) --
+        // otherwise a style-selected role string would resolve to
+        // `DataRole::Unknown(role)` while conversion tags the contributor with the
+        // typed variant, and `roles.contains()`'s derived `PartialEq` would never
+        // match the two.
+        "annotator" => DataRole::Annotator,
+        "commentator" => DataRole::Commentator,
+        "foreword-author" => DataRole::ForewordAuthor,
+        "introduction-author" => DataRole::IntroductionAuthor,
+        "afterword-author" => DataRole::AfterwordAuthor,
         _ => DataRole::Unknown(role.to_string()),
     }
 }
