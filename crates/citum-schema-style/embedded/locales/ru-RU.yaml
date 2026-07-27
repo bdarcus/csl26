@@ -46,6 +46,42 @@ dates:
     - осень
     - зима
 roles:
+  # Editorial sub-role terms follow BibLaTeX's russian.lbx vocabulary.
+  annotator:
+    long:
+      singular: примечания
+      plural: примечания
+    short: примеч.
+    verb: примечания
+    verb-short: примеч.
+  commentator:
+    long:
+      singular: комментатор
+      plural: комментаторы
+    short: коммент.
+    verb: комментарии
+    verb-short: коммент.
+  foreword-author:
+    long:
+      singular: предисловие
+      plural: предисловие
+    short: предисл.
+    verb: предисловие
+    verb-short: предисл.
+  introduction-author:
+    long:
+      singular: вступительная статья
+      plural: вступительная статья
+    short: вступ. ст.
+    verb: вступительная статья
+    verb-short: вступ. ст.
+  afterword-author:
+    long:
+      singular: послесловие
+      plural: послесловие
+    short: послесл.
+    verb: послесловие
+    verb-short: послесл.
   chair:
     long:
       singular: председатель

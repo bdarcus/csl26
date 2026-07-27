@@ -39,6 +39,46 @@ dates:
     - invierno
 
 roles:
+  # Editorial sub-role terms follow BibLaTeX's spanish.lbx vocabulary.
+  annotator:
+    long:
+      singular: anotaciones
+      plural: anotaciones
+    short:
+      singular: anot.
+      plural: anots.
+    verb: anotado por
+    verb-short: anot. por
+  commentator:
+    long:
+      singular: comentario
+      plural: comentarios
+    short:
+      singular: com.
+      plural: coms.
+    verb: comentado por
+    verb-short: com. por
+  foreword-author:
+    long:
+      singular: prólogo
+      plural: prólogo
+    short: pról.
+    verb: con prólogo de
+    verb-short: con pról. de
+  introduction-author:
+    long:
+      singular: introducción
+      plural: introducción
+    short: intr.
+    verb: con introducción de
+    verb-short: con intr. de
+  afterword-author:
+    long:
+      singular: epílogo
+      plural: epílogo
+    short: epíl.
+    verb: con epílogo de
+    verb-short: con epíl. de
   author:
     long:
   chair:

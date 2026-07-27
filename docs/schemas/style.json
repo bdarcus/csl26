@@ -707,6 +707,31 @@
             "original-author",
             "reviewed-author"
           ]
+        },
+        {
+          "description": "Author of annotations accompanying the work.",
+          "type": "string",
+          "const": "annotator"
+        },
+        {
+          "description": "Author of a commentary on the work.",
+          "type": "string",
+          "const": "commentator"
+        },
+        {
+          "description": "Author of a foreword accompanying the work.",
+          "type": "string",
+          "const": "foreword-author"
+        },
+        {
+          "description": "Author of an introduction accompanying the work.",
+          "type": "string",
+          "const": "introduction-author"
+        },
+        {
+          "description": "Author of an afterword accompanying the work.",
+          "type": "string",
+          "const": "afterword-author"
         }
       ]
     },

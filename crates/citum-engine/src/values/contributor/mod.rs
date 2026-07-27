@@ -47,6 +47,17 @@ pub(crate) fn contributor_role_to_reference_role(
         ContributorRole::Author => Some(citum_schema::reference::ContributorRole::Author),
         ContributorRole::Editor => Some(citum_schema::reference::ContributorRole::Editor),
         ContributorRole::Translator => Some(citum_schema::reference::ContributorRole::Translator),
+        ContributorRole::Annotator => Some(citum_schema::reference::ContributorRole::Annotator),
+        ContributorRole::Commentator => Some(citum_schema::reference::ContributorRole::Commentator),
+        ContributorRole::ForewordAuthor => {
+            Some(citum_schema::reference::ContributorRole::ForewordAuthor)
+        }
+        ContributorRole::IntroductionAuthor => {
+            Some(citum_schema::reference::ContributorRole::IntroductionAuthor)
+        }
+        ContributorRole::AfterwordAuthor => {
+            Some(citum_schema::reference::ContributorRole::AfterwordAuthor)
+        }
         ContributorRole::Recipient => Some(citum_schema::reference::ContributorRole::Recipient),
         ContributorRole::Chair => Some(citum_schema::reference::ContributorRole::Unknown(
             "chair".to_string(),

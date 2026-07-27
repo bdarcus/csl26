@@ -73,7 +73,7 @@ pub const EMBEDDED_LOCALE_OVERRIDE_IDS: &[&str] = &["en-US-chicago", "de-DE-chic
 
 #[cfg(test)]
 mod tests {
-    use super::get_locale;
+    use super::{EMBEDDED_LOCALE_IDS, get_locale};
     use crate::locale::types::TermForm;
     use crate::template::ContributorRole;
 
@@ -97,5 +97,80 @@ mod tests {
                 .and_then(|realization| realization.semicolon.as_deref()),
             Some("; ")
         );
+    }
+
+    #[test]
+    #[allow(
+        clippy::expect_used,
+        reason = "The test must fail when an embedded locale or required role term is absent."
+    )]
+    fn editorial_sub_roles_resolve_every_required_form_in_all_locales() {
+        let roles = [
+            ContributorRole::Annotator,
+            ContributorRole::Commentator,
+            ContributorRole::ForewordAuthor,
+            ContributorRole::IntroductionAuthor,
+            ContributorRole::AfterwordAuthor,
+        ];
+        let forms = [
+            TermForm::Long,
+            TermForm::Short,
+            TermForm::Verb,
+            TermForm::VerbShort,
+        ];
+
+        for &id in EMBEDDED_LOCALE_IDS {
+            let locale = get_locale(id).expect("locale should be embedded");
+            for role in &roles {
+                for form in &forms {
+                    for plural in [false, true] {
+                        let resolved = locale
+                            .resolved_role_term(role, plural, form, None)
+                            .expect("required editorial role term should resolve");
+                        assert!(
+                            !resolved.trim().is_empty(),
+                            "{id} resolved an empty {} ({form:?}, plural={plural})",
+                            role.as_str()
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    #[allow(
+        clippy::expect_used,
+        reason = "The test must fail when an embedded fallback locale is absent."
+    )]
+    fn locales_without_upstream_terms_use_documented_english_fallbacks() {
+        let english = get_locale("en-US").expect("en-US should be embedded");
+        let roles = [
+            ContributorRole::Annotator,
+            ContributorRole::Commentator,
+            ContributorRole::ForewordAuthor,
+            ContributorRole::IntroductionAuthor,
+            ContributorRole::AfterwordAuthor,
+        ];
+        let forms = [
+            TermForm::Long,
+            TermForm::Short,
+            TermForm::Verb,
+            TermForm::VerbShort,
+        ];
+
+        for id in ["ar-AR", "zh-CN", "ja-JP", "ko-KR"] {
+            let locale = get_locale(id).expect("fallback locale should be embedded");
+            for role in &roles {
+                for form in &forms {
+                    assert_eq!(
+                        locale.resolved_role_term(role, false, form, None),
+                        english.resolved_role_term(role, false, form, None),
+                        "{id} should use the English fallback for {} ({form:?})",
+                        role.as_str()
+                    );
+                }
+            }
+        }
     }
 }

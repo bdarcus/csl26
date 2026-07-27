@@ -36,6 +36,42 @@ dates:
     - Sonbahar
     - Kış
 roles:
+  # Editorial sub-role terms follow BibLaTeX's turkish.lbx vocabulary.
+  annotator:
+    long:
+      singular: açıklayan
+      plural: açıklayanlar
+    short: açık.
+    verb: açıklayan
+    verb-short: açık.
+  commentator:
+    long:
+      singular: yorumlayan
+      plural: yorumlayanlar
+    short: yrm.
+    verb: yorumlayan
+    verb-short: yrm.
+  foreword-author:
+    long:
+      singular: önsöz
+      plural: önsöz
+    short: öns.
+    verb: önsözü yazan
+    verb-short: öns. yaz.
+  introduction-author:
+    long:
+      singular: giriş
+      plural: giriş
+    short: gir.
+    verb: girişi yazan
+    verb-short: gir. yaz.
+  afterword-author:
+    long:
+      singular: sonsöz
+      plural: sonsöz
+    short: sons.
+    verb: sonsözü yazan
+    verb-short: sons. yaz.
   author:
     long:
   chair:
