@@ -36,6 +36,42 @@ dates:
     - automne
     - hiver
 roles:
+  # Editorial sub-role terms follow BibLaTeX's french.lbx vocabulary.
+  annotator:
+    long:
+      singular: annotateur
+      plural: annotateurs
+    short: annot.
+    verb: annoté par
+    verb-short: annot. par
+  commentator:
+    long:
+      singular: commentateur
+      plural: commentateurs
+    short: comm.
+    verb: commenté par
+    verb-short: comm. par
+  foreword-author:
+    long:
+      singular: préface
+      plural: préface
+    short: préf.
+    verb: avec une préface de
+    verb-short: avec une préf. de
+  introduction-author:
+    long:
+      singular: introduction
+      plural: introduction
+    short: introd.
+    verb: avec une introduction de
+    verb-short: avec une introd. de
+  afterword-author:
+    long:
+      singular: postface
+      plural: postface
+    short: postf.
+    verb: avec une postface de
+    verb-short: avec une postf. de
   author:
     long:
   chair:

@@ -86,6 +86,11 @@ fn parse_known_role(value: &str) -> Option<ContributorRole> {
         "chair" => ContributorRole::Chair,
         "editor" => ContributorRole::Editor,
         "translator" => ContributorRole::Translator,
+        "annotator" => ContributorRole::Annotator,
+        "commentator" => ContributorRole::Commentator,
+        "foreword-author" => ContributorRole::ForewordAuthor,
+        "introduction-author" => ContributorRole::IntroductionAuthor,
+        "afterword-author" => ContributorRole::AfterwordAuthor,
         "director" => ContributorRole::Director,
         "composer" => ContributorRole::Composer,
         "illustrator" => ContributorRole::Illustrator,
@@ -134,6 +139,11 @@ fn data_role_for_builtin(role: &ContributorRole) -> Option<DataRole> {
         ContributorRole::Director => DataRole::Director,
         ContributorRole::Composer => DataRole::Composer,
         ContributorRole::Illustrator => DataRole::Illustrator,
+        ContributorRole::Annotator => DataRole::Annotator,
+        ContributorRole::Commentator => DataRole::Commentator,
+        ContributorRole::ForewordAuthor => DataRole::ForewordAuthor,
+        ContributorRole::IntroductionAuthor => DataRole::IntroductionAuthor,
+        ContributorRole::AfterwordAuthor => DataRole::AfterwordAuthor,
         ContributorRole::Recipient => DataRole::Recipient,
         ContributorRole::Interviewer => DataRole::Interviewer,
         ContributorRole::Guest => DataRole::Guest,
@@ -166,13 +176,8 @@ fn data_role_for_custom(role: &str) -> DataRole {
         "host" => DataRole::Host,
         "producer" | "executive-producer" => DataRole::Producer,
         "writer" => DataRole::Writer,
-        // Editorial sub-roles (BibLaTeX annotator/commentator/foreword/introduction/
-        // afterword). These must stay in lockstep with the typed `ContributorRole`
-        // variants added for the same fields (citum-schema-data::contributor) --
-        // otherwise a style-selected role string would resolve to
-        // `DataRole::Unknown(role)` while conversion tags the contributor with the
-        // typed variant, and `roles.contains()`'s derived `PartialEq` would never
-        // match the two.
+        // Compatibility aliases for styles authored before these roles became
+        // built-in style vocabulary.
         "annotator" => DataRole::Annotator,
         "commentator" => DataRole::Commentator,
         "foreword-author" => DataRole::ForewordAuthor,

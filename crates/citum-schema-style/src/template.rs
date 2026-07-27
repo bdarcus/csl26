@@ -969,6 +969,16 @@ crate::str_enum! {
         Chair = "chair",
         Editor = "editor",
         Translator = "translator",
+        /// Author of annotations accompanying the work.
+        Annotator = "annotator",
+        /// Author of a commentary on the work.
+        Commentator = "commentator",
+        /// Author of a foreword accompanying the work.
+        ForewordAuthor = "foreword-author",
+        /// Author of an introduction accompanying the work.
+        IntroductionAuthor = "introduction-author",
+        /// Author of an afterword accompanying the work.
+        AfterwordAuthor = "afterword-author",
         Director = "director",
         Publisher = "publisher",
         Recipient = "recipient",

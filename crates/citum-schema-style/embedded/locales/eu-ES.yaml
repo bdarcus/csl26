@@ -60,6 +60,48 @@ dates:
     - udazkena
     - negua
 
+roles:
+  # Editorial sub-role terms follow BibLaTeX's basque.lbx vocabulary.
+  annotator:
+    long:
+      singular: ohargilea
+      plural: ohargileak
+    short:
+      singular: ohr.
+      plural: ohrk.
+    verb: oharrak
+    verb-short: ohk.
+  commentator:
+    long:
+      singular: iruzkingilea
+      plural: iruzkingileak
+    short:
+      singular: irzgl.
+      plural: irzglk.
+    verb: iruzkinak
+    verb-short: irzk.
+  foreword-author:
+    long:
+      singular: hitzaurrea
+      plural: hitzaurrea
+    short: hitzaur.
+    verb: hitzaurrea
+    verb-short: hitzaur.
+  introduction-author:
+    long:
+      singular: sarrera
+      plural: sarrera
+    short: sar.
+    verb: sarrera
+    verb-short: sar.
+  afterword-author:
+    long:
+      singular: hitzatzea
+      plural: hitzatzea
+    short: hitzatz.
+    verb: hitzatzea
+    verb-short: hitzatz.
+
 terms:
   in:
     long: in

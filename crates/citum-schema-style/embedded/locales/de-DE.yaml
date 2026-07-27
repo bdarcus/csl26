@@ -37,6 +37,42 @@ dates:
     - Herbst
     - Winter
 roles:
+  # Editorial sub-role terms follow BibLaTeX's german.lbx vocabulary.
+  annotator:
+    long:
+      singular: Kommentator
+      plural: Kommentatoren
+    short: Komm.
+    verb: erläutert von
+    verb-short: erläut. von
+  commentator:
+    long:
+      singular: Kommentator
+      plural: Kommentatoren
+    short: Komm.
+    verb: kommentiert von
+    verb-short: komm. von
+  foreword-author:
+    long:
+      singular: Vorwort
+      plural: Vorwort
+    short: Vorw.
+    verb: mit einem Vorwort von
+    verb-short: mit einem Vorw. von
+  introduction-author:
+    long:
+      singular: Einleitung
+      plural: Einleitung
+    short: Einl.
+    verb: mit einer Einleitung von
+    verb-short: mit einer Einl. von
+  afterword-author:
+    long:
+      singular: Nachwort
+      plural: Nachwort
+    short: Nachw.
+    verb: mit einem Nachwort von
+    verb-short: mit einem Nachw. von
   author:
     long:
   chair:

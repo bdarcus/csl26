@@ -33,6 +33,42 @@ dates:
     - الشتاء
 
 roles:
+  # English fallback: BibLaTeX does not ship authoritative Arabic forms.
+  annotator:
+    long:
+      singular: annotator
+      plural: annotators
+    short: annot.
+    verb: annotated by
+    verb-short: annot. by
+  commentator:
+    long:
+      singular: commentator
+      plural: commentators
+    short: comm.
+    verb: commented by
+    verb-short: comm. by
+  foreword-author:
+    long:
+      singular: foreword
+      plural: foreword
+    short: forew.
+    verb: with a foreword by
+    verb-short: with a forew. by
+  introduction-author:
+    long:
+      singular: introduction
+      plural: introduction
+    short: intro.
+    verb: with an introduction by
+    verb-short: with an intro. by
+  afterword-author:
+    long:
+      singular: afterword
+      plural: afterword
+    short: afterw.
+    verb: with an afterword by
+    verb-short: with an afterw. by
   editor:
     long:
       singular:
