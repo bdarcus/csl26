@@ -47,6 +47,269 @@ use std::collections::HashMap;
 use unicode_normalization::UnicodeNormalization;
 use url::Url;
 
+/// One row of the CSL 1.0.2 → Citum `ref_type()` conversion contract.
+///
+/// Source of truth for the generated CSL-JSON mapping doc
+/// (`docs/reference/generated/CSL_JSON_MAPPING.md`, via
+/// `docs/schemas/type-map.json`). See
+/// `docs/specs/CSL_TYPE_CONVERSION_CONTRACT.md` for the full canonicalization
+/// rationale.
+#[derive(Debug, Clone, Copy, serde::Serialize)]
+pub struct CslTypeMapping {
+    /// The CSL 1.0.2 item type (or accepted extension spelling).
+    pub csl_type: &'static str,
+    /// The `ref_type()` this type round-trips to, given the minimal shape
+    /// `contract_tests::minimal_reference` builds (an id, the type, a title,
+    /// and an issued year).
+    pub citum_ref_type: &'static str,
+    /// Rationale for divergences from the identity mapping; `None` when the
+    /// mapping is unremarkable.
+    pub note: Option<&'static str>,
+}
+
+/// Expected `ref_type()` output for every CSL 1.0.2 type, given the minimal
+/// shape `contract_tests::minimal_reference` builds. Most entries are the
+/// identity mapping; the ones that are not are intentional and documented in
+/// `note` (also recorded in `docs/specs/CSL_TYPE_CONVERSION_CONTRACT.md`'s
+/// canonicalization table). Asserted against
+/// `csl_legacy::csl_json::CSL_TYPES` by
+/// `contract_tests::every_csl_1_0_2_type_has_an_expectation_table_entry`.
+pub const CSL_TYPE_MAP: &[CslTypeMapping] = &[
+    CslTypeMapping {
+        csl_type: "article",
+        citum_ref_type: "preprint",
+        note: Some(
+            "Bare `article` carries no container-title, so the converter treats it as a standalone preprint rather than a truncated journal article — this mirrors real-world CSL-JSON exports where a container-less `article` is an arXiv/SSRN-style preprint. See `from_preprint_ref`.",
+        ),
+    },
+    CslTypeMapping {
+        csl_type: "article-journal",
+        citum_ref_type: "article-journal",
+        note: None,
+    },
+    CslTypeMapping {
+        csl_type: "article-magazine",
+        citum_ref_type: "article-magazine",
+        note: None,
+    },
+    CslTypeMapping {
+        csl_type: "article-newspaper",
+        citum_ref_type: "article-newspaper",
+        note: None,
+    },
+    CslTypeMapping {
+        csl_type: "bill",
+        citum_ref_type: "document",
+        note: Some(
+            "A minimal `bill` (no `authority`, `chapter-number`, or `container-title`/`volume`/`page` combination) carries none of the shape signals `from_bill_ref` uses to distinguish a hearing, bill-proceeding, or bill-record from a generic government document. See `reference/tests.rs` for the shapes that do round-trip distinctly (`test_parse_csl_bill_*`).",
+        ),
+    },
+    CslTypeMapping {
+        csl_type: "book",
+        citum_ref_type: "book",
+        note: None,
+    },
+    CslTypeMapping {
+        csl_type: "broadcast",
+        citum_ref_type: "broadcast",
+        note: None,
+    },
+    CslTypeMapping {
+        csl_type: "chapter",
+        citum_ref_type: "chapter",
+        note: None,
+    },
+    CslTypeMapping {
+        csl_type: "classic",
+        citum_ref_type: "classic",
+        note: None,
+    },
+    CslTypeMapping {
+        csl_type: "collection",
+        citum_ref_type: "collection",
+        note: None,
+    },
+    CslTypeMapping {
+        csl_type: "dataset",
+        citum_ref_type: "dataset",
+        note: None,
+    },
+    CslTypeMapping {
+        csl_type: "document",
+        citum_ref_type: "document",
+        note: None,
+    },
+    CslTypeMapping {
+        csl_type: "entry",
+        citum_ref_type: "entry",
+        note: None,
+    },
+    CslTypeMapping {
+        csl_type: "entry-dictionary",
+        citum_ref_type: "entry-dictionary",
+        note: None,
+    },
+    CslTypeMapping {
+        csl_type: "entry-encyclopedia",
+        citum_ref_type: "entry-encyclopedia",
+        note: None,
+    },
+    CslTypeMapping {
+        csl_type: "event",
+        citum_ref_type: "event",
+        note: None,
+    },
+    CslTypeMapping {
+        csl_type: "figure",
+        citum_ref_type: "figure",
+        note: None,
+    },
+    CslTypeMapping {
+        csl_type: "graphic",
+        citum_ref_type: "graphic",
+        note: None,
+    },
+    CslTypeMapping {
+        csl_type: "hearing",
+        citum_ref_type: "hearing",
+        note: None,
+    },
+    CslTypeMapping {
+        csl_type: "interview",
+        citum_ref_type: "interview",
+        note: None,
+    },
+    CslTypeMapping {
+        csl_type: "legal_case",
+        citum_ref_type: "legal-case",
+        note: Some(
+            "The CSL 1.0.2 spelling uses an underscore; it canonicalizes to the hyphenated `legal-case` on output, matching this codebase's convention of canonicalizing underscore CSL spellings to hyphens (see also `motion_picture`, `musical_score`, `personal_communication`).",
+        ),
+    },
+    CslTypeMapping {
+        csl_type: "legislation",
+        citum_ref_type: "statute",
+        note: Some(
+            "`legislation` is the CSL 1.0.2 closed-vocabulary type; it routes to the same converter as the `statute` extension spelling and shares its canonical output.",
+        ),
+    },
+    CslTypeMapping {
+        csl_type: "manuscript",
+        citum_ref_type: "manuscript",
+        note: None,
+    },
+    CslTypeMapping {
+        csl_type: "map",
+        citum_ref_type: "map",
+        note: None,
+    },
+    CslTypeMapping {
+        csl_type: "motion_picture",
+        citum_ref_type: "motion-picture",
+        note: Some("Underscore CSL spelling canonicalizes to hyphenated output; see `legal_case`."),
+    },
+    CslTypeMapping {
+        csl_type: "musical_score",
+        citum_ref_type: "musical-score",
+        note: Some("Underscore CSL spelling canonicalizes to hyphenated output; see `legal_case`."),
+    },
+    CslTypeMapping {
+        csl_type: "pamphlet",
+        citum_ref_type: "pamphlet",
+        note: None,
+    },
+    CslTypeMapping {
+        csl_type: "paper-conference",
+        citum_ref_type: "paper-conference",
+        note: None,
+    },
+    CslTypeMapping {
+        csl_type: "patent",
+        citum_ref_type: "patent",
+        note: None,
+    },
+    CslTypeMapping {
+        csl_type: "performance",
+        citum_ref_type: "performance",
+        note: None,
+    },
+    CslTypeMapping {
+        csl_type: "periodical",
+        citum_ref_type: "periodical",
+        note: None,
+    },
+    CslTypeMapping {
+        csl_type: "personal_communication",
+        citum_ref_type: "personal-communication",
+        note: Some("Underscore CSL spelling canonicalizes to hyphenated output; see `legal_case`."),
+    },
+    CslTypeMapping {
+        csl_type: "post",
+        citum_ref_type: "post",
+        note: None,
+    },
+    CslTypeMapping {
+        csl_type: "post-weblog",
+        citum_ref_type: "post-weblog",
+        note: None,
+    },
+    CslTypeMapping {
+        csl_type: "regulation",
+        citum_ref_type: "regulation",
+        note: None,
+    },
+    CslTypeMapping {
+        csl_type: "report",
+        citum_ref_type: "report",
+        note: None,
+    },
+    CslTypeMapping {
+        csl_type: "review",
+        citum_ref_type: "review",
+        note: None,
+    },
+    CslTypeMapping {
+        csl_type: "review-book",
+        citum_ref_type: "review-book",
+        note: None,
+    },
+    CslTypeMapping {
+        csl_type: "software",
+        citum_ref_type: "software",
+        note: None,
+    },
+    CslTypeMapping {
+        csl_type: "song",
+        citum_ref_type: "song",
+        note: None,
+    },
+    CslTypeMapping {
+        csl_type: "speech",
+        citum_ref_type: "speech",
+        note: None,
+    },
+    CslTypeMapping {
+        csl_type: "standard",
+        citum_ref_type: "standard",
+        note: None,
+    },
+    CslTypeMapping {
+        csl_type: "thesis",
+        citum_ref_type: "thesis",
+        note: None,
+    },
+    CslTypeMapping {
+        csl_type: "treaty",
+        citum_ref_type: "treaty",
+        note: None,
+    },
+    CslTypeMapping {
+        csl_type: "webpage",
+        citum_ref_type: "webpage",
+        note: None,
+    },
+];
+
 /// Fold legacy named contributor fields (recipient and interviewer) into a contributors vec.
 fn legacy_named_contributors(legacy: &csl_legacy::csl_json::Reference) -> Vec<ContributorEntry> {
     let mut entries = Vec::new();

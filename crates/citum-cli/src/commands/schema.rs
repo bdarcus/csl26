@@ -7,10 +7,12 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus and Citum contributors
 
 use super::CliResult;
 use crate::args::{SchemaArgs, SchemaType};
+use citum_io::biblatex::{biblatex_entry_type_descriptors, biblatex_field_descriptors};
 use citum_schema::InputBibliography;
 use citum_schema::Style;
 use citum_schema::locale::RawLocale;
 use citum_schema_data::AbbreviationMap;
+use citum_schema_data::reference::conversion::CSL_TYPE_MAP;
 use citum_server::rpc::{
     FormatDocumentParams, RenderBibliographyParams, RenderCitationParams, ValidateStyleParams,
 };
@@ -166,6 +168,22 @@ fn build_server_schema() -> Result<serde_json::Value, serde_json::Error> {
     Ok(doc)
 }
 
+/// Build the declarative BibLaTeX/CSL-JSON ↔ Citum mapping data dump.
+///
+/// Not a JSON Schema (no `schema_for!` involved) — a plain serialization of
+/// the mapping consts in `citum-refs::formats::biblatex::tables` and
+/// `citum-schema-data::reference::conversion`, consumed by
+/// `scripts/build-data-model-reference.js` to generate
+/// `docs/reference/BIBLATEX_MAPPING.md` and
+/// `docs/reference/generated/CSL_JSON_MAPPING.md`.
+fn build_type_map_schema() -> Result<serde_json::Value, serde_json::Error> {
+    Ok(serde_json::json!({
+        "biblatex_entry_types": biblatex_entry_type_descriptors(),
+        "biblatex_fields": biblatex_field_descriptors(),
+        "csl_type_map": CSL_TYPE_MAP,
+    }))
+}
+
 pub(super) fn run_schema(args: SchemaArgs) -> CliResult {
     if let Some(dir) = args.out_dir {
         fs::create_dir_all(&dir)?;
@@ -187,6 +205,7 @@ pub(super) fn run_schema(args: SchemaArgs) -> CliResult {
                 serde_json::to_value(schema_for!(AbbreviationMap))?,
             ),
             ("server", server_schema),
+            ("type-map", build_type_map_schema()?),
         ];
         for (_, schema) in &mut schemas {
             stamp_unevaluated_properties(schema);
@@ -209,6 +228,7 @@ pub(super) fn run_schema(args: SchemaArgs) -> CliResult {
             SchemaType::Registry => serde_json::to_value(schema_for!(citum_schema::StyleRegistry))?,
             SchemaType::AbbrevMap => serde_json::to_value(schema_for!(AbbreviationMap))?,
             SchemaType::Server => build_server_schema()?,
+            SchemaType::TypeMap => build_type_map_schema()?,
         };
         stamp_unevaluated_properties(&mut schema);
         println!("{}", serde_json::to_string_pretty(&schema)?);
@@ -216,7 +236,7 @@ pub(super) fn run_schema(args: SchemaArgs) -> CliResult {
     }
 
     Err(
-        "Specify a schema type (style, bib, locale, citation, registry, abbrev-map, server) or --out-dir"
+        "Specify a schema type (style, bib, locale, citation, registry, abbrev-map, server, type-map) or --out-dir"
             .into(),
     )
 }

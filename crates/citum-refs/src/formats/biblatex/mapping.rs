@@ -23,6 +23,8 @@ use citum_schema::reference::{
 use std::collections::HashMap;
 use url::Url;
 
+use super::tables::{BiblatexBuilder, biblatex_entry_mapping};
+
 /// Common fields shared across all biblatex reference conversion helpers.
 struct BibRefContext<'a> {
     id: Option<RefID>,
@@ -248,26 +250,12 @@ pub fn input_reference_from_biblatex(entry: &biblatex_crate::Entry) -> InputRefe
         rich_field_str: &rich_field_str,
     };
 
-    let mut reference = match entry_type.as_str() {
-        "book" | "mvbook" | "collection" | "mvcollection" | "manual" | "report" | "thesis"
-        | "online" | "unpublished" | "proceedings" | "mvproceedings" => {
-            let mono_type = match entry_type.as_str() {
-                "manual" => MonographType::Manual,
-                "report" => MonographType::Report,
-                "thesis" => MonographType::Thesis,
-                "online" => MonographType::Webpage,
-                "unpublished" => MonographType::Manuscript,
-                _ => MonographType::Book,
-            };
-            InputReference::Monograph(Box::new(biblatex_monograph(mono_type, &entry_type, ctx)))
-        }
-        "inbook" | "incollection" | "inproceedings" => build_inbook_reference(ctx),
-        "article" => build_article_reference(ctx),
-        _ => InputReference::Monograph(Box::new(biblatex_monograph(
-            MonographType::Document,
-            &entry_type,
-            ctx,
-        ))),
+    let mut reference = match &biblatex_entry_mapping(&entry_type).builder {
+        BiblatexBuilder::Monograph(mono_type) => InputReference::Monograph(Box::new(
+            biblatex_monograph(mono_type.clone(), &entry_type, ctx),
+        )),
+        BiblatexBuilder::Inbook => build_inbook_reference(ctx),
+        BiblatexBuilder::Article => build_article_reference(ctx),
     };
     // The builders above construct references directly rather than through
     // deserialization, so the `author`/`editor`/`translator` shorthands they set

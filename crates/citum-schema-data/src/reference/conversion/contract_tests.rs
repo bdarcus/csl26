@@ -8,8 +8,8 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus and Citum contributors
 //! whose `ref_type()` is a faithful round trip, not a silent collapse into
 //! the generic document/monograph fallback. See
 //! `docs/specs/CSL_TYPE_CONVERSION_CONTRACT.md` for the canonicalization
-//! rules and the rationale behind each intentional divergence documented
-//! inline in [`EXPECTATIONS`] below.
+//! rules and the rationale behind each intentional divergence documented on
+//! [`super::CSL_TYPE_MAP`], which this test asserts against.
 
 #![allow(
     clippy::unwrap_used,
@@ -45,7 +45,7 @@ fn structured_circa_csl_dates_convert_to_approximate_edtf() {
 /// would carry. A type that needs more than this to avoid the generic
 /// document/monograph fallback is either a genuine routing gap (fix the
 /// converter, not this helper) or a documented, shape-dependent
-/// divergence (see the comments on [`EXPECTATIONS`] and the spec).
+/// divergence (see the comments on [`super::CSL_TYPE_MAP`] and the spec).
 fn minimal_reference(ref_type: &str) -> csl_legacy::csl_json::Reference {
     csl_legacy::csl_json::Reference {
         id: format!("contract-{ref_type}"),
@@ -59,90 +59,19 @@ fn minimal_reference(ref_type: &str) -> csl_legacy::csl_json::Reference {
     }
 }
 
-/// Expected `ref_type()` output for every CSL 1.0.2 type, given the
-/// minimal shape [`minimal_reference`] builds. Most entries are the
-/// identity mapping; the ones that are not are intentional and documented
-/// inline (also recorded in
-/// `docs/specs/CSL_TYPE_CONVERSION_CONTRACT.md`'s canonicalization table).
-const EXPECTATIONS: &[(&str, &str)] = &[
-    // Bare `article` carries no container-title, so the converter treats
-    // it as a standalone preprint rather than a truncated journal article
-    // — this mirrors real-world CSL-JSON exports where a container-less
-    // `article` is an arXiv/SSRN-style preprint. See `from_preprint_ref`.
-    ("article", "preprint"),
-    ("article-journal", "article-journal"),
-    ("article-magazine", "article-magazine"),
-    ("article-newspaper", "article-newspaper"),
-    // A minimal `bill` (no `authority`, `chapter-number`, or
-    // `container-title`/`volume`/`page` combination) carries none of the
-    // shape signals `from_bill_ref` uses to distinguish a hearing,
-    // bill-proceeding, or bill-record from a generic government
-    // document. See `reference/tests.rs` for the shapes that *do*
-    // round-trip distinctly (`test_parse_csl_bill_*`).
-    ("bill", "document"),
-    ("book", "book"),
-    ("broadcast", "broadcast"),
-    ("chapter", "chapter"),
-    ("classic", "classic"),
-    ("collection", "collection"),
-    ("dataset", "dataset"),
-    ("document", "document"),
-    ("entry", "entry"),
-    ("entry-dictionary", "entry-dictionary"),
-    ("entry-encyclopedia", "entry-encyclopedia"),
-    ("event", "event"),
-    ("figure", "figure"),
-    ("graphic", "graphic"),
-    ("hearing", "hearing"),
-    ("interview", "interview"),
-    // `legal_case` (the CSL 1.0.2 spelling) canonicalizes to the
-    // hyphenated `legal-case` on output, matching this codebase's
-    // convention of canonicalizing underscore CSL spellings to hyphens
-    // (see also `motion_picture`, `musical_score`,
-    // `personal_communication`).
-    ("legal_case", "legal-case"),
-    // `legislation` is the CSL 1.0.2 closed-vocabulary type; it routes to
-    // the same converter as the `statute` extension spelling and shares
-    // its canonical output.
-    ("legislation", "statute"),
-    ("manuscript", "manuscript"),
-    ("map", "map"),
-    ("motion_picture", "motion-picture"),
-    ("musical_score", "musical-score"),
-    ("pamphlet", "pamphlet"),
-    ("paper-conference", "paper-conference"),
-    ("patent", "patent"),
-    ("performance", "performance"),
-    ("periodical", "periodical"),
-    ("personal_communication", "personal-communication"),
-    ("post", "post"),
-    ("post-weblog", "post-weblog"),
-    ("regulation", "regulation"),
-    ("report", "report"),
-    ("review", "review"),
-    ("review-book", "review-book"),
-    ("software", "software"),
-    ("song", "song"),
-    ("speech", "speech"),
-    ("standard", "standard"),
-    ("thesis", "thesis"),
-    ("treaty", "treaty"),
-    ("webpage", "webpage"),
-];
-
 #[test]
 fn every_csl_1_0_2_type_has_an_expectation_table_entry() {
     for csl_type in CSL_TYPES {
         assert!(
-            EXPECTATIONS.iter().any(|(input, _)| input == csl_type),
-            "CSL_TYPES entry `{csl_type}` has no entry in the contract test's \
-             EXPECTATIONS table; every CSL 1.0.2 type must be covered"
+            CSL_TYPE_MAP.iter().any(|row| &row.csl_type == csl_type),
+            "CSL_TYPES entry `{csl_type}` has no entry in `CSL_TYPE_MAP`; \
+             every CSL 1.0.2 type must be covered"
         );
     }
     assert_eq!(
-        EXPECTATIONS.len(),
+        CSL_TYPE_MAP.len(),
         CSL_TYPES.len(),
-        "EXPECTATIONS table size has drifted from CSL_TYPES; add or remove \
+        "CSL_TYPE_MAP size has drifted from CSL_TYPES; add or remove \
          an entry so the two stay in lockstep"
     );
 }
@@ -154,13 +83,17 @@ fn every_csl_1_0_2_type_round_trips_through_ref_type() {
     // seeing the whole set in one run is what turns this into a fast
     // diagnostic instead of a bisection exercise (see the epic's problem
     // statement in bean csl26-cvfy).
-    let failures: Vec<String> = EXPECTATIONS
+    let failures: Vec<String> = CSL_TYPE_MAP
         .iter()
-        .filter_map(|(csl_type, expected)| {
-            let legacy = minimal_reference(csl_type);
+        .filter_map(|row| {
+            let legacy = minimal_reference(row.csl_type);
             let actual = InputReference::from(legacy).ref_type();
-            (&actual != expected)
-                .then(|| format!("{csl_type}: expected `{expected}`, got `{actual}`"))
+            (actual != row.citum_ref_type).then(|| {
+                format!(
+                    "{}: expected `{}`, got `{actual}`",
+                    row.csl_type, row.citum_ref_type
+                )
+            })
         })
         .collect();
 
