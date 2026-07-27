@@ -50,6 +50,7 @@ If the `citum-cli` or `citum-schema*` crates changed, regenerate schemas in the 
 ```bash
 just schema-gen    # Or: cargo run --bin citum --features schema -- schema --out-dir docs/schemas && git add docs/schemas/
 ```
+Changes to `citum-refs`' BibLaTeX mapping tables (`crates/citum-refs/src/formats/biblatex/tables.rs`) or `citum-schema-data`'s CSL type conversion (`crates/citum-schema-data/src/reference/conversion/`) must regenerate the data-model reference docs in the same commit: `just schema-gen` also runs `node scripts/build-data-model-reference.js`, which rewrites `docs/reference/generated/`, `docs/reference/BIBLATEX_MAPPING.md`, and `docs/reference/NATIVE_FORMAT.md`.
 
 **Do not** bump `STYLE_SCHEMA_VERSION` or `[workspace.package].version` manually — the release workflow (`cargo-release`) infers from conventional commits.
 

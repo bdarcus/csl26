@@ -1,0 +1,17 @@
+# Flat class: patent — a specialized reference class outside the five
+# structural classes, with its own required field (`patent-number`) rather
+# than a `type` discriminator.
+references:
+  - id: page1998-pagerank
+    class: patent
+    title: Method for node ranking in a linked database
+    author:
+      - family: Page
+        given: Lawrence
+    assignee:
+      name: The Board of Trustees of the Leland Stanford Junior University
+    patent-number: "US6285999B1"
+    jurisdiction: US
+    authority: U.S. Patent and Trademark Office
+    filing-date: "1998-01-09"
+    issued: "2001-09-04"

@@ -1,0 +1,21 @@
+# Structural class: serial-component — a component of a larger serial
+# publication, such as a journal or magazine article. `container` embeds the
+# parent `serial` inline via `WorkRelation` rather than referencing it by id.
+references:
+  - id: watson1953
+    class: serial-component
+    type: article
+    title: "Molecular Structure of Nucleic Acids: A Structure for Deoxyribose Nucleic Acid"
+    author:
+      - family: Watson
+        given: James D.
+      - family: Crick
+        given: Francis H. C.
+    issued: "1953-04-25"
+    pages: "737-738"
+    container:
+      class: serial
+      type: academic-journal
+      title: Nature
+      volume: "171"
+      issue: "4356"

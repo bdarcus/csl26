@@ -1,0 +1,23 @@
+# Structural class: collection-component — a component of a larger monographic
+# collection, such as a chapter in an edited volume. `container` embeds the
+# parent `collection` inline via `WorkRelation` rather than referencing it by id.
+references:
+  - id: geertz1973-thick-description
+    class: collection-component
+    type: chapter
+    title: "Thick Description: Toward an Interpretive Theory of Culture"
+    author:
+      - family: Geertz
+        given: Clifford
+    issued: "1973"
+    pages: "3-30"
+    container:
+      class: collection
+      type: anthology
+      title: The Interpretation of Cultures
+      editor:
+        - family: Geertz
+          given: Clifford
+      publisher:
+        name: Basic Books
+        place: New York

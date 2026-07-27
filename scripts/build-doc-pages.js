@@ -14,6 +14,14 @@ const DOCS_DIR = path.join(__dirname, '../docs');
 
 const PAGES = [
     {
+        src: 'reference/DATA_MODEL.md',
+        out: 'reference/data-model.html',
+        title: 'Data model',
+        kicker: 'Reference',
+        description:
+            'Conceptual tour of the InputReference data model: reference classes, containers, contributors, dates, and ingest architecture.',
+    },
+    {
         src: 'policies/TYPE_ADDITION_POLICY.md',
         out: 'policies/type-addition-policy.html',
         title: 'Type addition policy',

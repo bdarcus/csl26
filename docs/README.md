@@ -34,6 +34,8 @@ architecture docs versus historical snapshots and audits.
 
 - [`specs/`](./specs/) — Feature/design specifications (create before implementing non-trivial features)
 - [`policies/`](./policies/) — Active behavioral rules for agents and contributors
+- [`reference/`](./reference/) — Domain reference tables, including the generated data model
+  ([`reference/DATA_MODEL.md`](./reference/DATA_MODEL.md)) and ingest mapping docs; see [`reference.html`](https://citum.github.io/citum-core/reference.html) for the browsable index
 - [`guides/DOCUMENT_CLASSIFICATION.md`](./guides/DOCUMENT_CLASSIFICATION.md) — how to decide whether an existing doc belongs in specs, architecture, or policies
 
 ## Historical Snapshot Policy

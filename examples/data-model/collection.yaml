@@ -1,0 +1,14 @@
+# Structural class: collection — a collection of works published under one
+# cover, such as an edited anthology or conference proceedings.
+references:
+  - id: geertz1973
+    class: collection
+    type: anthology
+    title: The Interpretation of Cultures
+    editor:
+      - family: Geertz
+        given: Clifford
+    issued: "1973"
+    publisher:
+      name: Basic Books
+      place: New York

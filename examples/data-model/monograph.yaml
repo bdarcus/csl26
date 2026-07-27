@@ -1,0 +1,15 @@
+# Structural class: monograph — a monolithic work published or produced as a
+# complete entity, such as a book or technical report.
+references:
+  - id: kuhn1962
+    class: monograph
+    type: book
+    title: The Structure of Scientific Revolutions
+    author:
+      - family: Kuhn
+        given: Thomas S.
+    issued: "1962"
+    publisher:
+      name: University of Chicago Press
+      place: Chicago
+    isbn: "9780226458113"
