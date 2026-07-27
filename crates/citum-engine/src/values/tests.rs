@@ -1811,6 +1811,57 @@ fn test_role_substitute_uses_custom_fallback_roles_without_silent_drop() {
     assert_eq!(values.value, "Compiler, Casey");
 }
 
+#[test]
+fn given_contributor_tagged_with_typed_annotator_role_when_selected_as_custom_fallback_then_resolves()
+ {
+    // Regression for pairing `ContributorRole::Annotator` (the typed data-model
+    // variant added for BibLaTeX's `annotator` field) with `data_role_for_custom`
+    // in substitute.rs. `roles.contains()` uses derived `PartialEq`, so
+    // `ContributorRole::Annotator != ContributorRole::Unknown("annotator")` --
+    // if `data_role_for_custom("annotator")` still returned `Unknown`, a style
+    // selecting the custom role "annotator" would silently fail to find a
+    // contributor the biblatex converter tagged with the typed variant.
+    let mut config = make_config();
+    config.substitute = Some(SubstituteConfig::Explicit(Substitute {
+        role_substitute: std::collections::HashMap::from([(
+            "editor".to_string(),
+            vec!["annotator".to_string()],
+        )]),
+        ..Default::default()
+    }));
+
+    let locale = make_locale();
+    let options = RenderOptions {
+        config: Arc::new(config),
+        bibliography_config: None,
+        locale: &locale,
+        context: RenderContext::Bibliography,
+        mode: citum_schema::citation::CitationMode::NonIntegral,
+        suppress_author: false,
+        locator_raw: None,
+        ref_type: None,
+        show_semantics: true,
+        current_template_index: None,
+        abbreviation_map: None,
+    };
+    let reference = make_custom_role_reference(
+        citum_schema::reference::ContributorRole::Annotator,
+        &[ContributorGender::Common],
+    );
+    let hints = ProcHints::default();
+
+    let component = TemplateContributor {
+        contributor: ContributorRole::Editor.into(),
+        form: ContributorForm::Long,
+        ..Default::default()
+    };
+
+    let values = component
+        .values::<PlainText>(&reference, &hints, &options)
+        .expect("typed annotator role should resolve through the custom fallback chain");
+    assert_eq!(values.value, "Persona0, Nombre0");
+}
+
 /// Tests the behavior of `test_et_al_delimiter_always`.
 #[test]
 fn test_et_al_delimiter_always() {

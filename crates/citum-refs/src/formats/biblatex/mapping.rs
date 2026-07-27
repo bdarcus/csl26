@@ -9,15 +9,18 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus and Citum contributors
 //! information into Citum's `InputReference` and Contributor types.
 
 use biblatex as biblatex_crate;
+use biblatex_crate::ChunksExt as _;
 use citum_schema::reference::{
     InputReference, LangID, Numbering, NumberingType, Publisher, RefID, RichText, WorkRelation,
     citeproc_markup::html_markup_to_djot,
-    contributor::{Contributor, ContributorList, SimpleName, StructuredName},
+    contributor::{
+        Contributor, ContributorEntry, ContributorList, ContributorRole, SimpleName, StructuredName,
+    },
     date::DateValue,
     types::{
-        Collection, CollectionComponent, CollectionType, Monograph, MonographComponentType,
-        MonographType, NumOrStr, Serial, SerialComponent, SerialComponentType, SerialType,
-        StructuredTitle, Subtitle, Title,
+        Collection, CollectionComponent, CollectionType, EprintInfo, Event, Monograph,
+        MonographComponentType, MonographType, NumOrStr, Serial, SerialComponent,
+        SerialComponentType, SerialType, StructuredTitle, Subtitle, Title,
     },
 };
 use std::collections::HashMap;
@@ -32,9 +35,21 @@ struct BibRefContext<'a> {
     author: Option<Contributor>,
     editor: Option<Contributor>,
     translator: Option<Contributor>,
+    /// Contributors that don't have a shorthand slot on `InputReference`:
+    /// non-`Editor`-typed `editora`/`editorb`/`editorc` groups (compiler,
+    /// director, ...) and the editorial sub-role fields (`annotator`,
+    /// `commentator`, `foreword`, `introduction`, `afterword`). Folded into
+    /// the canonical `contributors` vec by `normalize_contributors()`
+    /// alongside the `author`/`editor`/`translator` shorthands above.
+    contributors: Vec<ContributorEntry>,
     issued: DateValue,
     publisher: Option<Publisher>,
     language: Option<LangID>,
+    /// Preprint-server identifier from `eprint`/`eprinttype`/`eprintclass`.
+    /// Set unconditionally when present; unlike the `MonographType::Preprint`
+    /// flip (decided in `input_reference_from_biblatex`, before a builder is
+    /// chosen), storing this metadata doesn't depend on the entry's type.
+    eprint: Option<EprintInfo>,
     field_str: &'a dyn Fn(&str) -> Option<String>,
     /// Like `field_str`, but converts citeproc-js's literal HTML rich-text
     /// convention (`<span class="nocase">`, `<i>`, `<b>`, `<sc>`, `<sup>`,
@@ -47,10 +62,12 @@ struct BibRefContext<'a> {
 }
 
 /// Build a `CollectionComponent` from a biblatex inbook/incollection/inproceedings entry.
-fn build_inbook_reference(ctx: BibRefContext<'_>) -> InputReference {
+fn build_inbook_reference(entry_type: &str, ctx: BibRefContext<'_>) -> InputReference {
     let field_str = ctx.field_str;
     let rich_field_str = ctx.rich_field_str;
+    let contributors = ctx.contributors;
     let parent_title = rich_field_str("booktitle").map(Title::Single);
+    let is_inproceedings = entry_type == "inproceedings";
 
     let mut parent_numbering = Vec::new();
     if let Some(n) = field_str("number") {
@@ -59,6 +76,34 @@ fn build_inbook_reference(ctx: BibRefContext<'_>) -> InputReference {
             value: n,
         });
     }
+
+    let mut numbering = Vec::new();
+    if let Some(c) = field_str("chapter") {
+        numbering.push(Numbering {
+            r#type: NumberingType::Chapter,
+            value: c,
+        });
+    }
+
+    // `eventtitle`/`venue`/`eventdate` name the conference itself, distinct
+    // from `booktitle` (the proceedings volume) -- only meaningful for
+    // `@inproceedings`. Mirrors `relation_event` in citum-schema-data's
+    // CSL-JSON `paper-conference` conversion path.
+    let event = is_inproceedings
+        .then(|| {
+            let title = rich_field_str("eventtitle");
+            let location = rich_field_str("venue");
+            let date = field_str("eventdate").map(DateValue::new);
+            (title.is_some() || location.is_some() || date.is_some()).then(|| {
+                WorkRelation::Embedded(Box::new(InputReference::Event(Box::new(Event {
+                    title: title.map(Title::Single),
+                    location,
+                    date,
+                    ..Default::default()
+                }))))
+            })
+        })
+        .flatten();
 
     InputReference::CollectionComponent(Box::new(CollectionComponent {
         id: ctx.id,
@@ -70,15 +115,21 @@ fn build_inbook_reference(ctx: BibRefContext<'_>) -> InputReference {
         // (unlike `publisher()`), so a parent-only translator would be
         // unreachable. See bean csl26-7ab8.
         translator: ctx.translator,
+        contributors,
+        eprint: ctx.eprint,
         created: DateValue::new(String::new()),
         issued: ctx.issued,
         container: Some(WorkRelation::Embedded(Box::new(
             InputReference::Collection(Box::new(Collection {
                 id: None,
-                r#type: CollectionType::EditedBook,
+                r#type: if is_inproceedings {
+                    CollectionType::Proceedings
+                } else {
+                    CollectionType::EditedBook
+                },
                 title: parent_title,
                 short_title: None,
-                container: None,
+                container: series_relation(field_str("series")),
                 editor: ctx.editor,
                 translator: None,
                 created: DateValue::new(String::new()),
@@ -86,10 +137,11 @@ fn build_inbook_reference(ctx: BibRefContext<'_>) -> InputReference {
                 publisher: ctx.publisher,
                 numbering: parent_numbering,
                 isbn: field_str("isbn"),
+                event,
                 ..Default::default()
             })),
         ))),
-        numbering: Vec::new(),
+        numbering,
         pages: field_str("pages").map(NumOrStr::Str),
         url: field_str("url").and_then(|u| Url::parse(&u).ok()),
         accessed: field_str("urldate").map(DateValue::new),
@@ -106,6 +158,7 @@ fn build_inbook_reference(ctx: BibRefContext<'_>) -> InputReference {
 fn build_article_reference(ctx: BibRefContext<'_>) -> InputReference {
     let field_str = ctx.field_str;
     let rich_field_str = ctx.rich_field_str;
+    let contributors = ctx.contributors;
     let parent_title = rich_field_str("journaltitle")
         .or_else(|| rich_field_str("journal"))
         .map(Title::Single);
@@ -130,6 +183,8 @@ fn build_article_reference(ctx: BibRefContext<'_>) -> InputReference {
         title: ctx.title,
         author: ctx.author,
         translator: ctx.translator,
+        contributors,
+        eprint: ctx.eprint,
         created: DateValue::new(String::new()),
         issued: ctx.issued,
         container: Some(WorkRelation::Embedded(Box::new(InputReference::Serial(
@@ -138,7 +193,7 @@ fn build_article_reference(ctx: BibRefContext<'_>) -> InputReference {
                 r#type: SerialType::AcademicJournal,
                 title: parent_title,
                 short_title: None,
-                container: None,
+                container: series_relation(field_str("series")),
                 // Journal/issue editor: `editor()` falls back to the container
                 // for `SerialComponent`, so storing it here is both correct
                 // (biblatex `editor` on `@article` names the journal editor)
@@ -169,6 +224,35 @@ fn build_article_reference(ctx: BibRefContext<'_>) -> InputReference {
     }))
 }
 
+/// Convert one BibLaTeX chunk without discarding inline math.
+fn chunk_to_string(chunk: &biblatex_crate::Chunk) -> String {
+    match chunk {
+        biblatex_crate::Chunk::Normal(s) | biblatex_crate::Chunk::Verbatim(s) => s.clone(),
+        biblatex_crate::Chunk::Math(s) => format!("${s}$"),
+    }
+}
+
+/// Concatenate a chunk sequence into a single string.
+fn chunks_to_string(chunks: &[biblatex_crate::Spanned<biblatex_crate::Chunk>]) -> String {
+    chunks
+        .iter()
+        .map(|chunk| chunk_to_string(&chunk.v))
+        .collect()
+}
+
+/// Read and join a BibLaTeX `LiteralList` field.
+fn literal_list_str(entry: &biblatex_crate::Entry, key: &str) -> Option<String> {
+    let chunks = entry.get(key)?;
+    let items = chunks.parse::<Vec<biblatex_crate::Chunks>>().ok()?;
+    Some(
+        items
+            .iter()
+            .map(|item| chunks_to_string(item))
+            .collect::<Vec<_>>()
+            .join("; "),
+    )
+}
+
 /// Convert a biblatex entry into an `InputReference`.
 ///
 /// Maps biblatex entry types (book, article, inproceedings, etc.) to
@@ -176,19 +260,10 @@ fn build_article_reference(ctx: BibRefContext<'_>) -> InputReference {
 /// including contributors, dates, and metadata.
 pub fn input_reference_from_biblatex(entry: &biblatex_crate::Entry) -> InputReference {
     let id = Some(entry.key.clone().into());
-    let field_str = |key: &str| {
-        entry.fields.get(key).map(|f| {
-            f.iter()
-                .map(|c| match &c.v {
-                    biblatex_crate::Chunk::Normal(s) | biblatex_crate::Chunk::Verbatim(s) => {
-                        s.as_str()
-                    }
-                    _ => "",
-                })
-                .collect::<String>()
-        })
-    };
+    let field_str = |key: &str| entry.fields.get(key).map(|f| chunks_to_string(f));
     let rich_field_str = |key: &str| field_str(key).map(|s| html_markup_to_djot(&s));
+    let rich_literal_list_str =
+        |key: &str| literal_list_str(entry, key).map(|s| html_markup_to_djot(&s));
 
     let title = match (rich_field_str("title"), rich_field_str("subtitle")) {
         (Some(main), Some(sub)) => Some(Title::Structured(StructuredTitle {
@@ -200,42 +275,51 @@ pub fn input_reference_from_biblatex(entry: &biblatex_crate::Entry) -> InputRefe
         (None, _) => None,
     };
     let issued = field_str("date").map_or(DateValue::new(String::new()), DateValue::new);
-    let publisher = rich_field_str("publisher")
-        .or_else(|| rich_field_str("institution"))
-        .or_else(|| rich_field_str("organization"))
-        .or_else(|| rich_field_str("school"))
+    let publisher = rich_literal_list_str("publisher")
+        .or_else(|| rich_literal_list_str("institution"))
+        .or_else(|| rich_literal_list_str("organization"))
+        .or_else(|| rich_literal_list_str("school"))
         .map(|p| Publisher {
             name: p.into(),
-            place: rich_field_str("location").map(Into::into),
+            place: rich_literal_list_str("location").map(Into::into),
         });
 
     let author = entry
         .author()
         .ok()
         .map(|p| contributors_from_biblatex_persons(&p));
-    let editor = entry.editors().ok().and_then(|e| {
-        // `entry.editors()` returns `Ok(vec![])` rather than `Err` when the
-        // entry has no `editor` field at all, so an empty person list must be
-        // treated as "no editor" — otherwise a bogus `contributor: []` leaks
-        // into every reference (see bean csl26-7ab8).
-        let all_persons: Vec<biblatex_crate::Person> =
-            e.into_iter().flat_map(|(persons, _)| persons).collect();
-        if all_persons.is_empty() {
-            None
-        } else {
-            Some(contributors_from_biblatex_persons(&all_persons))
-        }
-    });
+
+    // Contributors with no shorthand slot on `InputReference`: non-`Editor`
+    // editorial-role groups (`editora`/`editorb`/`editorc` tagged `compiler`,
+    // `director`, etc.) and the sub-role name fields. Folded into the
+    // canonical `contributors` vec by `normalize_contributors()`.
+    let (editor, mut contributors) = editor_groups_from_biblatex(entry);
     let translator = entry
         .translator()
         .ok()
         .map(|p| contributors_from_biblatex_persons(&p));
 
+    contributors.extend(editorial_sub_role_contributors(entry));
+
     let language = field_str("langid")
         .or_else(|| field_str("language"))
         .map(Into::into);
+    let eprint = eprint_info_from_biblatex(&field_str);
+    let has_eprint = eprint.is_some();
 
     let entry_type = entry.entry_type.to_biblatex().to_string().to_lowercase();
+    // An `@article` with no `journaltitle`/`journal` *and* an `eprint` is
+    // treated as a standalone preprint rather than a truncated journal
+    // article -- loosely mirroring `CSL_TYPE_MAP`'s rule for a bare CSL-JSON
+    // `article`, but requiring `eprint` too: unlike CSL-JSON's generic
+    // `article` type, BibLaTeX's `@article` inherently implies journal
+    // fields, so a container-less `@article` with no `eprint` either is more
+    // likely an incomplete entry than a preprint (a plain `@article{key,
+    // author = {...}, title = {...}}` fixture must not become one).
+    let article_is_container_less = entry_type == "article"
+        && has_eprint
+        && field_str("journaltitle").is_none()
+        && field_str("journal").is_none();
 
     let ctx = BibRefContext {
         id,
@@ -243,19 +327,39 @@ pub fn input_reference_from_biblatex(entry: &biblatex_crate::Entry) -> InputRefe
         author,
         editor,
         translator,
+        contributors,
         issued,
         publisher,
         language,
+        eprint,
         field_str: &field_str,
         rich_field_str: &rich_field_str,
     };
 
-    let mut reference = match &biblatex_entry_mapping(&entry_type).builder {
-        BiblatexBuilder::Monograph(mono_type) => InputReference::Monograph(Box::new(
-            biblatex_monograph(mono_type.clone(), &entry_type, ctx),
-        )),
-        BiblatexBuilder::Inbook => build_inbook_reference(ctx),
-        BiblatexBuilder::Article => build_article_reference(ctx),
+    let mut reference = if article_is_container_less {
+        InputReference::Monograph(Box::new(biblatex_monograph(
+            MonographType::Preprint,
+            &entry_type,
+            ctx,
+        )))
+    } else {
+        match &biblatex_entry_mapping(&entry_type).builder {
+            BiblatexBuilder::Monograph(mono_type) => {
+                // A `misc`/`unpublished`/`online`/fallback entry carrying an
+                // `eprint` is a preprint, not a generic document/manuscript/
+                // webpage. Doesn't apply to types with more specific semantics
+                // (`@book`, `@thesis`, ...) -- a stray `eprint` there doesn't
+                // override the entry-type-driven mapping.
+                let mono_type = if has_eprint && is_document_like_monograph_type(mono_type) {
+                    MonographType::Preprint
+                } else {
+                    mono_type.clone()
+                };
+                InputReference::Monograph(Box::new(biblatex_monograph(mono_type, &entry_type, ctx)))
+            }
+            BiblatexBuilder::Inbook => build_inbook_reference(&entry_type, ctx),
+            BiblatexBuilder::Article => build_article_reference(ctx),
+        }
     };
     // The builders above construct references directly rather than through
     // deserialization, so the `author`/`editor`/`translator` shorthands they set
@@ -264,6 +368,158 @@ pub fn input_reference_from_biblatex(entry: &biblatex_crate::Entry) -> InputRefe
     // silently vanish on write (bean csl26-7ab8).
     reference.normalize_contributors();
     reference
+}
+
+/// Push a `ContributorEntry` for a biblatex name-list field that has no
+/// shorthand slot on `InputReference` — the editorial sub-role fields
+/// (`annotator`, `commentator`, `foreword`, `introduction`, `afterword`) and
+/// non-primary `editora`/`editorb`/`editorc` `EditorType` groups. No-ops when
+/// the field is absent or the person list is empty.
+fn push_person_role(
+    contributors: &mut Vec<ContributorEntry>,
+    persons: Option<Vec<biblatex_crate::Person>>,
+    role: ContributorRole,
+) {
+    let Some(persons) = persons.filter(|p| !p.is_empty()) else {
+        return;
+    };
+    contributors.push(ContributorEntry {
+        roles: role.into(),
+        contributor: contributors_from_biblatex_persons(&persons),
+        gender: None,
+    });
+}
+
+/// Map a biblatex `EditorType` (the `editortype`/`editoratype`/`editorbtype`/
+/// `editorctype` annotation on the `editor`/`editora`/`editorb`/`editorc`
+/// fields) to a Citum contributor role. `Founder`/`Continuator`/`Redactor`/
+/// `Reviser`/`Collaborator`/`Organizer` have no dedicated `ContributorRole`
+/// variant and degrade to `Unknown(<name>)`, which still round-trips and
+/// remains selectable by a style as a custom role.
+fn contributor_role_for_editor_type(editor_type: &biblatex_crate::EditorType) -> ContributorRole {
+    use biblatex_crate::EditorType;
+    match editor_type {
+        EditorType::Editor => ContributorRole::Editor,
+        EditorType::Compiler => ContributorRole::Compiler,
+        EditorType::Director => ContributorRole::Director,
+        EditorType::Founder => ContributorRole::Unknown("founder".to_string()),
+        EditorType::Continuator => ContributorRole::Unknown("continuator".to_string()),
+        EditorType::Redactor => ContributorRole::Unknown("redactor".to_string()),
+        EditorType::Reviser => ContributorRole::Unknown("reviser".to_string()),
+        EditorType::Collaborator => ContributorRole::Unknown("collaborator".to_string()),
+        EditorType::Organizer => ContributorRole::Unknown("organizer".to_string()),
+        EditorType::Unknown(s) => ContributorRole::Unknown(s.clone()),
+    }
+}
+
+/// Split biblatex's `editor`/`editora`/`editorb`/`editorc` groups into the
+/// `editor` shorthand (the `EditorType::Editor`-tagged groups) and any
+/// other-typed groups, returned as `ContributorEntry` values ready to fold
+/// into a reference's `contributors` vec. Previously all four groups were
+/// flattened into `editor` regardless of `EditorType`, discarding it.
+fn editor_groups_from_biblatex(
+    entry: &biblatex_crate::Entry,
+) -> (Option<Contributor>, Vec<ContributorEntry>) {
+    let mut contributors = Vec::new();
+    let editor = entry.editors().ok().and_then(|groups| {
+        let mut editor_persons: Vec<biblatex_crate::Person> = Vec::new();
+        for (persons, editor_type) in groups {
+            if matches!(editor_type, biblatex_crate::EditorType::Editor) {
+                editor_persons.extend(persons);
+            } else {
+                push_person_role(
+                    &mut contributors,
+                    Some(persons),
+                    contributor_role_for_editor_type(&editor_type),
+                );
+            }
+        }
+        // `entry.editors()` returns `Ok(vec![])` rather than `Err` when the
+        // entry has no editor* field at all, so an empty person list must be
+        // treated as "no editor" — otherwise a bogus `contributor: []` leaks
+        // into every reference (see bean csl26-7ab8).
+        if editor_persons.is_empty() {
+            None
+        } else {
+            Some(contributors_from_biblatex_persons(&editor_persons))
+        }
+    });
+    (editor, contributors)
+}
+
+/// Read the editorial sub-role name fields (`annotator`, `commentator`,
+/// `foreword`, `introduction`, `afterword`) as `ContributorEntry` values.
+fn editorial_sub_role_contributors(entry: &biblatex_crate::Entry) -> Vec<ContributorEntry> {
+    let mut contributors = Vec::new();
+    push_person_role(
+        &mut contributors,
+        entry.annotator().ok(),
+        ContributorRole::Annotator,
+    );
+    push_person_role(
+        &mut contributors,
+        entry.commentator().ok(),
+        ContributorRole::Commentator,
+    );
+    push_person_role(
+        &mut contributors,
+        entry.foreword().ok(),
+        ContributorRole::ForewordAuthor,
+    );
+    push_person_role(
+        &mut contributors,
+        entry.introduction().ok(),
+        ContributorRole::IntroductionAuthor,
+    );
+    push_person_role(
+        &mut contributors,
+        entry.afterword().ok(),
+        ContributorRole::AfterwordAuthor,
+    );
+    contributors
+}
+
+/// Build the shared `EprintInfo` (preprint-server identifier) from biblatex's
+/// `eprint`/`eprinttype` (alias `archiveprefix`)/`eprintclass` (alias
+/// `primaryclass`) fields. `server` is lowercased per `EprintInfo::server`'s
+/// doc comment; producers may supply mixed case (`"arXiv"`).
+fn eprint_info_from_biblatex(field_str: &dyn Fn(&str) -> Option<String>) -> Option<EprintInfo> {
+    let id = field_str("eprint").filter(|id| !id.trim().is_empty())?;
+    let server = field_str("eprinttype")
+        .or_else(|| field_str("archiveprefix"))
+        .unwrap_or_default()
+        .trim()
+        .to_lowercase();
+    let class = field_str("eprintclass")
+        .or_else(|| field_str("primaryclass"))
+        .filter(|class| !class.trim().is_empty());
+    Some(EprintInfo { id, server, class })
+}
+
+/// Whether `t` is generic enough that an `eprint` field should override it to
+/// `MonographType::Preprint`. Excludes types with more specific semantics
+/// (`Book`, `Thesis`, `Report`, ...), where a stray `eprint` field doesn't
+/// override the entry-type-driven mapping.
+fn is_document_like_monograph_type(t: &MonographType) -> bool {
+    matches!(
+        t,
+        MonographType::Document | MonographType::Manuscript | MonographType::Webpage
+    )
+}
+
+/// Build a `WorkRelation::Embedded` pointing at a bare `Collection` carrying
+/// `series` as its title, so `collection_title()`/`collection_number()`
+/// resolve it. Mirrors `relation_collection_title` in citum-schema-data's
+/// CSL-JSON conversion path -- a BibLaTeX series and a CSL `collection-title`
+/// are the same concept, so both input formats produce the same shape for it
+/// rather than a dedicated flat `series` field.
+fn series_relation(series: Option<String>) -> Option<WorkRelation> {
+    series.map(|title| {
+        WorkRelation::Embedded(Box::new(InputReference::Collection(Box::new(Collection {
+            title: Some(Title::Single(title)),
+            ..Default::default()
+        }))))
+    })
 }
 
 /// Build a Monograph reference with common fields from biblatex.
@@ -277,6 +533,9 @@ fn biblatex_monograph(
 ) -> Monograph {
     let field_str = ctx.field_str;
     let rich_field_str = ctx.rich_field_str;
+    let contributors = ctx.contributors;
+
+    let series = field_str("series");
 
     let mut numbering = Vec::new();
     if let Some(ed) = field_str("edition") {
@@ -286,28 +545,44 @@ fn biblatex_monograph(
         });
     }
     if let Some(n) = field_str("number") {
-        if entry_type == "report" {
-            numbering.push(Numbering {
-                r#type: NumberingType::Report,
-                value: n,
-            });
+        // A `number` alongside `series` is the volume-in-series number, not a
+        // generic document number -- `collection_number()` reads it back via
+        // `NumberingType::Volume`. The `report` special case is unaffected.
+        let numbering_type = if entry_type == "report" {
+            NumberingType::Report
+        } else if series.is_some() {
+            NumberingType::Volume
         } else {
-            numbering.push(Numbering {
-                r#type: NumberingType::Number,
-                value: n,
-            });
-        }
+            NumberingType::Number
+        };
+        numbering.push(Numbering {
+            r#type: numbering_type,
+            value: n,
+        });
     }
+
+    // No intermediate container-title for a bare `@book`/`@report`/etc., so a
+    // `series` wraps in a title-less parent (mirroring the CSL-JSON path's
+    // identical "book in a series with no intermediate container-title" case)
+    // rather than being attached directly as this reference's own container.
+    let container = series.map(|series| {
+        WorkRelation::Embedded(Box::new(InputReference::Monograph(Box::new(Monograph {
+            container: series_relation(Some(series)),
+            ..Default::default()
+        }))))
+    });
 
     Monograph {
         id: ctx.id,
         r#type,
         title: ctx.title,
         short_title: None,
-        container: None,
+        container,
         author: ctx.author,
         editor: ctx.editor,
         translator: ctx.translator,
+        contributors,
+        eprint: ctx.eprint,
         created: DateValue::new(String::new()),
         issued: ctx.issued,
         publisher: ctx.publisher,
@@ -436,6 +711,58 @@ mod tests {
     }
 
     #[test]
+    fn given_book_with_series_when_converted_then_series_becomes_collection_title() {
+        let entry = parse_single_entry(
+            "@book{k1, title = {T}, date = {2024}, series = {Studies in Examples}}",
+        );
+
+        let converted = input_reference_from_biblatex(&entry);
+
+        assert_eq!(
+            converted.collection_title(),
+            Some(Title::Single("Studies in Examples".to_string()))
+        );
+    }
+
+    #[test]
+    fn given_book_with_series_and_number_when_converted_then_number_becomes_the_volume_in_series() {
+        let entry = parse_single_entry(
+            "@book{k1, title = {T}, date = {2024}, series = {Studies in Examples}, \
+             number = {12}}",
+        );
+
+        let converted = input_reference_from_biblatex(&entry);
+
+        assert_eq!(converted.collection_number(), Some("12".to_string()));
+        assert_eq!(converted.number(), None);
+    }
+
+    #[test]
+    fn given_book_with_number_and_no_series_when_converted_then_number_stays_generic() {
+        let entry = parse_single_entry("@book{k1, title = {T}, date = {2024}, number = {12}}");
+
+        let converted = input_reference_from_biblatex(&entry);
+
+        assert_eq!(converted.number(), Some("12".to_string()));
+        assert_eq!(converted.collection_number(), None);
+    }
+
+    #[test]
+    fn given_incollection_with_series_when_converted_then_series_is_on_the_parent_collection() {
+        let entry = parse_single_entry(
+            "@incollection{k1, title = {Chapter}, booktitle = {Book}, date = {2024}, \
+             series = {Studies in Examples}}",
+        );
+
+        let converted = input_reference_from_biblatex(&entry);
+
+        assert_eq!(
+            converted.collection_title(),
+            Some(Title::Single("Studies in Examples".to_string()))
+        );
+    }
+
+    #[test]
     fn given_techreport_with_number_when_converted_then_maps_to_report_type_and_report_numbering() {
         let entry = parse_single_entry(
             "@techreport{k1,\n  title = {T},\n  date = {2024},\n  number = {TR-9}\n}",
@@ -548,6 +875,85 @@ mod tests {
     }
 
     #[test]
+    fn given_inproceedings_with_event_fields_when_converted_then_event_is_on_the_parent_collection()
+    {
+        let entry = parse_single_entry(
+            "@inproceedings{p1, title = {Paper}, booktitle = {Proceedings}, date = {2024}, \
+             eventtitle = {Symposium on Examples}, venue = {Springfield}, \
+             eventdate = {2023-06-01}}",
+        );
+
+        let converted = input_reference_from_biblatex(&entry);
+
+        let component = converted
+            .as_collection_component()
+            .expect("expected a CollectionComponent");
+        let parent = match component.container.as_ref().expect("expected a container") {
+            WorkRelation::Embedded(inner) => inner
+                .as_collection()
+                .expect("expected an embedded Collection"),
+            WorkRelation::Id(_) => panic!("expected an embedded container, not an id reference"),
+        };
+        assert_eq!(parent.r#type, CollectionType::Proceedings);
+        let event = match parent.event.as_ref().expect("expected an event") {
+            WorkRelation::Embedded(inner) => inner.as_event().expect("expected an Event"),
+            WorkRelation::Id(_) => panic!("expected an embedded event, not an id reference"),
+        };
+        assert_eq!(
+            event.title,
+            Some(Title::Single("Symposium on Examples".to_string()))
+        );
+        assert_eq!(event.location, Some("Springfield".to_string()));
+        assert_eq!(event.date, Some(DateValue::new("2023-06-01".to_string())));
+    }
+
+    #[test]
+    fn given_incollection_with_eventtitle_when_converted_then_event_is_not_read() {
+        // `eventtitle`/`venue`/`eventdate` are only meaningful for the
+        // conference itself; an `@incollection` (not a proceedings paper)
+        // must not pick them up even if present in the source.
+        let entry = parse_single_entry(
+            "@incollection{c1, title = {Chapter}, booktitle = {Book}, date = {2024}, \
+             eventtitle = {Not A Conference}}",
+        );
+
+        let converted = input_reference_from_biblatex(&entry);
+
+        let component = converted
+            .as_collection_component()
+            .expect("expected a CollectionComponent");
+        let parent = match component.container.as_ref().expect("expected a container") {
+            WorkRelation::Embedded(inner) => inner
+                .as_collection()
+                .expect("expected an embedded Collection"),
+            WorkRelation::Id(_) => panic!("expected an embedded container, not an id reference"),
+        };
+        assert_eq!(parent.r#type, CollectionType::EditedBook);
+        assert!(parent.event.is_none());
+    }
+
+    #[test]
+    fn given_incollection_with_chapter_number_when_converted_then_chapter_becomes_numbering() {
+        let entry = parse_single_entry(
+            "@incollection{c1, title = {Chapter}, booktitle = {Book}, date = {2024}, \
+             chapter = {7}}",
+        );
+
+        let converted = input_reference_from_biblatex(&entry);
+
+        let component = converted
+            .as_collection_component()
+            .expect("expected a CollectionComponent");
+        assert_eq!(
+            component.numbering,
+            vec![Numbering {
+                r#type: NumberingType::Chapter,
+                value: "7".to_string(),
+            }]
+        );
+    }
+
+    #[test]
     fn given_biblatex_title_with_escaped_html_nocase_span_when_converted_then_becomes_djot_case_protection()
      {
         // Zotero's builtin BibTeX/BibLaTeX exporter escapes citeproc-js's
@@ -613,6 +1019,136 @@ mod tests {
         let converted = input_reference_from_biblatex(&entry);
 
         assert_eq!(converted.ref_type(), expected_ref_type);
+    }
+
+    #[test]
+    fn math_chunk_becomes_djot_inline_math() {
+        let entry = parse_single_entry("@book{k1, title = {Energy: $E=mc^2$}, date = {2024}}");
+
+        let converted = input_reference_from_biblatex(&entry);
+
+        assert_eq!(
+            converted.title(),
+            Some(Title::Single("Energy: $E=mc^2$".to_string()))
+        );
+    }
+
+    #[test]
+    fn multiple_locations_are_joined_with_semicolon() {
+        let entry = parse_single_entry(
+            "@book{k1, title = {T}, date = {2024}, publisher = {Acme}, \
+             location = {Boston and London}}",
+        );
+
+        let converted = input_reference_from_biblatex(&entry);
+
+        let monograph = converted.as_monograph().expect("expected a Monograph");
+        assert_eq!(
+            monograph.publisher,
+            Some(Publisher {
+                name: "Acme".into(),
+                place: Some("Boston; London".into()),
+            })
+        );
+    }
+
+    #[test]
+    fn given_article_with_no_journal_and_an_eprint_when_converted_then_becomes_a_preprint() {
+        // Mirrors `CSL_TYPE_MAP`'s rule that a container-less CSL-JSON
+        // `article` is a standalone preprint, not a truncated journal article.
+        let entry = parse_single_entry(
+            "@article{k1, title = {T}, date = {2024}, eprint = {2301.00001}, \
+             eprinttype = {arXiv}}",
+        );
+
+        let converted = input_reference_from_biblatex(&entry);
+
+        assert_eq!(converted.ref_type(), "preprint");
+        let monograph = converted.as_monograph().expect("expected a Monograph");
+        assert_eq!(
+            monograph.eprint,
+            Some(EprintInfo {
+                id: "2301.00001".to_string(),
+                server: "arxiv".to_string(),
+                class: None,
+            })
+        );
+    }
+
+    #[test]
+    fn given_article_with_a_journal_and_an_eprint_when_converted_then_stays_a_journal_article_with_eprint_metadata()
+     {
+        let entry = parse_single_entry(
+            "@article{k1, title = {T}, date = {2024}, journaltitle = {J}, \
+             eprint = {2301.00001}, eprinttype = {arXiv}, eprintclass = {cs.DL}}",
+        );
+
+        let converted = input_reference_from_biblatex(&entry);
+
+        assert_eq!(converted.ref_type(), "article-journal");
+        let component = converted
+            .as_serial_component()
+            .expect("expected a SerialComponent");
+        assert_eq!(
+            component.eprint,
+            Some(EprintInfo {
+                id: "2301.00001".to_string(),
+                server: "arxiv".to_string(),
+                class: Some("cs.DL".to_string()),
+            })
+        );
+    }
+
+    #[rstest]
+    #[case::misc_becomes_preprint(
+        "@misc{k1, title = {T}, date = {2024}, eprint = {2301.00001}}",
+        "preprint"
+    )]
+    #[case::unpublished_becomes_preprint(
+        "@unpublished{k1, title = {T}, date = {2024}, eprint = {2301.00001}}",
+        "preprint"
+    )]
+    #[case::online_becomes_preprint(
+        "@online{k1, title = {T}, date = {2024}, eprint = {2301.00001}}",
+        "preprint"
+    )]
+    #[case::book_keeps_its_type(
+        "@book{k1, title = {T}, date = {2024}, eprint = {2301.00001}}",
+        "book"
+    )]
+    fn given_biblatex_entry_with_an_eprint_field_when_converted_then_type_flip_follows_the_precedence_rule(
+        #[case] source: &str,
+        #[case] expected_ref_type: &str,
+    ) {
+        let entry = parse_single_entry(source);
+
+        let converted = input_reference_from_biblatex(&entry);
+
+        assert_eq!(converted.ref_type(), expected_ref_type);
+    }
+
+    #[test]
+    fn bare_eprint_keeps_identifier_and_uses_empty_server() {
+        let entry =
+            parse_single_entry("@misc{k1, title = {T}, date = {2024}, eprint = {2301.00001}}");
+
+        let converted = input_reference_from_biblatex(&entry);
+
+        assert_eq!(converted.ref_type(), "preprint");
+        assert_eq!(converted.eprint_id().as_deref(), Some("2301.00001"));
+        assert_eq!(converted.eprint_server().as_deref(), Some(""));
+    }
+
+    #[rstest]
+    #[case::empty("@misc{k1, title = {T}, date = {2024}, eprint = {}}")]
+    #[case::whitespace("@misc{k1, title = {T}, date = {2024}, eprint = {   }}")]
+    fn blank_eprint_does_not_promote_to_preprint(#[case] source: &str) {
+        let entry = parse_single_entry(source);
+
+        let converted = input_reference_from_biblatex(&entry);
+
+        assert_eq!(converted.ref_type(), "document");
+        assert_eq!(converted.eprint_id(), None);
     }
 
     /// Serialize `reference` to YAML the same way `citum convert refs` does.
@@ -788,5 +1324,101 @@ mod tests {
             serde_yaml::from_str(&yaml).expect("emitted YAML should deserialize");
 
         assert_eq!(converted, round_tripped);
+    }
+
+    #[rstest]
+    #[case::annotator("annotator", "annotator")]
+    #[case::commentator("commentator", "commentator")]
+    #[case::foreword("foreword", "foreword-author")]
+    #[case::introduction("introduction", "introduction-author")]
+    #[case::afterword("afterword", "afterword-author")]
+    fn given_biblatex_editorial_sub_role_field_when_converted_then_maps_to_typed_contributor_role(
+        #[case] biblatex_field: &str,
+        #[case] expected_role: &str,
+    ) {
+        let source =
+            format!("@book{{k1, title = {{T}}, date = {{2024}}, {biblatex_field} = {{Roe, Sam}}}}");
+        let entry = parse_single_entry(&source);
+
+        let converted = input_reference_from_biblatex(&entry);
+
+        assert_eq!(
+            to_yaml(&converted),
+            format!(
+                "class: monograph\n\
+                 id: k1\n\
+                 type: book\n\
+                 title: T\n\
+                 contributors:\n\
+                 - roles:\n  \
+                 - {expected_role}\n  \
+                 contributor:\n    \
+                 given: Sam\n    \
+                 family: Roe\n\
+                 issued: '2024'\n"
+            )
+        );
+    }
+
+    #[test]
+    fn given_editor_and_editora_with_different_editor_types_when_converted_then_roles_stay_distinct()
+     {
+        // Regression: `entry.editors()` returns one group per editor* field
+        // plus its `EditorType`; extraction used to flatten all of it into a
+        // single undifferentiated `editor` field, discarding the type. Only
+        // the `EditorType::Editor` group should become the `editor`
+        // shorthand -- other groups (here, `editora`'s `compiler` type) go
+        // onto `contributors` directly.
+        let entry = parse_single_entry(
+            "@book{k1, title = {T}, date = {2024}, editor = {Doe, John}, \
+             editora = {Roe, Sam}, editoratype = {compiler}}",
+        );
+
+        let converted = input_reference_from_biblatex(&entry);
+
+        assert_eq!(
+            to_yaml(&converted),
+            "class: monograph\n\
+             id: k1\n\
+             type: book\n\
+             title: T\n\
+             contributors:\n\
+             - roles:\n  \
+             - compiler\n  \
+             contributor:\n    \
+             given: Sam\n    \
+             family: Roe\n\
+             - roles:\n  \
+             - editor\n  \
+             contributor:\n    \
+             given: John\n    \
+             family: Doe\n\
+             issued: '2024'\n"
+        );
+    }
+
+    #[test]
+    fn given_editora_with_an_editor_type_lacking_a_typed_role_when_converted_then_degrades_to_unknown_role()
+     {
+        let entry = parse_single_entry(
+            "@book{k1, title = {T}, date = {2024}, editora = {Roe, Sam}, editoratype = {organizer}}",
+        );
+
+        let converted = input_reference_from_biblatex(&entry);
+
+        assert_eq!(
+            to_yaml(&converted),
+            "class: monograph\n\
+             id: k1\n\
+             type: book\n\
+             title: T\n\
+             contributors:\n\
+             - roles:\n  \
+             - organizer\n  \
+             contributor:\n    \
+             given: Sam\n    \
+             family: Roe\n\
+             issued: '2024'\n"
+        );
     }
 }

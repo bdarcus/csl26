@@ -209,7 +209,17 @@ crate::tolerant_enum! {
         Recipient = "recipient",
         Compiler = "compiler",
         Producer = "producer",
-        Writer = "writer"
+        Writer = "writer",
+        /// Author of annotations accompanying the work (BibLaTeX `annotator`).
+        Annotator = "annotator",
+        /// Author of a commentary on the work (BibLaTeX `commentator`).
+        Commentator = "commentator",
+        /// Author of a foreword (BibLaTeX `foreword`).
+        ForewordAuthor = "foreword-author",
+        /// Author of an introduction (BibLaTeX `introduction`).
+        IntroductionAuthor = "introduction-author",
+        /// Author of an afterword (BibLaTeX `afterword`).
+        AfterwordAuthor = "afterword-author"
     }
 }
 
