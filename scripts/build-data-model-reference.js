@@ -219,9 +219,8 @@ function buildBiblatexMapping(typeMap) {
         '## Not Yet Mapped',
         '',
         'Fields with a typed accessor in the `biblatex` crate (or documented prior art) but',
-        'no Citum schema slot or extraction path today. This is the gap-analysis deliverable',
-        'for bean csl26-11h2 — each row below is a candidate for a follow-up bean, not a bug',
-        'in the mapping tables.',
+        'no Citum schema slot or extraction path today. Each row below is a known gap, not',
+        'a bug in the mapping tables.',
         '',
         '| BibLaTeX Field | Datatype | Crate Accessor | Notes |',
         '|---|---|---|---|'

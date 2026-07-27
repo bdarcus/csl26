@@ -32,7 +32,7 @@ maps that legacy shape onto `InputReference` (see
 [generated/CSL_JSON_MAPPING.md](generated/CSL_JSON_MAPPING.md) and
 [CSL_TYPE_CONVERSION_CONTRACT.md](../specs/CSL_TYPE_CONVERSION_CONTRACT.md) for
 the type-level rules that hop follows). A dedicated RIS mapping reference is
-deferred — see Follow-ups below.
+not currently documented.
 
 ## Reference classes
 
@@ -60,7 +60,7 @@ would either lose domain-specific fields (a legal case's `reporter`/`volume`/
 `page` triad isn't a `Numbering`) or bloat the structural classes with fields
 that only apply to one domain. See
 [TYPE_SYSTEM_ARCHITECTURE.md](../specs/TYPE_SYSTEM_ARCHITECTURE.md) for the
-original design rationale (still `Status: Draft` — see Follow-ups) and
+original design rationale (still `Status: Draft`) and
 [TYPE_ADDITION_POLICY.md](../policies/TYPE_ADDITION_POLICY.md) for when a new
 domain earns a new flat class versus reusing an existing one.
 
@@ -119,10 +119,10 @@ The canonical representation, though, is `contributors: Vec<ContributorEntry>`
 — each entry pairs a `Contributor` with an explicit `ContributorRole`
 (`author`, `editor`, `translator`, `director`, …), so a reference can carry
 an arbitrary mix of roles without one field per role. `normalize_contributors`
-(bean `csl26-7ab8`) reconciles the two representations: when a reference is
-constructed or converted with only the shorthand fields set, it folds them
-into `contributors` so downstream code (the renderer, disambiguation, sorting)
-has one canonical list to read regardless of which shape the input used.
+reconciles the two representations: when a reference is constructed or
+converted with only the shorthand fields set, it folds them into
+`contributors` so downstream code (the renderer, disambiguation, sorting) has
+one canonical list to read regardless of which shape the input used.
 
 ## Dates, titles, rich text, forward compatibility
 
@@ -165,18 +165,3 @@ be a useful grounding reference:
 | `entrykey` | `WorkRelation` (partial) | See the containers section above — only `related`/`relatedtype` is comparable prior art; `crossref`/`xdata` are resolved before Citum's mapping runs. |
 | — | `Numbering` | No BibLaTeX equivalent: `Numbering` is Citum's typed volume/issue/number-kind identifier, used where BibLaTeX has several distinct flat fields (`volume`, `number`, `part`, `chapter`, …) for what is conceptually one "identifier within a container" concept. |
 | — | `LangID` | Closest BibLaTeX equivalent is `langid`/`hyphenation`, a `key`-typed field; Citum's `LangID` is a validated BCP 47 tag. |
-
-## Follow-ups (not in scope here)
-
-The following are filed as separate beans rather than addressed in this pass:
-
-- Datatype-driven BibLaTeX extraction rewrite (dispatch on `BiblatexDataType`).
-- Contributor roles split: reading the unread editorial `name`-type fields
-  (`afterword`, `annotator`, `commentator`, `foreword`, `introduction`,
-  `holder`), and preserving `EditorType` instead of discarding it during
-  contributor flattening.
-- `series` as a flat literal field on `Monograph`/`Collection`.
-- RIS mapping reference (`RIS → csl_legacy::csl_json::Reference → InputReference`).
-- Resolving [TYPE_SYSTEM_ARCHITECTURE.md](../specs/TYPE_SYSTEM_ARCHITECTURE.md)'s
-  `Draft` status — promote to `Active` or fold its conclusions into this
-  document and archive it.

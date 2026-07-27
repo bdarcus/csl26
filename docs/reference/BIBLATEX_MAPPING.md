@@ -42,13 +42,13 @@ generated; do not hand-edit rows here, edit `tables.rs` and run
 
 | BibLaTeX Field | Datatype | Crate Accessor | Citum Target | Notes |
 |---|---|---|---|---|
-| `title` | literal | `entry.title()` | title | Read via `rich_field_str`, not the crate's `title()` accessor: converts citeproc-js HTML rich-text markup (e.g. `<span class="nocase">`) to Djot (bean csl26-6eoi). |
+| `title` | literal | `entry.title()` | title | Read via `rich_field_str`, not the crate's `title()` accessor: converts citeproc-js HTML rich-text markup (e.g. `<span class="nocase">`) to Djot. |
 | `subtitle` | literal | `entry.subtitle()` | title.sub | Combined with `title` into a `Title::Structured` when both are present. |
 | `booktitle` | literal | `entry.book_title()` | container.title (inbook/incollection/inproceedings only) | — |
 | `journaltitle` | literal | `entry.journal_title()` | container.title (article only) | Falls back to the BibTeX alias `journal` when absent. |
 | `date` | date | `entry.date()` | issued | Extraction reads `field_str("date")` directly rather than the crate's typed `Date` accessor, so the value is stored as a raw string handed to `DateValue::new` rather than a parsed EDTF value. |
 | `urldate` | date | `entry.url_date()` | accessed | Same raw-string caveat as `date`. |
-| `publisher` | literal-list | `entry.publisher()` | publisher.name | biblatex `publisher` is an `and`-separated literal list (multiple publishers). `literal_list_str` splits and rejoins with `"; "`, but `Publisher.name` is a single `MultilingualString` -- a genuine multi-publisher entry still collapses to one string; only the join delimiter changed (`"; "` instead of leaking the literal `and`), not the underlying single-valued field. See bean csl26-11h2's follow-ups. |
+| `publisher` | literal-list | `entry.publisher()` | publisher.name | biblatex `publisher` is an `and`-separated literal list (multiple publishers). `literal_list_str` splits and rejoins with `"; "`, but `Publisher.name` is a single `MultilingualString` -- a genuine multi-publisher entry still collapses to one string; only the join delimiter changed (`"; "` instead of leaking the literal `and`), not the underlying single-valued field. |
 | `institution` | literal-list | `entry.institution()` | publisher.name (fallback) | Falls back to `organization`, then `school`, when `publisher` is absent. Same list-join handling as `publisher`. |
 | `organization` | literal-list | `entry.fields.get("organization") => Vec<Chunks>` | publisher.name (fallback) | Same list-join handling as `publisher`. |
 | `school` | literal-list | `entry.school()` | publisher.name (fallback) | Same list-join handling as `publisher`. |
@@ -90,9 +90,8 @@ generated; do not hand-edit rows here, edit `tables.rs` and run
 ## Not Yet Mapped
 
 Fields with a typed accessor in the `biblatex` crate (or documented prior art) but
-no Citum schema slot or extraction path today. This is the gap-analysis deliverable
-for bean csl26-11h2 — each row below is a candidate for a follow-up bean, not a bug
-in the mapping tables.
+no Citum schema slot or extraction path today. Each row below is a known gap, not
+a bug in the mapping tables.
 
 | BibLaTeX Field | Datatype | Crate Accessor | Notes |
 |---|---|---|---|

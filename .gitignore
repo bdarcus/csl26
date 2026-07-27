@@ -59,6 +59,13 @@ __pycache__/
 scripts/x-bench.js
 docs/guides/style-author-guide.html
 
+# Generated doc pages (built by scripts/build-doc-pages.js's PAGES list;
+# markdown sources stay committed, HTML is a deploy-time artifact)
+docs/architecture/*.html
+docs/policies/*.html
+docs/reference/*.html
+docs/reference/generated/*.html
+
 .claude/scheduled_tasks.lock
 clippy_errors.log
 .mcp.json
