@@ -159,6 +159,9 @@ new field rather than overloading `kind` again.
 
 ## Changelog
 
+- v1.6 (2026-07-28): Cross-referenced
+  [STYLE_INHERITANCE.md](./STYLE_INHERITANCE.md), which absorbs the Profile
+  Rule into its form-decision table and adds the three-tier portfolio policy.
 - v1.5 (2026-04-22): Reframed taxonomy on two axes: semantic class and
   implementation form. Recorded the 2026-04-22 journal-candidate audit,
   reduced three audited descendants to `journal + config-wrapper`, dropped one

@@ -1,7 +1,13 @@
 # Style Aliasing and Presets Design
 
-**Status:** Active
+**Status:** Superseded
 **Date:** 2026-02-15
+**Superseded by:** [STYLE_INHERITANCE.md](./STYLE_INHERITANCE.md) (resolution
+model and merge semantics) and
+[STYLE_PRESET_ARCHITECTURE.md](./STYLE_PRESET_ARCHITECTURE.md) (`extends:` /
+`StyleBase`). This document's "no parent/child aliasing" verdict predates the
+`extends:` mechanism and the registry `aliases:` layer; its preset analysis
+and parent-coverage data remain useful as historical context.
 
 ## Problem Statement
 

@@ -363,6 +363,9 @@ policy; the beans land mechanism as the need arrives.
 
 ## Changelog
 
+- v1.1 (2026-07-28): Cross-referenced
+  [STYLE_INHERITANCE.md](./STYLE_INHERITANCE.md), which owns merge semantics
+  and portfolio tiering; edition workflow remains owned here.
 - v1.0 (2026-05-21): Initial spec. Codifies edition inheritance shape
   (siblings under archetype), embedding retention (N + N−1), retirement
   workflow, version-field policy (no new field), and tooling impact.
