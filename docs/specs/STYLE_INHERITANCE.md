@@ -77,8 +77,14 @@ onto the fully resolved parent:
    every scope (global, `citation`, `bibliography`).
 2. **Scalars and arrays replace whole.** There is no per-element array
    merge; a child that touches a list owns the whole list.
-3. **Explicit `null` clears.** Writing `key: null` removes the inherited
-   value entirely (distinct from omitting the key, which inherits).
+3. **Explicit `null` clears optional fields.** Writing `key: null` removes
+   the inherited value entirely (distinct from omitting the key, which
+   inherits). Non-optional fields with schema defaults reject `null` at
+   parse time; reset one by authoring its default value explicitly.
+   A preset reference (e.g. `dates: numeric`) layers its resolved settings
+   like an authored block: fields the preset defines apply — non-optional
+   fields are always fully determined by the preset — while optional fields
+   the preset leaves unset inherit from the parent.
 4. **`type-variants` and `type-templates` merge per-key.** A child variant
    for `book` replaces the parent's `book` variant and leaves the parent's
    other variants intact. Within a replaced variant, no deeper merge
@@ -165,10 +171,29 @@ disposition of all 141 checked-in styles is recorded in
 
 ## Implementation Notes
 
-- The deep-merge change (`csl26-svfg`) touches `Options::merge` impls and
-  the `merge_options!` macro shape shared with the runtime scope merge in
-  `crates/citum-schema-style/src/options/mod.rs`; the GB/T dates
-  deduplication is the verifying case (rendered output must not change).
+- The deep-merge change (`csl26-svfg`) is implemented in the `extends`
+  overlay (`crates/citum-schema-style/src/style/overlay.rs`), not in the
+  runtime `Options::merge` impls; the GB/T dates deduplication is the
+  verifying case (rendered output must not change). A working spike lives
+  on local branch `wip/svfg-deep-merge`; it verified the GB/T case
+  byte-identical and surfaced three constraints the final implementation
+  must satisfy:
+  1. **Raw-YAML basis.** Field presence must come from the authored raw
+     `options` mapping — struct-level merges cannot distinguish authored
+     defaults from serde defaults (e.g. `DateConfig.month`). `month` also
+     needs `#[serde(default)]` or partial `dates` blocks cannot parse.
+  2. **Post-parse mutation guard.** Styles mutated programmatically after
+     parse (tests, server overrides) carry stale `raw_yaml`; the raw path
+     must verify the typed overlay still round-trips from its raw options
+     and fall back to the typed merge otherwise, because resolution re-runs
+     on already-resolved styles (`extends` is preserved).
+  3. **Wrapper-compat pass.** Existing wrappers were tuned under
+     whole-block replace and may rely on a partial block *suppressing*
+     parent fields — `taylor-and-francis-chicago-author-date`'s partial
+     `titles:` block drops the parent's `type-mapping` and title-class
+     entries today. Each such wrapper needs explicit `~` clears added in
+     the same change, verified against the full test suite and the
+     compatibility report.
 - The community-repo split, report refocus, and registry alias review are
   tracked as separate beans under epic `csl26-s2rw`.
 - STYLE_PRESET_ARCHITECTURE.md remains authoritative for `StyleBase`
