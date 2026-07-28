@@ -1,0 +1,142 @@
+style	disposition	alias_review	justification	extends_parent	band	best_target	similarity	exact_parity	compat_score	csl_reach
+acm-sig-proceedings	move-to-community	yes	alias band with CSL-metadata dependency evidence		alias	elsevier-with-titles	1.0000	0	0.925	
+african-online-scientific-information-systems-harvard	move-to-community	no	near-clone band		near-clone	harvard-cite-them-right	0.9627	0.104	0.91	
+african-online-scientific-information-systems-vancouver	move-to-community	yes	alias band with CSL-metadata dependency evidence		alias	elsevier-with-titles	1.0000	0.299	0.896	
+aims-press	move-to-community	yes	alias band with CSL-metadata dependency evidence		alias	elsevier-with-titles	1.0000	0.299	0.94	
+alpha	keep-exemplar	no	Rust test fixture							
+american-association-for-cancer-research	move-to-community	yes	alias band with CSL-metadata dependency evidence		alias	elsevier-with-titles	1.0000	0.299	1	
+american-chemical-society	keep-exemplar	no	coverage: chemistry numbering/abbreviation conventions		alias	elsevier-with-titles	1.0000	0.293	0.951	
+american-fisheries-society	move-to-community	yes	alias band with CSL-metadata dependency evidence		alias	canadian-journal-of-fisheries-and-aquatic-sciences	1.0000	0.119	0.955	
+american-geophysical-union	move-to-community	yes	alias band with CSL-metadata dependency evidence		alias	springer-socpsych-author-date	1.0000	0.224	0.97	
+american-institute-of-aeronautics-and-astronautics	move-to-community	yes	alias band with CSL-metadata dependency evidence	ieee	alias	elsevier-with-titles	1.0000	0.299	1	
+american-institute-of-physics	move-to-community	yes	alias band with CSL-metadata dependency evidence		alias	elsevier-with-titles	1.0000	0.268	0.926	
+american-marketing-association	move-to-community	no	near-clone band		near-clone	american-sociological-association	0.9783	0.164	0.955	
+american-mathematical-society-label	keep-exemplar	no	elsevier-with-titles wrapper exemplar; label-style coverage	elsevier-with-titles				0.388	0.925	
+american-medical-association-alphabetical	keep-exemplar	no	AMA family wrapper exemplar	american-medical-association	alias	american-medical-association	1.0000	0.179	1	
+american-medical-association-no-et-al	move-to-community	yes	alias band with CSL-metadata dependency evidence	american-medical-association	alias	american-medical-association	1.0000	0.239	1	
+american-medical-association-no-url	move-to-community	yes	alias band with CSL-metadata dependency evidence	american-medical-association	alias	american-medical-association	1.0000	0.239	0.881	
+american-meteorological-society	move-to-community	yes	alias band with CSL-metadata dependency evidence		alias	springer-basic-author-date	1.0000	0.224	0.94	
+american-physics-society	move-to-community	yes	alias band with CSL-metadata dependency evidence		alias	microbiology-society	0.9928	0.268	0.886	
+american-physiological-society	move-to-community	yes	alias band with CSL-metadata dependency evidence		alias	elsevier-with-titles	1.0000	0.294	0.971	
+american-society-for-microbiology	move-to-community	yes	alias band with CSL-metadata dependency evidence		alias	elsevier-with-titles	1.0000	0.299	0.94	
+american-society-of-civil-engineers	move-to-community	yes	alias band with CSL-metadata dependency evidence		alias	springer-basic-author-date	1.0000	0.179	0.955	
+american-society-of-mechanical-engineers	keep-exemplar	no	IEEE family wrapper exemplar	ieee	alias	elsevier-with-titles	1.0000	0	0.881	
+american-sociological-association	move-to-community	no	near-clone band		near-clone	american-marketing-association	0.9783	0.239	0.925	
+american-statistical-association	move-to-community	yes	alias band with CSL-metadata dependency evidence		alias	springer-basic-author-date	1.0000	0.119	0.985	
+angewandte-chemie	move-to-community	yes	alias band with CSL-metadata dependency evidence		alias	elsevier-without-titles	1.0000	0.373	0.8	
+annual-reviews	move-to-community	yes	alias band with CSL-metadata dependency evidence		alias	annual-reviews-alphabetical	1.0000	0.299	0.925	
+annual-reviews-alphabetical	move-to-community	yes	alias band with CSL-metadata dependency evidence		alias	annual-reviews	1.0000	0.194	0.94	
+annual-reviews-author-date	move-to-community	yes	alias band with CSL-metadata dependency evidence		alias	springer-basic-author-date	0.9891	0.06	0.881	
+association-for-computing-machinery	move-to-community	yes	alias band with CSL-metadata dependency evidence		alias	hawaii-international-conference-on-system-sciences-proceedings	0.9938	0	0.91	
+baishideng-publishing-group	move-to-community	yes	alias band with CSL-metadata dependency evidence		alias	elsevier-with-titles	1.0000	0.299	0.955	
+begell-house-chicago-author-date	move-to-community	no	near-clone band		near-clone	institute-of-mathematics-and-its-applications	0.9620	0.119	0.94	
+biomed-central	move-to-community	yes	alias band with CSL-metadata dependency evidence		alias	elsevier-with-titles	1.0000	0.299	0.985	66
+bmj	move-to-community	yes	alias band with CSL-metadata dependency evidence		alias	elsevier-with-titles	1.0000	0.299	1	
+bristol-university-press	move-to-community	no	near-clone band		near-clone	american-fisheries-society	0.9766	0.284	0.94	
+canadian-journal-of-fisheries-and-aquatic-sciences	move-to-community	yes	alias band with CSL-metadata dependency evidence		alias	american-fisheries-society	1.0000	0.104	0.955	
+cell	move-to-community	yes	alias band with CSL-metadata dependency evidence		alias	elsevier-with-titles	1.0000	0.299	0.97	
+cell-numeric	move-to-community	yes	alias band with CSL-metadata dependency evidence	elsevier-with-titles	alias	elsevier-with-titles	1.0000	0.299	0.866	
+chem-acs	move-to-community	no	no measured neighbor					0.36	0.8	
+chem-biochem	move-to-community	no	no measured neighbor					0.387	0.8	
+chem-rsc	move-to-community	no	no measured neighbor					0.56	0.933	
+chicago-author-date-classic	move-to-community	no	near-clone band		near-clone	springer-humanities-author-date	0.9783	0.104	0.94	
+chicago-notes-bibliography-17th-edition	keep-exemplar	no	coverage: Chicago 17th-edition notes machinery		near-clone	new-harts-rules-notes	0.9227	0	0.914	
+chicago-notes-bibliography-classic-archive-place-first-no-url	move-to-community	no	near-clone band		near-clone	new-harts-rules-notes-label-page-no-url	0.8974	0	0.877	
+chicago-notes-classic	move-to-community	yes	alias band with CSL-metadata dependency evidence		alias	chicago-notes-classic-archive-place-first	1.0000	0	0.941	
+chicago-notes-classic-archive-place-first	move-to-community	yes	alias band with CSL-metadata dependency evidence		alias	chicago-notes-classic	1.0000	0	0.941	
+chicago-notes-classic-no-url	move-to-community	no	near-clone band		near-clone	chicago-notes-publisher-place-archive-place-first-no-url	0.9563	0	0.912	
+chicago-notes-publisher-place-archive-place-first-no-url	move-to-community	no	near-clone band		near-clone	chicago-notes-classic-no-url	0.9563	0	0.853	
+chicago-shortened-notes-bibliography-classic-archive-place-first	move-to-community	yes	alias band with CSL-metadata dependency evidence		alias	chicago-shortened-notes-bibliography	1.0000	0.037	0.951	
+copernicus-publications	move-to-community	no	near-clone band		near-clone	the-geological-society-of-london	0.9511	0.224	0.94	
+cse-name-year	move-to-community	yes	alias band with CSL-metadata dependency evidence		alias	taylor-and-francis-council-of-science-editors-author-date	0.9928	0.045	0.955	
+current-opinion	move-to-community	yes	alias band with CSL-metadata dependency evidence		alias	elsevier-with-titles	1.0000	0.299	1	
+din-1505-2-alphanumeric	move-to-community	no	no measured neighbor					0.119	0.925	
+disability-and-rehabilitation	move-to-community	yes	alias band with CSL-metadata dependency evidence	elsevier-with-titles	alias	elsevier-with-titles	1.0000	0.299	0.866	
+elsevier-vancouver-author-date	keep-exemplar	no	elsevier-vancouver wrapper exemplar	elsevier-vancouver	alias	elsevier-harvard	1.0000	0	0.955	
+elsevier-without-titles	move-to-community	yes	alias band with CSL-metadata dependency evidence		alias	angewandte-chemie	1.0000	0.29	0.87	
+endocrine-press	move-to-community	yes	alias band with CSL-metadata dependency evidence	american-medical-association	alias	elsevier-with-titles	1.0000	0.239	0.97	
+entomological-society-of-america	keep-exemplar	no	elsevier-harvard wrapper exemplar	elsevier-harvard	alias	sage-harvard	1.0000	0.134	0.896	
+frontiers	move-to-community	yes	alias band with CSL-metadata dependency evidence		alias	american-fisheries-society	1.0000	0.239	0.97	
+frontiers-medical-journals	move-to-community	yes	alias band with CSL-metadata dependency evidence		alias	elsevier-with-titles	1.0000	0.299	0.97	
+future-medicine	move-to-community	yes	alias band with CSL-metadata dependency evidence		alias	elsevier-with-titles	0.9876	0.294	0.853	
+future-science-group	move-to-community	yes	alias band with CSL-metadata dependency evidence		alias	elsevier-with-titles	1.0000	0.299	0.97	
+gost-r-7-0-5-2008-author-date	move-to-community	no	no measured neighbor					0.104	0.881	
+gost-r-7-0-5-2008-numeric	move-to-community	yes	alias band with CSL-metadata dependency evidence		alias	ieee	1.0000	0.164	0.955	
+hainan-medical-university-journal-publisher	move-to-community	yes	alias band with CSL-metadata dependency evidence		alias	elsevier-with-titles	1.0000	0.299	1	
+harvard-cite-them-right	keep-exemplar	no	Rust test fixture		near-clone	african-online-scientific-information-systems-harvard	0.9627	0.299	1	
+hawaii-international-conference-on-system-sciences-proceedings	move-to-community	yes	alias band with CSL-metadata dependency evidence	ieee	alias	association-for-computing-machinery	0.9938	0.209	0.94	
+institute-for-operations-research-and-the-management-sciences	move-to-community	yes	alias band with CSL-metadata dependency evidence		alias	american-geophysical-union	0.9855	0.284	0.94	
+institute-of-mathematics-and-its-applications	move-to-community	no	near-clone band		near-clone	international-union-of-crystallography	0.9710	0.313	0.97	
+institute-of-physics-numeric	move-to-community	yes	alias band with CSL-metadata dependency evidence		alias	elsevier-with-titles	1.0000	0.239	0.955	82
+integrated-science-publishing-journals	move-to-community	yes	alias band with CSL-metadata dependency evidence		alias	elsevier-with-titles	1.0000	0.299	0.97	
+inter-research-science-center	move-to-community	no	near-clone band	american-medical-association	near-clone	the-geological-society-of-london	0.9754	0.059	0.735	
+international-journal-of-wildland-fire	keep-exemplar	no	springer-basic-author-date wrapper exemplar	springer-basic-author-date	near-clone	springer-basic-author-date	0.9666	0.194	0.866	
+international-union-of-crystallography	move-to-community	no	near-clone band		near-clone	institute-of-mathematics-and-its-applications	0.9710	0.164	0.91	
+iso690-author-date	move-to-community	no	no measured neighbor							
+iso690-numeric	move-to-community	no	no measured neighbor							
+karger-journals	move-to-community	yes	alias band with CSL-metadata dependency evidence		alias	elsevier-with-titles	1.0000	0.239	0.97	85
+karger-journals-author-date	move-to-community	yes	alias band with CSL-metadata dependency evidence		alias	the-company-of-biologists	1.0000	0.132	0.956	
+landes-bioscience-journals	move-to-community	yes	alias band with CSL-metadata dependency evidence		alias	elsevier-with-titles	1.0000	0.299	0.94	
+mary-ann-liebert-harvard	move-to-community	yes	alias band with CSL-metadata dependency evidence		alias	american-fisheries-society	1.0000	0.224	0.955	
+mary-ann-liebert-vancouver	move-to-community	yes	alias band with CSL-metadata dependency evidence		alias	elsevier-with-titles	1.0000	0.299	0.985	72
+medicina-clinica	move-to-community	yes	alias band with CSL-metadata dependency evidence		alias	elsevier-with-titles	1.0000	0.299	0.955	
+medicine-publishing	move-to-community	yes	alias band with CSL-metadata dependency evidence		alias	elsevier-with-titles	1.0000	0.299	0.94	
+memorias-do-instituto-oswaldo-cruz	move-to-community	yes	alias band with CSL-metadata dependency evidence		alias	springer-basic-author-date	1.0000	0.328	0.94	
+mhra-author-date-publisher-place	move-to-community	no	near-clone band		near-clone	new-harts-rules-author-date-space-publisher	0.9070	0.136	0.955	
+mhra-notes	keep-exemplar	no	coverage: British humanities note style		near-clone	mhra-notes-publisher-place	0.9796	0	0.95	
+mhra-notes-publisher-place	move-to-community	no	near-clone band		near-clone	mhra-notes	0.9796	0	0.95	
+mhra-notes-publisher-place-no-url	move-to-community	no	near-clone band		near-clone	new-harts-rules-notes-label-page-no-url	0.9039	0	0.95	
+mhra-shortened-notes-publisher-place	move-to-community	no	near-clone band		near-clone	chicago-shortened-notes-bibliography	0.9203	0	0.963	
+microbiology-society	move-to-community	yes	alias band with CSL-metadata dependency evidence		alias	sage-vancouver	1.0000	0.294	0.941	
+multidisciplinary-digital-publishing-institute	move-to-community	yes	alias band with CSL-metadata dependency evidence		alias	elsevier-with-titles	1.0000	0.239	0.97	180
+museum-national-dhistoire-naturelle	move-to-community	no	near-clone band		near-clone	begell-house-chicago-author-date	0.9181	0.164	0.866	
+nature	keep-exemplar	no	coverage: high-reach numeric superscript journal style		alias	elsevier-with-titles	1.0000	0.268	0.966	
+nature-publishing-group-vancouver	move-to-community	yes	alias band with CSL-metadata dependency evidence		alias	elsevier-with-titles	1.0000	0.299	1	
+new-harts-rules-author-date-space-publisher	move-to-community	no	alias band, similarity-only evidence		alias	taylor-and-francis-chicago-author-date	0.9974	0.136	0.955	
+new-harts-rules-notes	move-to-community	no	alias band, similarity-only evidence		alias	new-harts-rules-notes-label-page	0.9863	0	0.887	
+new-harts-rules-notes-label-page	move-to-community	no	alias band, similarity-only evidence		alias	new-harts-rules-notes	0.9863	0	0.9	
+new-harts-rules-notes-label-page-no-url	move-to-community	no	near-clone band		near-clone	mhra-notes-publisher-place-no-url	0.9039	0	0.889	
+nlm-citation-sequence	move-to-community	yes	alias band with CSL-metadata dependency evidence		alias	elsevier-with-titles	1.0000	0.299	1	116
+nlm-citation-sequence-brackets	move-to-community	yes	alias band with CSL-metadata dependency evidence		alias	elsevier-with-titles	1.0000	0.299	1	
+nlm-citation-sequence-brackets-no-et-al	move-to-community	yes	alias band with CSL-metadata dependency evidence		alias	elsevier-with-titles	1.0000	0.299	1	
+nlm-citation-sequence-brackets-year-only-no-issue	move-to-community	yes	alias band with CSL-metadata dependency evidence		alias	elsevier-with-titles	1.0000	0.299	0.97	
+nlm-citation-sequence-superscript	move-to-community	yes	alias band with CSL-metadata dependency evidence		alias	elsevier-with-titles	1.0000	0.299	1	121
+nlm-citation-sequence-superscript-brackets-year-only	move-to-community	yes	alias band with CSL-metadata dependency evidence		alias	elsevier-with-titles	1.0000	0.299	1	
+nlm-citation-sequence-superscript-year-only-no-issue	move-to-community	yes	alias band with CSL-metadata dependency evidence		alias	elsevier-with-titles	1.0000	0.299	1	
+nlm-name-year	move-to-community	yes	alias band with CSL-metadata dependency evidence		alias	american-fisheries-society	0.9876	0.045	1	
+numeric-comp	move-to-community	no	no measured neighbor					0	0.936	
+oscola	keep-exemplar	no	Rust test fixture; legal-citation coverage		alias	oscola-no-ibid	0.9918	0	0.864	
+oscola-no-ibid	keep-exemplar	no	Rust test fixture; legal-citation coverage		alias	oscola	0.9918	0	0.864	
+oxford-journals-scimed-author-date	move-to-community	no	near-clone band		near-clone	american-fisheries-society	0.9579	0.164	0.94	
+oxford-journals-scimed-numeric	move-to-community	yes	alias band with CSL-metadata dependency evidence		alias	elsevier-with-titles	1.0000	0.299	0.955	
+pensoft-journals	move-to-community	yes	alias band with CSL-metadata dependency evidence		alias	american-fisheries-society	1.0000	0.06	0.955	
+pharmacoepidemiology-and-drug-safety	move-to-community	yes	alias band with CSL-metadata dependency evidence	american-medical-association	alias	american-medical-association	0.9891	0.239	0.955	
+plos	move-to-community	yes	alias band with CSL-metadata dependency evidence		alias	elsevier-with-titles	1.0000	0.299	1	
+proceedings-of-the-royal-society-b	move-to-community	yes	alias band with CSL-metadata dependency evidence		alias	elsevier-with-titles	1.0000	0.299	0.955	
+royal-society-of-chemistry	keep-exemplar	no	Rust test fixture		alias	angewandte-chemie	0.9855	0.318	0.859	
+sage-harvard	move-to-community	yes	alias band with CSL-metadata dependency evidence		alias	entomological-society-of-america	1.0000	0.075	0.97	
+sage-vancouver	move-to-community	yes	alias band with CSL-metadata dependency evidence		alias	microbiology-society	1.0000	0.294	0.941	
+spandidos-publications	move-to-community	yes	alias band with CSL-metadata dependency evidence		alias	elsevier-with-titles	1.0000	0.299	0.97	
+spie-journals	move-to-community	yes	alias band with CSL-metadata dependency evidence		alias	elsevier-with-titles	1.0000	0.299	0.985	
+springer-basic-author-date-no-et-al	move-to-community	yes	alias band with CSL-metadata dependency evidence		alias	springer-mathphys-author-date	1.0000	0.254	0.925	
+springer-basic-brackets-no-et-al	move-to-community	yes	alias band with CSL-metadata dependency evidence		alias	elsevier-with-titles	1.0000	0.299	0.97	
+springer-basic-brackets-no-et-al-alphabetical	move-to-community	yes	alias band with CSL-metadata dependency evidence		alias	elsevier-with-titles	1.0000	0	0.925	
+springer-fachzeitschriften-medizin-psychologie	move-to-community	yes	alias band with CSL-metadata dependency evidence		alias	elsevier-with-titles	1.0000	0	0.94	
+springer-humanities-author-date	move-to-community	no	near-clone band		near-clone	chicago-author-date-classic	0.9783	0.164	0.925	
+springer-humanities-brackets	move-to-community	no	near-clone band		near-clone	elsevier-with-titles	0.9728	0.299	0.94	
+springer-mathphys-author-date	move-to-community	yes	alias band with CSL-metadata dependency evidence		alias	springer-basic-author-date-no-et-al	1.0000	0.104	0.91	
+springer-mathphys-brackets	move-to-community	yes	alias band with CSL-metadata dependency evidence		alias	elsevier-with-titles	1.0000	0.299	0.94	201
+springer-physics-author-date	move-to-community	no	near-clone band		near-clone	springer-basic-author-date-no-et-al	0.9710	0.229	0.843	
+springer-physics-brackets	move-to-community	yes	alias band with CSL-metadata dependency evidence		alias	angewandte-chemie	1.0000	0.29	0.913	
+springer-socpsych-author-date	move-to-community	yes	alias band with CSL-metadata dependency evidence		alias	american-geophysical-union	1.0000	0.239	0.985	317
+springer-socpsych-brackets	move-to-community	yes	alias band with CSL-metadata dependency evidence		alias	elsevier-with-titles	1.0000	0.299	0.985	
+springer-vancouver-author-date	move-to-community	yes	alias band with CSL-metadata dependency evidence		alias	springer-basic-author-date-no-et-al	1.0000	0.06	1	
+taylor-and-francis-council-of-science-editors-author-date	move-to-community	yes	alias band with CSL-metadata dependency evidence		alias	cse-name-year	0.9928	0.194	0.94	
+taylor-and-francis-national-library-of-medicine	move-to-community	yes	alias band with CSL-metadata dependency evidence		alias	hawaii-international-conference-on-system-sciences-proceedings	0.9891	0.209	1	
+the-company-of-biologists	move-to-community	yes	alias band with CSL-metadata dependency evidence		alias	karger-journals-author-date	1.0000	0.254	0.97	
+the-geological-society-of-london	move-to-community	no	near-clone band		near-clone	inter-research-science-center	0.9754	0.149	0.985	
+the-institution-of-engineering-and-technology	move-to-community	yes	alias band with CSL-metadata dependency evidence		alias	ieee	0.9876	0.209	0.955	
+the-optical-society	move-to-community	yes	alias band with CSL-metadata dependency evidence	ieee	alias	elsevier-with-titles	1.0000	0.299	0.866	
+thieme-german	move-to-community	yes	alias band with CSL-metadata dependency evidence		alias	elsevier-with-titles	1.0000	0.239	0.97	74
+thomson-reuters-legal-tax-and-accounting-australia	keep-exemplar	no	Rust test fixture					0	0.824	
+trends-journals	move-to-community	yes	alias band with CSL-metadata dependency evidence		alias	elsevier-with-titles	1.0000	0.299	0.955	
