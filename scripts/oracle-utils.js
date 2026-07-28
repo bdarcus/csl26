@@ -64,6 +64,26 @@ function normalizeText(text) {
 }
 
 /**
+ * Normalize renderer output for exact textual parity.
+ *
+ * This removes transport-only markup while preserving every visible text
+ * character, including numbering, case, punctuation, brackets, and labels.
+ *
+ * @param {string} text
+ * @returns {string}
+ */
+function normalizeExactText(text) {
+  return String(text ?? '')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&#38;/g, '&')
+    .replace(/&amp;/g, '&')
+    .replace(/_([^_]+)_/g, '$1')
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
  * Tokenize normalized text for order/punctuation-tolerant similarity checks.
  *
  * Similarity intentionally remains case-insensitive so punctuation/order
@@ -135,16 +155,41 @@ function isCaseOnlyMismatch(leftText, rightText) {
  * @param {string} expectedText
  * @param {string} actualText
  * @param {{ caseSensitive?: boolean, similarityThreshold?: number }} [options]
- * @returns {{ expected: string, actual: string, match: boolean, caseMismatch: boolean, similarity: number }}
+ * @returns {{
+ *   rawExpected: string,
+ *   rawActual: string,
+ *   exactExpected: string,
+ *   exactActual: string,
+ *   exactMatch: boolean,
+ *   exactAdjudication: 'matched' | 'unresolved',
+ *   expected: string,
+ *   actual: string,
+ *   match: boolean,
+ *   caseMismatch: boolean,
+ *   similarity: number
+ * }}
  */
 function compareText(expectedText, actualText, options = {}) {
   const caseSensitive = options.caseSensitive !== false;
   const similarityThreshold = options.similarityThreshold ?? 0.60;
-  const expected = normalizeText(expectedText);
-  const actual = normalizeText(actualText);
+  const rawExpected = String(expectedText ?? '');
+  const rawActual = String(actualText ?? '');
+  const exactExpected = normalizeExactText(rawExpected);
+  const exactActual = normalizeExactText(rawActual);
+  const exactMatch = exactExpected === exactActual;
+  const expected = normalizeText(rawExpected);
+  const actual = normalizeText(rawActual);
+  const parity = {
+    rawExpected,
+    rawActual,
+    exactExpected,
+    exactActual,
+    exactMatch,
+    exactAdjudication: exactMatch ? 'matched' : 'unresolved',
+  };
 
   if (expected === actual) {
-    return { expected, actual, match: true, caseMismatch: false, similarity: 1 };
+    return { ...parity, expected, actual, match: true, caseMismatch: false, similarity: 1 };
   }
 
   // Case-mismatch detection must stay meaningful even when expected/actual also
@@ -162,11 +207,12 @@ function compareText(expectedText, actualText, options = {}) {
   const caseMismatch =
     strippedExpected !== strippedActual && strippedExpected.toLowerCase() === strippedActual.toLowerCase();
   if (caseSensitive && caseMismatch) {
-    return { expected, actual, match: false, caseMismatch: true, similarity: 1 };
+    return { ...parity, expected, actual, match: false, caseMismatch: true, similarity: 1 };
   }
 
   const similarity = textSimilarity(expected, actual);
   return {
+    ...parity,
     expected,
     actual,
     match: similarity >= similarityThreshold,
@@ -654,6 +700,7 @@ function compareComponents(oracleComp, citumComp, _refData) {
 
 module.exports = {
   compareText,
+  normalizeExactText,
   normalizeText,
   isCaseOnlyMismatch,
   parseComponents,

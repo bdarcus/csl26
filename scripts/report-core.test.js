@@ -48,6 +48,8 @@ const {
   hasRootExtends,
   toPublishedBenchmarkRunRecord,
   determineBenchmarkStatus,
+  summarizeBibliographyPairing,
+  summarizeExactParity,
 } = require('./report-core');
 
 const projectRoot = path.resolve(__dirname, '..');
@@ -89,6 +91,95 @@ test('discoverCoreStyles skips hidden embedded core wrappers', () => {
 
   assert.equal(styles.some((style) => style.name.endsWith('-core')), false);
   assert.equal(styles.some((style) => style.name === 'chicago-18-base'), false);
+});
+
+test('discoverCoreStyles exposes complete family and registry metadata', () => {
+  const styles = loadStyleMap();
+  const chicago = styles.get('chicago-author-date-18th');
+
+  assert.deepEqual(chicago.inheritance.chain, [
+    'chicago-author-date-18th',
+    'chicago-18-base',
+  ]);
+  assert.equal(chicago.inheritance.familyRoot, 'chicago-18-base');
+  assert.equal(chicago.inheritance.implementationForm, 'structural-wrapper');
+  assert.equal(chicago.registry.kind, 'base');
+  assert.equal(chicago.registry.aliases.includes('chicago-author-date'), true);
+});
+
+test('summarizeExactParity remains pre-divergence', () => {
+  const summary = summarizeExactParity({
+    citations: {
+      total: 1,
+      entries: [{ exactMatch: false }],
+    },
+    bibliography: {
+      total: 1,
+      entries: [
+        { exactMatch: true },
+        { exactMatch: null, exactParityEligible: false },
+      ],
+    },
+    adjusted: {
+      citations: {
+        total: 1,
+        passed: 1,
+        entries: [{ exactMatch: true, match: true }],
+      },
+    },
+  });
+
+  assert.deepEqual(summary, {
+    passed: 1,
+    total: 2,
+    notComparable: 1,
+    rate: 0.5,
+    status: 'unadjudicated',
+    gating: false,
+  });
+});
+
+test('bibliography pairing summaries distinguish paired, unresolved, and ID-proven observations', () => {
+  const summary = summarizeBibliographyPairing({
+    bibliography: {
+      entries: [
+        {
+          expected: 'Benchmark text',
+          actual: 'Citum text',
+          pairingMethod: 'position',
+          comparisonState: 'paired',
+        },
+        {
+          expected: 'Unresolved benchmark candidate',
+          actual: null,
+          pairingMethod: 'position',
+          comparisonState: 'unresolved-unpaired',
+        },
+        {
+          id: 'oracle-only',
+          oracle: 'ID-proven benchmark output',
+          citum: null,
+          pairingMethod: 'id',
+          comparisonState: 'oracle-only',
+        },
+        {
+          id: 'citum-only',
+          oracle: null,
+          citum: 'ID-proven Citum output',
+          pairingMethod: 'id',
+          comparisonState: 'citum-only',
+        },
+      ],
+    },
+  });
+
+  assert.deepEqual(summary, {
+    paired: 1,
+    unresolvedUnpaired: 1,
+    idProvenOracleOnly: 1,
+    idProvenCitumOnly: 1,
+    totalObservations: 4,
+  });
 });
 
 test('resolveSelectedStyles filters to requested style names and rejects unknown styles', () => {
@@ -965,6 +1056,173 @@ test('generateHtml returns JSON string if template is missing', () => {
 
   assert.match(html, /"chicago-notes-18th"/);
   assert.match(html, /chicago-full-note/);
+});
+
+test('generateHtml groups families and exposes unadjudicated oracle text drift', () => {
+  const longSharedPrefix = 'A'.repeat(110);
+  const html = generateHtml({
+    generated: '2026-07-28T00:00:00.000Z',
+    commit: 'deadbee',
+    metadata: {},
+    totalImpact: 0.1,
+    totalStyles: 1,
+    citationsOverall: { passed: 0, total: 0 },
+    bibliographyOverall: { passed: 1, total: 2, unresolvedPairing: 1 },
+    exactParityOverall: { passed: 0, total: 1, notComparable: 2, rate: 0 },
+    pairingOverall: {
+      paired: 1,
+      unresolvedUnpaired: 1,
+      idProvenOracleOnly: 1,
+      idProvenCitumOnly: 0,
+      totalObservations: 3,
+    },
+    qualityOverall: { score: 1 },
+    families: [{
+      root: 'chicago-18-base',
+      aggregateCslReach: 8,
+      members: ['chicago-author-date-18th'],
+      memberCount: 1,
+      aliases: ['chicago-author-date'],
+      aliasCount: 1,
+    }],
+    styles: [{
+      name: 'chicago-author-date-18th',
+      format: 'author-date',
+      hasBibliography: true,
+      cslReach: 8,
+      originLabel: 'CSL-derived',
+      benchmarkLabel: 'citeproc-js',
+      bibliographyAuthorityLabel: 'citeproc-js',
+      fidelityScore: 1,
+      exactParity: { passed: 0, total: 1, notComparable: 2, rate: 0 },
+      pairingSummary: {
+        paired: 1,
+        unresolvedUnpaired: 1,
+        idProvenOracleOnly: 1,
+        idProvenCitumOnly: 0,
+        totalObservations: 3,
+      },
+      citations: { passed: 0, total: 0 },
+      bibliography: { passed: 1, total: 1 },
+      qualityScore: 1,
+      qualityBreakdown: {
+        score: 100,
+        subscores: {
+          typeCoverage: { score: 100 },
+          fallbackRobustness: { score: 100 },
+          concision: { score: 100 },
+          presetUsage: { score: 100 },
+        },
+      },
+      inheritance: {
+        chain: ['chicago-author-date-18th', 'chicago-18-base'],
+        familyRoot: 'chicago-18-base',
+        implementationForm: 'structural-wrapper',
+      },
+      registry: {
+        kind: 'base',
+        aliases: ['chicago-author-date'],
+        aliasCount: 1,
+      },
+      measurementEvidence: {
+        behavioralBand: { band: 'near-clone', target: 'chicago-author-date' },
+        derivability: { verdict: 'not-delta-expressible', target: 'chicago-author-date' },
+      },
+      benchmarkRunResults: [{
+        id: 'native-smoke',
+        label: 'Native Chicago bibliography render smoke test',
+        runner: 'native-smoke',
+        scope: 'bibliography',
+        countTowardFidelity: false,
+        refsFixture: 'examples/chicago-bib.yaml',
+        status: 'pass',
+        bibliographyEntries: 6,
+      }],
+      citationEntries: [{
+        id: 'late-difference',
+        rawOracle: `${longSharedPrefix}. Benchmark ending.`,
+        rawCitum: `${longSharedPrefix}, Citum ending.`,
+        exactOracle: `${longSharedPrefix}. Benchmark ending.`,
+        exactCitum: `${longSharedPrefix}, Citum ending.`,
+        exactMatch: false,
+        exactAdjudication: 'unresolved',
+        match: true,
+      }],
+      oracleDetail: [{
+        index: 193,
+        rawOracle: '<div>Smith, John. [1750?]. <i>Title of First Work</i>.</div>',
+        rawCitum: 'Smith, John. 1750? _Title of First Work_.',
+        exactOracle: 'Smith, John. [1750?]. Title of First Work.',
+        exactCitum: 'Smith, John. 1750? Title of First Work.',
+        exactMatch: false,
+        match: true,
+        exactParityEligible: true,
+        pairingMethod: 'similarity',
+        comparisonState: 'paired',
+        evidenceRunId: 'benchmark:chicago-shared-corpus',
+        evidenceRunLabel: 'Chicago shared corpus',
+        evidenceAuthority: 'citeproc-js',
+      }, {
+        index: 194,
+        rawOracle: null,
+        rawCitum: 'Stephanos C. 2017.',
+        exactOracle: '',
+        exactCitum: 'Stephanos C. 2017.',
+        exactMatch: null,
+        exactAdjudication: 'not-comparable',
+        match: null,
+        exactParityEligible: false,
+        compatibilityEligible: false,
+        pairingMethod: 'similarity',
+        comparisonState: 'unresolved-unpaired',
+        evidenceRunId: 'benchmark:chicago-shared-corpus',
+        evidenceRunLabel: 'Chicago shared corpus',
+        evidenceAuthority: 'citeproc-js',
+        issues: [{ issue: 'unpaired_output' }],
+      }, {
+        id: 'ITEM-MISSING',
+        index: 195,
+        rawOracle: '<div>Oracle-only identified entry.</div>',
+        rawCitum: null,
+        exactOracle: 'Oracle-only identified entry.',
+        exactCitum: '',
+        exactMatch: null,
+        exactAdjudication: 'not-comparable',
+        match: false,
+        exactParityEligible: false,
+        compatibilityEligible: true,
+        pairingMethod: 'id',
+        comparisonState: 'oracle-only',
+        evidenceRunId: 'benchmark:chicago-shared-corpus',
+        evidenceRunLabel: 'Chicago shared corpus',
+        evidenceAuthority: 'citeproc-js',
+        issues: [{ issue: 'missing_entry' }],
+      }],
+    }],
+  });
+
+  assert.match(html, /aggregate CSL reach 8/);
+  assert.match(html, /structural-wrapper/);
+  assert.match(html, /near-clone/);
+  assert.match(html, /not-delta-expressible/);
+  assert.match(html, /Oracle Text Parity/);
+  assert.match(html, /Unresolved Oracle Drift/);
+  assert.match(html, /<mark[^>]*>\. Benchmark<\/mark> ending\./);
+  assert.match(html, /<mark[^>]*>, Citum<\/mark> ending\./);
+  assert.match(html, /Smith, John\. <mark[^>]*>\[1750\?\]\.<\/mark>/);
+  assert.match(html, /Chicago shared corpus/);
+  assert.match(html, /1 paired · 1 unresolved · 1 ID-proven one-sided/);
+  assert.match(html, /Unpaired outputs—pairing unresolved \(1\)/);
+  assert.match(html, /These candidates are excluded from compatibility and oracle-text parity/);
+  assert.match(html, /ID-proven output cardinality failures \(1\)/);
+  assert.match(html, /Oracle-only identified entry/);
+  assert.match(html, /N\/A/);
+  assert.match(html, /Native Chicago bibliography render smoke test/);
+  assert.match(html, /none \(render-only smoke test\)/);
+  assert.doesNotMatch(html, /<mark[^>]*>Stephanos C\. 2017\.<\/mark>/);
+  assert.doesNotMatch(html, /no benchmark entry/);
+  assert.doesNotMatch(html, />∅</);
+  assert.doesNotMatch(html, /&lt;div&gt;Smith/);
 });
 
 test('generateReport supports style-scoped official reports', {

@@ -281,13 +281,13 @@ styles:
         count_toward_fidelity: true
         min_pass_rate: 0.86
       - id: relational-comprehensive-smoke
-        label: Relational comprehensive native smoke
+        label: Native comprehensive render smoke test
         runner: native-smoke
         refs_fixture: examples/comprehensive.yaml
         scope: bibliography
         count_toward_fidelity: false
       - id: relational-chicago-bib-smoke
-        label: Relational Chicago bibliography native smoke
+        label: Native Chicago bibliography render smoke test
         runner: native-smoke
         refs_fixture: examples/chicago-bib.yaml
         scope: bibliography

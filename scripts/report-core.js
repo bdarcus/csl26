@@ -46,6 +46,10 @@ const {
   discoverNoteStyles,
 } = require('./lib/note-position-audit');
 const {
+  buildFamilyAggregates,
+  buildInheritanceIndex,
+} = require('./lib/report-inheritance');
+const {
   compareText,
   normalizeText,
   textSimilarity,
@@ -95,7 +99,7 @@ const DEFAULT_PROCESS_TIMEOUT_MS = 240000;
 const CSL_SNAPSHOT_DIR = path.join(PROJECT_ROOT, 'tests', 'snapshots', 'csl');
 const BIBLATEX_SNAPSHOT_DIR = path.join(PROJECT_ROOT, 'tests', 'snapshots', 'biblatex');
 const COMPOUND_SNAPSHOT_DIR = path.join(PROJECT_ROOT, 'tests', 'snapshots', 'compound');
-const REPORT_CACHE_VERSION = 5;
+const REPORT_CACHE_VERSION = 9;
 
 const TOTAL_DEPENDENTS = 7987;
 const CORE_FALLBACK_TYPES = [
@@ -529,6 +533,10 @@ function discoverCoreStyles(provenanceConfig = loadReportProvenance()) {
     throw new Error(`No style YAML files found in: ${stylesRoot}`);
   }
 
+  const inheritanceIndex = buildInheritanceIndex({
+    styleRoots: [stylesRoot, embeddedRoot],
+  });
+
   return allStyles.map(({ stylePath, name }) => {
     let rawStyleData = null;
     let styleData = null;
@@ -548,6 +556,19 @@ function discoverCoreStyles(provenanceConfig = loadReportProvenance()) {
       || inferLineageKey(styleData, hasLegacySource);
     const origin = getLineagePresentation(lineageKey, provenanceConfig);
     const cslReach = KNOWN_DEPENDENTS[name] ?? KNOWN_DEPENDENTS[sourceName] ?? null;
+    const inheritanceMetadata = inheritanceIndex.records.get(name) || {
+      inheritance: {
+        directParent: null,
+        chain: [name],
+        familyRoot: name,
+        complete: true,
+        missingParent: null,
+        cycle: null,
+        implementationForm: 'standalone',
+      },
+      registry: { kind: null, aliases: [], aliasCount: 0 },
+      measurementEvidence: { behavioralBand: null, derivability: null },
+    };
 
     return {
       name,
@@ -560,6 +581,8 @@ function discoverCoreStyles(provenanceConfig = loadReportProvenance()) {
       originKey: origin.key,
       originLabel: origin.label,
       originSortRank: origin.sortRank,
+      ...inheritanceMetadata,
+      measurementEvidenceSources: inheritanceIndex.evidenceSources,
     };
   });
 }
@@ -723,6 +746,89 @@ function collectCaseMismatchSummary(oracleResult) {
     bibliography: bibliographyCount,
     total: citationCount + bibliographyCount,
   };
+}
+
+function summarizeExactParity(oracleResult, hasBibliography = true) {
+  const sections = [oracleResult?.citations];
+  if (hasBibliography) sections.push(oracleResult?.bibliography);
+  let passed = 0;
+  let total = 0;
+  let notComparable = 0;
+
+  for (const section of sections) {
+    const entries = section?.entries || [];
+    for (const entry of entries) {
+      if (entry?.exactParityEligible === false || entry?.exactMatch === null) {
+        notComparable++;
+        continue;
+      }
+      if (typeof entry?.exactMatch === 'boolean') {
+        total++;
+        if (entry.exactMatch) passed++;
+        continue;
+      }
+      const { benchmark, citum } = getComparisonEntryTexts(entry);
+      if (!benchmark || !citum) {
+        notComparable++;
+        continue;
+      }
+      total++;
+      if (compareText(benchmark, citum).exactMatch) passed++;
+    }
+  }
+
+  return {
+    passed,
+    total,
+    notComparable,
+    rate: total > 0 ? parseFloat((passed / total).toFixed(3)) : null,
+    status: 'unadjudicated',
+    gating: false,
+  };
+}
+
+function summarizeBibliographyPairing(oracleResult) {
+  const summary = {
+    paired: 0,
+    unresolvedUnpaired: 0,
+    idProvenOracleOnly: 0,
+    idProvenCitumOnly: 0,
+    totalObservations: 0,
+  };
+
+  for (const entry of oracleResult?.bibliography?.entries || []) {
+    summary.totalObservations++;
+    const state = bibliographyComparisonState(entry);
+    if (state === 'paired') {
+      summary.paired++;
+    } else if (state === 'oracle-only' && entry?.pairingMethod === 'id') {
+      summary.idProvenOracleOnly++;
+    } else if (state === 'citum-only' && entry?.pairingMethod === 'id') {
+      summary.idProvenCitumOnly++;
+    } else {
+      summary.unresolvedUnpaired++;
+    }
+  }
+
+  return summary;
+}
+
+function tagOracleResultEvidence(oracleResult, evidence) {
+  if (!oracleResult || !evidence) return oracleResult;
+  const sections = [
+    oracleResult.citations,
+    oracleResult.bibliography,
+    oracleResult.adjusted?.citations,
+    oracleResult.adjusted?.bibliography,
+  ];
+  for (const section of sections) {
+    for (const entry of section?.entries || []) {
+      entry.evidenceRunId = evidence.id;
+      entry.evidenceRunLabel = evidence.label;
+      entry.evidenceAuthority = evidence.authority;
+    }
+  }
+  return oracleResult;
 }
 
 function mergeDivergenceDetails(base = {}, extra = {}) {
@@ -1165,30 +1271,55 @@ async function runBiblatexSnapshotOracle(runtime, styleName, styleYamlPath, auth
         const rendered = await renderCitumJson(runtime, styleYamlPath, DEFAULT_REFS_FIXTURE, 'bib');
         const actualEntries = rendered?.bibliography?.entries?.map((entry) => entry.text) || [];
         const expectedEntries = expandCompoundBibEntries(snapshot.bibliography || []);
-        const total = Math.max(expectedEntries.length, actualEntries.length);
+        const observationCount = Math.max(expectedEntries.length, actualEntries.length);
+        let total = 0;
         let passed = 0;
         const entries = [];
         const citationsByType = {};
 
-        for (let i = 0; i < total; i++) {
-          const expected = expectedEntries[i] ?? '';
-          const actual = actualEntries[i] ?? '';
-          const comparison = compareText(expected, actual, {
-            caseSensitive: runtime.caseSensitive,
-          });
-          const match = comparison.match;
-          if (match) passed += 1;
+        for (let i = 0; i < observationCount; i++) {
+          const expected = expectedEntries[i] ?? null;
+          const actual = actualEntries[i] ?? null;
+          const isPaired = expected !== null && actual !== null;
+          const comparison = isPaired
+            ? compareText(expected, actual, {
+              caseSensitive: runtime.caseSensitive,
+            })
+            : null;
+          const match = comparison?.match ?? null;
+          if (isPaired) {
+            total += 1;
+            if (match) passed += 1;
+          }
           const entryResult = {
-            expected: comparison.expected,
-            actual: comparison.actual,
+            expected: comparison?.expected ?? expected,
+            actual: comparison?.actual ?? actual,
+            rawExpected: comparison?.rawExpected ?? expected,
+            rawActual: comparison?.rawActual ?? actual,
+            exactExpected: comparison?.exactExpected ?? null,
+            exactActual: comparison?.exactActual ?? null,
+            exactMatch: comparison?.exactMatch ?? null,
+            exactAdjudication: comparison?.exactAdjudication ?? 'not-comparable',
             match,
-            caseMismatch: comparison.caseMismatch,
+            caseMismatch: comparison?.caseMismatch ?? false,
+            pairingMethod: 'position',
+            comparisonState: isPaired ? 'paired' : 'unresolved-unpaired',
+            compatibilityEligible: isPaired,
+            exactParityEligible: isPaired,
+            issues: isPaired
+              ? []
+              : [{
+                issue: 'unpaired_output',
+                detail: expected === null
+                  ? 'Positional pairing found no benchmark counterpart'
+                  : 'Positional pairing found no Citum counterpart',
+              }],
           };
 
           // On mismatch, run the same symmetric component-diff heuristic used
           // for citeproc-js styles so the Components column gets a comparable
           // signal for biblatex-authority styles.
-          if (!match) {
+          if (isPaired && !match) {
             const refData = fixtureRefs[i];
             if (refData) {
               const expectedComp = parseComponents(comparison.expected, refData);
@@ -1202,11 +1333,13 @@ async function runBiblatexSnapshotOracle(runtime, styleName, styleYamlPath, auth
           entries.push(entryResult);
 
           // Track per-type stats using the fixture entry at this position.
-          const refType = (fixtureRefs[i] && fixtureRefs[i].type) || 'unknown';
-          const typeStats = citationsByType[refType] || { passed: 0, total: 0 };
-          typeStats.total += 1;
-          if (match) typeStats.passed += 1;
-          citationsByType[refType] = typeStats;
+          if (isPaired) {
+            const refType = (fixtureRefs[i] && fixtureRefs[i].type) || 'unknown';
+            const typeStats = citationsByType[refType] || { passed: 0, total: 0 };
+            typeStats.total += 1;
+            if (match) typeStats.passed += 1;
+            citationsByType[refType] = typeStats;
+          }
         }
 
         return buildEmptyOracleResult({
@@ -2358,6 +2491,9 @@ function buildPresentationFields(styleSpec, stylePolicy, sufficiencyPolicy) {
     fixtureSets: sufficiencyPolicy.fixtureSets,
     benchmarkRuns: stylePolicy.benchmarkRuns || [],
     verificationNote: stylePolicy.note,
+    inheritance: styleSpec.inheritance,
+    registry: styleSpec.registry,
+    measurementEvidence: styleSpec.measurementEvidence,
   };
 }
 
@@ -2402,10 +2538,22 @@ async function processStyleReport(runtime, styleSpec, context) {
   const bibliographyAuthority = resolveScopeAuthority(stylePolicy, 'bibliography');
 
   if (primaryComparator === 'citum-baseline') {
-    const oracleResult = await runNativeOracle(runtime, styleSpec.name);
+    const oracleResult = tagOracleResultEvidence(
+      await runNativeOracle(runtime, styleSpec.name),
+      {
+        id: 'baseline',
+        label: 'Core compatibility baseline',
+        authority: 'citum-baseline',
+      }
+    );
+    const pairingSummary = summarizeBibliographyPairing(oracleResult);
     const fidelityScore = computeFidelityScore(oracleResult, styleSpec.hasBibliography);
     const caseMismatches = collectCaseMismatchSummary(oracleResult);
-    const bibliography = getEffectiveOracleSection(oracleResult, 'bibliography');
+    const exactParity = summarizeExactParity(oracleResult, styleSpec.hasBibliography);
+    const bibliography = {
+      ...getEffectiveOracleSection(oracleResult, 'bibliography'),
+      unresolvedPairing: pairingSummary.unresolvedUnpaired,
+    };
     const citations = getEffectiveOracleSection(oracleResult, 'citations');
     const rawBibliography = oracleResult.bibliography || { passed: 0, total: 0 };
     const rawCitations = oracleResult.citations || { passed: 0, total: 0 };
@@ -2431,6 +2579,7 @@ async function processStyleReport(runtime, styleSpec, context) {
         hasBibliography: styleSpec.hasBibliography,
         ...buildPresentationFields(styleSpec, stylePolicy, sufficiencyPolicy),
         fidelityScore: parseFloat(fidelityScore.toFixed(3)),
+        compatibilityScore: parseFloat(fidelityScore.toFixed(3)),
         citations,
         bibliography,
         rawCitations,
@@ -2438,6 +2587,8 @@ async function processStyleReport(runtime, styleSpec, context) {
         knownDivergences: divergences[styleSpec.name] || [],
         adjustedDivergences: oracleResult.adjusted?.divergenceSummary || {},
         caseMismatches,
+        exactParity,
+        pairingSummary,
         citationsByType: oracleResult.citationsByType || {},
         error: oracleResult.error || null,
         componentMatchRate: null,
@@ -2470,6 +2621,7 @@ async function processStyleReport(runtime, styleSpec, context) {
         hasBibliography: styleSpec.hasBibliography,
         ...buildPresentationFields(styleSpec, stylePolicy, sufficiencyPolicy),
         fidelityScore: 0,
+        compatibilityScore: 0,
         citations: { passed: 0, total: 0 },
         bibliography: { passed: 0, total: 0 },
         knownDivergences: divergences[styleSpec.name] || [],
@@ -2498,12 +2650,28 @@ async function processStyleReport(runtime, styleSpec, context) {
   } else {
     oracleResult = await runCiteprocSnapshotOracle(runtime, stylePath, styleSpec.name, styleSpec.format, undefined, null, styleYamlPath);
   }
+  tagOracleResultEvidence(oracleResult, {
+    id: 'baseline',
+    label: 'Core compatibility baseline',
+    authority: formatAuthorityLabel(
+      bibliographyAuthority.authority,
+      bibliographyAuthority.authorityId
+    ),
+  });
 
   const familySets = getAdditionalFixtureSetNames(sufficiencyPolicy.fixtureSets || []);
   if (citationAuthority.authority === 'citeproc-js' && fs.existsSync(stylePath)) {
     for (const setName of familySets) {
       const extra = await runFamilyFixtureOracle(runtime, stylePath, styleSpec.name, setName);
       if (!extra) continue;
+      tagOracleResultEvidence(extra, {
+        id: `family:${setName}`,
+        label: `Family fixture: ${setName}`,
+        authority: formatAuthorityLabel(
+          bibliographyAuthority.authority,
+          bibliographyAuthority.authorityId
+        ),
+      });
       if (bibliographyAuthority.authority === 'citeproc-js') {
         mergeOracleResults(oracleResult, extra);
       } else {
@@ -2516,6 +2684,13 @@ async function processStyleReport(runtime, styleSpec, context) {
     runBenchmarkRun(runtime, styleSpec, stylePath, styleYamlPath, benchmarkRun)
   );
   for (const benchmarkRunResult of benchmarkRunResults) {
+    tagOracleResultEvidence(benchmarkRunResult.oracleResult, {
+      id: `benchmark:${benchmarkRunResult.id}`,
+      label: benchmarkRunResult.label,
+      authority: benchmarkRunResult.runner === 'citeproc-oracle'
+        ? 'citeproc-js'
+        : benchmarkRunResult.runner,
+    });
     mergeBenchmarkRunIntoOracle(oracleResult, benchmarkRunResult);
   }
   const benchmarkErrors = benchmarkRunResults
@@ -2525,8 +2700,13 @@ async function processStyleReport(runtime, styleSpec, context) {
 
   const fidelityScore = computeFidelityScore(oracleResult, styleSpec.hasBibliography);
   const caseMismatches = collectCaseMismatchSummary(oracleResult);
+  const exactParity = summarizeExactParity(oracleResult, styleSpec.hasBibliography);
+  const pairingSummary = summarizeBibliographyPairing(oracleResult);
   const citations = getEffectiveOracleSection(oracleResult, 'citations');
-  const bibliography = getEffectiveOracleSection(oracleResult, 'bibliography');
+  const bibliography = {
+    ...getEffectiveOracleSection(oracleResult, 'bibliography'),
+    unresolvedPairing: pairingSummary.unresolvedUnpaired,
+  };
   const rawCitations = oracleResult.citations || { passed: 0, total: 0 };
   const rawBibliography = oracleResult.bibliography || { passed: 0, total: 0 };
   const componentMatchRate = computeComponentMatchRate(oracleResult);
@@ -2554,6 +2734,7 @@ async function processStyleReport(runtime, styleSpec, context) {
     hasBibliography: styleSpec.hasBibliography,
     ...buildPresentationFields(styleSpec, stylePolicy, sufficiencyPolicy),
     fidelityScore: parseFloat(fidelityScore.toFixed(3)),
+    compatibilityScore: parseFloat(fidelityScore.toFixed(3)),
     citations,
     bibliography,
     rawCitations,
@@ -2561,6 +2742,8 @@ async function processStyleReport(runtime, styleSpec, context) {
     knownDivergences: divergences[styleSpec.name] || [],
     adjustedDivergences: oracleResult.adjusted?.divergenceSummary || {},
     caseMismatches,
+    exactParity,
+    pairingSummary,
     citationsByType: oracleResult.citationsByType || {},
     error: combinedStyleError,
     componentMatchRate,
@@ -2638,6 +2821,16 @@ async function generateReport(options) {
   let biblioPassed = 0;
   let citationCaseMismatchTotal = 0;
   let bibliographyCaseMismatchTotal = 0;
+  let exactParityPassed = 0;
+  let exactParityTotal = 0;
+  let exactParityNotComparable = 0;
+  const pairingOverall = {
+    paired: 0,
+    unresolvedUnpaired: 0,
+    idProvenOracleOnly: 0,
+    idProvenCitumOnly: 0,
+    totalObservations: 0,
+  };
   let qualityTotal = 0;
   let qualityCount = 0;
   let errorCount = 0;
@@ -2656,6 +2849,12 @@ async function generateReport(options) {
     }
     citationCaseMismatchTotal += job.styleRecord.caseMismatches?.citations || 0;
     bibliographyCaseMismatchTotal += job.styleRecord.caseMismatches?.bibliography || 0;
+    exactParityPassed += job.styleRecord.exactParity?.passed || 0;
+    exactParityTotal += job.styleRecord.exactParity?.total || 0;
+    exactParityNotComparable += job.styleRecord.exactParity?.notComparable || 0;
+    for (const key of Object.keys(pairingOverall)) {
+      pairingOverall[key] += job.styleRecord.pairingSummary?.[key] || 0;
+    }
     qualityTotal += job.qualityScore || 0;
     qualityCount += 1;
     errorCount += job.errorCount || 0;
@@ -2665,6 +2864,7 @@ async function generateReport(options) {
     .filter((s) => typeof s.cslReach === 'number')
     .reduce((sum, s) => sum + s.cslReach, 0);
   const totalImpact = ((knownDependents / TOTAL_DEPENDENTS) * 100).toFixed(2);
+  const families = buildFamilyAggregates(styles);
 
   return {
     report: {
@@ -2700,22 +2900,43 @@ async function generateReport(options) {
         },
         oracleComparison: {
           caseSensitive: runtime.caseSensitive,
+          exactTextParity: 'informational-pre-divergence',
+        },
+        measurementEvidenceSources: coreStyles[0]?.measurementEvidenceSources || {
+          behavioralBands: null,
+          derivability: null,
         },
         ...(options.timings ? { timings: serializeTimingSummary(runtime) } : {}),
       },
       totalImpact: parseFloat(totalImpact),
       totalStyles: coreStyles.length,
       citationsOverall: { passed: citationsPassed, total: citationsTotal },
-      bibliographyOverall: { passed: biblioPassed, total: biblioTotal },
+      bibliographyOverall: {
+        passed: biblioPassed,
+        total: biblioTotal,
+        unresolvedPairing: pairingOverall.unresolvedUnpaired,
+      },
       caseMismatchesOverall: {
         citations: citationCaseMismatchTotal,
         bibliography: bibliographyCaseMismatchTotal,
         total: citationCaseMismatchTotal + bibliographyCaseMismatchTotal,
       },
+      exactParityOverall: {
+        passed: exactParityPassed,
+        total: exactParityTotal,
+        notComparable: exactParityNotComparable,
+        rate: exactParityTotal > 0
+          ? parseFloat((exactParityPassed / exactParityTotal).toFixed(3))
+          : null,
+        status: 'unadjudicated',
+        gating: false,
+      },
+      pairingOverall,
       qualityOverall: {
         score: qualityCount > 0 ? parseFloat((qualityTotal / qualityCount).toFixed(3)) : 0,
       },
       styles,
+      families,
     },
     errorCount
   };
@@ -2906,12 +3127,15 @@ function generateHtmlStats(report) {
   const qualityPct = report.qualityOverall
     ? (report.qualityOverall.score * 100).toFixed(1)
     : '0.0';
+  const exactParityPct = report.exactParityOverall?.total > 0
+    ? ((report.exactParityOverall.passed / report.exactParityOverall.total) * 100).toFixed(1)
+    : '0.0';
 
   return `
     <!-- Statistics Cards -->
     <section class="py-12 px-6 bg-accent-cream">
         <div class="max-w-7xl mx-auto">
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-6">
                 <!-- Core Styles -->
                 <div class="bg-[var(--citum-surface)] rounded-xl border border-slate-200 p-6">
                     <div class="text-sm font-medium text-slate-500 mb-2">Core Styles</div>
@@ -2930,7 +3154,14 @@ function generateHtmlStats(report) {
                 <div class="bg-[var(--citum-surface)] rounded-xl border border-slate-200 p-6">
                     <div class="text-sm font-medium text-slate-500 mb-2">Bibliography</div>
                     <div class="text-3xl font-bold text-slate-900">${report.bibliographyOverall.passed}/${report.bibliographyOverall.total}</div>
-                    <div class="text-xs text-slate-400 mt-2">${biblioPct}% pass rate</div>
+                    <div class="text-xs text-slate-400 mt-2">${biblioPct}% pass rate · ${report.bibliographyOverall.unresolvedPairing || 0} unresolved pairing candidates excluded</div>
+                </div>
+
+                <!-- Unadjudicated Oracle Text Parity -->
+                <div class="bg-[var(--citum-surface)] rounded-xl border border-slate-200 p-6">
+                    <div class="text-sm font-medium text-slate-500 mb-2">Oracle Text Parity</div>
+                    <div class="text-3xl font-bold text-slate-900">${report.exactParityOverall?.passed || 0}/${report.exactParityOverall?.total || 0}</div>
+                    <div class="text-xs text-slate-400 mt-2">${exactParityPct}% unadjudicated, non-gating · ${report.exactParityOverall?.notComparable || 0} N/A</div>
                 </div>
 
                 <!-- Quality Overall -->
@@ -2953,16 +3184,20 @@ function generateHtmlSqiExplainer() {
             <div class="bg-[var(--citum-surface)] rounded-xl border border-slate-200 p-6">
                 <h2 class="text-lg font-semibold text-slate-900 mb-2">How To Read This Report</h2>
                 <p class="text-sm text-slate-600 mb-3">
-                    <strong>Fidelity</strong> is the hard gate: rendered output should match citeproc-js.
+                    <strong>Compatibility</strong> is the existing lenient regression gate; it can tolerate meaningful text-level drift.
+                    <strong>Oracle text parity</strong> is the stricter, symmetric comparison of visible renderer text.
                     <strong>SQI</strong> (Style Quality Index) is secondary: it scores maintainability and fallback quality.
                 </p>
                 <p class="text-sm text-slate-600 mb-4">
-                    Current working target for style waves is <code>&gt;=95% fidelity</code> and <code>&gt;=90 SQI</code>.
-                    SQI should never be improved at the cost of fidelity.
+                    Current working targets remain <code>&gt;=95% compatibility</code> and <code>&gt;=90 SQI</code>.
+                    Oracle text parity is informational until each drift is adjudicated and family-level ratchets are defined.
                 </p>
                 <p class="text-sm text-slate-600 mb-4">
                     <strong>Lineage</strong> shows the source family a style derives from.
-                    <strong>Authority</strong> shows the declared benchmark used for fidelity checks.
+                    <strong>Oracle text parity</strong> preserves numbering, case, punctuation, brackets, and role labels after transport markup is removed.
+                    A drift may be a Citum defect, an oracle defect, an intentional divergence, or unresolved; parity alone does not assign fault.
+                    Similarity outputs without an established counterpart are excluded from both metrics and appear only as neutral pairing diagnostics.
+                    <strong>Authority</strong> shows the declared benchmark used for compatibility checks.
                     <strong>Regression baseline</strong> is listed separately when Citum snapshots are retained only as an internal guardrail.
                     <strong>CSL Reach</strong> is the count of dependent legacy CSL styles for comparable parents and is blank when there is no meaningful CSL analogue.
                 </p>
@@ -2977,10 +3212,45 @@ function generateHtmlSqiExplainer() {
 
 function generateHtmlTable(report) {
   let tableRows = '';
+  const stylesByName = new Map(report.styles.map((style) => [style.name, style]));
+  const families = Array.isArray(report.families) && report.families.length > 0
+    ? report.families
+    : report.styles.map((style) => ({
+      root: style.inheritance?.familyRoot || style.name,
+      aggregateCslReach: style.cslReach || 0,
+      members: [style.name],
+      memberCount: 1,
+      aliases: style.registry?.aliases || [],
+      aliasCount: style.registry?.aliasCount || 0,
+    }));
 
-  for (const style of report.styles) {
-    const fidelityPct = (style.fidelityScore * 100).toFixed(1);
+  for (const family of families) {
+    const familyAliasText = family.aliasCount > 0
+      ? `${family.aliasCount} alias${family.aliasCount === 1 ? '' : 'es'}`
+      : 'no aliases';
+    tableRows += `
+                <tr class="family-header border-y border-slate-300 bg-slate-100"
+                    data-family-root="${escapeHtml(family.root)}">
+                    <td colspan="13" class="px-6 py-3">
+                        <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+                            <span class="font-semibold text-slate-900">${escapeHtml(family.root)}</span>
+                            <span class="text-xs text-slate-500">${family.memberCount} member${family.memberCount === 1 ? '' : 's'}</span>
+                            <span class="text-xs text-slate-500">${escapeHtml(familyAliasText)}</span>
+                            <span class="text-xs font-mono text-slate-600">aggregate CSL reach ${family.aggregateCslReach}</span>
+                        </div>
+                    </td>
+                </tr>
+`;
+
+    for (const styleName of family.members) {
+      const style = stylesByName.get(styleName);
+      if (!style) continue;
+    const compatibilityScore = style.compatibilityScore ?? style.fidelityScore;
+    const fidelityPct = (compatibilityScore * 100).toFixed(1);
     const qualityPct = ((style.qualityScore || 0) * 100).toFixed(1);
+    const exactParityRate = style.exactParity?.total > 0
+      ? style.exactParity.passed / style.exactParity.total
+      : -1;
     const citationRate = style.citations.total > 0 ? style.citations.passed / style.citations.total : -1;
     const bibliographyRate = style.hasBibliography && style.bibliography.total > 0
       ? style.bibliography.passed / style.bibliography.total
@@ -3028,6 +3298,28 @@ function generateHtmlTable(report) {
     const biblioText = style.hasBibliography
       ? `${style.bibliography.passed}/${style.bibliography.total}`
       : 'N/A';
+    const unresolvedPairingText = style.pairingSummary?.unresolvedUnpaired > 0
+      ? `<div class="mt-1 text-[10px] text-slate-400">${style.pairingSummary.unresolvedUnpaired} unpaired N/A</div>`
+      : '';
+    const exactParityBadge = style.exactParity?.total > 0 && style.exactParity.passed === style.exactParity.total
+      ? 'badge-perfect'
+      : style.exactParity?.passed > 0
+        ? 'badge-partial'
+        : 'badge-failing';
+    const exactParityText = style.exactParity?.total > 0
+      ? `${style.exactParity.passed}/${style.exactParity.total}`
+      : '—';
+    const inheritanceChain = style.inheritance?.chain || [style.name];
+    const evidenceBand = style.measurementEvidence?.behavioralBand?.band || 'unavailable';
+    const searchText = [
+      style.name,
+      style.inheritance?.familyRoot,
+      style.inheritance?.implementationForm,
+      ...(style.registry?.aliases || []),
+      ...inheritanceChain,
+      evidenceBand,
+      style.measurementEvidence?.derivability?.verdict,
+    ].filter(Boolean).join(' ').toLowerCase();
 
     let componentRateHtml = '—';
     if (style.componentMatchRate !== null) {
@@ -3048,17 +3340,25 @@ function generateHtmlTable(report) {
                 <tr class="border-b border-slate-200 hover:bg-slate-50 accordion-toggle"
                     data-toggle="${toggleId}"
                     data-detail-id="${contentId}"
+                    data-family-root="${escapeHtml(family.root)}"
                     data-style-name="${escapeHtml(style.name.toLowerCase())}"
+                    data-search="${escapeHtml(searchText)}"
                     data-format="${escapeHtml(String(style.format).toLowerCase())}"
                     data-origin="${escapeHtml(String(style.originLabel || '').toLowerCase())}"
                     data-csl-reach="${cslReachValue}"
                     data-citation-rate="${citationRate}"
                     data-bibliography-rate="${bibliographyRate}"
                     data-component-rate="${componentRateValue}"
-                    data-fidelity="${style.fidelityScore}"
+                    data-fidelity="${compatibilityScore}"
+                    data-exact-parity="${exactParityRate}"
                     data-quality="${style.qualityScore || 0}"
                     data-sqi-tier-rank="${sqiTierRank}">
-                    <td class="px-6 py-4 text-sm font-medium text-slate-900">${style.name}</td>
+                    <td class="px-6 py-4 text-sm font-medium text-slate-900">
+                        <div>${style.name}</div>
+                        <div class="mt-1 text-[11px] font-normal text-slate-500">
+                            ${escapeHtml(style.inheritance?.implementationForm || 'standalone')} · ${escapeHtml(inheritanceChain.join(' → '))}
+                        </div>
+                    </td>
                     <td class="hidden md:table-cell px-6 py-4 text-sm text-slate-600">${style.format}</td>
                     <td class="hidden md:table-cell px-6 py-4 text-sm text-slate-600">${escapeHtml(style.originLabel || '—')}</td>
                     <td class="hidden md:table-cell px-6 py-4 text-sm text-slate-500 font-mono">${escapeHtml(style.benchmarkLabel || '—')}</td>
@@ -3072,11 +3372,18 @@ function generateHtmlTable(report) {
                         <span class="inline-flex items-center px-3 py-1 rounded text-xs font-medium ${biblioBadge}">
                             ${biblioText}
                         </span>
+                        ${unresolvedPairingText}
                     </td>
                     <td class="hidden md:table-cell px-6 py-4">
                         ${componentRateHtml}
                     </td>
                     <td class="px-6 py-4 text-sm font-mono text-slate-600">${fidelityPct}%</td>
+                    <td class="px-6 py-4">
+                        <span class="inline-flex items-center px-3 py-1 rounded text-xs font-medium ${exactParityBadge}">
+                            ${exactParityText}
+                        </span>
+                        ${style.exactParity?.notComparable > 0 ? `<div class="mt-1 text-[10px] text-slate-400">${style.exactParity.notComparable} N/A</div>` : ''}
+                    </td>
                     <td class="hidden md:table-cell px-6 py-4 text-sm font-mono text-slate-600">${qualityPct}%</td>
                     <td class="px-6 py-4">
                         <span class="inline-flex items-center px-3 py-1 rounded text-xs font-medium ${sqiBadgeClass}">
@@ -3090,13 +3397,14 @@ function generateHtmlTable(report) {
                     </td>
                 </tr>
                 <tr class="accordion-content" id="${contentId}">
-                    <td colspan="12" class="px-6 py-4 bg-slate-50">
+                    <td colspan="13" class="px-6 py-4 bg-slate-50">
                         <div class="max-w-4xl">
 ${generateDetailContent(style)}
                         </div>
                     </td>
                 </tr>
     `;
+    }
   }
 
   return `
@@ -3159,7 +3467,12 @@ ${generateDetailContent(style)}
                             </th>
                             <th class="text-left px-6 py-4 text-xs font-semibold text-slate-700">
                                 <button class="inline-flex items-center gap-1 hover:text-primary transition-colors" onclick="sortCompatTable('fidelity')">
-                                    Fidelity <span class="text-slate-400" id="sort-ind-fidelity">↕</span>
+                                    Compatibility <span class="text-slate-400" id="sort-ind-fidelity">↕</span>
+                                </button>
+                            </th>
+                            <th class="text-left px-6 py-4 text-xs font-semibold text-slate-700">
+                                <button class="inline-flex items-center gap-1 hover:text-primary transition-colors" onclick="sortCompatTable('exact-parity')">
+                                    Oracle Text <span class="text-slate-400" id="sort-ind-exact-parity">↕</span>
                                 </button>
                             </th>
                             <th class="hidden md:table-cell text-left px-6 py-4 text-xs font-semibold text-slate-700">
@@ -3192,12 +3505,291 @@ function getComparisonEntryTexts(entry) {
   };
 }
 
+function getRawComparisonEntryTexts(entry) {
+  const normalized = getComparisonEntryTexts(entry);
+  return {
+    benchmark: entry?.rawOracle ?? entry?.rawExpected ?? normalized.benchmark,
+    citum: entry?.rawCitum ?? entry?.rawActual ?? normalized.citum,
+  };
+}
+
+function getExactComparisonEntryTexts(entry) {
+  const raw = getRawComparisonEntryTexts(entry);
+  const comparison = compareText(raw.benchmark, raw.citum);
+  return {
+    benchmark: entry?.exactOracle ?? entry?.exactExpected ?? comparison.exactExpected,
+    citum: entry?.exactCitum ?? entry?.exactActual ?? comparison.exactActual,
+  };
+}
+
+function renderTextPreview(text, limit = 120) {
+  const value = String(text ?? '');
+  if (!value) return '(empty)';
+  return escapeHtml(value.length > limit ? `${value.substring(0, limit)}…` : value);
+}
+
+function renderInlineTextDifference(benchmarkText, citumText) {
+  const benchmark = Array.from(String(benchmarkText ?? ''));
+  const citum = Array.from(String(citumText ?? ''));
+  let prefixLength = 0;
+  while (
+    prefixLength < benchmark.length
+    && prefixLength < citum.length
+    && benchmark[prefixLength] === citum[prefixLength]
+  ) {
+    prefixLength += 1;
+  }
+
+  let suffixLength = 0;
+  while (
+    suffixLength < benchmark.length - prefixLength
+    && suffixLength < citum.length - prefixLength
+    && benchmark[benchmark.length - 1 - suffixLength] === citum[citum.length - 1 - suffixLength]
+  ) {
+    suffixLength += 1;
+  }
+
+  const prefixStart = Math.max(0, prefixLength - 48);
+  const benchmarkChangeEnd = benchmark.length - suffixLength;
+  const citumChangeEnd = citum.length - suffixLength;
+  const suffixEnd = Math.min(benchmark.length, benchmarkChangeEnd + 32);
+  const commonPrefix = benchmark.slice(prefixStart, prefixLength).join('');
+  const commonSuffix = benchmark.slice(benchmarkChangeEnd, suffixEnd).join('');
+
+  const renderSide = (characters, changeEnd, emptyLabel) => {
+    if (characters.length === 0) {
+      return `<mark class="rounded bg-amber-200 px-0.5 text-slate-900">${escapeHtml(emptyLabel)}</mark>`;
+    }
+    const changed = characters.slice(prefixLength, Math.min(changeEnd, prefixLength + 72)).join('');
+    const changeWasTruncated = changeEnd > prefixLength + 72;
+    const before = `${prefixStart > 0 ? '…' : ''}${commonPrefix}`;
+    const after = `${commonSuffix}${suffixEnd < benchmark.length ? '…' : ''}`;
+    return `${escapeHtml(before)}<mark class="rounded bg-amber-200 px-0.5 text-slate-900">${escapeHtml(changed)}${changeWasTruncated ? '…' : ''}</mark>${escapeHtml(after)}`;
+  };
+
+  return {
+    benchmark: renderSide(benchmark, benchmarkChangeEnd, 'no benchmark entry'),
+    citum: renderSide(citum, citumChangeEnd, 'no Citum entry'),
+    position: prefixLength + 1,
+  };
+}
+
+function bibliographyComparisonState(entry) {
+  if (entry?.comparisonState) return entry.comparisonState;
+  const { benchmark, citum } = getRawComparisonEntryTexts(entry);
+  if (benchmark && citum) return 'paired';
+  if (entry?.pairingMethod === 'id') return benchmark ? 'oracle-only' : 'citum-only';
+  return 'unresolved-unpaired';
+}
+
+function groupBibliographyEvidence(entries, fallbackAuthority) {
+  const groups = new Map();
+  for (const entry of entries || []) {
+    const id = entry.evidenceRunId || 'unattributed';
+    const group = groups.get(id) || {
+      id,
+      label: entry.evidenceRunLabel || 'Unattributed comparison evidence',
+      authority: entry.evidenceAuthority || fallbackAuthority,
+      entries: [],
+    };
+    group.entries.push(entry);
+    groups.set(id, group);
+  }
+  return [...groups.values()];
+}
+
+function renderPairedBibliographyTable(entries) {
+  if (entries.length === 0) return '';
+  let rows = '';
+  for (const entry of entries) {
+    const matchIcon = entry.match === true ? '✓' : '✗';
+    const matchColor = entry.match === true ? 'text-emerald-600' : 'text-red-600';
+    const rawTexts = getRawComparisonEntryTexts(entry);
+    const exactMatch = typeof entry.exactMatch === 'boolean'
+      ? entry.exactMatch
+      : compareText(rawTexts.benchmark, rawTexts.citum).exactMatch;
+    const exactIcon = exactMatch ? '✓' : '✗';
+    const exactColor = exactMatch ? 'text-emerald-600' : 'text-amber-700';
+    const texts = exactMatch ? getComparisonEntryTexts(entry) : getExactComparisonEntryTexts(entry);
+    const diff = exactMatch
+      ? null
+      : renderInlineTextDifference(texts.benchmark, texts.citum);
+    const benchmarkText = diff?.benchmark ?? renderTextPreview(texts.benchmark);
+    const citumText = diff?.citum ?? renderTextPreview(texts.citum);
+
+    let issuesText = '—';
+    if (entry.match && !exactMatch) {
+      issuesText = `Unresolved Oracle Drift${diff ? ` (Δ${diff.position})` : ''}`;
+    } else if (entry.match === false && entry.issues?.length > 0) {
+      issuesText = entry.issues
+        .map((issue) => issue.component ? `${issue.component}:${issue.issue}` : issue.issue)
+        .join(', ');
+    }
+
+    rows += `
+                                            <tr class="border-b border-slate-200 hover:bg-slate-50">
+                                                <td class="px-2 py-1 text-slate-600">${escapeHtml(entry.id || entry.index || '—')}</td>
+                                                <td class="px-2 py-1 font-mono text-slate-600 text-xs" title="${escapeHtml(texts.benchmark)}">${benchmarkText}</td>
+                                                <td class="px-2 py-1 font-mono text-slate-600 text-xs" title="${escapeHtml(texts.citum)}">${citumText}</td>
+                                                <td class="px-2 py-1 text-center font-bold ${matchColor}">${matchIcon}</td>
+                                                <td class="px-2 py-1 text-center font-bold ${exactColor}">${exactIcon}</td>
+                                                <td class="px-2 py-1 text-slate-600 text-xs font-mono">${escapeHtml(issuesText)}</td>
+                                            </tr>
+`;
+  }
+
+  return `
+                                <div class="overflow-x-auto">
+                                    <table class="w-full text-xs border-collapse">
+                                        <thead>
+                                            <tr class="border-b border-slate-300 bg-slate-100">
+                                                <th class="text-left px-2 py-1 font-medium text-slate-700">Item</th>
+                                                <th class="text-left px-2 py-1 font-medium text-slate-700">Benchmark</th>
+                                                <th class="text-left px-2 py-1 font-medium text-slate-700">Citum</th>
+                                                <th class="text-center px-2 py-1 font-medium text-slate-700">Compatibility</th>
+                                                <th class="text-center px-2 py-1 font-medium text-slate-700">Oracle Text</th>
+                                                <th class="text-left px-2 py-1 font-medium text-slate-700">Issues</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>${rows}
+                                        </tbody>
+                                    </table>
+                                </div>
+`;
+}
+
+function renderIdProvenCardinalityFailures(entries) {
+  if (entries.length === 0) return '';
+  const rows = entries.map((entry) => {
+    const state = bibliographyComparisonState(entry);
+    const texts = getExactComparisonEntryTexts(entry);
+    const oracleOnly = state === 'oracle-only';
+    const output = oracleOnly ? texts.benchmark : texts.citum;
+    const side = oracleOnly ? 'Oracle only' : 'Citum only';
+    return `
+                                            <tr class="border-b border-red-100">
+                                                <td class="px-2 py-1 font-mono text-slate-600">${escapeHtml(entry.id || '—')}</td>
+                                                <td class="px-2 py-1 text-slate-700">${side}</td>
+                                                <td class="px-2 py-1 font-mono text-slate-600 text-xs" title="${escapeHtml(output)}">${renderTextPreview(output)}</td>
+                                                <td class="px-2 py-1 text-center font-bold text-red-600">✗</td>
+                                                <td class="px-2 py-1 text-center font-medium text-slate-400">N/A</td>
+                                            </tr>
+`;
+  }).join('');
+
+  return `
+                                <div class="mt-4">
+                                    <div class="text-xs font-semibold text-red-700 mb-1">ID-proven output cardinality failures (${entries.length})</div>
+                                    <div class="text-xs text-slate-500 mb-2">The same item ID was emitted by only one renderer. This affects compatibility, but no text-parity comparison exists.</div>
+                                    <div class="overflow-x-auto">
+                                        <table class="w-full text-xs border-collapse">
+                                            <thead>
+                                                <tr class="border-b border-red-200 bg-red-50">
+                                                    <th class="text-left px-2 py-1 font-medium text-slate-700">Item ID</th>
+                                                    <th class="text-left px-2 py-1 font-medium text-slate-700">Observed side</th>
+                                                    <th class="text-left px-2 py-1 font-medium text-slate-700">Output</th>
+                                                    <th class="text-center px-2 py-1 font-medium text-slate-700">Compatibility</th>
+                                                    <th class="text-center px-2 py-1 font-medium text-slate-700">Oracle Text</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>${rows}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+`;
+}
+
+function renderUnresolvedPairingDiagnostics(entries) {
+  if (entries.length === 0) return '';
+  const rows = entries.map((entry) => {
+    const texts = getExactComparisonEntryTexts(entry);
+    const benchmarkSide = Boolean(texts.benchmark);
+    const output = benchmarkSide ? texts.benchmark : texts.citum;
+    return `
+                                                <tr class="border-b border-slate-200">
+                                                    <td class="px-2 py-1 text-slate-600">${benchmarkSide ? 'Oracle candidate' : 'Citum candidate'}</td>
+                                                    <td class="px-2 py-1 font-mono text-slate-500 text-xs" title="${escapeHtml(output)}">${renderTextPreview(output)}</td>
+                                                    <td class="px-2 py-1 text-center font-medium text-slate-400">N/A</td>
+                                                </tr>
+`;
+  }).join('');
+
+  return `
+                                <details class="mt-4 rounded border border-slate-200 bg-slate-100/70">
+                                    <summary class="cursor-pointer px-3 py-2 text-xs font-semibold text-slate-600">Unpaired outputs—pairing unresolved (${entries.length})</summary>
+                                    <div class="px-3 pb-3">
+                                        <p class="mb-2 text-xs text-slate-500">Similarity pairing could not establish counterparts. These candidates are excluded from compatibility and oracle-text parity.</p>
+                                        <div class="overflow-x-auto">
+                                            <table class="w-full text-xs border-collapse">
+                                                <thead>
+                                                    <tr class="border-b border-slate-300 bg-slate-200/70">
+                                                        <th class="text-left px-2 py-1 font-medium text-slate-600">Observed side</th>
+                                                        <th class="text-left px-2 py-1 font-medium text-slate-600">Candidate output</th>
+                                                        <th class="text-center px-2 py-1 font-medium text-slate-600">Comparison</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>${rows}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </details>
+`;
+}
+
+function renderBibliographyEvidence(style) {
+  if (!style.oracleDetail?.length) return '';
+  const fallbackAuthority = style.bibliographyAuthorityLabel || style.benchmarkLabel || 'configured authority';
+  const groups = groupBibliographyEvidence(style.oracleDetail, fallbackAuthority);
+  const summary = style.pairingSummary || {};
+  let html = `
+                            <div class="mt-4">
+                                <div class="text-xs font-semibold text-slate-900 mb-1">Bibliography Evidence</div>
+                                <div class="text-xs text-slate-500 mb-3">${summary.paired || 0} paired · ${summary.unresolvedUnpaired || 0} unresolved-unpaired · ${(summary.idProvenOracleOnly || 0) + (summary.idProvenCitumOnly || 0)} ID-proven one-sided</div>
+`;
+
+  for (const group of groups) {
+    const paired = group.entries.filter((entry) => bibliographyComparisonState(entry) === 'paired');
+    const cardinalityFailures = group.entries.filter((entry) => {
+      const state = bibliographyComparisonState(entry);
+      return entry.pairingMethod === 'id' && (state === 'oracle-only' || state === 'citum-only');
+    });
+    const unresolved = group.entries.filter((entry) => bibliographyComparisonState(entry) === 'unresolved-unpaired');
+    html += `
+                                <section class="mb-5 rounded border border-slate-200 bg-[var(--citum-surface)] p-3">
+                                    <div class="mb-1 text-xs font-semibold text-slate-800">${escapeHtml(group.label)}</div>
+                                    <div class="mb-3 text-[11px] text-slate-500">Authority: ${escapeHtml(group.authority || fallbackAuthority)} · ${paired.length} paired · ${unresolved.length} unresolved · ${cardinalityFailures.length} ID-proven one-sided</div>
+                                    ${renderPairedBibliographyTable(paired)}
+                                    ${renderIdProvenCardinalityFailures(cardinalityFailures)}
+                                    ${renderUnresolvedPairingDiagnostics(unresolved)}
+                                </section>
+`;
+  }
+
+  html += `
+                            </div>
+`;
+  return html;
+}
+
 function generateDetailContent(style) {
   let html = '';
   const secondaryLabels = Array.isArray(style.secondarySourceLabels) && style.secondarySourceLabels.length > 0
     ? style.secondarySourceLabels.join(', ')
     : '—';
   const cslReachText = style.cslReach != null ? String(style.cslReach) : '—';
+  const inheritanceChain = style.inheritance?.chain?.join(' → ') || style.name;
+  const aliasText = style.registry?.aliases?.length > 0
+    ? style.registry.aliases.join(', ')
+    : '—';
+  const band = style.measurementEvidence?.behavioralBand;
+  const derivability = style.measurementEvidence?.derivability;
+  const chainWarning = style.inheritance?.cycle
+    ? `Cycle: ${style.inheritance.cycle.join(' → ')}`
+    : style.inheritance?.missingParent
+      ? `Missing parent: ${style.inheritance.missingParent}`
+      : null;
 
   html += `
                             <div class="mb-4 p-3 rounded border border-slate-200 bg-[var(--citum-surface)]">
@@ -3210,7 +3802,15 @@ function generateDetailContent(style) {
                                     <div><span class="font-semibold text-slate-700">Secondary:</span> <span class="font-mono text-slate-600">${escapeHtml(secondaryLabels)}</span></div>
                                     ${style.regressionBaselineLabel ? `<div><span class="font-semibold text-slate-700">Regression baseline:</span> <span class="font-mono text-slate-600">${escapeHtml(style.regressionBaselineLabel)}</span></div>` : ''}
                                     <div><span class="font-semibold text-slate-700">CSL Reach:</span> <span class="font-mono text-slate-600">${escapeHtml(cslReachText)}</span></div>
+                                    <div><span class="font-semibold text-slate-700">Family:</span> <span class="font-mono text-slate-600">${escapeHtml(style.inheritance?.familyRoot || style.name)}</span></div>
+                                    <div><span class="font-semibold text-slate-700">Implementation:</span> <span class="font-mono text-slate-600">${escapeHtml(style.inheritance?.implementationForm || 'standalone')}</span></div>
+                                    <div class="md:col-span-2"><span class="font-semibold text-slate-700">Inheritance:</span> <span class="font-mono text-slate-600">${escapeHtml(inheritanceChain)}</span></div>
+                                    <div><span class="font-semibold text-slate-700">Registry kind:</span> <span class="font-mono text-slate-600">${escapeHtml(style.registry?.kind || '—')}</span></div>
+                                    <div><span class="font-semibold text-slate-700">Aliases (${style.registry?.aliasCount || 0}):</span> <span class="font-mono text-slate-600">${escapeHtml(aliasText)}</span></div>
+                                    <div><span class="font-semibold text-slate-700">Near-clone band:</span> <span class="font-mono text-slate-600">${escapeHtml(band?.band || 'unavailable')}${band?.target ? ` → ${escapeHtml(band.target)}` : ''}</span></div>
+                                    <div><span class="font-semibold text-slate-700">Derivability:</span> <span class="font-mono text-slate-600">${escapeHtml(derivability?.verdict || 'unavailable')}${derivability?.target ? ` → ${escapeHtml(derivability.target)}` : ''}</span></div>
                                 </div>
+                                ${chainWarning ? `<div class="mt-3 text-xs font-mono text-amber-700">${escapeHtml(chainWarning)}</div>` : ''}
                                 ${style.verificationNote ? `<div class="mt-3 text-xs text-slate-600"><strong>Note:</strong> ${escapeHtml(style.verificationNote)}</div>` : ''}
                             </div>
 `;
@@ -3320,7 +3920,7 @@ function generateDetailContent(style) {
     html += `
                             <div class="mb-4 p-3 rounded border border-slate-200 bg-[var(--citum-surface)]">
                                 <div class="text-xs font-semibold text-slate-900 mb-1">Official Supplemental Rich Benchmark Evidence</div>
-                                <div class="text-xs text-slate-500 mb-3">Baseline fidelity remains the gate. Rich benchmark runs extend the official evidence for configured styles.</div>
+                                <div class="text-xs text-slate-500 mb-3">Baseline compatibility remains the gate. Rich benchmark runs extend the official evidence for configured styles.</div>
                                 <div class="space-y-3">
 `;
     for (const benchmarkRun of style.benchmarkRunResults) {
@@ -3330,7 +3930,7 @@ function generateDetailContent(style) {
           ? 'bg-slate-100 text-slate-600'
           : 'bg-red-100 text-red-700';
       const scopeText = benchmarkRun.scope === 'both' ? 'citation + bibliography' : benchmarkRun.scope;
-      const contributionText = benchmarkRun.countTowardFidelity ? 'counts toward fidelity' : 'diagnostic only';
+      const contributionText = benchmarkRun.countTowardFidelity ? 'counts toward compatibility' : 'diagnostic only';
       const thresholdText = benchmarkRun.minPassRate != null
         ? `${(benchmarkRun.minPassRate * 100).toFixed(0)}%`
         : 'none';
@@ -3342,6 +3942,9 @@ function generateDetailContent(style) {
       const citationsText = benchmarkRun.citations
         ? `${benchmarkRun.citations.passed}/${benchmarkRun.citations.total}`
         : '—';
+      const comparisonText = benchmarkRun.runner === 'native-smoke'
+        ? 'none (render-only smoke test)'
+        : 'configured oracle';
 
       html += `
                                     <div class="rounded border border-slate-200 p-3">
@@ -3355,6 +3958,7 @@ function generateDetailContent(style) {
                                             <div><span class="font-semibold text-slate-700">Runner:</span> <span class="font-mono text-slate-600">${escapeHtml(benchmarkRun.runner)}</span></div>
                                             <div><span class="font-semibold text-slate-700">Scope:</span> <span class="font-mono text-slate-600">${escapeHtml(scopeText)}</span></div>
                                             <div><span class="font-semibold text-slate-700">Contribution:</span> <span class="font-mono text-slate-600">${escapeHtml(contributionText)}</span></div>
+                                            <div><span class="font-semibold text-slate-700">Oracle comparison:</span> <span class="font-mono text-slate-600">${escapeHtml(comparisonText)}</span></div>
                                             <div><span class="font-semibold text-slate-700">Threshold:</span> <span class="font-mono text-slate-600">${escapeHtml(thresholdText)}</span></div>
                                             <div><span class="font-semibold text-slate-700">Bibliography:</span> <span class="font-mono text-slate-600">${escapeHtml(bibliographyText)}</span></div>
                                             ${benchmarkRun.citations ? `<div><span class="font-semibold text-slate-700">Citations:</span> <span class="font-mono text-slate-600">${escapeHtml(citationsText)}</span></div>` : ''}
@@ -3426,17 +4030,22 @@ function generateDetailContent(style) {
   }
 
   if (style.citationEntries && style.citationEntries.length > 0) {
-    const failedEntries = style.citationEntries.filter(e => !e.match);
-    if (failedEntries.length === 0) {
+    const citationFindings = style.citationEntries.filter((entry) => {
+      if (!entry.match) return true;
+      if (typeof entry.exactMatch === 'boolean') return !entry.exactMatch;
+      const texts = getRawComparisonEntryTexts(entry);
+      return !compareText(texts.benchmark, texts.citum).exactMatch;
+    });
+    if (citationFindings.length === 0) {
       html += `
                             <div class="mb-4 p-3 rounded bg-emerald-50 border border-emerald-200">
-                                <div class="text-xs font-semibold text-emerald-700">All ${style.citationEntries.length} citations match ✓</div>
+                                <div class="text-xs font-semibold text-emerald-700">All ${style.citationEntries.length} citations are compatible and exact ✓</div>
                             </div>
 `;
     } else {
       html += `
                             <div class="mb-4">
-                                <div class="text-xs font-semibold text-slate-900 mb-2">Failed Citations (${failedEntries.length}/${style.citationEntries.length})</div>
+                                <div class="text-xs font-semibold text-slate-900 mb-2">Citation Findings (${citationFindings.length}/${style.citationEntries.length})</div>
                                 <div class="overflow-x-auto">
                                     <table class="w-full text-xs border-collapse">
                                         <thead>
@@ -3444,21 +4053,30 @@ function generateDetailContent(style) {
                                                 <th class="text-left px-2 py-1 font-medium text-slate-700">#</th>
                                                 <th class="text-left px-2 py-1 font-medium text-slate-700">Benchmark</th>
                                                 <th class="text-left px-2 py-1 font-medium text-slate-700">Citum</th>
-                                                <th class="text-center px-2 py-1 font-medium text-slate-700">Match</th>
+                                                <th class="text-center px-2 py-1 font-medium text-slate-700">Status</th>
                                             </tr>
                                         </thead>
                                         <tbody>
 `;
-      for (const entry of failedEntries) {
-        const texts = getComparisonEntryTexts(entry);
-        const benchmarkText = texts.benchmark ? texts.benchmark.substring(0, 100) : '(empty)';
-        const citumText = texts.citum ? texts.citum.substring(0, 100) : '(empty)';
+      for (const entry of citationFindings) {
+        const rawTexts = getRawComparisonEntryTexts(entry);
+        const exactMatch = typeof entry.exactMatch === 'boolean'
+          ? entry.exactMatch
+          : compareText(rawTexts.benchmark, rawTexts.citum).exactMatch;
+        const texts = exactMatch ? getComparisonEntryTexts(entry) : getExactComparisonEntryTexts(entry);
+        const diff = exactMatch
+          ? null
+          : renderInlineTextDifference(texts.benchmark, texts.citum);
+        const benchmarkText = diff?.benchmark ?? renderTextPreview(texts.benchmark);
+        const citumText = diff?.citum ?? renderTextPreview(texts.citum);
+        const statusText = entry.match ? 'Unresolved Oracle Drift' : 'Compatibility Fail';
+        const statusColor = entry.match ? 'text-amber-700' : 'text-red-600';
         html += `
                                             <tr class="border-b border-slate-200 hover:bg-slate-50">
                                                 <td class="px-2 py-1 text-slate-600">${escapeHtml(entry.id)}</td>
-                                                <td class="px-2 py-1 font-mono text-slate-600 text-xs" title="${escapeHtml(texts.benchmark)}">${escapeHtml(benchmarkText)}</td>
-                                                <td class="px-2 py-1 font-mono text-slate-600 text-xs" title="${escapeHtml(texts.citum)}">${escapeHtml(citumText)}</td>
-                                                <td class="px-2 py-1 text-center font-bold text-red-600">✗</td>
+                                                <td class="px-2 py-1 font-mono text-slate-600 text-xs" title="${escapeHtml(texts.benchmark)}">${benchmarkText}</td>
+                                                <td class="px-2 py-1 font-mono text-slate-600 text-xs" title="${escapeHtml(texts.citum)}">${citumText}</td>
+                                                <td class="px-2 py-1 text-center font-semibold ${statusColor}">${statusText}${diff ? ` <span class="text-slate-400">(Δ${diff.position})</span>` : ''}</td>
                                             </tr>
 `;
       }
@@ -3471,59 +4089,7 @@ function generateDetailContent(style) {
     }
   }
 
-  if (style.oracleDetail && style.oracleDetail.length > 0) {
-    html += `
-                            <div class="mt-4">
-                                <div class="text-xs font-semibold text-slate-900 mb-2">Bibliography Entries (${style.oracleDetail.length})</div>
-                                <div class="overflow-x-auto">
-                                    <table class="w-full text-xs border-collapse">
-                                        <thead>
-                                            <tr class="border-b border-slate-300 bg-slate-100">
-                                                <th class="text-left px-2 py-1 font-medium text-slate-700">#</th>
-                                                <th class="text-left px-2 py-1 font-medium text-slate-700">Benchmark</th>
-                                                <th class="text-left px-2 py-1 font-medium text-slate-700">Citum</th>
-                                                <th class="text-center px-2 py-1 font-medium text-slate-700">Match</th>
-                                                <th class="text-left px-2 py-1 font-medium text-slate-700">Issues</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-`;
-
-    for (let i = 0; i < style.oracleDetail.length; i++) {
-      const entry = style.oracleDetail[i];
-      const matchIcon = entry.match === true ? '✓' : entry.match === false ? '✗' : '–';
-      const matchColor = entry.match === true ? 'text-emerald-600' : entry.match === false ? 'text-red-600' : 'text-slate-400';
-      const texts = getComparisonEntryTexts(entry);
-      const benchmarkText = texts.benchmark ? texts.benchmark.substring(0, 100) : '(empty)';
-      const citumText = texts.citum ? texts.citum.substring(0, 100) : '(empty)';
-
-      let issuesText = '—';
-      if (!entry.match) {
-        if (entry.issues && entry.issues.length > 0) {
-          issuesText = entry.issues
-            .map(iss => iss.component ? `${iss.component}:${iss.issue}` : iss.issue)
-            .join(', ');
-        }
-      }
-
-      html += `
-                                            <tr class="border-b border-slate-200 hover:bg-slate-50">
-                                                <td class="px-2 py-1 text-slate-600">${i + 1}</td>
-                                                <td class="px-2 py-1 font-mono text-slate-600 text-xs" title="${escapeHtml(texts.benchmark)}">${escapeHtml(benchmarkText)}</td>
-                                                <td class="px-2 py-1 font-mono text-slate-600 text-xs" title="${escapeHtml(texts.citum)}">${escapeHtml(citumText)}</td>
-                                                <td class="px-2 py-1 text-center font-bold ${matchColor}">${matchIcon}</td>
-                                                <td class="px-2 py-1 text-slate-600 text-xs font-mono">${escapeHtml(issuesText)}</td>
-                                            </tr>
-`;
-    }
-
-    html += `
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-`;
-  }
+  html += renderBibliographyEvidence(style);
 
   if (style.knownDivergences && style.knownDivergences.length > 0) {
     html += `
@@ -3610,6 +4176,7 @@ function generateHtmlFooter() {
             const tbody = document.querySelector('table tbody');
             if (!tbody) return;
 
+            const familyHeaders = Array.from(tbody.querySelectorAll('tr.family-header'));
             const summaryRows = Array.from(tbody.querySelectorAll('tr.accordion-toggle'));
             const rowPairs = summaryRows.map((summary) => {
                 const detailId = summary.dataset.detailId;
@@ -3643,6 +4210,7 @@ function generateHtmlFooter() {
                     'bibliography-rate',
                     'component-rate',
                     'fidelity',
+                    'exact-parity',
                     'quality',
                     'sqi-tier-rank',
                 ]);
@@ -3661,9 +4229,21 @@ function generateHtmlFooter() {
                 return asText(left).localeCompare(asText(right)) * sortState.direction;
             });
 
+            const pairsByFamily = new Map();
             for (const pair of rowPairs) {
-                tbody.appendChild(pair.summary);
-                if (pair.detail) tbody.appendChild(pair.detail);
+                const root = pair.summary.dataset.familyRoot || '';
+                const members = pairsByFamily.get(root) || [];
+                members.push(pair);
+                pairsByFamily.set(root, members);
+            }
+
+            for (const header of familyHeaders) {
+                tbody.appendChild(header);
+                const members = pairsByFamily.get(header.dataset.familyRoot || '') || [];
+                for (const pair of members) {
+                    tbody.appendChild(pair.summary);
+                    if (pair.detail) tbody.appendChild(pair.detail);
+                }
             }
 
             updateSortIndicators(key, sortState.direction);
@@ -3688,7 +4268,7 @@ function generateHtmlFooter() {
             for (const summary of summaryRows) {
                 const detailId = summary.dataset.detailId;
                 const detail = detailId ? document.getElementById(detailId) : null;
-                const haystack = (summary.dataset.styleName || '').toLowerCase();
+                const haystack = (summary.dataset.search || summary.dataset.styleName || '').toLowerCase();
                 const isMatch = !query || haystack.includes(query);
 
                 summary.style.display = isMatch ? '' : 'none';
@@ -3697,6 +4277,15 @@ function generateHtmlFooter() {
                     if (!isMatch) detail.classList.remove('active');
                 }
                 if (isMatch) visible += 1;
+            }
+
+            const familyHeaders = Array.from(tbody.querySelectorAll('tr.family-header'));
+            for (const header of familyHeaders) {
+                const root = header.dataset.familyRoot || '';
+                const hasVisibleMember = summaryRows.some((summary) =>
+                    summary.dataset.familyRoot === root && summary.style.display !== 'none'
+                );
+                header.style.display = hasVisibleMember ? '' : 'none';
             }
 
             updateFilterCount(visible, summaryRows.length);
@@ -3824,6 +4413,8 @@ module.exports = {
   selectQualityAuthorshipData,
   selectPrimaryComparator,
   serializeTimingSummary,
+  summarizeBibliographyPairing,
+  summarizeExactParity,
   textSimilarity,
   mergeDivergenceSummaries,
 };

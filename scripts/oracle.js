@@ -664,13 +664,24 @@ function matchBibliographyEntries(oracleBib, citumBib, oracleIds = [], citumIds 
         oracle: oracleBib[index],
         citum: citum?.text ?? null,
         score: citum ? textSimilarity(oracleBib[index], citum.text) : 0,
+        pairingMethod: 'id',
+        comparisonState: citum ? 'paired' : 'oracle-only',
+        compatibilityEligible: true,
       };
     });
 
     for (let index = 0; index < citumIds.length; index++) {
       const id = citumIds[index];
       if (!oracleIdSet.has(id)) {
-        pairs.push({ id, oracle: null, citum: citumBib[index], score: 0 });
+        pairs.push({
+          id,
+          oracle: null,
+          citum: citumBib[index],
+          score: 0,
+          pairingMethod: 'id',
+          comparisonState: 'citum-only',
+          compatibilityEligible: true,
+        });
       }
     }
     return pairs;
@@ -705,20 +716,37 @@ function matchBibliographyEntries(oracleBib, citumBib, oracleIds = [], citumIds 
       oracle: oracleBib[candidate.oi],
       citum: citumBib[candidate.ci],
       score: candidate.score,
+      pairingMethod: 'similarity',
+      comparisonState: 'paired',
+      compatibilityEligible: true,
     });
   }
 
   // Add unmatched oracle entries.
   for (let oi = 0; oi < oracleBib.length; oi++) {
     if (!usedOracle.has(oi)) {
-      pairs.push({ oracle: oracleBib[oi], citum: null, score: 0 });
+      pairs.push({
+        oracle: oracleBib[oi],
+        citum: null,
+        score: 0,
+        pairingMethod: 'similarity',
+        comparisonState: 'unresolved-unpaired',
+        compatibilityEligible: false,
+      });
     }
   }
 
   // Add unmatched Citum entries.
   for (let ci = 0; ci < citumBib.length; ci++) {
     if (!usedCitum.has(ci)) {
-      pairs.push({ oracle: null, citum: citumBib[ci], score: 0 });
+      pairs.push({
+        oracle: null,
+        citum: citumBib[ci],
+        score: 0,
+        pairingMethod: 'similarity',
+        comparisonState: 'unresolved-unpaired',
+        compatibilityEligible: false,
+      });
     }
   }
 
@@ -820,7 +848,7 @@ function runOracle(cliOptions = parseArgs()) {
     },
     citationsByType: {},
     bibliography: {
-      total: pairs.length,
+      total: 0,
       passed: 0,
       failed: 0,
       entries: [],
@@ -850,6 +878,12 @@ function runOracle(cliOptions = parseArgs()) {
         id,
         oracle: comparison.expected,
         citum: comparison.actual,
+        rawOracle: comparison.rawExpected,
+        rawCitum: comparison.rawActual,
+        exactOracle: comparison.exactExpected,
+        exactCitum: comparison.exactActual,
+        exactMatch: comparison.exactMatch,
+        exactAdjudication: comparison.exactAdjudication,
         match,
         caseMismatch: comparison.caseMismatch,
       });
@@ -875,26 +909,53 @@ function runOracle(cliOptions = parseArgs()) {
       id: pair.id || null,
       oracle: pair.oracle ? normalizeText(pair.oracle) : null,
       citum: pair.citum ? normalizeText(pair.citum) : null,
-      match: false,
+      rawOracle: pair.oracle ?? null,
+      rawCitum: pair.citum ?? null,
+      exactOracle: null,
+      exactCitum: null,
+      exactMatch: null,
+      exactAdjudication: 'not-comparable',
+      match: pair.compatibilityEligible ? false : null,
       caseMismatch: false,
+      pairingMethod: pair.pairingMethod,
+      comparisonState: pair.comparisonState,
+      compatibilityEligible: pair.compatibilityEligible,
+      exactParityEligible: pair.comparisonState === 'paired',
       components: {},
       ordering: null,
       issues: [],
     };
 
     if (!pair.oracle) {
-      entryResult.issues.push({ issue: 'extra_entry', detail: 'Entry in Citum but not oracle' });
-      rawResults.bibliography.failed++;
+      if (pair.compatibilityEligible) {
+        entryResult.issues.push({ issue: 'extra_entry', detail: 'ID-proven entry in Citum but not oracle' });
+        rawResults.bibliography.total++;
+        rawResults.bibliography.failed++;
+      } else {
+        entryResult.issues.push({ issue: 'unpaired_output', detail: 'Similarity pairing found no benchmark counterpart' });
+      }
     } else if (!pair.citum) {
-      entryResult.issues.push({ issue: 'missing_entry', detail: 'Entry in oracle but not Citum' });
-      rawResults.bibliography.failed++;
+      if (pair.compatibilityEligible) {
+        entryResult.issues.push({ issue: 'missing_entry', detail: 'ID-proven entry in oracle but not Citum' });
+        rawResults.bibliography.total++;
+        rawResults.bibliography.failed++;
+      } else {
+        entryResult.issues.push({ issue: 'unpaired_output', detail: 'Similarity pairing found no Citum counterpart' });
+      }
     } else {
+      rawResults.bibliography.total++;
       // Both exist - compare
       const comparison = compareText(pair.oracle, pair.citum, {
         caseSensitive: cliOptions.caseSensitive,
       });
       entryResult.oracle = comparison.expected;
       entryResult.citum = comparison.actual;
+      entryResult.rawOracle = comparison.rawExpected;
+      entryResult.rawCitum = comparison.rawActual;
+      entryResult.exactOracle = comparison.exactExpected;
+      entryResult.exactCitum = comparison.exactActual;
+      entryResult.exactMatch = comparison.exactMatch;
+      entryResult.exactAdjudication = comparison.exactAdjudication;
       entryResult.caseMismatch = comparison.caseMismatch;
       const match = bibliographyComparisonMatches(
         styleName,
