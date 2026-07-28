@@ -131,7 +131,9 @@ boundary for all callers (CLI, tests, FFI, and embedded integrations).
 
 **Merge semantics:** object fields merge structurally and recursively. Scalars,
 arrays, and explicit `null` values replace inherited values. Arrays replace
-wholesale — there is no per-element merging.
+wholesale — there is no per-element merging. The normative statement of these
+rules, including field-level deep merge of nested option blocks, now lives in
+[STYLE_INHERITANCE.md](./STYLE_INHERITANCE.md); this section defers to it.
 
 This preserves a simple and predictable contract, but it also means some
 evidence-backed child styles remain bulky until more granular override
@@ -274,6 +276,9 @@ and four-tier classification are documented in `STYLE_TAXONOMY.md`.
 
 ## Changelog
 
+- v2.1 (2026-07-28): Deferred merge-semantics ownership to
+  [STYLE_INHERITANCE.md](./STYLE_INHERITANCE.md), which resolves the
+  nested-option whole-value-replace divergence (`csl26-svfg`).
 - v2.0 (2026-04-20): Renamed `StylePreset` → `StyleBase` and `preset:` →
   `extends:` throughout the schema (breaking rename; all YAML files updated).
   Expanded the base enum to 16 entries with full publisher and numeric styles.
