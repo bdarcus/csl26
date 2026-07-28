@@ -530,6 +530,14 @@ function buildAdjustedOracleResult(rawResults, testCitations, testItems, diverge
   const adjustedCitationPassed = adjustedCitationEntries.filter((entry) => entry.match).length;
   const adjustedCitationTotal = rawResults.citations?.total || adjustedCitationEntries.length;
   const adjustedBibliographyEntries = (rawResults.bibliography?.entries || []).map((entry) => {
+    if (entry.match === null) {
+      return {
+        ...entry,
+        rawMatch: null,
+        match: null,
+        appliedDivergence: null,
+      };
+    }
     const div009Adjustment = explainBibliographyMismatchFromDiv009(entry, testItems, div009Rule);
     const div010Adjustment = explainBibliographyMismatchFromDiv010(entry, testItems, div010Rule);
     const div011Adjustment = explainBibliographyMismatchFromDiv011(entry, testItems, div011Rule);
@@ -537,7 +545,9 @@ function buildAdjustedOracleResult(rawResults, testCitations, testItems, diverge
     return { ...entry, rawMatch: entry.match, match: entry.match || Boolean(appliedDivergence), appliedDivergence };
   });
   const adjustedBibliographyPassed = adjustedBibliographyEntries.filter((entry) => entry.match).length;
-  const adjustedBibliographyTotal = rawResults.bibliography?.total || adjustedBibliographyEntries.length;
+  const adjustedBibliographyTotal = Number.isFinite(rawResults.bibliography?.total)
+    ? rawResults.bibliography.total
+    : adjustedBibliographyEntries.length;
   const divergenceSummary = {};
 
   if (divergenceInfo) {

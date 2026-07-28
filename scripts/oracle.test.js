@@ -372,6 +372,35 @@ test('registered divergence adjustments recompute the bibliography passed/failed
   assert.equal(adjusted.adjusted.bibliography.failed, 0);
 });
 
+test('registered divergence adjustments keep heuristic-unpaired rows outside compatibility totals', () => {
+  const rawResults = {
+    citations: { total: 0, passed: 0, failed: 0, entries: [] },
+    bibliography: {
+      total: 0,
+      passed: 0,
+      failed: 0,
+      entries: [{
+        index: 1,
+        oracle: 'Oracle-only similarity candidate',
+        citum: null,
+        match: null,
+        exactMatch: null,
+        comparisonState: 'unresolved-unpaired',
+        pairingMethod: 'similarity',
+        compatibilityEligible: false,
+        exactParityEligible: false,
+      }],
+    },
+  };
+
+  const adjusted = attachRegisteredDivergenceAdjustments(rawResults, [], [], {}, []);
+
+  assert.equal(adjusted.adjusted.bibliography.total, 0);
+  assert.equal(adjusted.adjusted.bibliography.passed, 0);
+  assert.equal(adjusted.adjusted.bibliography.failed, 0);
+  assert.equal(adjusted.adjusted.bibliography.entries[0].match, null);
+});
+
 test('div-005 recognizes structured archival manuscript detail as an intentional citation divergence', () => {
   const policy = loadVerificationPolicy();
   const divergenceRule = resolveRegisteredDivergence(policy, 'div-005');
@@ -964,10 +993,91 @@ test('bibliography entries pair by item id instead of text similarity', () => {
 
   assert.equal(pairs.length, 2);
   assert.deepEqual(
-    pairs.map(({ id, oracle, citum }) => ({ id, oracle, citum })),
+    pairs.map(({ id, oracle, citum, pairingMethod, comparisonState, compatibilityEligible }) => ({
+      id,
+      oracle,
+      citum,
+      pairingMethod,
+      comparisonState,
+      compatibilityEligible,
+    })),
     [
-      { id: 'ITEM-A', oracle: 'Oracle alpha', citum: 'Citum alpha' },
-      { id: 'ITEM-B', oracle: 'Oracle beta', citum: 'Citum beta' },
+      {
+        id: 'ITEM-A',
+        oracle: 'Oracle alpha',
+        citum: 'Citum alpha',
+        pairingMethod: 'id',
+        comparisonState: 'paired',
+        compatibilityEligible: true,
+      },
+      {
+        id: 'ITEM-B',
+        oracle: 'Oracle beta',
+        citum: 'Citum beta',
+        pairingMethod: 'id',
+        comparisonState: 'paired',
+        compatibilityEligible: true,
+      },
+    ]
+  );
+});
+
+test('bibliography ID pairing treats one-sided output as a compatibility-eligible cardinality failure', () => {
+  const pairs = matchBibliographyEntries(
+    ['Oracle alpha'],
+    ['Citum beta'],
+    ['ITEM-A'],
+    ['ITEM-B']
+  );
+
+  assert.deepEqual(
+    pairs.map(({ id, comparisonState, pairingMethod, compatibilityEligible }) => ({
+      id,
+      comparisonState,
+      pairingMethod,
+      compatibilityEligible,
+    })),
+    [
+      {
+        id: 'ITEM-A',
+        comparisonState: 'oracle-only',
+        pairingMethod: 'id',
+        compatibilityEligible: true,
+      },
+      {
+        id: 'ITEM-B',
+        comparisonState: 'citum-only',
+        pairingMethod: 'id',
+        compatibilityEligible: true,
+      },
+    ]
+  );
+});
+
+test('bibliography similarity pairing leaves unrelated one-sided outputs unresolved', () => {
+  const pairs = matchBibliographyEntries(
+    ['Alpha bibliography record'],
+    ['Zulu completely unrelated output']
+  );
+
+  assert.equal(pairs.length, 2);
+  assert.deepEqual(
+    pairs.map(({ pairingMethod, comparisonState, compatibilityEligible }) => ({
+      pairingMethod,
+      comparisonState,
+      compatibilityEligible,
+    })),
+    [
+      {
+        pairingMethod: 'similarity',
+        comparisonState: 'unresolved-unpaired',
+        compatibilityEligible: false,
+      },
+      {
+        pairingMethod: 'similarity',
+        comparisonState: 'unresolved-unpaired',
+        compatibilityEligible: false,
+      },
     ]
   );
 });
@@ -1014,6 +1124,72 @@ test('compareText does not report a case mismatch for a pure trailing-punctuatio
   );
   assert.equal(comparison.caseMismatch, false);
   assert.equal(comparison.match, true, 'similarity fallback still applies for non-strict styles');
+});
+
+test('compareText keeps estimated-date brackets visible to exact parity', () => {
+  const comparison = compareText(
+    'Smith, John. [1750?]. Title of First Work.',
+    'Smith, John. 1750? Title of First Work.'
+  );
+  assert.equal(comparison.match, true, 'lenient compatibility remains unchanged');
+  assert.equal(comparison.exactMatch, false);
+  assert.equal(comparison.exactExpected, 'Smith, John. [1750?]. Title of First Work.');
+  assert.equal(comparison.exactActual, 'Smith, John. 1750? Title of First Work.');
+});
+
+test('compareText exact parity preserves punctuation and case', () => {
+  const punctuation = compareText(
+    'LeCun, Yann. “Deep Learning.” Nature.',
+    'LeCun, Yann. “Deep Learning.” Nature'
+  );
+  assert.equal(punctuation.match, true);
+  assert.equal(punctuation.exactMatch, false);
+
+  const letterCase = compareText(
+    'Skinner, Quentin. Meaning and Understanding.',
+    'Skinner, Quentin. Meaning and understanding.',
+    { caseSensitive: false }
+  );
+  assert.equal(letterCase.match, true);
+  assert.equal(letterCase.exactMatch, false);
+});
+
+test('compareText exact parity preserves role-label drift', () => {
+  const caseDrift = compareText(
+    'Smith, John, and Jane Doe (Eds.). A Long Collected Work.',
+    'Smith, John, and Jane Doe (eds.). A Long Collected Work.',
+    { caseSensitive: false }
+  );
+  assert.equal(caseDrift.match, true);
+  assert.equal(caseDrift.exactMatch, false);
+
+  const missingLabel = compareText(
+    'Smith, John, and Jane Doe (Eds.). A Long Collected Work.',
+    'Smith, John, and Jane Doe. A Long Collected Work.'
+  );
+  assert.equal(missingLabel.match, true);
+  assert.equal(missingLabel.exactMatch, false);
+});
+
+test('compareText exact parity removes markup but preserves visible numbering', () => {
+  const comparison = compareText(
+    '<div class="csl-entry">193. <i>Smith</i> and Doe.</div>',
+    '**Smith** and Doe.'
+  );
+  assert.equal(comparison.exactMatch, false);
+  assert.equal(comparison.exactAdjudication, 'unresolved');
+  assert.equal(comparison.exactExpected, '193. Smith and Doe.');
+  assert.equal(comparison.exactActual, 'Smith and Doe.');
+});
+
+test('compareText exact parity preserves bracketed and parenthesized numbering', () => {
+  const bracketed = compareText('[39] Smith and Doe.', '[40] Smith and Doe.');
+  const parenthesized = compareText('(39) Smith and Doe.', '(40) Smith and Doe.');
+
+  assert.equal(bracketed.exactMatch, false);
+  assert.equal(parenthesized.exactMatch, false);
+  assert.equal(bracketed.exactAdjudication, 'unresolved');
+  assert.equal(parenthesized.exactAdjudication, 'unresolved');
 });
 
 test('compareComponents reports differing component values as mismatches', () => {

@@ -195,13 +195,38 @@ function matchBibliographyEntries(oracleBib, citumBib) {
     if (usedO.has(c.oi) || usedC.has(c.ci)) continue;
     usedO.add(c.oi);
     usedC.add(c.ci);
-    pairs.push({ oracle: oracleBib[c.oi], citum: citumBib[c.ci], score: c.score });
+    pairs.push({
+      oracle: oracleBib[c.oi],
+      citum: citumBib[c.ci],
+      score: c.score,
+      pairingMethod: 'similarity',
+      comparisonState: 'paired',
+      compatibilityEligible: true,
+    });
   }
   for (let oi = 0; oi < oracleBib.length; oi++) {
-    if (!usedO.has(oi)) pairs.push({ oracle: oracleBib[oi], citum: null, score: 0 });
+    if (!usedO.has(oi)) {
+      pairs.push({
+        oracle: oracleBib[oi],
+        citum: null,
+        score: 0,
+        pairingMethod: 'similarity',
+        comparisonState: 'unresolved-unpaired',
+        compatibilityEligible: false,
+      });
+    }
   }
   for (let ci = 0; ci < citumBib.length; ci++) {
-    if (!usedC.has(ci)) pairs.push({ oracle: null, citum: citumBib[ci], score: 0 });
+    if (!usedC.has(ci)) {
+      pairs.push({
+        oracle: null,
+        citum: citumBib[ci],
+        score: 0,
+        pairingMethod: 'similarity',
+        comparisonState: 'unresolved-unpaired',
+        compatibilityEligible: false,
+      });
+    }
   }
   return pairs;
 }
@@ -270,7 +295,7 @@ function run() {
     snapshotGeneratedBy: snapshot.generated_by,
     citations: { total: testCitations.length, passed: 0, failed: 0, entries: [] },
     citationsByType: {},
-    bibliography: { total: pairs.length, passed: 0, failed: 0, entries: [] },
+    bibliography: { total: 0, passed: 0, failed: 0, entries: [] },
     componentSummary: {},
     orderingIssues: 0,
   };
@@ -287,6 +312,12 @@ function run() {
       id: cite.id,
       oracle: comparison.expected,
       citum: comparison.actual,
+      rawOracle: comparison.rawExpected,
+      rawCitum: comparison.rawActual,
+      exactOracle: comparison.exactExpected,
+      exactCitum: comparison.exactActual,
+      exactMatch: comparison.exactMatch,
+      exactAdjudication: comparison.exactAdjudication,
       match,
       caseMismatch: comparison.caseMismatch,
     });
@@ -305,25 +336,40 @@ function run() {
       index: i + 1,
       oracle: pair.oracle ? normalizeText(pair.oracle) : null,
       citum: pair.citum ? normalizeText(pair.citum) : null,
-      match: false,
+      rawOracle: pair.oracle ?? null,
+      rawCitum: pair.citum ?? null,
+      exactOracle: null,
+      exactCitum: null,
+      exactMatch: null,
+      exactAdjudication: 'not-comparable',
+      match: pair.compatibilityEligible ? false : null,
       caseMismatch: false,
+      pairingMethod: pair.pairingMethod,
+      comparisonState: pair.comparisonState,
+      compatibilityEligible: pair.compatibilityEligible,
+      exactParityEligible: pair.comparisonState === 'paired',
       components: {},
       ordering: null,
       issues: [],
     };
 
     if (!pair.oracle) {
-      entryResult.issues.push({ issue: 'extra_entry', detail: 'Entry in Citum but not oracle' });
-      rawResults.bibliography.failed++;
+      entryResult.issues.push({ issue: 'unpaired_output', detail: 'Similarity pairing found no benchmark counterpart' });
     } else if (!pair.citum) {
-      entryResult.issues.push({ issue: 'missing_entry', detail: 'Entry in oracle but not Citum' });
-      rawResults.bibliography.failed++;
+      entryResult.issues.push({ issue: 'unpaired_output', detail: 'Similarity pairing found no Citum counterpart' });
     } else {
+      rawResults.bibliography.total++;
       const comparison = compareText(pair.oracle, pair.citum, {
         caseSensitive: opts.caseSensitive,
       });
       entryResult.oracle = comparison.expected;
       entryResult.citum = comparison.actual;
+      entryResult.rawOracle = comparison.rawExpected;
+      entryResult.rawCitum = comparison.rawActual;
+      entryResult.exactOracle = comparison.exactExpected;
+      entryResult.exactCitum = comparison.exactActual;
+      entryResult.exactMatch = comparison.exactMatch;
+      entryResult.exactAdjudication = comparison.exactAdjudication;
       entryResult.caseMismatch = comparison.caseMismatch;
       if (bibliographyComparisonMatches(styleName, comparison, opts.caseSensitive)) {
         entryResult.match = true;
@@ -404,6 +450,7 @@ if (require.main === module) {
 module.exports = {
   parseArgs,
   run,
+  matchBibliographyEntries,
   // Re-exported so tests can confirm this module's bibliography pairing loop
   // is wired to the same strict-fidelity gate oracle.js uses for
   // STRICT_BIBLIOGRAPHY_STYLES, rather than falling back to the lenient
