@@ -186,6 +186,7 @@ note. The `—` marker in the Tests column means no targeted test exists yet.
 | [`STYLE_TAXONOMY.md`](./STYLE_TAXONOMY.md) — Citum style taxonomy based on semantic class and implementation | Active | `crates/citum-schema-style/tests/` |
 | [`STYLE_EDITIONS_AND_FAMILIES.md`](./STYLE_EDITIONS_AND_FAMILIES.md) — style edition and family versioning model | Active | `crates/citum-schema-style/tests/` |
 | [`STYLE_ALIASING.md`](./STYLE_ALIASING.md) — alias/discovery layer for style identity resolution | Active | `crates/citum-schema-style/tests/` |
+| [`STYLE_COMPATIBILITY_INHERITANCE_REPORT.md`](./STYLE_COMPATIBILITY_INHERITANCE_REPORT.md) — family-grouped compatibility and exact-text parity reporting | Draft | `scripts/oracle-utils.test.js`, `scripts/report-core.test.js` |
 | [`APA_SQI_ALIGNMENT_AND_PRESET_REFACTOR.md`](./APA_SQI_ALIGNMENT_AND_PRESET_REFACTOR.md) — APA SQI alignment and preset-first cleanup | Active | `bibliography.rs`, `citations.rs` |
 | [`CHICAGO_18_COVERAGE.md`](./CHICAGO_18_COVERAGE.md) — Chicago 18th and APA 8th high-fidelity coverage enhancement | Active | `bibliography.rs`, `citations.rs` |
 | [`UNIFIED_SCOPED_OPTIONS.md`](./UNIFIED_SCOPED_OPTIONS.md) — typed scoped options replacing flat author-facing contracts | Active | `crates/citum-schema-style/tests/` |
