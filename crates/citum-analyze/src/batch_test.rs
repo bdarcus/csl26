@@ -149,7 +149,7 @@ fn test_style(path: &Path) -> TestResult {
         Ok(y) => y,
         Err(e) => return TestResult::YamlInvalid(format!("serialize: {e}")),
     };
-    if let Err(e) = serde_yaml::from_str::<Style>(&yaml) {
+    if let Err(e) = Style::from_yaml_str(&yaml) {
         return TestResult::YamlInvalid(e.to_string());
     }
 

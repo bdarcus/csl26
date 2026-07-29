@@ -329,24 +329,17 @@ fn resolve_style_reference_uri(
         reason: e.to_string(),
     })?;
     let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("yaml");
-    let style: Style = match ext {
-        "cbor" => ciborium::de::from_reader(std::io::Cursor::new(&bytes)).map_err(|e| {
-            ResolutionError::UriResolutionFailed {
-                uri: uri.to_string(),
-                reason: e.to_string(),
-            }
-        })?,
-        "json" => {
-            serde_json::from_slice(&bytes).map_err(|e| ResolutionError::UriResolutionFailed {
-                uri: uri.to_string(),
-                reason: e.to_string(),
-            })?
-        }
-        _ => Style::from_yaml_bytes(&bytes).map_err(|e| ResolutionError::UriResolutionFailed {
+    let doc_format = match ext {
+        "cbor" => super::model::StyleDocumentFormat::Cbor,
+        "json" => super::model::StyleDocumentFormat::Json,
+        _ => super::model::StyleDocumentFormat::Yaml,
+    };
+    let style = Style::from_document_bytes(&bytes, doc_format).map_err(|e| {
+        ResolutionError::UriResolutionFailed {
             uri: uri.to_string(),
             reason: e.to_string(),
-        })?,
-    };
+        }
+    })?;
     check_citum_version(uri, &style.info)?;
     Ok(style)
 }

@@ -27,6 +27,42 @@ use tempfile;
 
 pub use citum_resolver_api::{ResolutionError, ResolverError, StyleResolver};
 
+/// Parse a [`Style`] from bytes, routing through [`Style::from_document_bytes`]
+/// so the raw value tree is always populated for null-aware overlay merging
+/// (see `docs/specs/STYLE_INHERITANCE.md`), regardless of which resolver or
+/// wire format the style arrived through.
+fn parse_style_bytes(bytes: &[u8], format: StoreFormat) -> Result<Style, ResolverError> {
+    let doc_format = match format {
+        StoreFormat::Yaml => citum_schema::StyleDocumentFormat::Yaml,
+        StoreFormat::Json => citum_schema::StyleDocumentFormat::Json,
+        StoreFormat::Cbor => citum_schema::StyleDocumentFormat::Cbor,
+    };
+    Style::from_document_bytes(bytes, doc_format).map_err(|e| match e {
+        citum_schema::StyleDocumentError::Yaml(err) => ResolverError::YamlError(err.to_string()),
+        citum_schema::StyleDocumentError::Json(err) => ResolverError::JsonError(err),
+        citum_schema::StyleDocumentError::Cbor(err) => ResolverError::CborError(err),
+        citum_schema::StyleDocumentError::Validation(err) => {
+            ResolverError::InvalidStyle(err.into())
+        }
+    })
+}
+
+/// Parse any other store-resolved type (locales) using plain format-dispatched
+/// deserialization; only [`Style`] needs the raw-tree-preserving path.
+fn parse_generic_bytes<T: DeserializeOwned>(
+    bytes: &[u8],
+    format: StoreFormat,
+) -> Result<T, ResolverError> {
+    match format {
+        StoreFormat::Yaml => {
+            serde_yaml::from_slice(bytes).map_err(|e| ResolverError::YamlError(e.to_string()))
+        }
+        StoreFormat::Json => serde_json::from_slice(bytes).map_err(ResolverError::JsonError),
+        StoreFormat::Cbor => ciborium::de::from_reader(Cursor::new(bytes))
+            .map_err(|e| ResolverError::CborError(e.to_string())),
+    }
+}
+
 /// A resolver that searches a local directory for styles and locales.
 pub struct FileResolver;
 
@@ -44,15 +80,7 @@ impl StyleResolver for FileResolver {
         if path.is_file() {
             let content = fs::read(&path)?;
             let format = StoreFormat::detect(&path).unwrap_or(StoreFormat::Yaml);
-            match format {
-                StoreFormat::Yaml => serde_yaml::from_slice(&content)
-                    .map_err(|e| ResolverError::YamlError(ToString::to_string(&e))),
-                StoreFormat::Json => {
-                    serde_json::from_slice(&content).map_err(ResolverError::JsonError)
-                }
-                StoreFormat::Cbor => ciborium::de::from_reader(Cursor::new(&content))
-                    .map_err(|e| ResolverError::CborError(e.to_string())),
-            }
+            parse_style_bytes(&content, format)
         } else {
             Err(ResolverError::StyleNotFound(Cow::Owned(uri.to_string())))
         }
@@ -1101,7 +1129,7 @@ impl StoreResolver {
     /// # Errors
     /// Returns an error if the style cannot be found or loaded.
     pub fn resolve_style(&self, id: &str) -> Result<Style, ResolverError> {
-        self.resolve_item(id, "styles")
+        self.resolve_item(id, "styles", parse_style_bytes)
     }
 
     /// Resolve a locale by ID.
@@ -1109,7 +1137,7 @@ impl StoreResolver {
     /// # Errors
     /// Returns an error if the locale cannot be found or loaded.
     pub fn resolve_locale(&self, id: &str) -> Result<Locale, ResolverError> {
-        self.resolve_item(id, "locales")
+        self.resolve_item(id, "locales", parse_generic_bytes)
     }
 
     /// List all installed styles.
@@ -1162,10 +1190,11 @@ impl StoreResolver {
 
     // --- Internal Helpers ---
 
-    fn resolve_item<T: DeserializeOwned>(
+    fn resolve_item<T>(
         &self,
         id: &str,
         category: &str,
+        parse: impl Fn(&[u8], StoreFormat) -> Result<T, ResolverError>,
     ) -> Result<T, ResolverError> {
         let items_dir = self.data_dir.join(category);
         if !items_dir.exists() {
@@ -1178,14 +1207,14 @@ impl StoreResolver {
         // Try exact match with current format extension first
         let path = items_dir.join(format!("{}.{}", id, self.format.extension()));
         if path.is_file() {
-            return self.load_item_at(&path);
+            return self.load_item_at(&path, &parse);
         }
 
         // Fallback: probe every accepted extension (yaml + yml + json + cbor)
         for ext in StoreFormat::all_extensions() {
             let path = items_dir.join(format!("{id}.{ext}"));
             if path.is_file() {
-                return self.load_item_at(&path);
+                return self.load_item_at(&path, &parse);
             }
         }
 
@@ -1195,17 +1224,14 @@ impl StoreResolver {
         })
     }
 
-    fn load_item_at<T: DeserializeOwned>(&self, path: &Path) -> Result<T, ResolverError> {
+    fn load_item_at<T>(
+        &self,
+        path: &Path,
+        parse: &impl Fn(&[u8], StoreFormat) -> Result<T, ResolverError>,
+    ) -> Result<T, ResolverError> {
         let content = fs::read(path)?;
         let format = StoreFormat::detect(path).unwrap_or(self.format);
-
-        match format {
-            StoreFormat::Yaml => serde_yaml::from_slice(&content)
-                .map_err(|e| ResolverError::YamlError(ToString::to_string(&e))),
-            StoreFormat::Json => serde_json::from_slice(&content).map_err(ResolverError::JsonError),
-            StoreFormat::Cbor => ciborium::de::from_reader(Cursor::new(&content))
-                .map_err(|e| ResolverError::CborError(e.to_string())),
-        }
+        parse(&content, format)
     }
 
     fn list_items(&self, category: &str) -> Result<Vec<String>, ResolverError> {

@@ -186,14 +186,20 @@ disposition of all 141 checked-in styles is recorded in
      JSON and CBOR inputs carry the same key-set and explicit-null
      information and transcode losslessly into the same generic value
      tree (style documents use string-keyed maps only).
-  2. **Uniform raw-preserving ingest (`csl26-j3zy`).** Every style load
-     path must populate the raw tree through one constructor
-     (`Style::from_document_bytes(bytes, format)` or equivalent). The
-     store resolver currently bypasses `Style::from_yaml_bytes` and
-     deserializes typed structs directly, so store-resolved styles have
-     no raw tree in any format — which already makes the shipped
-     explicit-`null` clearing load-path-dependent, independent of the
-     deep-merge work.
+  2. **Uniform raw-preserving ingest (`csl26-j3zy`, fixed).** Every style
+     load path now populates the raw tree through one of the
+     raw-preserving constructors: `Style::from_document_bytes(bytes, format)`
+     for load paths that detect YAML/JSON/CBOR from the source (YAML/JSON
+     parse directly; CBOR is decoded the same way, then rejected if any map
+     uses a non-string key), or `Style::from_yaml_bytes`/`from_yaml_str` for
+     the remote and embedded paths (HTTP, Git, CID, `embedded/styles.rs`)
+     that are YAML-only by construction. The store resolver, the
+     schema-layer `file://` `extends` fallback, and the CLI's
+     `convert style` command previously deserialized typed structs directly
+     and so never populated `raw_yaml` in any format — the fix and a
+     turbofish-bypass guard
+     (`crates/citum-schema-style/tests/raw_ingest_guard.rs`) land together
+     with regression coverage in `citum_store`'s resolver tests.
   3. **Post-parse mutation guard.** Styles mutated programmatically after
      parse (tests, server overrides) carry stale `raw_yaml`; the raw path
      must verify the typed overlay still round-trips from its raw options
