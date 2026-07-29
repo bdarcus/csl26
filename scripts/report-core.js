@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Core Styles Compatibility Report Generator
+ * Style Quality and Fidelity Report Generator
  *
  * Generates a JSON report of compatibility metrics for core styles in styles/
  * and optionally produces an HTML dashboard.
@@ -572,6 +572,7 @@ function discoverCoreStyles(provenanceConfig = loadReportProvenance()) {
 
     return {
       name,
+      tier: stylePath.startsWith(`${embeddedRoot}${path.sep}`) ? 'embedded' : 'exemplar',
       sourceName,
       stylePath,
       cslReach,
@@ -2575,6 +2576,7 @@ async function processStyleReport(runtime, styleSpec, context) {
     return {
       styleRecord: {
         name: styleSpec.name,
+        tier: styleSpec.tier,
         format: styleSpec.format,
         hasBibliography: styleSpec.hasBibliography,
         ...buildPresentationFields(styleSpec, stylePolicy, sufficiencyPolicy),
@@ -2617,6 +2619,7 @@ async function processStyleReport(runtime, styleSpec, context) {
     return {
       styleRecord: {
         name: styleSpec.name,
+        tier: styleSpec.tier,
         format: styleSpec.format,
         hasBibliography: styleSpec.hasBibliography,
         ...buildPresentationFields(styleSpec, stylePolicy, sufficiencyPolicy),
@@ -2730,6 +2733,7 @@ async function processStyleReport(runtime, styleSpec, context) {
 
   const styleRecord = {
     name: styleSpec.name,
+    tier: styleSpec.tier,
     format: styleSpec.format,
     hasBibliography: styleSpec.hasBibliography,
     ...buildPresentationFields(styleSpec, stylePolicy, sufficiencyPolicy),
@@ -2815,6 +2819,7 @@ async function generateReport(options) {
   const styles = styleJobs
     .map((job) => job.styleRecord)
     .sort((left, right) => left.name.localeCompare(right.name));
+  const headlineJobs = styleJobs.filter((job) => job.styleRecord.tier === 'embedded');
   let citationsTotal = 0;
   let citationsPassed = 0;
   let biblioTotal = 0;
@@ -2835,7 +2840,7 @@ async function generateReport(options) {
   let qualityCount = 0;
   let errorCount = 0;
 
-  for (const job of styleJobs) {
+  for (const job of headlineJobs) {
     const citations = job.citations || { passed: 0, total: 0 };
     const bibliography = job.bibliography || { passed: 0, total: 0 };
     citationsTotal += citations.total || 0;
@@ -2860,7 +2865,8 @@ async function generateReport(options) {
     errorCount += job.errorCount || 0;
   }
 
-  const knownDependents = coreStyles
+  const headlineStyles = coreStyles.filter((style) => style.tier === 'embedded');
+  const knownDependents = headlineStyles
     .filter((s) => typeof s.cslReach === 'number')
     .reduce((sum, s) => sum + s.cslReach, 0);
   const totalImpact = ((knownDependents / TOTAL_DEPENDENTS) * 100).toFixed(2);
@@ -2882,6 +2888,11 @@ async function generateReport(options) {
             : 'core-styles',
         styleYamlOverride: options.styleFile ? toRepoRelativePath(options.styleFile) || options.styleFile : null,
         styles: coreStyles.map((style) => style.name),
+        portfolioTiers: {
+          headline: 'embedded',
+          embedded: headlineStyles.map((style) => style.name),
+          exemplar: coreStyles.filter((style) => style.tier === 'exemplar').map((style) => style.name),
+        },
         generator: 'scripts/report-core.js',
         richInputEvidence: {
           status: 'official-supplemental',
@@ -2909,7 +2920,8 @@ async function generateReport(options) {
         ...(options.timings ? { timings: serializeTimingSummary(runtime) } : {}),
       },
       totalImpact: parseFloat(totalImpact),
-      totalStyles: coreStyles.length,
+      totalStyles: headlineStyles.length,
+      exemplarStyles: coreStyles.length - headlineStyles.length,
       citationsOverall: { passed: citationsPassed, total: citationsTotal },
       bibliographyOverall: {
         passed: biblioPassed,
@@ -2964,9 +2976,9 @@ function generateHtmlHeader(report) {
 <head>
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
-    <title>Citum | Style Compatibility Report</title>
+    <title>Citum | Style Quality &amp; Fidelity Report</title>
     <meta name="description"
-        content="Compatibility metrics for Citum against declared style authority sources.">
+        content="Embedded-style fidelity, implementation quality, and portfolio metrics for Citum.">
 
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries,typography"></script>
     <link
@@ -3095,9 +3107,9 @@ function generateHtmlHeader(report) {
             <div class="flex items-center justify-between mb-6">
                 <div>
                     <h1 class="text-4xl md:text-5xl font-bold tracking-tight text-slate-900 mb-2">
-                        Style Compatibility Report
+                        Style Quality &amp; Fidelity Report
                     </h1>
-                    <p class="text-slate-500">Compatibility metrics for styles in <code>styles/</code></p>
+                    <p class="text-slate-500">Embedded-style parity, implementation quality, and portfolio status</p>
                 </div>
             </div>
             <div class="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
@@ -3108,7 +3120,7 @@ function generateHtmlHeader(report) {
                 </div>
             </div>
             <div class="mt-5 flex flex-wrap gap-3 text-sm font-medium">
-                <a class="text-primary hover:underline" href="compat.html">Compatibility</a>
+                <a class="text-primary hover:underline" href="compat.html">Style Quality &amp; Fidelity</a>
                 <a class="text-slate-600 hover:text-primary transition-colors" href="behavior-report.html">Engine Behavior Coverage</a>
                 <a class="text-slate-600 hover:text-primary transition-colors" href="migration-behavior-report.html">Migration Behavior Coverage</a>
             </div>
@@ -3138,9 +3150,9 @@ function generateHtmlStats(report) {
             <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-6">
                 <!-- Core Styles -->
                 <div class="bg-[var(--citum-surface)] rounded-xl border border-slate-200 p-6">
-                    <div class="text-sm font-medium text-slate-500 mb-2">Core Styles</div>
+                    <div class="text-sm font-medium text-slate-500 mb-2">Embedded Styles</div>
                     <div class="text-3xl font-bold text-slate-900">${report.totalStyles}</div>
-                    <div class="text-xs text-slate-400 mt-2">${report.totalImpact}% known CSL dependent coverage</div>
+                    <div class="text-xs text-slate-400 mt-2">${report.totalImpact}% known CSL dependent coverage · ${report.exemplarStyles || 0} exemplars reported separately</div>
                 </div>
 
                 <!-- Citations Overall -->

@@ -67,11 +67,8 @@ test('discoverCoreStyles classifies representative style origins and CSL reach',
   assert.equal(styles.get('apa-7th').cslReach, 783);
   assert.equal(styles.get('apa-7th').hasBibliography, true);
 
-  assert.equal(styles.get('chem-acs').originLabel, provenance.defaults.labels['biblatex-derived']);
-  assert.equal(styles.get('chem-acs').cslReach, null);
-
-  assert.equal(styles.get('numeric-comp').originLabel, provenance.defaults.labels['biblatex-derived']);
-  assert.equal(styles.get('numeric-comp').cslReach, null);
+  assert.equal(styles.get('apa-7th').tier, 'embedded');
+  assert.equal(styles.get('american-chemical-society').tier, 'exemplar');
 
   const unknownOrigins = [...styles.values()].filter((style) => style.originLabel === 'Unknown');
   assert.deepEqual(unknownOrigins, []);
@@ -644,8 +641,8 @@ test('verification policy exposes registered divergence metadata for div-005', (
 test('citation-only note styles do not advertise bibliography verification scopes', () => {
   const styles = loadStyleMap();
   const policy = loadVerificationPolicy();
-  const chicagoNotesClassic = styles.get('chicago-notes-classic');
-  const stylePolicy = resolveVerificationPolicy('chicago-notes-classic', policy);
+  const chicagoNotesClassic = styles.get('chicago-notes-18th');
+  const stylePolicy = resolveVerificationPolicy('chicago-notes-18th', policy);
 
   assert.equal(chicagoNotesClassic.hasBibliography, false);
   assert.deepEqual(getEffectiveVerificationScopes(stylePolicy, chicagoNotesClassic.hasBibliography), ['citation']);

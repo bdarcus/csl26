@@ -1,6 +1,6 @@
 {
-  "generated": "2026-04-12T01:28:23.988Z",
-  "commit": "8bd1fd11",
+  "generated": "2026-07-29T19:24:47.721Z",
+  "commit": "7d531919",
   "source": "scripts/report-core.js",
   "metadata": {
     "timestamp": "2026-04-12T01:28:23.988Z",
@@ -38,67 +38,60 @@
     },
     "oracleComparison": {
       "caseSensitive": true
+    },
+    "portfolioTiers": {
+      "headline": "embedded",
+      "embedded": [
+        "american-medical-association",
+        "apa-7th",
+        "chicago-author-date-18th",
+        "chicago-notes-18th",
+        "chicago-shortened-notes-bibliography",
+        "elsevier-harvard",
+        "elsevier-vancouver",
+        "elsevier-with-titles",
+        "gb-t-7714-2025-author-date",
+        "gb-t-7714-2025-note",
+        "gb-t-7714-2025-numeric",
+        "ieee",
+        "modern-language-association",
+        "springer-basic-author-date",
+        "springer-basic-brackets",
+        "springer-vancouver-brackets",
+        "taylor-and-francis-chicago-author-date",
+        "taylor-and-francis-council-of-science-editors-author-date",
+        "taylor-and-francis-national-library-of-medicine"
+      ],
+      "exemplar": [
+        "american-chemical-society",
+        "american-mathematical-society-label",
+        "american-medical-association-alphabetical",
+        "american-society-of-mechanical-engineers",
+        "chicago-notes-bibliography-17th-edition",
+        "elsevier-vancouver-author-date",
+        "entomological-society-of-america",
+        "harvard-cite-them-right",
+        "international-journal-of-wildland-fire",
+        "mhra-notes",
+        "nature",
+        "oscola",
+        "oscola-no-ibid",
+        "royal-society-of-chemistry",
+        "thomson-reuters-legal-tax-and-accounting-australia"
+      ]
     }
   },
   "styles": {
-    "american-institute-of-aeronautics-and-astronautics": {
-      "fidelityScore": 1,
-      "quality": 92.9,
-      "concision": 71.6,
-      "presetUsage": 100
-    },
-    "bmj": {
-      "fidelityScore": 1,
-      "quality": 94.1,
-      "concision": 76.5,
-      "presetUsage": 100
-    },
-    "current-opinion": {
-      "fidelityScore": 1,
-      "quality": 97,
-      "concision": 87.8,
-      "presetUsage": 100
-    },
-    "hainan-medical-university-journal-publisher": {
-      "fidelityScore": 1,
-      "quality": 92.1,
-      "concision": 68.5,
-      "presetUsage": 100
-    },
     "ieee": {
       "fidelityScore": 1,
       "quality": 83.9,
       "concision": 35.7,
       "presetUsage": 100
     },
-    "nature-publishing-group-vancouver": {
-      "fidelityScore": 1,
-      "quality": 93.9,
-      "concision": 75.5,
-      "presetUsage": 100
-    },
-    "nlm-citation-sequence-superscript-brackets-year-only": {
-      "fidelityScore": 1,
-      "quality": 95.7,
-      "concision": 82.6,
-      "presetUsage": 100
-    },
-    "plos": {
-      "fidelityScore": 1,
-      "quality": 91.5,
-      "concision": 66.1,
-      "presetUsage": 100
-    },
     "springer-vancouver-brackets": {
       "fidelityScore": 1,
       "quality": 93.2,
       "concision": 72.8,
-      "presetUsage": 100
-    },
-    "taylor-and-francis-national-library-of-medicine": {
-      "fidelityScore": 1,
-      "quality": 88.1,
-      "concision": 52.5,
       "presetUsage": 100
     }
   }
