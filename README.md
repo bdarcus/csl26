@@ -29,6 +29,7 @@ JavaScript/TypeScript (WASM): `npx jsr add @citum/engine`
 - **Richer reference and style model** — expressive reference types, dates, and relationships beyond what CSL 1.0 can represent; see [capabilities](https://docs.citum.org/examples.html)
 - **Declarative YAML styles** — human-readable, diff-friendly, and toolable; no procedural XML
 - **Evolvable foundations** — a type-safe model and scoped `extends` inheritance make style behavior explicit and reusable as the ecosystem grows
+- **Evolvable foundations** — a type-safe model and scoped `extends` inheritance make style behavior explicit and reusable as the ecosystem grows
 - **Type-safe schema** — styles are fully validated at load time; invalid styles are rejected, not silently misrendered
 - **Oracle-verified rendering** — parity targets against citeproc-js (CSL ecosystem) and biblatex; regressions caught automatically
 - **Deploy anywhere** — the same engine runs as a CLI binary, a WASM module, a JSON-RPC server, or via C FFI
@@ -62,6 +63,7 @@ output and some language bindings are experimental.
 For live metrics — do not rely on any hardcoded numbers in this file:
 
 - Style quality & fidelity report: [`citum.github.io/citum-core/compat.html`](https://citum.github.io/citum-core/compat.html)
+- Style portfolio: the embedded core is tuned toward exact-text parity; exemplars and the [community corpus](https://github.com/citum/citum-styles) extend coverage without changing that product-surface promise.
 - Style portfolio: the embedded core is tuned toward exact-text parity; exemplars and the [community corpus](https://github.com/citum/citum-styles) extend coverage without changing that product-surface promise.
 
 ## For App Developers

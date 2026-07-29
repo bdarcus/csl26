@@ -10,6 +10,14 @@ embedded parents through the registry filesystem layer.
 
 `styles/experimental/` remains outside these tier rules.
 
+| Tier | Location | Purpose |
+|---|---|---|
+| Embedded | `embedded/` | Compiled product surface, tuned toward exact-text parity. |
+| Exemplar | this directory | Fixtures, wrapper examples, and unique behavior coverage. |
+| Community | [`citum-styles`](https://github.com/citum/citum-styles) | Runtime-resolved extensions with advisory parity. |
+
+The initial disposition is recorded in [`scripts/report-data/style-disposition-2026-07-28.tsv`](../scripts/report-data/style-disposition-2026-07-28.tsv); the governing policy is [`STYLE_INHERITANCE.md`](../docs/specs/STYLE_INHERITANCE.md).
+
 `docs/compat.html` now reports two complementary metrics:
 
 - `Fidelity`: output match rate against citeproc-js oracle.
