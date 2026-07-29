@@ -109,6 +109,9 @@ impl DateConfigEntry {
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub struct DateConfig {
+    /// Month display format (defaults to `long`), so partial `dates` blocks
+    /// can override single fields without redeclaring the month format.
+    #[serde(default)]
     pub month: MonthFormat,
     /// Marker for uncertain dates (e.g., "?" or "uncertain"). None suppresses display.
     #[serde(skip_serializing_if = "Option::is_none")]

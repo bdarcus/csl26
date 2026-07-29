@@ -3386,7 +3386,7 @@
           }
         },
         "substitute": {
-          "description": "Substitution rules for missing data.",
+          "description": "Substitution rules for missing data. Accepts a preset name (e.g.\n\"standard\") or explicit configuration.",
           "anyOf": [
             {
               "$ref": "#/$defs/SubstituteConfig"
@@ -5257,7 +5257,9 @@
       "type": "object",
       "properties": {
         "month": {
-          "$ref": "#/$defs/MonthFormat"
+          "description": "Month display format (defaults to `long`), so partial `dates` blocks\ncan override single fields without redeclaring the month format.",
+          "$ref": "#/$defs/MonthFormat",
+          "default": "long"
         },
         "uncertainty-marker": {
           "description": "Marker for uncertain dates (e.g., \"?\" or \"uncertain\"). None suppresses display.",
@@ -5364,9 +5366,6 @@
           ]
         }
       },
-      "required": [
-        "month"
-      ],
       "unevaluatedProperties": false
     },
     "MonthFormat": {
@@ -5511,8 +5510,11 @@
       "type": "object",
       "properties": {
         "type-mapping": {
-          "description": "Mapping of reference types to title categories.\nCategory keys: monograph, periodical, component.\nExample: { \"thesis\": \"monograph\", \"article-journal\": \"periodical\" }",
-          "type": "object",
+          "description": "Mapping of reference types to title categories.\nCategory keys: monograph, periodical, component.\nExample: { \"thesis\": \"monograph\", \"article-journal\": \"periodical\" }\n`None` means \"not configured at this level\" and will not override an\ninherited value; explicit `type-mapping: ~` clears an inherited\nmapping entirely (see `docs/specs/STYLE_INHERITANCE.md`).",
+          "type": [
+            "object",
+            "null"
+          ],
           "additionalProperties": {
             "type": "string"
           }
@@ -6417,7 +6419,7 @@
       "type": "object",
       "properties": {
         "substitute": {
-          "description": "Substitution rules for missing data.",
+          "description": "Substitution rules for missing data. Accepts a preset name (e.g.\n\"standard\") or explicit configuration.",
           "anyOf": [
             {
               "$ref": "#/$defs/SubstituteConfig"
@@ -7280,7 +7282,7 @@
       "type": "object",
       "properties": {
         "substitute": {
-          "description": "Substitution rules for missing data.",
+          "description": "Substitution rules for missing data. Accepts a preset name (e.g.\n\"standard\") or explicit configuration.",
           "anyOf": [
             {
               "$ref": "#/$defs/SubstituteConfig"

@@ -424,7 +424,12 @@ pub fn get_title_category_title_rendering(
     let titles_config = config.titles.as_ref()?;
 
     // Use type_mapping if available to resolve category
-    let mapped_category = ref_type.and_then(|rt| titles_config.type_mapping.get(rt));
+    let mapped_category = ref_type.and_then(|rt| {
+        titles_config
+            .type_mapping
+            .as_ref()
+            .and_then(|mapping| mapping.get(rt))
+    });
 
     use crate::values::type_class::TitleCategory;
 

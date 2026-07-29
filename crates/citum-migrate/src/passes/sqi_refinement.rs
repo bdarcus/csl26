@@ -408,7 +408,12 @@ fn effective_title_rendering(
         TitleDefaultContext::Unknown => return None,
     };
     let titles = options.titles.as_ref()?;
-    let mapped_category = ref_type.and_then(|rt| titles.type_mapping.get(rt));
+    let mapped_category = ref_type.and_then(|rt| {
+        titles
+            .type_mapping
+            .as_ref()
+            .and_then(|mapping| mapping.get(rt))
+    });
 
     let rendering = match title_type {
         TitleType::ContainerTitle => {
@@ -988,7 +993,7 @@ mod tests {
         let style = Style {
             options: Some(citum_schema::options::Config {
                 titles: Some(TitlesConfig {
-                    type_mapping,
+                    type_mapping: Some(type_mapping),
                     periodical: Some(TitleRendering {
                         text_case: Some(TextCase::SentenceApa),
                         ..TitleRendering::default()

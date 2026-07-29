@@ -75,8 +75,13 @@ pub struct Config {
     /// Style-owned MF2 messages, inherited and merged by message ID.
     #[serde(default, skip_serializing_if = "HashMap::is_empty")]
     pub messages: HashMap<String, String>,
-    /// Substitution rules for missing data.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    /// Substitution rules for missing data. Accepts a preset name (e.g.
+    /// "standard") or explicit configuration.
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "deserialize_substitute_config",
+        default
+    )]
     pub substitute: Option<SubstituteConfig>,
     /// Processing mode (author-date, numeric, etc.).
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -194,8 +199,13 @@ pub struct Config {
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub struct CitationOptions {
-    /// Substitution rules for missing data.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    /// Substitution rules for missing data. Accepts a preset name (e.g.
+    /// "standard") or explicit configuration.
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "deserialize_substitute_config",
+        default
+    )]
     pub substitute: Option<SubstituteConfig>,
     /// Processing mode (author-date, numeric, etc.).
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -294,8 +304,13 @@ pub struct CitationOptions {
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub struct BibliographyOptions {
-    /// Substitution rules for missing data.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    /// Substitution rules for missing data. Accepts a preset name (e.g.
+    /// "standard") or explicit configuration.
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "deserialize_substitute_config",
+        default
+    )]
     pub substitute: Option<SubstituteConfig>,
     /// Processing mode (author-date, numeric, etc.).
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -972,6 +987,28 @@ where
     Ok(value.map(|entry| entry.resolve()))
 }
 
+/// Deserialize substitute config from either a preset name or explicit config.
+///
+/// Eagerly resolves a `Preset` variant to its `Explicit` form (mirroring
+/// `deserialize_contributor_config`/`deserialize_date_config`/etc.), so the
+/// typed value always serializes as a mapping. Without this, the `extends`
+/// overlay's raw-YAML deep merge (`style/overlay.rs`) sees a preset-name
+/// scalar for an authored `substitute: <preset>` override and whole-replaces
+/// the inherited `Substitute` block instead of field-merging it, silently
+/// dropping fields the preset doesn't set (e.g. `role-substitute`).
+fn deserialize_substitute_config<'de, D>(
+    deserializer: D,
+) -> Result<Option<SubstituteConfig>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let value: Option<SubstituteConfig> = Option::deserialize(deserializer)?;
+    Ok(value.map(|config| match config {
+        SubstituteConfig::Preset(preset) => SubstituteConfig::Explicit(preset.config()),
+        explicit @ SubstituteConfig::Explicit(_) => explicit,
+    }))
+}
+
 /// Deserialize multilingual config from either a preset name or an explicit block.
 fn deserialize_multilingual_config<'de, D>(
     deserializer: D,
@@ -997,7 +1034,11 @@ impl<'de> Deserialize<'de> for Config {
         struct ConfigWire {
             #[serde(default)]
             messages: HashMap<String, String>,
-            #[serde(skip_serializing_if = "Option::is_none")]
+            #[serde(
+                skip_serializing_if = "Option::is_none",
+                deserialize_with = "deserialize_substitute_config",
+                default
+            )]
             substitute: Option<SubstituteConfig>,
             #[serde(skip_serializing_if = "Option::is_none")]
             processing: Option<Processing>,
