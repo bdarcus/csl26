@@ -35,7 +35,7 @@ fn project_root() -> PathBuf {
 
 fn load_style(path: &Path) -> Style {
     let bytes = fs::read(path).expect("style fixture should be readable");
-    serde_yaml::from_slice(&bytes).expect("style fixture should parse")
+    Style::from_yaml_bytes(&bytes).expect("style fixture should parse")
 }
 
 fn single_item_citation(id: &str) -> Citation {
