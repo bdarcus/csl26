@@ -74,8 +74,11 @@ pub struct TitlesConfig {
     /// Mapping of reference types to title categories.
     /// Category keys: monograph, periodical, component.
     /// Example: { "thesis": "monograph", "article-journal": "periodical" }
-    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
-    pub type_mapping: HashMap<String, String>,
+    /// `None` means "not configured at this level" and will not override an
+    /// inherited value; explicit `type-mapping: ~` clears an inherited
+    /// mapping entirely (see `docs/specs/STYLE_INHERITANCE.md`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub type_mapping: Option<HashMap<String, String>>,
     /// Formatting for component titles (articles, chapters).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub component: Option<TitleRendering>,

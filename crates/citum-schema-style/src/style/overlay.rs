@@ -25,6 +25,104 @@ macro_rules! clear_raw_nulls {
     };
 }
 
+/// Recursively merge overlay YAML into base YAML, mapping-by-mapping.
+///
+/// Overlay keys win; an explicitly null overlay key removes the base key so
+/// the field re-resolves to its default (or `None`) on deserialization; any
+/// non-mapping overlay value (scalar, sequence, preset name) replaces the
+/// base value whole. These are the `extends` merge rules of
+/// `docs/specs/STYLE_INHERITANCE.md`.
+fn deep_merge_yaml_value(base: &mut serde_yaml::Value, overlay: &serde_yaml::Value) {
+    match (base, overlay) {
+        (serde_yaml::Value::Mapping(base_map), serde_yaml::Value::Mapping(overlay_map)) => {
+            for (key, overlay_value) in overlay_map {
+                if overlay_value.is_null() {
+                    base_map.remove(key);
+                } else if let Some(base_value) = base_map.get_mut(key) {
+                    deep_merge_yaml_value(base_value, overlay_value);
+                } else {
+                    base_map.insert(key.clone(), overlay_value.clone());
+                }
+            }
+        }
+        (base_value, overlay_value) => *base_value = overlay_value.clone(),
+    }
+}
+
+/// Substitute preset-name strings in authored options YAML with the resolved
+/// mapping from the typed overlay.
+///
+/// A preset reference like `contributors: springer` resolves to a config
+/// struct at deserialization; layering that resolved block field-by-field
+/// over the inherited one (biblatex option layering) is the established
+/// semantics, so the raw string must not replace the inherited mapping whole.
+/// Recursion follows the authored keys; typed values are consulted only where
+/// a resolved mapping exists for an authored string.
+fn effective_overlay_options(
+    raw: &serde_yaml::Value,
+    typed: &serde_yaml::Value,
+) -> serde_yaml::Value {
+    match (raw, typed) {
+        (serde_yaml::Value::String(_), serde_yaml::Value::Mapping(_)) => typed.clone(),
+        (serde_yaml::Value::Mapping(raw_map), serde_yaml::Value::Mapping(typed_map)) => {
+            let mut out = serde_yaml::Mapping::new();
+            for (key, raw_value) in raw_map {
+                let effective = match typed_map.get(key) {
+                    Some(typed_value) => effective_overlay_options(raw_value, typed_value),
+                    None => raw_value.clone(),
+                };
+                out.insert(key.clone(), effective);
+            }
+            serde_yaml::Value::Mapping(out)
+        }
+        _ => raw.clone(),
+    }
+}
+
+/// Deep-merge the overlay's authored `options` YAML over resolved base options.
+///
+/// Serializes the base options struct, merges the overlay's raw `options`
+/// mapping (with preset strings expanded via [`effective_overlay_options`])
+/// onto it via [`deep_merge_yaml_value`], and deserializes the result.
+/// Working on the raw mapping means only keys the style author actually wrote
+/// override the parent — fields left unwritten inherit, even inside nested
+/// blocks whose struct fields carry serde defaults (the `csl26-svfg` gap).
+///
+/// Returns `None` when the overlay's raw options are absent or not a mapping
+/// (e.g. programmatic construction without `raw_yaml`), when the typed
+/// overlay no longer matches its raw YAML (programmatic mutation after
+/// parse — e.g. a caller setting options before `into_resolved`), or on any
+/// serde round-trip failure; callers fall back to the typed whole-field
+/// merge in all these cases.
+fn deep_merge_options_from_raw<T>(
+    base: &T,
+    overlay_typed: &T,
+    raw_options: Option<&serde_yaml::Value>,
+) -> Option<T>
+where
+    T: serde::Serialize + serde::de::DeserializeOwned + PartialEq,
+{
+    let raw = raw_options?;
+    if !raw.is_mapping() {
+        return None;
+    }
+    let authored: T = serde_yaml::from_value(raw.clone()).ok()?;
+    if authored != *overlay_typed {
+        return None;
+    }
+    let typed_value = serde_yaml::to_value(overlay_typed).ok()?;
+    let effective = effective_overlay_options(raw, &typed_value);
+    let mut base_value = serde_yaml::to_value(base).ok()?;
+    deep_merge_yaml_value(&mut base_value, &effective);
+    serde_yaml::from_value(base_value).ok()
+}
+
+/// Look up the raw `options` mapping inside a raw YAML section.
+fn raw_options_of(raw: Option<&serde_yaml::Value>) -> Option<&serde_yaml::Value> {
+    raw?.as_mapping()
+        .and_then(|m| m.get(serde_yaml::Value::String("options".to_string())))
+}
+
 /// Merge an overlay style into a base style, with the overlay taking precedence.
 ///
 /// Uses typed field merges throughout, preserving null-aware semantics for
@@ -60,10 +158,21 @@ pub(crate) fn merge_style_overlay(base: &mut Style, overlay: &Style) {
         }
     }
 
-    // Merge options: use Config::merge (already typed)
+    // Merge options: deep-merge authored raw keys over the resolved base
+    // (STYLE_INHERITANCE.md rule 1); fall back to the typed whole-field
+    // merge when no raw YAML is available.
     if let Some(overlay_options) = &overlay.options {
         match &mut base.options {
-            Some(existing) => existing.merge(overlay_options),
+            Some(existing) => {
+                let raw_options = raw_options_of(overlay.raw_yaml.as_ref());
+                if let Some(merged) =
+                    deep_merge_options_from_raw(existing, overlay_options, raw_options)
+                {
+                    *existing = merged;
+                } else {
+                    existing.merge(overlay_options);
+                }
+            }
             None => base.options = Some(overlay_options.clone()),
         }
     }
@@ -229,9 +338,17 @@ fn merge_citation_spec(
         }
     }
 
-    // Merge options: CitationOptions has .merge()
+    // Merge options: deep-merge authored raw keys (STYLE_INHERITANCE.md
+    // rule 1), falling back to the typed CitationOptions::merge.
     match (&mut base.options, &overlay.options) {
-        (Some(existing), Some(other)) => existing.merge(other),
+        (Some(existing), Some(other)) => {
+            if let Some(merged) = deep_merge_options_from_raw(existing, other, raw_options_of(raw))
+            {
+                *existing = merged;
+            } else {
+                existing.merge(other);
+            }
+        }
         (None, Some(other)) => base.options = Some(other.clone()),
         _ => {}
     }
@@ -337,9 +454,17 @@ fn merge_bibliography_spec(
         base.groups = overlay.groups.clone();
     }
 
-    // Merge options: BibliographyOptions has .merge()
+    // Merge options: deep-merge authored raw keys (STYLE_INHERITANCE.md
+    // rule 1), falling back to the typed BibliographyOptions::merge.
     match (&mut base.options, &overlay.options) {
-        (Some(existing), Some(other)) => existing.merge(other),
+        (Some(existing), Some(other)) => {
+            if let Some(merged) = deep_merge_options_from_raw(existing, other, raw_options_of(raw))
+            {
+                *existing = merged;
+            } else {
+                existing.merge(other);
+            }
+        }
         (None, Some(other)) => base.options = Some(other.clone()),
         _ => {}
     }

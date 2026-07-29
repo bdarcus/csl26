@@ -22,7 +22,7 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus and Citum contributors
 //! are resolved deterministically and predictably in `merge_style_overlay`.
 
 use citum_schema_style::{
-    Style,
+    Style, StyleDocumentFormat,
     locale::GeneralTerm,
     template::{SimpleVariable, TemplateComponent, TypeSelector},
 };
@@ -502,5 +502,325 @@ bibliography:
     assert!(
         resolved.bibliography.as_ref().unwrap().options.is_none(),
         "explicit `bibliography.options: ~` did not clear inherited options"
+    );
+}
+
+/// Shared parent for the nested-option deep-merge cases: a fully populated
+/// `dates` block at both global and bibliography scope.
+fn nested_options_base_yaml() -> &'static str {
+    r#"
+version: "0.44.0"
+info: { id: base }
+options:
+  dates:
+    month: numeric
+    uncertainty-marker: '?'
+    approximation-marker: '['
+    approximation-marker-suffix: ']'
+    range-delimiter: "—"
+bibliography:
+  options:
+    dates:
+      month: numeric
+      uncertainty-marker: '?'
+      approximation-marker: '['
+      approximation-marker-suffix: ']'
+  template:
+    - variable: doi
+"#
+}
+
+#[rstest]
+#[case::bibliography_scope_adds_one_field(
+    r#"
+extends: base
+info: { id: overlay }
+bibliography:
+  options:
+    dates:
+      note-wrap: parentheses
+"#,
+    |resolved: &Style| {
+        let dates = resolved
+            .bibliography
+            .as_ref()
+            .expect("bibliography inherited")
+            .options
+            .as_ref()
+            .expect("bibliography options inherited")
+            .dates
+            .as_ref()
+            .expect("dates block present");
+        assert!(dates.note_wrap.is_some(), "authored note-wrap must apply");
+        assert_eq!(
+            dates.approximation_marker.as_deref(),
+            Some("["),
+            "inherited sibling field must survive a partial override"
+        );
+        assert_eq!(dates.uncertainty_marker.as_deref(), Some("?"));
+    }
+)]
+#[case::global_scope_scalar_replaces(
+    r#"
+extends: base
+info: { id: overlay }
+options:
+  dates:
+    range-delimiter: "-"
+"#,
+    |resolved: &Style| {
+        let dates = resolved
+            .options
+            .as_ref()
+            .expect("global options inherited")
+            .dates
+            .as_ref()
+            .expect("dates block present");
+        assert_eq!(dates.range_delimiter, "-", "authored scalar must replace");
+        assert_eq!(
+            dates.uncertainty_marker.as_deref(),
+            Some("?"),
+            "inherited sibling field must survive a scalar override"
+        );
+    }
+)]
+#[case::null_clears_one_optional_field(
+    r#"
+extends: base
+info: { id: overlay }
+options:
+  dates:
+    uncertainty-marker: ~
+"#,
+    |resolved: &Style| {
+        let dates = resolved
+            .options
+            .as_ref()
+            .expect("global options inherited")
+            .dates
+            .as_ref()
+            .expect("dates block present");
+        assert!(
+            dates.uncertainty_marker.is_none(),
+            "explicit null must clear the inherited field"
+        );
+        assert_eq!(
+            dates.approximation_marker.as_deref(),
+            Some("["),
+            "sibling fields must survive a targeted null"
+        );
+    }
+)]
+#[case::preset_string_layers_over_inherited_block(
+    r#"
+extends: base
+info: { id: overlay }
+options:
+  dates: numeric
+"#,
+    |resolved: &Style| {
+        let dates = resolved
+            .options
+            .as_ref()
+            .expect("global options inherited")
+            .dates
+            .as_ref()
+            .expect("dates block present");
+        assert_eq!(
+            dates.month,
+            citum_schema_style::options::MonthFormat::Numeric,
+            "preset-defined field must apply"
+        );
+        assert_eq!(
+            dates.approximation_marker_suffix.as_deref(),
+            Some("]"),
+            "optional field unset by the preset must inherit from the parent"
+        );
+        assert_eq!(
+            dates.range_delimiter, "–",
+            "non-optional preset fields fully determine their value"
+        );
+    }
+)]
+fn given_inherited_nested_options_when_child_partially_overrides_then_untouched_fields_survive(
+    #[case] overlay_yaml: &str,
+    #[case] assertion: fn(&Style),
+) {
+    let base = Style::from_yaml_str(nested_options_base_yaml()).expect("valid base style");
+    let overlay = Style::from_yaml_str(overlay_yaml).expect("valid overlay style");
+    let mut visited = HashSet::new();
+    let resolved = overlay
+        .try_into_resolved_recursive_with(Some(&make_resolver(base)), &mut visited)
+        .expect("resolution succeeds");
+    assertion(&resolved);
+}
+
+/// A preset-string override for a scoped-option field (`contributors: springer`,
+/// `substitute: standard`) must layer only the preset's own fields over the
+/// inherited block, not whole-replace it — the preset target types resolve
+/// eagerly at parse time (`deserialize_contributor_config`,
+/// `deserialize_substitute_config`, etc.) precisely so the raw-YAML deep
+/// merge sees a mapping to field-merge rather than a scalar to replace.
+/// Regression coverage for a real bug found auditing `gb-t-7714-2025-*`:
+/// `substitute: standard` was whole-replacing an inherited
+/// `role-substitute` because `SubstituteConfig` lacked the eager-resolve
+/// deserializer the other preset-target fields already had.
+#[test]
+fn preset_string_override_preserves_inherited_sibling_fields_not_covered_by_the_preset() {
+    let base_yaml = r#"
+version: "0.44.0"
+info: { id: base }
+options:
+  contributors:
+    demote-non-dropping-particle: never
+  substitute:
+    template:
+      - editor
+    role-substitute:
+      container-author:
+        - editor
+        - collection-editor
+"#;
+    let overlay_yaml = r#"
+extends: base
+info: { id: overlay }
+options:
+  contributors: springer
+  substitute: standard
+"#;
+    let base = Style::from_yaml_str(base_yaml).expect("valid base style");
+    let overlay = Style::from_yaml_str(overlay_yaml).expect("valid overlay style");
+    let mut visited = HashSet::new();
+    let resolved = overlay
+        .try_into_resolved_recursive_with(Some(&make_resolver(base)), &mut visited)
+        .expect("resolution succeeds");
+
+    let options = resolved.options.as_ref().expect("global options inherited");
+
+    let contributors = options
+        .contributors
+        .as_ref()
+        .expect("contributors block present");
+    assert_eq!(
+        contributors.demote_non_dropping_particle,
+        Some(citum_schema_style::options::DemoteNonDroppingParticle::Never),
+        "the springer preset does not set demote-non-dropping-particle, so the \
+         inherited value must survive"
+    );
+    assert_eq!(
+        contributors.name_form,
+        Some(citum_schema_style::options::NameForm::Initials),
+        "fields the springer preset does define must still apply"
+    );
+
+    let substitute = options
+        .substitute
+        .as_ref()
+        .expect("substitute block present")
+        .resolve();
+    assert_eq!(
+        substitute.role_substitute.get("container-author"),
+        Some(&vec!["editor".to_string(), "collection-editor".to_string()]),
+        "the standard preset does not set role-substitute, so the inherited \
+         chain must survive"
+    );
+    assert_eq!(
+        substitute.template,
+        vec![
+            citum_schema_style::options::SubstituteKey::Editor,
+            citum_schema_style::options::SubstituteKey::Title,
+            citum_schema_style::options::SubstituteKey::Translator,
+        ],
+        "the standard preset's own template must apply"
+    );
+}
+
+/// A JSON-authored child produces the same resolved style as its YAML
+/// equivalent — the raw-presence basis deep merge reads from must be
+/// format-neutral (`csl26-j3zy`), not YAML-specific.
+#[test]
+fn json_authored_child_deep_merges_identically_to_yaml_equivalent() {
+    let base = Style::from_yaml_str(nested_options_base_yaml()).expect("valid base style");
+
+    let yaml_overlay = Style::from_yaml_str(
+        r#"
+extends: base
+info: { id: overlay }
+bibliography:
+  options:
+    dates:
+      note-wrap: parentheses
+"#,
+    )
+    .expect("valid yaml overlay");
+
+    let json_overlay = Style::from_document_bytes(
+        br#"{
+            "extends": "base",
+            "info": { "id": "overlay" },
+            "bibliography": { "options": { "dates": { "note-wrap": "parentheses" } } }
+        }"#,
+        StyleDocumentFormat::Json,
+    )
+    .expect("valid json overlay");
+
+    let mut yaml_visited = HashSet::new();
+    let yaml_resolved = yaml_overlay
+        .try_into_resolved_recursive_with(Some(&make_resolver(base.clone())), &mut yaml_visited)
+        .expect("yaml resolution succeeds");
+
+    let mut json_visited = HashSet::new();
+    let json_resolved = json_overlay
+        .try_into_resolved_recursive_with(Some(&make_resolver(base)), &mut json_visited)
+        .expect("json resolution succeeds");
+
+    let yaml_dates = yaml_resolved
+        .bibliography
+        .as_ref()
+        .and_then(|b| b.options.as_ref())
+        .and_then(|o| o.dates.as_ref())
+        .expect("yaml dates present");
+    let json_dates = json_resolved
+        .bibliography
+        .as_ref()
+        .and_then(|b| b.options.as_ref())
+        .and_then(|o| o.dates.as_ref())
+        .expect("json dates present");
+
+    assert_eq!(
+        json_dates, yaml_dates,
+        "a JSON-authored partial override must deep-merge identically to the \
+         same override authored in YAML"
+    );
+    assert!(
+        json_dates.note_wrap.is_some(),
+        "authored note-wrap must apply"
+    );
+    assert_eq!(
+        json_dates.approximation_marker.as_deref(),
+        Some("["),
+        "inherited sibling field must survive regardless of authoring format"
+    );
+}
+
+/// Explicit `null` on a non-`Option` scalar that carries a serde default
+/// (e.g. `dates.range-delimiter`, a `String` with `#[serde(default = ...)]`)
+/// is a parse error, not a silent reset to the default — STYLE_INHERITANCE.md
+/// rule 3. If this ever stops erroring, the raw deep-merge path would fall
+/// back to the typed whole-field merge without anyone noticing.
+#[test]
+fn null_on_defaulted_non_option_scalar_is_a_parse_error() {
+    let yaml = r#"
+version: "0.44.0"
+info: { id: base }
+options:
+  dates:
+    range-delimiter: ~
+"#;
+    let result = Style::from_yaml_str(yaml);
+    assert!(
+        result.is_err(),
+        "null on a non-Option scalar field must fail to parse, not silently \
+         reset to the field's serde default"
     );
 }
