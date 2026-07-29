@@ -59,7 +59,12 @@ options:
     uncertainty-marker: '?'
     approximation-marker: 'ca. '
     range-delimiter: –
+  # Book titles render plain, not italic (citeproc-js: "A Brief History of
+  # Time." with no markup), so the inherited american-medical-association
+  # (humanities preset) monograph emphasis must be cleared here. See
+  # csl26-svfg / STYLE_INHERITANCE.md rule 1 and 3.
   titles:
+    monograph: ~
     periodical:
       emph: true
     serial:
