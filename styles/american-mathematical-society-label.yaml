@@ -33,8 +33,15 @@ options:
     delimiter: ', '
     delimiter-precedes-last: always
     sort-separator: ', '
+  # container-monograph must be set explicitly (not left to fall back to
+  # monograph) because the inherited elsevier-with-titles-core ancestor
+  # already sets an inert container-monograph block; deep merge preserves
+  # that inert block over the ParentMonograph fallback to monograph. See
+  # csl26-svfg / STYLE_INHERITANCE.md rule 1 and 3.
   titles:
     monograph:
+      emph: true
+    container-monograph:
       emph: true
     periodical:
       emph: true

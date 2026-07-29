@@ -8,7 +8,7 @@ tags:
     - style
     - architecture
 created_at: 2026-07-20T17:50:16Z
-updated_at: 2026-07-29T16:04:12Z
+updated_at: 2026-07-29T18:04:24Z
 parent: csl26-s2rw
 ---
 
@@ -104,7 +104,40 @@ in-repo styles against `main`, not just a manual review):
   book titles (AIAA quotes them; Inter-Research uses no markup). Cleared
   `monograph` explicitly in each wrapper's own titles block to restore
   their citeproc-verified rendering.
-- No other embedded or in-repo style's rendered output changed.
+- `american-mathematical-society-label` separately lost emphasis on
+  *parent*-monograph (container) titles despite its own `monograph.emph:
+  true`: its ancestor `elsevier-with-titles-core` sets an inert
+  `container-monograph: {text-case: as-is}` block. Under old whole-replace,
+  the child's `titles:` block (which never mentions `container-monograph`)
+  replaced the ancestor's block outright, so `container_monograph` came
+  out `None` and `TitleType::ParentMonograph`'s
+  `container_monograph.or(monograph)` fallback reached `monograph.emph:
+  true`. Field-level merge instead inherits the ancestor's
+  `container-monograph` unchanged, so the fallback now finds that inert
+  block first. Fixed with an explicit `container-monograph: {emph: true}`
+  in the wrapper, verified against citeproc-js `<i>...</i>` for all four
+  affected entries.
+- `american-society-of-mechanical-engineers` separately over-italicized
+  two container titles (`entry-dictionary`, `entry-encyclopedia`) that
+  citeproc-js renders unstyled — `TitleType::ParentMonograph`'s fallback
+  is not ref-type-aware, unlike `ContainerTitle`. Pre-existing engine gap,
+  newly exposed once the whole-replace bug stopped suppressing all
+  monograph emphasis for this style; worked around with explicit
+  `emph: false` on the `parent-monograph` title in a new
+  `entry-dictionary` type-variant and the existing `entry-encyclopedia`
+  one. Filed `csl26-e5xl` to fix the dispatch itself. Blast radius
+  measured, not assumed: `references-expanded.json` has exactly one
+  `entry-dictionary` and one `entry-encyclopedia` item, and a corpus-wide
+  grep across all 173 rendered outputs for those two container titles
+  shows ASME is the only style where the resulting emphasis disagrees
+  with citeproc-js (`taylor-and-francis-chicago-author-date(-core)` also
+  gained emphasis there, but its own oracle confirms citeproc-js
+  italicizes it).
+- Full render diff re-run after these two fixes against 32 embedded + 141
+  in-repo styles: only the five expected diffs remain (T&F/-core,
+  chicago-shortened-notes-bibliography/-core, ASME), all matching
+  citeproc-js. No other embedded or in-repo style's rendered output
+  changed.
 
 Added rstest coverage in `bdd_inheritance.rs`: nested-option partial
 override (bibliography- and global-scope), scalar replace, explicit-null

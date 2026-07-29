@@ -242,6 +242,44 @@ disposition of all 141 checked-in styles is recorded in
     emphasis, but citeproc-js's raw output shows neither style italicizes
     book titles (AIAA quotes them; Inter-Research uses no markup) — cleared
     `monograph` explicitly in each wrapper's own titles block.
+  - `american-mathematical-society-label` separately lost emphasis on
+    *parent*-monograph (container) titles even though its own `monograph`
+    config sets `emph: true`. Root cause: its ancestor
+    `elsevier-with-titles-core` sets an inert `container-monograph:
+    {text-case: as-is}` block; field-level merge now inherits it unchanged,
+    and `TitleType::ParentMonograph` always resolves via
+    `container_monograph.or(monograph)` — so the inert inherited block wins
+    over the `monograph` fallback the old whole-replace relied on. Under
+    whole-replace, the child's own `titles:` block (which never mentions
+    `container-monograph`) replaced the ancestor's entire block outright,
+    so `container_monograph` came out `None` and the fallback reached
+    `monograph.emph: true`; field-level merge instead inherits the
+    ancestor's `container-monograph` unchanged (the child never touches
+    it), so the inert block itself is what the fallback now finds. Fixed
+    by setting `container-monograph: {emph: true}` explicitly in the
+    wrapper, verified against citeproc-js `<i>...</i>` output for all four
+    affected entries.
+  - `american-society-of-mechanical-engineers` separately over-italicized
+    two container titles (`entry-dictionary`, `entry-encyclopedia`) that
+    citeproc-js renders unstyled, because `TitleType::ParentMonograph`'s
+    fallback is not ref-type-aware — it applies the same `monograph` config
+    to every container regardless of whether the container is a book
+    (should italicize) or a dictionary/encyclopedia (should not). This is a
+    pre-existing engine gap independent of the deep-merge algorithm, newly
+    exposed because the old whole-replace bug had been silently suppressing
+    all monograph emphasis for this style. Worked around at the wrapper
+    level with explicit `emph: false` on the `parent-monograph` title in a
+    new `entry-dictionary` type-variant and the existing
+    `entry-encyclopedia` one; the underlying dispatch gap is tracked
+    separately (`csl26-e5xl`), not fixed here. Blast radius measured, not
+    assumed: `references-expanded.json` carries exactly one
+    `entry-dictionary` and one `entry-encyclopedia` item, so a corpus-wide
+    grep for those two titles across all 173 rendered outputs shows every
+    other style either renders them unchanged from `main` or (for
+    `taylor-and-francis-chicago-author-date(-core)`) gained the same
+    emphasis change — verified against that style's own citeproc-js output,
+    which does italicize the encyclopedia container there. ASME is the only
+    style in the corpus where the fallback disagrees with citeproc-js.
   A temporary instrumentation pass counting every `deep_merge_options_from_raw`
   outcome across all 173 embedded and in-repo styles found zero fallbacks
   to the typed merge — rule 1's raw path is what actually ran everywhere it
