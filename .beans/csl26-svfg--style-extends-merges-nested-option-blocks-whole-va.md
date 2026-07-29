@@ -8,7 +8,7 @@ tags:
     - style
     - architecture
 created_at: 2026-07-20T17:50:16Z
-updated_at: 2026-07-28T16:28:43Z
+updated_at: 2026-07-29T12:41:17Z
 parent: csl26-s2rw
 ---
 
@@ -37,3 +37,10 @@ Remaining before merge:
 - [ ] Explicit-null semantics: null on defaulted non-Option scalars is a parse error; spec rule 3 updated accordingly — keep tests aligned
 
 See STYLE_INHERITANCE.md Implementation Notes for the constraint list.
+
+## Ingest prerequisite (2026-07-29)
+
+Blocked by csl26-j3zy: the raw-presence basis must be format-neutral and load-path-uniform before deep merge lands. The store resolver currently bypasses Style::from_yaml_bytes (no raw_yaml for store-resolved styles in any format), which already makes shipped explicit-null clearing load-path-dependent. Deep merge must read authored presence from the unified raw tree (yaml/json/cbor), so:
+
+- [ ] Depends on the single raw-preserving constructor from csl26-j3zy
+- [ ] Deep-merge tests must cover a JSON-authored child (and ideally CBOR) proving format-identical merge results
