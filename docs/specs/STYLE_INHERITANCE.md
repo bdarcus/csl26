@@ -1,6 +1,6 @@
 # Style Inheritance Specification
 
-**Status:** Draft
+**Status:** Active
 **Version:** 1.0
 **Date:** 2026-07-28
 **Supersedes:** [STYLE_ALIASING.md](./STYLE_ALIASING.md) (mechanism-selection
@@ -94,13 +94,11 @@ onto the fully resolved parent:
    styles must not themselves declare `extends`
    (STYLE_PRESET_ARCHITECTURE.md §7).
 
-Rule 1 is the resolution of `csl26-svfg`: STYLE_PRESET_ARCHITECTURE.md §3
+Rule 1 was the resolution of `csl26-svfg`: STYLE_PRESET_ARCHITECTURE.md §3
 already stated structural deep merge, but the implementation replaced
 nested option structs whole-value, forcing the three GB/T 7714-2025 leaf
 styles to each carry a duplicated `bibliography.options.dates` block
-(PR #1068). Under this spec those duplicates collapse into
-`gb-t-7714-2025-base`. Until the overlay implementation lands, rule 1 is
-aspirational and this spec remains Draft.
+(PR #1068). Those duplicates now collapse into `gb-t-7714-2025-base`.
 
 ### Choosing a form
 
@@ -174,44 +172,62 @@ disposition of all 141 checked-in styles is recorded in
 - The deep-merge change (`csl26-svfg`) is implemented in the `extends`
   overlay (`crates/citum-schema-style/src/style/overlay.rs`), not in the
   runtime `Options::merge` impls; the GB/T dates deduplication is the
-  verifying case (rendered output must not change). A working spike lives
-  on local branch `wip/svfg-deep-merge`; it verified the GB/T case
-  byte-identical and surfaced four constraints the final implementation
-  must satisfy:
-  1. **Raw-document basis.** Field presence must come from the authored raw
+  verifying case (rendered output is byte-identical to the pre-merge
+  duplicated blocks). Four constraints govern the implementation:
+  1. **Raw-document basis.** Field presence comes from the authored raw
      `options` mapping — struct-level merges cannot distinguish authored
-     defaults from serde defaults (e.g. `DateConfig.month`). `month` also
-     needs `#[serde(default)]` or partial `dates` blocks cannot parse.
-     Presence is a property of any serialized document, not of YAML:
-     JSON and CBOR inputs carry the same key-set and explicit-null
-     information and transcode losslessly into the same generic value
-     tree (style documents use string-keyed maps only).
-  2. **Uniform raw-preserving ingest (`csl26-j3zy`, fixed).** Every style
-     load path now populates the raw tree through one of the
-     raw-preserving constructors: `Style::from_document_bytes(bytes, format)`
-     for load paths that detect YAML/JSON/CBOR from the source (YAML/JSON
-     parse directly; CBOR is decoded the same way, then rejected if any map
-     uses a non-string key), or `Style::from_yaml_bytes`/`from_yaml_str` for
-     the remote and embedded paths (HTTP, Git, CID, `embedded/styles.rs`)
-     that are YAML-only by construction. The store resolver, the
-     schema-layer `file://` `extends` fallback, and the CLI's
-     `convert style` command previously deserialized typed structs directly
-     and so never populated `raw_yaml` in any format — the fix and a
-     turbofish-bypass guard
-     (`crates/citum-schema-style/tests/raw_ingest_guard.rs`) land together
-     with regression coverage in `citum_store`'s resolver tests.
+     defaults from serde defaults (e.g. `DateConfig.month`, which needs
+     `#[serde(default)]` for a partial `dates` block to parse at all).
+     Presence is a property of any serialized document, not of YAML: JSON
+     and CBOR inputs carry the same key-set and explicit-null information
+     and transcode losslessly into the same generic value tree (style
+     documents use string-keyed maps only).
+  2. **Uniform raw-preserving ingest (`csl26-j3zy`).** Every style load
+     path populates the raw tree through one of the raw-preserving
+     constructors: `Style::from_document_bytes(bytes, format)` for load
+     paths that detect YAML/JSON/CBOR from the source (YAML/JSON parse
+     directly; CBOR is decoded the same way, then rejected if any map uses
+     a non-string key), or `Style::from_yaml_bytes`/`from_yaml_str` for the
+     remote and embedded paths (HTTP, Git, CID, `embedded/styles.rs`) that
+     are YAML-only by construction. A turbofish-bypass guard
+     (`crates/citum-schema-style/tests/raw_ingest_guard.rs`) and regression
+     coverage in `citum_store`'s resolver tests keep new load paths honest.
   3. **Post-parse mutation guard.** Styles mutated programmatically after
      parse (tests, server overrides) carry stale `raw_yaml`; the raw path
-     must verify the typed overlay still round-trips from its raw options
-     and fall back to the typed merge otherwise, because resolution re-runs
-     on already-resolved styles (`extends` is preserved).
-  4. **Wrapper-compat pass.** Existing wrappers were tuned under
-     whole-block replace and may rely on a partial block *suppressing*
-     parent fields — `taylor-and-francis-chicago-author-date`'s partial
-     `titles:` block drops the parent's `type-mapping` and title-class
-     entries today. Each such wrapper needs explicit `~` clears added in
-     the same change, verified against the full test suite and the
-     compatibility report.
+     verifies the typed overlay still round-trips from its raw options and
+     falls back to the typed merge otherwise, because resolution re-runs on
+     already-resolved styles (`extends` is preserved).
+  4. **Preset-target fields must resolve eagerly.** A scoped-option field
+     that accepts a preset name (`dates: numeric`, `contributors: springer`,
+     `substitute: standard`) must deserialize the preset into its `Explicit`
+     form immediately, not keep the unresolved preset-name variant. The raw
+     merge only recognizes a preset override as "layer these fields, inherit
+     the rest" when the *typed* value serializes back to a mapping; if it
+     serializes as a bare string (the unresolved preset name), the merge
+     treats it as a plain scalar and whole-replaces the inherited block —
+     silently dropping any parent field the preset itself doesn't set.
+     `dates`/`contributors`/`titles`/`multilingual`/`locators` already had
+     the eager-resolving `deserialize_with` this requires; `substitute` did
+     not, which dropped an inherited `role-substitute` chain wherever a
+     child wrote `substitute: <preset>` over a richer parent (found via the
+     GB/T 7714-2025 author-date leaf, fixed with
+     `deserialize_substitute_config`, covered by
+     `preset_string_override_preserves_inherited_sibling_fields_not_covered_by_the_preset`
+     in `bdd_inheritance.rs`).
+- Wrapper-compat: a config-wrapper tuned under the old whole-block replace
+  can rely on a partial block *suppressing* inherited fields rather than
+  merging with them. `taylor-and-francis-chicago-author-date-core`'s
+  `titles:` block relied on this to keep its sentence-case override scoped
+  to `component` only, since applying it to the parent's `type-mapping`
+  categories (motion-picture, broadcast, …) hits the open proper-noun
+  text-case bug (`csl26-4kt3`) — fixed with an explicit `type-mapping: ~`
+  clear (which required making `TitlesConfig.type_mapping` an `Option` so it
+  can be null-cleared at all). A full render diff across every embedded and
+  in-repo style found two further, more common cases — `chicago-shortened-
+  notes-bibliography(-core)` and four exemplar styles regaining inherited
+  monograph/title-class emphasis and quoting the whole-block replace bug had
+  been silently dropping — both correctness improvements consistent with
+  the styles' own conventions, not suppressed.
 - The community-repo split, report refocus, and registry alias review are
   tracked as separate beans under epic `csl26-s2rw`.
 - STYLE_PRESET_ARCHITECTURE.md remains authoritative for `StyleBase`
@@ -220,23 +236,26 @@ disposition of all 141 checked-in styles is recorded in
 
 ## Acceptance Criteria
 
-- [ ] `extends` deep-merges nested option structs field-by-field (rule 1),
+- [x] `extends` deep-merges nested option structs field-by-field (rule 1),
   verified by a test extending a parent's `dates` block with one field.
-- [ ] All style load paths populate the raw document tree via one
+- [x] All style load paths populate the raw document tree via one
   constructor (`csl26-j3zy`), and a deep-merge test proves a JSON-authored
   child produces the same resolved style as its YAML equivalent.
-- [ ] The three duplicated GB/T `bibliography.options.dates` blocks are
+- [x] The three duplicated GB/T `bibliography.options.dates` blocks are
   removed with byte-identical rendered output.
-- [ ] Scalars, arrays, and explicit `null` behavior are covered by tests
+- [x] Scalars, arrays, and explicit `null` behavior are covered by tests
   matching rules 2–3.
-- [ ] STYLE_ALIASING.md is marked Superseded pointing here; the related
+- [x] STYLE_ALIASING.md is marked Superseded pointing here; the related
   specs cross-reference this spec in their changelogs.
-- [ ] The disposition TSV exists and covers all 141 checked-in styles.
-- [ ] Status flips to Active in the same commit as the overlay
+- [x] The disposition TSV exists and covers all 141 checked-in styles.
+- [x] Status flips to Active in the same commit as the overlay
   implementation.
 
 ## Changelog
 
+- v1.0 (2026-07-29): Status flips to Active — rule 1's deep merge lands in
+  `style/overlay.rs` (`csl26-svfg`); GB/T 7714-2025 dates deduplication and
+  the taylor-and-francis-chicago-author-date wrapper compat fix verify it.
 - v1.0 (2026-07-28): Initial version — resolution model, normative merge
   semantics, form decision rules, hidden-layer conventions, three-tier
   portfolio policy.
