@@ -14,7 +14,7 @@ The citum-core workspace. Read this first to orient — then descend into the re
 | 1 | [`csl-legacy`](csl-legacy/CLAUDE.md) | CSL 1.0 XML parser — frozen, consumed by `citum-migrate`. |
 | 2 | [`citum-migrate`](citum-migrate/CLAUDE.md) | Standalone CSL 1.0 -> Citum YAML migration crate/tool. Plateau reached on automatic mode; hand-authoring is canonical for top parents. |
 | 3 | [`citum-schema`](citum-schema/CLAUDE.md) | Facade re-exporting `citum-schema-style` + `citum-schema-data`. Real types in `citum-schema-style/`. |
-| 4 | `citum-schema-style` | Modular style model: `Style`, `Template`, `Options`, `Locale`, `Renderer`, presets, registry, embedded styles/locales. Navigate via jcodemunch. |
+| 4 | `citum-schema-style` | Modular style model: `Style`, `Template`, `Options`, `Locale`, `Renderer`, presets, registry, and the exact-parity embedded style core; community styles resolve through the filesystem registry layer. Navigate via jcodemunch. |
 | 5 | `citum-schema-data` | Reference / data model accessors. |
 | 6 | [`citum-engine`](citum-engine/CLAUDE.md) | Rendering engine. Citation/bibliography output. Byte-for-byte targets vs citeproc-js / biblatex. |
 
