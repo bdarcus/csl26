@@ -216,18 +216,36 @@ disposition of all 141 checked-in styles is recorded in
      in `bdd_inheritance.rs`).
 - Wrapper-compat: a config-wrapper tuned under the old whole-block replace
   can rely on a partial block *suppressing* inherited fields rather than
-  merging with them. `taylor-and-francis-chicago-author-date-core`'s
-  `titles:` block relied on this to keep its sentence-case override scoped
-  to `component` only, since applying it to the parent's `type-mapping`
-  categories (motion-picture, broadcast, …) hits the open proper-noun
-  text-case bug (`csl26-4kt3`) — fixed with an explicit `type-mapping: ~`
-  clear (which required making `TitlesConfig.type_mapping` an `Option` so it
-  can be null-cleared at all). A full render diff across every embedded and
-  in-repo style found two further, more common cases — `chicago-shortened-
-  notes-bibliography(-core)` and four exemplar styles regaining inherited
-  monograph/title-class emphasis and quoting the whole-block replace bug had
-  been silently dropping — both correctness improvements consistent with
-  the styles' own conventions, not suppressed.
+  merging with them, and there is no substitute for checking each affected
+  style against real citeproc-js output — assuming a convention (e.g. "book
+  titles are always italic") is not sufficient, and was wrong twice in the
+  audit below. A full render diff of every embedded and in-repo style
+  against the pre-merge baseline found six styles whose rendered output
+  changed:
+  - `taylor-and-francis-chicago-author-date-core`'s `titles:` block relied
+    on whole-replace to keep its sentence-case override scoped to
+    `component` only; applying it to the parent's `type-mapping` categories
+    (motion-picture, broadcast, …) hits the open proper-noun text-case bug
+    (`csl26-4kt3`) — fixed with an explicit `type-mapping: ~` clear (which
+    required making `TitlesConfig.type_mapping` an `Option` so it can be
+    null-cleared at all).
+  - `chicago-shortened-notes-bibliography(-core)`,
+    `american-mathematical-society-label`, and
+    `american-society-of-mechanical-engineers` regained inherited
+    monograph/title-class emphasis or quoting. Confirmed as correctness
+    improvements against citeproc-js raw output (`node scripts/oracle.js
+    <legacy .csl>`), not assumed: the notes-bibliography style is a 46/46
+    oracle match, and the other two show the same `<i>...</i>` citeproc
+    emits for the same titles.
+  - `american-institute-of-aeronautics-and-astronautics` and
+    `inter-research-science-center` inherited the same class of monograph
+    emphasis, but citeproc-js's raw output shows neither style italicizes
+    book titles (AIAA quotes them; Inter-Research uses no markup) — cleared
+    `monograph` explicitly in each wrapper's own titles block.
+  A temporary instrumentation pass counting every `deep_merge_options_from_raw`
+  outcome across all 173 embedded and in-repo styles found zero fallbacks
+  to the typed merge — rule 1's raw path is what actually ran everywhere it
+  was reachable, not a code path that silently degrades.
 - The community-repo split, report refocus, and registry alias review are
   tracked as separate beans under epic `csl26-s2rw`.
 - STYLE_PRESET_ARCHITECTURE.md remains authoritative for `StyleBase`

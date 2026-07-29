@@ -8,7 +8,7 @@ tags:
     - style
     - architecture
 created_at: 2026-07-20T17:50:16Z
-updated_at: 2026-07-29T15:39:48Z
+updated_at: 2026-07-29T16:04:12Z
 parent: csl26-s2rw
 ---
 
@@ -90,15 +90,20 @@ in-repo styles against `main`, not just a manual review):
   stale fixture assertion (`Metamorphosis` expected no italics — an
   artifact of the old whole-replace bug losing `monograph.emph: true`;
   deep merge now correctly applies it).
-- `chicago-shortened-notes-bibliography(-core)` and four exemplar styles
-  (`american-institute-of-aeronautics-and-astronautics`,
-  `american-mathematical-society-label`,
-  `american-society-of-mechanical-engineers`,
-  `inter-research-science-center`): regained inherited title-class
-  quoting/emphasis the whole-replace bug had been silently dropping.
-  Verified as correctness improvements (standard Chicago/AIAA/ASME/Vancouver
-  conventions, no open bug involved, no existing test asserted the old
-  behavior) — left as-is, not suppressed.
+- `chicago-shortened-notes-bibliography(-core)`, `american-mathematical-society-label`,
+  and `american-society-of-mechanical-engineers`: regained inherited
+  title-class quoting/emphasis the whole-replace bug had been silently
+  dropping. Verified against citeproc-js raw output (not assumed from style
+  convention alone — an earlier pass here was wrong for two other styles,
+  below): chicago-shortened-notes-bibliography is a perfect 46/46 oracle
+  match; AMS-label and ASME's raw citeproc output both show `<i>...</i>`
+  around the same monograph titles Citum now italicizes. Left as-is.
+- `american-institute-of-aeronautics-and-astronautics` and
+  `inter-research-science-center`: same inherited-monograph-emphasis
+  pattern, but citeproc-js raw output confirms neither style italicizes
+  book titles (AIAA quotes them; Inter-Research uses no markup). Cleared
+  `monograph` explicitly in each wrapper's own titles block to restore
+  their citeproc-verified rendering.
 - No other embedded or in-repo style's rendered output changed.
 
 Added rstest coverage in `bdd_inheritance.rs`: nested-option partial
