@@ -1028,9 +1028,9 @@ mod tests {
     }
 
     #[test]
-    fn resolves_journal_config_wrapper_from_local_style() {
+    fn resolves_exemplar_structural_wrapper_from_local_style() {
         let lineage = StyleLineage::resolve(
-            "styles-legacy/disability-and-rehabilitation.csl",
+            "styles-legacy/entomological-society-of-america.csl",
             &repo_root(),
             &[],
         )
@@ -1039,18 +1039,15 @@ mod tests {
         assert_eq!(lineage.semantic_class, SemanticClass::Journal);
         assert_eq!(
             lineage.implementation_form,
-            ImplementationForm::ConfigWrapper
+            ImplementationForm::StructuralWrapper
         );
-        assert_eq!(
-            lineage.parent_style_id.as_deref(),
-            Some("elsevier-with-titles")
-        );
+        assert_eq!(lineage.parent_style_id.as_deref(), Some("elsevier-harvard"));
         assert_eq!(
             lineage.output_plan(),
             MigrationOutputPlan::ExistingWrapper {
-                parent_style_id: "elsevier-with-titles".to_string(),
-                implementation_form: ImplementationForm::ConfigWrapper,
-                preserve_template_deltas: false,
+                parent_style_id: "elsevier-harvard".to_string(),
+                implementation_form: ImplementationForm::StructuralWrapper,
+                preserve_template_deltas: true,
             }
         );
     }
