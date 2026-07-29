@@ -315,7 +315,7 @@ fn test_taylor_and_francis_author_date_wrapper_preserves_media_and_translation_d
     );
     assert!(
         rendered_bib
-            .contains("Metamorphosis. Translated by David Wyllie. Leipzig: Kurt Wolff Verlag"),
-        "translated books should retain translator detail"
+            .contains("_Metamorphosis_. Translated by David Wyllie. Leipzig: Kurt Wolff Verlag"),
+        "translated books should retain translator detail and the inherited monograph emphasis"
     );
 }

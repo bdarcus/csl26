@@ -13,9 +13,16 @@ options:
   # reference, which renders title-case. Journal/serial names stay title-case.
   # Applied to article (`component`) titles only for now: the engine's
   # `text-case: sentence` has no proper-noun protection (it would lowercase
-  # `Cambridge` in a book title), so monograph/container titles stay title-case
-  # until the sentence-case proper-noun fix lands (tracked in csl26-maim).
+  # `Cambridge` in a book title, or `La Ciotat` in a motion-picture title), so
+  # monograph/container titles stay title-case until the sentence-case
+  # proper-noun fix lands (tracked in csl26-4kt3). The parent's `type-mapping`
+  # (chicago-author-date-18th) would otherwise route broadcast/collection/
+  # manuscript/motion-picture/song/webpage into `component` too, so it is
+  # explicitly cleared here rather than letting sentence-case reach those
+  # categories through inheritance (see csl26-svfg / STYLE_INHERITANCE.md
+  # rule 1 and 3).
   titles:
+    type-mapping: ~
     component:
       text-case: sentence
   contributors:
