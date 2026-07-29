@@ -394,3 +394,103 @@ fn load_locale_or_default_uses_first_match() {
     let locale = crate::load_locale_or_default(&chain, "xx-XX");
     assert_eq!(locale.locale, "xx-XX");
 }
+
+// Regression tests for csl26-j3zy: a child style resolved through
+// `StoreResolver` (in any wire format) must clear an explicit-`null`
+// inherited field identically to the same child loaded directly from a
+// file, because `merge_style_overlay` reads null-clear intent from the
+// *child's* raw value tree, not from typed `Option::None`.
+mod store_raw_ingest_regression {
+    use super::*;
+    use citum_schema::Style;
+    use std::collections::HashSet;
+
+    const BASE_YAML: &str = r#"
+version: "0.44.0"
+info: { id: base }
+citation:
+  options: {}
+"#;
+
+    /// Resolver stub that always hands back `base` for `extends: base`,
+    /// mirroring the fixture pattern citum-schema-style's own
+    /// `bdd_inheritance` null-clear regression tests use.
+    struct BaseOnly(Style);
+
+    impl citum_resolver_api::StyleResolver for BaseOnly {
+        type Style = Style;
+        type Locale = citum_schema::Locale;
+
+        fn resolve_style(&self, _uri: &str) -> Result<Style, citum_resolver_api::ResolverError> {
+            Ok(self.0.clone())
+        }
+
+        fn resolve_locale(
+            &self,
+            id: &str,
+        ) -> Result<Self::Locale, citum_resolver_api::ResolverError> {
+            Err(citum_resolver_api::ResolverError::LocaleNotFound(
+                id.to_string().into(),
+            ))
+        }
+    }
+
+    /// Child document as a generic JSON value carrying an explicit
+    /// `citation.options: null` — the wire-format-neutral shape each test
+    /// below transcodes into its target store format.
+    fn child_value() -> serde_json::Value {
+        serde_json::json!({
+            "extends": "base",
+            "info": { "id": "child" },
+            "citation": { "options": serde_json::Value::Null }
+        })
+    }
+
+    fn assert_options_cleared(resolved: &Style) {
+        assert!(
+            resolved.citation.as_ref().unwrap().options.is_none(),
+            "explicit `citation.options: null` did not clear inherited options"
+        );
+    }
+
+    fn resolve_child_through_store(format: StoreFormat, bytes: &[u8], ext: &str) -> Style {
+        let (dir, resolver) = make_resolver(format);
+        let styles_dir = dir.path().join("styles");
+        fs::create_dir_all(&styles_dir).unwrap();
+        fs::write(styles_dir.join(format!("child.{ext}")), bytes).unwrap();
+
+        let base = citum_schema::Style::from_yaml_str(BASE_YAML).expect("valid base style");
+        assert!(
+            base.citation.as_ref().unwrap().options.is_some(),
+            "base must have citation.options for this test"
+        );
+
+        let child = resolver.resolve_style("child").expect("resolve_style");
+        let mut visited = HashSet::new();
+        child
+            .try_into_resolved_recursive_with(Some(&BaseOnly(base)), &mut visited)
+            .expect("child resolves against base")
+    }
+
+    #[test]
+    fn store_resolved_yaml_child_null_clear_matches_file_loaded() {
+        let bytes = serde_yaml::to_string(&child_value()).unwrap().into_bytes();
+        let resolved = resolve_child_through_store(StoreFormat::Yaml, &bytes, "yaml");
+        assert_options_cleared(&resolved);
+    }
+
+    #[test]
+    fn store_resolved_json_child_null_clear_matches_file_loaded() {
+        let bytes = serde_json::to_vec(&child_value()).unwrap();
+        let resolved = resolve_child_through_store(StoreFormat::Json, &bytes, "json");
+        assert_options_cleared(&resolved);
+    }
+
+    #[test]
+    fn store_resolved_cbor_child_null_clear_matches_file_loaded() {
+        let mut bytes = Vec::new();
+        ciborium::ser::into_writer(&child_value(), &mut bytes).unwrap();
+        let resolved = resolve_child_through_store(StoreFormat::Cbor, &bytes, "cbor");
+        assert_options_cleared(&resolved);
+    }
+}

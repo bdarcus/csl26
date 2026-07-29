@@ -134,6 +134,17 @@ python3 scripts/audit-rust-review-smells.py --all --json
 - Prefer `Option<T>` with `skip_serializing_if` for optional fields
 - Add `#[serde(flatten)]` for inline rendering options
 - Comment non-obvious logic; reference CSL 1.0 spec where applicable
+- Never deserialize `Style` directly with `serde_yaml::from_slice`/`from_str`,
+  `serde_json::from_slice`, or `ciborium::de::from_reader`. Always go through
+  `Style::from_yaml_str`, `Style::from_yaml_bytes`, or
+  `Style::from_document_bytes` (`crates/citum-schema-style/src/style/model.rs`)
+  so `raw_yaml` is populated — every `extends` overlay merge reads null-clear
+  intent from that raw tree, not from typed `Option::None`. A direct bypass
+  compiles and passes ordinary round-trip tests while silently breaking
+  explicit-`null` inherited-field clearing (`csl26-j3zy`); a guard test
+  (`crates/citum-schema-style/tests/raw_ingest_guard.rs`) forbids the
+  turbofish form of this bypass but cannot catch one hidden behind
+  return-type inference, so review new style load paths by hand.
 
 ## Verification Requirements
 

@@ -12,8 +12,8 @@ use citum_io::{
     infer_refs_output_format as infer_engine_refs_output_format, load_input_bibliography,
     write_output_bibliography,
 };
-use citum_schema::Style;
 use citum_schema::locale::RawLocale;
+use citum_schema::{Style, StyleDocumentFormat};
 use serde::Serialize;
 use std::error::Error;
 use std::fs;
@@ -43,7 +43,12 @@ fn run_convert_typed(args: ConvertTypedArgs, data_type: DataType) -> CliResult {
 
     match data_type {
         DataType::Style => {
-            let style: Style = deserialize_any(&input_bytes, input_ext)?;
+            let doc_format = match input_ext {
+                "json" => StyleDocumentFormat::Json,
+                "cbor" => StyleDocumentFormat::Cbor,
+                _ => StyleDocumentFormat::Yaml,
+            };
+            let style = Style::from_document_bytes(&input_bytes, doc_format)?;
             let out_bytes = serialize_any(&style, output_ext)?;
             fs::write(&args.output, out_bytes)?;
         }

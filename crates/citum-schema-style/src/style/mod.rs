@@ -14,7 +14,7 @@ mod sections;
 mod validation;
 
 pub use metadata::{CitationField, StyleInfo, StyleLink, StylePerson, StyleSource};
-pub use model::Style;
+pub use model::{Style, StyleDocumentError, StyleDocumentFormat};
 pub use resolution::check_citum_version;
 pub use sections::{BibliographySpec, CitationCollapse, CitationSpec, NoteStartTextCase};
 pub use validation::SchemaWarning;

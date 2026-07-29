@@ -95,13 +95,7 @@ impl Style {
     /// Returns a serde error if YAML parsing or deserialization fails.
     pub fn from_yaml_str(s: &str) -> Result<Self, serde_yaml::Error> {
         let raw: serde_yaml::Value = serde_yaml::from_str(s)?;
-        super::diagnostics::validate_raw_style(&raw).map_err(serde_yaml::Error::custom)?;
-        let mut style: Style = serde_yaml::from_value(raw.clone())?;
-        style.raw_yaml = Some(raw);
-        style
-            .validate_resource_limits()
-            .map_err(serde_yaml::Error::custom)?;
-        Ok(style)
+        Self::from_raw_value(raw).map_err(StyleDocumentError::into_yaml_error)
     }
 
     /// Apply scoped citation and bibliography option overrides to this style.
@@ -136,12 +130,165 @@ impl Style {
     /// Returns a serde error if YAML parsing or deserialization fails.
     pub fn from_yaml_bytes(bytes: &[u8]) -> Result<Self, serde_yaml::Error> {
         let raw: serde_yaml::Value = serde_yaml::from_slice(bytes)?;
-        super::diagnostics::validate_raw_style(&raw).map_err(serde_yaml::Error::custom)?;
+        Self::from_raw_value(raw).map_err(StyleDocumentError::into_yaml_error)
+    }
+
+    /// Parse a Citum style from bytes in any [`StyleDocumentFormat`], preserving
+    /// a format-neutral raw value tree for null-aware overlay merging.
+    ///
+    /// This is the canonical entry point for every style load path — file,
+    /// store, registry, CLI conversion, and server resolution — so that
+    /// explicit-`null` inherited-field clearing (see [`Style::apply_overlay`])
+    /// behaves identically regardless of load path or wire format. JSON and
+    /// YAML documents parse directly into the same generic value tree used by
+    /// [`Style::from_yaml_bytes`]; CBOR documents are decoded the same way but
+    /// are rejected if any map uses a non-string key, since the raw-tree
+    /// presence lookups used by overlay merging key on string field names.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`StyleDocumentError`] if the bytes cannot be decoded in the
+    /// requested format, if a CBOR document contains a non-string map key, or
+    /// if the decoded style fails schema or resource-limit validation.
+    pub fn from_document_bytes(
+        bytes: &[u8],
+        format: StyleDocumentFormat,
+    ) -> Result<Self, StyleDocumentError> {
+        let raw: serde_yaml::Value = match format {
+            StyleDocumentFormat::Yaml => serde_yaml::from_slice(bytes)?,
+            StyleDocumentFormat::Json => serde_json::from_slice(bytes)?,
+            StyleDocumentFormat::Cbor => {
+                let raw: serde_yaml::Value = ciborium::de::from_reader(bytes)
+                    .map_err(|e| StyleDocumentError::Cbor(e.to_string()))?;
+                reject_non_string_keys(&raw).map_err(StyleDocumentError::Cbor)?;
+                raw
+            }
+        };
+        Self::from_raw_value(raw)
+    }
+
+    /// Shared tail of [`Style::from_yaml_str`], [`Style::from_yaml_bytes`], and
+    /// [`Style::from_document_bytes`]: validate the raw tree, deserialize the
+    /// typed style from it, stamp `raw_yaml`, then validate resource limits.
+    ///
+    /// The `serde_yaml::from_value` step always uses the real
+    /// [`StyleDocumentError::Yaml`] variant (never collapsed to a string),
+    /// regardless of which wire format the raw tree originated from — the
+    /// tree is already unified into `serde_yaml::Value` by the time this
+    /// runs, so this deserialize step is always a `serde_yaml` operation.
+    fn from_raw_value(raw: serde_yaml::Value) -> Result<Self, StyleDocumentError> {
+        super::diagnostics::validate_raw_style(&raw).map_err(StyleDocumentError::Validation)?;
         let mut style: Style = serde_yaml::from_value(raw.clone())?;
         style.raw_yaml = Some(raw);
         style
             .validate_resource_limits()
-            .map_err(serde_yaml::Error::custom)?;
+            .map_err(StyleDocumentError::Validation)?;
         Ok(style)
+    }
+}
+
+/// Serialization format of a raw style document, used by
+/// [`Style::from_document_bytes`] to select the right decoder.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum StyleDocumentFormat {
+    /// YAML document.
+    Yaml,
+    /// JSON document.
+    Json,
+    /// CBOR document. Only string-keyed maps are supported.
+    Cbor,
+}
+
+/// Error parsing a style document in any [`StyleDocumentFormat`].
+#[derive(Debug)]
+pub enum StyleDocumentError {
+    /// Failure decoding a YAML document, or deserializing the typed [`Style`]
+    /// from the generic raw tree — which applies regardless of whether that
+    /// tree originated from YAML, JSON, or CBOR, since the tree is always
+    /// unified into `serde_yaml::Value` before this step runs.
+    Yaml(serde_yaml::Error),
+    /// Failure decoding a JSON document.
+    Json(serde_json::Error),
+    /// Failure decoding a CBOR document, or a non-string map key was found.
+    Cbor(String),
+    /// The decoded style failed schema or resource-limit validation.
+    Validation(String),
+}
+
+impl std::fmt::Display for StyleDocumentError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            StyleDocumentError::Yaml(e) => write!(f, "yaml error: {e}"),
+            StyleDocumentError::Json(e) => write!(f, "json error: {e}"),
+            StyleDocumentError::Cbor(e) => write!(f, "cbor error: {e}"),
+            StyleDocumentError::Validation(e) => write!(f, "invalid style: {e}"),
+        }
+    }
+}
+
+impl std::error::Error for StyleDocumentError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            StyleDocumentError::Yaml(e) => Some(e),
+            StyleDocumentError::Json(e) => Some(e),
+            StyleDocumentError::Cbor(_) | StyleDocumentError::Validation(_) => None,
+        }
+    }
+}
+
+impl From<serde_yaml::Error> for StyleDocumentError {
+    fn from(e: serde_yaml::Error) -> Self {
+        StyleDocumentError::Yaml(e)
+    }
+}
+
+impl From<serde_json::Error> for StyleDocumentError {
+    fn from(e: serde_json::Error) -> Self {
+        StyleDocumentError::Json(e)
+    }
+}
+
+impl StyleDocumentError {
+    /// Convert into a `serde_yaml::Error` for callers with a YAML-only
+    /// public signature ([`Style::from_yaml_str`], [`Style::from_yaml_bytes`]).
+    ///
+    /// The `Yaml` variant unwraps directly, preserving the original error
+    /// and its source chain. `Json`/`Cbor` cannot structurally occur on
+    /// those callers' paths (they never decode JSON or CBOR), so those arms
+    /// only exist to keep this conversion total; `Validation` has no
+    /// underlying serde error to preserve, so it round-trips through
+    /// [`serde::de::Error::custom`].
+    fn into_yaml_error(self) -> serde_yaml::Error {
+        match self {
+            StyleDocumentError::Yaml(e) => e,
+            StyleDocumentError::Json(e) => serde_yaml::Error::custom(e),
+            StyleDocumentError::Cbor(msg) | StyleDocumentError::Validation(msg) => {
+                serde_yaml::Error::custom(msg)
+            }
+        }
+    }
+}
+
+/// Reject a raw value tree containing a mapping keyed by anything other than
+/// a string, recursively. CBOR permits non-string map keys; the overlay
+/// null-clear lookups in `style/overlay.rs` key on string field names, so a
+/// non-string-keyed map would silently fail to match rather than error.
+fn reject_non_string_keys(value: &serde_yaml::Value) -> Result<(), String> {
+    match value {
+        serde_yaml::Value::Mapping(map) => {
+            for (key, val) in map {
+                if !matches!(key, serde_yaml::Value::String(_)) {
+                    return Err(format!(
+                        "CBOR style document uses a non-string map key ({key:?}); \
+                         only string-keyed maps are supported"
+                    ));
+                }
+                reject_non_string_keys(val)?;
+            }
+            Ok(())
+        }
+        serde_yaml::Value::Sequence(seq) => seq.iter().try_for_each(reject_non_string_keys),
+        serde_yaml::Value::Tagged(tagged) => reject_non_string_keys(&tagged.value),
+        _ => Ok(()),
     }
 }
