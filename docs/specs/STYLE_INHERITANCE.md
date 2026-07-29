@@ -176,18 +176,30 @@ disposition of all 141 checked-in styles is recorded in
   runtime `Options::merge` impls; the GB/T dates deduplication is the
   verifying case (rendered output must not change). A working spike lives
   on local branch `wip/svfg-deep-merge`; it verified the GB/T case
-  byte-identical and surfaced three constraints the final implementation
+  byte-identical and surfaced four constraints the final implementation
   must satisfy:
-  1. **Raw-YAML basis.** Field presence must come from the authored raw
+  1. **Raw-document basis.** Field presence must come from the authored raw
      `options` mapping — struct-level merges cannot distinguish authored
      defaults from serde defaults (e.g. `DateConfig.month`). `month` also
      needs `#[serde(default)]` or partial `dates` blocks cannot parse.
-  2. **Post-parse mutation guard.** Styles mutated programmatically after
+     Presence is a property of any serialized document, not of YAML:
+     JSON and CBOR inputs carry the same key-set and explicit-null
+     information and transcode losslessly into the same generic value
+     tree (style documents use string-keyed maps only).
+  2. **Uniform raw-preserving ingest (`csl26-j3zy`).** Every style load
+     path must populate the raw tree through one constructor
+     (`Style::from_document_bytes(bytes, format)` or equivalent). The
+     store resolver currently bypasses `Style::from_yaml_bytes` and
+     deserializes typed structs directly, so store-resolved styles have
+     no raw tree in any format — which already makes the shipped
+     explicit-`null` clearing load-path-dependent, independent of the
+     deep-merge work.
+  3. **Post-parse mutation guard.** Styles mutated programmatically after
      parse (tests, server overrides) carry stale `raw_yaml`; the raw path
      must verify the typed overlay still round-trips from its raw options
      and fall back to the typed merge otherwise, because resolution re-runs
      on already-resolved styles (`extends` is preserved).
-  3. **Wrapper-compat pass.** Existing wrappers were tuned under
+  4. **Wrapper-compat pass.** Existing wrappers were tuned under
      whole-block replace and may rely on a partial block *suppressing*
      parent fields — `taylor-and-francis-chicago-author-date`'s partial
      `titles:` block drops the parent's `type-mapping` and title-class
@@ -204,6 +216,9 @@ disposition of all 141 checked-in styles is recorded in
 
 - [ ] `extends` deep-merges nested option structs field-by-field (rule 1),
   verified by a test extending a parent's `dates` block with one field.
+- [ ] All style load paths populate the raw document tree via one
+  constructor (`csl26-j3zy`), and a deep-merge test proves a JSON-authored
+  child produces the same resolved style as its YAML equivalent.
 - [ ] The three duplicated GB/T `bibliography.options.dates` blocks are
   removed with byte-identical rendered output.
 - [ ] Scalars, arrays, and explicit `null` behavior are covered by tests
