@@ -1045,7 +1045,13 @@ fn test_parsed_style_no_date_terms_match_expected_variants() {
         .expect("no-date-single citation should exist");
 
     let load_style = |name: &str| -> Style {
-        let style_path = root.join("styles").join(format!("{name}.yaml"));
+        let style_path = [
+            root.join("styles").join(format!("{name}.yaml")),
+            root.join("styles/embedded").join(format!("{name}.yaml")),
+        ]
+        .into_iter()
+        .find(|path| path.exists())
+        .expect("style fixture should exist");
         let style_yaml = fs::read_to_string(&style_path).expect("style should read");
         Style::from_yaml_str(&style_yaml)
             .expect("style should parse")
@@ -1058,16 +1064,9 @@ fn test_parsed_style_no_date_terms_match_expected_variants() {
         "(Forthcoming, no date)"
     );
 
-    let sage = Processor::new(load_style("sage-harvard"), bibliography);
-    let sage_rendered = sage.process_citation(&no_date).unwrap();
-    assert!(
-        sage_rendered.contains("n.d."),
-        "sage-harvard should keep the short no-date term: {sage_rendered}"
-    );
-    assert!(
-        !sage_rendered.contains("no date"),
-        "sage-harvard should not switch to the long no-date term: {sage_rendered}"
-    );
+    let springer = Processor::new(load_style("springer-basic-author-date"), bibliography);
+    let springer_rendered = springer.process_citation(&no_date).unwrap();
+    assert_eq!(springer_rendered, "(Forthcoming n.d.)");
 }
 
 /// Given a style whose `options.dates.no-date-form` is `long`, when a citation's

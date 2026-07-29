@@ -1,5 +1,15 @@
 # Styles Quality Metrics
 
+This directory now contains Citum's **exemplar** tier: 16 styles retained as
+Rust-test fixtures, embedded-parent wrapper examples, or unique behavior
+coverage. The compiled **embedded** tier is authoritative at
+`crates/citum-schema-style/embedded/styles/` (also exposed here through the
+`embedded/` symlink). The remaining community corpus lives in
+[`citum/citum-styles`](https://github.com/citum/citum-styles); it may extend
+embedded parents through the registry filesystem layer.
+
+`styles/experimental/` remains outside these tier rules.
+
 `docs/compat.html` now reports two complementary metrics:
 
 - `Fidelity`: output match rate against citeproc-js oracle.
