@@ -125,6 +125,7 @@ bibliography:
       wrap:
         punctuation: quotes
     - title: parent-monograph
+      emph: false
     - title: parent-serial
     - group:
       - number: volume
@@ -158,6 +159,34 @@ bibliography:
     - variable: publisher
     - number: pages
       label-form: short
+    - variable: doi
+      prefix: '. '
+    - variable: publisher-place
+    # citeproc-js does not italicize the dictionary/encyclopedia container
+    # title (unlike a chapter's book container); the generic `template`
+    # fallback's plain `title: parent-monograph` inherits emph:true from
+    # the style's monograph config, so this dedicated variant overrides it.
+    # See csl26-svfg / STYLE_INHERITANCE.md rule 1 and 3.
+    entry-dictionary:
+    - contributor: author
+      form: long
+      name-order: family-first
+    - date: issued
+      form: year
+    - title: primary
+      wrap:
+        punctuation: quotes
+    - title: parent-monograph
+      emph: false
+    - title: parent-serial
+    - group:
+      - number: volume
+      - number: issue
+        wrap:
+          punctuation: parentheses
+    - variable: url
+    - variable: publisher
+    - number: pages
     - variable: doi
       prefix: '. '
     - variable: publisher-place
