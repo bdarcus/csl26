@@ -39,17 +39,6 @@ options:
     delimiter: { mark: comma }
     demote-non-dropping-particle: never
     name-form: initials
-  dates:
-    month: numeric
-    uncertainty-marker: '?'
-    approximation-marker: '['
-    approximation-marker-suffix: ']'
-    range-delimiter: —
-    no-date-year-suffix-delimiter: '-'
-    show-seconds: false
-    show-timezone: false
-    era-labels: default
-    negative-unspecified-years: range
   page-range-format: expanded
 citation:
   options:
@@ -120,21 +109,6 @@ bibliography:
         and-others: et-al
         delimiter-precedes-last: contextual
       delimiter: null
-    # `dates` overrides the whole global `dates` block for this scope (no
-    # per-field merge), so the base config's values are repeated here
-    # alongside the new `note-wrap` opt-in — see CALENDAR_DATE_ANNOTATIONS.md.
-    dates:
-      month: numeric
-      uncertainty-marker: '?'
-      approximation-marker: '['
-      approximation-marker-suffix: ']'
-      range-delimiter: —
-      no-date-year-suffix-delimiter: '-'
-      show-seconds: false
-      show-timezone: false
-      era-labels: default
-      negative-unspecified-years: range
-      note-wrap: parentheses
     hanging-indent: true
     separator: ''
   template:
