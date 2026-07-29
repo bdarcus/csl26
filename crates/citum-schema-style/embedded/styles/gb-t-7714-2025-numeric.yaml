@@ -31,17 +31,6 @@ options:
     delimiter: null
     demote-non-dropping-particle: never
     name-form: initials
-  dates:
-    month: numeric
-    uncertainty-marker: '?'
-    approximation-marker: '['
-    approximation-marker-suffix: ']'
-    range-delimiter: —
-    no-date-year-suffix-delimiter: '-'
-    show-seconds: false
-    show-timezone: false
-    era-labels: default
-    negative-unspecified-years: range
   page-range-format: expanded
 citation:
   template:
@@ -50,27 +39,3 @@ citation:
     punctuation: brackets
   multi-cite-delimiter: ','
   collapse: citation-number
-bibliography:
-  options:
-    # `dates` overrides the whole global `dates` block for this scope (no
-    # per-field merge), so the base config's values are repeated here
-    # alongside the new `note-wrap` opt-in — see CALENDAR_DATE_ANNOTATIONS.md.
-    # This style has no other `bibliography:` key, so this block is new
-    # (not previously duplicated) and inherits its template from
-    # gb-t-7714-2025-base unaffected. Follow-up: consolidate this and the
-    # same block in -author-date/-note into a shared
-    # gb-t-7714-2025-base.yaml bibliography.options.dates once style
-    # inheritance supports partial (field-level) merge of nested option
-    # blocks — see follow-up bean on the whole-block-replace limitation.
-    dates:
-      month: numeric
-      uncertainty-marker: '?'
-      approximation-marker: '['
-      approximation-marker-suffix: ']'
-      range-delimiter: —
-      no-date-year-suffix-delimiter: '-'
-      show-seconds: false
-      show-timezone: false
-      era-labels: default
-      negative-unspecified-years: range
-      note-wrap: parentheses
