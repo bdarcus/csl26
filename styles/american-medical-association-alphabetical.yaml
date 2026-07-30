@@ -56,18 +56,16 @@ bibliography:
         and-others: et-al
         delimiter-precedes-last: contextual
     separator: '. '
+    label-mode: numeric
+    label-wrap: period
   type-variants:
     article-journal:
-    - delimiter: ""
-      group:
-      - number: citation-number
-        suffix: "."
-      - contributor: author
-        form: long
-        name-order: family-first
-        shorten:
-          min: 8
-          use-first: 3
+    - contributor: author
+      form: long
+      name-order: family-first
+      shorten:
+        min: 8
+        use-first: 3
     - title: primary
       prefix: ' '
     - group:
@@ -89,16 +87,12 @@ bibliography:
     - variable: doi
     - variable: url
     article-magazine:
-    - delimiter: ""
-      group:
-      - number: citation-number
-        suffix: "."
-      - contributor: author
-        form: long
-        name-order: family-first
-        shorten:
-          min: 8
-          use-first: 3
+    - contributor: author
+      form: long
+      name-order: family-first
+      shorten:
+        min: 8
+        use-first: 3
     - title: primary
       prefix: ' '
     - group:
@@ -120,16 +114,12 @@ bibliography:
     - variable: doi
     - variable: url
     broadcast:
-    - delimiter: ""
-      group:
-      - number: citation-number
-        suffix: "."
-      - contributor: author
-        form: long
-        name-order: family-first
-        shorten:
-          min: 8
-          use-first: 3
+    - contributor: author
+      form: long
+      name-order: family-first
+      shorten:
+        min: 8
+        use-first: 3
     - title: primary
       prefix: ' '
     - group:
@@ -151,16 +141,12 @@ bibliography:
     - variable: doi
     - variable: url
     chapter:
-    - delimiter: ""
-      group:
-      - number: citation-number
-        suffix: "."
-      - contributor: author
-        form: long
-        name-order: family-first
-        shorten:
-          min: 8
-          use-first: 3
+    - contributor: author
+      form: long
+      name-order: family-first
+      shorten:
+        min: 8
+        use-first: 3
     - title: primary
       prefix: ' '
     - group:
@@ -183,16 +169,12 @@ bibliography:
     - variable: doi
     - variable: url
     entry-encyclopedia:
-    - delimiter: ""
-      group:
-      - number: citation-number
-        suffix: "."
-      - contributor: author
-        form: long
-        name-order: family-first
-        shorten:
-          min: 8
-          use-first: 3
+    - contributor: author
+      form: long
+      name-order: family-first
+      shorten:
+        min: 8
+        use-first: 3
     - title: primary
       prefix: ' '
     - group:
@@ -214,16 +196,12 @@ bibliography:
     - variable: doi
     - variable: url
     patent:
-    - delimiter: ""
-      group:
-      - number: citation-number
-        suffix: "."
-      - contributor: author
-        form: long
-        name-order: family-first
-        shorten:
-          min: 8
-          use-first: 3
+    - contributor: author
+      form: long
+      name-order: family-first
+      shorten:
+        min: 8
+        use-first: 3
     - title: primary
       prefix: ' '
     - delimiter: ""
@@ -241,16 +219,12 @@ bibliography:
     - variable: patent-number
       prefix: ':'
   template:
-  - delimiter: ""
-    group:
-    - number: citation-number
-      suffix: "."
-    - contributor: author
-      form: long
-      name-order: family-first
-      shorten:
-        min: 8
-        use-first: 3
+  - contributor: author
+    form: long
+    name-order: family-first
+    shorten:
+      min: 8
+      use-first: 3
   - title: primary
     prefix: ' '
   - group:

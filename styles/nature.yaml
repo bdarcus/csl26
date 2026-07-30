@@ -52,6 +52,8 @@ bibliography:
       sort-separator: ", "
     entry-suffix: .
     separator: ". "
+    label-mode: numeric
+    label-wrap: period
   type-variants:
     report:
       remove:
@@ -60,16 +62,12 @@ bibliography:
         - match:
             variable: publisher-place
   template:
-  - delimiter: ""
-    group:
-    - number: citation-number
-      suffix: "."
-    - contributor: author
-      form: long
-      name-order: family-first
-      shorten:
-        min: 8
-        use-first: 1
+  - contributor: author
+    form: long
+    name-order: family-first
+    shorten:
+      min: 8
+      use-first: 1
   - title: primary
     prefix: " "
   - group:
