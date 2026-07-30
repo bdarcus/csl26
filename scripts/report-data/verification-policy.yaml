@@ -108,68 +108,6 @@ styles:
     regression_baseline: citum-baseline
     note: Authority follows biblatex numeric-comp. Citum snapshots remain only
       as a regression baseline.
-  chem-acs:
-    authority: biblatex
-    authority_id: chem-acs
-    secondary:
-      - citeproc-js
-    scopes:
-      - citation
-      - bibliography
-    scope_authorities:
-      citation:
-        authority: citeproc-js
-    fixture_family: chemistry
-    regression_baseline: citum-baseline
-    note: Bibliography authority follows biblatex chem-acs; citation authority
-      remains citeproc-js until citation-side biblatex comparison is available.
-  angewandte-chemie:
-    authority: biblatex
-    authority_id: chem-angew
-    secondary:
-      - citeproc-js
-    scopes:
-      - citation
-      - bibliography
-    scope_authorities:
-      citation:
-        authority: citeproc-js
-    fixture_family: chemistry
-    regression_baseline: citum-baseline
-    note: Bibliography authority follows biblatex chem-angew; citation
-      authority remains citeproc-js until citation-side biblatex comparison is
-      available.
-  chem-rsc:
-    authority: biblatex
-    authority_id: chem-rsc
-    secondary:
-      - citeproc-js
-    scopes:
-      - citation
-      - bibliography
-    scope_authorities:
-      citation:
-        authority: citeproc-js
-    fixture_family: chemistry
-    regression_baseline: citum-baseline
-    note: Bibliography authority follows biblatex chem-rsc; citation authority
-      remains citeproc-js until citation-side biblatex comparison is available.
-  chem-biochem:
-    authority: biblatex
-    authority_id: chem-biochem
-    secondary:
-      - citeproc-js
-    scopes:
-      - citation
-      - bibliography
-    scope_authorities:
-      citation:
-        authority: citeproc-js
-    fixture_family: chemistry
-    regression_baseline: citum-baseline
-    note: Bibliography authority follows biblatex chem-biochem; citation
-      authority remains citeproc-js until citation-side biblatex comparison is
-      available.
   apa-7th:
     secondary:
       - biblatex
@@ -348,14 +286,6 @@ styles:
         scope: both
         count_toward_fidelity: true
         min_pass_rate: 0.86
-  american-physics-society:
-    secondary:
-      - biblatex
-    fixture_family: physics-numeric
-  american-institute-of-physics:
-    secondary:
-      - biblatex
-    fixture_family: physics-numeric
   american-chemical-society:
     secondary:
       - biblatex

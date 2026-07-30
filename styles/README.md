@@ -1,8 +1,11 @@
 # Styles Quality Metrics
 
-This directory now contains Citum's **exemplar** tier: 16 styles retained as
+This directory now contains Citum's **exemplar** tier: 17 styles retained as
 Rust-test fixtures, embedded-parent wrapper examples, or unique behavior
-coverage. The compiled **embedded** tier is authoritative at
+coverage (16 appear in `docs/compat.html`; `alpha` is excluded there — see
+`SKIPPED_STYLES` in `scripts/report-core.js` — because it is biblatex-derived
+with no citeproc-js counterpart and no snapshot). The compiled **embedded**
+tier is authoritative at
 `crates/citum-schema-style/embedded/styles/` (also exposed here through the
 `embedded/` symlink). The remaining community corpus lives in
 [`citum/citum-styles`](https://github.com/citum/citum-styles); it may extend

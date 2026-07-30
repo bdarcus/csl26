@@ -89,8 +89,6 @@ const SKIPPED_STYLES = [
   'alpha',
   'chicago-18-base',
   'chicago-notes-18th-script',
-  'iso690-author-date',
-  'iso690-numeric',
 ];
 const PROJECT_ROOT = path.dirname(__dirname);
 const DEFAULT_REPORT_CACHE_DIR = path.join(PROJECT_ROOT, '.oracle-cache', 'report-core');
@@ -1200,8 +1198,9 @@ async function renderCitumJson(runtime, styleYamlPath, refsFixture, mode = 'both
 /**
  * Expand compound bibliography blocks into individual entries.
  *
- * Some biblatex styles (chem-acs, chem-rsc, chem-biochem) produce compound
- * bibliography entries where multiple sub-entries are merged into a single
+ * The numeric-comp biblatex-authority style (and any other style with
+ * `bibliography.options.compound-numeric.collapse-subentries: true`) produces
+ * compound bibliography entries where multiple sub-entries are merged into a single
  * string: "(1) text1 (2) text2 ... (N) textN".  Citum renders individual
  * entries, so we expand the compound blocks before comparing.
  */
