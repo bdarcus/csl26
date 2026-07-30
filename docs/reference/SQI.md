@@ -33,12 +33,18 @@ Overall SQI is reported as a 0.0-1.0 score in JSON and as a percentage in `docs/
 
 ## Working Thresholds
 
-Current wave target:
+Current wave target, as a mean across the **embedded tier only**
+(`docs/compat.html`'s headline; exemplar and community styles are reported
+separately and are not held to this target):
 
-- `>= 0.95` fidelity
-- `>= 0.90` SQI
+- `>= 0.95` mean fidelity
+- `>= 0.90` mean SQI
 
-These thresholds are used for wave planning and tracking, not as a replacement for oracle checks.
+These are directional wave-planning targets, not a per-style gate and not a
+replacement for oracle checks. The actual enforced gate is
+`scripts/check-core-quality.js`, which checks each style's fidelity and SQI
+drift against a recorded baseline (`scripts/report-data/core-quality-baseline.json`),
+not this aggregate.
 
 ## Commands
 
