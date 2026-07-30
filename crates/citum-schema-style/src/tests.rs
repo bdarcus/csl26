@@ -2224,3 +2224,214 @@ bibliography:
     );
     assert_eq!(realization.colon, None);
 }
+
+#[test]
+fn numeric_label_mode_wraps_auto_inserted_label_flush_against_next_component() {
+    let resolved = Style::from_yaml_str(
+        r#"
+info: { id: numeric-flush-wrap, title: Numeric Flush Wrap }
+bibliography:
+  options:
+    label-mode: numeric
+  template:
+    - contributor: author
+      form: long
+    - title: primary
+"#,
+    )
+    .unwrap()
+    .try_into_resolved()
+    .expect("numeric label-mode should resolve");
+
+    let template = resolved
+        .bibliography
+        .as_ref()
+        .and_then(|bib| bib.template.as_ref())
+        .expect("bibliography template should be present");
+
+    let template::TemplateComponent::Group(group) = &template[0] else {
+        panic!(
+            "expected the auto-inserted label wrapped in a group, got {:?}",
+            template[0]
+        );
+    };
+    assert_eq!(
+        group.delimiter,
+        Some(template::DelimiterPunctuation::Custom(String::new()))
+    );
+    assert_eq!(group.group.len(), 2);
+    assert!(matches!(
+        &group.group[0],
+        template::TemplateComponent::Number(number)
+            if number.number == template::NumberVariable::CitationNumber
+    ));
+    assert!(matches!(
+        &group.group[1],
+        template::TemplateComponent::Contributor(contributor)
+            if contributor.contributor == template::ContributorRoles::Single(template::ContributorRole::Author)
+    ));
+}
+
+#[test]
+fn label_wrap_period_sets_suffix_and_clears_an_inherited_bracket_wrap() {
+    let resolved = Style::from_yaml_str(
+        r#"
+info: { id: numeric-period-wrap, title: Numeric Period Wrap }
+bibliography:
+  options:
+    label-mode: numeric
+    label-wrap: period
+  template:
+    - number: citation-number
+      wrap:
+        punctuation: brackets
+    - contributor: author
+      form: long
+"#,
+    )
+    .unwrap()
+    .try_into_resolved()
+    .expect("period label-wrap should resolve");
+
+    let template = resolved
+        .bibliography
+        .as_ref()
+        .and_then(|bib| bib.template.as_ref())
+        .expect("bibliography template should be present");
+
+    let template::TemplateComponent::Number(number) = &template[0] else {
+        panic!("expected a bare label component, got {:?}", template[0]);
+    };
+    assert_eq!(number.rendering.suffix.as_deref(), Some("."));
+    assert_eq!(number.rendering.wrap, None);
+}
+
+#[test]
+fn numeric_label_mode_is_idempotent_across_inheritance_levels() {
+    use std::io::Write;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    let nanos = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .subsec_nanos();
+    let dir = std::env::temp_dir().join(format!("citum_numeric_idempotent_{nanos}"));
+    std::fs::create_dir_all(&dir).unwrap();
+    let parent_path = dir.join("parent.yaml");
+    std::fs::File::create(&parent_path)
+        .unwrap()
+        .write_all(
+            br#"
+info: { id: numeric-idempotent-parent, title: Numeric Idempotent Parent }
+bibliography:
+  options:
+    label-mode: numeric
+  template:
+    - contributor: author
+      form: long
+"#,
+        )
+        .unwrap();
+
+    let child_yaml = format!(
+        "info: {{ id: numeric-idempotent-child, title: Numeric Idempotent Child }}\nextends: \"file://{}\"\n",
+        parent_path.display()
+    );
+    let resolved = Style::from_yaml_str(&child_yaml)
+        .unwrap()
+        .try_into_resolved()
+        .expect("child inheriting numeric label-mode should resolve");
+    std::fs::remove_dir_all(&dir).ok();
+
+    let template = resolved
+        .bibliography
+        .as_ref()
+        .and_then(|bib| bib.template.as_ref())
+        .expect("bibliography template should be present");
+
+    let label_count = template
+        .iter()
+        .flat_map(|component| match component {
+            template::TemplateComponent::Group(group) => group.group.iter().collect::<Vec<_>>(),
+            other => vec![other],
+        })
+        .filter(|component| {
+            matches!(
+                component,
+                template::TemplateComponent::Number(number)
+                    if number.number == template::NumberVariable::CitationNumber
+            )
+        })
+        .count();
+    assert_eq!(
+        label_count, 1,
+        "resolving citation-number twice (parent then child) must not duplicate the label"
+    );
+}
+
+#[test]
+fn author_date_label_mode_strips_label_inherited_from_a_numeric_parent() {
+    use std::io::Write;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    let nanos = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .subsec_nanos();
+    let dir = std::env::temp_dir().join(format!("citum_author_date_strip_{nanos}"));
+    std::fs::create_dir_all(&dir).unwrap();
+    let parent_path = dir.join("parent.yaml");
+    std::fs::File::create(&parent_path)
+        .unwrap()
+        .write_all(
+            br#"
+info: { id: author-date-strip-parent, title: Author Date Strip Parent }
+bibliography:
+  options:
+    label-mode: numeric
+  template:
+    - contributor: author
+      form: long
+    - title: primary
+"#,
+        )
+        .unwrap();
+
+    let child_yaml = format!(
+        "info: {{ id: author-date-strip-child, title: Author Date Strip Child }}\nextends: \"file://{}\"\nbibliography:\n  options:\n    label-mode: author-date\n",
+        parent_path.display()
+    );
+    let resolved = Style::from_yaml_str(&child_yaml)
+        .unwrap()
+        .try_into_resolved()
+        .expect("author-date override should resolve");
+    std::fs::remove_dir_all(&dir).ok();
+
+    let template = resolved
+        .bibliography
+        .as_ref()
+        .and_then(|bib| bib.template.as_ref())
+        .expect("bibliography template should be present");
+
+    assert!(
+        !template.iter().any(|component| matches!(
+            component,
+            template::TemplateComponent::Number(number)
+                if number.number == template::NumberVariable::CitationNumber
+        ) || matches!(
+            component,
+            template::TemplateComponent::Group(group)
+                if group.group.iter().any(|inner| matches!(
+                    inner,
+                    template::TemplateComponent::Number(number)
+                        if number.number == template::NumberVariable::CitationNumber
+                ))
+        )),
+        "author-date label-mode must strip the label the numeric parent inserted, got {template:?}"
+    );
+    assert!(matches!(
+        &template[0],
+        template::TemplateComponent::Contributor(contributor)
+            if contributor.contributor == template::ContributorRoles::Single(template::ContributorRole::Author)
+    ));
+}

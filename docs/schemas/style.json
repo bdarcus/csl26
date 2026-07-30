@@ -7852,6 +7852,11 @@
           "description": "Brackets.",
           "type": "string",
           "const": "brackets"
+        },
+        {
+          "description": "A trailing period, flush against the following component (no outer wrap).",
+          "type": "string",
+          "const": "period"
         }
       ]
     },
