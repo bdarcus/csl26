@@ -2959,7 +2959,7 @@ async function generateReport(options) {
 function generateHtml(report) {
   const headerHtml = generateHtmlHeader(report);
   const statsHtml = generateHtmlStats(report);
-  const sqiExplainerHtml = generateHtmlSqiExplainer();
+  const sqiExplainerHtml = generateHtmlSqiExplainer(report);
   const tableHtml = generateHtmlTable(report);
   const footerHtml = generateHtmlFooter();
 
@@ -3187,7 +3187,18 @@ function generateHtmlStats(report) {
 `;
 }
 
-function generateHtmlSqiExplainer() {
+function generateHtmlSqiExplainer(report) {
+  const embeddedNames = new Set(report.metadata?.portfolioTiers?.embedded || []);
+  const embeddedStyles = report.styles.filter((style) => embeddedNames.has(style.name));
+  const embeddedCompat = embeddedStyles.map((style) => (style.compatibilityScore ?? style.fidelityScore) * 100);
+  const embeddedSqi = embeddedStyles.map((style) => style.qualityBreakdown?.score ?? (style.qualityScore || 0) * 100);
+  const meanCompat = embeddedCompat.length > 0
+    ? (embeddedCompat.reduce((sum, v) => sum + v, 0) / embeddedCompat.length).toFixed(1)
+    : 'n/a';
+  const meanSqi = embeddedSqi.length > 0
+    ? (embeddedSqi.reduce((sum, v) => sum + v, 0) / embeddedSqi.length).toFixed(1)
+    : 'n/a';
+
   return `
     <!-- SQI Explainer -->
     <section class="py-8 px-6">
@@ -3195,16 +3206,40 @@ function generateHtmlSqiExplainer() {
             <div class="bg-[var(--citum-surface)] rounded-xl border border-slate-200 p-6">
                 <h2 class="text-lg font-semibold text-slate-900 mb-2">How To Read This Report</h2>
                 <p class="text-sm text-slate-600 mb-3">
+                    This report covers a three-tier style portfolio. <strong>Embedded</strong> (${embeddedStyles.length} styles) is
+                    Citum's compiled product surface and the headline this report scores against; the stats above and the
+                    working targets below cover this tier only. <strong>Exemplar</strong> (${report.exemplarStyles || 0} styles,
+                    listed separately in the table below) are Rust-test fixtures, embedded-parent wrapper examples, or unique
+                    behavior coverage — reported for visibility, not gated. The long-tail <strong>community</strong> corpus lives
+                    in <a class="text-primary hover:underline" href="https://github.com/citum/citum-styles">citum-styles</a>; its
+                    parity values are advisory and do not appear in this report at all.
+                </p>
+                <p class="text-sm text-slate-600 mb-3">
                     <strong>Compatibility</strong> is the existing lenient regression gate; it can tolerate meaningful text-level drift.
                     <strong>Oracle text parity</strong> is the stricter, symmetric comparison of visible renderer text.
                     <strong>SQI</strong> (Style Quality Index) is secondary: it scores maintainability and fallback quality.
+                    Most styles are verified against the <strong>citeproc-js</strong> oracle; a small number of biblatex-derived
+                    styles (currently just <code>numeric-comp</code>, in the exemplar tier) instead use
+                    <strong>biblatex</strong> as their primary authority, because biblatex is the only origin format for the
+                    compound-numeric grouping feature they exercise — the <strong>Authority</strong> column shows which applies
+                    per style.
                 </p>
                 <p class="text-sm text-slate-600 mb-4">
-                    Current working targets remain <code>&gt;=95% compatibility</code> and <code>&gt;=90 SQI</code>.
-                    Oracle text parity is informational until each drift is adjudicated and family-level ratchets are defined.
+                    Working targets for the embedded tier remain <code>&gt;=95% mean compatibility</code> and
+                    <code>&gt;=90 mean SQI</code>; as of this report the embedded tier measures
+                    <code>${meanCompat}% compatibility</code> and <code>${meanSqi} SQI</code> (mean across ${embeddedStyles.length} styles).
+                    These are directional targets, not a per-style gate — the enforced gate
+                    (<code>scripts/check-core-quality.js</code>) checks fidelity and SQI drift against a recorded baseline per
+                    style, not this aggregate. Oracle text parity is informational until each drift is adjudicated and
+                    family-level ratchets are defined.
                 </p>
                 <p class="text-sm text-slate-600 mb-4">
-                    <strong>Lineage</strong> shows the source family a style derives from.
+                    <strong>Lineage</strong> shows the source family a style derives from. Below the headline tiles, styles are
+                    grouped under <strong>family header rows</strong> (root style name, member count, alias count, aggregate CSL
+                    reach): the root is the top of a style's <code>extends</code> chain, so a family groups only styles that
+                    literally extend a common ancestor. A style with no <code>extends</code> is its own singleton family, root
+                    equal to itself — most embedded and exemplar styles fall in this category today; visually related styles
+                    (e.g. same publisher) are not automatically grouped unless one actually extends another.
                     <strong>Oracle text parity</strong> preserves numbering, case, punctuation, brackets, and role labels after transport markup is removed.
                     A drift may be a Citum defect, an oracle defect, an intentional divergence, or unresolved; parity alone does not assign fault.
                     Similarity outputs without an established counterpart are excluded from both metrics and appear only as neutral pairing diagnostics.
