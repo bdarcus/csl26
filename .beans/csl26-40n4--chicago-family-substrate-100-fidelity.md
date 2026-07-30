@@ -5,7 +5,8 @@ status: in-progress
 type: epic
 priority: high
 created_at: 2026-06-30T14:29:06Z
-updated_at: 2026-06-30T14:29:06Z
+updated_at: 2026-07-30T19:09:41Z
+parent: csl26-w0hf
 ---
 
 Container epic for the Chicago-family pivot: stop hand-tuning chicago-author-date-18th in isolation and instead build a shared semantic/component layer plus conversion/accessor fixes that lift chicago-author-date-18th, chicago-notes-18th, chicago-shortened-notes-bibliography, and taylor-and-francis-chicago-author-date together, backed by one robust fixture exercising citation+bibliography surfaces across all four, with each variant driven to ~100% fidelity.

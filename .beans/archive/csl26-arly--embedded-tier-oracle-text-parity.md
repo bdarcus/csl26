@@ -1,11 +1,12 @@
 ---
 # csl26-arly
 title: Embedded-tier oracle text parity
-status: in-progress
+status: completed
 type: epic
 priority: high
 created_at: 2026-07-30T14:16:05Z
-updated_at: 2026-07-30T14:55:38Z
+updated_at: 2026-07-30T19:10:05Z
+parent: csl26-w0hf
 ---
 
 Raise oracle text parity for the embedded style tier (currently 38.7% overall, 1260/3255). Baseline: docs/compat.html generated at fb0a01af. Disjoint defect taxonomy over 2501 parity mismatches (Z unclassified 925/37%, D title-quoting 421/16.8%, D2 title/term case 392/15.7%, A oracle-only number prefix 318/12.7% split into A1 harness-join + A2 rendering-omission, B punctuation-only 200/8%, J citum-only number prefix 82/3.3%, I number-prefix format 64/2.6%, F bracket medium label 30/1.2%, H year-suffix 30/1.2% (csl26-m8la), E name separator 26/1%, G/M accessed+label terms 13/0.5%).
@@ -25,3 +26,20 @@ Plan: /home/bruce/.claude/plans/ok-now-that-we-ve-iridescent-cat.md (revised sco
 **Remaining open children:** [[csl26-j7uc]] (A2 rendering-gap fix, largest deferred wave, 318 mismatches / unblocks 8 exemplars at 0% parity) and [[csl26-waly]] (RSC report-evidence bug). Chicago-family work (55.7% of all mismatches) is intentionally not tracked under this epic -- see the scope-correction note above; residual-defect evidence was fed into the existing in-progress [[csl26-giun]] and [[csl26-7jht]] beans instead.
 
 **Correction (2026-07-30, post-PR-1):** the framing above overstates csl26-40n4/csl26-h7oc as active. Its last landed PR merged 2026-07-04 (26 days idle at time of writing), csl26-giun has sat 'in-progress' with no landed work since then, and csl26-7jht/csl26-gzwj are unstarted todos. Feeding evidence into them was still correct (avoids a second competing tracking structure for the same styles), but resuming Chicago work is separate, unstarted effort -- not something already in flight. User flagged this after reading the PR; next work picked was csl26-j7uc instead.
+
+## Summary of Changes
+
+This epic's own scope is complete: [[csl26-j7uc]] (the class-A2 bibliography
+numeric-label gap, landed via PR #1119 + PR #1118), [[csl26-w1vf]] (the
+elsevier-vancouver-author-date label-mode leak), [[csl26-lf68]] (the class-A2
+root-cause spike), and [[csl26-q42m]] (baseline/ratchet tracking) are all
+done. Only [[csl26-waly]] (a low-priority RSC evidence bug) remains open.
+
+**This does not mean embedded-tier oracle parity is done.** The headline
+number barely moved from this epic's own work -- see this epic's own
+"scope correction" note above: the Chicago family (55.7% of all tracked
+mismatches) was deliberately excluded and tracked separately under
+[[csl26-40n4]], which was disconnected from this epic (no shared parent)
+until today. Both are now children of [[csl26-w0hf]] ("Embedded-tier oracle
+parity to 100%"), the actual project-level milestone -- see that bean for
+current status and next actions.
