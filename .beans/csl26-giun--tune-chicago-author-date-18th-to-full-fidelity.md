@@ -5,7 +5,7 @@ status: in-progress
 type: task
 priority: high
 created_at: 2026-06-30T18:46:08Z
-updated_at: 2026-07-02T23:19:17Z
+updated_at: 2026-07-30T14:17:47Z
 parent: csl26-h7oc
 ---
 
@@ -133,3 +133,13 @@ are layered on.
   index-misaligned tail (classic/legal-citation placeholder items the
   oracle doesn't render at all). Bean stays in-progress; 100% + clean-SQI
   gate not met.
+
+## 2026-07-30: oracle text-parity residuals (new class evidence, from citum-core#embedded-parity report at fb0a01af)
+
+Full-portfolio oracle-parity clustering (not shared-corpus, the broader references-expanded run) surfaces residual classes on chicago-author-date-18th (byte-identical on taylor-and-francis-chicago-author-date, so any fix here pays twice — see csl26-gzwj):
+
+- **D: title quoting differs (111 of this style's mismatches).** Oracle quotes titles/chapter-titles with curly quotes on types this style doesn't (e.g. archival letters, dictionary entries, newspaper articles): `O: Adams, John. 1797. \"Letter to James Smith.\" Adams Papers, reel 45.` vs `C: Adams, John. 1797. Letter to James Smith. Adams Papers, reel 45.` Also the inverse — Citum quotes a map/dataset the oracle doesn't: `O: Cable, D. 2013. The Racial Dot Map. Map. …` vs `C: Cable, D. 2013. \"The racial dot map.\" …` — suggests a type-variant boundary issue, not a uniform quoting rule.
+- **C: stray period after container-title, before volume/issue locator (68 occurrences).** `O: … Urban Climate 15: 1–18.` vs `C: … Urban Climate. 15: 1–18` — container-title is getting a terminal period before the volume:issue:page block where CMOS wants none.
+- **B: name-list conjunction dropped between two authors (subset of 62 punctuation-only diffs).** `O: Smith, Jane, and Robert Williams. 2020.` vs `C: Smith, Jane and Robert Williams. 2020.` — missing comma before \"and\" in a 2-author list.
+
+Not independently investigated/fixed — recorded as residual-defect input for this bean's ongoing fidelity loop. Full clustering data: /tmp/prd_report.json (stale path, regenerate via `node scripts/report-core.js --styles chicago-author-date-18th --parallelism 2`). See [[csl26-arly]] for the harness-side finding that class A (bib-number prefix) is a separate, likely-unrelated measurement artifact — do not chase it from this bean.

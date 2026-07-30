@@ -5,7 +5,7 @@ status: todo
 type: task
 priority: high
 created_at: 2026-06-30T18:46:09Z
-updated_at: 2026-06-30T18:55:24Z
+updated_at: 2026-07-30T14:17:58Z
 parent: csl26-h7oc
 blocked_by:
     - csl26-lxy3
@@ -42,3 +42,20 @@ already improved, leaving this bean to focus on its own bibliography surface
       citation deltas
 - [ ] SQI loop
 - [ ] style-qa-reviewer handoff (tier: embedded-core)
+
+## 2026-07-30: oracle text-parity evidence (worst style in the portfolio: 2.4% parity, 0.751 fidelity)
+
+Full-portfolio oracle-parity clustering (references-expanded run, report at fb0a01af) shows chicago-shortened-notes-bibliography's bibliography failure shape is systemic, not per-entry — comma delimiters where Chicago wants periods, quotes dropped, terms lowercased, across nearly every sampled entry:
+
+```
+O: Kafka, Franz. Metamorphosis. Translated by David Wyllie. Kurt Wolff Verlag, 1915.
+C: Kafka, Franz, Metamorphosis. translated by David Wyllie, Kurt Wolff Verlag, 1915.
+
+O: NASA Goddard Institute for Space Studies. \"Global Temperature Anomalies 1880-2023.\" NASA, 2024. https://data.giss.nasa.gov/gistemp/.
+C: NASA Goddard Institute for Space Studies, Global Temperature Anomalies 1880-2023, NASA, 2024, https://data.giss.nasa.gov/gistemp/
+
+O: State of JS Team. \"The State of JavaScript 2023.\" 2023. https://stateofjs.com/2023.
+C: State of JS Team, The State of JavaScript 2023, 2023, https://stateofjs.com/2023
+```
+
+This style is `chicago-shortened-notes-bibliography-core.yaml` (284 lines) extending `chicago-notes-18th` (731 lines). Given `303a38f0 feat(schema)!: deep-merge options on extends` and `0b8efb77 fix(styles): fix two title deep-merge regressions` landed recently, this looks like deep-merge fallout from a shared root cause (delimiter/quoting/case options not surviving the extends chain), not N independent per-type bugs — worth checking the resolved merged template against `chicago-notes-18th`'s bibliography delimiters/affixes before doing per-entry tuning. Not independently root-caused — recorded as a strong lead for this bean's fidelity loop. Full clustering data path is stale (/tmp/prd_report.json); regenerate via `node scripts/report-core.js --styles chicago-shortened-notes-bibliography --parallelism 2`. See [[csl26-arly]].

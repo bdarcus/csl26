@@ -1,0 +1,350 @@
+{
+  "generated": "2026-07-30T14:20:04.489Z",
+  "commit": "828cb9d2",
+  "source": "scripts/report-core.js",
+  "purpose": "Non-gating snapshot of embedded-tier oracle text parity (exactParity) and headline fidelity, recorded per csl26-arly. NOT read by scripts/check-core-quality.js's hard fidelity gate (that gate is reserved for styles that have reached fidelityScore 1.0 in scripts/report-data/core-quality-baseline.json). Sub-1.0 fidelity ratchets are tracked separately per-style in scripts/report-data/verification-policy.yaml (min_pass_rate floors). This file exists because nothing previously recorded exactParity at all -- it is the input for future parity-improvement waves to compare against.",
+  "styles": {
+    "american-medical-association": {
+      "tier": "embedded",
+      "fidelityScore": 1,
+      "qualityScore": 0.972,
+      "citations": {
+        "passed": 20,
+        "total": 20
+      },
+      "bibliography": {
+        "passed": 47,
+        "total": 47
+      },
+      "exactParity": {
+        "passed": 16,
+        "total": 67,
+        "rate": 0.239
+      }
+    },
+    "apa-7th": {
+      "tier": "embedded",
+      "fidelityScore": 0.986,
+      "qualityScore": 0.914,
+      "citations": {
+        "passed": 48,
+        "total": 48
+      },
+      "bibliography": {
+        "passed": 96,
+        "total": 98
+      },
+      "exactParity": {
+        "passed": 89,
+        "total": 146,
+        "rate": 0.61
+      }
+    },
+    "chicago-author-date-18th": {
+      "tier": "embedded",
+      "fidelityScore": 0.926,
+      "qualityScore": 0.921,
+      "citations": {
+        "passed": 63,
+        "total": 63
+      },
+      "bibliography": {
+        "passed": 437,
+        "total": 477
+      },
+      "exactParity": {
+        "passed": 104,
+        "total": 540,
+        "rate": 0.193
+      }
+    },
+    "chicago-notes-18th": {
+      "tier": "embedded",
+      "fidelityScore": 0.986,
+      "qualityScore": 0.914,
+      "citations": {
+        "passed": 73,
+        "total": 74
+      },
+      "bibliography": {
+        "passed": 0,
+        "total": 0
+      },
+      "exactParity": {
+        "passed": 8,
+        "total": 74,
+        "rate": 0.108
+      }
+    },
+    "chicago-shortened-notes-bibliography": {
+      "tier": "embedded",
+      "fidelityScore": 0.751,
+      "qualityScore": 1,
+      "citations": {
+        "passed": 40,
+        "total": 49
+      },
+      "bibliography": {
+        "passed": 309,
+        "total": 416
+      },
+      "exactParity": {
+        "passed": 11,
+        "total": 465,
+        "rate": 0.024
+      }
+    },
+    "elsevier-harvard": {
+      "tier": "embedded",
+      "fidelityScore": 1,
+      "qualityScore": 1,
+      "citations": {
+        "passed": 20,
+        "total": 20
+      },
+      "bibliography": {
+        "passed": 47,
+        "total": 47
+      },
+      "exactParity": {
+        "passed": 40,
+        "total": 67,
+        "rate": 0.597
+      }
+    },
+    "elsevier-vancouver": {
+      "tier": "embedded",
+      "fidelityScore": 0.97,
+      "qualityScore": 1,
+      "citations": {
+        "passed": 20,
+        "total": 20
+      },
+      "bibliography": {
+        "passed": 45,
+        "total": 47
+      },
+      "exactParity": {
+        "passed": 55,
+        "total": 67,
+        "rate": 0.821
+      }
+    },
+    "elsevier-with-titles": {
+      "tier": "embedded",
+      "fidelityScore": 0.985,
+      "qualityScore": 1,
+      "citations": {
+        "passed": 20,
+        "total": 20
+      },
+      "bibliography": {
+        "passed": 46,
+        "total": 47
+      },
+      "exactParity": {
+        "passed": 27,
+        "total": 67,
+        "rate": 0.403
+      }
+    },
+    "gb-t-7714-2025-author-date": {
+      "tier": "embedded",
+      "fidelityScore": 0.701,
+      "qualityScore": 0.909,
+      "citations": {
+        "passed": 19,
+        "total": 20
+      },
+      "bibliography": {
+        "passed": 28,
+        "total": 47
+      },
+      "exactParity": {
+        "passed": 32,
+        "total": 67,
+        "rate": 0.478
+      }
+    },
+    "gb-t-7714-2025-note": {
+      "tier": "embedded",
+      "fidelityScore": 0.982,
+      "qualityScore": 0.941,
+      "citations": {
+        "passed": 31,
+        "total": 35
+      },
+      "bibliography": {
+        "passed": 249,
+        "total": 250
+      },
+      "exactParity": {
+        "passed": 240,
+        "total": 285,
+        "rate": 0.842
+      }
+    },
+    "gb-t-7714-2025-numeric": {
+      "tier": "embedded",
+      "fidelityScore": 0.996,
+      "qualityScore": 0.985,
+      "citations": {
+        "passed": 21,
+        "total": 21
+      },
+      "bibliography": {
+        "passed": 249,
+        "total": 250
+      },
+      "exactParity": {
+        "passed": 257,
+        "total": 271,
+        "rate": 0.948
+      }
+    },
+    "ieee": {
+      "tier": "embedded",
+      "fidelityScore": 1,
+      "qualityScore": 0.87,
+      "citations": {
+        "passed": 48,
+        "total": 48
+      },
+      "bibliography": {
+        "passed": 101,
+        "total": 101
+      },
+      "exactParity": {
+        "passed": 84,
+        "total": 149,
+        "rate": 0.564
+      }
+    },
+    "modern-language-association": {
+      "tier": "embedded",
+      "fidelityScore": 0.948,
+      "qualityScore": 0.99,
+      "citations": {
+        "passed": 43,
+        "total": 45
+      },
+      "bibliography": {
+        "passed": 66,
+        "total": 70
+      },
+      "exactParity": {
+        "passed": 38,
+        "total": 115,
+        "rate": 0.33
+      }
+    },
+    "springer-basic-author-date": {
+      "tier": "embedded",
+      "fidelityScore": 0.955,
+      "qualityScore": 0.996,
+      "citations": {
+        "passed": 19,
+        "total": 20
+      },
+      "bibliography": {
+        "passed": 45,
+        "total": 47
+      },
+      "exactParity": {
+        "passed": 43,
+        "total": 67,
+        "rate": 0.642
+      }
+    },
+    "springer-basic-brackets": {
+      "tier": "embedded",
+      "fidelityScore": 0.97,
+      "qualityScore": 1,
+      "citations": {
+        "passed": 20,
+        "total": 20
+      },
+      "bibliography": {
+        "passed": 45,
+        "total": 47
+      },
+      "exactParity": {
+        "passed": 49,
+        "total": 67,
+        "rate": 0.731
+      }
+    },
+    "springer-vancouver-brackets": {
+      "tier": "embedded",
+      "fidelityScore": 1,
+      "qualityScore": 1,
+      "citations": {
+        "passed": 20,
+        "total": 20
+      },
+      "bibliography": {
+        "passed": 47,
+        "total": 47
+      },
+      "exactParity": {
+        "passed": 28,
+        "total": 67,
+        "rate": 0.418
+      }
+    },
+    "taylor-and-francis-chicago-author-date": {
+      "tier": "embedded",
+      "fidelityScore": 0.926,
+      "qualityScore": 1,
+      "citations": {
+        "passed": 63,
+        "total": 63
+      },
+      "bibliography": {
+        "passed": 437,
+        "total": 477
+      },
+      "exactParity": {
+        "passed": 104,
+        "total": 540,
+        "rate": 0.193
+      }
+    },
+    "taylor-and-francis-council-of-science-editors-author-date": {
+      "tier": "embedded",
+      "fidelityScore": 0.94,
+      "qualityScore": 0.996,
+      "citations": {
+        "passed": 19,
+        "total": 20
+      },
+      "bibliography": {
+        "passed": 44,
+        "total": 47
+      },
+      "exactParity": {
+        "passed": 21,
+        "total": 67,
+        "rate": 0.313
+      }
+    },
+    "taylor-and-francis-national-library-of-medicine": {
+      "tier": "embedded",
+      "fidelityScore": 0.97,
+      "qualityScore": 1,
+      "citations": {
+        "passed": 20,
+        "total": 20
+      },
+      "bibliography": {
+        "passed": 45,
+        "total": 47
+      },
+      "exactParity": {
+        "passed": 14,
+        "total": 67,
+        "rate": 0.209
+      }
+    }
+  }
+}
