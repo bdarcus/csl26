@@ -28,11 +28,12 @@ use citum_schema::{
     BibliographySpec, CitationSpec, Style, StyleInfo,
     options::{
         AndOptions, ArticleJournalBibliographyConfig, ArticleJournalNoPageFallback,
-        BibliographyOptions, BibliographyPartitionHeading, BibliographyPartitionKind,
-        BibliographyPartitionMode, BibliographySortPartitioning, Config, ContributorConfig,
-        DelimiterPrecedesLast, DemoteNonDroppingParticle, DisplayAsSort, LinkAnchor, LinkTarget,
-        LinksConfig, MultilingualConfig, MultilingualMode, Processing, ProcessingCustom, Sort,
-        SortKey, SortSpec, SortingConfig, SortingMultilingualMode,
+        BibliographyLabelMode, BibliographyLabelWrap, BibliographyOptions,
+        BibliographyPartitionHeading, BibliographyPartitionKind, BibliographyPartitionMode,
+        BibliographySortPartitioning, Config, ContributorConfig, DelimiterPrecedesLast,
+        DemoteNonDroppingParticle, DisplayAsSort, LinkAnchor, LinkTarget, LinksConfig,
+        MultilingualConfig, MultilingualMode, Processing, ProcessingCustom, Sort, SortKey,
+        SortSpec, SortingConfig, SortingMultilingualMode,
     },
     reference::{
         Contributor, ContributorList, DateValue, InputReference, Monograph, MonographType,
@@ -42,10 +43,10 @@ use citum_schema::{
         types::{ArchiveInfo, EprintInfo, MultilingualComplex, MultilingualString},
     },
     template::{
-        DateForm, DateVariable, DelimiterPunctuation, NumberVariable, Rendering, SimpleVariable,
-        TemplateComponent, TemplateConditionField, TemplateDate, TemplateGroup,
-        TemplateGroupCondition, TemplateNumber, TemplateTitle, TemplateVariable, TitleForm,
-        TitleType,
+        ContributorForm, ContributorRole, DateForm, DateVariable, DelimiterPunctuation,
+        NumberVariable, Rendering, SimpleVariable, TemplateComponent, TemplateConditionField,
+        TemplateContributor, TemplateDate, TemplateGroup, TemplateGroupCondition, TemplateNumber,
+        TemplateTitle, TemplateVariable, TitleForm, TitleType,
     },
 };
 use indexmap::IndexMap;
@@ -5203,6 +5204,65 @@ fn explicit_label_wrap_preserves_prefix_placement_spacing() {
     let result = processor.render_bibliography();
 
     assert_eq!(result, "(Eds.) John Smith, Jane Doe");
+}
+
+#[rstest]
+#[case::period(BibliographyLabelWrap::Period, "1.Thomas Kuhn")]
+#[case::brackets(BibliographyLabelWrap::Brackets, "[1]Thomas Kuhn")]
+fn given_numeric_label_mode_when_label_wrap_varies_then_label_renders_flush_against_author(
+    #[case] label_wrap: BibliographyLabelWrap,
+    #[case] expected: &str,
+) {
+    // Regression test for csl26-ecwd: `label-mode: numeric` used to insert
+    // the auto-generated citation-number as a bare top-level list item, so
+    // the bibliography's `separator` leaked between the label and the next
+    // component ("1. Kuhn" instead of the oracle-correct "1.Kuhn").
+    let style = Style {
+        info: StyleInfo {
+            title: Some("Numeric Label Wrap Test".to_string()),
+            id: Some("numeric-label-wrap-test".into()),
+            ..Default::default()
+        },
+        options: Some(Config {
+            processing: Some(Processing::Numeric),
+            ..Default::default()
+        }),
+        bibliography: Some(BibliographySpec {
+            options: Some(BibliographyOptions {
+                label_mode: Some(BibliographyLabelMode::Numeric),
+                label_wrap: Some(label_wrap),
+                separator: Some(". ".into()),
+                ..Default::default()
+            }),
+            template: Some(vec![TemplateComponent::Contributor(TemplateContributor {
+                contributor: ContributorRole::Author.into(),
+                form: ContributorForm::Long,
+                ..Default::default()
+            })]),
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
+    let reference = InputReference::Monograph(Box::new(Monograph {
+        id: Some("kuhn-1962".into()),
+        r#type: MonographType::Book,
+        title: Some(Title::Single(
+            "The Structure of Scientific Revolutions".to_string(),
+        )),
+        author: Some(Contributor::StructuredName(StructuredName {
+            given: "Thomas".into(),
+            family: "Kuhn".into(),
+            ..Default::default()
+        })),
+        issued: DateValue::new("1962".to_string()),
+        ..Default::default()
+    }));
+    let bib = citum_schema::bib_map!["kuhn-1962" => reference];
+    let processor = Processor::new(style, bib);
+
+    let result = processor.render_bibliography();
+
+    assert_eq!(result, expected);
 }
 
 /// Regression test for the `Date`-key engine fix (`get_variable_key` in

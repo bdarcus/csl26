@@ -51,18 +51,35 @@ pub enum BibliographyLabelWrap {
     Parentheses,
     /// Brackets.
     Brackets,
+    /// A trailing period, flush against the following component (no outer wrap).
+    Period,
 }
 
 impl BibliographyLabelWrap {
     /// Convert a supported punctuation style into a concrete wrap config.
+    ///
+    /// Returns `None` for [`BibliographyLabelWrap::Period`], since a period is
+    /// expressed as a rendering suffix rather than an outer wrap; see
+    /// [`BibliographyLabelWrap::as_suffix`].
     #[must_use]
     pub fn as_wrap_config(self) -> Option<WrapConfig> {
         match self {
-            BibliographyLabelWrap::None => None,
+            BibliographyLabelWrap::None | BibliographyLabelWrap::Period => None,
             BibliographyLabelWrap::Parentheses => {
                 Some(WrapConfig::from(WrapPunctuation::Parentheses))
             }
             BibliographyLabelWrap::Brackets => Some(WrapConfig::from(WrapPunctuation::Brackets)),
+        }
+    }
+
+    /// Return the literal suffix this wrap style appends to the label, if any.
+    #[must_use]
+    pub fn as_suffix(self) -> Option<&'static str> {
+        match self {
+            BibliographyLabelWrap::Period => Some("."),
+            BibliographyLabelWrap::None
+            | BibliographyLabelWrap::Parentheses
+            | BibliographyLabelWrap::Brackets => None,
         }
     }
 }
@@ -290,51 +307,119 @@ fn apply_repeated_author_rendering(
     }
 }
 
+/// Whether `component` is the citation-number/citation-label variable used
+/// as a bibliography entry label.
+fn is_bibliography_label(component: &TemplateComponent) -> bool {
+    matches!(
+        component,
+        TemplateComponent::Number(number)
+            if matches!(
+                number.number,
+                crate::template::NumberVariable::CitationNumber
+                    | crate::template::NumberVariable::CitationLabel
+            )
+    )
+}
+
+/// Whether a label is present anywhere in `components`, including nested groups —
+/// e.g. the `delimiter: ""` group the `Numeric` branch below wraps it in.
+fn template_has_label(components: &[TemplateComponent]) -> bool {
+    components.iter().any(|component| {
+        is_bibliography_label(component)
+            || matches!(
+                component,
+                TemplateComponent::Group(group) if template_has_label(&group.group)
+            )
+    })
+}
+
+/// Remove any bibliography label from `components`, recursing into groups and
+/// collapsing groups left empty or with a single trivial child behind.
+fn strip_bibliography_label(components: &mut Vec<TemplateComponent>) {
+    components.retain_mut(|component| {
+        if is_bibliography_label(component) {
+            return false;
+        }
+        if let TemplateComponent::Group(group) = component {
+            strip_bibliography_label(&mut group.group);
+        }
+        true
+    });
+    collapse_trivial_groups(components);
+}
+
+/// Drop empty groups and flatten groups left with exactly one child that carry
+/// no other semantics (no render condition, rendering affixes, or custom fields).
+fn collapse_trivial_groups(components: &mut Vec<TemplateComponent>) {
+    let mut index = 0;
+    while index < components.len() {
+        let Some(TemplateComponent::Group(group)) = components.get(index) else {
+            index += 1;
+            continue;
+        };
+        if group.group.is_empty() {
+            components.remove(index);
+            continue;
+        }
+        if group.group.len() == 1
+            && group.render_when.is_none()
+            && group.rendering == crate::template::Rendering::default()
+            && group.custom.is_none()
+        {
+            if let TemplateComponent::Group(mut group) = components.remove(index)
+                && let Some(child) = group.group.pop()
+            {
+                components.insert(index, child);
+            }
+            continue;
+        }
+        index += 1;
+    }
+}
+
 fn update_label_mode(template: Option<&mut Template>, mode: BibliographyLabelMode) {
     let Some(template) = template else {
         return;
     };
     match mode {
         BibliographyLabelMode::None | BibliographyLabelMode::AuthorDate => {
-            template.retain(|component| {
-                !matches!(
-                    component,
-                    TemplateComponent::Number(number)
-                        if matches!(
-                            number.number,
-                            crate::template::NumberVariable::CitationNumber
-                                | crate::template::NumberVariable::CitationLabel
-                        )
-                )
-            });
+            strip_bibliography_label(template);
         }
         BibliographyLabelMode::Numeric => {
-            let has_label = template.iter().any(|component| {
-                matches!(
-                    component,
-                    TemplateComponent::Number(number)
-                        if matches!(
-                            number.number,
-                            crate::template::NumberVariable::CitationNumber
-                                | crate::template::NumberVariable::CitationLabel
-                        )
-                )
-            });
-            if !has_label {
-                template.insert(
-                    0,
-                    TemplateComponent::Number(crate::TemplateNumber {
-                        number: crate::template::NumberVariable::CitationNumber,
-                        ..Default::default()
-                    }),
-                );
+            if template_has_label(template) {
+                return;
             }
+            let label = TemplateComponent::Number(crate::TemplateNumber {
+                number: crate::template::NumberVariable::CitationNumber,
+                ..Default::default()
+            });
+            if template.is_empty() {
+                template.push(label);
+                return;
+            }
+            let following = template.remove(0);
+            template.insert(
+                0,
+                TemplateComponent::Group(crate::template::TemplateGroup {
+                    group: vec![label, following],
+                    delimiter: Some(crate::template::DelimiterPunctuation::Custom(String::new())),
+                    ..Default::default()
+                }),
+            );
         }
     }
 }
 
 trait LabelWrapConfig {
     fn wrap_config(self) -> Option<WrapConfig>;
+
+    /// Literal suffix this wrap style appends to the label, if any.
+    fn suffix(self) -> Option<&'static str>
+    where
+        Self: Sized,
+    {
+        None
+    }
 }
 
 impl LabelWrapConfig for LabelWrap {
@@ -347,6 +432,10 @@ impl LabelWrapConfig for BibliographyLabelWrap {
     fn wrap_config(self) -> Option<WrapConfig> {
         self.as_wrap_config()
     }
+
+    fn suffix(self) -> Option<&'static str> {
+        self.as_suffix()
+    }
 }
 
 fn update_label_wrap<W>(template: Option<&mut Template>, wrap: W)
@@ -356,15 +445,29 @@ where
     let Some(template) = template else {
         return;
     };
-    for component in template.iter_mut() {
-        if let TemplateComponent::Number(number) = component
-            && matches!(
-                number.number,
-                crate::template::NumberVariable::CitationNumber
-                    | crate::template::NumberVariable::CitationLabel
-            )
-        {
-            number.rendering.wrap = wrap.wrap_config();
+    update_label_wrap_components(template, wrap);
+}
+
+fn update_label_wrap_components<W>(components: &mut [TemplateComponent], wrap: W)
+where
+    W: Copy + LabelWrapConfig,
+{
+    for component in components.iter_mut() {
+        match component {
+            TemplateComponent::Number(number)
+                if matches!(
+                    number.number,
+                    crate::template::NumberVariable::CitationNumber
+                        | crate::template::NumberVariable::CitationLabel
+                ) =>
+            {
+                number.rendering.wrap = wrap.wrap_config();
+                number.rendering.suffix = wrap.suffix().map(ToString::to_string).map(Into::into);
+            }
+            TemplateComponent::Group(group) => {
+                update_label_wrap_components(&mut group.group, wrap);
+            }
+            _ => {}
         }
     }
 }

@@ -49,6 +49,8 @@ bibliography:
     separator: ", "
     entry-suffix: .
     entry-suffix-after-doi: true
+    label-mode: numeric
+    label-wrap: brackets
   type-variants:
     article-journal:
       modify:
@@ -61,18 +63,13 @@ bibliography:
             number: pages
           label-form: short
     book:
-    - delimiter: ""
-      group:
-      - number: citation-number
-        wrap:
-          punctuation: brackets
-      - contributor: author
-        form: long
-        and: text
-        name-order: given-first
-        shorten:
-          min: 7
-          use-first: 1
+    - contributor: author
+      form: long
+      and: text
+      name-order: given-first
+      shorten:
+        min: 7
+        use-first: 1
     - title: primary
     - title: parent-monograph
       emph: true
@@ -94,18 +91,13 @@ bibliography:
       prefix: ", doi: "
     - variable: url
     broadcast:
-    - delimiter: ""
-      group:
-      - number: citation-number
-        wrap:
-          punctuation: brackets
-      - contributor: author
-        form: long
-        and: text
-        name-order: given-first
-        shorten:
-          min: 7
-          use-first: 1
+    - contributor: author
+      form: long
+      and: text
+      name-order: given-first
+      shorten:
+        min: 7
+        use-first: 1
     - title: primary
     - title: parent-monograph
       emph: true
@@ -126,18 +118,13 @@ bibliography:
       prefix: ", doi: "
     - variable: url
     chapter:
-    - delimiter: ""
-      group:
-      - number: citation-number
-        wrap:
-          punctuation: brackets
-      - contributor: author
-        form: long
-        and: text
-        name-order: given-first
-        shorten:
-          min: 7
-          use-first: 1
+    - contributor: author
+      form: long
+      and: text
+      name-order: given-first
+      shorten:
+        min: 7
+        use-first: 1
     - title: primary
       wrap:
         punctuation: quotes
@@ -163,18 +150,13 @@ bibliography:
     - number: pages
       label-form: short
     dataset:
-    - delimiter: ""
-      group:
-      - number: citation-number
-        wrap:
-          punctuation: brackets
-      - contributor: author
-        form: long
-        and: text
-        name-order: given-first
-        shorten:
-          min: 7
-          use-first: 1
+    - contributor: author
+      form: long
+      and: text
+      name-order: given-first
+      shorten:
+        min: 7
+        use-first: 1
     - title: primary
     - title: parent-monograph
       emph: true
@@ -201,18 +183,13 @@ bibliography:
             number: pages
           label-form: short
     motion-picture:
-    - delimiter: ""
-      group:
-      - number: citation-number
-        wrap:
-          punctuation: brackets
-      - contributor: author
-        form: long
-        and: text
-        name-order: given-first
-        shorten:
-          min: 7
-          use-first: 1
+    - contributor: author
+      form: long
+      and: text
+      name-order: given-first
+      shorten:
+        min: 7
+        use-first: 1
     - title: primary
     - title: parent-monograph
       emph: true
@@ -233,18 +210,13 @@ bibliography:
       prefix: ", doi: "
     - variable: url
     paper-conference:
-    - delimiter: ""
-      group:
-      - number: citation-number
-        wrap:
-          punctuation: brackets
-      - contributor: author
-        form: long
-        and: text
-        name-order: given-first
-        shorten:
-          min: 7
-          use-first: 1
+    - contributor: author
+      form: long
+      and: text
+      name-order: given-first
+      shorten:
+        min: 7
+        use-first: 1
     - title: primary
       wrap:
         punctuation: quotes
@@ -276,18 +248,13 @@ bibliography:
     - date: issued
       form: full
     personal_communication:
-    - delimiter: ""
-      group:
-      - number: citation-number
-        wrap:
-          punctuation: brackets
-      - contributor: author
-        form: long
-        and: text
-        name-order: given-first
-        shorten:
-          min: 7
-          use-first: 1
+    - contributor: author
+      form: long
+      and: text
+      name-order: given-first
+      shorten:
+        min: 7
+        use-first: 1
     - title: primary
       wrap:
         punctuation: quotes
@@ -310,18 +277,13 @@ bibliography:
       prefix: ", doi: "
     - variable: url
     report:
-    - delimiter: ""
-      group:
-      - number: citation-number
-        wrap:
-          punctuation: brackets
-      - contributor: author
-        form: long
-        and: text
-        name-order: given-first
-        shorten:
-          min: 7
-          use-first: 1
+    - contributor: author
+      form: long
+      and: text
+      name-order: given-first
+      shorten:
+        min: 7
+        use-first: 1
     - title: primary
     - title: parent-monograph
       emph: true
@@ -342,18 +304,13 @@ bibliography:
       prefix: ", doi: "
     - variable: url
     thesis:
-    - delimiter: ""
-      group:
-      - number: citation-number
-        wrap:
-          punctuation: brackets
-      - contributor: author
-        form: long
-        and: text
-        name-order: given-first
-        shorten:
-          min: 7
-          use-first: 1
+    - contributor: author
+      form: long
+      and: text
+      name-order: given-first
+      shorten:
+        min: 7
+        use-first: 1
     - title: primary
       emph: false
       wrap:
@@ -375,18 +332,13 @@ bibliography:
     - variable: doi
       prefix: "doi: "
   template:
-  - delimiter: ""
-    group:
-    - number: citation-number
-      wrap:
-        punctuation: brackets
-    - contributor: author
-      form: long
-      and: text
-      name-order: given-first
-      shorten:
-        min: 7
-        use-first: 1
+  - contributor: author
+    form: long
+    and: text
+    name-order: given-first
+    shorten:
+      min: 7
+      use-first: 1
   - title: primary
     wrap:
       punctuation: quotes
