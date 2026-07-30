@@ -5,7 +5,7 @@ status: in-progress
 type: task
 priority: high
 created_at: 2026-06-30T18:46:08Z
-updated_at: 2026-07-30T14:17:47Z
+updated_at: 2026-07-30T20:23:05Z
 parent: csl26-h7oc
 ---
 
@@ -143,3 +143,13 @@ Full-portfolio oracle-parity clustering (not shared-corpus, the broader referenc
 - **B: name-list conjunction dropped between two authors (subset of 62 punctuation-only diffs).** `O: Smith, Jane, and Robert Williams. 2020.` vs `C: Smith, Jane and Robert Williams. 2020.` — missing comma before \"and\" in a 2-author list.
 
 Not independently investigated/fixed — recorded as residual-defect input for this bean's ongoing fidelity loop. Full clustering data: /tmp/prd_report.json (stale path, regenerate via `node scripts/report-core.js --styles chicago-author-date-18th --parallelism 2`). See [[csl26-arly]] for the harness-side finding that class A (bib-number prefix) is a separate, likely-unrelated measurement artifact — do not chase it from this bean.
+
+
+
+## 2026-07-30: exact-parity punctuation pass
+
+- Prioritized `exactParity` for milestone `csl26-w0hf` rather than the behavioral fidelity score.
+- Corrected Chicago bibliography serial commas, grouped journal container/volume/page/identifier punctuation, and quoted archival manuscript/collection titles.
+- Fresh `report-core` evidence: exact parity improved from **105/540 (19.4%)** to **156/540 (28.9%)**, a gain of 51 byte-identical observations.
+- The behavioral fidelity score is diagnostic for this pass and remains below the embedded-style tuning gate; exact parity is still incomplete, so the task remains in progress.
+- Remaining exact clusters include rich reference-type templates (legal, media, web, and document/archive variants) and author-date citation formatting.

@@ -175,6 +175,9 @@ bibliography:
       - title
     contributors:
       display-as-sort: first
+      # The Chicago bibliography uses a serial comma before the final
+      # conjunction, including two-contributor entries.
+      delimiter-precedes-last: always
       shorten:
         min: 7
         use-first: 3
@@ -232,24 +235,30 @@ bibliography:
     - title: primary
       wrap:
         punctuation: quotes
-    - title: parent-serial
-      emph: true
     - group:
-      - number: volume
-      - number: issue
-        prefix: " ("
-        suffix: ")"
+      - title: parent-serial
+        emph: true
+      - group:
+        - number: volume
+        - number: issue
+          prefix: " ("
+          suffix: ")"
+        delimiter: ''
+        prefix: " "
+      - number: pages
+        prefix: ": "
+      - variable: number
+        prefix: ": "
+      - variable: doi
+        prefix: ". https://doi.org/"
+        suffix: "."
+      - group:
+        - variable: url
+        prefix: ". "
+        suffix: "."
+        render-when:
+          field-absent: doi
       delimiter: ''
-    - number: pages
-      prefix: ": "
-    - variable: number
-      prefix: ": "
-    - variable: doi
-      prefix: https://doi.org/
-    - group:
-      - variable: url
-      render-when:
-        field-absent: doi
     article-magazine:
     - contributor: author
       form: long
@@ -459,6 +468,10 @@ bibliography:
       render-when:
         field-present: issued
     - title: primary
+      # Archival manuscript and collection titles are quoted in the source
+      # Chicago style.
+      wrap:
+        punctuation: quotes
     - date: issued
       form: month-day
     - variable: raw-genre
