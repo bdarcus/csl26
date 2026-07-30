@@ -6,6 +6,7 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus and Citum contributors
 //! Style configuration options.
 
 pub mod bibliography;
+pub mod cascade;
 pub mod contributors;
 pub mod dates;
 pub mod integral_name_memory;
@@ -24,6 +25,7 @@ pub use bibliography::{
     BibliographyConfig, BibliographyPartitionHeading, BibliographyPartitionKind,
     BibliographyPartitionMode, BibliographySortPartitioning, SubsequentAuthorSubstituteRule,
 };
+pub use cascade::ScopedRawOptions;
 pub use contributors::{
     AndOptions, AndOtherOptions, ContributorConfig, ContributorConfigEntry,
     ContributorSuppressionRule, DelimiterPrecedesLast, DemoteNonDroppingParticle, DisplayAsSort,
@@ -765,6 +767,29 @@ impl CitationOptions {
         Config::merged(base, &self.to_config())
     }
 
+    /// Merge citation-local overrides over a base config, merging nested
+    /// option blocks field-by-field when a trustworthy authored scope mapping
+    /// is available (see [`cascade::ScopedRawOptions`]).
+    ///
+    /// `raw_options` is the chain-merged authored `citation.options` mapping
+    /// carried on the resolved [`crate::Style`]. When it is absent or no
+    /// longer round-trips to `self` (post-parse mutation), this behaves
+    /// exactly like [`CitationOptions::merged_with`].
+    #[must_use]
+    pub fn merged_with_raw(
+        &self,
+        base: &Config,
+        raw_options: Option<&serde_yaml::Value>,
+    ) -> Config {
+        let mut merged = self.merged_with(base);
+        if let Some(raw) = raw_options
+            && cascade::authored_matches(raw, self)
+        {
+            cascade::merge_citation_config_blocks_from_raw(&mut merged, base, raw);
+        }
+        merged
+    }
+
     /// Merge `other` into `self`, with `other` taking precedence for each field.
     pub fn merge(&mut self, other: &CitationOptions) {
         crate::merge_options!(
@@ -866,6 +891,29 @@ impl BibliographyOptions {
     #[must_use]
     pub fn merged_with(&self, base: &Config) -> Config {
         Config::merged(base, &self.to_config())
+    }
+
+    /// Merge bibliography-local overrides over a base config, merging nested
+    /// option blocks field-by-field when a trustworthy authored scope mapping
+    /// is available (see [`cascade::ScopedRawOptions`]).
+    ///
+    /// `raw_options` is the chain-merged authored `bibliography.options`
+    /// mapping carried on the resolved [`crate::Style`]. When it is absent or
+    /// no longer round-trips to `self` (post-parse mutation), this behaves
+    /// exactly like [`BibliographyOptions::merged_with`].
+    #[must_use]
+    pub fn merged_with_raw(
+        &self,
+        base: &Config,
+        raw_options: Option<&serde_yaml::Value>,
+    ) -> Config {
+        let mut merged = self.merged_with(base);
+        if let Some(raw) = raw_options
+            && cascade::authored_matches(raw, self)
+        {
+            cascade::merge_bibliography_config_blocks_from_raw(&mut merged, base, raw);
+        }
+        merged
     }
 
     /// Merge `other` into `self`, with `other` taking precedence for each field.

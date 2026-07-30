@@ -63,6 +63,40 @@ After a style is resolved, the engine applies the new scoped options to the
 effective citation and bibliography specs. This happens for both profile
 wrappers and standalone styles, so the option semantics are uniform.
 
+### 2a. Runtime Scope Cascade Merge Semantics
+
+At render time the engine derives an effective per-scope configuration by
+cascading the global `options` block into each scope: global →
+`citation.options` and global → `bibliography.options`. Scope values win.
+
+Nested option blocks (`dates`, `titles`, `contributors`, `substitute`,
+`multilingual`, `locators`, `links`, `notes`, `sorting`, …) merge
+**field-by-field**, mirroring STYLE_INHERITANCE.md rule 1: a scope block
+that sets `dates.note-wrap` inherits every other field of the global
+`dates` block. Scalars and arrays replace whole.
+
+Field presence comes from the authored document, not from typed structs —
+deserialized serde defaults are indistinguishable from authored defaults.
+Each parsed style captures its authored `citation.options` /
+`bibliography.options` mappings (preset names expanded to their resolved
+mappings), and `extends` resolution chain-merges these captures alongside
+the typed overlay, so a wrapper's scope-level authorship accumulates
+across the chain while global-scope changes still flow into scopes the
+chain never re-authored.
+
+The captures are advisory, never load-bearing: before the cascade uses a
+capture it verifies the typed scope options still round-trip from it (the
+same post-parse mutation guard as the overlay). When no trustworthy
+capture exists — programmatic construction, post-parse mutation, or a
+non-mapping value — the cascade falls back to the pre-existing typed
+whole-block merge. Non-engine consumers of the typed merge (lint,
+citum-migrate SQI refinement) intentionally stay on the typed path.
+
+The verifying case is `gb-t-7714-2025-base`: its bibliography scope
+authors only `dates.note-wrap`, and the previously duplicated copy of the
+global `dates` block is removed with byte-identical rendered output
+across the embedded and in-repo corpus (bean `csl26-yz4w`).
+
 ### 3. Schema Rules
 
 `options.profile` is removed completely.
@@ -85,5 +119,8 @@ current code-as-schema model while removing the separate profile vocabulary.
 
 ## Changelog
 
+- 2026-07-30: §2a — the runtime scope cascade merges nested option blocks
+  field-by-field from chain-merged authored scope captures, with a typed
+  whole-block fallback (bean `csl26-yz4w`).
 - 2026-04-22: Activated alongside the schema and embedded-style migration.
 - 2026-04-22: Initial version.

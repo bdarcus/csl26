@@ -8,7 +8,7 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus and Citum contributors
 mod diagnostics;
 mod metadata;
 mod model;
-mod overlay;
+pub(crate) mod overlay;
 mod resolution;
 mod sections;
 mod validation;

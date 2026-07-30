@@ -512,7 +512,10 @@ impl Processor {
             .as_ref()
             .and_then(|citation| citation.options.as_ref())
         {
-            Some(citation_options) => std::borrow::Cow::Owned(citation_options.merged_with(base)),
+            Some(citation_options) => std::borrow::Cow::Owned(
+                citation_options
+                    .merged_with_raw(base, self.style.scoped_raw_options.citation.as_ref()),
+            ),
             None => std::borrow::Cow::Borrowed(base),
         };
         self.with_punctuation_defaults(config)
@@ -530,9 +533,10 @@ impl Processor {
             .as_ref()
             .and_then(|bibliography| bibliography.options.as_ref())
         {
-            Some(bibliography_options) => {
-                std::borrow::Cow::Owned(bibliography_options.merged_with(base))
-            }
+            Some(bibliography_options) => std::borrow::Cow::Owned(
+                bibliography_options
+                    .merged_with_raw(base, self.style.scoped_raw_options.bibliography.as_ref()),
+            ),
             None => std::borrow::Cow::Borrowed(base),
         };
         self.with_punctuation_defaults(config)

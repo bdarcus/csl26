@@ -39,8 +39,10 @@ Out of scope:
 
 - registry file format and lookup order (owned by
   [STYLE_REGISTRY.md](./STYLE_REGISTRY.md))
-- the scoped-options surface itself (owned by
-  [UNIFIED_SCOPED_OPTIONS.md](./UNIFIED_SCOPED_OPTIONS.md))
+- the scoped-options surface itself, including the runtime scope cascade's
+  field-level merge (owned by
+  [UNIFIED_SCOPED_OPTIONS.md](./UNIFIED_SCOPED_OPTIONS.md) §2a,
+  bean `csl26-yz4w`)
 - edition evolution and retirement workflow (owned by
   [STYLE_EDITIONS_AND_FAMILIES.md](./STYLE_EDITIONS_AND_FAMILIES.md))
 - semantic classification vocabulary (owned by
@@ -309,6 +311,10 @@ disposition of all 141 checked-in styles is recorded in
 
 ## Changelog
 
+- v1.0 (2026-07-30): The runtime scope cascade (global → citation/
+  bibliography options) gains the same field-level merge semantics via
+  chain-merged authored scope captures — owned and specified by
+  UNIFIED_SCOPED_OPTIONS.md §2a (`csl26-yz4w`).
 - v1.0 (2026-07-29): Status flips to Active — rule 1's deep merge lands in
   `style/overlay.rs` (`csl26-svfg`); GB/T 7714-2025 dates deduplication and
   the taylor-and-francis-chicago-author-date wrapper compat fix verify it.

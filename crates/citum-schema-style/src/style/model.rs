@@ -71,6 +71,21 @@ pub struct Style {
     #[cfg_attr(feature = "schema", schemars(skip))]
     #[serde(skip, default)]
     pub raw_yaml: Option<serde_yaml::Value>,
+    /// Chain-merged authored `citation.options` / `bibliography.options`
+    /// mappings, captured at parse time and maintained through `extends`
+    /// resolution. Basis for the runtime scope cascade's field-level merge
+    /// (see [`crate::options::cascade::ScopedRawOptions`]). Empty in
+    /// programmatically-constructed styles, which fall back to the typed
+    /// whole-block merge.
+    ///
+    /// Public like [`Self::raw_yaml`] and [`Self::unknown_fields`]: other
+    /// workspace crates construct `Style` via `Style { .. } .. Default::default()`,
+    /// which requires every field visible at the call site, so a `pub(crate)`
+    /// field would break those construction sites rather than only external
+    /// struct-literal callers.
+    #[cfg_attr(feature = "schema", schemars(skip))]
+    #[serde(skip, default)]
+    pub scoped_raw_options: crate::options::cascade::ScopedRawOptions,
     /// Forward-compat: captures unknown keys when an older engine reads a
     /// style produced by a newer schema. Empty by default; treated as a
     /// SoftDegrade signal. See `docs/specs/FORWARD_COMPATIBILITY.md`.
@@ -180,6 +195,7 @@ impl Style {
         super::diagnostics::validate_raw_style(&raw).map_err(StyleDocumentError::Validation)?;
         let mut style: Style = serde_yaml::from_value(raw.clone())?;
         style.raw_yaml = Some(raw);
+        style.scoped_raw_options = crate::options::cascade::ScopedRawOptions::capture(&style);
         style
             .validate_resource_limits()
             .map_err(StyleDocumentError::Validation)?;

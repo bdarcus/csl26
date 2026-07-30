@@ -103,22 +103,11 @@ options:
 bibliography:
   sort: citation-number
   options:
-    # The runtime scope cascade replaces the global `dates` block whole at
-    # bibliography scope (no field-level merge yet — csl26-yz4w), so this
-    # block repeats the global values alongside the bibliography-only
-    # `note-wrap` opt-in shared by all GB/T leaf styles — see
-    # CALENDAR_DATE_ANNOTATIONS.md.
+    # The runtime scope cascade merges nested blocks field-by-field
+    # (csl26-yz4w), so this block only opts into the bibliography-only
+    # `note-wrap` shared by all GB/T leaf styles — every other dates field
+    # inherits from the global block. See CALENDAR_DATE_ANNOTATIONS.md.
     dates:
-      month: numeric
-      uncertainty-marker: '?'
-      approximation-marker: '['
-      approximation-marker-suffix: ']'
-      range-delimiter: —
-      no-date-year-suffix-delimiter: '-'
-      show-seconds: false
-      show-timezone: false
-      era-labels: default
-      negative-unspecified-years: range
       note-wrap: parentheses
     contributors:
       shorten:

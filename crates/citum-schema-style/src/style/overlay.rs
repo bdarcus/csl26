@@ -32,7 +32,7 @@ macro_rules! clear_raw_nulls {
 /// non-mapping overlay value (scalar, sequence, preset name) replaces the
 /// base value whole. These are the `extends` merge rules of
 /// `docs/specs/STYLE_INHERITANCE.md`.
-fn deep_merge_yaml_value(base: &mut serde_yaml::Value, overlay: &serde_yaml::Value) {
+pub(crate) fn deep_merge_yaml_value(base: &mut serde_yaml::Value, overlay: &serde_yaml::Value) {
     match (base, overlay) {
         (serde_yaml::Value::Mapping(base_map), serde_yaml::Value::Mapping(overlay_map)) => {
             for (key, overlay_value) in overlay_map {
@@ -58,7 +58,7 @@ fn deep_merge_yaml_value(base: &mut serde_yaml::Value, overlay: &serde_yaml::Val
 /// semantics, so the raw string must not replace the inherited mapping whole.
 /// Recursion follows the authored keys; typed values are consulted only where
 /// a resolved mapping exists for an authored string.
-fn effective_overlay_options(
+pub(crate) fn effective_overlay_options(
     raw: &serde_yaml::Value,
     typed: &serde_yaml::Value,
 ) -> serde_yaml::Value {
