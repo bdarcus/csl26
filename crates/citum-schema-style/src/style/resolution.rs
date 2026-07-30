@@ -179,6 +179,8 @@ impl Style {
 
         let inherited_variants = crate::template::inherited_variant_context(&effective);
         merge_style_overlay(&mut effective, &self);
+        effective.scoped_raw_options =
+            std::mem::take(&mut effective.scoped_raw_options).merged_with_child(&self);
         effective.version = self.version;
         effective.extends = self.extends;
         effective.extends_pin = self.extends_pin;
