@@ -185,6 +185,8 @@ bibliography:
         delimiter-precedes-last: contextual
     hanging-indent: true
     entry-suffix: .
+    entry-suffix-after-url: true
+    entry-suffix-after-doi: true
     separator: ". "
     anonymous-entries: notes-only
   groups:

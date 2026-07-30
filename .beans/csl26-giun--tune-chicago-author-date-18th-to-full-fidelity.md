@@ -5,7 +5,7 @@ status: in-progress
 type: task
 priority: high
 created_at: 2026-06-30T18:46:08Z
-updated_at: 2026-07-30T20:23:05Z
+updated_at: 2026-07-30T20:35:16Z
 parent: csl26-h7oc
 ---
 
@@ -153,3 +153,7 @@ Not independently investigated/fixed — recorded as residual-defect input for t
 - Fresh `report-core` evidence: exact parity improved from **105/540 (19.4%)** to **156/540 (28.9%)**, a gain of 51 byte-identical observations.
 - The behavioral fidelity score is diagnostic for this pass and remains below the embedded-style tuning gate; exact parity is still incomplete, so the task remains in progress.
 - Remaining exact clusters include rich reference-type templates (legal, media, web, and document/archive variants) and author-date citation formatting.
+
+
+
+- Follow-up exact-parity pass: enabled `entry-suffix-after-url` and `entry-suffix-after-doi` for Chicago bibliography output. Fresh `report-core` exact parity improved **156/540 -> 165/540** (+9) with SQI unchanged at 0.920. The remaining 133 URL/DOI-ending mismatches also have structural differences, so this global option is exhausted; next cluster is type-specific quote/template selection.
