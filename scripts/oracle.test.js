@@ -1192,6 +1192,28 @@ test('compareText exact parity preserves bracketed and parenthesized numbering',
   assert.equal(parenthesized.exactAdjudication, 'unresolved');
 });
 
+test('compareText exact parity: second-field-align left-margin and right-inline concatenate flush, no inserted space', () => {
+  // citeproc-js renders second-field-align bibliographies (numeric styles
+  // like IEEE) as adjacent sibling <div class="csl-left-margin"> (list
+  // number) and <div class="csl-right-inline"> (entry body) divs with the
+  // visual gap done via CSS, not a text character -- there is genuinely no
+  // space in the rendered text between them. A style whose own bibliography
+  // template renders the same bracketed number as literal content (IEEE)
+  // therefore already agrees with the oracle on a flush, spaceless join;
+  // verified across the full embedded+exemplar oracle-parity corpus that
+  // zero mismatches are whitespace-only at this boundary (2026-07-30 spike,
+  // see docs/architecture/audits/2026-07-30_EMBEDDED_PARITY_CLASS_A.md).
+  // This test guards against reintroducing a join-space "fix" that would
+  // regress this currently-passing pairing.
+  const comparison = compareText(
+    '<div class="csl-left-margin">[2]</div><div class="csl-right-inline">S. Hawking, A Brief History of Time.</div>',
+    '[2]S. Hawking, A Brief History of Time.'
+  );
+  assert.equal(comparison.exactExpected, '[2]S. Hawking, A Brief History of Time.');
+  assert.equal(comparison.exactActual, '[2]S. Hawking, A Brief History of Time.');
+  assert.equal(comparison.exactMatch, true);
+});
+
 test('compareComponents reports differing component values as mismatches', () => {
   const { differences, matches } = compareComponents(
     {
