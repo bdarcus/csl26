@@ -1,11 +1,11 @@
 ---
 # csl26-j7uc
 title: 'Engine gap: bibliography numeric-label rendering for second-field-align-derived styles'
-status: in-progress
+status: completed
 type: task
 priority: normal
 created_at: 2026-07-30T14:28:57Z
-updated_at: 2026-07-30T15:02:35Z
+updated_at: 2026-07-30T15:50:31Z
 parent: csl26-arly
 ---
 
@@ -24,3 +24,16 @@ americnn-medical-association-alphabetical inherits via 'extends: american-medica
 - Remaining 15/67 mismatches are unrelated small defects (case: 'In:' vs 'in:'; abbreviation: 'phd-thesis' vs 'PhD thesis', 'CFR' vs 'C.F.R.'; a couple of stray leading-space quirks) -- out of scope for this bean, not investigated further.
 
 **Remaining scope (not done):** nature (101 mismatches), american-chemical-society (53), american-medical-association-alphabetical (47) -- all exemplar tier, same mechanical pattern, each needs its own type-variant-by-type-variant pass (verified per-style, not just copy-pasted, since each style's component structure differs). royal-society-of-chemistry is explicitly NOT part of this fix -- its report evidence doesn't match its actual rendered output (separate bug, csl26-waly).
+
+## Progress: nature, american-chemical-society, american-medical-association-alphabetical fixed (exemplar tier)
+
+Mechanized the same transform via a small text-based Python script (finds the type-variant/default-template anchor, wraps its first list item in `delimiter: ""` + `group: [number: citation-number <wrap>, <original first item>]`), since the per-file repetition is genuinely mechanical once the wrap format is known. The wrap format itself is NOT mechanical -- had to read oracle output per style: nature and american-medical-association-alphabetical use plain `suffix: "."`; american-chemical-society uses `wrap: punctuation: parentheses` (already partially present on its own `patent` type-variant, but broken by the same delimiter-leak bug -- fixed as a one-off, not via the generic script).
+
+**Script bug caught before landing:** the generic script matched the FIRST literal `  template:` line in american-medical-association-alphabetical.yaml, which was the citation template (also called `template:`), not bibliography's -- would have double-wrapped the citation-number/locator group. Fixed by anchoring searches to start after `bibliography:`, reverted and reran clean.
+
+**Verified (node scripts/report-core.js --styles nature,american-chemical-society,american-medical-association-alphabetical):**
+- american-medical-association-alphabetical: fidelity 1.0 (unchanged), citations/bibliography unchanged, exactParity 12/67 (17.9%) -> 33/67 (49.3%).
+- american-chemical-society: citations 28/28 (unchanged), exactParity 24/82 (29.3%) -> 30/82 (36.6%). fidelityScore ticked down 0.951 -> 0.939 and lenient bibliography match 50/54 -> 49/54 -- investigated, NOT a regression: bibliography pairing is similarity-based, and adding numbers changed the pairing solution. One 'hearing'-type entry that was previously mis-paired against a different, coincidentally-similar oracle line (falsely showing match:true) now correctly pairs with its real oracle counterpart and correctly shows match:false on a PRE-EXISTING title-case/trailing-period defect unrelated to numbering (confirmed: the diff never touches title-casing; direct citum render output for that item is unchanged aside from the added number). Net effect is more accurate measurement, not worse rendering. Flagging the exposed hearing-type title-case defect for a future style-maintain pass, not filing a new bean for one entry.
+- nature: fidelity 0.966 (unchanged), citations/bibliography unchanged, **exactParity unchanged at 40/149 (26.8%)** despite the fix working correctly (direct render confirms every entry now carries its number, byte-identical to oracle on that boundary). Nearly all of nature's 101 originally-attributed 'class A' mismatches are actually COMPOUND defects -- number missing AND a second, independent defect (name-list '&' vs ',' conjunction, container-title trailing punctuation) on the same entry. Fixing only the number doesn't flip these to exact match. This means the original taxonomy's per-class counts overstate what a single-class fix buys when defects co-occur -- worth remembering for future wave planning.
+
+All three: citum check OK, node --test scripts/oracle.test.js 53/53 passing, no .rs touched.
