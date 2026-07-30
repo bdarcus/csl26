@@ -60,12 +60,16 @@ bibliography:
         - match:
             variable: publisher-place
   template:
-  - contributor: author
-    form: long
-    name-order: family-first
-    shorten:
-      min: 8
-      use-first: 1
+  - delimiter: ""
+    group:
+    - number: citation-number
+      suffix: "."
+    - contributor: author
+      form: long
+      name-order: family-first
+      shorten:
+        min: 8
+        use-first: 1
   - title: primary
     prefix: " "
   - group:
