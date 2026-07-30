@@ -5268,6 +5268,13 @@
             "null"
           ]
         },
+        "uncertainty-marker-prefix": {
+          "description": "Optional opening marker paired with `uncertainty_marker`, for\nbracket-style uncertain-date notation (e.g. Chicago's `[1750?]`\nguessed year, where this is `[` and `uncertainty_marker` is `?]`).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "approximation-marker": {
           "description": "Marker for approximate dates (e.g., \"ca. \" or \"~\"). None suppresses display.",
           "type": [

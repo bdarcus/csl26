@@ -514,7 +514,8 @@ info: { id: base }
 options:
   dates:
     month: numeric
-    uncertainty-marker: '?'
+    uncertainty-marker: '?]'
+    uncertainty-marker-prefix: '['
     approximation-marker: '['
     approximation-marker-suffix: ']'
     range-delimiter: "—"
@@ -522,7 +523,8 @@ bibliography:
   options:
     dates:
       month: numeric
-      uncertainty-marker: '?'
+      uncertainty-marker: '?]'
+      uncertainty-marker-prefix: '['
       approximation-marker: '['
       approximation-marker-suffix: ']'
   template:
@@ -557,7 +559,12 @@ bibliography:
             Some("["),
             "inherited sibling field must survive a partial override"
         );
-        assert_eq!(dates.uncertainty_marker.as_deref(), Some("?"));
+        assert_eq!(dates.uncertainty_marker.as_deref(), Some("?]"));
+        assert_eq!(
+            dates.uncertainty_marker_prefix.as_deref(),
+            Some("["),
+            "inherited paired uncertainty prefix must survive a partial override"
+        );
     }
 )]
 #[case::global_scope_scalar_replaces(
@@ -579,7 +586,7 @@ options:
         assert_eq!(dates.range_delimiter, "-", "authored scalar must replace");
         assert_eq!(
             dates.uncertainty_marker.as_deref(),
-            Some("?"),
+            Some("?]"),
             "inherited sibling field must survive a scalar override"
         );
     }
@@ -608,6 +615,11 @@ options:
             dates.approximation_marker.as_deref(),
             Some("["),
             "sibling fields must survive a targeted null"
+        );
+        assert_eq!(
+            dates.uncertainty_marker_prefix.as_deref(),
+            Some("["),
+            "paired uncertainty prefix must survive a null clearing only its own suffix field"
         );
     }
 )]

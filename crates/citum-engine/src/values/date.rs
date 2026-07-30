@@ -612,7 +612,10 @@ fn apply_date_markers(
     if date.is_uncertain()
         && let Some(marker) = date_config.and_then(|c| c.uncertainty_marker.as_ref())
     {
-        result = format!("{result}{marker}");
+        let prefix = date_config
+            .and_then(|c| c.uncertainty_marker_prefix.as_deref())
+            .unwrap_or("");
+        result = format!("{prefix}{result}{marker}");
     }
     result
 }
@@ -1202,6 +1205,26 @@ mod tests {
 
         // Test zero returns None
         assert_eq!(int_to_letter(0), None);
+    }
+
+    #[test]
+    fn test_apply_date_markers_uncertainty_suffix_only_by_default() {
+        let date = DateValue::new("1750?");
+        let config = citum_schema::options::dates::DateConfig::default();
+        let result = apply_date_markers("1750".to_string(), &date, Some(&config));
+        assert_eq!(result, "1750?");
+    }
+
+    #[test]
+    fn test_apply_date_markers_uncertainty_paired_brackets() {
+        let date = DateValue::new("1750?");
+        let config = citum_schema::options::dates::DateConfig {
+            uncertainty_marker: Some("?]".to_string()),
+            uncertainty_marker_prefix: Some("[".to_string()),
+            ..citum_schema::options::dates::DateConfig::default()
+        };
+        let result = apply_date_markers("1750".to_string(), &date, Some(&config));
+        assert_eq!(result, "[1750?]");
     }
 }
 

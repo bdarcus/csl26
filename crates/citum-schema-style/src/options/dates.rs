@@ -116,6 +116,11 @@ pub struct DateConfig {
     /// Marker for uncertain dates (e.g., "?" or "uncertain"). None suppresses display.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub uncertainty_marker: Option<String>,
+    /// Optional opening marker paired with `uncertainty_marker`, for
+    /// bracket-style uncertain-date notation (e.g. Chicago's `[1750?]`
+    /// guessed year, where this is `[` and `uncertainty_marker` is `?]`).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub uncertainty_marker_prefix: Option<String>,
     /// Marker for approximate dates (e.g., "ca. " or "~"). None suppresses display.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub approximation_marker: Option<String>,
@@ -190,6 +195,7 @@ impl Default for DateConfig {
         Self {
             month: MonthFormat::Long,
             uncertainty_marker: Some("?".to_string()),
+            uncertainty_marker_prefix: None,
             approximation_marker: Some("ca. ".to_string()),
             approximation_marker_suffix: None,
             range_delimiter: default_range_delimiter(),

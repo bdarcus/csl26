@@ -11,7 +11,8 @@ options:
   page-range-format: chicago16
   dates:
     month: long
-    uncertainty-marker: "?"
+    uncertainty-marker: "?]"
+    uncertainty-marker-prefix: "["
     approximation-marker: "ca. "
     range-delimiter: "–"
     range-format: chicago
