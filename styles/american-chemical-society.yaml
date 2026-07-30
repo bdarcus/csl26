@@ -46,6 +46,8 @@ bibliography:
       sort-separator: ", "
     entry-suffix: .
     separator: ". "
+    label-mode: numeric
+    label-wrap: parentheses
   type-variants:
     article-journal:
       modify:
@@ -78,26 +80,16 @@ bibliography:
         - match:
             date: issued
     patent:
-    - delimiter: ""
-      group:
-      - number: citation-number
-        wrap:
-          punctuation: parentheses
-      - contributor: author
-        form: long
-        sort-separator: ", "
+    - contributor: author
+      form: long
+      sort-separator: ", "
     - title: primary
     - date: issued
       form: full
   template:
-  - delimiter: ""
-    group:
-    - number: citation-number
-      wrap:
-        punctuation: parentheses
-    - contributor: author
-      form: long
-      name-order: family-first
+  - contributor: author
+    form: long
+    name-order: family-first
   - title: primary
     prefix: " "
   - title: parent-monograph
