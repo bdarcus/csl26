@@ -10,7 +10,6 @@ const {
   resolveStyleData,
   loadVerificationPolicy,
   resolveVerificationPolicy,
-  resolveScopeAuthority,
 } = require('./lib/verification-policy');
 const { getEffectiveVerificationScopes } = require('./lib/style-verification');
 const { loadReportProvenance } = require('./lib/report-metadata');
@@ -579,7 +578,6 @@ test('report-core exposes expected benchmark labels for representative styles', 
 
   const cases = [
     ['apa-7th', 'citeproc-js', null],
-    ['chem-acs', 'biblatex: chem-acs', 'chem-acs'],
     ['numeric-comp', 'biblatex: numeric-comp', 'numeric-comp'],
   ];
 
@@ -589,29 +587,6 @@ test('report-core exposes expected benchmark labels for representative styles', 
     const comparator = selectPrimaryComparator(style, stylePolicy);
     assert.equal(formatAuthorityLabel(comparator, authorityId || stylePolicy.authorityId), expectedLabel);
   }
-});
-
-test('verification policy exposes scope-specific authority for chemistry benchmark rows', () => {
-  const policy = loadVerificationPolicy();
-  const stylePolicy = resolveVerificationPolicy('chem-acs', policy);
-
-  assert.equal(stylePolicy.authority, 'biblatex');
-  assert.equal(stylePolicy.authorityId, 'chem-acs');
-  assert.equal(stylePolicy.regressionBaseline, 'citum-baseline');
-
-  const citationAuthority = resolveScopeAuthority(stylePolicy, 'citation');
-  const bibliographyAuthority = resolveScopeAuthority(stylePolicy, 'bibliography');
-
-  assert.deepEqual(citationAuthority, {
-    authority: 'citeproc-js',
-    authorityId: null,
-    note: stylePolicy.note,
-  });
-  assert.deepEqual(bibliographyAuthority, {
-    authority: 'biblatex',
-    authorityId: 'chem-acs',
-    note: stylePolicy.note,
-  });
 });
 
 test('verification policy exposes registered divergence metadata for div-004', () => {

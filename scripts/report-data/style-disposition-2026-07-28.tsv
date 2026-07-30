@@ -140,3 +140,4 @@ the-optical-society	move-to-community	yes	alias band with CSL-metadata dependenc
 thieme-german	move-to-community	yes	alias band with CSL-metadata dependency evidence		alias	elsevier-with-titles	1.0000	0.239	0.97	74
 thomson-reuters-legal-tax-and-accounting-australia	keep-exemplar	no	Rust test fixture					0	0.824	
 trends-journals	move-to-community	yes	alias band with CSL-metadata dependency evidence		alias	elsevier-with-titles	1.0000	0.299	0.955	
+numeric-comp	keep-exemplar	no	sole compound-numeric / biblatex-authority exemplar; only shipped style exercising collapse-subentries and the biblatex verification apparatus					0	0.936	
