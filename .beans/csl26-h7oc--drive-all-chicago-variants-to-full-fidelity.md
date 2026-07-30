@@ -1,11 +1,11 @@
 ---
 # csl26-h7oc
 title: Drive all Chicago variants to full fidelity
-status: todo
+status: in-progress
 type: epic
 priority: high
 created_at: 2026-06-30T14:30:24Z
-updated_at: 2026-06-30T18:55:01Z
+updated_at: 2026-07-30T19:09:49Z
 parent: csl26-40n4
 ---
 
