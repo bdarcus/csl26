@@ -61,13 +61,17 @@ bibliography:
     separator: ". "
   type-variants:
     [article-journal, article-magazine]:
-    - contributor: author
-      form: long
-      name-order: family-first
-      shorten:
-        min: 7
-        use-first: 3
-        and-others: et-al
+    - delimiter: ""
+      group:
+      - number: citation-number
+        suffix: "."
+      - contributor: author
+        form: long
+        name-order: family-first
+        shorten:
+          min: 7
+          use-first: 3
+          and-others: et-al
     - title: primary
     - title: parent-serial
       form: short
@@ -88,9 +92,13 @@ bibliography:
     - variable: doi
       prefix: ". doi:"
     [book, report, thesis]:
-    - contributor: author
-      form: long
-      name-order: family-first
+    - delimiter: ""
+      group:
+      - number: citation-number
+        suffix: "."
+      - contributor: author
+        form: long
+        name-order: family-first
     - title: primary
     - variable: genre
     - number: edition
@@ -99,9 +107,13 @@ bibliography:
     - date: issued
       form: year
     [chapter, paper-conference]:
-    - contributor: author
-      form: long
-      name-order: family-first
+    - delimiter: ""
+      group:
+      - number: citation-number
+        suffix: "."
+      - contributor: author
+        form: long
+        name-order: family-first
     - title: primary
     - delimiter: " "
       group:
@@ -124,9 +136,13 @@ bibliography:
       - number: pages
         prefix: ":"
     webpage:
-    - contributor: author
-      form: long
-      name-order: family-first
+    - delimiter: ""
+      group:
+      - number: citation-number
+        suffix: "."
+      - contributor: author
+        form: long
+        name-order: family-first
     - title: primary
     - date: issued
       form: year
@@ -144,9 +160,13 @@ bibliography:
       suffix: ". "
     - variable: url
     article-newspaper:
-    - contributor: author
-      form: long
-      name-order: family-first
+    - delimiter: ""
+      group:
+      - number: citation-number
+        suffix: "."
+      - contributor: author
+        form: long
+        name-order: family-first
     - title: primary
     - title: parent-serial
     - date: issued
@@ -168,9 +188,13 @@ bibliography:
       suffix: ". "
     - variable: url
     entry-encyclopedia:
-    - contributor: author
-      form: long
-      name-order: family-first
+    - delimiter: ""
+      group:
+      - number: citation-number
+        suffix: "."
+      - contributor: author
+        form: long
+        name-order: family-first
     - title: primary
     - message: pattern.in-container-colon
       args:
@@ -200,7 +224,11 @@ bibliography:
           before:
             date: issued
     legal-case:
-    - title: primary
+    - delimiter: ""
+      group:
+      - number: citation-number
+        suffix: "."
+      - title: primary
     - delimiter: " "
       group:
       - variable: reporter
@@ -215,9 +243,13 @@ bibliography:
       - date: issued
         form: year
     patent:
-    - contributor: author
-      form: long
-      name-order: family-first
+    - delimiter: ""
+      group:
+      - number: citation-number
+        suffix: "."
+      - contributor: author
+        form: long
+        name-order: family-first
     - title: primary
     - delimiter: ""
       group:
@@ -246,9 +278,13 @@ bibliography:
           before:
             date: issued
     broadcast:
-    - contributor: author
-      form: long
-      name-order: family-first
+    - delimiter: ""
+      group:
+      - number: citation-number
+        suffix: "."
+      - contributor: author
+        form: long
+        name-order: family-first
     - title: primary
     - title: parent-serial
     - delimiter: ""
@@ -279,9 +315,13 @@ bibliography:
       suffix: ". "
     - variable: url
     [interview, personal-communication]:
-    - contributor: author
-      form: long
-      name-order: family-first
+    - delimiter: ""
+      group:
+      - number: citation-number
+        suffix: "."
+      - contributor: author
+        form: long
+        name-order: family-first
     - title: primary
     - delimiter: ""
       group:
@@ -297,9 +337,13 @@ bibliography:
             delimiter: " "
     - variable: url
     entry-dictionary:
-    - contributor: author
-      form: long
-      name-order: family-first
+    - delimiter: ""
+      group:
+      - number: citation-number
+        suffix: "."
+      - contributor: author
+        form: long
+        name-order: family-first
     - title: primary
     - message: pattern.in-container-colon
       args:
@@ -324,14 +368,22 @@ bibliography:
     software:
       extends: dataset
     statute:
-    - title: primary
+    - delimiter: ""
+      group:
+      - number: citation-number
+        suffix: "."
+      - title: primary
     - number: volume
       prefix: "Vol "
     - date: issued
       form: year
     - variable: url
     hearing:
-    - title: primary
+    - delimiter: ""
+      group:
+      - number: citation-number
+        suffix: "."
+      - title: primary
     - delimiter: ""
       group:
       - message: pattern.published-online-date
@@ -341,7 +393,11 @@ bibliography:
             form: year
     - variable: url
     standard:
-    - title: primary
+    - delimiter: ""
+      group:
+      - number: citation-number
+        suffix: "."
+      - title: primary
     - delimiter: ""
       group:
       - message: pattern.published-online-date
@@ -359,7 +415,11 @@ bibliography:
     - variable: doi
       prefix: ". doi:"
     regulation:
-    - title: primary
+    - delimiter: ""
+      group:
+      - number: citation-number
+        suffix: "."
+      - title: primary
     - variable: code
     - delimiter: ""
       group:
@@ -369,9 +429,13 @@ bibliography:
       - number: volume
     - variable: url
   template:
-  - contributor: author
-    form: long
-    name-order: family-first
+  - delimiter: ""
+    group:
+    - number: citation-number
+      suffix: "."
+    - contributor: author
+      form: long
+      name-order: family-first
   - title: primary
   - variable: publisher
     suffix: "; "
