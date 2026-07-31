@@ -392,7 +392,7 @@ pub(crate) fn apply_text_case_markup_aware_with_language(
 // English title-case stop words (articles, short conjunctions, short prepositions).
 const TITLE_CASE_STOP_WORDS: &[&str] = &[
     "a", "an", "and", "as", "at", "but", "by", "for", "from", "in", "nor", "of", "on", "or", "so",
-    "the", "to", "up", "yet", "v", "vs",
+    "the", "to", "up", "yet", "along", "between", "during", "with", "v", "vs",
 ];
 
 /// Hyphen-like characters that join compound words for title-case purposes.
@@ -407,23 +407,26 @@ fn contains_hyphen_like(text: &str) -> bool {
     text.contains(HYPHEN_LIKE_CHARS)
 }
 
-/// Capitalize each component of a hyphen-joined compound word for title case.
+/// Capitalize non-stop-word components of a hyphen-joined compound for title case.
 ///
-/// When `force_all` is true (first/last word, post-punctuation), every component
-/// is capitalized. Otherwise interior stop-word components stay lowercase.
 /// Splits on both the ASCII hyphen and the en dash (see [`HYPHEN_LIKE_CHARS`]),
 /// preserving whichever separator character was actually used.
-fn capitalize_hyphenated(word: &str, force_all: bool, language: &LanguageIdentifier) -> String {
+fn capitalize_hyphenated(word: &str, language: &LanguageIdentifier) -> String {
     let mut result = String::with_capacity(word.len());
     let mut last_end = 0;
-    for (idx, sep) in word.match_indices(HYPHEN_LIKE_CHARS) {
+    let part_count = word.matches(HYPHEN_LIKE_CHARS).count() + 1;
+    for (part_index, (idx, sep)) in word.match_indices(HYPHEN_LIKE_CHARS).enumerate() {
         let part = word.get(last_end..idx).unwrap_or_default();
-        result.push_str(&capitalize_hyphen_part(part, force_all, language));
+        result.push_str(&capitalize_hyphen_part(
+            part,
+            part_index == 0 || part_index + 1 == part_count,
+            language,
+        ));
         result.push_str(sep);
         last_end = idx + sep.len();
     }
     let tail = word.get(last_end..).unwrap_or_default();
-    result.push_str(&capitalize_hyphen_part(tail, force_all, language));
+    result.push_str(&capitalize_hyphen_part(tail, false, language));
     result
 }
 
@@ -479,7 +482,7 @@ fn to_title_case_with_language_id(text: &str, language: &LanguageIdentifier) -> 
             let lower = lowercase(word, language);
             if i == 0 || i == last_idx || capitalize_next {
                 if contains_hyphen_like(&lower) {
-                    parts.push(capitalize_hyphenated(&lower, true, language));
+                    parts.push(capitalize_hyphenated(&lower, language));
                 } else {
                     parts.push(capitalize_first_word_with_language_id(&lower, language));
                 }
@@ -490,7 +493,7 @@ fn to_title_case_with_language_id(text: &str, language: &LanguageIdentifier) -> 
                 if TITLE_CASE_STOP_WORDS.contains(&alpha_core) {
                     parts.push(lower);
                 } else if contains_hyphen_like(&lower) {
-                    parts.push(capitalize_hyphenated(&lower, false, language));
+                    parts.push(capitalize_hyphenated(&lower, language));
                 } else {
                     parts.push(capitalize_first_word_with_language_id(&lower, language));
                 }
@@ -831,6 +834,25 @@ mod tests {
     fn test_title_case_hyphenated_stop_word_part() {
         // "well-to-do": "to" is a stop word → stays lowercase in interior position
         assert_eq!(to_title_case("a well-to-do family"), "A Well-to-Do Family");
+    }
+
+    #[test]
+    fn given_hyphenated_title_with_stop_word_when_title_case_then_interior_stop_word_stays_lowercase()
+     {
+        assert_eq!(
+            to_title_case("text-to-speech systems"),
+            "Text-to-Speech Systems"
+        );
+    }
+
+    #[test]
+    fn given_long_title_prepositions_when_title_case_then_interior_stop_words_stay_lowercase() {
+        assert_eq!(
+            to_title_case(
+                "fighting for forests: protection and exploitation during the war with China"
+            ),
+            "Fighting for Forests: Protection and Exploitation during the War with China"
+        );
     }
 
     #[test]
