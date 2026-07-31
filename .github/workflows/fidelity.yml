@@ -14,7 +14,10 @@ on:
       - "scripts/oracle*.js"
       - "scripts/report-core.js"
       - "scripts/check-core-quality.js"
+      - "scripts/check-core-quality.test.js"
       - "scripts/check-oracle-regression.js"
+      - "scripts/report-data/embedded-parity-baseline.json"
+      - "scripts/report-data/parity-adjudication.json"
       - "scripts/lib/**"
       - "styles/**"
       - "tests/**"
@@ -100,13 +103,17 @@ jobs:
 
       - name: Run corpus-aware script tests
         if: ${{ steps.fidelity-scope.outputs.mode == 'all' }}
-        run: node --test --test-timeout=180000 scripts/oracle.test.js scripts/report-core.test.js scripts/oracle-yaml.test.js
+        run: node --test --test-timeout=180000 scripts/oracle.test.js scripts/report-core.test.js scripts/check-core-quality.test.js scripts/oracle-yaml.test.js
 
       - name: Check core fidelity and SQI drift
         run: |
           if [ "${{ steps.fidelity-scope.outputs.mode }}" = "selected" ]; then
+            # --parallelism 1: default concurrency has produced non-deterministic
+            # per-style snapshot-oracle failures (exit 2) yielding partial
+            # exactParity totals; pin for a reproducible gate.
             node scripts/report-core.js \
               --all-features \
+              --parallelism 1 \
               --styles "${{ steps.fidelity-scope.outputs.styles }}" \
               > /tmp/core-report.json
           node <<'NODE'
@@ -117,24 +124,82 @@ jobs:
             console.error('Selected fidelity report has no styles');
             process.exit(1);
           }
+          const styleMap = new Map(styles.map((s) => [s.name, s]));
+
+          // A style-YAML-only PR is exactly the kind of change that moves
+          // fidelity and exact parity, so any changed style that is subject to
+          // either hard gate must be checked here, not just reported. Styles
+          // outside both baselines are printed for visibility only, matching
+          // the full-corpus gate's scope (see check-core-quality.js).
+          const fidelityBaseline = JSON.parse(
+            fs.readFileSync('scripts/report-data/core-quality-baseline.json', 'utf8')
+          );
+          const parityBaseline = JSON.parse(
+            fs.readFileSync('scripts/report-data/embedded-parity-baseline.json', 'utf8')
+          );
+
           const failures = styles.filter((style) => style.error || style.qualityBreakdown?.error);
           for (const style of styles) {
             console.log(`${style.name}: fidelity=${style.fidelityScore}`);
           }
-          if (failures.length > 0) {
-            for (const style of failures) {
-              console.error(
-                `Selected fidelity failed for ${style.name}: ${style.error || style.qualityBreakdown?.error}`
+          for (const style of failures) {
+            console.error(
+              `Selected fidelity failed for ${style.name}: ${style.error || style.qualityBreakdown?.error}`
+            );
+          }
+
+          // Styles already counted in `failures` (a measurement error, e.g. a
+          // stale/missing citeproc snapshot) have untrustworthy fidelity and
+          // exact-parity numbers this run — skip them here so a measurement
+          // gap doesn't also get reported as a false fidelity/parity
+          // regression; `failures.length > 0` below still fails the build.
+          const unmeasurableNames = new Set(failures.map((style) => style.name));
+
+          const fidelityGateFailures = [];
+          for (const name of Object.keys(fidelityBaseline.styles || {})) {
+            const style = styleMap.get(name);
+            if (!style || unmeasurableNames.has(name)) continue;
+            if (Number(style.fidelityScore) < 1.0) {
+              fidelityGateFailures.push(`${name}: fidelity=${style.fidelityScore} (must be 1.0)`);
+            }
+          }
+
+          const parityGateFailures = [];
+          for (const [name, baselineStyle] of Object.entries(parityBaseline.styles || {})) {
+            const style = styleMap.get(name);
+            if (!style || unmeasurableNames.has(name)) continue;
+            const baselineParity = baselineStyle.exactParity;
+            const currentParity = style.exactParity;
+            if (!baselineParity) continue;
+            if (Number(currentParity?.total) !== Number(baselineParity.total)) {
+              parityGateFailures.push(
+                `${name}: exact-parity total ${currentParity?.total} != baseline total ${baselineParity.total} ` +
+                  `(regenerate scripts/report-data/embedded-parity-baseline.json if intended)`
+              );
+            } else if (Number(currentParity?.passed) < Number(baselineParity.passed)) {
+              parityGateFailures.push(
+                `${name}: exact-parity passed=${currentParity?.passed} < baseline floor ${baselineParity.passed}`
               );
             }
+          }
+
+          if (fidelityGateFailures.length > 0 || parityGateFailures.length > 0) {
+            for (const msg of fidelityGateFailures) console.error(`Fidelity gate failed for ${msg}`);
+            for (const msg of parityGateFailures) console.error(`Exact-parity gate failed for ${msg}`);
+            process.exit(1);
+          }
+
+          if (failures.length > 0) {
             process.exit(1);
           }
           NODE
           else
-            node scripts/report-core.js --all-features > /tmp/core-report.json
+            node scripts/report-core.js --all-features --parallelism 1 > /tmp/core-report.json
             node scripts/check-core-quality.js \
               --report /tmp/core-report.json \
-              --baseline scripts/report-data/core-quality-baseline.json
+              --baseline scripts/report-data/core-quality-baseline.json \
+              --parity-baseline scripts/report-data/embedded-parity-baseline.json \
+              --parity-adjudication scripts/report-data/parity-adjudication.json
           fi
 
       - name: Check oracle top-10 regression baseline
