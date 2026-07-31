@@ -5,7 +5,7 @@ status: in-progress
 type: task
 priority: high
 created_at: 2026-06-30T18:46:08Z
-updated_at: 2026-07-31T12:15:53Z
+updated_at: 2026-07-31T15:23:21Z
 parent: csl26-h7oc
 ---
 
@@ -161,3 +161,5 @@ Not independently investigated/fixed — recorded as residual-defect input for t
 
 
 - 2026-07-31: extended the terminal-link policy to the other active Chicago bibliography head, `chicago-shortened-notes-bibliography-core` (`entry-suffix-after-url: true`, `entry-suffix-after-doi: true`). Author-date already carries both flags, and its dependent T&F variant retains the verified **165/540** exact-parity result. The isolated author-date report rerun hit a snapshot-oracle exit-2 infrastructure failure before producing a new comparison; this change does not modify author-date YAML. [[csl26-2nv1]] tracks the separate inheritance/engine feature required to replace Chicago notes’ `bibliography.template: []` sentinel with an explicit disabled bibliography.
+
+2026-07-31 progress: fixed a shared engine title-case defect for Chicago's interior stop words and hyphenated compounds (including with, during, along, between, and Text-to-Speech). On a clean isolated Cargo target, shared-corpus bibliography improved 334/379 -> 339/379 with citations steady at 15/15; embedded report fidelity improved 0.917 -> 0.926, exact parity 165/540 -> 170/540, and SQI stayed 0.920. The inherited Taylor & Francis Chicago style matched the improvement with no regression. Full fidelity, clean-SQI completion, and final QA closure remain open; this is a bounded processor-defect progress pass.
