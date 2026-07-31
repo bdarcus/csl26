@@ -4,7 +4,7 @@
     {
       "id": 0,
       "prompt": "/style-evolve upgrade styles/alpha.yaml",
-      "expected_output": "Runs style-maintain on alpha.yaml; output includes all 7 contract fields: fidelity metrics (N/M), SQI delta, authority basis, divergence statement, Code Opportunities table, QA verdict, research value rating.",
+      "expected_output": "Runs style-maintain on alpha.yaml; output includes all contract fields: fidelity metrics (N/M), exact-parity metrics (embedded-core styles only), SQI delta, authority basis, divergence statement, Code Opportunities table, QA verdict, research value rating.",
       "files": [],
       "assertions": [
         "Fidelity metrics in N/M format present (citations and bibliography)",

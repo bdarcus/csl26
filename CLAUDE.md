@@ -153,7 +153,7 @@ If `.jj` is present, see [JJ_AI_CHANGE_STACK.md](docs/guides/JJ_AI_CHANGE_STACK.
 - Crate map: [crates/README.md](crates/README.md)
 - Design principles: [docs/architecture/DESIGN_PRINCIPLES.md](docs/architecture/DESIGN_PRINCIPLES.md)
 - Architecture index: [docs/architecture/README.md](docs/architecture/README.md)
-- Live fidelity: `node scripts/report-core.js > /tmp/core-report.json`
+- Live fidelity & exact parity: `node scripts/report-core.js --all-features > /tmp/core-report.json`
 - Compatibility dashboard: [docs/compat.html](docs/compat.html) (refresh with `node scripts/report-core.js --write-html`)
 - Coding standards: [docs/guides/CODING_STANDARDS.md](docs/guides/CODING_STANDARDS.md)
 - Locale authoring: [docs/guides/AUTHORING_LOCALES.md](docs/guides/AUTHORING_LOCALES.md)
