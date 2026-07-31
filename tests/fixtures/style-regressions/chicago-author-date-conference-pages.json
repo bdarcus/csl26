@@ -1,0 +1,23 @@
+{
+  "chicago-conference-no-volume-pages": {
+    "id": "chicago-conference-no-volume-pages",
+    "type": "paper-conference",
+    "title": "Distributed Representations of Words and Phrases",
+    "author": [
+      {
+        "family": "Mikolov",
+        "given": "Tomas"
+      }
+    ],
+    "issued": {
+      "date-parts": [
+        [
+          2013
+        ]
+      ]
+    },
+    "container-title": "Proceedings of NIPS 2013",
+    "page": "3111-3119",
+    "event": "Neural Information Processing Systems"
+  }
+}

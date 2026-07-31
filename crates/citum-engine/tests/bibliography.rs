@@ -85,6 +85,26 @@ fn build_numeric_style() -> Style {
     }
 }
 
+#[test]
+fn chicago_author_date_uses_comma_before_conference_pages_without_volume_or_issue() {
+    let style = load_style("styles/embedded/chicago-author-date-18th.yaml");
+    let bibliography = citum_io::load_bibliography(
+        &project_root()
+            .join("tests/fixtures/style-regressions/chicago-author-date-conference-pages.json"),
+    )
+    .expect("Chicago conference punctuation fixture should load");
+
+    let processor = Processor::new(style, bibliography);
+    let rendered = processor.render_selected_bibliography_with_format_standalone::<PlainText, _>([
+        "chicago-conference-no-volume-pages".to_string(),
+    ]);
+
+    assert_eq!(
+        rendered.trim(),
+        "Mikolov, Tomas. 2013. “Distributed Representations of Words and Phrases.” _Proceedings of NIPS 2013_, 3111–19."
+    );
+}
+
 fn build_sorted_style(sort: Vec<SortSpec>) -> Style {
     Style {
         info: StyleInfo {
