@@ -5,7 +5,7 @@ status: todo
 type: task
 priority: high
 created_at: 2026-06-30T18:46:09Z
-updated_at: 2026-07-30T14:17:58Z
+updated_at: 2026-07-31T12:16:50Z
 parent: csl26-h7oc
 blocked_by:
     - csl26-lxy3
@@ -59,3 +59,13 @@ C: State of JS Team, The State of JavaScript 2023, 2023, https://stateofjs.com/2
 ```
 
 This style is `chicago-shortened-notes-bibliography-core.yaml` (284 lines) extending `chicago-notes-18th` (731 lines). Given `303a38f0 feat(schema)!: deep-merge options on extends` and `0b8efb77 fix(styles): fix two title deep-merge regressions` landed recently, this looks like deep-merge fallout from a shared root cause (delimiter/quoting/case options not surviving the extends chain), not N independent per-type bugs — worth checking the resolved merged template against `chicago-notes-18th`'s bibliography delimiters/affixes before doing per-entry tuning. Not independently root-caused — recorded as a strong lead for this bean's fidelity loop. Full clustering data path is stale (/tmp/prd_report.json); regenerate via `node scripts/report-core.js --styles chicago-shortened-notes-bibliography --parallelism 2`. See [[csl26-arly]].
+
+
+
+## 2026-07-31 shared terminal-link punctuation progress
+
+Enabled `bibliography.options.entry-suffix-after-url` and `entry-suffix-after-doi` in the shared shortened-notes bibliography core, so terminal URLs and DOIs receive its declared `entry-suffix: .`. The current broad exact-parity fixture remains **11/465**: no broad-match count lifted because its terminal-link entries also have structural template differences. This is shared punctuation progress only; it does not start or complete this task’s full tuning loop.
+
+
+
+Direct verification: `just workflow-test styles-legacy/chicago-shortened-notes-bibliography.csl` passed **20/20 citations** and **46/46 bibliography entries** against citeproc-js after the suffix-policy change.

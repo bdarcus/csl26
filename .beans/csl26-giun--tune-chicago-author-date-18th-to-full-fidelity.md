@@ -5,7 +5,7 @@ status: in-progress
 type: task
 priority: high
 created_at: 2026-06-30T18:46:08Z
-updated_at: 2026-07-30T20:35:16Z
+updated_at: 2026-07-31T12:15:53Z
 parent: csl26-h7oc
 ---
 
@@ -157,3 +157,7 @@ Not independently investigated/fixed — recorded as residual-defect input for t
 
 
 - Follow-up exact-parity pass: enabled `entry-suffix-after-url` and `entry-suffix-after-doi` for Chicago bibliography output. Fresh `report-core` exact parity improved **156/540 -> 165/540** (+9) with SQI unchanged at 0.920. The remaining 133 URL/DOI-ending mismatches also have structural differences, so this global option is exhausted; next cluster is type-specific quote/template selection.
+
+
+
+- 2026-07-31: extended the terminal-link policy to the other active Chicago bibliography head, `chicago-shortened-notes-bibliography-core` (`entry-suffix-after-url: true`, `entry-suffix-after-doi: true`). Author-date already carries both flags, and its dependent T&F variant retains the verified **165/540** exact-parity result. The isolated author-date report rerun hit a snapshot-oracle exit-2 infrastructure failure before producing a new comparison; this change does not modify author-date YAML. [[csl26-2nv1]] tracks the separate inheritance/engine feature required to replace Chicago notes’ `bibliography.template: []` sentinel with an explicit disabled bibliography.
