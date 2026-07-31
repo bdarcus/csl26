@@ -220,6 +220,23 @@
       "notes": "Dedicated citation sequence for first, ibid, and subsequent note-position audits."
     },
     {
+      "fixture": "tests/fixtures/style-regressions/chicago-author-date-conference-pages.json",
+      "domain": "core",
+      "kind": "references",
+      "reference_types": [
+        "paper-conference"
+      ],
+      "citation_scenarios": [],
+      "rendering_risks": [
+        "conditional container locator punctuation"
+      ],
+      "used_by": [
+        "crates/citum-engine/tests/bibliography.rs"
+      ],
+      "ci_status": "required",
+      "notes": "Focused Chicago author-date regression for conference pages when volume and issue are absent."
+    },
+    {
       "fixture": "tests/fixtures/compound-numeric-refs.json",
       "domain": "core",
       "kind": "references",

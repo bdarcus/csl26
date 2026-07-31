@@ -945,8 +945,16 @@ bibliography:
       suffix: ")"
     prefix: " "
     delimiter: ""
-  - number: pages
+  - group:
+    - number: pages
     prefix: ": "
+    render-when:
+      field-present: volume-or-issue
+  - group:
+    - number: pages
+    prefix: ", "
+    render-when:
+      field-absent: volume-or-issue
   - variable: publisher
   - variable: doi
   - variable: url
