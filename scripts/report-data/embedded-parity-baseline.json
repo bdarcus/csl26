@@ -1,8 +1,8 @@
 {
-  "generated": "2026-07-30T14:20:04.489Z",
-  "commit": "828cb9d2",
+  "generated": "2026-07-31T13:11:46.606Z",
+  "commit": "940b461d",
   "source": "scripts/report-core.js",
-  "purpose": "Non-gating snapshot of embedded-tier oracle text parity (exactParity) and headline fidelity, recorded per csl26-arly. NOT read by scripts/check-core-quality.js's hard fidelity gate (that gate is reserved for styles that have reached fidelityScore 1.0 in scripts/report-data/core-quality-baseline.json). Sub-1.0 fidelity ratchets are tracked separately per-style in scripts/report-data/verification-policy.yaml (min_pass_rate floors). This file exists because nothing previously recorded exactParity at all -- it is the input for future parity-improvement waves to compare against.",
+  "purpose": "Hard per-style exact-parity floor-gate baseline for the embedded tier, consumed by scripts/check-core-quality.js --parity-baseline (see docs/architecture/audits/2026-07-31_EXACT_PARITY_REFOCUS.md). It also records headline fidelity. Sub-1.0 fidelity ratchets are tracked separately per-style in scripts/report-data/verification-policy.yaml (min_pass_rate floors). Regenerate this file after each parity-tuning wave; the gate never goes backward on passed counts or total (fixture-drift guard).",
   "styles": {
     "american-medical-association": {
       "tier": "embedded",
@@ -17,9 +17,9 @@
         "total": 47
       },
       "exactParity": {
-        "passed": 16,
+        "passed": 48,
         "total": 67,
-        "rate": 0.239
+        "rate": 0.716
       }
     },
     "apa-7th": {
@@ -42,20 +42,20 @@
     },
     "chicago-author-date-18th": {
       "tier": "embedded",
-      "fidelityScore": 0.926,
-      "qualityScore": 0.921,
+      "fidelityScore": 0.917,
+      "qualityScore": 0.92,
       "citations": {
         "passed": 63,
         "total": 63
       },
       "bibliography": {
-        "passed": 437,
+        "passed": 432,
         "total": 477
       },
       "exactParity": {
-        "passed": 104,
+        "passed": 165,
         "total": 540,
-        "rate": 0.193
+        "rate": 0.306
       }
     },
     "chicago-notes-18th": {
@@ -72,8 +72,8 @@
       },
       "exactParity": {
         "passed": 8,
-        "total": 74,
-        "rate": 0.108
+        "total": 72,
+        "rate": 0.111
       }
     },
     "chicago-shortened-notes-bibliography": {
@@ -180,8 +180,8 @@
       },
       "exactParity": {
         "passed": 240,
-        "total": 285,
-        "rate": 0.842
+        "total": 276,
+        "rate": 0.87
       }
     },
     "gb-t-7714-2025-numeric": {
@@ -198,14 +198,14 @@
       },
       "exactParity": {
         "passed": 257,
-        "total": 271,
-        "rate": 0.948
+        "total": 262,
+        "rate": 0.981
       }
     },
     "ieee": {
       "tier": "embedded",
       "fidelityScore": 1,
-      "qualityScore": 0.87,
+      "qualityScore": 0.881,
       "citations": {
         "passed": 48,
         "total": 48
@@ -258,20 +258,20 @@
     },
     "springer-basic-brackets": {
       "tier": "embedded",
-      "fidelityScore": 0.97,
+      "fidelityScore": 0.955,
       "qualityScore": 1,
       "citations": {
         "passed": 20,
         "total": 20
       },
       "bibliography": {
-        "passed": 45,
+        "passed": 44,
         "total": 47
       },
       "exactParity": {
-        "passed": 49,
+        "passed": 20,
         "total": 67,
-        "rate": 0.731
+        "rate": 0.299
       }
     },
     "springer-vancouver-brackets": {
@@ -287,27 +287,27 @@
         "total": 47
       },
       "exactParity": {
-        "passed": 28,
+        "passed": 20,
         "total": 67,
-        "rate": 0.418
+        "rate": 0.299
       }
     },
     "taylor-and-francis-chicago-author-date": {
       "tier": "embedded",
-      "fidelityScore": 0.926,
+      "fidelityScore": 0.917,
       "qualityScore": 1,
       "citations": {
         "passed": 63,
         "total": 63
       },
       "bibliography": {
-        "passed": 437,
+        "passed": 432,
         "total": 477
       },
       "exactParity": {
-        "passed": 104,
+        "passed": 165,
         "total": 540,
-        "rate": 0.193
+        "rate": 0.306
       }
     },
     "taylor-and-francis-council-of-science-editors-author-date": {
@@ -330,14 +330,14 @@
     },
     "taylor-and-francis-national-library-of-medicine": {
       "tier": "embedded",
-      "fidelityScore": 0.97,
+      "fidelityScore": 0.851,
       "qualityScore": 1,
       "citations": {
         "passed": 20,
         "total": 20
       },
       "bibliography": {
-        "passed": 45,
+        "passed": 37,
         "total": 47
       },
       "exactParity": {

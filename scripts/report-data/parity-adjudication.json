@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "purpose": "Lightweight ledger for exact-parity residuals that automated divergence detection (scripts/lib/oracle-divergences.js) does not explain. See docs/architecture/audits/2026-07-31_EXACT_PARITY_REFOCUS.md. Distinct from docs/adjudication/DIVERGENCE_REGISTER.md, which is reserved for authority-classified, style-family-scoped design decisions.",
+  "states": {
+    "citeproc-correct": "The oracle is right; Citum has a defect. Counts toward the exact-parity gate as a required fix. An agent may record this state unilaterally.",
+    "unclear": "Neither side's correctness is established from available evidence. Excluded from the exact-parity gate denominator until resolved. An agent may record this state unilaterally, but it escalates to the user for adjudication -- it is not a terminal classification.",
+    "citum-correct": "Citum is right and the oracle (citeproc-js) is wrong or not authoritative for this case. Excluded from the exact-parity gate. Requires \"authority\" (a cited source: publisher rules, biblatex prior art, a spec section, documentary evidence) and \"confirmedBy\" (the user). An agent must never write this state; check-core-quality.js rejects citum-correct entries missing either field."
+  },
+  "entries": {}
+}
