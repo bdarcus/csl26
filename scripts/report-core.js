@@ -747,16 +747,27 @@ function collectCaseMismatchSummary(oracleResult) {
   };
 }
 
-function summarizeExactParity(oracleResult, hasBibliography = true) {
-  const sections = [oracleResult?.citations];
-  if (hasBibliography) sections.push(oracleResult?.bibliography);
+function summarizeExactParity(oracleResult, hasBibliography = true, tier = null) {
+  // Use the divergence-adjusted sections (same source collectCaseMismatchSummary
+  // reads) so registered intentional divergences (div-004, div-005, div-008,
+  // div-009, div-010, div-011) are excluded from the parity gate the same way
+  // they are already excluded from the fidelity gate. Reading oracleResult
+  // directly here previously counted deliberately-chosen Citum behavior as
+  // parity failures.
+  const sections = [getEffectiveOracleSection(oracleResult, 'citations')];
+  if (hasBibliography) sections.push(getEffectiveOracleSection(oracleResult, 'bibliography'));
   let passed = 0;
   let total = 0;
   let notComparable = 0;
+  let divergenceExcluded = 0;
 
   for (const section of sections) {
     const entries = section?.entries || [];
     for (const entry of entries) {
+      if (entry?.appliedDivergence) {
+        divergenceExcluded++;
+        continue;
+      }
       if (entry?.exactParityEligible === false || entry?.exactMatch === null) {
         notComparable++;
         continue;
@@ -780,9 +791,13 @@ function summarizeExactParity(oracleResult, hasBibliography = true) {
     passed,
     total,
     notComparable,
+    divergenceExcluded,
     rate: total > 0 ? parseFloat((passed / total).toFixed(3)) : null,
-    status: 'unadjudicated',
-    gating: false,
+    // Reflects scripts/check-core-quality.js's --parity-baseline gate: hard
+    // for embedded-core (per-style floor may never regress), diagnostic for
+    // exemplar/dependent. See docs/architecture/audits/2026-07-31_EXACT_PARITY_REFOCUS.md.
+    status: 'divergence-adjusted',
+    gating: tier === 'embedded',
   };
 }
 
@@ -2549,7 +2564,7 @@ async function processStyleReport(runtime, styleSpec, context) {
     const pairingSummary = summarizeBibliographyPairing(oracleResult);
     const fidelityScore = computeFidelityScore(oracleResult, styleSpec.hasBibliography);
     const caseMismatches = collectCaseMismatchSummary(oracleResult);
-    const exactParity = summarizeExactParity(oracleResult, styleSpec.hasBibliography);
+    const exactParity = summarizeExactParity(oracleResult, styleSpec.hasBibliography, styleSpec.tier);
     const bibliography = {
       ...getEffectiveOracleSection(oracleResult, 'bibliography'),
       unresolvedPairing: pairingSummary.unresolvedUnpaired,
@@ -2702,7 +2717,7 @@ async function processStyleReport(runtime, styleSpec, context) {
 
   const fidelityScore = computeFidelityScore(oracleResult, styleSpec.hasBibliography);
   const caseMismatches = collectCaseMismatchSummary(oracleResult);
-  const exactParity = summarizeExactParity(oracleResult, styleSpec.hasBibliography);
+  const exactParity = summarizeExactParity(oracleResult, styleSpec.hasBibliography, styleSpec.tier);
   const pairingSummary = summarizeBibliographyPairing(oracleResult);
   const citations = getEffectiveOracleSection(oracleResult, 'citations');
   const bibliography = {
@@ -2828,6 +2843,7 @@ async function generateReport(options) {
   let exactParityPassed = 0;
   let exactParityTotal = 0;
   let exactParityNotComparable = 0;
+  let exactParityDivergenceExcluded = 0;
   const pairingOverall = {
     paired: 0,
     unresolvedUnpaired: 0,
@@ -2856,6 +2872,7 @@ async function generateReport(options) {
     exactParityPassed += job.styleRecord.exactParity?.passed || 0;
     exactParityTotal += job.styleRecord.exactParity?.total || 0;
     exactParityNotComparable += job.styleRecord.exactParity?.notComparable || 0;
+    exactParityDivergenceExcluded += job.styleRecord.exactParity?.divergenceExcluded || 0;
     for (const key of Object.keys(pairingOverall)) {
       pairingOverall[key] += job.styleRecord.pairingSummary?.[key] || 0;
     }
@@ -2910,7 +2927,7 @@ async function generateReport(options) {
         },
         oracleComparison: {
           caseSensitive: runtime.caseSensitive,
-          exactTextParity: 'informational-pre-divergence',
+          exactTextParity: 'divergence-adjusted',
         },
         measurementEvidenceSources: coreStyles[0]?.measurementEvidenceSources || {
           behavioralBands: null,
@@ -2936,10 +2953,16 @@ async function generateReport(options) {
         passed: exactParityPassed,
         total: exactParityTotal,
         notComparable: exactParityNotComparable,
+        divergenceExcluded: exactParityDivergenceExcluded,
         rate: exactParityTotal > 0
           ? parseFloat((exactParityPassed / exactParityTotal).toFixed(3))
           : null,
-        status: 'unadjudicated',
+        // This portfolio-wide aggregate spans embedded + exemplar tiers and is
+        // directional context only (see docs/compat.html's "working targets"
+        // paragraph); the real hard gate is per-style, embedded-core only —
+        // see each style's own exactParity.gating and
+        // scripts/check-core-quality.js's --parity-baseline.
+        status: 'divergence-adjusted',
         gating: false,
       },
       pairingOverall,
@@ -3168,11 +3191,11 @@ function generateHtmlStats(report) {
                     <div class="text-xs text-slate-400 mt-2">${biblioPct}% pass rate · ${report.bibliographyOverall.unresolvedPairing || 0} unresolved pairing candidates excluded</div>
                 </div>
 
-                <!-- Unadjudicated Oracle Text Parity -->
+                <!-- Exact Oracle Text Parity -->
                 <div class="bg-[var(--citum-surface)] rounded-xl border border-slate-200 p-6">
                     <div class="text-sm font-medium text-slate-500 mb-2">Oracle Text Parity</div>
                     <div class="text-3xl font-bold text-slate-900">${report.exactParityOverall?.passed || 0}/${report.exactParityOverall?.total || 0}</div>
-                    <div class="text-xs text-slate-400 mt-2">${exactParityPct}% unadjudicated, non-gating · ${report.exactParityOverall?.notComparable || 0} N/A</div>
+                    <div class="text-xs text-slate-400 mt-2">${exactParityPct}% divergence-adjusted · portfolio figure is directional; per-style floors gate in CI · ${report.exactParityOverall?.notComparable || 0} N/A · ${report.exactParityOverall?.divergenceExcluded || 0} registered divergences excluded</div>
                 </div>
 
                 <!-- Quality Overall -->
@@ -3229,9 +3252,12 @@ function generateHtmlSqiExplainer(report) {
                     <code>&gt;=90 mean SQI</code>; as of this report the embedded tier measures
                     <code>${meanCompat}% compatibility</code> and <code>${meanSqi} SQI</code> (mean across ${embeddedStyles.length} styles).
                     These are directional targets, not a per-style gate — the enforced gate
-                    (<code>scripts/check-core-quality.js</code>) checks fidelity and SQI drift against a recorded baseline per
-                    style, not this aggregate. Oracle text parity is informational until each drift is adjudicated and
-                    family-level ratchets are defined.
+                    (<code>scripts/check-core-quality.js</code>) checks fidelity and exact-parity drift against a recorded
+                    baseline per style: fidelity must stay at 1.0, and a style's exact-parity <code>passed</code> count may
+                    never drop below its baseline floor (SQI drift is warn-only outside the embedded tier). Exact parity is
+                    the primary tuning objective for embedded-core styles; residuals an agent cannot classify are recorded in
+                    <code>scripts/report-data/parity-adjudication.json</code> as <code>unclear</code> and escalated rather than
+                    excluded unilaterally.
                 </p>
                 <p class="text-sm text-slate-600 mb-4">
                     <strong>Lineage</strong> shows the source family a style derives from. Below the headline tiles, styles are

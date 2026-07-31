@@ -103,7 +103,12 @@ test('discoverCoreStyles exposes complete family and registry metadata', () => {
   assert.equal(chicago.registry.aliases.includes('chicago-author-date'), true);
 });
 
-test('summarizeExactParity remains pre-divergence', () => {
+test('summarizeExactParity prefers divergence-adjusted sections', () => {
+  // Registered-divergence adjustment (scripts/lib/oracle-divergences.js) only
+  // overrides `match`; it never touches `exactMatch`. summarizeExactParity
+  // must still read the adjusted section (when present) so its entry set —
+  // and any appliedDivergence exclusions on those entries — matches what the
+  // fidelity gate already sees via getEffectiveOracleSection/countCaseMismatches.
   const summary = summarizeExactParity({
     citations: {
       total: 1,
@@ -120,17 +125,70 @@ test('summarizeExactParity remains pre-divergence', () => {
       citations: {
         total: 1,
         passed: 1,
+        // Test-only evidence that the adjusted section is selected: production
+        // divergence handling does not rewrite exactMatch. The adjusted
+        // section, not the raw one, is authoritative here.
         entries: [{ exactMatch: true, match: true }],
       },
     },
   });
 
   assert.deepEqual(summary, {
-    passed: 1,
+    passed: 2,
     total: 2,
     notComparable: 1,
-    rate: 0.5,
-    status: 'unadjudicated',
+    divergenceExcluded: 0,
+    rate: 1,
+    status: 'divergence-adjusted',
+    gating: false,
+  });
+});
+
+test('summarizeExactParity marks gating true only for the embedded tier', () => {
+  const oracleResult = {
+    citations: { total: 1, entries: [{ exactMatch: true }] },
+    bibliography: { total: 0, entries: [] },
+  };
+
+  const embedded = summarizeExactParity(oracleResult, true, 'embedded');
+  assert.equal(embedded.gating, true);
+
+  const exemplar = summarizeExactParity(oracleResult, true, 'exemplar');
+  assert.equal(exemplar.gating, false);
+
+  const untiered = summarizeExactParity(oracleResult, true);
+  assert.equal(untiered.gating, false);
+});
+
+test('summarizeExactParity excludes entries with an applied divergence from passed/total', () => {
+  const summary = summarizeExactParity({
+    citations: { total: 0, entries: [] },
+    bibliography: {
+      total: 2,
+      entries: [
+        { exactMatch: false, appliedDivergence: { divergenceId: 'div-010' } },
+        { exactMatch: true },
+      ],
+    },
+    adjusted: {
+      bibliography: {
+        total: 2,
+        passed: 2,
+        entries: [
+          { exactMatch: false, match: true, appliedDivergence: { divergenceId: 'div-010' } },
+          { exactMatch: true, match: true },
+        ],
+      },
+    },
+  });
+
+  assert.deepEqual(summary, {
+    passed: 1,
+    total: 1,
+    notComparable: 0,
+    divergenceExcluded: 1,
+    rate: 1,
+    status: 'divergence-adjusted',
     gating: false,
   });
 });
