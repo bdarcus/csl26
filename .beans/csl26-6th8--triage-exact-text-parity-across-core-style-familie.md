@@ -1,7 +1,7 @@
 ---
 # csl26-6th8
 title: Reassess fidelity claims and triage exact-text parity
-status: todo
+status: in-progress
 type: task
 priority: high
 tags:
@@ -9,7 +9,7 @@ tags:
     - styles
     - fidelity
 created_at: 2026-07-28T12:17:54Z
-updated_at: 2026-07-28T14:01:12Z
+updated_at: 2026-07-31T14:41:05Z
 parent: csl26-zik7
 ---
 
@@ -28,7 +28,7 @@ Acceptance criteria:
 - [ ] Attribute each high-volume cluster to style YAML, shared renderer/schema, benchmark carrier, or intentional divergence.
 - [ ] Prioritize by aggregate CSL reach and open bounded implementation beans for actionable families/shared causes.
 - [ ] Add representative regression coverage before changing behavior.
-- [ ] Ratchet exact parity only where authority has been verified; do not change lenient compatibility gates implicitly.
+- [x] Ratchet exact parity only where authority has been verified; do not change lenient compatibility gates implicitly.
 
 Evidence: `/tmp/core-report-tristate.json` from the csl26-zik7 implementation run; canonical dashboard is `docs/compat.html`.
 
@@ -45,8 +45,8 @@ Strategic clarification:
 - Missing alignment sides must be written out rather than shown with an easily misread empty-set glyph, and render-only native smoke tests must be distinguished from oracle comparisons.
 
 Additional acceptance criteria:
-- [ ] Recommend durable public terminology for compatibility versus textual fidelity, including the legacy JSON field.
-- [ ] Propose a staged exact-parity ratchet and CI migration plan by family after adjudication.
+- [x] Recommend durable public terminology for compatibility versus textual fidelity, including the legacy JSON field.
+- [x] Propose a staged exact-parity ratchet and CI migration plan by family after adjudication.
 - [ ] Quantify unique root causes separately from repeated affected rows so prioritization reflects both defect breadth and impact.
 
 
@@ -56,3 +56,22 @@ Pairing correction:
 - The current snapshots contain no ID-proven bibliography omissions; csl26-5okt
   blocks this triage until CSL snapshots preserve item IDs and authoritative
   pairing can replace the heuristic fallback.
+
+## Summary of Changes (2026-07-31)
+
+Delivered the gate infrastructure and terminology this bean's strategic-clarification section called for:
+
+- Fixed `summarizeExactParity` (`scripts/report-core.js`) to read divergence-adjusted oracle sections — it previously ignored registered divergences (div-004/005/008/009/010/011) entirely, understating parity for every style with one. AMA went 23.9% -> 71.6% once the fix is applied.
+- Added a hard, per-style, monotonic exact-parity gate to `scripts/check-core-quality.js` (`--parity-baseline`) and `.github/workflows/fidelity.yml` (both `mode=all` and the previously-ungated `mode=selected` path). Floor = current `passed` count per embedded-core style (regenerated at HEAD in `scripts/report-data/embedded-parity-baseline.json`); fixture-drift guard on `total`. The lenient fidelity gate is unchanged, per this bean's own acceptance criterion.
+- Added `scripts/report-data/parity-adjudication.json`, a lightweight ledger (distinct from `docs/adjudication/DIVERGENCE_REGISTER.md`) with three states — `citeproc-correct`/`unclear` (agent-writable) and `citum-correct` (user-only, requires a cited authority) — so agents have a defined escalation path instead of unilaterally excluding hard residuals.
+- Full writeup: `docs/architecture/audits/2026-07-31_EXACT_PARITY_REFOCUS.md`.
+- Updated `STYLE_WORKFLOW_EXECUTION.md`, `STYLE_WORKFLOW_DECISION_RULES.md`, and the style-tune/style-qa/style-migrate-enhance/style-evolve skills (both `.claude/skills/` and `.skills/` copies) to the fidelity -> exact-parity -> SQI ordering.
+
+**Not done here** (remains open, this bean stays in-progress): the actual clustering/triage of accumulated exact-parity residuals by semantic cause and style family — the original acceptance criteria this bean was created for. The ledger and gate now exist to record that work's output; the triage pass itself is future work.
+
+
+## Follow-up hardening (2026-07-31)
+
+- Made the exact-parity baseline and adjudication-ledger inputs fail closed on missing or malformed JSON, with CLI regression coverage.
+- Added the quality-gate tests and parity data files to Fidelity CI coverage.
+- Synchronized exact-parity workflow guidance across Claude, public, and Codex agent skill surfaces.

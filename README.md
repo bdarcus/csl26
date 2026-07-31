@@ -62,9 +62,8 @@ output and some language bindings are experimental.
 
 For live metrics — do not rely on any hardcoded numbers in this file:
 
-- Style quality & fidelity report: [`citum.github.io/citum-core/compat.html`](https://citum.github.io/citum-core/compat.html)
-- Style portfolio: the embedded core is tuned toward exact-text parity; exemplars and the [community corpus](https://github.com/citum/citum-styles) extend coverage without changing that product-surface promise.
-- Style portfolio: the embedded core is tuned toward exact-text parity; exemplars and the [community corpus](https://github.com/citum/citum-styles) extend coverage without changing that product-surface promise.
+- Style quality & exact-parity report: [`citum.github.io/citum-core/compat.html`](https://citum.github.io/citum-core/compat.html)
+- Style portfolio: the embedded core is tuned toward exact-text parity (a hard, per-style CI gate — see [the exact-parity refocus audit](docs/architecture/audits/2026-07-31_EXACT_PARITY_REFOCUS.md)); exemplars and the [community corpus](https://github.com/citum/citum-styles) extend coverage without changing that product-surface promise.
 
 ## For App Developers
 

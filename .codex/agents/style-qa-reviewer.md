@@ -15,13 +15,18 @@ scope:
   - No code edits unless the calling workflow explicitly overrides this.
 verification:
   - Check citation and bibliography fidelity.
-  - Check whether remaining mismatches are covered by registered divergences.
+  - Check exact-parity drift against `scripts/report-data/embedded-parity-baseline.json`
+    for embedded-core styles (hard gate; diagnostic-only for dependent styles).
+  - Check whether remaining mismatches are covered by registered divergences or
+    a `scripts/report-data/parity-adjudication.json` entry; reject any
+    agent-authored `citum-correct` entry (user-only state).
   - Audit formatting defects and delimiter collisions.
   - Review likely cross-style regression surface.
   - Run docs and beans hygiene checks when docs or beans changed.
 output_contract:
   - Return `approve` or `reject`.
-  - Include one metrics line with citation, bibliography, and SQI drift context.
+  - Include one metrics line with citation, bibliography, exact-parity
+    (embedded-core styles), and SQI drift context.
   - List concise numbered findings.
   - Recommend merge, iterate, or escalate.
 ---
@@ -31,5 +36,6 @@ output_contract:
 Authoritative shared process docs:
 - `docs/policies/STYLE_WORKFLOW_DECISION_RULES.md`
 - `docs/guides/STYLE_WORKFLOW_EXECUTION.md`
+- `docs/architecture/audits/2026-07-31_EXACT_PARITY_REFOCUS.md`
 
 Use the shared docs for the workflow logic. Keep this file as the host-local contract for QA behavior.

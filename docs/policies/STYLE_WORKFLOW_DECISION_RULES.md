@@ -1,12 +1,13 @@
 # Style Workflow Decision Rules
 
 **Status:** Active
-**Version:** 1.4
-**Date:** 2026-07-02
+**Version:** 1.5
+**Date:** 2026-07-31
 **Related:** [STYLE_WORKFLOW_EXECUTION.md](../guides/STYLE_WORKFLOW_EXECUTION.md),
 [SKILL_AGENT_REFACTOR.md](../architecture/SKILL_AGENT_REFACTOR.md),
 [MIGRATION_STRATEGY_ANALYSIS.md](../architecture/MIGRATION_STRATEGY_ANALYSIS.md),
-[CSL_TYPE_CONVERSION_CONTRACT.md](../specs/CSL_TYPE_CONVERSION_CONTRACT.md)
+[CSL_TYPE_CONVERSION_CONTRACT.md](../specs/CSL_TYPE_CONVERSION_CONTRACT.md),
+[2026-07-31_EXACT_PARITY_REFOCUS.md](../architecture/audits/2026-07-31_EXACT_PARITY_REFOCUS.md)
 
 ## Rule
 Shared style-workflow agents must classify each mismatch as `style-defect`, `migration-artifact`, `processor-defect`, or `intentional divergence`, and must stop iterating once a cluster is clearly outside the active workflow's scope.
@@ -72,12 +73,15 @@ compile time. The canonical registry is
 arms). The CLI exposes the predicate: `citum style list --source embedded`.
 All other styles are **dependent** (long-tail or external).
 
-Tier determines the quality bar:
+Tier determines the quality bar. Fidelity is a lenient structural check (see
+[2026-07-31_EXACT_PARITY_REFOCUS.md](../architecture/audits/2026-07-31_EXACT_PARITY_REFOCUS.md)
+for what it discards); exact parity is the primary tuning objective for
+embedded-core styles:
 
-| Tier | Fidelity | SQI |
-|---|---|---|
-| `embedded-core` | Hard gate — 100% required | **Hard gate** — clean SQI required alongside fidelity |
-| `dependent` | Hard gate | Advisory / tie-breaker only |
+| Tier | Fidelity | Exact Parity | SQI |
+|---|---|---|---|
+| `embedded-core` | Hard gate — 100% required | **Hard gate** — per-style floor in `scripts/report-data/embedded-parity-baseline.json` may never regress | **Hard gate** — clean SQI required alongside fidelity and exact parity |
+| `dependent` | Hard gate | Diagnostic only | Advisory / tie-breaker only |
 
 For `embedded-core` styles, the `citum-migrate` converter is a **seed and evidence
 source**, not the canonical authoring path. The correct authoring path is `create`
@@ -124,6 +128,9 @@ Style work in Citum repeatedly follows the same decision logic: determine whethe
 - Rich-input evidence ordering and per-skill output phrasing live in the execution guide.
 
 ## Changelog
+- v1.5 (2026-07-31): Added exact parity as a hard gate for `embedded-core`
+  styles in the portfolio-tier table, alongside fidelity and SQI. See
+  [2026-07-31_EXACT_PARITY_REFOCUS.md](../architecture/audits/2026-07-31_EXACT_PARITY_REFOCUS.md).
 - v1.4 (2026-07-02): Added the conversion-layer pre-flight (verify the
   reference converts truthfully against `CSL_TYPE_CONVERSION_CONTRACT.md`
   before classifying) and the newly-routed-types reading guidance,

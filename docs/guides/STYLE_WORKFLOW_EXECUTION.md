@@ -41,9 +41,17 @@ Out of scope:
 
 ### Shared verification logic
 - Fidelity to the declared primary authority is a hard gate for all tiers.
-- **SQI is a hard gate for `embedded-core` styles** (both fidelity and SQI must
-  be green for a pass verdict). For `dependent` styles, SQI is advisory and a
-  tie-breaker only.
+  Fidelity is lenient by design (see
+  [2026-07-31_EXACT_PARITY_REFOCUS.md](../architecture/audits/2026-07-31_EXACT_PARITY_REFOCUS.md)) —
+  it catches structural breakage, not formatting quality.
+- **Exact parity is a hard gate for `embedded-core` styles**, and is the
+  primary tuning objective once fidelity is green — see the `tune` loop
+  below. A style's exact-parity `passed` count may never drop below its
+  recorded floor in `scripts/report-data/embedded-parity-baseline.json`. For
+  `dependent` styles, exact parity is diagnostic only.
+- **SQI is a hard gate for `embedded-core` styles**, ordered after exact
+  parity (both fidelity and exact parity must be green before SQI work
+  starts). For `dependent` styles, SQI is advisory and a tie-breaker only.
 - QA must reject regressions and formatting defects.
 - Supplemental rich-input evidence is confirmation, not the first debugging surface.
 - CSL structure is verification evidence, not the source of truth for wrapper thickness.
@@ -67,7 +75,15 @@ Every workflow should report:
 - `migration-artifact` stays in migration work until the converter is fixed or disproven.
 - `style-defect` routes to style-local YAML repair.
 - `processor-defect` routes to processor or engine follow-up.
-- `intentional divergence` is recorded and excluded from fix counts.
+- `intentional divergence` that generalizes beyond one style is recorded in
+  [DIVERGENCE_REGISTER.md](../adjudication/DIVERGENCE_REGISTER.md) and excluded from fix counts.
+- An exact-parity residual an agent cannot classify as `style-defect` or
+  `processor-defect` is recorded in `scripts/report-data/parity-adjudication.json`
+  as `citeproc-correct` (fix required, counts against the gate) or `unclear`
+  (excluded, escalates to the user). An agent must never record `citum-correct`
+  — that state requires the user and a cited authority. See
+  [2026-07-31_EXACT_PARITY_REFOCUS.md](../architecture/audits/2026-07-31_EXACT_PARITY_REFOCUS.md)
+  for the full rationale.
 - If parentage is guide-backed but current merge semantics still force a bulky
   wrapper, escalate as an infrastructure constraint rather than preserving or
   reintroducing duplicated structure as if it were authority.
@@ -86,15 +102,23 @@ A style wave is a bounded cohort executed through repeated `upgrade`, `migrate`,
 ## The `tune` loop (embedded-core styles)
 
 `tune` is the correct mode whenever the goal is to bring an `embedded-core`
-style to **100% fidelity and clean SQI**. Deterministic migration (`citum-migrate`)
-cannot reliably reach this bar on its own — see
+style to **100% fidelity, its exact-parity floor raised, and clean SQI**.
+Deterministic migration (`citum-migrate`) cannot reliably reach this bar on
+its own — see
 [MIGRATION_STRATEGY_ANALYSIS.md](../architecture/MIGRATION_STRATEGY_ANALYSIS.md). The converter's output is a
 **seed**: a starting candidate whose oracle score and SQI baseline ground the
 first iteration.
 
+Exact parity is the primary tuning objective — it is where the actual
+punctuation, casing, and spacing work happens. Fidelity gates entry into the
+loop; SQI is a final structural pass once the visible text is correct. See
+[2026-07-31_EXACT_PARITY_REFOCUS.md](../architecture/audits/2026-07-31_EXACT_PARITY_REFOCUS.md)
+for why fidelity alone is not sufficient evidence of correct rendering.
+
 ### Execution order
 1. **Seed:** run `citum-migrate` (or accept the existing Citum YAML) to produce
-   a concrete candidate. Record oracle fidelity baseline and SQI baseline.
+   a concrete candidate. Record oracle fidelity baseline and exact-parity
+   baseline (`scripts/report-data/embedded-parity-baseline.json`).
 2. **Fidelity loop:**
    a. Run the oracle (`node scripts/oracle.js <legacy-style> --json`).
    b. Classify each failure per the shared decision rules; for type- or
@@ -104,13 +128,30 @@ first iteration.
    d. Re-run oracle. Repeat until fidelity is 100%.
    e. If a residual is clearly a `processor-defect` or `intentional divergence`,
       reclassify and exclude — do not keep iterating.
-3. **SQI loop (begins only when fidelity is green):**
+3. **Exact-parity loop (begins once fidelity is green):**
+   a. Run `node scripts/report-core.js --style <name> --all-features` and read
+      `exactParity` for the style.
+   b. For each residual: classify as `style-defect` (fix the YAML),
+      `processor-defect` (escalate to Rust workflow), a generalizable
+      `intentional divergence` (add to
+      [DIVERGENCE_REGISTER.md](../adjudication/DIVERGENCE_REGISTER.md)), or —
+      when none of those fit — record `citeproc-correct` (still a required
+      fix) or `unclear` (excludes and escalates to the user) in
+      `scripts/report-data/parity-adjudication.json`. Never record
+      `citum-correct`; that state is the user's call, made with a cited
+      authority.
+   c. Apply the smallest correct fix. Re-run and confirm the `passed` count
+      rose and fidelity did not regress.
+   d. Continue until no further residual is classifiable without escalation,
+      or the floor is raised as far as this pass supports; regenerate
+      `embedded-parity-baseline.json` to ratchet the new floor in.
+4. **SQI loop (begins only when fidelity and exact parity are stable):**
    a. Run `node scripts/report-core.js --style <name>` to get the SQI score.
    b. Apply SQI improvements — hoist shared options, use presets, introduce
       diff-based `type-variants`, prune redundant defaults — without regressing
-      fidelity. Re-run oracle after each SQI change to confirm.
+      fidelity or exact parity. Re-run oracle after each SQI change to confirm.
    c. Continue until SQI is clean (no actionable SQI findings remain).
-4. **QA gate:** hand off to `style-qa` with tier = `embedded-core`.
+5. **QA gate:** hand off to `style-qa` with tier = `embedded-core`.
 
 ### Stop conditions (same as all shared workflows)
 - Two distinct approaches fail on the same cluster → reclassify.
@@ -132,6 +173,13 @@ first iteration.
 - [x] `tune` loop is defined here once, not in individual skill files.
 
 ## Changelog
+- 2026-07-31: Promoted exact parity to a hard gate for `embedded-core` styles,
+  ordered between fidelity and SQI in the tier table and the `tune` loop
+  (fidelity → exact parity → SQI). Added the parity-adjudication escalation
+  path (`citeproc-correct` / `unclear` / user-only `citum-correct`) to shared
+  escalation. Cross-linked
+  [2026-07-31_EXACT_PARITY_REFOCUS.md](../architecture/audits/2026-07-31_EXACT_PARITY_REFOCUS.md).
+  Fidelity's gate mechanics and scope are unchanged.
 - 2026-06-24: Added portfolio tier to the three-axis classification and output
   shape. Replaced the universal "SQI is advisory" rule with a tier-aware rule
   (embedded-core promotes SQI to a hard gate; dependent stays advisory). Added

@@ -33,10 +33,13 @@ targeting.
   - `--source-file`
 
 4. `tune`
-- Drive an **embedded-core** style to 100% fidelity **and** clean SQI via
-  iterative LLM authoring, seeded by migrate evidence.
-- Both fidelity and SQI are hard gates. Use only for styles in
-  `citum style list --source embedded`.
+- Drive an **embedded-core** style to 100% fidelity, a raised exact-parity
+  floor, **and** clean SQI via iterative LLM authoring, seeded by migrate
+  evidence.
+- Fidelity, exact parity, and SQI are all hard gates, applied in that order.
+  Use only for styles in `citum style list --source embedded`. See
+  [2026-07-31_EXACT_PARITY_REFOCUS.md](../architecture/audits/2026-07-31_EXACT_PARITY_REFOCUS.md)
+  for why fidelity alone is not sufficient evidence of correct rendering.
 
 ## Examples
 ```bash
@@ -48,9 +51,16 @@ targeting.
 
 ## Quality Policy
 - Fidelity to the declared primary authority is the hard gate for all styles.
-- **SQI is a hard gate for embedded-core styles.** Both fidelity and clean SQI
-  are required for any embedded-core style pass. For dependent/long-tail styles,
-  SQI is a secondary optimization metric.
+  It tolerates meaningful text-level drift (punctuation, casing, spacing) by
+  design — it is a structural entry gate, not proof of correct rendering.
+- **Exact parity is a hard gate for embedded-core styles.** A style's
+  exact-parity `passed` count may never drop below the floor recorded in
+  `scripts/report-data/embedded-parity-baseline.json`; it is the primary
+  tuning objective. Diagnostic-only for dependent/long-tail styles.
+- **SQI is a hard gate for embedded-core styles**, ordered after fidelity and
+  exact parity. Fidelity, exact parity, and clean SQI are all required for
+  any embedded-core style pass. For dependent/long-tail styles, SQI is a
+  secondary optimization metric.
 - For styles with configured `benchmark_runs`, official rich-input evidence is auto-run as supplemental advisory output.
 - Every iteration must assess both:
   - style-level edits
