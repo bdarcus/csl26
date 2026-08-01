@@ -523,22 +523,21 @@ impl Renderer<'_> {
         author_part: &str,
         author_item_delimiter: &str,
     ) -> Option<String> {
-        if !self.config.punctuation_in_quote
-            || !author_item_delimiter.starts_with(',')
-            || !(author_part.ends_with('"') || author_part.ends_with('\u{201D}'))
-        {
+        if !self.config.punctuation_in_quote || !author_item_delimiter.starts_with(',') {
             return None;
         }
 
-        let is_curly = author_part.ends_with('\u{201D}');
-        let quote_char = if is_curly { '\u{201D}' } else { '"' };
-        #[allow(clippy::string_slice, reason = "quote found at end")]
-        let trimmed = &author_part[..author_part.len() - quote_char.len_utf8()];
+        let close_quote = crate::render::format::QuoteMarks::from(self.locale).close;
+        let mut adjusted = author_part.to_string();
+        if !crate::render::punctuation::move_punctuation_into_quote(
+            &mut adjusted,
+            ',',
+            &close_quote,
+        ) {
+            return None;
+        }
         #[allow(clippy::string_slice, reason = "delimiter checked to start with ','")]
-        Some(format!(
-            "{trimmed},{quote_char}{}",
-            &author_item_delimiter[1..]
-        ))
+        Some(format!("{adjusted}{}", &author_item_delimiter[1..]))
     }
 
     fn render_group_item_parts_with_format<F>(
@@ -1218,12 +1217,24 @@ impl Renderer<'_> {
         } else {
             delimiter.into_owned()
         };
+        // Joining two empty strings surfaces any format-specific escaping
+        // `fmt.join` would apply to the delimiter itself (e.g. LaTeX special
+        // characters), so the boundary-aware join below sees the same
+        // delimiter text `fmt.join` would have inserted.
+        let escaped_delimiter = fmt.join(vec![String::new(), String::new()], &delimiter);
+        let close_quote = crate::render::format::QuoteMarks::from(ctx.options.locale).close;
+        let joined_value = crate::render::punctuation::join_with_quote_movement(
+            values,
+            &escaped_delimiter,
+            ctx.options.config.punctuation_in_quote,
+            &close_quote,
+        );
         tracker.merge_from(group_tracker);
         let group_component = TemplateComponent::Group(group.clone());
         Some(ProcTemplateComponent {
             template_component: group_component.clone(),
             template_index: self.inject_ast_indices.then_some(ctx.template_index),
-            value: fmt.join(values, &delimiter),
+            value: joined_value,
             prefix: None,
             suffix: None,
             url: None,

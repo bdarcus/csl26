@@ -58,6 +58,10 @@ impl Renderer<'_> {
             .and_then(|bib| bib.separator.as_deref())
             .unwrap_or(". ")
             .to_string();
+        let close_quote = components
+            .first()
+            .map(|component| component.quote_marks.close.clone())
+            .unwrap_or_else(|| "\u{201D}".to_string());
 
         let mut entry_output = String::new();
         for component in components.iter_mut() {
@@ -71,6 +75,7 @@ impl Renderer<'_> {
                 &rendered,
                 &default_separator,
                 punctuation_in_quote,
+                &close_quote,
             ) {
                 component.sentence_initial = true;
                 self.apply_sentence_initial_transform(component, None);
@@ -83,6 +88,7 @@ impl Renderer<'_> {
                 &default_separator,
                 punctuation_in_quote,
                 strong_terminal_comma_policy,
+                &close_quote,
             );
         }
     }

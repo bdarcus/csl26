@@ -10,7 +10,9 @@ use crate::api::{AnnotationFormat, AnnotationStyle};
 use crate::render::component::{ProcEntry, ProcTemplateComponent, render_component_with_format};
 use crate::render::format::OutputFormat;
 use crate::render::plain::PlainText;
-use crate::render::punctuation::{is_strong_terminal, strong_terminal_comma_policy};
+use crate::render::punctuation::{
+    is_strong_terminal, move_punctuation_into_quote, strong_terminal_comma_policy,
+};
 use crate::render::rich_text::{render_djot_inline, render_org_inline};
 
 /// Returns true if the character is a sentence-ending or clause-ending punctuation mark.
@@ -59,6 +61,7 @@ pub(crate) fn component_starts_new_sentence<F: OutputFormat<Output = String>>(
     rendered: &str,
     default_separator: &str,
     punctuation_in_quote: bool,
+    close_quote: &str,
 ) -> bool {
     if entry_output.is_empty() {
         return true;
@@ -90,7 +93,15 @@ pub(crate) fn component_starts_new_sentence<F: OutputFormat<Output = String>>(
 
     punctuation_in_quote
         && default_separator.starts_with('.')
-        && (entry_output.ends_with('"') || entry_output.ends_with('\u{201D}'))
+        && ends_with_close_quote(entry_output, close_quote)
+}
+
+/// Returns true if `text` ends with the locale-resolved closing quote glyph
+/// (or the legacy straight-quote fallback), matching the same acceptance
+/// [`move_punctuation_into_quote`] uses when relocating trailing punctuation.
+fn ends_with_close_quote(text: &str, close_quote: &str) -> bool {
+    (!close_quote.is_empty() && text.ends_with(close_quote))
+        || (close_quote != "\"" && text.ends_with('"'))
 }
 
 /// Render processed templates into a final bibliography string using `PlainText` format.
@@ -129,6 +140,10 @@ pub(crate) fn render_entry_body_components_with_format<F: OutputFormat<Output = 
             .first()
             .and_then(|component| component.config.as_deref()),
     );
+    let close_quote = proc_template
+        .first()
+        .map(|c| c.quote_marks.close.as_str())
+        .unwrap_or("\u{201D}");
 
     // Get the bibliography separator from the config, defaulting to ". "
     let default_separator = proc_template
@@ -150,6 +165,7 @@ pub(crate) fn render_entry_body_components_with_format<F: OutputFormat<Output = 
                 default_separator,
                 punctuation_in_quote,
                 strong_terminal_comma_policy,
+                close_quote,
             );
         }
     }
@@ -173,6 +189,7 @@ pub(crate) fn render_entry_body_components_with_format<F: OutputFormat<Output = 
             default_separator,
             punctuation_in_quote,
             strong_terminal_comma_policy,
+            close_quote,
         );
     }
 
@@ -189,17 +206,16 @@ pub(crate) fn render_entry_body_components_with_format<F: OutputFormat<Output = 
                 TerminalLink::Url => !bib_cfg.is_some_and(|b| b.entry_suffix_after_url),
                 TerminalLink::None => false,
             };
-            if !suppress && !entry_output.ends_with(suffix.chars().next().unwrap_or('.')) {
-                if suffix == "."
-                    && punctuation_in_quote
-                    && (entry_output.ends_with('"') || entry_output.ends_with('\u{201D}'))
-                {
-                    let is_curly = entry_output.ends_with('\u{201D}');
-                    entry_output.pop();
-                    entry_output.push_str(if is_curly { ".\u{201D}" } else { ".\"" });
-                } else {
-                    entry_output.push_str(suffix);
-                }
+            let moved_into_quote = !suppress
+                && suffix == "."
+                && punctuation_in_quote
+                && !entry_output.ends_with(suffix.chars().next().unwrap_or('.'))
+                && move_punctuation_into_quote(&mut entry_output, '.', close_quote);
+            if !moved_into_quote
+                && !suppress
+                && !entry_output.ends_with(suffix.chars().next().unwrap_or('.'))
+            {
+                entry_output.push_str(suffix);
             }
         }
         _ => {}
@@ -215,12 +231,17 @@ pub(crate) fn render_entry_body_components_with_format<F: OutputFormat<Output = 
 /// The separator logic inspects the boundary between the accumulated output
 /// and the incoming `rendered` string; `punctuation_in_quote` controls whether
 /// a period should be pulled inside a preceding closing quotation mark.
+#[allow(
+    clippy::string_slice,
+    reason = "UTF-8 safe slicing based on char boundary checks"
+)]
 pub(crate) fn append_rendered_component<F: OutputFormat<Output = String>>(
     entry_output: &mut String,
     rendered: &str,
     default_separator: &str,
     punctuation_in_quote: bool,
     strong_terminal_comma_policy: citum_schema::options::StrongTerminalCommaPolicy,
+    close_quote: &str,
 ) {
     if !entry_output.is_empty() {
         let last_char = entry_output.chars().last().unwrap_or(' ');
@@ -230,6 +251,26 @@ pub(crate) fn append_rendered_component<F: OutputFormat<Output = String>>(
         let ends_with_punctuation = is_final_punctuation(trimmed_last);
         // The incoming component already carries its own leading separator (e.g. ", " or "; ").
         let starts_with_separator = matches!(first_char, ',' | ';' | ':' | ' ' | '.' | '(');
+
+        // The incoming component supplies its *own* leading punctuation (e.g. a
+        // `prefix: ". Aired "` on the next component) rather than the leading
+        // punctuation coming from `default_separator`. This must be checked
+        // before `starts_with_separator` below, since such text always matches
+        // that condition and would otherwise short-circuit before the quote can
+        // be examined. Only the incoming text's *raw* leading char is stripped
+        // (via `len_utf8`), so this only fires when the raw string genuinely
+        // starts with the visible char that was matched — safe even if a format
+        // wraps the value itself in markup further in.
+        let raw_first_char = rendered.chars().next();
+        if punctuation_in_quote
+            && raw_first_char == Some(first_char)
+            && matches!(first_char, '.' | ',')
+            && move_punctuation_into_quote(entry_output, first_char, close_quote)
+        {
+            let remainder = &rendered[first_char.len_utf8()..];
+            entry_output.push_str(remainder);
+            return;
+        }
 
         if starts_with_separator {
             // The rendered component is self-delimiting — don't add a separator.
@@ -252,21 +293,13 @@ pub(crate) fn append_rendered_component<F: OutputFormat<Output = String>>(
                 entry_output.push(' ');
             }
         } else if punctuation_in_quote
-            && (last_char == '"' || last_char == '\u{201D}')
             && (sep_first_char == '.' || sep_first_char == ',')
+            && move_punctuation_into_quote(entry_output, sep_first_char, close_quote)
         {
             // Punctuation-in-quote: pull the leading period or comma of the
             // separator inside the closing quotation mark, then append the rest
             // of the separator (e.g. the trailing space). Mirrors the citation
             // path in `render/citation.rs::push_delimiter`.
-            let quote = if last_char == '\u{201D}' {
-                '\u{201D}'
-            } else {
-                '"'
-            };
-            entry_output.pop();
-            entry_output.push(sep_first_char);
-            entry_output.push(quote);
             entry_output.push_str(
                 default_separator
                     .get(sep_first_char.len_utf8()..)
@@ -521,6 +554,7 @@ mod tests {
     use crate::render::markdown::Markdown;
     use crate::render::typst::Typst;
     use citum_schema::template::{Rendering, TemplateComponent, WrapConfig, WrapPunctuation};
+    use rstest::rstest;
 
     #[test]
     fn terminal_link_classifies_url_doi_and_plain_text() {
@@ -550,7 +584,8 @@ mod tests {
             "",
             "Edited by Grimm, Jacob",
             ". ",
-            false
+            false,
+            "\u{201D}"
         ));
     }
 
@@ -560,7 +595,8 @@ mod tests {
             "Collected Essays.",
             "edited by Grimm, Jacob",
             ". ",
-            false
+            false,
+            "\u{201D}"
         ));
     }
 
@@ -570,7 +606,8 @@ mod tests {
             "Collected Essays:",
             "edited by Grimm, Jacob",
             ". ",
-            false
+            false,
+            "\u{201D}"
         ));
     }
 
@@ -722,6 +759,7 @@ mod tests {
             ", ",
             true,
             Default::default(),
+            "\u{201D}",
         );
         // then the comma is pulled inside the closing quotation mark
         assert_eq!(entry_output, "\u{201C}Deep Learning,\u{201D} Nature");
@@ -738,6 +776,7 @@ mod tests {
             ". ",
             true,
             Default::default(),
+            "\u{201D}",
         );
         // then the period is pulled inside the closing quotation mark (unchanged behaviour)
         assert_eq!(entry_output, "\u{201C}Deep Learning.\u{201D} Nature");
@@ -754,9 +793,79 @@ mod tests {
             ", ",
             false,
             Default::default(),
+            "\u{201D}",
         );
         // then the comma stays outside the closing quotation mark
         assert_eq!(entry_output, "\u{201C}Deep Learning\u{201D}, Nature");
+    }
+
+    #[rstest]
+    #[case('.', "period")]
+    #[case(',', "comma")]
+    fn append_rendered_component_moves_next_component_own_leading_mark_inside_closing_quote(
+        #[case] mark: char,
+        #[case] label: &str,
+    ) {
+        // The next component's own rendering leads with the mark (e.g. the
+        // Chicago `broadcast` variant's `prefix: ". Aired "` on the following
+        // date component) — the leading punctuation comes from `rendered`,
+        // not from `default_separator`.
+        let mut entry_output = "\u{201C}The Universe in a Nutshell\u{201D}".to_string();
+        let rendered = format!("{mark} Aired September 28");
+
+        append_rendered_component::<PlainText>(
+            &mut entry_output,
+            &rendered,
+            ", ",
+            true,
+            Default::default(),
+            "\u{201D}",
+        );
+
+        assert_eq!(
+            entry_output,
+            format!("\u{201C}The Universe in a Nutshell{mark}\u{201D} Aired September 28"),
+            "{label}-led component text should move inside the quote"
+        );
+    }
+
+    #[test]
+    fn append_rendered_component_leaves_next_component_own_leading_mark_outside_quote_when_disabled()
+     {
+        let mut entry_output = "\u{201C}The Universe in a Nutshell\u{201D}".to_string();
+
+        append_rendered_component::<PlainText>(
+            &mut entry_output,
+            ". Aired September 28",
+            ", ",
+            false,
+            Default::default(),
+            "\u{201D}",
+        );
+
+        assert_eq!(
+            entry_output,
+            "\u{201C}The Universe in a Nutshell\u{201D}. Aired September 28"
+        );
+    }
+
+    #[test]
+    fn append_rendered_component_moves_mark_inside_a_locale_specific_close_quote() {
+        // A French-style guillemet close quote rather than the en-US curly
+        // quote — the hardcoded '"'/'\u{201D}' match this replaces would never
+        // fire for this glyph.
+        let mut entry_output = "«Titre»".to_string();
+
+        append_rendered_component::<PlainText>(
+            &mut entry_output,
+            "Suite",
+            ", ",
+            true,
+            Default::default(),
+            "»",
+        );
+
+        assert_eq!(entry_output, "«Titre,» Suite");
     }
 
     #[test]
@@ -769,6 +878,7 @@ mod tests {
                 ", ",
                 false,
                 citum_schema::options::StrongTerminalCommaPolicy::KeepBoth,
+                "\u{201D}",
             );
             assert_eq!(keep_both, format!("Title{terminal}, Next"));
 
@@ -779,6 +889,7 @@ mod tests {
                 ", ",
                 false,
                 citum_schema::options::StrongTerminalCommaPolicy::KeepTerminal,
+                "\u{201D}",
             );
             assert_eq!(keep_terminal, format!("Title{terminal} Next"));
         }
@@ -793,6 +904,7 @@ mod tests {
             ",\u{00A0}",
             false,
             citum_schema::options::StrongTerminalCommaPolicy::KeepTerminal,
+            "\u{201D}",
         );
 
         assert_eq!(entry_output, "Title?\u{00A0}Next");
@@ -1224,6 +1336,7 @@ mod tests {
             ". ",
             false,
             Default::default(),
+            "\u{201D}",
         );
 
         assert_eq!(Latex.visible_text(&entry_output), "Title. Next");

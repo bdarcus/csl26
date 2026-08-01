@@ -239,7 +239,7 @@ fn test_humanities_note_fixture_preserves_archive_and_interview_fields() {
     );
     assert_eq!(
         manuscript,
-        "\u{201C}The Community Rule (1QS)\u{201D}, Manuscript scroll, 101 BC, Shrine of the Book, Israel Antiquities Authority, Jerusalem.",
+        "\u{201C}The Community Rule (1QS),\u{201D} Manuscript scroll, 101 BC, Shrine of the Book, Israel Antiquities Authority, Jerusalem.",
         "manuscript citation should continue rendering the manuscript reference"
     );
     assert_eq!(

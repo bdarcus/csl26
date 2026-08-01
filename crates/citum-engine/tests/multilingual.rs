@@ -197,7 +197,7 @@ fn test_chinese_article_three_part_title() {
         entry,
         "Hua Linfu 华林甫, “Qingdai yilai Sanxia diqu shuihan zaihai de chubu yanjiu \
          清代以来三峡地区水旱灾害的初步研究 [A preliminary study of floods and droughts \
-         in the Three Gorges region since the Qing dynasty]”, _Zhongguo shehui kexue \
+         in the Three Gorges region since the Qing dynasty],” _Zhongguo shehui kexue \
          中国社会科学_ 1 (1999): 168–79."
     );
 }
