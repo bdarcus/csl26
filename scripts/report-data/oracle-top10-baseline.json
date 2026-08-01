@@ -1,9 +1,9 @@
 {
   "totalStyles": 10,
   "citationsPerfect": 10,
-  "bibliographyPerfect": 4,
+  "bibliographyPerfect": 3,
   "citationsPartial": 0,
-  "bibliographyPartial": 6,
+  "bibliographyPartial": 7,
   "componentIssues": {
     "year:value_mismatch": 8,
     "title:value_mismatch": 10,
@@ -224,11 +224,11 @@
     {
       "style": "chicago-author-date",
       "citations": "20/20",
-      "bibliography": "46/46",
+      "bibliography": "45/46",
       "rawCitations": "20/20",
-      "rawBibliography": "46/46",
+      "rawBibliography": "45/46",
       "citationsPct": 100,
-      "bibliographyPct": 100,
+      "bibliographyPct": 98,
       "adjustedDivergences": {},
       "templateSource": "inferred"
     }
