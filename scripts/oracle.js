@@ -72,6 +72,7 @@ function parseArgs() {
     caseSensitive: true,
     allFeatures: false,
     scope: 'both',
+    locale: null,
     migrate: {
       templateSource: null,
       minTemplateConfidence: null,
@@ -99,6 +100,8 @@ function parseArgs() {
       options.citationsFixture = path.resolve(args[++i]);
     } else if (arg === '--scope') {
       options.scope = args[++i];
+    } else if (arg === '--locale') {
+      options.locale = args[++i];
     } else if (arg === '--migrate-template-source') {
       options.migrate.templateSource = args[++i];
     } else if (arg === '--migrate-min-template-confidence') {
@@ -280,7 +283,14 @@ function renderWithCiteprocJs(stylePath, testItems, testCitations, options = {})
     retrieveItem: (id) => testItems[id],
   };
 
-  const citeproc = new CSL.Engine(sys, cslXml);
+  // Without --locale, citeproc-js resolves its own language from the CSL's
+  // `default-locale` attribute (falling back to en-US) — a value authored
+  // independently of, and not necessarily in sync with, citum's own
+  // `info.default-locale`. Passing `options.locale` with forceLang=true makes
+  // citeproc-js use the same locale citum resolved, closing that gap.
+  const citeproc = options.locale
+    ? new CSL.Engine(sys, cslXml, options.locale, true)
+    : new CSL.Engine(sys, cslXml);
   citeproc.updateItems(Object.keys(testItems));
 
   const citations = {};
@@ -547,6 +557,9 @@ function renderWithCitumProcessor(stylePath, refsData, testItems, testCitations,
       }
       renderParts.push(`--mode ${bibliographyOnly ? 'bib' : 'both'}`);
       renderParts.push('--show-keys');
+      if (cliOptions.locale) {
+        renderParts.push(`--locale "${cliOptions.locale}"`);
+      }
       output = execSync(
         renderParts.join(' '),
         { cwd: projectRoot, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }
