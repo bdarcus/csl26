@@ -8,12 +8,62 @@ use std::fmt::Write;
 
 use crate::api::{AnnotationFormat, AnnotationStyle};
 use crate::render::component::{ProcEntry, ProcTemplateComponent, render_component_with_format};
-use crate::render::format::OutputFormat;
+use crate::render::format::{OutputFormat, PunctuationPosition, RealizedPunctuation};
 use crate::render::plain::PlainText;
 use crate::render::punctuation::{
     is_strong_terminal, move_punctuation_into_quote, strong_terminal_comma_policy,
 };
 use crate::render::rich_text::{render_djot_inline, render_org_inline};
+use citum_schema::template::DelimiterPunctuation;
+
+/// Realize a bibliography-scoped [`DelimiterPunctuation`] value (the
+/// `separator` or `entry_suffix` config field) using the script/locale
+/// realization context carried by `first` — the leading component of the
+/// entry, the same source `punctuation_in_quote` and `close_quote` are
+/// resolved from elsewhere in this module. Shared by
+/// `render_entry_body_components_with_format` and
+/// `processor/rendering/grouped/sentence_initial.rs`'s bibliography
+/// sentence-initial pass, which build the identical separator to decide
+/// capitalization boundaries just before calling
+/// [`append_rendered_component`].
+pub(crate) fn realize_bibliography_punctuation(
+    first: Option<&ProcTemplateComponent>,
+    punctuation: Option<&DelimiterPunctuation>,
+    default: DelimiterPunctuation,
+    position: PunctuationPosition,
+) -> RealizedPunctuation<'static> {
+    let multilingual = first
+        .and_then(|c| c.config.as_ref())
+        .and_then(|config| config.multilingual.as_ref());
+    let (script, realization) = crate::values::punctuation_realization_context(
+        first.and_then(|c| c.item_language.as_deref()),
+        multilingual,
+        first.and_then(|c| c.quote_marks.punctuation_realization.as_ref()),
+    );
+    let owned;
+    let punctuation = if let Some(punctuation) = punctuation {
+        punctuation
+    } else {
+        owned = default;
+        &owned
+    };
+    crate::render::format::realize_punctuation_decomposed(
+        punctuation,
+        script,
+        realization.as_deref(),
+        position,
+    )
+    .into_owned()
+}
+
+/// The engine default bibliography separator when no style config is
+/// present — a literal, matching [`crate::render::bibliography`]'s historical
+/// `unwrap_or(". ")` fallback (not the semantic `Period` mark; see
+/// `citum_schema::options::bibliography`'s `default_separator` for why the
+/// engine default stays script-invariant).
+fn default_separator_punctuation() -> DelimiterPunctuation {
+    DelimiterPunctuation::Custom(". ".to_string())
+}
 
 /// Returns true if the character is a sentence-ending or clause-ending punctuation mark.
 fn is_final_punctuation(c: char) -> bool {
@@ -59,7 +109,7 @@ fn ends_with_sentence_ending_visible_punctuation<F: OutputFormat<Output = String
 pub(crate) fn component_starts_new_sentence<F: OutputFormat<Output = String>>(
     entry_output: &str,
     rendered: &str,
-    default_separator: &str,
+    default_separator: &RealizedPunctuation<'_>,
     punctuation_in_quote: bool,
     close_quote: &str,
 ) -> bool {
@@ -84,15 +134,14 @@ pub(crate) fn component_starts_new_sentence<F: OutputFormat<Output = String>>(
         && !first_char.is_whitespace()
         && !is_final_punctuation(trimmed_last)
         && default_separator
-            .chars()
-            .next()
+            .core()
             .is_some_and(is_sentence_ending_punctuation)
     {
         return true;
     }
 
     punctuation_in_quote
-        && default_separator.starts_with('.')
+        && default_separator.core() == Some('.')
         && ends_with_close_quote(entry_output, close_quote)
 }
 
@@ -146,11 +195,15 @@ pub(crate) fn render_entry_body_components_with_format<F: OutputFormat<Output = 
         .unwrap_or("\u{201D}");
 
     // Get the bibliography separator from the config, defaulting to ". "
-    let default_separator = proc_template
-        .first()
-        .and_then(|c| c.bibliography_config.as_ref())
-        .and_then(|bib| bib.separator.as_deref())
-        .unwrap_or(". ");
+    let first_component = proc_template.first();
+    let default_separator = realize_bibliography_punctuation(
+        first_component,
+        first_component
+            .and_then(|c| c.bibliography_config.as_ref())
+            .and_then(|bib| bib.separator.as_ref()),
+        default_separator_punctuation(),
+        PunctuationPosition::Separator,
+    );
 
     for (index, component) in proc_template.iter().enumerate() {
         let rendered = render_component_with_format::<F>(component);
@@ -162,7 +215,7 @@ pub(crate) fn render_entry_body_components_with_format<F: OutputFormat<Output = 
             append_rendered_component::<F>(
                 &mut entry_output,
                 &previous,
-                default_separator,
+                &default_separator,
                 punctuation_in_quote,
                 strong_terminal_comma_policy,
                 close_quote,
@@ -186,7 +239,7 @@ pub(crate) fn render_entry_body_components_with_format<F: OutputFormat<Output = 
         append_rendered_component::<F>(
             &mut entry_output,
             &final_rendered,
-            default_separator,
+            &default_separator,
             punctuation_in_quote,
             strong_terminal_comma_policy,
             close_quote,
@@ -196,9 +249,19 @@ pub(crate) fn render_entry_body_components_with_format<F: OutputFormat<Output = 
     let bib_cfg = proc_template
         .first()
         .and_then(|c| c.bibliography_config.as_ref());
-    let entry_suffix = bib_cfg.and_then(|bib| bib.entry_suffix.as_deref());
-    match entry_suffix {
-        Some(suffix) if !suffix.is_empty() => {
+    if let Some(entry_suffix) = bib_cfg.and_then(|bib| bib.entry_suffix.as_ref()) {
+        let realized_suffix = realize_bibliography_punctuation(
+            first_component,
+            Some(entry_suffix),
+            DelimiterPunctuation::None,
+            PunctuationPosition::Suffix,
+        );
+        // Mirrors the historical `Some(suffix) if !suffix.is_empty()` match
+        // guard, now tested against the realized text rather than the enum,
+        // so both `Custom("")` and `DelimiterPunctuation::None` land here.
+        if !realized_suffix.is_empty() {
+            let suffix = realized_suffix.text();
+            let suffix_core = realized_suffix.core().unwrap_or('.');
             // The suffix is suppressed after a terminal URL/DOI by default; a
             // style may force it back on per link kind (IEEE: DOI, MLA: URL).
             let suppress = match terminal_link::<F>(&entry_output) {
@@ -207,18 +270,15 @@ pub(crate) fn render_entry_body_components_with_format<F: OutputFormat<Output = 
                 TerminalLink::None => false,
             };
             let moved_into_quote = !suppress
-                && suffix == "."
+                && suffix_core == '.'
+                && realized_suffix.tail().is_empty()
                 && punctuation_in_quote
-                && !entry_output.ends_with(suffix.chars().next().unwrap_or('.'))
+                && !entry_output.ends_with(suffix_core)
                 && move_punctuation_into_quote(&mut entry_output, '.', close_quote);
-            if !moved_into_quote
-                && !suppress
-                && !entry_output.ends_with(suffix.chars().next().unwrap_or('.'))
-            {
+            if !moved_into_quote && !suppress && !entry_output.ends_with(suffix_core) {
                 entry_output.push_str(suffix);
             }
         }
-        _ => {}
     }
 
     cleanup_dangling_punctuation::<F>(&mut entry_output, strong_terminal_comma_policy);
@@ -238,7 +298,7 @@ pub(crate) fn render_entry_body_components_with_format<F: OutputFormat<Output = 
 pub(crate) fn append_rendered_component<F: OutputFormat<Output = String>>(
     entry_output: &mut String,
     rendered: &str,
-    default_separator: &str,
+    default_separator: &RealizedPunctuation<'_>,
     punctuation_in_quote: bool,
     strong_terminal_comma_policy: citum_schema::options::StrongTerminalCommaPolicy,
     close_quote: &str,
@@ -246,7 +306,7 @@ pub(crate) fn append_rendered_component<F: OutputFormat<Output = String>>(
     if !entry_output.is_empty() {
         let last_char = entry_output.chars().last().unwrap_or(' ');
         let first_char = first_visible_char::<F>(rendered).unwrap_or(' ');
-        let sep_first_char = default_separator.chars().next().unwrap_or('.');
+        let sep_first_char = default_separator.core().unwrap_or('.');
         let trimmed_last = last_visible_non_space_char::<F>(entry_output).unwrap_or(' ');
         let ends_with_punctuation = is_final_punctuation(trimmed_last);
         // The incoming component already carries its own leading separator (e.g. ", " or "; ").
@@ -285,9 +345,13 @@ pub(crate) fn append_rendered_component<F: OutputFormat<Output = String>>(
                 if strong_terminal_comma_policy
                     == citum_schema::options::StrongTerminalCommaPolicy::KeepBoth
                 {
-                    entry_output.push_str(default_separator);
-                } else if let Some(separator_tail) = default_separator.strip_prefix(',') {
-                    entry_output.push_str(separator_tail);
+                    entry_output.push_str(default_separator.text());
+                } else {
+                    // `sep_first_char == ','` here is guaranteed by the outer
+                    // condition, so the separator's core is exactly the comma
+                    // being collapsed away — `tail()` reproduces the historical
+                    // `strip_prefix(',')` without a fallible check.
+                    entry_output.push_str(default_separator.tail());
                 }
             } else if !last_char.is_whitespace() {
                 entry_output.push(' ');
@@ -300,17 +364,13 @@ pub(crate) fn append_rendered_component<F: OutputFormat<Output = String>>(
             // separator inside the closing quotation mark, then append the rest
             // of the separator (e.g. the trailing space). Mirrors the citation
             // path in `render/citation.rs::push_delimiter`.
-            entry_output.push_str(
-                default_separator
-                    .get(sep_first_char.len_utf8()..)
-                    .unwrap_or(""),
-            );
+            entry_output.push_str(default_separator.tail());
         } else if !last_char.is_whitespace() && !first_char.is_whitespace() {
             // Both sides are non-space — insert the configured separator between them.
-            entry_output.push_str(default_separator);
+            entry_output.push_str(default_separator.text());
         } else if !last_char.is_whitespace()
             && first_char.is_whitespace()
-            && default_separator.starts_with('.')
+            && default_separator.core() == Some('.')
             && !ends_with_punctuation
         {
             // The next component leads with whitespace and the separator is period-prefixed:
@@ -556,6 +616,14 @@ mod tests {
     use citum_schema::template::{Rendering, TemplateComponent, WrapConfig, WrapPunctuation};
     use rstest::rstest;
 
+    /// Decompose a literal separator for tests exercising
+    /// [`append_rendered_component`]/[`component_starts_new_sentence`]
+    /// directly, standing in for the realized value those functions receive
+    /// from `render_entry_body_components_with_format` in production.
+    fn sep(text: &str) -> RealizedPunctuation<'static> {
+        RealizedPunctuation::new(text.to_string().into())
+    }
+
     #[test]
     fn terminal_link_classifies_url_doi_and_plain_text() {
         // given a DOI in url form, doi: form, or bare 10.x form → Doi
@@ -583,7 +651,7 @@ mod tests {
         assert!(component_starts_new_sentence::<PlainText>(
             "",
             "Edited by Grimm, Jacob",
-            ". ",
+            &sep(". "),
             false,
             "\u{201D}"
         ));
@@ -594,7 +662,7 @@ mod tests {
         assert!(component_starts_new_sentence::<PlainText>(
             "Collected Essays.",
             "edited by Grimm, Jacob",
-            ". ",
+            &sep(". "),
             false,
             "\u{201D}"
         ));
@@ -605,7 +673,7 @@ mod tests {
         assert!(!component_starts_new_sentence::<PlainText>(
             "Collected Essays:",
             "edited by Grimm, Jacob",
-            ". ",
+            &sep(". "),
             false,
             "\u{201D}"
         ));
@@ -617,8 +685,8 @@ mod tests {
 
         let config = Config::default();
         let bibliography_config = BibliographyConfig {
-            separator: Some(". ".to_string()),
-            entry_suffix: Some(String::new()),
+            separator: Some(". ".into()),
+            entry_suffix: Some(String::new().into()),
             ..Default::default()
         };
 
@@ -684,8 +752,8 @@ mod tests {
 
         let config = Config::default();
         let bibliography_config = BibliographyConfig {
-            separator: Some(", ".to_string()),
-            entry_suffix: Some(String::new()),
+            separator: Some(", ".into()),
+            entry_suffix: Some(String::new().into()),
             ..Default::default()
         };
 
@@ -756,7 +824,7 @@ mod tests {
         append_rendered_component::<PlainText>(
             &mut entry_output,
             "Nature",
-            ", ",
+            &sep(", "),
             true,
             Default::default(),
             "\u{201D}",
@@ -773,7 +841,7 @@ mod tests {
         append_rendered_component::<PlainText>(
             &mut entry_output,
             "Nature",
-            ". ",
+            &sep(". "),
             true,
             Default::default(),
             "\u{201D}",
@@ -790,7 +858,7 @@ mod tests {
         append_rendered_component::<PlainText>(
             &mut entry_output,
             "Nature",
-            ", ",
+            &sep(", "),
             false,
             Default::default(),
             "\u{201D}",
@@ -816,7 +884,7 @@ mod tests {
         append_rendered_component::<PlainText>(
             &mut entry_output,
             &rendered,
-            ", ",
+            &sep(", "),
             true,
             Default::default(),
             "\u{201D}",
@@ -837,7 +905,7 @@ mod tests {
         append_rendered_component::<PlainText>(
             &mut entry_output,
             ". Aired September 28",
-            ", ",
+            &sep(", "),
             false,
             Default::default(),
             "\u{201D}",
@@ -859,7 +927,7 @@ mod tests {
         append_rendered_component::<PlainText>(
             &mut entry_output,
             "Suite",
-            ", ",
+            &sep(", "),
             true,
             Default::default(),
             "»",
@@ -875,7 +943,7 @@ mod tests {
             append_rendered_component::<PlainText>(
                 &mut keep_both,
                 "Next",
-                ", ",
+                &sep(", "),
                 false,
                 citum_schema::options::StrongTerminalCommaPolicy::KeepBoth,
                 "\u{201D}",
@@ -886,7 +954,7 @@ mod tests {
             append_rendered_component::<PlainText>(
                 &mut keep_terminal,
                 "Next",
-                ", ",
+                &sep(", "),
                 false,
                 citum_schema::options::StrongTerminalCommaPolicy::KeepTerminal,
                 "\u{201D}",
@@ -901,7 +969,7 @@ mod tests {
         append_rendered_component::<PlainText>(
             &mut entry_output,
             "Next",
-            ",\u{00A0}",
+            &sep(",\u{00A0}"),
             false,
             citum_schema::options::StrongTerminalCommaPolicy::KeepTerminal,
             "\u{201D}",
@@ -942,7 +1010,7 @@ mod tests {
         // Expected: "Hawking, S., 1988." (comma from author suffix preserved)
         let config = Config::default();
         let bibliography_config = BibliographyConfig {
-            separator: Some(". ".to_string()),
+            separator: Some(". ".into()),
             entry_suffix: Some(".".into()),
             ..Default::default()
         };
@@ -1011,8 +1079,8 @@ mod tests {
 
         let config = Config::default();
         let bibliography_config = BibliographyConfig {
-            separator: Some(". ".to_string()),
-            entry_suffix: Some(String::new()),
+            separator: Some(". ".into()),
+            entry_suffix: Some(String::new().into()),
             ..Default::default()
         };
 
@@ -1084,8 +1152,8 @@ mod tests {
             ..Default::default()
         };
         let bibliography_config = BibliographyConfig {
-            separator: Some(". ".to_string()),
-            entry_suffix: Some(String::new()),
+            separator: Some(". ".into()),
+            entry_suffix: Some(String::new().into()),
             ..Default::default()
         };
 
@@ -1333,7 +1401,7 @@ mod tests {
         append_rendered_component::<Latex>(
             &mut entry_output,
             "Next",
-            ". ",
+            &sep(". "),
             false,
             Default::default(),
             "\u{201D}",

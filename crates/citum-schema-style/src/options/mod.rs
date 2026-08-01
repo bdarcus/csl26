@@ -374,12 +374,14 @@ pub struct BibliographyOptions {
     /// Whether to use a hanging indent.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub hanging_indent: Option<bool>,
-    /// Suffix appended to each bibliography entry.
+    /// Suffix appended to each bibliography entry. Accepts a semantic mark
+    /// (`{ mark: period }`) or a literal string.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub entry_suffix: Option<String>,
-    /// Separator between bibliography components.
+    pub entry_suffix: Option<DelimiterPunctuation>,
+    /// Separator between bibliography components. Accepts a semantic mark
+    /// (`{ mark: period }`) or a literal string.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub separator: Option<String>,
+    pub separator: Option<DelimiterPunctuation>,
     /// Whether to suppress the trailing period after URLs/DOIs.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub suppress_period_after_url: bool,
@@ -1592,7 +1594,7 @@ punctuation:
 
         let overrides = BibliographyOptions {
             entry_suffix: Some(".".into()),
-            separator: Some(", ".to_string()),
+            separator: Some(", ".into()),
             suppress_period_after_url: true,
             ..Default::default()
         };

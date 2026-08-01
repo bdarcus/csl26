@@ -48,14 +48,23 @@ pub fn extract_bibliography_config(style: &Style) -> Option<BibliographyConfig> 
 
     // Extract layout suffix (e.g., "." from `<layout suffix=".">`).
     if let Some(suffix) = &bib.layout.suffix {
-        config.entry_suffix = Some(suffix.clone());
+        config.entry_suffix = Some(suffix.clone().into());
         has_config = true;
     }
 
-    // Extract bibliography component separator from group delimiter.
+    // Extract bibliography component separator from group delimiter. Flattened
+    // to a literal `Custom` string rather than kept as the semantic mark
+    // `from_csl_string` may have resolved it to (e.g. a literal CSL "," to
+    // `DelimiterPunctuation::Comma`): migrated output must stay script-invariant
+    // like every other migrated style, not silently start realizing full-width
+    // under a later `realization-default: cjk` — see
+    // `docs/specs/PUNCTUATION_REALIZATION.md` §7's literal-punctuation
+    // compatibility contract.
     if let Some(separator) = extract_bibliography_separator_from_layout(&bib.layout, &style.macros)
     {
-        config.separator = Some(separator.to_string_with_space());
+        config.separator = Some(DelimiterPunctuation::Custom(
+            separator.to_string_with_space(),
+        ));
         has_config = true;
     }
 

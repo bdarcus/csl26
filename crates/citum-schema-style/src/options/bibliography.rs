@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 use crate::locale::{GeneralTerm, TermForm};
+use crate::template::DelimiterPunctuation;
 
 /// Bibliography-specific configuration.
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
@@ -29,17 +30,20 @@ pub struct BibliographyConfig {
     pub hanging_indent: Option<bool>,
     /// Suffix appended to each bibliography entry (e.g., `"."`).
     /// Extracted from CSL 1.0 `<layout suffix=".">` attribute.
-    /// If `None`, no suffix is appended.
+    /// If `None`, no suffix is appended. Accepts a semantic mark (`{ mark: period }`)
+    /// or a literal string; literal authoring is unaffected — see
+    /// `docs/specs/PUNCTUATION_REALIZATION.md`.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub entry_suffix: Option<String>,
+    pub entry_suffix: Option<DelimiterPunctuation>,
     /// Separator between bibliography components (e.g., `". "` for Chicago/APA, `", "` for Elsevier).
     /// Extracted from CSL 1.0 group delimiter attribute.
-    /// Defaults to `". "`.
+    /// Defaults to the literal `". "`, not the semantic `period` mark — see
+    /// [`default_separator`], whose doc comment explains why.
     #[serde(
         default = "default_separator",
         skip_serializing_if = "is_default_separator"
     )]
-    pub separator: Option<String>,
+    pub separator: Option<DelimiterPunctuation>,
     /// Whether to suppress the trailing period after URLs/DOIs.
     /// Default behavior is to add a period (Chicago, MLA style).
     /// Set to true to suppress the period (APA 7th, Bluebook style).
@@ -235,13 +239,20 @@ pub enum SubLabelStyle {
 }
 
 /// Default bibliography component separator.
-pub(crate) fn default_separator() -> Option<String> {
-    Some(". ".to_string())
+///
+/// Deliberately `Custom(". ".into())`, not the semantic `Period` mark: `Period`
+/// realizes as `。` under a CJK script class, which would silently change
+/// output for every existing style that leaves `separator` unset. The engine
+/// default staying a script-invariant literal, rather than becoming semantic,
+/// preserves today's behavior; see `docs/specs/PUNCTUATION_REALIZATION.md` §7's
+/// byte-for-byte parity gate.
+pub(crate) fn default_separator() -> Option<DelimiterPunctuation> {
+    Some(DelimiterPunctuation::Custom(". ".to_string()))
 }
 
 /// Skip serializing separator when it is the default value.
-pub(crate) fn is_default_separator(v: &Option<String>) -> bool {
-    v.as_deref() == Some(". ")
+pub(crate) fn is_default_separator(v: &Option<DelimiterPunctuation>) -> bool {
+    matches!(v, Some(DelimiterPunctuation::Custom(s)) if s == ". ")
 }
 
 /// Default sub-label suffix.

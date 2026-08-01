@@ -690,3 +690,59 @@ fn test_extract_givenname_rule_remaining_values() {
         GivennameRule::PrimaryNameWithInitials
     );
 }
+
+#[test]
+fn test_extract_bibliography_separator_stays_literal_not_semantic() {
+    // A CSL 1.0 group delimiter of "," is recognized by `from_csl_string` as
+    // the semantic `Comma` mark, but migrated output must stay literal and
+    // script-invariant like every other migrated style -- it must not start
+    // realizing full-width if the migrated style later declares
+    // `realization-default: cjk` (docs/specs/PUNCTUATION_REALIZATION.md §7).
+    let xml = r#"<style>
+        <citation><layout><text variable="title"/></layout></citation>
+        <bibliography>
+            <layout>
+                <group delimiter=", ">
+                    <text variable="title"/>
+                    <text variable="container-title"/>
+                </group>
+            </layout>
+        </bibliography>
+    </style>"#;
+    let style = parse_csl(xml).unwrap();
+
+    let bibliography = super::bibliography::extract_bibliography_config(&style);
+
+    assert_eq!(
+        bibliography.and_then(|bibliography| bibliography.separator),
+        Some(citum_schema::template::DelimiterPunctuation::Custom(
+            ", ".to_string()
+        )),
+        "extracted separator should be a literal Custom(\", \"), not the semantic Comma mark"
+    );
+}
+
+#[test]
+fn test_extract_bibliography_entry_suffix_stays_literal() {
+    // The layout suffix attribute is always a raw CSL string, never
+    // classified via `from_csl_string`, so this should already be literal --
+    // regression guard against a future change accidentally reclassifying it.
+    let xml = r#"<style>
+        <citation><layout><text variable="title"/></layout></citation>
+        <bibliography>
+            <layout suffix=".">
+                <text variable="title"/>
+            </layout>
+        </bibliography>
+    </style>"#;
+    let style = parse_csl(xml).unwrap();
+
+    let bibliography = super::bibliography::extract_bibliography_config(&style);
+
+    assert_eq!(
+        bibliography.and_then(|bibliography| bibliography.entry_suffix),
+        Some(citum_schema::template::DelimiterPunctuation::Custom(
+            ".".to_string()
+        ))
+    );
+}

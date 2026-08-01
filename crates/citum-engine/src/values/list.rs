@@ -94,6 +94,8 @@ impl ComponentValues for TemplateGroup {
         // that transform on `delimiter` alone, so the boundary-aware join below
         // sees the same delimiter text `fmt.join` would have inserted.
         let escaped_delimiter = fmt.join(vec![String::new(), String::new()], &delimiter);
+        let escaped_delimiter =
+            crate::render::format::RealizedPunctuation::new(escaped_delimiter.into());
 
         let close_quote = crate::render::format::QuoteMarks::from(options.locale).close;
         let joined = crate::render::punctuation::join_with_quote_movement(

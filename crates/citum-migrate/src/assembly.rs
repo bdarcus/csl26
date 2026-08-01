@@ -455,13 +455,13 @@ fn override_bibliography_options_if_inferred(
             if let Some(ref delim) = resolved_bib.delimiter {
                 tracing::debug!("  Overriding bibliography separator: {delim:?}");
                 let bib_cfg = options.get_or_insert_with(Default::default);
-                bib_cfg.separator = Some(delim.clone());
+                bib_cfg.separator = Some(delim.clone().into());
             }
 
             if let Some(ref suffix) = resolved_bib.entry_suffix {
                 tracing::debug!("  Overriding bibliography entry suffix: {suffix:?}");
                 let bib_cfg = options.get_or_insert_with(Default::default);
-                bib_cfg.entry_suffix = Some(suffix.clone());
+                bib_cfg.entry_suffix = Some(suffix.clone().into());
             }
         } else {
             tracing::debug!(

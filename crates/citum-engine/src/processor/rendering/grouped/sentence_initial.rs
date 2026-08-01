@@ -9,14 +9,17 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus and Citum contributors
 
 use super::super::Renderer;
 use crate::render::ProcTemplateComponent;
-use crate::render::bibliography::{append_rendered_component, component_starts_new_sentence};
+use crate::render::bibliography::{
+    append_rendered_component, component_starts_new_sentence, realize_bibliography_punctuation,
+};
 use crate::render::component::render_component_with_format;
+use crate::render::format::PunctuationPosition;
 use crate::render::punctuation::strong_terminal_comma_policy;
 use crate::values::RenderContext;
 use citum_schema::NoteStartTextCase;
 use citum_schema::locale::GeneralTerm;
 use citum_schema::options::titles::TextCase;
-use citum_schema::template::TemplateComponent;
+use citum_schema::template::{DelimiterPunctuation, TemplateComponent};
 
 impl Renderer<'_> {
     pub(super) fn apply_sentence_initial_context<F>(
@@ -52,12 +55,15 @@ impl Renderer<'_> {
                 .first()
                 .and_then(|component| component.config.as_deref()),
         );
-        let default_separator = components
-            .first()
-            .and_then(|component| component.bibliography_config.as_ref())
-            .and_then(|bib| bib.separator.as_deref())
-            .unwrap_or(". ")
-            .to_string();
+        let first_component = components.first();
+        let default_separator = realize_bibliography_punctuation(
+            first_component,
+            first_component
+                .and_then(|component| component.bibliography_config.as_ref())
+                .and_then(|bib| bib.separator.as_ref()),
+            DelimiterPunctuation::Custom(". ".to_string()),
+            PunctuationPosition::Separator,
+        );
         let close_quote = components
             .first()
             .map(|component| component.quote_marks.close.clone())

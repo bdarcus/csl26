@@ -116,6 +116,93 @@ fn pair_mark(pair: &[String; 2], position: PunctuationPosition) -> Cow<'_, str> 
     }
 }
 
+/// A realized separator decomposed into its leading character and the tail
+/// that follows it, so punctuation-in-quote join sites (`render/bibliography.rs`,
+/// `render/citation.rs`, `render/punctuation.rs`, `processor/rendering/grouped/core.rs`)
+/// no longer each call `.chars().next()` on a plain `&str` to rediscover what a
+/// mark's identity already determined at realization.
+///
+/// [`Self::core`] mirrors `text.chars().next()` exactly, so every existing
+/// `matches!(core(), Some('.' | ','))` or `core() == Some(',')` comparison at
+/// a join site is byte-identical to what it replaces. This intentionally does
+/// *not* expose a [`PunctuationClass`](crate::render::punctuation::PunctuationClass)
+/// of the realized glyph: classifying the
+/// rendered character (rather than the source mark) is wrong for non-ASCII
+/// realizations (a CJK `，` is comma-like by origin but not by any ASCII
+/// classification of its glyph), and nothing in this codebase needs it —
+/// quote-movement/collision resolution in `PUNCTUATION_NORMALIZATION.md` is
+/// deliberately scoped to the Latin `.`/`,` convention. Extending it to
+/// full-width marks is a real design question for a future spec increment,
+/// not a byproduct of typing separators.
+///
+/// Must be built from the same string a join site will actually splice into
+/// its output. For the `group:` join sites this is the *post-escape* string
+/// (after `fmt.text`/`fmt.join` round-tripping), matching what
+/// `.chars().next()` inspected before this type existed — see
+/// `docs/specs/PUNCTUATION_REALIZATION.md` §6 on realization strictly
+/// preceding output-format escaping.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct RealizedPunctuation<'a> {
+    text: Cow<'a, str>,
+    core_len: usize,
+}
+
+impl<'a> RealizedPunctuation<'a> {
+    /// Decompose an already-realized separator string.
+    pub(crate) fn new(text: Cow<'a, str>) -> Self {
+        let core_len = text.chars().next().map(char::len_utf8).unwrap_or(0);
+        Self { text, core_len }
+    }
+
+    /// The full realized separator text.
+    pub(crate) fn text(&self) -> &str {
+        &self.text
+    }
+
+    /// The separator's leading character, or `None` when the separator is empty.
+    pub(crate) fn core(&self) -> Option<char> {
+        self.text.chars().next()
+    }
+
+    /// The separator with its leading character removed.
+    pub(crate) fn tail(&self) -> &str {
+        #[allow(
+            clippy::string_slice,
+            reason = "core_len is a char boundary derived from chars().next()"
+        )]
+        &self.text[self.core_len..]
+    }
+
+    /// Return whether the realized separator is the empty string.
+    pub(crate) fn is_empty(&self) -> bool {
+        self.text.is_empty()
+    }
+
+    /// Detach from the borrowed input, cloning if necessary.
+    pub(crate) fn into_owned(self) -> RealizedPunctuation<'static> {
+        RealizedPunctuation {
+            text: Cow::Owned(self.text.into_owned()),
+            core_len: self.core_len,
+        }
+    }
+}
+
+/// Realize `punctuation` and decompose the result — see [`RealizedPunctuation`].
+#[must_use]
+pub(crate) fn realize_punctuation_decomposed<'a>(
+    punctuation: &'a DelimiterPunctuation,
+    script: ScriptClass,
+    overrides: Option<&'a PunctuationRealization>,
+    position: PunctuationPosition,
+) -> RealizedPunctuation<'a> {
+    RealizedPunctuation::new(realize_punctuation(
+        punctuation,
+        script,
+        overrides,
+        position,
+    ))
+}
+
 /// Apply realized punctuation affixes while routing semantic glyphs through
 /// the active output format's text escaping.
 pub(crate) fn apply_punctuation_affixes<F>(
@@ -559,6 +646,7 @@ pub struct ProcEntryMetadata {
 )]
 mod tests {
     use super::*;
+    use rstest::rstest;
 
     #[derive(Default, Clone)]
     struct DummyFormat;
@@ -760,5 +848,83 @@ mod tests {
             ),
             "<&value"
         );
+    }
+
+    #[rstest]
+    #[case::latin_comma(DelimiterPunctuation::Comma, ScriptClass::Latin, Some(','), " ")]
+    #[case::cjk_comma_has_no_tail(DelimiterPunctuation::Comma, ScriptClass::Cjk, Some('，'), "")]
+    #[case::custom_period_matches_semantic_period_under_latin(
+        DelimiterPunctuation::Custom(". ".to_string()),
+        ScriptClass::Latin,
+        Some('.'),
+        " ",
+    )]
+    #[case::custom_empty_has_no_core(
+        DelimiterPunctuation::Custom(String::new()),
+        ScriptClass::Latin,
+        None,
+        ""
+    )]
+    #[case::custom_ampersand_space_led_core_is_not_terminal_punctuation(
+        DelimiterPunctuation::Custom(" & ".to_string()),
+        ScriptClass::Latin,
+        Some(' '),
+        "& ",
+    )]
+    fn realized_punctuation_decomposes_core_and_tail(
+        #[case] punctuation: DelimiterPunctuation,
+        #[case] script: ScriptClass,
+        #[case] expected_core: Option<char>,
+        #[case] expected_tail: &str,
+    ) {
+        let realized = realize_punctuation_decomposed(
+            &punctuation,
+            script,
+            None,
+            PunctuationPosition::Separator,
+        );
+
+        assert_eq!(realized.core(), expected_core);
+        assert_eq!(realized.tail(), expected_tail);
+    }
+
+    #[test]
+    fn realized_punctuation_french_colon_has_no_movable_core() {
+        // The parity case from `docs/specs/PUNCTUATION_REALIZATION.md` §2: a
+        // locale-supplied realization can lead with a non-breaking space
+        // rather than the mark's own glyph, so `core()` — which mirrors
+        // `chars().next()` exactly — returns the NBSP, not `:`. Downstream
+        // `matches!(core(), Some('.' | ','))` movement checks correctly treat
+        // this the same as no leading punctuation at all.
+        let realization = citum_schema::options::PunctuationRealization {
+            colon: Some("\u{00A0}: ".to_string()),
+            ..Default::default()
+        };
+        let punctuation = DelimiterPunctuation::Colon;
+
+        let realized = realize_punctuation_decomposed(
+            &punctuation,
+            ScriptClass::Latin,
+            Some(&realization),
+            PunctuationPosition::Separator,
+        );
+
+        assert_eq!(realized.text(), "\u{00A0}: ");
+        assert_eq!(realized.core(), Some('\u{00A0}'));
+        assert!(!matches!(realized.core(), Some('.' | ',')));
+    }
+
+    #[test]
+    fn realized_punctuation_is_empty_and_into_owned_detach_from_the_input() {
+        let borrowed = RealizedPunctuation::new(Cow::Borrowed(""));
+        assert!(borrowed.is_empty());
+
+        let source = String::from(", ");
+        let realized = RealizedPunctuation::new(Cow::Borrowed(source.as_str()));
+        let owned = realized.into_owned();
+        drop(source);
+
+        assert_eq!(owned.text(), ", ");
+        assert_eq!(owned.core(), Some(','));
     }
 }
