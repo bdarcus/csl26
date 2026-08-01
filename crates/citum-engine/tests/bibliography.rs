@@ -880,7 +880,7 @@ fn build_article_journal_no_page_fallback_style() -> Style {
                     no_page_fallback: Some(ArticleJournalNoPageFallback::Doi),
                     ..Default::default()
                 }),
-                separator: Some(", ".to_string()),
+                separator: Some(", ".into()),
                 ..Default::default()
             }),
             template: Some(vec![

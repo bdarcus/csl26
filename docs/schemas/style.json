@@ -7424,17 +7424,25 @@
           ]
         },
         "entry-suffix": {
-          "description": "Suffix appended to each bibliography entry.",
-          "type": [
-            "string",
-            "null"
+          "description": "Suffix appended to each bibliography entry. Accepts a semantic mark\n(`{ mark: period }`) or a literal string.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DelimiterPunctuation"
+            },
+            {
+              "type": "null"
+            }
           ]
         },
         "separator": {
-          "description": "Separator between bibliography components.",
-          "type": [
-            "string",
-            "null"
+          "description": "Separator between bibliography components. Accepts a semantic mark\n(`{ mark: period }`) or a literal string.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DelimiterPunctuation"
+            },
+            {
+              "type": "null"
+            }
           ]
         },
         "suppress-period-after-url": {

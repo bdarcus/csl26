@@ -970,3 +970,65 @@ bibliography:
         "Alpha; Beta: editors"
     );
 }
+
+/// Style used by the bibliography-separator/entry-suffix realization gate
+/// tests: opts in to CJK realization, and authors both the bibliography
+/// component separator and the entry suffix as semantic marks rather than
+/// literals — the `BibliographyConfig::separator`/`entry_suffix` widening
+/// from `csl26-2vcg`.
+const BIBLIOGRAPHY_SEPARATOR_REALIZATION_GATE_STYLE_YAML: &str = r#"
+info:
+  id: bibliography-separator-realization-gate-test
+  title: Bibliography Separator Realization Gate Test
+  default-locale: en-US
+options:
+  multilingual:
+    realization-default: cjk
+bibliography:
+  options:
+    separator: { mark: comma }
+    entry-suffix: { mark: period }
+  template:
+    - title: primary
+    - variable: publisher-place
+"#;
+
+#[test]
+fn semantic_bibliography_separator_and_entry_suffix_realize_full_width_for_cjk_item() {
+    announce_behavior(
+        "A bibliography-level `separator: { mark: comma }` and \
+         `entry-suffix: { mark: period }` realize full-width for a CJK-script \
+         item under realization-default: cjk — csl26-2vcg.",
+    );
+    let style: Style = serde_yaml::from_str(BIBLIOGRAPHY_SEPARATOR_REALIZATION_GATE_STYLE_YAML)
+        .expect("bibliography separator realization gate style should parse");
+    let bibliography = IndexMap::from([(
+        "cjk-book".to_string(),
+        realization_test_book("cjk-book", "Title", Some("zh"), "Beijing"),
+    )]);
+
+    let processor = Processor::new(style, bibliography);
+    let rendered = processor.render_bibliography();
+
+    assert_eq!(rendered, "Title，Beijing。");
+}
+
+#[test]
+fn semantic_bibliography_separator_and_entry_suffix_realize_half_width_for_latin_item() {
+    announce_behavior(
+        "The same semantic separator/entry-suffix marks realize half-width \
+         for a positively Latin-script item in the same CJK-default style — \
+         csl26-2vcg.",
+    );
+    let style: Style = serde_yaml::from_str(BIBLIOGRAPHY_SEPARATOR_REALIZATION_GATE_STYLE_YAML)
+        .expect("bibliography separator realization gate style should parse");
+    let bibliography = IndexMap::from([(
+        "latin-book".to_string(),
+        realization_test_book("latin-book", "Title", Some("en"), "New York"),
+    )]);
+
+    let processor = Processor::new(style, bibliography);
+    let rendered = processor.render_bibliography();
+
+    assert_eq!(rendered, "Title, New York. ");
+}
