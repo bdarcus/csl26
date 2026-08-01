@@ -265,6 +265,41 @@ function hashFile(filePath) {
   return hashContent(fs.readFileSync(filePath));
 }
 
+// Both renderers otherwise land on en-US by two independent accidents: citum
+// falls back to `Locale::en_us()` when a style declares no
+// `info.default-locale` (crates/citum-engine/src/processor/setup.rs), and
+// citeproc-js falls back to "en-US" when the legacy CSL declares no
+// `default-locale` attribute. Resolving the citum-declared locale once here
+// and passing it explicitly to both renderers (--locale below, and oracle.js's
+// --locale/forceLang) makes the agreement declared rather than coincidental.
+//
+// Mirrors EMBEDDED_LOCALE_IDS in
+// crates/citum-schema-style/src/embedded/locales.rs. A style may declare a
+// locale that isn't embedded (e.g. mhra-notes.yaml's `en-GB`) — today the
+// engine's implicit resolution silently substitutes en-US for that case
+// (crates/citum_store/src/chain.rs `load_locale_or_default`); an explicit
+// `--locale en-GB` on the CLI would hard-error instead, since the flag path
+// doesn't get that same fallback. Only pass --locale for known-embedded
+// values, so this stays additive: it makes the common case explicit without
+// turning that latent silent-fallback bug (tracked separately) into a report
+// crash.
+const EMBEDDED_LOCALE_IDS = new Set([
+  'en-US', 'ar-AR', 'de-DE', 'es-ES', 'eu-ES',
+  'fr-FR', 'fr-CA', 'tr-TR', 'zh-CN', 'ja-JP', 'ko-KR', 'ru-RU',
+]);
+
+function resolveStyleLocale(stylePath) {
+  try {
+    const raw = yaml.load(fs.readFileSync(stylePath, 'utf8'));
+    const resolved = resolveStyleData(cloneJson(raw));
+    const declared = resolved?.info?.['default-locale'];
+    if (declared && !EMBEDDED_LOCALE_IDS.has(declared)) return null;
+    return declared || 'en-US';
+  } catch {
+    return 'en-US';
+  }
+}
+
 // oracle.js's actual output also depends on these two files (registered
 // divergence detectors and the policy that enables them), but neither is
 // `oracle.js` itself, so a cache key hashing only `liveScript` silently
@@ -992,6 +1027,12 @@ async function runCiteprocSnapshotOracle(runtime, stylePath, styleName, styleFor
       if (runtime.allFeatures) {
         fastArgs.push('--all-features');
       }
+      if (styleYamlPath && fs.existsSync(styleYamlPath)) {
+        const resolvedLocale = resolveStyleLocale(styleYamlPath);
+        if (resolvedLocale) {
+          fastArgs.push('--locale', resolvedLocale);
+        }
+      }
 
       if (snapshotStatus.ok) {
         const fast = await runNodeOracleScript(fastScript, fastArgs);
@@ -1099,7 +1140,7 @@ async function runNativeOracle(runtime, styleName) {
   });
 }
 
-async function runCiteprocBenchmarkOracle(runtime, stylePath, styleName, benchmarkRun) {
+async function runCiteprocBenchmarkOracle(runtime, stylePath, styleName, benchmarkRun, styleYamlPath = null) {
   const resolvedRun = resolveBenchmarkRunConfig(benchmarkRun);
   const liveScript = path.join(__dirname, 'oracle.js');
   return runCachedJsonJob(runtime, {
@@ -1108,6 +1149,7 @@ async function runCiteprocBenchmarkOracle(runtime, stylePath, styleName, benchma
       backend: 'benchmarkCiteproc',
       styleName,
       stylePath,
+      styleYamlHash: styleYamlPath && fs.existsSync(styleYamlPath) ? hashFile(styleYamlPath) : null,
       benchmarkRunId: resolvedRun.id,
       benchmarkRunner: resolvedRun.runner,
       scope: resolvedRun.scope,
@@ -1135,6 +1177,12 @@ async function runCiteprocBenchmarkOracle(runtime, stylePath, styleName, benchma
       }
       if (resolvedRun.citationsFixture && resolvedRun.scope !== 'bibliography') {
         args.push('--citations-fixture', resolvedRun.citationsFixture);
+      }
+      if (styleYamlPath && fs.existsSync(styleYamlPath)) {
+        const resolvedLocale = resolveStyleLocale(styleYamlPath);
+        if (resolvedLocale) {
+          args.push('--locale', resolvedLocale);
+        }
       }
       const result = await runNodeOracleScript(liveScript, args);
       if ((result.code === 0 || result.code === 1) && result.stdout.trim()) {
@@ -1375,7 +1423,7 @@ async function runBiblatexSnapshotOracle(runtime, styleName, styleYamlPath, auth
   });
 }
 
-async function runFamilyFixtureOracle(runtime, stylePath, styleName, fixtureSetName) {
+async function runFamilyFixtureOracle(runtime, stylePath, styleName, fixtureSetName, styleYamlPath = null) {
   const refsFixture = FIXTURE_SET_REFS[fixtureSetName];
   const citationsFixture = FIXTURE_SET_CITATIONS[fixtureSetName];
   if (!refsFixture || !citationsFixture) return null;
@@ -1388,6 +1436,7 @@ async function runFamilyFixtureOracle(runtime, stylePath, styleName, fixtureSetN
       backend: 'familyFixture',
       styleName,
       stylePath,
+      styleYamlHash: styleYamlPath && fs.existsSync(styleYamlPath) ? hashFile(styleYamlPath) : null,
       refsFixture,
       citationsFixture,
       styleHash: hashFile(stylePath),
@@ -1409,6 +1458,12 @@ async function runFamilyFixtureOracle(runtime, stylePath, styleName, fixtureSetN
       ];
       if (runtime.allFeatures) {
         args.push('--all-features');
+      }
+      if (styleYamlPath && fs.existsSync(styleYamlPath)) {
+        const resolvedLocale = resolveStyleLocale(styleYamlPath);
+        if (resolvedLocale) {
+          args.push('--locale', resolvedLocale);
+        }
       }
       const result = await runNodeOracleScript(liveScript, args);
       if ((result.code === 0 || result.code === 1) && result.stdout.trim()) {
@@ -1636,7 +1691,7 @@ async function runBenchmarkRun(runtime, styleSpec, stylePath, styleYamlPath, ben
   const resolvedRun = resolveBenchmarkRunConfig(benchmarkRun);
   try {
     if (resolvedRun.runner === BENCHMARK_RUNNERS.CITEPROC_ORACLE) {
-      const oracleResult = await runCiteprocBenchmarkOracle(runtime, stylePath, styleSpec.name, resolvedRun);
+      const oracleResult = await runCiteprocBenchmarkOracle(runtime, stylePath, styleSpec.name, resolvedRun, styleYamlPath);
       const benchmarkStatus = determineBenchmarkStatus(oracleResult, resolvedRun.minPassRate);
       return formatBenchmarkRunRecord(resolvedRun, {
         status: benchmarkStatus,
@@ -2679,7 +2734,7 @@ async function processStyleReport(runtime, styleSpec, context) {
   const familySets = getAdditionalFixtureSetNames(sufficiencyPolicy.fixtureSets || []);
   if (citationAuthority.authority === 'citeproc-js' && fs.existsSync(stylePath)) {
     for (const setName of familySets) {
-      const extra = await runFamilyFixtureOracle(runtime, stylePath, styleSpec.name, setName);
+      const extra = await runFamilyFixtureOracle(runtime, stylePath, styleSpec.name, setName, styleYamlPath);
       if (!extra) continue;
       tagOracleResultEvidence(extra, {
         id: `family:${setName}`,
