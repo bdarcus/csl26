@@ -3521,7 +3521,7 @@
           ]
         },
         "punctuation-in-quote": {
-          "description": "Whether to place periods/commas inside quotation marks.\ntrue = American style (\"text.\"), false = British style (\"text\".)\nDefaults to false; en-US locale typically sets this to true.",
+          "description": "Whether to place periods/commas inside quotation marks.\ntrue = American style (\"text.\"), false = British style (\"text\".)\nDefaults to false; the style must opt in explicitly (embedded styles\nthat want American-style placement, including `en-US`-locale ones,\nset this directly — the locale's own `punctuation-in-quote` grammar\noption is not currently consulted by the engine).",
           "type": "boolean"
         },
         "punctuation": {
