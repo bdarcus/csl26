@@ -89,9 +89,22 @@ impl ComponentValues for TemplateGroup {
         } else {
             delimiter.into_owned()
         };
+        // `fmt.join` may apply format-specific escaping to the delimiter itself
+        // (e.g. LaTeX special characters); joining two empty strings surfaces
+        // that transform on `delimiter` alone, so the boundary-aware join below
+        // sees the same delimiter text `fmt.join` would have inserted.
+        let escaped_delimiter = fmt.join(vec![String::new(), String::new()], &delimiter);
+
+        let close_quote = crate::render::format::QuoteMarks::from(options.locale).close;
+        let joined = crate::render::punctuation::join_with_quote_movement(
+            values,
+            &escaped_delimiter,
+            options.config.punctuation_in_quote,
+            &close_quote,
+        );
 
         Some(ProcValues {
-            value: fmt.join(values, &delimiter),
+            value: joined,
             prefix: None,
             suffix: None,
             url: None,

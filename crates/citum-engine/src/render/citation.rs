@@ -7,25 +7,30 @@ use crate::render::component::{ProcTemplate, render_component_with_format};
 use crate::render::format::OutputFormat;
 use crate::render::plain::PlainText;
 use crate::render::punctuation::{
-    is_terminal_punctuation, resolve_punctuation_collision, strong_terminal_comma_policy,
+    is_terminal_punctuation, move_punctuation_into_quote, resolve_punctuation_collision,
+    strong_terminal_comma_policy,
 };
 use citum_schema::template::WrapPunctuation;
 
-/// Append `delim` to `content`, applying house-style punctuation rules at the join point.
+/// Append `delim` then `next` to `content`, applying house-style punctuation rules at the
+/// join point.
 ///
-/// Three cases are handled in priority order:
-/// 1. **Punctuation-in-quote** – when `punctuation_in_quote` is set and `delim` starts with
-///    a comma, the comma is pulled *inside* a preceding closing quotation mark (`"` or `\u{201D}`)
-///    before appending the rest of the delimiter. Quote marks are literal Unicode characters
-///    in every backend, not markup, so this case looks at the raw last char directly.
-/// 2. **Punctuation collision** – when format `F`'s *visible* last char of `content` and the
+/// Cases are handled in priority order:
+/// 1. **Punctuation-in-quote, delimiter-led** – when `punctuation_in_quote` is set and `delim`
+///    starts with a period or comma, that mark is pulled *inside* a preceding closing
+///    quotation mark before appending the rest of the delimiter and `next` verbatim.
+/// 2. **Punctuation-in-quote, `next`-led** – when `delim` is empty (or does not itself start
+///    with `.`/`,`) but `next` supplies its own leading period or comma (e.g. a component's own
+///    `prefix: ". Aired "`), that mark is pulled inside the quote the same way, and the
+///    remainder of `next` is appended after it.
+/// 3. **Punctuation collision** – when format `F`'s *visible* last char of `content` and the
 ///    first char of `delim` are both terminal punctuation, the pair is resolved via
 ///    [`resolve_punctuation_collision`] (e.g. `".` + `". "` → `". "` rather than `".. "`). If
 ///    the raw content genuinely ends with that char, it's popped and merged as before; if the
 ///    visible terminal punctuation is hidden behind trailing markup (e.g. a LaTeX `\emph{...}`
 ///    close brace), the raw markup is left alone and the delimiter's redundant leading
 ///    punctuation is dropped instead.
-/// 3. **Default** – append `delim` verbatim.
+/// 4. **Default** – append `delim` and `next` verbatim.
 #[inline]
 #[allow(
     clippy::string_slice,
@@ -34,38 +39,49 @@ use citum_schema::template::WrapPunctuation;
 fn push_delimiter<F: OutputFormat<Output = String>>(
     content: &mut String,
     delim: &str,
+    next: &str,
     punctuation_in_quote: bool,
     strong_terminal_comma_policy: citum_schema::options::StrongTerminalCommaPolicy,
+    close_quote: &str,
 ) {
     let delim_first = delim.chars().next();
 
-    if punctuation_in_quote
-        && delim_first == Some(',')
-        && (content.ends_with('"') || content.ends_with('\u{201D}'))
-    {
-        // Case 1: pull the leading comma inside the closing quotation mark.
-        let is_curly = content.ends_with('\u{201D}');
-        content.pop();
-        content.push(',');
-        content.push(if is_curly { '\u{201D}' } else { '"' });
-        content.push_str(&delim[1..]);
-        return;
+    if punctuation_in_quote {
+        if matches!(delim_first, Some('.' | ','))
+            && move_punctuation_into_quote(content, delim_first.unwrap_or('.'), close_quote)
+        {
+            // Case 1: pull the leading period/comma of the delimiter inside the quote.
+            content.push_str(&delim[delim_first.unwrap_or('.').len_utf8()..]);
+            content.push_str(next);
+            return;
+        }
+        if delim_first.is_none()
+            && let Some(next_first) = next.chars().next()
+            && matches!(next_first, '.' | ',')
+            && move_punctuation_into_quote(content, next_first, close_quote)
+        {
+            // Case 2: `next` supplies its own leading punctuation.
+            content.push_str(&next[next_first.len_utf8()..]);
+            return;
+        }
     }
 
     let Some(first) = delim_first else {
         content.push_str(delim);
+        content.push_str(next);
         return;
     };
     let Some(visible_last) = F::default().visible_text(content).chars().last() else {
         content.push_str(delim);
+        content.push_str(next);
         return;
     };
 
     if !is_terminal_punctuation(visible_last) || !is_terminal_punctuation(first) {
-        // Case 3: no special rule — append the delimiter verbatim.
+        // Case 4: no special rule — append the delimiter verbatim.
         content.push_str(delim);
     } else if content.ends_with(visible_last) {
-        // Case 2a: raw content genuinely ends with the visible terminal char — merge as before.
+        // Case 3a: raw content genuinely ends with the visible terminal char — merge as before.
         content.pop();
         content.push_str(&resolve_punctuation_collision(
             visible_last,
@@ -74,7 +90,7 @@ fn push_delimiter<F: OutputFormat<Output = String>>(
         ));
         content.push_str(&delim[first.len_utf8()..]);
     } else {
-        // Case 2b: the visible terminal punctuation is behind trailing markup (e.g. LaTeX
+        // Case 3b: the visible terminal punctuation is behind trailing markup (e.g. LaTeX
         // `}`). A retained comma can safely follow the markup wrapper; all collapsing cases
         // leave the raw markup alone and drop the incoming punctuation as before.
         if first == ','
@@ -87,6 +103,7 @@ fn push_delimiter<F: OutputFormat<Output = String>>(
             content.push_str(&delim[first.len_utf8()..]);
         }
     }
+    content.push_str(next);
 }
 
 /// Render a processed template into a final citation string using `PlainText` format.
@@ -129,18 +146,25 @@ pub fn citation_to_string_with_format<F: OutputFormat<Output = String>>(
             .first()
             .and_then(|component| component.config.as_deref()),
     );
+    let close_quote = proc_template
+        .first()
+        .map(|c| c.quote_marks.close.as_str())
+        .unwrap_or("\u{201D}");
 
     let mut content = String::new();
     for (i, part) in parts.iter().enumerate() {
-        if i > 0 {
+        if i == 0 {
+            content.push_str(part);
+        } else {
             push_delimiter::<F>(
                 &mut content,
                 delim,
+                part,
                 punctuation_in_quote,
                 strong_terminal_comma_policy,
+                close_quote,
             );
         }
-        content.push_str(part);
     }
 
     let (open, close) = match wrap {
@@ -190,6 +214,7 @@ mod tests {
         ContributorForm, ContributorRole, DateForm, DateVariable, Rendering, TemplateComponent,
         TemplateContributor, TemplateDate, TemplateTitle, TitleType,
     };
+    use rstest::rstest;
 
     #[test]
     fn test_citation_to_string() {
@@ -305,6 +330,82 @@ mod tests {
 
         assert_eq!(plain, "“colon,” period");
         assert_eq!(typst, "“colon,” period");
+    }
+
+    #[rstest]
+    #[case('.', "period")]
+    #[case(',', "comma")]
+    fn push_delimiter_moves_delimiter_led_mark_inside_closing_quote(
+        #[case] mark: char,
+        #[case] label: &str,
+    ) {
+        // Period was previously unhandled here — only comma-led delimiters moved.
+        let mut content = "“Title”".to_string();
+        let delim = format!("{mark} ");
+
+        push_delimiter::<PlainText>(
+            &mut content,
+            &delim,
+            "Next",
+            true,
+            citum_schema::options::StrongTerminalCommaPolicy::default(),
+            "”",
+        );
+
+        assert_eq!(
+            content,
+            format!("“Title{mark}” Next"),
+            "{label}-led delimiter should move inside the quote"
+        );
+    }
+
+    #[rstest]
+    #[case('.', "period")]
+    #[case(',', "comma")]
+    fn push_delimiter_moves_next_part_own_leading_mark_inside_closing_quote(
+        #[case] mark: char,
+        #[case] label: &str,
+    ) {
+        // An empty delimiter (a `group:` with `delimiter: ''`) plus a next part
+        // that supplies its own leading punctuation via a component-level
+        // `prefix` (e.g. `prefix: ". Aired "` on the following component) — the
+        // shape the delimiter-only check never saw.
+        let mut content = "“Title”".to_string();
+        let next = format!("{mark} Aired 1980");
+
+        push_delimiter::<PlainText>(
+            &mut content,
+            "",
+            &next,
+            true,
+            citum_schema::options::StrongTerminalCommaPolicy::default(),
+            "”",
+        );
+
+        assert_eq!(
+            content,
+            format!("“Title{mark}” Aired 1980"),
+            "{label}-led next part should move inside the quote"
+        );
+    }
+
+    #[test]
+    fn push_delimiter_moves_mark_inside_a_locale_specific_close_quote() {
+        // A French-style guillemet close quote rather than the en-US curly
+        // quote — the hardcoded '"'/'\u{201D}' match this replaces would never
+        // fire for this glyph.
+        let mut content = "«Titre»".to_string();
+
+        push_delimiter::<PlainText>(
+            &mut content,
+            ", ",
+            "Suite",
+            true,
+            citum_schema::options::StrongTerminalCommaPolicy::default(),
+            "»",
+        );
+
+        assert_eq!(content, "«Titre,» Suite");
     }
 
     #[test]

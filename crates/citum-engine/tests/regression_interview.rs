@@ -74,3 +74,55 @@ fn test_apa_interview_fidelity_regression() {
         "Arendt, H. (1975). Thinking in Public (E. Young-Bruehl, Interviewer) Schocken Books."
     );
 }
+
+#[test]
+fn test_chicago_author_date_interview_moves_period_inside_quote() {
+    // Regression for the nested-group delimiter dynamics bug: the
+    // `interview:` bibliography variant's outer group (title wrap:quotes,
+    // date, interviewer, ...) has its own `delimiter: ". "`, joined by
+    // `Renderer::render_group_component_with_format`
+    // (processor/rendering/grouped/core.rs) — a *separate* group-join
+    // implementation from `TemplateGroup::values` (values/list.rs). Only
+    // fixing the latter left this path emitting `Intelligence". 2023.`
+    // instead of `Intelligence.” 2023.` (period outside the closing quote).
+    let style = load_style("styles/embedded/chicago-author-date-18th.yaml");
+
+    let reference = InputReference::Monograph(Box::new(Monograph {
+        id: Some("bengio-interview".into()),
+        r#type: MonographType::Interview,
+        title: Some(Title::Single(
+            "The Future of Artificial Intelligence".to_string(),
+        )),
+        author: Some(Contributor::StructuredName(StructuredName {
+            family: "Bengio".into(),
+            given: "Yoshua".into(),
+            ..Default::default()
+        })),
+        contributors: vec![ContributorEntry {
+            roles: ContributorRole::Interviewer.into(),
+            contributor: Contributor::StructuredName(StructuredName {
+                family: "Colbert".into(),
+                given: "Stephen".into(),
+                ..Default::default()
+            }),
+            gender: None,
+        }],
+        issued: DateValue::new("2023-11-10".to_string()),
+        ..Default::default()
+    }));
+
+    let mut bib = IndexMap::new();
+    bib.insert("bengio-interview".to_string(), reference);
+
+    let processor = Processor::new(style, bib);
+    let result = processor.render_bibliography();
+
+    // The title-first ordering (rather than author-first) is a separate,
+    // already-tracked defect (bean csl26-4q7v) in the `interview:` variant's
+    // `render-when: field-present: title` gating — unrelated to, and not
+    // fixed by, the punctuation-in-quote join-boundary fix this test guards.
+    assert_eq!(
+        result,
+        "\u{201C}The Future of Artificial Intelligence.\u{201D} 2023. Interview by Stephen Colbert. November 10."
+    );
+}
