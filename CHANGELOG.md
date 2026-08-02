@@ -5,6 +5,196 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.79.0] - 2026-08-02
+
+### Bug Fixes
+
+**ci**
+
+- Cover exact parity enforcement ([`928e99e`](https://github.com/citum/citum-core/commit/928e99edd7d8814a972ac3cca18b6c45a99c2385))
+
+- Regen schema and oracle baseline ([`91f17f4`](https://github.com/citum/citum-core/commit/91f17f41240c6deb9db4672f580c1c2cca750902))
+
+
+**engine**
+
+- Align title-case stop words ([`3933dd9`](https://github.com/citum/citum-core/commit/3933dd9536d1de82d9924a4e2148b5566706dc5b))
+
+- Fix punctuation-in-quote joins ([`933761d`](https://github.com/citum/citum-core/commit/933761ddd9b17244ec85ea9b1ee682cab05aa283))
+
+- Bare numeric labels leak a separator ([`ae565ba`](https://github.com/citum/citum-core/commit/ae565baa5978dc9b88ac04669799ba079e12a16b))
+
+- Honor bibliography-free styles ([`9208a6c`](https://github.com/citum/citum-core/commit/9208a6caa7730bb2382f3e61492ffe96284b3af3))
+
+
+**hooks**
+
+- Drop redundant --base flag from alint ([`4e8bf9c`](https://github.com/citum/citum-core/commit/4e8bf9c5ed7f11a429a47dea287e1650adebf33a))
+
+
+**migrate**
+
+- Convert citeproc html outside titles ([`e06b7e2`](https://github.com/citum/citum-core/commit/e06b7e2d1056a798735cb64e88b06ce8915be458))
+
+
+**report**
+
+- Make oracle locale explicit ([`65cb95b`](https://github.com/citum/citum-core/commit/65cb95b71aa5e12d84b6190af389e7dbec143f86))
+
+- Restore canonical parity data ([`51e1be8`](https://github.com/citum/citum-core/commit/51e1be8147f603b2393efd04f3e1796d2589839e))
+
+
+**schema**
+
+- Add direct-build contributor fold ([`4c67fc0`](https://github.com/citum/citum-core/commit/4c67fc0848e1418ef3c1c2b056d605b17fef273b))
+
+- Merge multilingual config field-wise ([`96d5d45`](https://github.com/citum/citum-core/commit/96d5d455a1f5522b4de093a2a989efccbd914be3))
+
+- Preserve raw_yaml on every load path ([`c09f5bd`](https://github.com/citum/citum-core/commit/c09f5bdac01275c7422e4e576a9ec88b1c9a88a5))
+
+- Correct conference page punctuation ([`364cb90`](https://github.com/citum/citum-core/commit/364cb908c295632278fd7d7280056434ebe5dce8))
+
+
+**styles**
+
+- Correct multilingual example errors ([`886ff18`](https://github.com/citum/citum-core/commit/886ff1810b50b0fb6d883d6946edf3084fec6151))
+
+- Dedupe gb-t-7714-2025 dates block ([`8862075`](https://github.com/citum/citum-core/commit/8862075657761d53c2a7d370a31e68e2bfd591e3))
+
+- Scope T&F sentence-case to component ([`a9c7e06`](https://github.com/citum/citum-core/commit/a9c7e062c0d16582db7acd6ce74b0acfb5fed836))
+
+- Clear inherited monograph emphasis ([`418f35a`](https://github.com/citum/citum-core/commit/418f35afde24f810b82b62d12af70927ee7e7142))
+
+- Fix two title deep-merge regressions ([`0b8efb7`](https://github.com/citum/citum-core/commit/0b8efb775360576a694c8ae810574c11d80f71cc))
+
+- Fix split-corpus fallout ([`b636fd6`](https://github.com/citum/citum-core/commit/b636fd6c5b687e714bf396152c5bcc4d06253fa2))
+
+- Elsevier-vancouver label-mode leak ([`14fe4c2`](https://github.com/citum/citum-core/commit/14fe4c2c0c42847f0708910ca78bb7d998c5eda8))
+
+- Add bibliography numbering to AMA ([`fcdff9c`](https://github.com/citum/citum-core/commit/fcdff9cbd597dfac2ee641cee8c346d982d8e727))
+
+- Bib numbering, nature/ACS/AMA-alpha ([`c97833a`](https://github.com/citum/citum-core/commit/c97833a93f03f1f441d0a0cc67f6601645a966ad))
+
+- Use label-mode for numeric labels ([`29e1b72`](https://github.com/citum/citum-core/commit/29e1b72d472fde5fb164b2ceb838984e2900b3bb))
+
+- Bracket Chicago guessed-date years ([`5b47090`](https://github.com/citum/citum-core/commit/5b4709068efd9310c383239afcc45520a8dc89fb))
+
+- Improve Chicago exact parity ([`8a81ca5`](https://github.com/citum/citum-core/commit/8a81ca58a6bfc21d9d176743bdbea5d00c47c347))
+
+- Retain Chicago link suffixes ([`92fcfaf`](https://github.com/citum/citum-core/commit/92fcfafe87cba27f67516b92af675f88427f8f88))
+
+- Terminate Chicago bibliography links ([`940b461`](https://github.com/citum/citum-core/commit/940b461df980a9e430d468198418391ff97b4660))
+
+
+
+### Documentation
+
+**report**
+
+- Specify inheritance view ([`2668a98`](https://github.com/citum/citum-core/commit/2668a98e72a10609babbe03edba8e5bc58f4e66a))
+
+- Refresh compat.html read-this copy ([`4a094ef`](https://github.com/citum/citum-core/commit/4a094efebd55c04a4a6cfdfaffbccb31df86aa3f))
+
+- Spike class-A parity gap ([`b97de7e`](https://github.com/citum/citum-core/commit/b97de7ea35430bf5debeeb18159fb0db8bd0d043))
+
+
+**spec**
+
+- Add unified style inheritance spec ([`0be290f`](https://github.com/citum/citum-core/commit/0be290f64d9edfd2c10a13b728991b95e895444f))
+
+- Record deep-merge constraints ([`b358d8c`](https://github.com/citum/citum-core/commit/b358d8c566364f46f3aceee77e8d844a8f683ba5))
+
+- Require format-neutral raw ingest ([`5cf3740`](https://github.com/citum/citum-core/commit/5cf37400183e5d4534248a3f5cf4d3617e8d5dbc))
+
+- Flip style inheritance spec to active ([`894d8e6`](https://github.com/citum/citum-core/commit/894d8e622b8d301fed9cbae915599d6c0709b007))
+
+
+**styles**
+
+- Audit inheritance and portfolio ([`296d11c`](https://github.com/citum/citum-core/commit/296d11c00a38c7a72059e3e697067f94c21b0a80))
+
+- Explain the three-tier portfolio ([`7f8d014`](https://github.com/citum/citum-core/commit/7f8d014b3a8e91b10a610bede02659dbe6fb812a))
+
+- Align exact parity workflow ([`bb47b5e`](https://github.com/citum/citum-core/commit/bb47b5e47108e9d2070c41e508d1001550696e5b))
+
+
+
+### Features
+
+**engine**
+
+- Configure EDTF year ranges ([`9c6114d`](https://github.com/citum/citum-core/commit/9c6114d4c6be0d6926253aef79e3a69af9827ecc))
+
+- Type separators at punctuation joins ([`d9e59d8`](https://github.com/citum/citum-core/commit/d9e59d891bb5af984dbb167ab49411eb59675b8f))
+
+
+**locale**
+
+- Label biblatex editorial roles ([`d77655a`](https://github.com/citum/citum-core/commit/d77655a2d78062d8d6a4adefb85b50d1ad8d80c1))
+
+
+**refs**
+
+- Preserve biblatex field semantics ([`c90a5f2`](https://github.com/citum/citum-core/commit/c90a5f202e460ed3ecbce4ac14dbb156d593f190))
+
+- Route biblatex to native classes ([`6c7282a`](https://github.com/citum/citum-core/commit/6c7282ae3ff4e8f18ce9f6f172a853806afad9c0))
+
+
+**report**
+
+- Surface style inheritance ([`bbf5a0b`](https://github.com/citum/citum-core/commit/bbf5a0bdf04ca65112d19250b99e3ad49f214d45))
+
+- Focus embedded compatibility ([`82e3d76`](https://github.com/citum/citum-core/commit/82e3d76fd90c5b0b61024da84b0e2b5a87bf6d32))
+
+- Measure elsevier/T&F core overlap ([`828cb9d`](https://github.com/citum/citum-core/commit/828cb9d2046312e3338d48e0fcad008ca0a1b436))
+
+- Harden exact parity gate ([`4129b71`](https://github.com/citum/citum-core/commit/4129b71ebb65a7f68278ff9eac95885ba779bb8b))
+
+
+**schema**
+
+- Deep-merge options on extends ([`303a38f`](https://github.com/citum/citum-core/commit/303a38f02863bab5894cb6130cab87178908b4ac))
+
+- Flush numeric bibliography labels ([`79a66fa`](https://github.com/citum/citum-core/commit/79a66fafb0fbc7a3e8e4d8d4d0503d308cd60fa0))
+
+- Add locator and title presets ([`e51d11b`](https://github.com/citum/citum-core/commit/e51d11bf564fbcc71bc531f0cb6f4b55791b6ed2))
+
+
+**styles**
+
+- Split community style corpus ([`0eec168`](https://github.com/citum/citum-core/commit/0eec16875b4f446f4a337f592d7bce064c99e4ab))
+
+- Field-merge runtime scope cascade ([`85e94e8`](https://github.com/citum/citum-core/commit/85e94e81eec6912cff77fed7fcb8271cb058b758))
+
+
+**tooling**
+
+- Rework config-presets matching ([`5c25db3`](https://github.com/citum/citum-core/commit/5c25db3a97b471e8fd17a321d9ee848cf6d85f2d))
+
+
+
+### Refactor
+
+**refs**
+
+- Unify biblatex under formats/ ([`48a0982`](https://github.com/citum/citum-core/commit/48a09820279634f2491ea61bd3cb314c9901c389))
+
+- Declarative mapping tables ([`9b28345`](https://github.com/citum/citum-core/commit/9b283455f95c554498d98a68bf0af44150b89280))
+
+
+
+### Testing
+
+**engine**
+
+- Fix domain_fixtures raw-yaml bypass ([`77b1c14`](https://github.com/citum/citum-core/commit/77b1c145e96e5d284ef8bbb7cb8ce5f9d50a3222))
+
+
+**refs**
+
+- Add biblatex conversion corpus ([`6634f9f`](https://github.com/citum/citum-core/commit/6634f9f3cf6dc51982ca755c6e50cb86ffde435e))
+
+
 ## [0.78.0] - 2026-07-24
 
 ### Bug Fixes
