@@ -13,7 +13,7 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus and Citum contributors
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 crate::str_enum! {
     /// Form for term lookup.
@@ -368,9 +368,9 @@ pub struct DateTerms {
     /// Month names (full and abbreviated forms).
     #[serde(default)]
     pub months: MonthNames,
-    /// Season names (e.g., "Spring", "Summer", "Autumn", "Winter").
+    /// Season names, keyed by EDTF season code (`21`=Spring..`24`=Winter).
     #[serde(default)]
-    pub seasons: Vec<String>,
+    pub seasons: BTreeMap<SubYearCode, String>,
     /// Term for uncertain dates (e.g., "uncertain").
     #[serde(skip_serializing_if = "Option::is_none")]
     pub uncertainty_term: Option<String>,
@@ -405,14 +405,131 @@ pub struct DateTerms {
 
 /// Month name lists.
 ///
-/// Contains both full and abbreviated month names for a given locale.
+/// Contains both full and abbreviated month names for a given locale, each
+/// keyed by EDTF sub-year code (`1`-`12`). Also reused, sparsely populated,
+/// by [`LocaleOverride::dates`]'s month-name overrides — see
+/// `docs/specs/LOCALE_DATE_NAME_KEYING.md`.
 #[derive(Debug, Default, Deserialize, Serialize, Clone)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct MonthNames {
     /// Full month names (e.g., "January", "February", ..., "December").
-    pub long: Vec<String>,
+    pub long: BTreeMap<SubYearCode, String>,
     /// Abbreviated month names (e.g., "Jan.", "Feb.", ..., "Dec.").
-    pub short: Vec<String>,
+    pub short: BTreeMap<SubYearCode, String>,
+}
+
+/// An EDTF sub-year code: a value more specific than a year but not
+/// necessarily a calendar month.
+///
+/// `1`-`12` are calendar months (EDTF Level 0). `21`-`24` are the EDTF
+/// Level 1 seasons (Spring, Summer, Autumn, Winter). `25`-`41` are reserved
+/// for EDTF Level 2 sub-year granularity (quarters, semesters,
+/// quadrimesters, hemisphere-qualified seasons) not yet modeled here — the
+/// range is reserved so a future extension does not need another key shape.
+///
+/// Used as the map key for locale month/season name tables
+/// ([`MonthNames`], [`DateTerms::seasons`]) and their sparse overrides, so a
+/// style can replace a single month's name without redeclaring the other
+/// eleven. See `docs/specs/LOCALE_DATE_NAME_KEYING.md`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct SubYearCode(u8);
+
+impl SubYearCode {
+    /// First calendar-month code.
+    pub const MIN_MONTH: u8 = 1;
+    /// Last calendar-month code.
+    pub const MAX_MONTH: u8 = 12;
+    /// First EDTF Level 1 season code (Spring).
+    pub const MIN_SEASON: u8 = 21;
+    /// Last code reserved for EDTF Level 2 sub-year granularity.
+    pub const MAX_SEASON: u8 = 41;
+
+    /// Construct a `SubYearCode`, returning `None` if `code` falls outside
+    /// the reserved month (`1`-`12`) or season/sub-year (`21`-`41`) ranges.
+    #[must_use]
+    pub fn new(code: u8) -> Option<Self> {
+        let in_month_range = (Self::MIN_MONTH..=Self::MAX_MONTH).contains(&code);
+        let in_season_range = (Self::MIN_SEASON..=Self::MAX_SEASON).contains(&code);
+        (in_month_range || in_season_range).then_some(Self(code))
+    }
+
+    /// The raw EDTF sub-year code.
+    #[must_use]
+    pub fn get(self) -> u8 {
+        self.0
+    }
+}
+
+impl std::fmt::Display for SubYearCode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl Serialize for SubYearCode {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_u8(self.0)
+    }
+}
+
+impl<'de> Deserialize<'de> for SubYearCode {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        struct SubYearCodeVisitor;
+
+        impl serde::de::Visitor<'_> for SubYearCodeVisitor {
+            type Value = SubYearCode;
+
+            fn expecting(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                write!(
+                    f,
+                    "an EDTF sub-year code (1-12 for months, 21-41 reserved for seasons)"
+                )
+            }
+
+            fn visit_u64<E: serde::de::Error>(self, value: u64) -> Result<Self::Value, E> {
+                let code = u8::try_from(value)
+                    .map_err(|_| E::custom(format!("sub-year code out of range: {value}")))?;
+                SubYearCode::new(code)
+                    .ok_or_else(|| E::custom(format!("sub-year code out of range: {code}")))
+            }
+
+            fn visit_str<E: serde::de::Error>(self, value: &str) -> Result<Self::Value, E> {
+                let code: u8 = value
+                    .parse()
+                    .map_err(|_| E::custom(format!("invalid sub-year code: {value}")))?;
+                SubYearCode::new(code)
+                    .ok_or_else(|| E::custom(format!("sub-year code out of range: {code}")))
+            }
+        }
+
+        // `deserialize_any` (not `deserialize_u8`) so the visitor's
+        // `visit_u64`/`visit_str` are reached however the format represents
+        // the value. Some deserializers only honor a numeric type hint by
+        // special-casing it in map-key position; `deserialize_any` doesn't
+        // depend on that and works for a plain field too.
+        deserializer.deserialize_any(SubYearCodeVisitor)
+    }
+}
+
+#[cfg(feature = "schema")]
+impl JsonSchema for SubYearCode {
+    fn schema_name() -> std::borrow::Cow<'static, str> {
+        std::borrow::Cow::Borrowed("SubYearCode")
+    }
+
+    fn json_schema(_generator: &mut schemars::SchemaGenerator) -> schemars::Schema {
+        schemars::json_schema!({
+            "description": "EDTF sub-year code: 1-12 = calendar month, 21-24 = EDTF Level 1 season, 25-41 reserved for future sub-year codes.",
+            "anyOf": [
+                { "type": "integer", "minimum": 1, "maximum": u32::from(SubYearCode::MAX_MONTH) },
+                {
+                    "type": "integer",
+                    "minimum": u32::from(SubYearCode::MIN_SEASON),
+                    "maximum": u32::from(SubYearCode::MAX_SEASON),
+                },
+            ],
+        })
+    }
 }
 
 /// Number formatting options for a locale.
@@ -635,6 +752,24 @@ pub struct LocaleOverride {
     pub grammar_options: Option<GrammarOptions>,
     /// Additional or replacement legacy term aliases (key-by-key insertion/replacement).
     pub legacy_term_aliases: std::collections::HashMap<String, String>,
+    /// Sparse month/season name replacements (key-by-key insertion/replacement).
+    pub dates: DateNameOverride,
+}
+
+/// Sparse month/season name overrides for a [`LocaleOverride`].
+///
+/// Reuses [`MonthNames`] and the same EDTF-sub-year-code keying as the base
+/// locale's date names, so a style can replace a single month or season
+/// name without redeclaring the rest. See
+/// `docs/specs/LOCALE_DATE_NAME_KEYING.md`.
+#[derive(Debug, Clone, Default, Deserialize, Serialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+#[serde(rename_all = "kebab-case", default)]
+pub struct DateNameOverride {
+    /// Month name replacements, keyed by EDTF sub-year code (`1`-`12`).
+    pub months: MonthNames,
+    /// Season name replacements, keyed by EDTF season code (`21`-`24`).
+    pub seasons: BTreeMap<SubYearCode, String>,
 }
 
 #[cfg(test)]
@@ -651,6 +786,56 @@ pub struct LocaleOverride {
 )]
 mod tests {
     use super::*;
+
+    /// `SubYearCode::new` accepts every month and EDTF Level 1 season code,
+    /// and rejects everything else (the gap between them, and the reserved
+    /// Level 2 upper bound).
+    #[rstest::rstest]
+    #[case::first_month(1, true)]
+    #[case::last_month(12, true)]
+    #[case::first_season(21, true)]
+    #[case::last_season_reserved(41, true)]
+    #[case::zero_rejected(0, false)]
+    #[case::gap_between_months_and_seasons_rejected(13, false)]
+    #[case::gap_before_seasons_rejected(20, false)]
+    #[case::past_reserved_range_rejected(42, false)]
+    fn sub_year_code_range(#[case] code: u8, #[case] expected_valid: bool) {
+        assert_eq!(SubYearCode::new(code).is_some(), expected_valid);
+    }
+
+    /// `SubYearCode` deserializes from both a YAML/JSON integer and a JSON
+    /// object-key string, since JSON forces map keys to strings while YAML
+    /// keeps native integer keys — both loaders (`parse_locale_override_bytes`)
+    /// must resolve to the identical code.
+    #[rstest::rstest]
+    #[case::yaml_integer_key("months:\n  7: Jul.\n")]
+    #[case::json_string_key(r#"{"months": {"7": "Jul."}}"#)]
+    fn sub_year_code_parses_int_or_string_key(#[case] yaml_or_json: &str) {
+        #[derive(Deserialize)]
+        struct Wrapper {
+            months: BTreeMap<SubYearCode, String>,
+        }
+        let parsed: Wrapper = if yaml_or_json.trim_start().starts_with('{') {
+            serde_json::from_str(yaml_or_json).expect("should parse")
+        } else {
+            serde_yaml::from_str(yaml_or_json).expect("should parse")
+        };
+        assert_eq!(
+            parsed
+                .months
+                .get(&SubYearCode::new(7).expect("valid month code")),
+            Some(&"Jul.".to_string())
+        );
+    }
+
+    /// An out-of-range sub-year code is a loud deserialize error, not a
+    /// silently dropped key.
+    #[test]
+    fn sub_year_code_rejects_out_of_range_key() {
+        let err = serde_yaml::from_str::<BTreeMap<SubYearCode, String>>("13: invalid\n")
+            .expect_err("code 13 falls in the gap between months and seasons");
+        assert!(err.to_string().contains("out of range"));
+    }
 
     /// Test that GeneralTerm variants deserialize from expected string values.
     #[test]
@@ -804,14 +989,32 @@ mod tests {
 
         assert_eq!(dates.months.long.len(), 12);
         assert_eq!(dates.months.short.len(), 12);
-        assert_eq!(dates.months.long[0], "January");
-        assert_eq!(dates.months.long[11], "December");
+        assert_eq!(
+            dates.months.long[&SubYearCode::new(1).expect("valid month code")],
+            "January"
+        );
+        assert_eq!(
+            dates.months.long[&SubYearCode::new(12).expect("valid month code")],
+            "December"
+        );
 
         assert_eq!(dates.seasons.len(), 4);
-        assert_eq!(dates.seasons[0], "Spring");
-        assert_eq!(dates.seasons[1], "Summer");
-        assert_eq!(dates.seasons[2], "Autumn");
-        assert_eq!(dates.seasons[3], "Winter");
+        assert_eq!(
+            dates.seasons[&SubYearCode::new(21).expect("valid season code")],
+            "Spring"
+        );
+        assert_eq!(
+            dates.seasons[&SubYearCode::new(22).expect("valid season code")],
+            "Summer"
+        );
+        assert_eq!(
+            dates.seasons[&SubYearCode::new(23).expect("valid season code")],
+            "Autumn"
+        );
+        assert_eq!(
+            dates.seasons[&SubYearCode::new(24).expect("valid season code")],
+            "Winter"
+        );
     }
 
     /// The YAML-derived `Locale::en_us()` provides era suffixes that the

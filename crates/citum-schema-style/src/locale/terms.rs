@@ -488,24 +488,18 @@ impl Locale {
         self.terms.et_al.as_deref().unwrap_or("et al.")
     }
 
-    /// Get a month name.
+    /// Get a month name for a calendar month (`1`-`12`), by its EDTF
+    /// sub-year code. Returns an empty string for an out-of-range month.
     pub fn month_name(&self, month: u8, short: bool) -> &str {
-        let idx = (month.saturating_sub(1)) as usize;
-        if short {
-            self.dates
-                .months
-                .short
-                .get(idx)
-                .map(|s| s.as_str())
-                .unwrap_or("")
+        let Some(code) = super::types::SubYearCode::new(month) else {
+            return "";
+        };
+        let table = if short {
+            &self.dates.months.short
         } else {
-            self.dates
-                .months
-                .long
-                .get(idx)
-                .map(|s| s.as_str())
-                .unwrap_or("")
-        }
+            &self.dates.months.long
+        };
+        table.get(&code).map(String::as_str).unwrap_or("")
     }
 }
 

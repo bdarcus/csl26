@@ -15,7 +15,7 @@ use super::message::{MessageEvaluator, Mf2MessageEvaluator, NoOpEvaluator};
 use super::raw;
 use super::types::{
     ContributorTerm, DateTerms, LocaleOverride, LocatorTerm, MaybeGendered, MessageSyntax,
-    MonthNames, SimpleTerm, SingularPlural, TermForm,
+    MonthNames, SimpleTerm, SingularPlural, SubYearCode, TermForm,
 };
 use crate::citation::LocatorType;
 use crate::template::ContributorRole;
@@ -138,10 +138,10 @@ impl Locale {
         Self::remove_base_messages_shadowed_by_raw_terms(&raw, &mut locale.messages);
         locale.dates = DateTerms {
             months: MonthNames {
-                long: raw.dates.months.long,
-                short: raw.dates.months.short,
+                long: raw.dates.months.long.into_map(SubYearCode::MIN_MONTH),
+                short: raw.dates.months.short.into_map(SubYearCode::MIN_MONTH),
             },
-            seasons: raw.dates.seasons,
+            seasons: raw.dates.seasons.into_map(SubYearCode::MIN_SEASON),
             uncertainty_term: raw.dates.uncertainty_term,
             open_ended_term: raw.dates.open_ended_term,
             am: raw.dates.am,
@@ -791,6 +791,7 @@ impl Locale {
     /// - `grammar_options`: if `Some`, replaces the entire block and syncs
     ///   `punctuation_in_quote` field
     /// - `legacy_term_aliases`: new or updated term aliases
+    /// - `dates`: new or updated month/season names, by EDTF sub-year code
     pub fn apply_override(&mut self, ov: &LocaleOverride) {
         for (k, v) in &ov.messages {
             self.messages.insert(k.clone(), v.clone());
@@ -801,6 +802,15 @@ impl Locale {
         }
         for (k, v) in &ov.legacy_term_aliases {
             self.legacy_term_aliases.insert(k.clone(), v.clone());
+        }
+        for (k, v) in &ov.dates.months.long {
+            self.dates.months.long.insert(*k, v.clone());
+        }
+        for (k, v) in &ov.dates.months.short {
+            self.dates.months.short.insert(*k, v.clone());
+        }
+        for (k, v) in &ov.dates.seasons {
+            self.dates.seasons.insert(*k, v.clone());
         }
     }
 }
