@@ -224,3 +224,50 @@ with cost recorded, and fix the decision rule before starting:**
 This keeps the two decisions properly separated: whether translation can
 still reach the bar the project just raised on itself, versus whether a
 second rendering path is worth building. Only the first is answerable today.
+
+## Addendum (2026-08-02): the wave ran — here's what to do next
+
+**Verdict:** `ieee` moved 84/149 → 88/149 exact parity (56.4% → 59.1%),
+fidelity 100%, zero regressions. Still inside the "50s–60s stall" band this
+document's decision rule named — but the wave found one general engine bug,
+not an ieee quirk, and that bug retroactively improved
+`american-medical-association` too (48/67 → 49/67, verified against the
+checked-in baseline) once cross-checked against already-landed work
+(`csl26-j7uc`). One wave on one style doesn't settle the interpreter
+question either way; what it's good for is the table below. Full record:
+bean `csl26-unyu`, commit `12865760` on `style/ieee-exact-parity-wave`.
+
+**Next action: `csl26-ww77`.** `csl26-arly` already triaged all 2,501
+embedded+exemplar mismatches into named classes on 2026-07-30, closed its
+own scope, and left a 37% "Z-unclassified" bucket never broken down further.
+`csl26-ww77` checks whether that bucket hides more bugs shaped like this
+one, rather than re-running the triage from scratch. It lives under
+`csl26-ccdt` ("Embedded-tier non-Chicago parity," `csl26-arly`'s successor
+epic — `csl26-arly` itself is closed and shouldn't be reopened), which is a
+child of the top-level milestone `csl26-w0hf`. No new epic was needed once
+the tree was checked properly — creating one would have repeated the exact
+disconnected-thread mistake `csl26-w0hf` exists to prevent.
+
+### What was found, what it costs to fix
+
+| Class | Found this wave | Fix cost |
+|---|---|---|
+| General engine bug | Numeric bibliography label wrongly counted as content when its sibling is empty → spurious separator (`label_only` fix) | Fixed once, benefits every numeric style — free |
+| Shared-preset entanglement | Role-label suffix shared by ieee/chicago/AMA; fixing ieee regressed the other two (172→164/540, 49→48/67) — caught by hand, reverted | Needs per-style override or smarter separator logic, not a preset patch — `csl26-g6bi` |
+| Missing type-variants | `legal_case`/`treaty`/`patent`/apparatus never migrated from `ieee.csl` | Hand-authoring — `csl26-y49d` |
+| Schema gap | No way to override month abbreviations or zero-pad days per style | Bounded engine+schema work — `csl26-3az5` |
+| Data leaks | Raw `phd-thesis` enum, one fabricated `no. 1` | Small, untriaged — `csl26-lhrl` |
+
+**Process lesson, not optional going forward:** the shared-preset regression
+was caught by manually re-checking two styles I happened to think of, not by
+any automated check. Any change to engine machinery shared by more than one
+style must run `report-core.js --all-features` across the full
+embedded-core tier before landing.
+
+**For the interpretation question:** both real bugs found here are
+artifacts of translation's own shared-abstraction machinery (a
+label-injection pass, a role-label preset) — not something a CSL
+interpreter executing each style's layout literally would need to get
+right. A real point in its favor on this narrow failure mode; it doesn't
+touch the structural costs (dual semantics, no oracle substitute) that
+actually decide the question.
