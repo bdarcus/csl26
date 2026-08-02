@@ -5,7 +5,7 @@ status: in-progress
 type: milestone
 priority: high
 created_at: 2026-07-30T19:09:35Z
-updated_at: 2026-07-30T19:09:41Z
+updated_at: 2026-08-02T12:57:45Z
 ---
 
 Reach 100% oracle text parity (byte-for-byte match with citeproc-js for
@@ -51,3 +51,9 @@ parent):
 Re-derive this list with:
 `beans query '{ bean(id: "csl26-40n4") { children { id title status blockedBy { id status } } } }'`
 and recurse into any in-progress children.
+
+## Update (2026-08-02)
+
+A second active child now exists alongside csl26-40n4 (Chicago): **csl26-ccdt** ("Embedded-tier non-Chicago parity", successor to the now-completed csl26-arly). csl26-ccdt is where the ieee tuning wave's findings live and where the next concrete action is: **csl26-ww77** (check the 37%-unclassified residual bucket from csl26-arly's taxonomy for more general engine bugs like the one this wave found).
+
+The 'Next actions (as of 2026-07-30)' list above is Chicago-only and still accurate for that thread, but is no longer the complete picture -- check csl26-ccdt's children for non-Chicago work.
