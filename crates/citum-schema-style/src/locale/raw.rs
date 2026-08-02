@@ -3,6 +3,7 @@ SPDX-License-Identifier: MIT OR Apache-2.0
 SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus and Citum contributors
 */
 
+use crate::locale::SubYearCode;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::de::Error as _;
@@ -82,9 +83,12 @@ pub struct RawDateTerms {
     /// Localized month names.
     #[serde(default)]
     pub months: RawMonthNames,
-    /// Localized season names in display order.
+    /// Localized season names, either the legacy display-order sequence
+    /// (`[Spring, Summer, Autumn, Winter]`) or the canonical EDTF-season-code
+    /// map (`{21: Spring, 22: Summer, ...}`). See
+    /// `docs/specs/LOCALE_DATE_NAME_KEYING.md`.
     #[serde(default)]
-    pub seasons: Vec<String>,
+    pub seasons: RawDateNameField,
     /// Localized term for uncertain dates.
     #[serde(default)]
     pub uncertainty_term: Option<String>,
@@ -121,12 +125,65 @@ pub struct RawDateTerms {
 #[derive(Debug, Default, Deserialize, Serialize, Clone)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct RawMonthNames {
-    /// Full month names.
+    /// Full month names, sequence or EDTF-month-code-keyed map.
     #[serde(default)]
-    pub long: Vec<String>,
-    /// Abbreviated month names.
+    pub long: RawDateNameField,
+    /// Abbreviated month names, sequence or EDTF-month-code-keyed map.
     #[serde(default)]
-    pub short: Vec<String>,
+    pub short: RawDateNameField,
+}
+
+/// One date-name table (a set of `months.long`, `months.short`, or
+/// `seasons`), in either the legacy ordered-sequence form or the canonical
+/// EDTF-sub-year-code-keyed map form.
+///
+/// Both forms parse; [`RawDateNameField::into_map`] canonicalizes a sequence
+/// into the map, assigning sequence index `i` (0-based) to code
+/// `start_code + i`. This is the only place the legacy shape is known — the
+/// runtime [`crate::locale::Locale`] only ever sees the map form. See
+/// `docs/specs/LOCALE_DATE_NAME_KEYING.md`.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+#[serde(untagged)]
+pub enum RawDateNameField {
+    /// Legacy display-order sequence (e.g. `[January, February, ...]`).
+    Sequence(Vec<String>),
+    /// Canonical EDTF-sub-year-code-keyed map (e.g. `{1: January, ...}`).
+    Keyed(std::collections::BTreeMap<crate::locale::types::SubYearCode, String>),
+}
+
+impl Default for RawDateNameField {
+    fn default() -> Self {
+        Self::Sequence(Vec::new())
+    }
+}
+
+impl RawDateNameField {
+    /// Canonicalize into an EDTF-sub-year-code-keyed map.
+    ///
+    /// A [`Self::Sequence`] entry at 0-based index `i` is assigned code
+    /// `start_code + i`; entries whose resulting code falls outside the
+    /// valid month/season range are dropped rather than panicking, since
+    /// this is reachable from untrusted locale-file input. A
+    /// [`Self::Keyed`] value passes through unchanged.
+    #[must_use]
+    pub fn into_map(
+        self,
+        start_code: u8,
+    ) -> std::collections::BTreeMap<crate::locale::types::SubYearCode, String> {
+        match self {
+            Self::Sequence(names) => names
+                .into_iter()
+                .enumerate()
+                .filter_map(|(i, name)| {
+                    let offset = u8::try_from(i).ok()?;
+                    let code = start_code.checked_add(offset)?;
+                    crate::locale::types::SubYearCode::new(code).map(|c| (c, name))
+                })
+                .collect(),
+            Self::Keyed(map) => map,
+        }
+    }
 }
 
 /// Raw role term with form-keyed values.
@@ -543,6 +600,21 @@ pub struct RawLocaleOverride {
     pub grammar_options: Option<crate::locale::types::GrammarOptions>,
     /// Additional or replacement legacy term aliases.
     pub legacy_term_aliases: HashMap<String, String>,
+    /// Sparse month/season name replacements.
+    #[serde(default)]
+    pub dates: RawDateNameOverride,
+}
+
+/// Raw sparse month/season name overrides, mirroring
+/// [`super::types::DateNameOverride`] for deserialization.
+#[derive(Debug, Default, Deserialize, Serialize, Clone)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+#[serde(rename_all = "kebab-case", default)]
+pub struct RawDateNameOverride {
+    /// Month name replacements.
+    pub months: RawMonthNames,
+    /// Season name replacements.
+    pub seasons: RawDateNameField,
 }
 
 impl From<RawLocaleOverride> for super::types::LocaleOverride {
@@ -551,6 +623,13 @@ impl From<RawLocaleOverride> for super::types::LocaleOverride {
             messages: raw.messages,
             grammar_options: raw.grammar_options,
             legacy_term_aliases: raw.legacy_term_aliases,
+            dates: super::types::DateNameOverride {
+                months: super::types::MonthNames {
+                    long: raw.dates.months.long.into_map(SubYearCode::MIN_MONTH),
+                    short: raw.dates.months.short.into_map(SubYearCode::MIN_MONTH),
+                },
+                seasons: raw.dates.seasons.into_map(SubYearCode::MIN_SEASON),
+            },
         }
     }
 }
@@ -568,9 +647,56 @@ impl From<RawLocaleOverride> for super::types::LocaleOverride {
     reason = "Panicking is acceptable and often desired in tests."
 )]
 mod tests {
-    use super::{RawGenderedString, RawTermValue};
+    use super::{RawDateNameField, RawGenderedString, RawTermValue};
     #[cfg(feature = "schema")]
     use crate::locale::RawLocale;
+    use crate::locale::SubYearCode;
+
+    /// The legacy ordered sequence canonicalizes to the same codes the map
+    /// form would use directly: month index `i` -> code `i+1`, season
+    /// index `i` -> code `21+i`.
+    #[test]
+    fn raw_date_name_field_sequence_canonicalizes_to_expected_codes() {
+        let months = RawDateNameField::Sequence(vec!["January".into(), "February".into()]);
+        let map = months.into_map(SubYearCode::MIN_MONTH);
+        assert_eq!(
+            map.get(&SubYearCode::new(1).expect("valid month code")),
+            Some(&"January".to_string())
+        );
+        assert_eq!(
+            map.get(&SubYearCode::new(2).expect("valid month code")),
+            Some(&"February".to_string())
+        );
+
+        let seasons = RawDateNameField::Sequence(vec!["Spring".into(), "Summer".into()]);
+        let season_map = seasons.into_map(SubYearCode::MIN_SEASON);
+        assert_eq!(
+            season_map.get(&SubYearCode::new(21).expect("valid season code")),
+            Some(&"Spring".to_string())
+        );
+        assert_eq!(
+            season_map.get(&SubYearCode::new(22).expect("valid season code")),
+            Some(&"Summer".to_string())
+        );
+    }
+
+    /// The canonical keyed map form passes through `into_map` unchanged.
+    #[test]
+    fn raw_date_name_field_keyed_passes_through() {
+        let keyed = RawDateNameField::Keyed(
+            [(
+                SubYearCode::new(7).expect("valid month code"),
+                "Jul.".to_string(),
+            )]
+            .into(),
+        );
+        let map = keyed.into_map(SubYearCode::MIN_MONTH);
+        assert_eq!(
+            map.get(&SubYearCode::new(7).expect("valid month code")),
+            Some(&"Jul.".to_string())
+        );
+        assert_eq!(map.len(), 1);
+    }
 
     #[test]
     fn test_gender_slots_accept_explicit_null_values() {

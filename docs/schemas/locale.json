@@ -154,11 +154,8 @@
           }
         },
         "seasons": {
-          "description": "Localized season names in display order.",
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
+          "description": "Localized season names, either the legacy display-order sequence\n(`[Spring, Summer, Autumn, Winter]`) or the canonical EDTF-season-code\nmap (`{21: Spring, 22: Summer, ...}`). See\n`docs/specs/LOCALE_DATE_NAME_KEYING.md`.",
+          "$ref": "#/$defs/RawDateNameField",
           "default": []
         },
         "uncertainty-term": {
@@ -248,22 +245,38 @@
       "type": "object",
       "properties": {
         "long": {
-          "description": "Full month names.",
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
+          "description": "Full month names, sequence or EDTF-month-code-keyed map.",
+          "$ref": "#/$defs/RawDateNameField",
           "default": []
         },
         "short": {
-          "description": "Abbreviated month names.",
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
+          "description": "Abbreviated month names, sequence or EDTF-month-code-keyed map.",
+          "$ref": "#/$defs/RawDateNameField",
           "default": []
         }
       }
+    },
+    "RawDateNameField": {
+      "description": "One date-name table (a set of `months.long`, `months.short`, or\n`seasons`), in either the legacy ordered-sequence form or the canonical\nEDTF-sub-year-code-keyed map form.\n\nBoth forms parse; [`RawDateNameField::into_map`] canonicalizes a sequence\ninto the map, assigning sequence index `i` (0-based) to code\n`start_code + i`. This is the only place the legacy shape is known — the\nruntime [`crate::locale::Locale`] only ever sees the map form. See\n`docs/specs/LOCALE_DATE_NAME_KEYING.md`.",
+      "anyOf": [
+        {
+          "description": "Legacy display-order sequence (e.g. `[January, February, ...]`).",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        {
+          "description": "Canonical EDTF-sub-year-code-keyed map (e.g. `{1: January, ...}`).",
+          "type": "object",
+          "additionalProperties": false,
+          "patternProperties": {
+            "^-?\\d+$": {
+              "type": "string"
+            }
+          }
+        }
+      ]
     },
     "RawRoleTerm": {
       "description": "Raw role term with form-keyed values.",

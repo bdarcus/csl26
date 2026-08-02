@@ -142,6 +142,54 @@ up a `pattern.date-<form>` message in the active locale. If a pattern is
 authored, it is evaluated and used. If no pattern is authored, the engine
 falls through to a hardcoded English assembly (`{month} {day}, {year}`).
 
+### Month and season name keying
+
+`dates.months.long`, `dates.months.short`, and `dates.seasons` are keyed by
+EDTF sub-year code: `1`-`12` for calendar months, `21`-`24` for the EDTF
+Level 1 seasons (Spring, Summer, Autumn, Winter). The canonical form is a map:
+
+```yaml
+dates:
+  months:
+    long:
+      1: January
+      2: February
+      # ...
+  seasons:
+    21: Spring
+    22: Summer
+    23: Autumn
+    24: Winter
+```
+
+The legacy ordered-sequence form (`long: [January, February, ...]`,
+`seasons: [Spring, Summer, Autumn, Winter]`) still parses — sequence index
+`i` (0-based) is read as code `i+1` for months or `i+21` for seasons — so
+existing locale files do not need to convert. New locale files may use
+either form; serialization always emits the map form. See
+`docs/specs/LOCALE_DATE_NAME_KEYING.md`.
+
+A style's `locale-override` file can replace a single month or season name
+without redeclaring the rest, using the same keying under a `dates` block:
+
+```yaml
+# locales/overrides/en-US-ieee.yaml
+dates:
+  months:
+    short:
+      6: "Jun."
+      7: "Jul."
+      9: "Sep."
+```
+
+### `day-zero-pad`
+
+`options.dates.day-zero-pad: true` zero-pads the rendered day of month
+(`"07"` instead of `"7"`) across both single-date and same-year date-range
+rendering. It has no effect on `month: numeric` / `iso` presets, which
+already zero-pad the day unconditionally as part of their fixed
+`YYYY-MM-DD`-style output.
+
 When to author `pattern.date-*`:
 
 - The locale wants a non-English component order (Spanish day-first, Basque

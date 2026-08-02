@@ -301,6 +301,7 @@ impl Locale {
 )]
 mod tests {
     use super::*;
+    use std::collections::BTreeMap;
 
     #[test]
     fn test_en_us_locale_model_defaults() {
@@ -314,16 +315,26 @@ mod tests {
 
     #[test]
     fn test_locale_deserialization() {
+        // `Locale` derives `Deserialize` directly for its own canonical
+        // round-trip format (e.g. cache/IPC), which is always the
+        // EDTF-sub-year-code-keyed map — distinct from the raw-file loader
+        // (`RawLocale`/`from_yaml_str`), which additionally accepts the
+        // legacy sequence form. See `docs/specs/LOCALE_DATE_NAME_KEYING.md`.
         let json = r#"{
             "locale": "en-US",
             "dates": {
                 "months": {
-                    "long": ["January", "February", "March", "April", "May", "June",
-                             "July", "August", "September", "October", "November", "December"],
-                    "short": ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
-                              "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+                    "long": {
+                        "1": "January", "2": "February", "3": "March", "4": "April",
+                        "5": "May", "6": "June", "7": "July", "8": "August",
+                        "9": "September", "10": "October", "11": "November", "12": "December"
+                    },
+                    "short": {
+                        "1": "Jan", "2": "Feb", "3": "Mar", "4": "Apr", "5": "May", "6": "Jun",
+                        "7": "Jul", "8": "Aug", "9": "Sep", "10": "Oct", "11": "Nov", "12": "Dec"
+                    }
                 },
-                "seasons": ["Spring", "Summer", "Autumn", "Winter"]
+                "seasons": {"21": "Spring", "22": "Summer", "23": "Autumn", "24": "Winter"}
             },
             "roles": {},
             "terms": {
@@ -334,7 +345,10 @@ mod tests {
 
         let locale: Locale = serde_json::from_str(json).unwrap();
         assert_eq!(locale.locale, "en-US");
-        assert_eq!(locale.dates.months.long[0], "January");
+        assert_eq!(
+            locale.dates.months.long[&SubYearCode::new(1).expect("valid month code")],
+            "January"
+        );
         assert_eq!(locale.terms.and.as_ref().unwrap(), "and");
     }
 
@@ -362,7 +376,12 @@ punctuation-realization:
 
         assert_eq!(locale.locale, "fr-CA");
         assert_eq!(
-            locale.dates.months.long.first().map(String::as_str),
+            locale
+                .dates
+                .months
+                .long
+                .get(&SubYearCode::new(1).expect("valid month code"))
+                .map(String::as_str),
             Some("janvier")
         );
         assert_eq!(
@@ -423,8 +442,14 @@ terms:
         assert_eq!(locale.locale, "de-DE");
         assert_eq!(locale.terms.and.as_deref(), Some("und"));
         assert_eq!(locale.terms.et_al.as_deref(), Some("u. a."));
-        assert_eq!(locale.dates.months.long[0], "Januar");
-        assert_eq!(locale.dates.months.long[2], "März");
+        assert_eq!(
+            locale.dates.months.long[&SubYearCode::new(1).expect("valid month code")],
+            "Januar"
+        );
+        assert_eq!(
+            locale.dates.months.long[&SubYearCode::new(3).expect("valid month code")],
+            "März"
+        );
     }
 
     /// v2 locale with grammar-options overrides punctuation_in_quote correctly.
@@ -562,6 +587,94 @@ legacy-term-aliases:
         assert!(locale.grammar_options.punctuation_in_quote);
     }
 
+    /// `apply_override` replaces only the named month, leaving the other
+    /// eleven (and all four seasons) untouched — the bean's core ask:
+    /// a style overrides one abbreviation without redeclaring the rest.
+    #[test]
+    fn test_apply_override_merges_single_month_name() {
+        let mut locale = Locale::en_us();
+        let july = SubYearCode::new(7).expect("valid month code");
+        let june = SubYearCode::new(6).expect("valid month code");
+
+        let ov = LocaleOverride {
+            dates: DateNameOverride {
+                months: MonthNames {
+                    long: BTreeMap::new(),
+                    short: [(july, "Jul.".to_string())].into(),
+                },
+                seasons: BTreeMap::new(),
+            },
+            ..Default::default()
+        };
+        locale.apply_override(&ov);
+
+        assert_eq!(locale.dates.months.short[&july], "Jul.");
+        assert_eq!(locale.dates.months.short[&june], "June");
+        assert_eq!(locale.dates.months.long[&july], "July");
+    }
+
+    /// An out-of-range override key never reaches `apply_override` — it is
+    /// rejected at deserialize time (see `sub_year_code_rejects_out_of_range_key`
+    /// in `types.rs`), so `apply_override` itself has nothing to validate.
+    /// This test instead confirms a season override merges independently of
+    /// the month tables.
+    #[test]
+    fn test_apply_override_merges_season_name_independent_of_months() {
+        let mut locale = Locale::en_us();
+        let spring = SubYearCode::new(21).expect("valid season code");
+
+        let ov = LocaleOverride {
+            dates: DateNameOverride {
+                months: MonthNames::default(),
+                seasons: [(spring, "Printemps".to_string())].into(),
+            },
+            ..Default::default()
+        };
+        locale.apply_override(&ov);
+
+        assert_eq!(locale.dates.seasons[&spring], "Printemps");
+        assert_eq!(locale.dates.months.long.len(), 12);
+    }
+
+    /// Every embedded locale round-trips through raw-YAML parsing to the
+    /// canonical EDTF-sub-year-code-keyed map without losing or duplicating
+    /// a month or season name, regardless of whether the source YAML uses
+    /// the legacy sequence form or the canonical map form.
+    #[test]
+    fn embedded_locales_have_complete_keyed_month_and_season_tables() {
+        // ar-AR has no authored short-month forms in its source YAML
+        // (a pre-existing content gap, unrelated to this keying change);
+        // every other bundled locale defines both full and abbreviated
+        // forms for all 12 months.
+        const NO_SHORT_MONTHS: &[&str] = &["ar-AR"];
+
+        for &id in crate::embedded::EMBEDDED_LOCALE_IDS {
+            let locale = crate::embedded::get_locale(id)
+                .unwrap_or_else(|| panic!("{id} should be embedded"));
+
+            assert_eq!(locale.dates.months.long.len(), 12, "{id} long months");
+            assert_eq!(locale.dates.seasons.len(), 4, "{id} seasons");
+            if !NO_SHORT_MONTHS.contains(&id) {
+                assert_eq!(locale.dates.months.short.len(), 12, "{id} short months");
+            }
+
+            for code in 1..=12u8 {
+                let key = SubYearCode::new(code).expect("valid month code");
+                assert!(
+                    locale.dates.months.long.contains_key(&key),
+                    "{id} missing long month {code}"
+                );
+            }
+            for code in 21..=24u8 {
+                let key = SubYearCode::new(code).expect("valid season code");
+                assert!(
+                    locale.dates.seasons.contains_key(&key),
+                    "{id} missing season {code}"
+                );
+            }
+        }
+    }
+
     #[test]
     fn embedded_locale_ids_include_all_bundled_locale_files() {
         for id in [
@@ -693,7 +806,12 @@ legacy-term-aliases:
 
         // Month names.
         assert_eq!(
-            locale.dates.months.long.first().map(String::as_str),
+            locale
+                .dates
+                .months
+                .long
+                .get(&SubYearCode::new(1).expect("valid month code"))
+                .map(String::as_str),
             Some("January")
         );
 
