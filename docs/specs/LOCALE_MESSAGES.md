@@ -721,11 +721,12 @@ locale for a specific style or document. It lives in `locales/overrides/`.
 | `messages` | `map` | Partial — only keys to override. |
 | `dateFormats` | `map` | Partial — only keys to override. |
 | `grammarOptions` | `map` | Partial — only keys to override. |
+| `dates` | `object` | Partial month/season name overrides, keyed by EDTF sub-year code — see [`LOCALE_DATE_NAME_KEYING.md`](./LOCALE_DATE_NAME_KEYING.md). |
 
 **Merge semantics:** shallow key-level replacement. For each map
-(`messages`, `dateFormats`, `grammarOptions`), keys present in the override
-replace matching keys in the base. Keys absent from the override retain their
-base values. There is no deep-merge or list-append behavior.
+(`messages`, `dateFormats`, `grammarOptions`, `dates`), keys present in the
+override replace matching keys in the base. Keys absent from the override
+retain their base values. There is no deep-merge or list-append behavior.
 
 **Example — Chicago English:**
 

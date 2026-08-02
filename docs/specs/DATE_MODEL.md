@@ -93,3 +93,9 @@ different date for an unknown one.
 ## References
 - [DACS Chapter 2.4: Date](https://saa-ts-dacs.github.io/dacs/06_part_I/03_chapter_02/04_date.html)
 - [CSL Date Specification](https://docs.citationstyles.org/en/stable/specification.html#dates)
+
+## Related Specs
+- [`LOCALE_DATE_NAME_KEYING.md`](./LOCALE_DATE_NAME_KEYING.md): how locale
+  month/season names are keyed and overridden, and the `day-zero-pad`
+  rendering option — orthogonal to this document's EDTF *value* model, which
+  covers date *fields* rather than their rendered names.
