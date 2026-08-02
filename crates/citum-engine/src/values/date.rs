@@ -11,25 +11,31 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus and Citum contributors
 use crate::reference::{DateValue, Reference};
 use crate::values::{ComponentValues, ProcHints, ProcValues, RenderOptions};
 use citum_edtf::{Edtf, Timezone, UnspecifiedYear, Year};
-use citum_schema::locale::{GeneralTerm, TermForm};
+use citum_schema::locale::{GeneralTerm, SubYearCode, TermForm};
 use citum_schema::options::dates::{DateRangeFormat, TimeFormat};
 use citum_schema::reference::types::RefDate;
 use citum_schema::reference::{ClassExtension, WorkRelation};
 use citum_schema::template::{
     DateForm, DateVariable as TemplateDateVar, TemplateComponent, TemplateDate,
 };
+use std::collections::BTreeMap;
 
-fn month_to_string(month: u32, months: &[String]) -> String {
-    if month > 0 {
-        let index = month - 1;
-        if let Some(month_name) = months.get(index as usize) {
-            month_name.clone()
-        } else {
-            String::new()
-        }
+/// Zero-pad a rendered day when `zero_pad` is set, otherwise render it as-is.
+fn format_day(day: u32, zero_pad: bool) -> String {
+    if zero_pad {
+        format!("{day:02}")
     } else {
-        String::new()
+        day.to_string()
     }
+}
+
+fn code_to_string(code: u32, names: &BTreeMap<SubYearCode, String>) -> String {
+    u8::try_from(code)
+        .ok()
+        .and_then(SubYearCode::new)
+        .and_then(|c| names.get(&c))
+        .cloned()
+        .unwrap_or_default()
 }
 
 /// Zero-padded numeric month (`"01"`–`"12"`) for `month: numeric` rendering.
@@ -43,16 +49,20 @@ fn extract_month_numeric(date: &DateValue) -> Option<String> {
     (1..=12).contains(&month).then(|| format!("{month:02}"))
 }
 
-fn extract_month(date: &DateValue, months: &[String], seasons: &[String]) -> String {
+fn extract_month(
+    date: &DateValue,
+    months: &BTreeMap<SubYearCode, String>,
+    seasons: &BTreeMap<SubYearCode, String>,
+) -> String {
     let parsed_date = date.parse();
     let edtf = match parsed_date {
         RefDate::Edtf(edtf) => edtf,
         RefDate::Literal(_) => return String::new(),
     };
     match edtf.month() {
-        Some(month) => month_to_string(month, months),
-        None => match edtf.season() {
-            Some(season) => month_to_string(season, seasons),
+        Some(month) => code_to_string(month, months),
+        None => match edtf.season_code() {
+            Some(code) => code_to_string(code, seasons),
             None => String::new(),
         },
     }
@@ -540,9 +550,14 @@ fn format_abbreviated_month_day_fragment(
     if month.is_empty() {
         return None;
     }
+    let zero_pad_day = date_config.is_some_and(|c| c.day_zero_pad);
     match (form, date.day()) {
-        (DateForm::DayMonthAbbrYear, Some(day)) => Some(format!("{day} {month}")),
-        (DateForm::MonthAbbrDayYear, Some(day)) => Some(format!("{month} {day}")),
+        (DateForm::DayMonthAbbrYear, Some(day)) => {
+            Some(format!("{} {month}", format_day(day, zero_pad_day)))
+        }
+        (DateForm::MonthAbbrDayYear, Some(day)) => {
+            Some(format!("{month} {}", format_day(day, zero_pad_day)))
+        }
         (_, None) => Some(month),
         _ => None,
     }
@@ -723,6 +738,9 @@ fn format_single_date(
     // month (seasons, literals) fall back to the textual path.
     let numeric_months =
         date_config.is_some_and(|c| c.month == citum_schema::options::MonthFormat::Numeric);
+    // Independent of `numeric_months`: those numeral paths already
+    // zero-pad the day unconditionally as part of their fixed format.
+    let zero_pad_day = date_config.is_some_and(|c| c.day_zero_pad);
 
     let extract_year = |d: &DateValue| -> String {
         match d.parse() {
@@ -768,9 +786,13 @@ fn format_single_date(
             }
             let month = extract_month(date, &locale.dates.months.long, &locale.dates.seasons);
             let month_opt = (!month.is_empty()).then_some(month.as_str());
-            if let Some(rendered) =
-                locale.resolve_date_pattern("pattern.date-year-month", Some(&year), month_opt, None)
-            {
+            if let Some(rendered) = locale.resolve_date_pattern(
+                "pattern.date-year-month",
+                Some(&year),
+                month_opt,
+                None,
+                zero_pad_day,
+            ) {
                 return Some(rendered);
             }
             if month.is_empty() {
@@ -798,13 +820,17 @@ fn format_single_date(
                 return None;
             }
             let day = date.day();
-            if let Some(rendered) =
-                locale.resolve_date_pattern("pattern.date-month-day", None, Some(&month), day)
-            {
+            if let Some(rendered) = locale.resolve_date_pattern(
+                "pattern.date-month-day",
+                None,
+                Some(&month),
+                day,
+                zero_pad_day,
+            ) {
                 return Some(rendered);
             }
             match day {
-                Some(d) => Some(format!("{month} {d}")),
+                Some(d) => Some(format!("{month} {}", format_day(d, zero_pad_day))),
                 None => Some(month),
             }
         }
@@ -830,12 +856,15 @@ fn format_single_date(
                         Some(&year),
                         (!month.is_empty()).then_some(month.as_str()),
                         day,
+                        zero_pad_day,
                     )
                 })
                 .unwrap_or_else(|| match (month.is_empty(), day) {
                     (true, _) => year.clone(),
                     (false, None) => format!("{month} {year}"),
-                    (false, Some(d)) => format!("{month} {d}, {year}"),
+                    (false, Some(d)) => {
+                        format!("{month} {}, {year}", format_day(d, zero_pad_day))
+                    }
                 });
             // Append time component if configured and present
             if let (Some(time_fmt), Some(time)) = (
@@ -877,13 +906,16 @@ fn format_single_date(
                 Some(&year),
                 month_opt,
                 day,
+                zero_pad_day,
             ) {
                 return Some(rendered);
             }
             match (month.is_empty(), day) {
                 (true, _) => Some(year),
                 (false, None) => Some(format!("{year}, {month}")),
-                (false, Some(d)) => Some(format!("{year}, {month} {d}")),
+                (false, Some(d)) => {
+                    Some(format!("{year}, {month} {}", format_day(d, zero_pad_day)))
+                }
             }
         }
         DateForm::DayMonthAbbrYear => {
@@ -899,13 +931,14 @@ fn format_single_date(
                 Some(&year),
                 month_opt,
                 day,
+                zero_pad_day,
             ) {
                 return Some(rendered);
             }
             match (month.is_empty(), day) {
                 (true, _) => Some(year),
                 (false, None) => Some(format!("{month} {year}")),
-                (false, Some(d)) => Some(format!("{d} {month} {year}")),
+                (false, Some(d)) => Some(format!("{} {month} {year}", format_day(d, zero_pad_day))),
             }
         }
         DateForm::MonthAbbrDayYear => {
@@ -921,13 +954,16 @@ fn format_single_date(
                 Some(&year),
                 month_opt,
                 day,
+                zero_pad_day,
             ) {
                 return Some(rendered);
             }
             match (month.is_empty(), day) {
                 (true, _) => Some(year),
                 (false, None) => Some(format!("{month} {year}")),
-                (false, Some(d)) => Some(format!("{month} {d}, {year}")),
+                (false, Some(d)) => {
+                    Some(format!("{month} {}, {year}", format_day(d, zero_pad_day)))
+                }
             }
         }
         _ => Some(extract_year(date)),
@@ -1613,6 +1649,122 @@ mod locale_pattern_tests {
     #[test]
     fn en_us_full_form_renders_season_and_year() {
         assert_eq!(full(&en_us(), "2023-21"), "Spring 2023");
+    }
+
+    /// `day-zero-pad` is off by default, so a plain `format_single_date` call
+    /// (no `DateConfig`) renders the day unpadded — the pre-existing
+    /// behavior this option must not change unless a style opts in.
+    #[test]
+    fn day_zero_pad_defaults_to_unpadded_day() {
+        assert_eq!(full(&en_us(), "2023-02-07"), "February 7, 2023");
+    }
+
+    /// `day-zero-pad: true` zero-pads the day across every day-bearing
+    /// single-date form, not only `Full`.
+    #[test]
+    fn day_zero_pad_true_pads_day_in_full_and_month_day_forms() {
+        let config = citum_schema::options::dates::DateConfig {
+            day_zero_pad: true,
+            ..Default::default()
+        };
+        assert_eq!(
+            format_single_date(
+                &DateValue::new("2023-02-07".to_string()),
+                &DateForm::Full,
+                &en_us(),
+                Some(&config)
+            ),
+            Some("February 07, 2023".to_string())
+        );
+        assert_eq!(
+            format_single_date(
+                &DateValue::new("2023-02-07".to_string()),
+                &DateForm::MonthDay,
+                &en_us(),
+                Some(&config)
+            ),
+            Some("February 07".to_string())
+        );
+    }
+
+    /// The range-fragment path (`format_abbreviated_month_day_fragment`,
+    /// used by same-year date-range rendering) is a separate code path from
+    /// `format_single_date` and must honor `day-zero-pad` independently —
+    /// this is the surface most likely to be missed when wiring the option.
+    #[test]
+    fn day_zero_pad_true_pads_day_in_abbreviated_range_fragment() {
+        let config = citum_schema::options::dates::DateConfig {
+            day_zero_pad: true,
+            ..Default::default()
+        };
+        let date = DateValue::new("2023-02-07".to_string());
+        assert_eq!(
+            format_abbreviated_month_day_fragment(
+                &date,
+                &DateForm::DayMonthAbbrYear,
+                &en_us(),
+                Some(&config)
+            ),
+            Some("07 Feb.".to_string())
+        );
+        assert_eq!(
+            format_abbreviated_month_day_fragment(
+                &date,
+                &DateForm::MonthAbbrDayYear,
+                &en_us(),
+                Some(&config)
+            ),
+            Some("Feb. 07".to_string())
+        );
+    }
+
+    /// The bean's own reported example: a `LocaleOverride` replacing a
+    /// single short-month abbreviation, combined with `day-zero-pad`,
+    /// renders "Jul. 13, 2021" instead of the base locale's "July 13, 2021"
+    /// — without redeclaring the other eleven months.
+    #[test]
+    fn locale_override_month_abbreviation_with_day_zero_pad_matches_bean_example() {
+        use citum_schema::locale::{DateNameOverride, LocaleOverride, MonthNames, SubYearCode};
+
+        let mut locale = en_us();
+        let july = SubYearCode::new(7).expect("valid month code");
+        assert_eq!(
+            locale.dates.months.short.get(&july).map(String::as_str),
+            Some("July"),
+            "sanity: base locale renders July's short form unabbreviated"
+        );
+
+        // Override to IEEE's tighter form and confirm June is untouched.
+        let ov = LocaleOverride {
+            dates: DateNameOverride {
+                months: MonthNames {
+                    long: std::collections::BTreeMap::new(),
+                    short: [(july, "Jul.".to_string())].into(),
+                },
+                seasons: std::collections::BTreeMap::new(),
+            },
+            ..Default::default()
+        };
+        locale.apply_override(&ov);
+
+        let config = citum_schema::options::dates::DateConfig {
+            day_zero_pad: true,
+            ..Default::default()
+        };
+        assert_eq!(
+            format_single_date(
+                &DateValue::new("2021-07-13".to_string()),
+                &DateForm::MonthAbbrDayYear,
+                &locale,
+                Some(&config)
+            ),
+            Some("Jul. 13, 2021".to_string())
+        );
+        let june = SubYearCode::new(6).expect("valid month code");
+        assert_eq!(
+            locale.dates.months.short.get(&june).map(String::as_str),
+            Some("June")
+        );
     }
 
     #[test]

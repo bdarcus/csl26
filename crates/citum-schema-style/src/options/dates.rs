@@ -164,6 +164,16 @@ pub struct DateConfig {
     /// How negative EDTF years with unspecified digits are rendered.
     #[serde(default)]
     pub negative_unspecified_years: NegativeUnspecifiedYears,
+    /// Zero-pad the rendered day of month (`"07"` instead of `"7"`) across
+    /// both single-date and date-range rendering. Default `false`.
+    ///
+    /// Independent of `month: numeric` / `iso` presets, which already
+    /// zero-pad the day unconditionally as part of their fixed
+    /// `YYYY-MM-DD`-style output; this option only affects the textual
+    /// (`long`, `short`) month-name rendering paths. See
+    /// `docs/specs/LOCALE_DATE_NAME_KEYING.md`.
+    #[serde(default)]
+    pub day_zero_pad: bool,
     /// Wrap applied around a date's opaque `note` (e.g. a source-calendar
     /// annotation), appended after the complete formatted date. `None`
     /// (the default) hides the note entirely, even when the input has one.
@@ -209,6 +219,7 @@ impl Default for DateConfig {
             show_timezone: false,
             era_labels: EraLabels::default(),
             negative_unspecified_years: NegativeUnspecifiedYears::default(),
+            day_zero_pad: false,
             note_wrap: None,
             unknown_fields: std::collections::BTreeMap::new(),
         }

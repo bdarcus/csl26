@@ -5361,6 +5361,11 @@
           "$ref": "#/$defs/NegativeUnspecifiedYears",
           "default": "range"
         },
+        "day-zero-pad": {
+          "description": "Zero-pad the rendered day of month (`\"07\"` instead of `\"7\"`) across\nboth single-date and date-range rendering. Default `false`.\n\nIndependent of `month: numeric` / `iso` presets, which already\nzero-pad the day unconditionally as part of their fixed\n`YYYY-MM-DD`-style output; this option only affects the textual\n(`long`, `short`) month-name rendering paths. See\n`docs/specs/LOCALE_DATE_NAME_KEYING.md`.",
+          "type": "boolean",
+          "default": false
+        },
         "note-wrap": {
           "description": "Wrap applied around a date's opaque `note` (e.g. a source-calendar\nannotation), appended after the complete formatted date. `None`\n(the default) hides the note entirely, even when the input has one.\nSee `docs/specs/CALENDAR_DATE_ANNOTATIONS.md`.",
           "anyOf": [
