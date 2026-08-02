@@ -238,7 +238,15 @@ fn build_concern(
             }
         })
         .collect();
-    candidates.sort_by_key(|c| std::cmp::Reverse(c.corpus_count));
+    // Tie-break on the canonical shape string: `counts` is a HashMap, so candidates with equal
+    // corpus_count would otherwise print in an arbitrary, run-to-run-unstable order.
+    candidates.sort_by(|a, b| {
+        b.corpus_count.cmp(&a.corpus_count).then_with(|| {
+            a.canonical_config
+                .to_string()
+                .cmp(&b.canonical_config.to_string())
+        })
+    });
 
     ConcernReport {
         concern: name.to_string(),
@@ -257,6 +265,13 @@ fn nearest_preset(
     shape: &serde_json::Value,
     named_presets: &[(String, serde_json::Value)],
 ) -> (Option<String>, Vec<String>) {
+    // Only object shapes are comparable field-by-field; every canonical_config in practice is
+    // one (all Config structs serialize to JSON objects), but a non-object must never be treated
+    // as "close" to a preset by falling through the distance check below.
+    if !shape.is_object() {
+        return (None, Vec::new());
+    }
+
     let mut best: Option<(usize, &str, Vec<String>)> = None;
 
     for (name, preset_shape) in named_presets {
@@ -276,10 +291,13 @@ fn nearest_preset(
 }
 
 /// Field keys that differ between two top-level JSON objects (present in only one, or with
-/// unequal values).
+/// unequal values). A non-object input is never comparable field-by-field, so it always exceeds
+/// [`MAX_NEAREST_DISTANCE`] rather than reading as a deceptively small 1-field diff.
 fn top_level_diff(a: &serde_json::Value, b: &serde_json::Value) -> Vec<String> {
     let (Some(a), Some(b)) = (a.as_object(), b.as_object()) else {
-        return vec!["<non-object>".to_string()];
+        return (0..=MAX_NEAREST_DISTANCE)
+            .map(|i| format!("<non-object-{i}>"))
+            .collect();
     };
     let mut keys: Vec<&String> = a.keys().chain(b.keys()).collect();
     keys.sort();
@@ -560,6 +578,19 @@ mod tests {
         let named = vec![("author-date".to_string(), serde_json::json!({ "a": 0 }))];
 
         let (nearest, differing) = nearest_preset(&unrelated_shape, &named);
+
+        assert_eq!(nearest, None);
+        assert!(differing.is_empty());
+    }
+
+    #[test]
+    fn test_nearest_preset_ignores_non_object_shapes() {
+        // Regression: a non-object shape must never read as a deceptively small 1-field diff
+        // and get reported as "close" to an unrelated preset.
+        let non_object_shape = serde_json::json!(null);
+        let named = vec![("author-date".to_string(), serde_json::json!({ "a": 0 }))];
+
+        let (nearest, differing) = nearest_preset(&non_object_shape, &named);
 
         assert_eq!(nearest, None);
         assert!(differing.is_empty());
