@@ -5509,6 +5509,16 @@
           "description": "Scientific/Vancouver style: all titles plain (no formatting).\nExample: Article title. Book title. Journal title.",
           "type": "string",
           "const": "scientific"
+        },
+        {
+          "description": "All title categories italic, with no per-category overrides. Distinct from `humanities`\n(which leaves `component` plain): the corpus convention this covers italicizes articles\ntoo.\nExample: *Article title*. *Book Title*. *Journal Title*.",
+          "type": "string",
+          "const": "emphasis-all"
+        },
+        {
+          "description": "All title categories in headline-style title case, with no per-category overrides.\nExample: Article Title. Book Title. Journal Title.",
+          "type": "string",
+          "const": "title-case"
         }
       ]
     },
@@ -5705,6 +5715,11 @@
           "description": "Author-date / numbered: short labels for all kinds.",
           "type": "string",
           "const": "author-date"
+        },
+        {
+          "description": "Numeric journal convention: same as `author-date`, but strips periods from locator\nlabels (e.g. \"p.\" becomes \"p\"). Common across Vancouver-family medical/science journals.",
+          "type": "string",
+          "const": "numeric"
         }
       ]
     },

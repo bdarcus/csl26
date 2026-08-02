@@ -35,15 +35,28 @@ const MIN_FREQUENCY: u32 = 3;
 /// Maximum example style slugs per candidate entry.
 const MAX_EXAMPLES: usize = 5;
 
+/// Maximum top-level field distance for a candidate to report a [`PresetCandidate::nearest_preset`].
+///
+/// Above this distance the closest preset is not a meaningful comparison point, so the field is
+/// left `None` rather than suggesting an unrelated preset.
+const MAX_NEAREST_DISTANCE: usize = 3;
+
 /// A recurring config shape that does not match any existing named preset.
 #[derive(Debug, serde::Serialize)]
 pub struct PresetCandidate {
     /// Number of corpus styles sharing this exact config shape.
     pub corpus_count: u32,
+    /// Share of this concern's unmatched styles accounted for by this shape.
+    pub share_of_unmatched: f64,
     /// Up to [`MAX_EXAMPLES`] style slugs that use this config.
     pub example_styles: Vec<String>,
     /// Serialized config block: the literal shape a new preset would encode.
     pub canonical_config: serde_json::Value,
+    /// Name of the closest existing named preset by top-level field distance, if any preset is
+    /// within [`MAX_NEAREST_DISTANCE`] fields.
+    pub nearest_preset: Option<String>,
+    /// Top-level field keys where this shape differs from `nearest_preset`.
+    pub differing_fields: Vec<String>,
 }
 
 /// Per-concern summary: preset coverage count and unnamed-candidate list.
@@ -174,9 +187,9 @@ fn accumulate(
     value: &impl serde::Serialize,
 ) {
     let raw = serde_json::to_value(value).unwrap_or(serde_json::Value::Null);
-    let sorted = sort_json_keys(&raw);
-    let key = sorted.to_string();
-    let entry = map.entry(key).or_insert((0, Vec::new(), sorted));
+    let normalized = normalize_shape(&sort_json_keys(&raw));
+    let key = normalized.to_string();
+    let entry = map.entry(key).or_insert((0, Vec::new(), normalized));
     entry.0 += 1;
     if entry.1.len() < MAX_EXAMPLES {
         entry.1.push(slug.to_string());
@@ -187,11 +200,13 @@ fn accumulate(
 fn build_concern(
     name: &str,
     counts: HashMap<String, (u32, Vec<String>, serde_json::Value)>,
-    named_keys: &HashSet<String>,
+    named_presets: &[(String, serde_json::Value)],
 ) -> ConcernReport {
+    let named_keys: HashSet<String> = named_presets.iter().map(|(_, v)| v.to_string()).collect();
+
     let mut matched = 0u32;
     let mut unmatched = 0u32;
-    let mut candidates = Vec::new();
+    let mut pending = Vec::new();
 
     for (key, (count, examples, canonical_config)) in counts {
         if named_keys.contains(&key) {
@@ -199,14 +214,30 @@ fn build_concern(
         } else {
             unmatched += count;
             if count >= MIN_FREQUENCY {
-                candidates.push(PresetCandidate {
-                    corpus_count: count,
-                    example_styles: examples,
-                    canonical_config,
-                });
+                pending.push((count, examples, canonical_config));
             }
         }
     }
+
+    let mut candidates: Vec<PresetCandidate> = pending
+        .into_iter()
+        .map(|(count, examples, canonical_config)| {
+            let (nearest_preset, differing_fields) =
+                nearest_preset(&canonical_config, named_presets);
+            PresetCandidate {
+                corpus_count: count,
+                share_of_unmatched: if unmatched == 0 {
+                    0.0
+                } else {
+                    f64::from(count) / f64::from(unmatched)
+                },
+                example_styles: examples,
+                canonical_config,
+                nearest_preset,
+                differing_fields,
+            }
+        })
+        .collect();
     candidates.sort_by_key(|c| std::cmp::Reverse(c.corpus_count));
 
     ConcernReport {
@@ -214,6 +245,73 @@ fn build_concern(
         matched_style_count: matched,
         unmatched_style_count: unmatched,
         candidates,
+    }
+}
+
+/// Find the closest named preset to `shape` by top-level field distance.
+///
+/// Distance is the number of top-level keys present in exactly one of the two objects, plus one
+/// for each shared key whose values differ. Returns `None` when no preset is within
+/// [`MAX_NEAREST_DISTANCE`], since an unrelated preset is not a useful comparison point.
+fn nearest_preset(
+    shape: &serde_json::Value,
+    named_presets: &[(String, serde_json::Value)],
+) -> (Option<String>, Vec<String>) {
+    let mut best: Option<(usize, &str, Vec<String>)> = None;
+
+    for (name, preset_shape) in named_presets {
+        let diff = top_level_diff(shape, preset_shape);
+        if diff.len() > MAX_NEAREST_DISTANCE {
+            continue;
+        }
+        if best.as_ref().is_none_or(|(dist, ..)| diff.len() < *dist) {
+            best = Some((diff.len(), name.as_str(), diff));
+        }
+    }
+
+    match best {
+        Some((_, name, fields)) => (Some(name.to_string()), fields),
+        None => (None, Vec::new()),
+    }
+}
+
+/// Field keys that differ between two top-level JSON objects (present in only one, or with
+/// unequal values).
+fn top_level_diff(a: &serde_json::Value, b: &serde_json::Value) -> Vec<String> {
+    let (Some(a), Some(b)) = (a.as_object(), b.as_object()) else {
+        return vec!["<non-object>".to_string()];
+    };
+    let mut keys: Vec<&String> = a.keys().chain(b.keys()).collect();
+    keys.sort();
+    keys.dedup();
+    keys.into_iter()
+        .filter(|k| a.get(*k) != b.get(*k))
+        .cloned()
+        .collect()
+}
+
+/// Strip object keys whose value is JSON `null`.
+///
+/// A `null` here means "not configured at this level" for an `Option<T>` field — it carries no
+/// signal distinct from the field being absent, and named presets never emit it (they set
+/// `Some(default)` explicitly, e.g. `ContributorPreset` always sets `delimiter`). Left unstripped,
+/// an extracted config that is otherwise identical to a preset but has one `null` optional field
+/// can never match that preset by JSON string equality. See
+/// `ContributorConfig::is_default_contributor_delimiter` for the field that motivated this.
+fn normalize_shape(v: &serde_json::Value) -> serde_json::Value {
+    match v {
+        serde_json::Value::Object(map) => {
+            let new_map: serde_json::Map<_, _> = map
+                .iter()
+                .filter(|(_, v)| !v.is_null())
+                .map(|(k, v)| (k.clone(), normalize_shape(v)))
+                .collect();
+            serde_json::Value::Object(new_map)
+        }
+        serde_json::Value::Array(arr) => {
+            serde_json::Value::Array(arr.iter().map(normalize_shape).collect())
+        }
+        other => other.clone(),
     }
 }
 
@@ -242,69 +340,38 @@ fn sort_json_keys(v: &serde_json::Value) -> serde_json::Value {
 // definitions in `citum-schema-style/src/presets.rs` and
 // `citum-schema-style/src/options/locators.rs`.
 
+/// Serialize `(name, config)` pairs into `(kebab-case name, normalized canonical shape)` pairs.
+///
+/// Driven by each preset enum's own `ALL` const rather than a hand-listed array, so a preset
+/// variant can never be silently missing from analyzer matching — see the enums' `ALL` docs.
 fn preset_keys<P: serde::Serialize>(
     presets: impl IntoIterator<Item = (P, impl serde::Serialize)>,
-) -> HashSet<String> {
+) -> Vec<(String, serde_json::Value)> {
     presets
         .into_iter()
-        .map(|(_, config)| {
+        .map(|(name, config)| {
+            let name_json = serde_json::to_value(&name).unwrap_or(serde_json::Value::Null);
+            let name = name_json.as_str().unwrap_or_default().to_string();
             let raw = serde_json::to_value(&config).unwrap_or(serde_json::Value::Null);
-            sort_json_keys(&raw).to_string()
+            (name, normalize_shape(&sort_json_keys(&raw)))
         })
         .collect()
 }
 
-fn contributor_named_keys() -> HashSet<String> {
-    // keep in sync with ContributorPreset in presets.rs
-    let variants = [
-        ContributorPreset::Apa,
-        ContributorPreset::Chicago,
-        ContributorPreset::Vancouver,
-        ContributorPreset::Ieee,
-        ContributorPreset::Harvard,
-        ContributorPreset::Springer,
-        ContributorPreset::NumericCompact,
-        ContributorPreset::NumericMedium,
-        ContributorPreset::NumericTight,
-        ContributorPreset::NumericLarge,
-        ContributorPreset::NumericAllAuthors,
-        ContributorPreset::NumericGivenDot,
-        ContributorPreset::AnnualReviews,
-        ContributorPreset::MathPhys,
-        ContributorPreset::SocSciFirst,
-        ContributorPreset::PhysicsNumeric,
-    ];
-    preset_keys(variants.iter().map(|p| (p, p.config())))
+fn contributor_named_keys() -> Vec<(String, serde_json::Value)> {
+    preset_keys(ContributorPreset::ALL.iter().map(|p| (p, p.config())))
 }
 
-fn date_named_keys() -> HashSet<String> {
-    // keep in sync with DatePreset in presets.rs
-    let variants = [
-        DatePreset::Long,
-        DatePreset::Short,
-        DatePreset::Numeric,
-        DatePreset::Iso,
-    ];
-    preset_keys(variants.iter().map(|p| (p, p.config())))
+fn date_named_keys() -> Vec<(String, serde_json::Value)> {
+    preset_keys(DatePreset::ALL.iter().map(|p| (p, p.config())))
 }
 
-fn title_named_keys() -> HashSet<String> {
-    // keep in sync with TitlePreset in presets.rs
-    let variants = [
-        TitlePreset::Apa,
-        TitlePreset::Chicago,
-        TitlePreset::Ieee,
-        TitlePreset::Humanities,
-        TitlePreset::JournalEmphasis,
-        TitlePreset::Scientific,
-    ];
-    preset_keys(variants.iter().map(|p| (p, p.config())))
+fn title_named_keys() -> Vec<(String, serde_json::Value)> {
+    preset_keys(TitlePreset::ALL.iter().map(|p| (p, p.config())))
 }
 
-fn locator_named_keys() -> HashSet<String> {
-    // keep in sync with LocatorPreset in options/locators.rs
-    let variants = [LocatorPreset::Note, LocatorPreset::AuthorDate];
-    preset_keys(variants.into_iter().map(|p| (p, p.config())))
+fn locator_named_keys() -> Vec<(String, serde_json::Value)> {
+    preset_keys(LocatorPreset::ALL.iter().map(|p| (p, p.config())))
 }
 
 // ── Human-readable output ───────────────────────────────────────────────────
@@ -329,7 +396,7 @@ fn print_config_preset_report(report: &ConfigPresetReport) {
                 "  {} unnamed shapes (≥ {MIN_FREQUENCY} styles):\n",
                 concern.candidates.len()
             );
-            println!("  {:>6}  Examples", "Styles");
+            println!("  {:>6}  {:>7}  Examples", "Styles", "Share");
             println!("  {}", "-".repeat(60));
             for (rank, c) in concern.candidates.iter().enumerate() {
                 let examples = c.example_styles.join(", ");
@@ -338,7 +405,12 @@ fn print_config_preset_report(report: &ConfigPresetReport) {
                 } else {
                     examples
                 };
-                println!("  {:>6}  {}", c.corpus_count, examples_trunc);
+                println!(
+                    "  {:>6}  {:>6.1}%  {}",
+                    c.corpus_count,
+                    c.share_of_unmatched * 100.0,
+                    examples_trunc
+                );
                 let config_str = serde_json::to_string(&c.canonical_config)
                     .unwrap_or_else(|_| String::from("{?}"));
                 let config_trunc = if config_str.chars().count() > 100 {
@@ -347,9 +419,167 @@ fn print_config_preset_report(report: &ConfigPresetReport) {
                     config_str
                 };
                 println!("         Config[{}]: {config_trunc}", rank + 1);
+                match (&c.nearest_preset, c.differing_fields.is_empty()) {
+                    (Some(name), false) => {
+                        println!(
+                            "         Nearest preset: {name} (differs: {})",
+                            c.differing_fields.join(", ")
+                        );
+                    }
+                    (Some(name), true) => println!("         Nearest preset: {name} (identical?)"),
+                    (None, _) => println!("         Nearest preset: none within range"),
+                }
                 println!();
             }
         }
         println!();
+    }
+}
+
+#[cfg(test)]
+#[allow(
+    clippy::unwrap_used,
+    clippy::panic,
+    reason = "Panicking is acceptable and often desired in tests."
+)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_normalize_shape_strips_null_keys() {
+        let shape = serde_json::json!({
+            "delimiter": null,
+            "and": "text",
+            "shorten": { "min": 3, "use-first": null },
+        });
+
+        let normalized = normalize_shape(&shape);
+
+        assert_eq!(
+            normalized,
+            serde_json::json!({
+                "and": "text",
+                "shorten": { "min": 3 },
+            })
+        );
+    }
+
+    #[test]
+    fn test_build_concern_matches_null_delimiter_variant_of_a_preset() {
+        // Regression for the fragmentation bug: an extracted config that differs from a preset
+        // only by an explicit `delimiter: null` (vs. the preset's omitted default) must match.
+        let apa_shape = normalize_shape(&sort_json_keys(
+            &serde_json::to_value(ContributorPreset::Apa.config()).unwrap(),
+        ));
+        let mut extracted = apa_shape.as_object().unwrap().clone();
+        extracted.insert("delimiter".to_string(), serde_json::Value::Null);
+        let extracted_shape =
+            normalize_shape(&sort_json_keys(&serde_json::Value::Object(extracted)));
+
+        let mut counts = HashMap::new();
+        counts.insert(
+            extracted_shape.to_string(),
+            (5u32, vec!["some-style".to_string()], extracted_shape),
+        );
+
+        let report = build_concern("contributors", counts, &contributor_named_keys());
+
+        assert_eq!(report.matched_style_count, 5);
+        assert_eq!(report.unmatched_style_count, 0);
+        assert!(report.candidates.is_empty());
+    }
+
+    #[test]
+    fn test_build_concern_matches_locator_numeric_preset_shape() {
+        // The locator candidate this bean added (author-date + strip-label-periods) must now
+        // resolve as `numeric`, not appear as an unmatched candidate.
+        let numeric_shape = normalize_shape(&sort_json_keys(
+            &serde_json::to_value(LocatorPreset::Numeric.config()).unwrap(),
+        ));
+
+        let mut counts = HashMap::new();
+        counts.insert(
+            numeric_shape.to_string(),
+            (120u32, vec!["some-journal".to_string()], numeric_shape),
+        );
+
+        let report = build_concern("locators", counts, &locator_named_keys());
+
+        assert_eq!(report.matched_style_count, 120);
+        assert_eq!(report.unmatched_style_count, 0);
+        assert!(report.candidates.is_empty());
+    }
+
+    #[test]
+    fn test_build_concern_matches_title_default_only_shapes() {
+        let emphasis_shape = normalize_shape(&sort_json_keys(
+            &serde_json::to_value(TitlePreset::EmphasisAll.config()).unwrap(),
+        ));
+        let title_case_shape = normalize_shape(&sort_json_keys(
+            &serde_json::to_value(TitlePreset::TitleCase.config()).unwrap(),
+        ));
+
+        let mut counts = HashMap::new();
+        counts.insert(
+            emphasis_shape.to_string(),
+            (830u32, vec!["style-a".to_string()], emphasis_shape),
+        );
+        counts.insert(
+            title_case_shape.to_string(),
+            (208u32, vec!["style-b".to_string()], title_case_shape),
+        );
+
+        let report = build_concern("titles", counts, &title_named_keys());
+
+        assert_eq!(report.matched_style_count, 830 + 208);
+        assert_eq!(report.unmatched_style_count, 0);
+        assert!(report.candidates.is_empty());
+    }
+
+    #[test]
+    fn test_nearest_preset_reports_preset_one_field_away() {
+        let author_date_shape = normalize_shape(&sort_json_keys(
+            &serde_json::to_value(LocatorPreset::AuthorDate.config()).unwrap(),
+        ));
+        let mut candidate = author_date_shape.as_object().unwrap().clone();
+        candidate.insert("strip-label-periods".to_string(), serde_json::json!(true));
+        let candidate_shape = serde_json::Value::Object(candidate);
+
+        let named = vec![("author-date".to_string(), author_date_shape)];
+        let (nearest, differing) = nearest_preset(&candidate_shape, &named);
+
+        assert_eq!(nearest, Some("author-date".to_string()));
+        assert_eq!(differing, vec!["strip-label-periods".to_string()]);
+    }
+
+    #[test]
+    fn test_nearest_preset_returns_none_when_every_preset_is_far() {
+        let unrelated_shape = serde_json::json!({
+            "a": 1, "b": 2, "c": 3, "d": 4, "e": 5,
+        });
+        let named = vec![("author-date".to_string(), serde_json::json!({ "a": 0 }))];
+
+        let (nearest, differing) = nearest_preset(&unrelated_shape, &named);
+
+        assert_eq!(nearest, None);
+        assert!(differing.is_empty());
+    }
+
+    #[test]
+    fn test_named_keys_functions_never_panic() {
+        // ALL is what the analyzer's named_keys functions iterate; a variant missing its config()
+        // dispatch arm would panic here rather than silently vanishing from the analyzer.
+        for (name, _) in contributor_named_keys() {
+            assert!(!name.is_empty());
+        }
+        for (name, _) in date_named_keys() {
+            assert!(!name.is_empty());
+        }
+        for (name, _) in title_named_keys() {
+            assert!(!name.is_empty());
+        }
+        for (name, _) in locator_named_keys() {
+            assert!(!name.is_empty());
+        }
     }
 }

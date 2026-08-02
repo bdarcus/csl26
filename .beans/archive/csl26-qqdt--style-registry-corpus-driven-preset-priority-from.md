@@ -1,7 +1,7 @@
 ---
 # csl26-qqdt
 title: 'schema-style: corpus-driven preset discovery for config concerns'
-status: todo
+status: completed
 type: task
 priority: normal
 tags:
@@ -9,7 +9,7 @@ tags:
     - presets
     - citum-analyze
 created_at: 2026-06-16T15:49:15Z
-updated_at: 2026-06-17T11:21:23Z
+updated_at: 2026-08-02T18:16:47Z
 ---
 
 The `--config-presets` mode (csl26-t56t) discovers per-concern config
@@ -61,3 +61,23 @@ or `ContributorPreset` without a separate taxonomy decision.
 For a later implementation bean, add schema parse/resolve tests for any new
 preset, add analyzer reverse-match coverage so the accepted candidate no longer
 appears unmatched, and run `just pre-commit` for Rust/schema changes.
+
+## Audit Outcome (csl26-4aml, 2026-08-02)
+
+Ran the analyzer, found and fixed two structural defects before drawing conclusions:
+
+1. `ContributorConfig.delimiter` serializes `None` as `"delimiter": null` while presets omit the
+   field entirely for the default value (`skip_serializing_if`) — a normalization artifact
+   fragmenting the contributor candidate list. Fixed in the analyzer (strip null-valued keys before
+   hashing, both extracted and preset sides).
+2. No `TitlePreset` ever sets `TitlesConfig.default` (only component/monograph/periodical/serial),
+   so any `default`-only extracted shape was structurally unreachable — not a taxonomy gap.
+
+Re-ran after the fix:
+- **locators**: 120/120 now matched (added `LocatorPreset::Numeric` = author-date + strip-label-periods).
+- **titles**: matched rose 643→1681, unmatched fell 1697→659 (added `TitlePreset::EmphasisAll` `default.emph`, `TitlePreset::TitleCase` `default.text-case:title`).
+- **contributors**: matched_style_count unchanged (1931, identical before/after the null-normalization fix) — the delimiter:null artifact, while real, was never the sole blocker for any candidate shape; every remaining candidate differs from its nearest preset by ≥2 other fields, scattered across many different presets. **No coherent family/convention cluster found.** Per this bean's original guidance, no `ContributorPreset` variants added.
+
+Also added a nearest-preset diff and `share_of_unmatched` to the JSON output, and `pub const ALL` on each preset enum (was a hand-maintained, untested mirror list — silent-drift risk).
+
+Follow-ups: [[csl26-5397]] (suspected migrate title emph+quote artifact, ~68 styles), [[csl26-kohl]] (deferred analyzer improvements: savings ranking, array normalization, substitute/sort concerns, subsumption clustering).
