@@ -200,3 +200,26 @@ impl TitleRendering {
         })
     }
 }
+
+#[cfg(test)]
+#[allow(
+    clippy::unwrap_used,
+    clippy::panic,
+    reason = "Panicking is acceptable and often desired in tests."
+)]
+mod tests {
+    use super::*;
+    use crate::presets::TitlePreset;
+
+    #[test]
+    fn test_emphasis_all_preset_name_resolves_through_config_entry() {
+        let entry: TitlesConfigEntry = serde_yaml::from_str("emphasis-all").unwrap();
+        assert_eq!(entry.resolve(), TitlePreset::EmphasisAll.config());
+    }
+
+    #[test]
+    fn test_title_case_preset_name_resolves_through_config_entry() {
+        let entry: TitlesConfigEntry = serde_yaml::from_str("title-case").unwrap();
+        assert_eq!(entry.resolve(), TitlePreset::TitleCase.config());
+    }
+}

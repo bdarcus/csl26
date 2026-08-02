@@ -70,6 +70,13 @@ check-core-quality:
 oracle-refresh:
     node scripts/oracle-batch-aggregate.js styles-legacy/ --top 10
 
+# Discover recurring per-concern config shapes across the legacy CSL corpus that no named
+# preset covers (contributors, dates, titles, locators) — a worklist for citum-schema-style presets.
+analyze-presets styles="styles-legacy":
+    ./scripts/dev-env.sh cargo run --quiet --bin citum-analyze -- {{styles}} --config-presets --json \
+        | jq '.concerns[] | {concern, matched_style_count, unmatched_style_count, \
+              candidate_count: (.candidates|length), candidates: .candidates[:5]}'
+
 # Validate YAML frontmatter for local contributor AI skills and commands
 validate-frontmatter flags='--copilot-strict':
     ./scripts/validate-frontmatter.sh {{flags}}

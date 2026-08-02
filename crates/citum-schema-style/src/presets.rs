@@ -121,6 +121,31 @@ pub enum ContributorPreset {
 }
 
 impl ContributorPreset {
+    /// All current variants, kept in sync manually since the enum is `#[non_exhaustive]`.
+    ///
+    /// Consumers that need to enumerate every named contributor preset (e.g. reverse-matching
+    /// extracted configs in `citum-analyze`) should use this instead of hand-listing variants,
+    /// so a forgotten update fails a compile-time-adjacent test rather than silently omitting
+    /// a variant. See `tests` in this module for the coverage check.
+    pub const ALL: &'static [ContributorPreset] = &[
+        ContributorPreset::Apa,
+        ContributorPreset::Chicago,
+        ContributorPreset::Vancouver,
+        ContributorPreset::Ieee,
+        ContributorPreset::Harvard,
+        ContributorPreset::Springer,
+        ContributorPreset::NumericCompact,
+        ContributorPreset::NumericMedium,
+        ContributorPreset::NumericTight,
+        ContributorPreset::NumericLarge,
+        ContributorPreset::NumericAllAuthors,
+        ContributorPreset::NumericGivenDot,
+        ContributorPreset::AnnualReviews,
+        ContributorPreset::MathPhys,
+        ContributorPreset::SocSciFirst,
+        ContributorPreset::PhysicsNumeric,
+    ];
+
     /// Convert named-style presets to config.
     fn config_named_presets(&self) -> ContributorConfig {
         match self {
@@ -392,6 +417,14 @@ pub enum DatePreset {
 }
 
 impl DatePreset {
+    /// All current variants. See [`ContributorPreset::ALL`] for why this exists.
+    pub const ALL: &'static [DatePreset] = &[
+        DatePreset::Long,
+        DatePreset::Short,
+        DatePreset::Numeric,
+        DatePreset::Iso,
+    ];
+
     /// Convert this preset to a concrete `DateConfig`.
     pub fn config(&self) -> DateConfig {
         match self {
@@ -446,9 +479,29 @@ pub enum TitlePreset {
     /// Scientific/Vancouver style: all titles plain (no formatting).
     /// Example: Article title. Book title. Journal title.
     Scientific,
+    /// All title categories italic, with no per-category overrides. Distinct from `humanities`
+    /// (which leaves `component` plain): the corpus convention this covers italicizes articles
+    /// too.
+    /// Example: *Article title*. *Book Title*. *Journal Title*.
+    EmphasisAll,
+    /// All title categories in headline-style title case, with no per-category overrides.
+    /// Example: Article Title. Book Title. Journal Title.
+    TitleCase,
 }
 
 impl TitlePreset {
+    /// All current variants. See [`ContributorPreset::ALL`] for why this exists.
+    pub const ALL: &'static [TitlePreset] = &[
+        TitlePreset::Apa,
+        TitlePreset::Chicago,
+        TitlePreset::Ieee,
+        TitlePreset::Humanities,
+        TitlePreset::JournalEmphasis,
+        TitlePreset::Scientific,
+        TitlePreset::EmphasisAll,
+        TitlePreset::TitleCase,
+    ];
+
     /// Convert this preset to a concrete `TitlesConfig`.
     pub fn config(&self) -> TitlesConfig {
         use crate::options::titles::TextCase;
@@ -502,6 +555,17 @@ impl TitlePreset {
                     ..Default::default()
                 }),
                 periodical: Some(TitleRendering::default()),
+                ..Default::default()
+            },
+            TitlePreset::EmphasisAll => TitlesConfig {
+                default: Some(emph_rendering),
+                ..Default::default()
+            },
+            TitlePreset::TitleCase => TitlesConfig {
+                default: Some(TitleRendering {
+                    text_case: Some(TextCase::Title),
+                    ..Default::default()
+                }),
                 ..Default::default()
             },
         }
@@ -1036,6 +1100,44 @@ mod tests {
     }
 
     #[test]
+    fn test_title_preset_emphasis_all() {
+        let config = TitlePreset::EmphasisAll.config();
+        let default = config.default.unwrap();
+        assert_eq!(default.emph, Some(true));
+        assert!(config.component.is_none());
+        assert!(config.monograph.is_none());
+        assert!(config.periodical.is_none());
+        assert!(config.serial.is_none());
+    }
+
+    #[test]
+    fn test_title_preset_title_case() {
+        let config = TitlePreset::TitleCase.config();
+        let default = config.default.unwrap();
+        assert_eq!(
+            default.text_case,
+            Some(crate::options::titles::TextCase::Title)
+        );
+        assert!(default.emph.is_none() || default.emph == Some(false));
+    }
+
+    #[test]
+    fn test_all_preset_const_variants_resolve_to_config() {
+        // `.config()` for ContributorPreset dispatches through per-family helpers with
+        // `unreachable!()` arms; a variant present in `ALL` but missing from a dispatch match
+        // must panic here rather than at analyzer runtime.
+        for preset in ContributorPreset::ALL {
+            let _ = preset.config();
+        }
+        for preset in DatePreset::ALL {
+            let _ = preset.config();
+        }
+        for preset in TitlePreset::ALL {
+            let _ = preset.config();
+        }
+    }
+
+    #[test]
     fn test_preset_yaml_roundtrip() {
         let yaml = r#"apa"#;
         let preset: ContributorPreset = serde_yaml::from_str(yaml).unwrap();
@@ -1089,6 +1191,8 @@ mod tests {
             TitlePreset::Humanities,
             TitlePreset::JournalEmphasis,
             TitlePreset::Scientific,
+            TitlePreset::EmphasisAll,
+            TitlePreset::TitleCase,
         ];
         for preset in title_presets {
             let yaml = serde_yaml::to_string(&preset).unwrap();

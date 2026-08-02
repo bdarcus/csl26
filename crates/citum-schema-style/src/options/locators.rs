@@ -176,9 +176,20 @@ pub enum LocatorPreset {
     Note,
     /// Author-date / numbered: short labels for all kinds.
     AuthorDate,
+    /// Numeric journal convention: same as `author-date`, but strips periods from locator
+    /// labels (e.g. "p." becomes "p"). Common across Vancouver-family medical/science journals.
+    Numeric,
 }
 
 impl LocatorPreset {
+    /// All current variants. See `ContributorPreset::ALL` in `citum-schema-style::presets` for
+    /// why this exists.
+    pub const ALL: &'static [LocatorPreset] = &[
+        LocatorPreset::Note,
+        LocatorPreset::AuthorDate,
+        LocatorPreset::Numeric,
+    ];
+
     /// Resolve a preset to an explicit `LocatorConfig`.
     #[must_use]
     pub fn config(self) -> LocatorConfig {
@@ -209,6 +220,15 @@ impl LocatorPreset {
                 default_label_form: LabelForm::Short,
                 range_format: PageRangeFormat::Expanded,
                 strip_label_periods: None,
+                kinds: HashMap::new(),
+                patterns: Vec::new(),
+                fallback_delimiter: ", ".to_string(),
+                unknown_fields: std::collections::BTreeMap::new(),
+            },
+            LocatorPreset::Numeric => LocatorConfig {
+                default_label_form: LabelForm::Short,
+                range_format: PageRangeFormat::Expanded,
+                strip_label_periods: Some(true),
                 kinds: HashMap::new(),
                 patterns: Vec::new(),
                 fallback_delimiter: ", ".to_string(),
@@ -280,10 +300,37 @@ mod tests {
     }
 
     #[test]
+    fn test_locator_preset_numeric() {
+        let config = LocatorPreset::Numeric.config();
+        // Numeric is author-date plus strip-label-periods; everything else matches author-date.
+        let author_date = LocatorPreset::AuthorDate.config();
+        assert_eq!(config.strip_label_periods, Some(true));
+        assert_eq!(config.default_label_form, author_date.default_label_form);
+        assert_eq!(config.range_format, author_date.range_format);
+        assert_eq!(config.fallback_delimiter, author_date.fallback_delimiter);
+    }
+
+    #[test]
+    fn test_locator_preset_all_covers_every_variant() {
+        // Every branch of LocatorPreset::config()'s match arm must have a corresponding entry in
+        // ALL, or the analyzer's reverse-match set silently omits a named preset.
+        assert_eq!(LocatorPreset::ALL.len(), 3);
+        for preset in LocatorPreset::ALL {
+            let _ = preset.config();
+        }
+    }
+
+    #[test]
     fn test_locator_config_entry_preset() {
         let entry = LocatorConfigEntry::Preset(LocatorPreset::Note);
         let config = entry.resolve();
         assert_eq!(config.default_label_form, LabelForm::Short);
+    }
+
+    #[test]
+    fn test_numeric_preset_name_resolves_through_config_entry() {
+        let entry: LocatorConfigEntry = serde_yaml::from_str("numeric").unwrap();
+        assert_eq!(entry.resolve(), LocatorPreset::Numeric.config());
     }
 
     #[test]
