@@ -59,12 +59,8 @@ workflow-test csl:
 # Generate a core rendering report and validate it against baseline quality gates: fails if any
 # gated style's fidelity drops below 1.0, or if any embedded-core style's exact-parity `passed`
 # count drops below its recorded floor (see docs/architecture/audits/2026-07-31_EXACT_PARITY_REFOCUS.md).
-# --parallelism 1: observed non-deterministic per-style snapshot-oracle failures under the
-# default concurrency (exit 2, stale/missing snapshot read race) that produced partial exactParity
-# totals and false fixture-drift gate failures; pinned to 1 for a reproducible gate. Do not
-# raise this without first confirming the race is fixed.
 check-core-quality:
-    node scripts/report-core.js --all-features --parallelism 1 > /tmp/r.json
+    node scripts/report-core.js --all-features > /tmp/r.json
     node scripts/check-core-quality.js --report /tmp/r.json \
         --baseline scripts/report-data/core-quality-baseline.json \
         --parity-baseline scripts/report-data/embedded-parity-baseline.json \

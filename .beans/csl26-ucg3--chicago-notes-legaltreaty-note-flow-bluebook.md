@@ -5,7 +5,8 @@ status: todo
 type: bug
 priority: normal
 created_at: 2026-06-21T11:49:07Z
-updated_at: 2026-07-06T18:55:29Z
+updated_at: 2026-08-02T14:19:28Z
+parent: csl26-h7oc
 ---
 
 Chicago notes (`chicago-notes-18th.yaml`) legal/treaty note-flow defects found

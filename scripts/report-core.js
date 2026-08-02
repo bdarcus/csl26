@@ -95,9 +95,10 @@ const DEFAULT_REPORT_CACHE_DIR = path.join(PROJECT_ROOT, '.oracle-cache', 'repor
 const DEFAULT_PARALLELISM = 4;
 const DEFAULT_PROCESS_TIMEOUT_MS = 240000;
 const CSL_SNAPSHOT_DIR = path.join(PROJECT_ROOT, 'tests', 'snapshots', 'csl');
+const CSL_SNAPSHOT_VERSION = 2;
 const BIBLATEX_SNAPSHOT_DIR = path.join(PROJECT_ROOT, 'tests', 'snapshots', 'biblatex');
 const COMPOUND_SNAPSHOT_DIR = path.join(PROJECT_ROOT, 'tests', 'snapshots', 'compound');
-const REPORT_CACHE_VERSION = 9;
+const REPORT_CACHE_VERSION = 10;
 
 const TOTAL_DEPENDENTS = 7987;
 const CORE_FALLBACK_TYPES = [
@@ -300,15 +301,18 @@ function resolveStyleLocale(stylePath) {
   }
 }
 
-// oracle.js's actual output also depends on these two files (registered
-// divergence detectors and the policy that enables them), but neither is
-// `oracle.js` itself, so a cache key hashing only `liveScript` silently
-// serves stale pre-fix results after editing either — see the div-011
-// investigation in docs/architecture/audits/2026-07-22_GBT_DATE_ANNOTATION_FIDELITY.md.
-function oracleDivergenceDepsHash() {
+// oracle.js's actual output also depends on helper modules and policy data
+// that are not captured by hashing the entry script. Keep these dependencies
+// explicit so a helper-only fix cannot silently reuse stale report results.
+function oracleRuntimeDepsHash() {
   const oracleDivergencesPath = path.join(__dirname, 'lib', 'oracle-divergences.js');
+  const citeprocBibliographyPath = path.join(__dirname, 'lib', 'citeproc-bibliography.js');
   const verificationPolicyPath = path.join(__dirname, 'report-data', 'verification-policy.yaml');
-  return hashContent(hashFile(oracleDivergencesPath) + hashFile(verificationPolicyPath));
+  return hashContent(
+    hashFile(oracleDivergencesPath) +
+    hashFile(citeprocBibliographyPath) +
+    hashFile(verificationPolicyPath)
+  );
 }
 
 function equivalentText(expected, actual, options = {}) {
@@ -322,23 +326,33 @@ function fixtureHash(refsFixture, citationsFixture) {
   return hash.digest('hex').slice(0, 16);
 }
 
-function resolveCitumBinary(explicitPath = null, allFeatures = false) {
-  const cargoTargetDir = process.env.CARGO_TARGET_DIR
-    ? path.resolve(process.env.CARGO_TARGET_DIR)
+function resolveCitumBinary(explicitPath = null, allFeatures = false, dependencies = {}) {
+  const environment = dependencies.environment || process.env;
+  const fileExists = dependencies.fileExists || fs.existsSync;
+  const runCargo = dependencies.runCargo || execFileSync;
+  const cargoTargetDir = environment.CARGO_TARGET_DIR
+    ? path.resolve(environment.CARGO_TARGET_DIR)
     : null;
-  const candidates = [
+  const externalCandidates = [
     explicitPath,
-    process.env.CITUM_BIN,
+    environment.CITUM_BIN,
+  ].filter(Boolean);
+
+  for (const candidate of externalCandidates) {
+    if (fileExists(candidate)) {
+      return path.resolve(candidate);
+    }
+  }
+
+  const managedCandidates = [
     cargoTargetDir ? path.join(cargoTargetDir, 'debug', 'citum') : null,
     cargoTargetDir ? path.join(cargoTargetDir, 'release', 'citum') : null,
     path.join(PROJECT_ROOT, 'target', 'debug', 'citum'),
     path.join(PROJECT_ROOT, 'target', 'release', 'citum'),
   ].filter(Boolean);
-
-  for (const candidate of candidates) {
-    if (fs.existsSync(candidate)) {
-      return path.resolve(candidate);
-    }
+  if (!allFeatures) {
+    const existing = managedCandidates.find((candidate) => fileExists(candidate));
+    if (existing) return path.resolve(existing);
   }
 
   const buildArgs = ['build', '-q', '--bin', 'citum'];
@@ -346,7 +360,11 @@ function resolveCitumBinary(explicitPath = null, allFeatures = false) {
     buildArgs.push('--all-features');
   }
 
-  execFileSync('cargo', buildArgs, {
+  // The canonical all-features path must ask Cargo to validate the managed
+  // binary. Merely reusing target/debug/citum can silently measure the wrong
+  // feature set; an up-to-date Cargo build is effectively a no-op. Default
+  // feature callers retain the cheap existing-binary path used by unit tests.
+  runCargo('cargo', buildArgs, {
     cwd: PROJECT_ROOT,
     encoding: 'utf8',
     stdio: ['pipe', 'pipe', 'pipe'],
@@ -355,7 +373,7 @@ function resolveCitumBinary(explicitPath = null, allFeatures = false) {
   const builtBinary = cargoTargetDir
     ? path.join(cargoTargetDir, 'debug', 'citum')
     : path.join(PROJECT_ROOT, 'target', 'debug', 'citum');
-  if (!fs.existsSync(builtBinary)) {
+  if (!fileExists(builtBinary)) {
     throw new Error(`Expected Citum binary after build: ${builtBinary}`);
   }
   return builtBinary;
@@ -396,6 +414,8 @@ function spawnProcess(command, args, options = {}) {
     });
     let stdout = '';
     let stderr = '';
+    child.stdout.setEncoding('utf8');
+    child.stderr.setEncoding('utf8');
     let settled = false;
     const timeoutMs = options.timeout ?? DEFAULT_PROCESS_TIMEOUT_MS;
     const timer = setTimeout(() => {
@@ -429,6 +449,7 @@ function spawnProcess(command, args, options = {}) {
 async function runCachedJsonJob(runtime, config) {
   const keyJson = JSON.stringify({
     version: REPORT_CACHE_VERSION,
+    allFeatures: Boolean(runtime.allFeatures),
     ...config.cacheKey,
   });
   const cacheFile = path.join(runtime.cacheDir, `${hashContent(keyJson)}.json`);
@@ -952,6 +973,23 @@ function getCslSnapshotStatus(stylePath, refsFixture, citationsFixture) {
     };
   }
 
+  const bibliographyIds = snapshot.bibliography_ids;
+  const hasCompleteBibliographyIds =
+    snapshot.version === CSL_SNAPSHOT_VERSION &&
+    Array.isArray(snapshot.bibliography) &&
+    Array.isArray(bibliographyIds) &&
+    bibliographyIds.length === snapshot.bibliography.length &&
+    bibliographyIds.every((id) => id !== null && id !== undefined && id !== '') &&
+    new Set(bibliographyIds).size === bibliographyIds.length;
+  if (!hasCompleteBibliographyIds) {
+    return {
+      ok: false,
+      status: 'stale',
+      message: `Snapshot lacks complete v${CSL_SNAPSHOT_VERSION} bibliography IDs for ${styleName}. Run: node scripts/oracle-snapshot.js ${stylePath}`,
+      snapshotPath,
+    };
+  }
+
   return { ok: true, status: 'ok', snapshotPath };
 }
 
@@ -1004,7 +1042,7 @@ async function runCiteprocSnapshotOracle(runtime, stylePath, styleName, styleFor
     snapshotHash: snapshotStatus.ok ? hashFile(snapshotStatus.snapshotPath) : null,
     fastScriptHash: hashFile(fastScript),
     liveScriptHash: hashFile(liveScript),
-    oracleDivergenceDepsHash: oracleDivergenceDepsHash(),
+    oracleRuntimeDepsHash: oracleRuntimeDepsHash(),
     citumBin: runtime.citumBin,
     citumBinHash: hashFile(runtime.citumBin),
     allowLiveFallback: runtime.allowLiveFallback,
@@ -1027,6 +1065,7 @@ async function runCiteprocSnapshotOracle(runtime, stylePath, styleName, styleFor
       if (runtime.allFeatures) {
         fastArgs.push('--all-features');
       }
+      fastArgs.push('--citum-bin', runtime.citumBin);
       if (styleYamlPath && fs.existsSync(styleYamlPath)) {
         const resolvedLocale = resolveStyleLocale(styleYamlPath);
         if (resolvedLocale) {
@@ -1159,7 +1198,7 @@ async function runCiteprocBenchmarkOracle(runtime, stylePath, styleName, benchma
       refsHash: hashFile(resolvedRun.refsFixture),
       citationsHash: resolvedRun.citationsFixture ? hashFile(resolvedRun.citationsFixture) : null,
       liveScriptHash: hashFile(liveScript),
-      oracleDivergenceDepsHash: oracleDivergenceDepsHash(),
+      oracleRuntimeDepsHash: oracleRuntimeDepsHash(),
       citumBin: runtime.citumBin,
       citumBinHash: hashFile(runtime.citumBin),
       caseSensitive: runtime.caseSensitive,
@@ -1175,6 +1214,7 @@ async function runCiteprocBenchmarkOracle(runtime, stylePath, styleName, benchma
       if (runtime.allFeatures) {
         args.push('--all-features');
       }
+      args.push('--citum-bin', runtime.citumBin);
       if (resolvedRun.citationsFixture && resolvedRun.scope !== 'bibliography') {
         args.push('--citations-fixture', resolvedRun.citationsFixture);
       }
@@ -1443,7 +1483,7 @@ async function runFamilyFixtureOracle(runtime, stylePath, styleName, fixtureSetN
       refsHash: hashFile(refsFixture),
       citationsHash: hashFile(citationsFixture),
       liveScriptHash: hashFile(liveScript),
-      oracleDivergenceDepsHash: oracleDivergenceDepsHash(),
+      oracleRuntimeDepsHash: oracleRuntimeDepsHash(),
       citumBin: runtime.citumBin,
       citumBinHash: hashFile(runtime.citumBin),
       caseSensitive: runtime.caseSensitive,
@@ -1459,6 +1499,7 @@ async function runFamilyFixtureOracle(runtime, stylePath, styleName, fixtureSetN
       if (runtime.allFeatures) {
         args.push('--all-features');
       }
+      args.push('--citum-bin', runtime.citumBin);
       if (styleYamlPath && fs.existsSync(styleYamlPath)) {
         const resolvedLocale = resolveStyleLocale(styleYamlPath);
         if (resolvedLocale) {
@@ -4529,6 +4570,8 @@ module.exports = {
   parseArgs,
   preflightSnapshots,
   resolveSelectedStyles,
+  resolveCitumBinary,
+  spawnProcess,
   runCachedJsonJob,
   buildEmptyOracleResult,
   cloneOracleResult,

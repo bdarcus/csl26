@@ -56,6 +56,11 @@ env CARGO_PROFILE_RELEASE_DEBUG=1 CARGO_PROFILE_RELEASE_STRIP=false \
   cargo build --release -p citum -p citum-migrate --features dhat-heap
 ```
 
+The feature installs the DHAT allocator, while capture is explicitly enabled
+per invocation with `CITUM_DHAT_HEAP=1`. This keeps ordinary
+`--all-features` validation and reporting free of profiler output and
+`dhat-heap.json` artifacts.
+
 ## Timing Baseline
 
 | Workload | Mean | Stddev |
@@ -160,5 +165,6 @@ flamegraph -o /tmp/citum-render-apa-large.symbolized.svg -- \
   -o /tmp/citum-render-apa-large-symbolized.json
 ```
 
-For heap profiling, run the target binary from `/tmp` so `dhat-heap.json` does
-not land in the repository root, then rename the generated file.
+For heap profiling, run the target binary from `/tmp` with
+`CITUM_DHAT_HEAP=1` so `dhat-heap.json` does not land in the repository root,
+then rename the generated file.

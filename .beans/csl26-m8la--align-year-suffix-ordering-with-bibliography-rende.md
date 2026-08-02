@@ -9,7 +9,8 @@ tags:
     - fidelity
     - engine
 created_at: 2026-07-23T17:05:46Z
-updated_at: 2026-07-23T17:06:50Z
+updated_at: 2026-08-02T14:19:28Z
+parent: csl26-ccdt
 ---
 
 Disambiguator::sort_group_for_year_suffix (crates/citum-engine/src/processor/disambiguation.rs) has a no-group_sort fallback that hardcodes a title-alphabetical tiebreak (a_title.cmp(b_title)) as the DEFAULT year-suffix ordering whenever a style doesn't configure an explicit bibliography.sort:/group_sort. This is wrong for styles (confirmed: gb-t-7714-2025-author-date) whose actual bibliography render order is NOT title-alphabetical.

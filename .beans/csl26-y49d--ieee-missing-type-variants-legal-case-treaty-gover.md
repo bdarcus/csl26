@@ -9,7 +9,8 @@ tags:
     - style
     - fidelity
 created_at: 2026-08-02T00:09:16Z
-updated_at: 2026-08-02T13:16:20Z
+updated_at: 2026-08-02T14:19:29Z
+parent: csl26-ccdt
 ---
 
 Hand-author the missing ieee bibliography type-variants: legal_case, treaty, government-act (bill/legislation), and apparatus/equipment. Right now they fall back to the generic monograph template, which gets title quoting, container title, and field order all wrong for these types.

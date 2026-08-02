@@ -162,10 +162,17 @@ guards, both required:
    **unmeasurable** — hard-failing with its own message — before comparing
    its `exactParity` numbers at all, so a measurement gap is never reported
    as fixture drift or a false parity regression.
-2. `just check-core-quality` and both `report-core.js` invocations in
-   `fidelity.yml` now pin `--parallelism 1`. This is a workaround, not a fix
-   for the underlying race — see the follow-up bean below — but a
-   reproducible gate needs it now.
+2. At the time of this audit, `just check-core-quality` and both
+   `report-core.js` invocations in `fidelity.yml` pinned `--parallelism 1` as
+   a reproducibility workaround.
+
+The follow-up repair on 2026-08-02 identified two causes: all-features jobs
+were repeatedly launching a profiler-enabled Cargo renderer, and child-process
+output decoded UTF-8 buffer chunks independently, corrupting code points split
+at arbitrary chunk boundaries. Report jobs now share one validated binary,
+DHAT capture requires explicit opt-in, and stream decoding is stateful. Fresh
+parallelism-1 and parallelism-4 reports are byte-identical after excluding
+run metadata, so the temporary pins have been removed.
 
 Cost of the pin, measured locally on the full default corpus (35 styles,
 `--all-features`, warm build): `--parallelism 4` completed in ~28s wall,
@@ -253,11 +260,11 @@ told to optimize and which one CI enforces beyond the coarse entry check.
   validation; unclear-queue reporting.
 - `.github/workflows/fidelity.yml` — `mode=selected` now enforces the same
   fidelity/parity floors as `mode=all`, instead of only failing on a hard
-  error; both paths pin `--parallelism 1` for determinism (see above).
-- `justfile` — `check-core-quality` recipe wired to the new flags, pinned to
-  `--parallelism 1`, and now runs with `--all-features` to match CI
-  (previously the two measured different feature sets against the same
-  baseline).
+  error; both paths use the repaired default parallelism (see above).
+- `justfile` — `check-core-quality` recipe wired to the new flags and
+  `--all-features` to match CI (previously the two measured different feature
+  sets against the same baseline). The original `--parallelism 1` workaround
+  was removed by the 2026-08-02 repair described above.
 - `docs/guides/STYLE_WORKFLOW_EXECUTION.md`,
   `docs/policies/STYLE_WORKFLOW_DECISION_RULES.md`, the `style-tune` /
   `style-qa` / `style-migrate-enhance` / `style-evolve` skills (both
@@ -282,10 +289,9 @@ told to optimize and which one CI enforces beyond the coarse entry check.
 - `csl26-l5oh` — investigate the `springer-vancouver-brackets` 28→20 parity
   regression between `828cb9d2` and `940b461d` (likely a side effect of the
   Chicago bibliography-link commits).
-- `csl26-7xhp` — root-cause the concurrent-read race behind the `Snapshot
-  oracle failed ... exit 2` non-determinism under default `--parallelism`
-  (see "Determinism" above) so the gate can drop the `--parallelism 1`
-  workaround.
+- `csl26-7xhp` — completed on 2026-08-02; the profiler/subprocess and UTF-8
+  stream-decoding causes were repaired and the default-parallelism gate was
+  restored (see "Determinism" above).
 - Triage and classify the accumulated parity residuals per style/family into
   the new adjudication ledger (the bulk of `csl26-6th8`'s original acceptance
   criteria — clustering by semantic cause, attributing to style YAML vs.

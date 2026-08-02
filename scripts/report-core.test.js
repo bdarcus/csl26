@@ -40,7 +40,9 @@ const {
   mergeOracleResults,
   parseArgs,
   preflightSnapshots,
+  resolveCitumBinary,
   resolveSelectedStyles,
+  spawnProcess,
   runCachedJsonJob,
   selectPrimaryComparator,
   selectQualityAuthorshipData,
@@ -881,7 +883,11 @@ test('mergeBenchmarkRunIntoOracle adds bibliography-only scoring totals without 
 
 test('mergeOracleResults combines bibliography-only oracle sections', () => {
   const main = buildEmptyOracleResult({
-    bibliography: { passed: 1, total: 2, entries: [{ index: 1, match: true }] },
+    bibliography: {
+      passed: 1,
+      total: 2,
+      entries: [{ index: 1, match: true, pairingMethod: 'id', comparisonState: 'paired' }],
+    },
     adjusted: {
       citations: { passed: 0, total: 0, entries: [] },
       bibliography: { passed: 1, total: 2, entries: [{ index: 1, match: true }] },
@@ -889,7 +895,11 @@ test('mergeOracleResults combines bibliography-only oracle sections', () => {
     },
   });
   const extra = buildEmptyOracleResult({
-    bibliography: { passed: 2, total: 3, entries: [{ index: 2, match: false }] },
+    bibliography: {
+      passed: 2,
+      total: 3,
+      entries: [{ index: 2, match: false, pairingMethod: 'id', comparisonState: 'oracle-only' }],
+    },
     adjusted: {
       citations: { passed: 0, total: 0, entries: [] },
       bibliography: { passed: 2, total: 3, entries: [{ index: 2, match: false }] },
@@ -901,6 +911,13 @@ test('mergeOracleResults combines bibliography-only oracle sections', () => {
   assert.deepEqual(main.bibliography.passed, 3);
   assert.deepEqual(main.bibliography.total, 5);
   assert.deepEqual(main.citations.total, 0);
+  assert.deepEqual(summarizeBibliographyPairing(main), {
+    paired: 1,
+    unresolvedUnpaired: 0,
+    idProvenOracleOnly: 1,
+    idProvenCitumOnly: 0,
+    totalObservations: 2,
+  });
 });
 
 test('published benchmark run records are compact and repo-relative', () => {
@@ -1481,6 +1498,74 @@ test('runCachedJsonJob invalidates when cache key changes', async () => {
   assert.equal(computes, 2);
 });
 
+test('runCachedJsonJob separates default and all-features measurements', async () => {
+  const cacheDir = fs.mkdtempSync(path.join(os.tmpdir(), 'report-feature-cache-'));
+  const runtime = {
+    allFeatures: false,
+    cacheDir,
+    timings: new Map(),
+    recordTiming() {},
+  };
+  let computes = 0;
+  const config = {
+    kind: 'unit',
+    cacheKey: { style: 'apa', fixture: 'core' },
+    async compute() {
+      computes += 1;
+      return { computes };
+    },
+  };
+
+  const defaultFeatures = await runCachedJsonJob(runtime, config);
+  runtime.allFeatures = true;
+  const allFeatures = await runCachedJsonJob(runtime, config);
+
+  fs.rmSync(cacheDir, { recursive: true, force: true });
+  assert.deepEqual(defaultFeatures, { computes: 1 });
+  assert.deepEqual(allFeatures, { computes: 2 });
+  assert.equal(computes, 2);
+});
+
+test('resolveCitumBinary rebuilds a Cargo-managed binary for the requested feature set', () => {
+  const targetDir = path.join(os.tmpdir(), 'report-core-managed-target');
+  const builtBinary = path.join(targetDir, 'debug', 'citum');
+  const calls = [];
+
+  const resolved = resolveCitumBinary(null, true, {
+    environment: { CARGO_TARGET_DIR: targetDir },
+    fileExists(candidate) {
+      return candidate === builtBinary;
+    },
+    runCargo(command, args) {
+      calls.push({ command, args });
+    },
+  });
+
+  assert.equal(resolved, builtBinary);
+  assert.deepEqual(calls, [{
+    command: 'cargo',
+    args: ['build', '-q', '--bin', 'citum', '--all-features'],
+  }]);
+});
+
+test('resolveCitumBinary trusts an explicitly supplied binary without rebuilding', () => {
+  const explicitBinary = path.join(os.tmpdir(), 'citum-explicit');
+  let cargoCalls = 0;
+
+  const resolved = resolveCitumBinary(explicitBinary, true, {
+    environment: {},
+    fileExists(candidate) {
+      return candidate === explicitBinary;
+    },
+    runCargo() {
+      cargoCalls += 1;
+    },
+  });
+
+  assert.equal(resolved, explicitBinary);
+  assert.equal(cargoCalls, 0);
+});
+
 test('mapWithConcurrency preserves input ordering under parallel execution', async () => {
   const values = [40, 5, 20, 1];
   const results = await mapWithConcurrency(values, 2, async (delay, index) => {
@@ -1489,6 +1574,23 @@ test('mapWithConcurrency preserves input ordering under parallel execution', asy
   });
 
   assert.deepEqual(results, ['0:40', '1:5', '2:20', '3:1']);
+});
+
+test('spawnProcess preserves UTF-8 code points split across output chunks', async () => {
+  const script = [
+    "process.stdout.write(Buffer.from([0xe2]));",
+    "process.stderr.write(Buffer.from([0xe3]));",
+    "setTimeout(() => {",
+    "  process.stdout.write(Buffer.from([0x80, 0x9c]));",
+    "  process.stderr.write(Buffer.from([0x80, 0x82]));",
+    "}, 20);",
+  ].join('\n');
+
+  const result = await spawnProcess(process.execPath, ['-e', script]);
+
+  assert.equal(result.code, 0);
+  assert.equal(result.stdout, '“');
+  assert.equal(result.stderr, '。');
 });
 
 test('preflightSnapshots reports missing citeproc snapshots for citeproc-backed styles', () => {

@@ -16,6 +16,8 @@
  *
  * Each snapshot is keyed on fixture_hash + csl_hash. If either changes the
  * snapshot is considered stale and oracle-fast.js will refuse to use it.
+ * Version 2 adds bibliography_ids aligned by index with bibliography rows;
+ * version 1 remains readable through oracle-fast.js's similarity fallback.
  *
  * Exit codes:
  *   0 — all snapshots written (or already current)
@@ -30,9 +32,11 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { loadLocale } = require('./oracle-utils');
+const { bibliographyIdsForRenderedRows } = require('./lib/citeproc-bibliography');
 const { toCiteprocItem } = require('./lib/citeproc-locators');
 
 const CITEPROC_VERSION = '2.4.63';
+const SNAPSHOT_VERSION = 2;
 const PROJECT_ROOT = path.resolve(__dirname, '..');
 const SNAPSHOT_DIR = path.join(PROJECT_ROOT, 'tests', 'snapshots', 'csl');
 const DEFAULT_REFS_FIXTURE = path.join(PROJECT_ROOT, 'tests', 'fixtures', 'references-expanded.json');
@@ -121,7 +125,13 @@ function isSnapshotCurrent(snapPath, fxHash, cslHash) {
   if (!fs.existsSync(snapPath)) return false;
   try {
     const snap = JSON.parse(fs.readFileSync(snapPath, 'utf8'));
-    return snap.fixture_hash === fxHash && snap.csl_hash === cslHash;
+    return snap.version === SNAPSHOT_VERSION &&
+      snap.fixture_hash === fxHash &&
+      snap.csl_hash === cslHash &&
+      Array.isArray(snap.bibliography_ids) &&
+      snap.bibliography_ids.length === snap.bibliography.length &&
+      snap.bibliography_ids.every((id) => id !== null && id !== undefined && id !== '') &&
+      new Set(snap.bibliography_ids).size === snap.bibliography_ids.length;
   } catch {
     return false;
   }
@@ -142,7 +152,7 @@ function loadFixtures(refsFixture, citationsFixture) {
 
 /**
  * Render citations and bibliography for one CSL style using citeproc-js.
- * Returns { citations, bibliography } — the raw strings, no diff analysis.
+ * Returns bibliography text and its source item IDs alongside citation text.
  */
 function renderWithCiteprocJs(stylePath, testItems, testCitations) {
   const styleXml = fs.readFileSync(stylePath, 'utf8');
@@ -168,13 +178,28 @@ function renderWithCiteprocJs(stylePath, testItems, testCitations) {
 
   const bibResult = engine.makeBibliography();
   const bibliography = bibResult ? bibResult[1] : [];
+  const bibliographyIds = bibliographyIdsForRenderedRows(bibResult?.[0], bibliography);
 
-  return { citations, bibliography };
+  return { citations, bibliography, bibliographyIds };
 }
 
 // ---------------------------------------------------------------------------
 // Single-style snapshot generation
 // ---------------------------------------------------------------------------
+
+function buildSnapshot(styleName, fxHash, cslHash, rendered) {
+  return {
+    version: SNAPSHOT_VERSION,
+    generated_by: `citeproc-js@${CITEPROC_VERSION}`,
+    generated_at: new Date().toISOString(),
+    style: styleName,
+    fixture_hash: fxHash,
+    csl_hash: cslHash,
+    citations: rendered.citations,
+    bibliography: rendered.bibliography,
+    bibliography_ids: rendered.bibliographyIds,
+  };
+}
 
 /**
  * Generate (or skip if current) the snapshot for one CSL style.
@@ -196,16 +221,7 @@ function generateSnapshot(stylePath, { testItems, testCitations }, fxHash, opts)
     return `error:${err.message}`;
   }
 
-  const snapshot = {
-    version: 1,
-    generated_by: `citeproc-js@${CITEPROC_VERSION}`,
-    generated_at: new Date().toISOString(),
-    style: styleName,
-    fixture_hash: fxHash,
-    csl_hash: cslHash,
-    citations: rendered.citations,
-    bibliography: rendered.bibliography,
-  };
+  const snapshot = buildSnapshot(styleName, fxHash, cslHash, rendered);
 
   fs.mkdirSync(path.dirname(snapPath), { recursive: true });
   fs.writeFileSync(snapPath, JSON.stringify(snapshot, null, 2) + '\n', 'utf8');
@@ -320,7 +336,17 @@ async function main() {
   }
 }
 
-main().catch((err) => {
-  process.stderr.write(`Fatal: ${err.message}\n`);
-  process.exit(1);
-});
+if (require.main === module) {
+  main().catch((err) => {
+    process.stderr.write(`Fatal: ${err.message}\n`);
+    process.exit(1);
+  });
+}
+
+module.exports = {
+  SNAPSHOT_VERSION,
+  buildSnapshot,
+  generateSnapshot,
+  isSnapshotCurrent,
+  renderWithCiteprocJs,
+};

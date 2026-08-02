@@ -1,7 +1,7 @@
 {
-  "version": 1,
+  "version": 2,
   "generated_by": "citeproc-js@2.4.63",
-  "generated_at": "2026-06-18T12:17:43.276Z",
+  "generated_at": "2026-08-02T14:38:49.115Z",
   "style": "chicago-notes",
   "fixture_hash": "50dd15d3b173e87a",
   "csl_hash": "0062790d3a81cab6",
@@ -41,5 +41,6 @@
     "note-disambiguate-add-names-et-al": "John Smith, Alice Lee, Priya Kumar, and Ming Zhou, “Adaptive Climate Risk Modeling in Coastal Cities,” <i>Journal of Climate Analytics</i> 12, no. 2 (2021): 101–19, https://doi.org/10.5555/jca.2021.12.2.101; John Smith, Alice Lee, Bao Nguyen, and Ravi Patel, “Adaptive Climate Risk Modeling for Inland Regions,” <i>Journal of Climate Analytics</i> 12, no. 3 (2021): 201–19, https://doi.org/10.5555/jca.2021.12.3.201.",
     "note-disambiguate-year-suffix": "Maria Garcia, “Methods for Robust Climate Attribution,” <i>Annual Review of Climate Science</i> 4 (2019): 55–80, https://doi.org/10.5555/arcs.2019.4.55; Maria Garcia, “Methods for Probabilistic Climate Attribution,” <i>Annual Review of Climate Science</i> 4 (2019): 81–104, https://doi.org/10.5555/arcs.2019.4.81."
   },
-  "bibliography": []
+  "bibliography": [],
+  "bibliography_ids": []
 }
