@@ -10,7 +10,8 @@ use super::super::{
     strip_leading_group_affixes,
 };
 use super::component_predicates::{
-    is_term_only_component, resolve_localized_type_variant, resolve_type_variant,
+    is_citation_number_component, is_term_only_component, resolve_localized_type_variant,
+    resolve_type_variant,
 };
 use super::group_citation_items_by_author;
 use crate::error::ProcessorError;
@@ -1173,6 +1174,7 @@ impl Renderer<'_> {
             quote_marks: crate::render::format::QuoteMarks::from(ctx.options.locale),
             sentence_initial: false,
             pre_formatted: values.pre_formatted,
+            label_only: false,
         })
     }
 
@@ -1198,7 +1200,8 @@ impl Renderer<'_> {
 
         let fmt = F::default();
         let mut group_tracker = tracker.clone();
-        let values = self.render_group_child_values(&fmt, ctx, group, &mut group_tracker)?;
+        let (values, label_only) =
+            self.render_group_child_values(&fmt, ctx, group, &mut group_tracker)?;
         let default_delimiter = citum_schema::template::DelimiterPunctuation::Comma;
         let punctuation = group.delimiter.as_ref().unwrap_or(&default_delimiter);
         let (script, realization) = crate::values::punctuation_realization_context(
@@ -1250,25 +1253,33 @@ impl Renderer<'_> {
             quote_marks: crate::render::format::QuoteMarks::from(ctx.options.locale),
             sentence_initial: false,
             pre_formatted: true,
+            label_only,
         })
     }
 
     /// Render the children of a template group into rendered strings, dropping
     /// empty values. Returns `None` when no child carries meaningful content
-    /// (i.e. only term-only siblings produced output). Borrows the parent
-    /// `fmt` so a stateful `OutputFormat` sees a single instance for both
-    /// child rendering and the final `join` in the caller.
+    /// (i.e. only term-only siblings produced output) — except for the
+    /// bibliography numeric-label pattern (`update_label_mode`'s injected
+    /// `[label, following]` group), where the label alone is still real
+    /// content that must render even when `following` is empty (e.g. no
+    /// author); the second element of the returned tuple flags that case so
+    /// the caller can mark the resulting component `label_only` instead of
+    /// treating it as ordinary preceding content for separator purposes.
+    /// Borrows the parent `fmt` so a stateful `OutputFormat` sees a single
+    /// instance for both child rendering and the final `join` in the caller.
     fn render_group_child_values<F>(
         &self,
         fmt: &F,
         ctx: &TemplateRenderContext<'_>,
         group: &citum_schema::template::TemplateGroup,
         tracker: &mut TemplateComponentTracker,
-    ) -> Option<Vec<String>>
+    ) -> Option<(Vec<String>, bool)>
     where
         F: crate::render::format::OutputFormat<Output = String>,
     {
         let mut has_meaningful_content = false;
+        let mut has_citation_number_label = false;
         let mut values = Vec::with_capacity(group.group.len());
 
         for item in &group.group {
@@ -1285,13 +1296,18 @@ impl Renderer<'_> {
             if rendered_str.trim().is_empty() {
                 continue;
             }
-            if !is_term_only_component(item) {
+            if is_citation_number_component(item) {
+                has_citation_number_label = true;
+            } else if !is_term_only_component(item) {
                 has_meaningful_content = true;
             }
             values.push(rendered_str);
         }
 
-        (has_meaningful_content && !values.is_empty()).then_some(values)
+        if values.is_empty() || !(has_meaningful_content || has_citation_number_label) {
+            return None;
+        }
+        Some((values, !has_meaningful_content && has_citation_number_label))
     }
 
     fn apply_issued_no_date_fallback(

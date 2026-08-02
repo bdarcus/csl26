@@ -167,6 +167,62 @@ pub fn render_entry_body_with_format<F: OutputFormat<Output = String>>(
     render_entry_body_components_with_format::<F>(&entry.template)
 }
 
+/// Append `rendered` to `entry_output`, either via the normal separator logic
+/// or, when `suppress` is set, as a raw append with no separator at all.
+///
+/// `suppress` is set when the *previous* flush was a bare bibliography
+/// numeric label (`ProcTemplateComponent::label_only`) — see its docs for
+/// why such a label must never engage normal inter-component separator
+/// logic with whatever comes next.
+#[allow(
+    clippy::too_many_arguments,
+    reason = "threads shared per-entry punctuation state"
+)]
+fn append_or_suppress<F: OutputFormat<Output = String>>(
+    entry_output: &mut String,
+    rendered: &str,
+    suppress: bool,
+    default_separator: &RealizedPunctuation<'_>,
+    punctuation_in_quote: bool,
+    strong_terminal_comma_policy: citum_schema::options::StrongTerminalCommaPolicy,
+    close_quote: &str,
+) {
+    if suppress {
+        entry_output.push_str(rendered);
+    } else {
+        append_rendered_component::<F>(
+            entry_output,
+            rendered,
+            default_separator,
+            punctuation_in_quote,
+            strong_terminal_comma_policy,
+            close_quote,
+        );
+    }
+}
+
+/// Re-render `last_component` with its own suffix (and any wrap inner-suffix)
+/// stripped, when trailing template components after it were all empty — a
+/// component's suffix implies "there is more to come," which stops being
+/// true once nothing after it actually rendered.
+fn trim_trailing_only_suffix<F: OutputFormat<Output = String>>(
+    last_component: &ProcTemplateComponent,
+    rendered: String,
+    is_truly_last: bool,
+) -> String {
+    if is_truly_last {
+        return rendered;
+    }
+    let mut trimmed_component = last_component.clone();
+    let rendering = trimmed_component.template_component.rendering_mut();
+    rendering.suffix = None;
+    if let Some(ref mut wrap_config) = rendering.wrap {
+        wrap_config.inner_suffix = None;
+    }
+    trimmed_component.suffix = None;
+    render_component_with_format::<F>(&trimmed_component)
+}
+
 /// Render processed bibliography components without outer entry/bibliography wrappers.
 #[must_use]
 pub(crate) fn render_entry_body_components_with_format<F: OutputFormat<Output = String>>(
@@ -205,40 +261,47 @@ pub(crate) fn render_entry_body_components_with_format<F: OutputFormat<Output = 
         PunctuationPosition::Separator,
     );
 
+    // Bibliography numeric labels (`update_label_mode`'s injected
+    // `[label, following]` group with `following` empty, e.g. no author)
+    // render real, non-empty text but must attach directly to whatever
+    // content actually opens the entry — no separator, exactly as if the
+    // label were not there. Tracks whether the item just written to
+    // `entry_output` was such a label, so the *next* flush skips normal
+    // separator logic instead of treating the label as preceding content.
+    let mut suppress_next_separator = false;
+
     for (index, component) in proc_template.iter().enumerate() {
         let rendered = render_component_with_format::<F>(component);
         if rendered.is_empty() {
             continue;
         }
 
-        if let Some((_, _, previous)) = pending_component.replace((index, component, rendered)) {
-            append_rendered_component::<F>(
+        if let Some((_, previous_component, previous)) =
+            pending_component.replace((index, component, rendered))
+        {
+            append_or_suppress::<F>(
                 &mut entry_output,
                 &previous,
+                suppress_next_separator,
                 &default_separator,
                 punctuation_in_quote,
                 strong_terminal_comma_policy,
                 close_quote,
             );
+            suppress_next_separator = previous_component.label_only;
         }
     }
 
     if let Some((last_index, last_component, rendered)) = pending_component {
-        let final_rendered = if last_index + 1 < proc_template.len() {
-            let mut trimmed_component = last_component.clone();
-            let rendering = trimmed_component.template_component.rendering_mut();
-            rendering.suffix = None;
-            if let Some(ref mut wrap_config) = rendering.wrap {
-                wrap_config.inner_suffix = None;
-            }
-            trimmed_component.suffix = None;
-            render_component_with_format::<F>(&trimmed_component)
-        } else {
-            rendered
-        };
-        append_rendered_component::<F>(
+        let final_rendered = trim_trailing_only_suffix::<F>(
+            last_component,
+            rendered,
+            last_index + 1 == proc_template.len(),
+        );
+        append_or_suppress::<F>(
             &mut entry_output,
             &final_rendered,
+            suppress_next_separator,
             &default_separator,
             punctuation_in_quote,
             strong_terminal_comma_policy,
@@ -710,6 +773,7 @@ mod tests {
             quote_marks: Default::default(),
             sentence_initial: false,
             pre_formatted: false,
+            label_only: false,
         };
 
         let c2 = ProcTemplateComponent {
@@ -735,6 +799,7 @@ mod tests {
             quote_marks: Default::default(),
             sentence_initial: false,
             pre_formatted: false,
+            label_only: false,
         };
 
         let entries = vec![ProcEntry {
@@ -744,6 +809,79 @@ mod tests {
         }];
         let result = refs_to_string(entries);
         assert_eq!(result, "Publisher1. Place");
+    }
+
+    #[rstest]
+    #[case::label_only_component_suppresses_the_separator(true, "[15]Title Text")]
+    #[case::ordinary_first_component_keeps_the_separator(false, "[15]. Title Text")]
+    fn given_a_leading_component_when_label_only_flag_varies_then_separator_follows_it(
+        #[case] label_only: bool,
+        #[case] expected: &str,
+    ) {
+        // A bibliography numeric-label component (`update_label_mode`'s
+        // synthetic `[label, following]` group with `following` empty --
+        // e.g. no author) renders real, non-empty text ("[15]") but must
+        // never engage normal separator logic with whatever comes next.
+        // Contrasted against an ordinary component of otherwise identical
+        // shape, which *does* get the normal separator.
+        use citum_schema::options::{BibliographyConfig, Config};
+
+        let config = Config::default();
+        let bibliography_config = BibliographyConfig {
+            separator: Some(". ".into()),
+            entry_suffix: Some(String::new().into()),
+            ..Default::default()
+        };
+
+        let label = ProcTemplateComponent {
+            template_component: TemplateComponent::Number(citum_schema::template::TemplateNumber {
+                number: citum_schema::template::NumberVariable::CitationNumber,
+                rendering: Rendering::default(),
+                ..Default::default()
+            }),
+            template_index: None,
+            value: "[15]".to_string(),
+            prefix: None,
+            suffix: None,
+            ref_type: None,
+            config: Some(config.clone().into()),
+            bibliography_config: Some(bibliography_config.clone().into()),
+            url: None,
+            item_language: None,
+            quote_marks: Default::default(),
+            sentence_initial: false,
+            pre_formatted: true,
+            label_only,
+        };
+
+        let content = ProcTemplateComponent {
+            template_component: TemplateComponent::Title(citum_schema::template::TemplateTitle {
+                title: citum_schema::template::TitleType::Primary,
+                rendering: Rendering::default(),
+                ..Default::default()
+            }),
+            template_index: None,
+            value: "Title Text".to_string(),
+            prefix: None,
+            suffix: None,
+            ref_type: None,
+            config: Some(config.into()),
+            bibliography_config: Some(bibliography_config.into()),
+            url: None,
+            item_language: None,
+            quote_marks: Default::default(),
+            sentence_initial: false,
+            pre_formatted: false,
+            label_only: false,
+        };
+
+        let entries = vec![ProcEntry {
+            id: "id1".to_string(),
+            template: vec![label, content],
+            metadata: crate::render::format::ProcEntryMetadata::default(),
+        }];
+        let result = refs_to_string(entries);
+        assert_eq!(result, expected);
     }
 
     #[test]
@@ -784,6 +922,7 @@ mod tests {
             quote_marks: Default::default(),
             sentence_initial: false,
             pre_formatted: false,
+            label_only: false,
         };
 
         let c2 = ProcTemplateComponent {
@@ -804,6 +943,7 @@ mod tests {
             quote_marks: Default::default(),
             sentence_initial: false,
             pre_formatted: false,
+            label_only: false,
         };
 
         let entries = vec![ProcEntry {
@@ -1038,6 +1178,7 @@ mod tests {
             quote_marks: Default::default(),
             sentence_initial: false,
             pre_formatted: false,
+            label_only: false,
         };
 
         let c2 = ProcTemplateComponent {
@@ -1061,6 +1202,7 @@ mod tests {
             quote_marks: Default::default(),
             sentence_initial: false,
             pre_formatted: false,
+            label_only: false,
         };
 
         let entries = vec![ProcEntry {
@@ -1105,6 +1247,7 @@ mod tests {
             quote_marks: Default::default(),
             sentence_initial: false,
             pre_formatted: false,
+            label_only: false,
         };
 
         let pages = ProcTemplateComponent {
@@ -1125,6 +1268,7 @@ mod tests {
             quote_marks: Default::default(),
             sentence_initial: false,
             pre_formatted: false,
+            label_only: false,
         };
 
         let result = refs_to_string(vec![ProcEntry {
@@ -1178,6 +1322,7 @@ mod tests {
             quote_marks: Default::default(),
             sentence_initial: false,
             pre_formatted: false,
+            label_only: false,
         };
 
         let pages = ProcTemplateComponent {
@@ -1202,6 +1347,7 @@ mod tests {
             quote_marks: Default::default(),
             sentence_initial: false,
             pre_formatted: false,
+            label_only: false,
         };
 
         let doi = ProcTemplateComponent {
@@ -1225,6 +1371,7 @@ mod tests {
             quote_marks: Default::default(),
             sentence_initial: false,
             pre_formatted: false,
+            label_only: false,
         };
 
         let result = refs_to_string_with_format::<Html>(
@@ -1278,6 +1425,7 @@ mod tests {
                 quote_marks: Default::default(),
                 sentence_initial: false,
                 pre_formatted: false,
+                label_only: false,
             }],
             metadata: crate::render::format::ProcEntryMetadata::default(),
         }
