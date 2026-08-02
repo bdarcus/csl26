@@ -20,7 +20,7 @@ members = [
 resolver = "2"
 
 [workspace.package]
-version = "0.78.0"
+version = "0.79.0"
 edition = "2024"
 license = "MIT OR Apache-2.0"
 description = "Citum citation engine — schema, processor, and migration tools"
@@ -111,18 +111,18 @@ ignored = ["csl-legacy", "specta", "multibase"]
 # pin here stays in sync on bump.
 [workspace.dependencies]
 tracing = "0.1"
-citum-edtf = { path = "crates/citum-edtf", version = "0.78.0" }
-citum-resolver-api = { path = "crates/citum-resolver-api", version = "0.78.0" }
-citum-schema-data = { path = "crates/citum-schema-data", version = "0.78.0" }
-citum-schema-style = { path = "crates/citum-schema-style", version = "0.78.0" }
-citum-schema = { path = "crates/citum-schema", version = "0.78.0" }
-csl-legacy = { path = "crates/csl-legacy", version = "0.78.0" }
-citum-engine = { path = "crates/citum-engine", version = "0.78.0" }
-citum-refs = { path = "crates/citum-refs", version = "0.78.0" }
-citum-io = { path = "crates/citum-io", version = "0.78.0" }
-citum-migrate = { path = "crates/citum-migrate", version = "0.78.0" }
-citum_store = { path = "crates/citum_store", version = "0.78.0" }
-citum-server = { path = "crates/citum-server", version = "0.78.0" }
+citum-edtf = { path = "crates/citum-edtf", version = "0.79.0" }
+citum-resolver-api = { path = "crates/citum-resolver-api", version = "0.79.0" }
+citum-schema-data = { path = "crates/citum-schema-data", version = "0.79.0" }
+citum-schema-style = { path = "crates/citum-schema-style", version = "0.79.0" }
+citum-schema = { path = "crates/citum-schema", version = "0.79.0" }
+csl-legacy = { path = "crates/csl-legacy", version = "0.79.0" }
+citum-engine = { path = "crates/citum-engine", version = "0.79.0" }
+citum-refs = { path = "crates/citum-refs", version = "0.79.0" }
+citum-io = { path = "crates/citum-io", version = "0.79.0" }
+citum-migrate = { path = "crates/citum-migrate", version = "0.79.0" }
+citum_store = { path = "crates/citum_store", version = "0.79.0" }
+citum-server = { path = "crates/citum-server", version = "0.79.0" }
 
 [profile.dev]
 debug = 0
