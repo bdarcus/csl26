@@ -9,11 +9,15 @@ tags:
     - fidelity
     - multilingual
 created_at: 2026-07-16T10:56:59Z
-updated_at: 2026-07-23T17:05:29Z
+updated_at: 2026-08-02T14:19:30Z
+parent: csl26-ccdt
 blocking:
     - csl26-dxuo
 blocked_by:
     - csl26-8uxa
+    - csl26-m8la
+    - csl26-yyrs
+    - csl26-o333
 ---
 
 Drive the embedded gb-t-7714-2025-author-date style to 100% fidelity on the upstream corpus and flip its verification-policy benchmark run back to count_toward_fidelity: true with min_pass_rate 1.0. Citation-side behavior (无日期 / n.d. terms, eight ordered clusters) differs from numeric; re-run the cluster triage before tuning.

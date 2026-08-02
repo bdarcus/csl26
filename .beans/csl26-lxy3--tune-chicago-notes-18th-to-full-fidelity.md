@@ -5,11 +5,12 @@ status: todo
 type: task
 priority: high
 created_at: 2026-06-30T18:46:08Z
-updated_at: 2026-06-30T18:55:24Z
+updated_at: 2026-08-02T14:19:30Z
 parent: csl26-h7oc
 blocked_by:
     - csl26-ucg3
     - csl26-shco
+    - csl26-2nv1
 ---
 
 Tune `chicago-notes-18th` to 100% fidelity + clean SQI via the `style-tune`

@@ -5,8 +5,11 @@ status: in-progress
 type: task
 priority: high
 created_at: 2026-06-30T18:46:08Z
-updated_at: 2026-07-31T16:29:00Z
+updated_at: 2026-08-02T14:19:30Z
 parent: csl26-h7oc
+blocked_by:
+    - csl26-t0m4
+    - csl26-4q7v
 ---
 
 Tune `chicago-author-date-18th` to 100% fidelity + clean SQI via the

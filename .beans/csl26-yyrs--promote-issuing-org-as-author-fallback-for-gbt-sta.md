@@ -8,7 +8,8 @@ tags:
     - fidelity
     - style
 created_at: 2026-07-23T17:06:02Z
-updated_at: 2026-07-23T17:06:50Z
+updated_at: 2026-08-02T14:19:29Z
+parent: csl26-ccdt
 ---
 
 GB/T 7714-2025 author-date's `standard` reference type: oracle promotes the issuing committee/organization into the author slot (e.g. `全国信息与文献标准化技术委员会，2021. GB/T 3792—2021 ...`) when no personal author exists. Citum's `standard` type-variant has no path to promote an org/publisher-shaped field into the author position, so it falls through to the `佚名` anonymous fallback instead, dropping the org name entirely.

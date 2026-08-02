@@ -1,7 +1,7 @@
 ---
 # csl26-5okt
 title: Preserve bibliography item IDs in CSL oracle snapshots
-status: todo
+status: completed
 type: bug
 priority: high
 tags:
@@ -9,8 +9,8 @@ tags:
     - snapshots
     - fidelity
 created_at: 2026-07-28T13:46:03Z
-updated_at: 2026-07-28T13:46:03Z
-parent: csl26-zik7
+updated_at: 2026-08-02T15:01:57Z
+parent: csl26-6th8
 blocking:
     - csl26-6th8
 ---

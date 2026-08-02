@@ -8,7 +8,8 @@ tags:
     - style
     - fidelity
 created_at: 2026-07-23T17:06:18Z
-updated_at: 2026-07-23T17:06:50Z
+updated_at: 2026-08-02T14:19:29Z
+parent: csl26-ccdt
 ---
 
 Small cluster of unresolved GB/T 7714-2025 author-date rendering gaps against the upstream corpus (tests/fixtures/test-items-library/gb-t-7714-2025.json, --scope bibliography), triaged in csl26-6eak's 2026-07-23 session but not attempted (low item count, distinct root causes from the main disambiguation work):

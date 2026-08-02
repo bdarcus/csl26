@@ -32,9 +32,12 @@ const {
   parseComponents,
   analyzeOrdering,
   findRefDataForEntry,
-  textSimilarity,
 } = require('./oracle-utils');
-const { renderWithCitumProcessor, bibliographyComparisonMatches } = require('./oracle');
+const {
+  renderWithCitumProcessor,
+  bibliographyComparisonMatches,
+  matchBibliographyEntries: matchLiveBibliographyEntries,
+} = require('./oracle');
 const { attachRegisteredDivergenceAdjustments } = require('./lib/oracle-divergences');
 
 const PROJECT_ROOT = path.resolve(__dirname, '..');
@@ -61,6 +64,8 @@ function parseArgs() {
     verbose: false,
     caseSensitive: true,
     allFeatures: false,
+    citumBin: null,
+    locale: null,
     refsFixture: DEFAULT_REFS_FIXTURE,
     citationsFixture: DEFAULT_CITATIONS_FIXTURE,
   };
@@ -71,6 +76,8 @@ function parseArgs() {
     else if (a === '--case-sensitive') opts.caseSensitive = true;
     else if (a === '--case-insensitive') opts.caseSensitive = false;
     else if (a === '--all-features') opts.allFeatures = true;
+    else if (a === '--citum-bin') opts.citumBin = path.resolve(args[++i]);
+    else if (a === '--locale') opts.locale = args[++i];
     else if (a === '--refs-fixture') opts.refsFixture = path.resolve(args[++i]);
     else if (a === '--citations-fixture') opts.citationsFixture = path.resolve(args[++i]);
     else if (!a.startsWith('--') && !opts.stylePath) opts.stylePath = path.resolve(a);
@@ -176,59 +183,23 @@ function equivalentCitationText(oracleText, citumText, citationId, options = {})
 }
 
 /**
- * Pair bibliography entries by text similarity (greedy best-match).
+ * Pair bibliography entries by ID when both outputs have complete IDs.
+ * Falls back to the live oracle's neutral similarity matcher otherwise.
  */
-function matchBibliographyEntries(oracleBib, citumBib) {
-  const pairs = [];
-  const usedO = new Set();
-  const usedC = new Set();
-  const candidates = [];
+function matchBibliographyEntries(oracleBib, citumBib, oracleIds = null, citumIds = null) {
+  const hasCompleteIds = (entries, ids) =>
+    Array.isArray(ids) &&
+    ids.length === entries.length &&
+    ids.every((id) => id !== null && id !== undefined && id !== '') &&
+    new Set(ids).size === ids.length;
+  const useIds = hasCompleteIds(oracleBib, oracleIds) && hasCompleteIds(citumBib, citumIds);
 
-  for (let oi = 0; oi < oracleBib.length; oi++) {
-    for (let ci = 0; ci < citumBib.length; ci++) {
-      const score = textSimilarity(oracleBib[oi], citumBib[ci]);
-      if (score >= 0.20) candidates.push({ oi, ci, score });
-    }
-  }
-  candidates.sort((a, b) => b.score - a.score);
-  for (const c of candidates) {
-    if (usedO.has(c.oi) || usedC.has(c.ci)) continue;
-    usedO.add(c.oi);
-    usedC.add(c.ci);
-    pairs.push({
-      oracle: oracleBib[c.oi],
-      citum: citumBib[c.ci],
-      score: c.score,
-      pairingMethod: 'similarity',
-      comparisonState: 'paired',
-      compatibilityEligible: true,
-    });
-  }
-  for (let oi = 0; oi < oracleBib.length; oi++) {
-    if (!usedO.has(oi)) {
-      pairs.push({
-        oracle: oracleBib[oi],
-        citum: null,
-        score: 0,
-        pairingMethod: 'similarity',
-        comparisonState: 'unresolved-unpaired',
-        compatibilityEligible: false,
-      });
-    }
-  }
-  for (let ci = 0; ci < citumBib.length; ci++) {
-    if (!usedC.has(ci)) {
-      pairs.push({
-        oracle: null,
-        citum: citumBib[ci],
-        score: 0,
-        pairingMethod: 'similarity',
-        comparisonState: 'unresolved-unpaired',
-        compatibilityEligible: false,
-      });
-    }
-  }
-  return pairs;
+  return matchLiveBibliographyEntries(
+    oracleBib,
+    citumBib,
+    useIds ? oracleIds : [],
+    useIds ? citumIds : []
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -287,7 +258,12 @@ function run() {
   const styleName = path.basename(opts.stylePath, '.csl');
 
   // 4. Diff
-  const pairs = matchBibliographyEntries(snapshot.bibliography, citum.bibliography);
+  const pairs = matchBibliographyEntries(
+    snapshot.bibliography,
+    citum.bibliography,
+    snapshot.bibliography_ids,
+    citum.bibliographyIds
+  );
 
   const rawResults = {
     style: styleName,
@@ -334,6 +310,7 @@ function run() {
     const pair = pairs[i];
     const entryResult = {
       index: i + 1,
+      id: pair.id || null,
       oracle: pair.oracle ? normalizeText(pair.oracle) : null,
       citum: pair.citum ? normalizeText(pair.citum) : null,
       rawOracle: pair.oracle ?? null,
@@ -354,9 +331,21 @@ function run() {
     };
 
     if (!pair.oracle) {
-      entryResult.issues.push({ issue: 'unpaired_output', detail: 'Similarity pairing found no benchmark counterpart' });
+      if (pair.compatibilityEligible) {
+        entryResult.issues.push({ issue: 'extra_entry', detail: 'ID-proven entry in Citum but not oracle' });
+        rawResults.bibliography.total++;
+        rawResults.bibliography.failed++;
+      } else {
+        entryResult.issues.push({ issue: 'unpaired_output', detail: 'Similarity pairing found no benchmark counterpart' });
+      }
     } else if (!pair.citum) {
-      entryResult.issues.push({ issue: 'unpaired_output', detail: 'Similarity pairing found no Citum counterpart' });
+      if (pair.compatibilityEligible) {
+        entryResult.issues.push({ issue: 'missing_entry', detail: 'ID-proven entry in oracle but not Citum' });
+        rawResults.bibliography.total++;
+        rawResults.bibliography.failed++;
+      } else {
+        entryResult.issues.push({ issue: 'unpaired_output', detail: 'Similarity pairing found no Citum counterpart' });
+      }
     } else {
       rawResults.bibliography.total++;
       const comparison = compareText(pair.oracle, pair.citum, {
@@ -376,7 +365,9 @@ function run() {
         rawResults.bibliography.passed++;
       } else {
         rawResults.bibliography.failed++;
-        const refData = findRefDataForEntry(pair.oracle, testItems);
+        const refData = pair.id
+          ? testItems[pair.id]
+          : findRefDataForEntry(pair.oracle, testItems);
         if (refData) {
           const oComp = parseComponents(pair.oracle, refData);
           const cComp = parseComponents(pair.citum, refData);

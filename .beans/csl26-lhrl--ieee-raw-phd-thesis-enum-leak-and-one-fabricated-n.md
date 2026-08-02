@@ -8,7 +8,8 @@ tags:
     - style
     - fidelity
 created_at: 2026-08-02T00:09:51Z
-updated_at: 2026-08-02T13:16:50Z
+updated_at: 2026-08-02T14:19:29Z
+parent: csl26-ccdt
 ---
 
 Two small, unrelated ieee bugs, neither investigated yet:

@@ -25,7 +25,8 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const yaml = require('js-yaml');
-const { execSync } = require('child_process');
+const { execFileSync, execSync } = require('child_process');
+const { bibliographyIdsForRenderedRows } = require('./lib/citeproc-bibliography');
 const {
   compareText,
   normalizeText,
@@ -71,6 +72,7 @@ function parseArgs() {
     forceMigrate: false,
     caseSensitive: true,
     allFeatures: false,
+    citumBin: null,
     scope: 'both',
     locale: null,
     migrate: {
@@ -92,6 +94,8 @@ function parseArgs() {
       options.caseSensitive = false;
     } else if (arg === '--all-features') {
       options.allFeatures = true;
+    } else if (arg === '--citum-bin') {
+      options.citumBin = path.resolve(args[++i]);
     } else if (arg === '--force-migrate') {
       options.forceMigrate = true;
     } else if (arg === '--refs-fixture') {
@@ -320,7 +324,7 @@ function renderWithCiteprocJs(stylePath, testItems, testCitations, options = {})
 
   const bibResult = citeproc.makeBibliography();
   const bibliography = bibResult ? bibResult[1] : [];
-  const bibliographyIds = bibResult?.[0]?.entry_ids?.map((ids) => ids[0]) || [];
+  const bibliographyIds = bibliographyIdsForRenderedRows(bibResult?.[0], bibliography);
 
   return { citations, bibliography, bibliographyIds };
 }
@@ -547,23 +551,35 @@ function renderWithCitumProcessor(stylePath, refsData, testItems, testCitations,
 
     let output;
     try {
-      const renderParts = [
-        'cargo run -q --bin citum' + (cliOptions.allFeatures ? ' --all-features' : '') + ' -- render refs',
-        `-b "${workspace.refsFile}"`,
-        `-s "${citumStylePath}"`,
+      const renderArgs = [
+        'render', 'refs',
+        '-b', workspace.refsFile,
+        '-s', citumStylePath,
       ];
       if (!bibliographyOnly) {
-        renderParts.push(`-c "${workspace.citationsFile}"`);
+        renderArgs.push('-c', workspace.citationsFile);
       }
-      renderParts.push(`--mode ${bibliographyOnly ? 'bib' : 'both'}`);
-      renderParts.push('--show-keys');
+      renderArgs.push('--mode', bibliographyOnly ? 'bib' : 'both');
+      renderArgs.push('--show-keys');
       if (cliOptions.locale) {
-        renderParts.push(`--locale "${cliOptions.locale}"`);
+        renderArgs.push('--locale', cliOptions.locale);
       }
-      output = execSync(
-        renderParts.join(' '),
-        { cwd: projectRoot, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }
-      );
+      if (cliOptions.citumBin) {
+        output = execFileSync(cliOptions.citumBin, renderArgs, {
+          cwd: projectRoot,
+          encoding: 'utf8',
+          stdio: ['pipe', 'pipe', 'pipe'],
+        });
+      } else {
+        const cargoArgs = ['run', '-q', '--bin', 'citum'];
+        if (cliOptions.allFeatures) cargoArgs.push('--all-features');
+        cargoArgs.push('--', ...renderArgs);
+        output = execFileSync(
+          'cargo',
+          cargoArgs,
+          { cwd: projectRoot, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }
+        );
+      }
     } catch (e) {
       const errorMsg = e.stderr ? e.stderr.toString() : e.message;
       return { error: `Processor failed: ${errorMsg}`, citations: { passed: 0, total: 0 }, bibliography: { passed: 0, total: 0 } };

@@ -1,7 +1,7 @@
 {
-  "version": 1,
+  "version": 2,
   "generated_by": "citeproc-js@2.4.63",
-  "generated_at": "2026-06-18T12:18:09.237Z",
+  "generated_at": "2026-08-02T14:41:38.122Z",
   "style": "thomson-reuters-legal-tax-and-accounting-australia",
   "fixture_hash": "50dd15d3b173e87a",
   "csl_hash": "6b541a929668feaf",
@@ -41,5 +41,6 @@
     "note-disambiguate-add-names-et-al": "Smith J, Lee A, Kumar P and Zhou M, “Adaptive Climate Risk Modeling in Coastal Cities” (2021) 12 Journal of Climate Analytics 101; Smith J, Lee A, Nguyen B and Patel R, “Adaptive Climate Risk Modeling for Inland Regions” (2021) 12 Journal of Climate Analytics 201.",
     "note-disambiguate-year-suffix": "Garcia M, “Methods for Robust Climate Attribution” (2019) 4 Annual Review of Climate Science 55; Garcia M, “Methods for Probabilistic Climate Attribution” (2019) 4 Annual Review of Climate Science 81."
   },
-  "bibliography": []
+  "bibliography": [],
+  "bibliography_ids": []
 }

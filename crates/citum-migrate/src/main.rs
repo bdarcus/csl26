@@ -44,9 +44,15 @@ use std::{fs, path::Path};
 #[global_allocator]
 static ALLOC: dhat::Alloc = dhat::Alloc;
 
+#[cfg(feature = "dhat-heap")]
+fn heap_profiling_requested(value: Option<&std::ffi::OsStr>) -> bool {
+    value.is_some()
+}
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     #[cfg(feature = "dhat-heap")]
-    let _profiler = dhat::Profiler::new_heap();
+    let _profiler = heap_profiling_requested(std::env::var_os("CITUM_DHAT_HEAP").as_deref())
+        .then(dhat::Profiler::new_heap);
 
     let cli = Args::parse();
     let path = &cli.path;
@@ -149,6 +155,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     output_style_and_debug(&style, cli.debug_variable.as_deref(), &tracker)?;
     Ok(())
+}
+
+#[cfg(all(test, feature = "dhat-heap"))]
+mod tests {
+    use super::heap_profiling_requested;
+    use std::ffi::OsStr;
+
+    #[test]
+    fn heap_profiling_requires_explicit_environment_opt_in() {
+        assert!(!heap_profiling_requested(None));
+        assert!(heap_profiling_requested(Some(OsStr::new("1"))));
+    }
 }
 
 fn migration_diagnostics(

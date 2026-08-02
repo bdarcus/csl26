@@ -9,12 +9,13 @@ tags:
     - fidelity
     - research
 created_at: 2026-08-02T12:34:31Z
-updated_at: 2026-08-02T13:15:49Z
+updated_at: 2026-08-02T14:19:15Z
 parent: csl26-ccdt
 ---
 
-Check the 37% "unclassified" bucket from the 2026-07-30 parity audit (925 of 2,501 mismatches) for more bugs shaped like the one this wave just fixed in ieee: a bibliography number wrongly treated as real content, causing a stray separator before the next field.
+Check only the non-Chicago portion of the Z-unclassified residual bucket from the 2026-07-30 taxonomy for additional shared engine bugs shaped like the IEEE label_only defect. Chicago residuals remain under csl26-40n4 and are excluded here.
 
-- That bug was tagged "unclassified" because it didn't match any known defect pattern -- there may be more like it hiding the same way.
-- Run the oracle-parity report, filter to unclassified mismatches, sample a chunk by hand for the same signature (stray punctuation right after a bibliography number).
-- Investigation only -- file a new bean for anything found, don't fix inline.
+- Sample by normalized diff signature rather than arbitrary row order.
+- Record the number of affected rows and embedded styles for every root cause found.
+- Investigation only: update or file bounded implementation beans; do not fix unrelated findings inline.
+- Finish when sampled signatures are assigned to known causes or explicit follow-up beans, not with another narrative audit.

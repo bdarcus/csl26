@@ -108,12 +108,8 @@ jobs:
       - name: Check core fidelity and SQI drift
         run: |
           if [ "${{ steps.fidelity-scope.outputs.mode }}" = "selected" ]; then
-            # --parallelism 1: default concurrency has produced non-deterministic
-            # per-style snapshot-oracle failures (exit 2) yielding partial
-            # exactParity totals; pin for a reproducible gate.
             node scripts/report-core.js \
               --all-features \
-              --parallelism 1 \
               --styles "${{ steps.fidelity-scope.outputs.styles }}" \
               > /tmp/core-report.json
           node <<'NODE'
@@ -194,7 +190,7 @@ jobs:
           }
           NODE
           else
-            node scripts/report-core.js --all-features --parallelism 1 > /tmp/core-report.json
+            node scripts/report-core.js --all-features > /tmp/core-report.json
             node scripts/check-core-quality.js \
               --report /tmp/core-report.json \
               --baseline scripts/report-data/core-quality-baseline.json \
