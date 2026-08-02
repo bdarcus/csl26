@@ -5,7 +5,7 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-07-30T14:28:57Z
-updated_at: 2026-07-30T15:50:31Z
+updated_at: 2026-08-02T12:28:42Z
 parent: csl26-arly
 ---
 
@@ -37,3 +37,15 @@ Mechanized the same transform via a small text-based Python script (finds the ty
 - nature: fidelity 0.966 (unchanged), citations/bibliography unchanged, **exactParity unchanged at 40/149 (26.8%)** despite the fix working correctly (direct render confirms every entry now carries its number, byte-identical to oracle on that boundary). Nearly all of nature's 101 originally-attributed 'class A' mismatches are actually COMPOUND defects -- number missing AND a second, independent defect (name-list '&' vs ',' conjunction, container-title trailing punctuation) on the same entry. Fixing only the number doesn't flip these to exact match. This means the original taxonomy's per-class counts overstate what a single-class fix buys when defects co-occur -- worth remembering for future wave planning.
 
 All three: citum check OK, node --test scripts/oracle.test.js 53/53 passing, no .rs touched.
+
+## Follow-up verification (2026-08-02, from csl26-unyu's ieee tuning wave)
+
+Checked whether the ieee wave's engine fix (`ProcTemplateComponent.label_only`, commit `12865760` on `style/ieee-exact-parity-wave`) retroactively improved these four styles for free, since they use the identical `delimiter: "" + group: [number: citation-number, <first component>]` pattern hand-authored here, and this bean's own summary notes "no .rs touched" -- meaning the engine-level separator bug this session found and fixed was never addressed for these styles.
+
+Result, one style at a time via `node scripts/report-core.js --style <name> --all-features --json`:
+- **american-medical-association (embedded-core, gated): 48/67 -> 49/67. Confirmed free win** -- verified against the checked-in `scripts/report-data/embedded-parity-baseline.json` (48/67), not just this bean's recorded number, so the +1 is cleanly attributable to the engine fix and nothing else touched this code path since.
+- american-medical-association-alphabetical (exemplar): passed count unchanged (33), but total shifted 67 -> 65 -- unrelated fixture/pairing drift, not a parity change, not investigated further here.
+- nature (exemplar): unchanged, 40/149. Consistent with this bean's own note that nature's remaining defects are compound (number-fix alone doesn't flip entries that also carry a second, independent defect).
+- american-chemical-society (exemplar): unchanged, 30/82.
+
+Not reopening this bean (its own scope is complete); recording here since the improvement is a direct consequence of work this bean did, surfaced by unrelated follow-up work rather than anything further needed here.
