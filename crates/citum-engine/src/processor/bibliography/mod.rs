@@ -391,6 +391,9 @@ impl Processor {
     where
         F: OutputFormat<Output = String>,
     {
+        if self.style.bibliography.is_none() {
+            return ProcessedReferences::default();
+        }
         let sorted_refs = self.sort_references(self.bibliography.values().collect());
         let bibliography = self.process_sorted_refs::<_, F>(sorted_refs.iter().copied(), run);
         ProcessedReferences {
@@ -416,6 +419,9 @@ impl Processor {
         F: OutputFormat<Output = String>,
         I: IntoIterator<Item = String>,
     {
+        if self.style.bibliography.is_none() {
+            return ProcessedReferences::default();
+        }
         let selected: HashSet<String> = item_ids.into_iter().collect();
         let sorted_refs = self.sort_references(self.bibliography.values().collect());
         let bibliography = self.process_sorted_refs::<_, F>(
@@ -438,6 +444,7 @@ impl Processor {
         entry_number: usize,
         run: &FinalizedRun,
     ) -> Option<ProcTemplate> {
+        self.style.bibliography.as_ref()?;
         self.with_bibliography_renderer(run, |renderer| {
             renderer.process_bibliography_entry(reference, entry_number)
         })
@@ -453,6 +460,7 @@ impl Processor {
     where
         F: OutputFormat<Output = String>,
     {
+        self.style.bibliography.as_ref()?;
         self.with_bibliography_renderer(run, |renderer| {
             renderer.process_bibliography_entry_with_format::<F>(reference, entry_number)
         })
@@ -525,6 +533,9 @@ impl Processor {
         F: OutputFormat<Output = String>,
         I: IntoIterator<Item = String>,
     {
+        if self.style.bibliography.is_none() {
+            return String::new();
+        }
         let selected: HashSet<String> = item_ids.into_iter().collect();
 
         // 1. Check for custom bibliography groups

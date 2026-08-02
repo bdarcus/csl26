@@ -281,7 +281,7 @@ test('buildNoteStyleLookup indexes shipped note styles', () => {
 
   assert.equal(noteStyles.has('chicago-notes-18th'), true);
   assert.equal(noteStyles.get('chicago-notes-18th').style.options.processing, 'note');
-  assert.equal(Boolean(noteStyles.get('chicago-notes-18th').style.bibliography), true);
+  assert.equal(Object.hasOwn(noteStyles.get('chicago-notes-18th').style, 'bibliography'), false);
   assert.equal(noteStyles.has('apa-7th'), false);
 });
 

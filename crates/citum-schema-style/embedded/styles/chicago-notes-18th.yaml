@@ -727,5 +727,3 @@ citation:
     prefix: ", https://doi.org/"
   suffix: .
   multi-cite-delimiter: "; "
-bibliography:
-  template: []
