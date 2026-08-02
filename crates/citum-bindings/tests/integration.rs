@@ -20,9 +20,12 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus and Citum contributors
 ///
 /// These tests verify the public API using minimal inline fixtures that match
 /// the expected caller contract (clean JSON, no metadata keys).
-use citum_bindings::{render_bibliography, render_citation, validate_style};
+use citum_bindings::{materialize_style, render_bibliography, render_citation, validate_style};
+use citum_schema::Style;
 
 const STYLE_YAML: &str = include_str!("../../../styles/embedded/apa-7th.yaml");
+const CITATION_ONLY_STYLE_YAML: &str =
+    include_str!("../../../styles/embedded/chicago-notes-18th.yaml");
 
 /// Minimal bibliography with one book reference (Citum-native JSON format).
 const REFS_JSON: &str = r#"{
@@ -50,6 +53,24 @@ fn render_bibliography_returns_string() {
     let result = render_bibliography(STYLE_YAML, REFS_JSON);
     assert!(result.is_ok(), "render_bibliography failed: {result:?}");
     assert!(!result.unwrap().is_empty());
+}
+
+#[test]
+fn render_bibliography_without_a_resolved_spec_returns_an_empty_string() {
+    let result = render_bibliography(CITATION_ONLY_STYLE_YAML, REFS_JSON)
+        .expect("citation-only style should remain valid for bibliography calls");
+
+    assert_eq!(result, "");
+}
+
+#[test]
+fn materialize_style_preserves_an_absent_bibliography() {
+    let materialized = materialize_style(CITATION_ONLY_STYLE_YAML)
+        .expect("citation-only style should materialize");
+    let style = Style::from_yaml_str(&materialized)
+        .expect("materialized citation-only style should remain valid");
+
+    assert!(style.bibliography.is_none());
 }
 
 #[test]

@@ -123,10 +123,12 @@ fn parse_references(refs_json: &str) -> Result<IndexMap<String, Reference>, Stri
     Ok(mapped)
 }
 
-/// Ensure a style has materialized templates suitable for preview rendering.
+/// Ensure a style has a materialized citation template suitable for preview rendering.
 ///
-/// Forces a locator into the citation template if missing, and materializes
-/// bibliography templates from template extensions when needed.
+/// Supplies the APA citation preset when the citation section is absent and
+/// forces a locator into the citation template when missing. An absent
+/// bibliography remains absent so citation-only styles keep their authored
+/// contract.
 pub fn ensure_style_has_templates(style: &mut Style) {
     if style.citation.is_none() {
         style.citation = Some(CitationSpec {
@@ -155,13 +157,6 @@ pub fn ensure_style_has_templates(style: &mut Style) {
             citation.template = Some(template);
             citation.template_ref = None;
         }
-    }
-
-    if style.bibliography.is_none() {
-        style.bibliography = Some(citum_schema::BibliographySpec {
-            template_ref: Some(TemplatePreset::Apa.into()),
-            ..Default::default()
-        });
     }
 }
 

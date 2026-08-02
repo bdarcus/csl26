@@ -25,7 +25,7 @@ use citum_engine::processor::document::{
 };
 use citum_io::load_bibliography;
 use citum_schema::{
-    BibliographySpec, Locale, Style, StyleInfo,
+    BibliographySpec, CitationSpec, Locale, Style, StyleInfo,
     options::{
         BibliographyOptions, BibliographyPartitionKind, BibliographyPartitionMode,
         BibliographySortPartitioning, Config, Disambiguation, LocatorPreset,
@@ -808,6 +808,53 @@ fn given_chicago_note_flow_document_when_no_bibliography_entries_are_needed_then
     );
 }
 
+fn given_a_style_without_a_bibliography_when_rendering_a_document_then_citations_remain_and_bibliography_output_is_empty()
+ {
+    let style = Style {
+        info: StyleInfo {
+            title: Some("Citation-only test style".to_string()),
+            id: Some("citation-only-test".into()),
+            ..Default::default()
+        },
+        options: Some(Config {
+            processing: Some(Processing::Numeric),
+            ..Default::default()
+        }),
+        citation: Some(CitationSpec {
+            template: Some(vec![citum_schema::tc_number!(CitationNumber)]),
+            wrap: Some(citum_schema::template::WrapPunctuation::Brackets.into()),
+            ..Default::default()
+        }),
+        bibliography: None,
+        ..Default::default()
+    };
+    let mut bibliography = indexmap::IndexMap::new();
+    bibliography.insert(
+        "kuhn1962".to_string(),
+        make_book(
+            "kuhn1962",
+            "Kuhn",
+            "Thomas S.",
+            1962,
+            "The Structure of Scientific Revolutions",
+        ),
+    );
+    let processor = Processor::new(style, bibliography);
+    let parser = DjotParser;
+
+    let output = processor
+        .process_document::<_, citum_engine::render::plain::PlainText>(
+            "A claim [@kuhn1962].",
+            &parser,
+            DocumentFormat::Plain,
+        )
+        .expect("citation-only document should render");
+
+    assert_eq!(output.trim(), "A claim [1].");
+    assert_eq!(processor.render_bibliography(), "");
+    assert!(processor.process_references().bibliography.is_empty());
+}
+
 fn given_non_note_styles_when_rendering_the_note_flow_example_then_ibid_is_never_emitted() {
     let parser = DjotParser;
     let document = load_example_document("examples/document-citation-flow.djot");
@@ -1261,6 +1308,14 @@ mod note_flow {
             "A note-flow document with no bibliography entries should not emit an empty bibliography heading.",
         );
         super::given_chicago_note_flow_document_when_no_bibliography_entries_are_needed_then_no_heading_is_emitted();
+    }
+
+    #[test]
+    fn citation_only_style_skips_bibliography_output_without_skipping_citations() {
+        announce_behavior(
+            "A resolved style without a bibliography should still render citations while emitting no bibliography entries, content, or heading.",
+        );
+        super::given_a_style_without_a_bibliography_when_rendering_a_document_then_citations_remain_and_bibliography_output_is_empty();
     }
 
     #[test]

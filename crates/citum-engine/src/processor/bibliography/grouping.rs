@@ -591,6 +591,9 @@ impl Processor {
     where
         F: OutputFormat<Output = String>,
     {
+        if self.style.bibliography.is_none() {
+            return String::new();
+        }
         self.render_grouped_bibliography_inner::<F>(false, annotations, annotation_style, run)
     }
 
@@ -657,6 +660,9 @@ impl Processor {
     where
         F: OutputFormat<Output = String>,
     {
+        if self.style.bibliography.is_none() {
+            return super::DocumentBibliography::default();
+        }
         let has_custom_groups = self.effective_custom_groups().is_some();
 
         if has_custom_groups || !run.state().compound_groups.is_empty() {
@@ -1036,6 +1042,9 @@ impl Processor {
     where
         F: OutputFormat<Output = String>,
     {
+        if self.style.bibliography.is_none() {
+            return Vec::new();
+        }
         let spine = self.sorted_id_stubs();
         let mut assigned = std::collections::HashSet::new();
         groups

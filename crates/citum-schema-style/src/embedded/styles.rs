@@ -256,4 +256,46 @@ mod tests {
             );
         }
     }
+
+    #[test]
+    fn chicago_notes_family_adds_a_bibliography_only_in_the_descendant() {
+        let authored = get_embedded_style("chicago-notes-18th")
+            .expect("Chicago notes should be embedded")
+            .expect("Chicago notes should parse");
+        assert!(
+            authored
+                .raw_yaml
+                .as_ref()
+                .and_then(|raw| raw.get("bibliography"))
+                .is_none(),
+            "Chicago notes should omit the optional bibliography section"
+        );
+
+        let resolved = authored.into_resolved();
+        assert!(
+            resolved.citation.is_some(),
+            "Chicago notes should retain its citation grammar"
+        );
+        assert!(
+            resolved.bibliography.is_none(),
+            "Chicago notes should remain bibliography-free after resolution"
+        );
+
+        let with_bibliography = get_embedded_style("chicago-shortened-notes-bibliography-core")
+            .expect("the Chicago notes-with-bibliography core should be embedded")
+            .expect("the Chicago notes-with-bibliography core should parse");
+        assert_eq!(
+            with_bibliography.extends.as_ref().map(StyleReference::key),
+            Some("chicago-notes-18th"),
+            "the bibliography-bearing variant should inherit Chicago notes"
+        );
+        assert!(
+            with_bibliography.bibliography.is_some(),
+            "the descendant should author its bibliography mapping"
+        );
+        assert!(
+            with_bibliography.into_resolved().bibliography.is_some(),
+            "the descendant should retain its bibliography after resolution"
+        );
+    }
 }
