@@ -206,6 +206,9 @@ bibliography:
     - number: pages
     - date: issued
       form: year
+      wrap:
+        punctuation: parentheses
+      prefix: ", "
     - variable: doi
       prefix: ", doi: "
     - variable: url
@@ -230,9 +233,6 @@ bibliography:
     - number: pages
       label-form: short
     patent:
-    - number: citation-number
-      wrap:
-        punctuation: brackets
     - contributor: author
       form: long
       shorten:
@@ -245,6 +245,7 @@ bibliography:
       quote: true
       wrap:
         punctuation: quotes
+    - number: patent-number
     - date: issued
       form: full
     personal_communication:
@@ -320,9 +321,6 @@ bibliography:
     - date: issued
       form: year
     standard:
-    - number: citation-number
-      wrap:
-        punctuation: brackets
     - title: primary
     - variable: standard-number
     - variable: publisher-place

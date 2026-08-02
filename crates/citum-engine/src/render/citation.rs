@@ -243,6 +243,7 @@ mod tests {
                 quote_marks: Default::default(),
                 sentence_initial: false,
                 pre_formatted: false,
+                label_only: false,
             },
             ProcTemplateComponent {
                 template_component: TemplateComponent::Date(TemplateDate {
@@ -263,6 +264,7 @@ mod tests {
                 quote_marks: Default::default(),
                 sentence_initial: false,
                 pre_formatted: false,
+                label_only: false,
             },
         ];
 
@@ -304,6 +306,7 @@ mod tests {
                 quote_marks: Default::default(),
                 sentence_initial: false,
                 pre_formatted: false,
+                label_only: false,
             },
             ProcTemplateComponent {
                 template_component: TemplateComponent::Date(TemplateDate {
@@ -324,6 +327,7 @@ mod tests {
                 quote_marks: Default::default(),
                 sentence_initial: false,
                 pre_formatted: false,
+                label_only: false,
             },
         ];
 
@@ -639,6 +643,7 @@ ENDING IN COMMA
                 quote_marks: Default::default(),
                 sentence_initial: false,
                 pre_formatted: false,
+                label_only: false,
             },
             ProcTemplateComponent {
                 template_component: TemplateComponent::Date(TemplateDate {
@@ -666,6 +671,7 @@ ENDING IN COMMA
                 quote_marks: Default::default(),
                 sentence_initial: false,
                 pre_formatted: false,
+                label_only: false,
             },
         ]
     }
