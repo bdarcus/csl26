@@ -49,8 +49,13 @@ options:
       emph: true
 citation:
   sort: author-date-title
-  template:
-  - number: citation-label
+  options:
+    # The trigraph label is processor-generated; the cluster-level `wrap` below
+    # brackets the whole cluster (`[ABC96, DEF97]`). `label-wrap: none` cancels
+    # the per-label `brackets` inherited from elsevier-with-titles, which would
+    # otherwise double-bracket each label (`[[ABC96], [DEF97]]`).
+    label-mode: alphabetic
+    label-wrap: none
   wrap:
     punctuation: brackets
   delimiter: ''
@@ -65,12 +70,13 @@ bibliography:
       sort-separator: ', '
     entry-suffix: .
     separator: ', '
+    # Overrides the numeric label-mode inherited from elsevier-with-titles-core,
+    # which would otherwise prepend a citation-number to every entry.
+    label-mode: alphabetic
+    label-wrap: brackets
+    label-separator: ' '
   type-variants:
     article-journal:
-    - number: citation-label
-      wrap:
-        punctuation: brackets
-      suffix: ' '
     - contributor: author
       form: long
       name-order: family-first
@@ -87,11 +93,12 @@ bibliography:
       prefix: ' '
     - number: pages
       prefix: ' '
+    # Identical to `template:` below, and STYLE004 flags it as redundant --
+    # but it is not. `all` matches every type and is resolved before the
+    # default template, which is what blocks the type-specific variants
+    # inherited from elsevier-with-titles-core from winning. Removing it
+    # drops oracle bibliography parity from 45/47 to 36/47.
     all:
-    - number: citation-label
-      wrap:
-        punctuation: brackets
-      suffix: ' '
     - contributor: author
       form: long
       name-order: family-first
@@ -106,10 +113,6 @@ bibliography:
     - number: pages
       prefix: ' '
   template:
-  - number: citation-label
-    wrap:
-      punctuation: brackets
-    suffix: ' '
   - contributor: author
     form: long
     name-order: family-first

@@ -75,14 +75,15 @@ bibliography:
     separator: '. '
     # This author-date style extends the numeric Vancouver family
     # (elsevier-vancouver -> elsevier-vancouver-core), which sets
-    # bibliography.options.label-mode: numeric and pre-authors bracketed
-    # `number: citation-number` components directly into several
-    # type-variant/default templates. Left unset, this style inherits both,
-    # leaking a numeric list label (`[2]. `, `33. `) into an author-date
-    # bibliography that should have none -- confirmed via oracle text
-    # parity (class J, 47 mismatches). label-mode: author-date strips any
-    # citation-number/citation-label component from every resolved
-    # bibliography template, whether locally authored or inherited.
+    # bibliography.options.label-mode: numeric, and several inherited
+    # type-variant/default templates still author bracketed
+    # `number: citation-number` components. Left unset, this style inherits
+    # both, leaking a numeric list label (`[2]. `, `33. `) into an
+    # author-date bibliography that should have none -- confirmed via oracle
+    # text parity (class J, 47 mismatches). Unlike `numeric`/`alphabetic`,
+    # which each name one generated label variable, `author-date` names none
+    # and so strips every citation-number/citation-label component from the
+    # resolved bibliography template, locally authored or inherited alike.
     label-mode: author-date
   type-variants:
     article-journal:

@@ -32,8 +32,11 @@ options:
   titles: humanities
 citation:
   sort: author-date-title
+  options:
+    # The trigraph label is processor-generated; the cluster-level `wrap` below
+    # brackets the whole cluster (`[ABC96, DEF97]`), so no `label-wrap` here.
+    label-mode: alphabetic
   template:
-  - number: citation-label
   - variable: locator
     prefix: ', '
   wrap:
@@ -50,12 +53,11 @@ bibliography:
       display-as-sort: all
     entry-suffix: .
     separator: ', '
+    label-mode: alphabetic
+    label-wrap: brackets
+    label-separator: ' '
   type-variants:
     article-journal:
-    - number: citation-label
-      wrap:
-        punctuation: brackets
-      suffix: ' '
     - contributor: author
       form: long
       name-order: family-first
@@ -86,10 +88,6 @@ bibliography:
             number: pages
           label-form: short
   template:
-  - number: citation-label
-    wrap:
-      punctuation: brackets
-    suffix: ' '
   - contributor: author
     form: long
     name-order: family-first
