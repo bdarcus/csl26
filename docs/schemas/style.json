@@ -6610,6 +6610,17 @@
             }
           ]
         },
+        "label-mode": {
+          "description": "Declarative mode for processor-generated numeric citation labels.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CitationLabelMode"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "label-wrap": {
           "description": "Label wrap policy applied to citation labels.",
           "anyOf": [
@@ -6642,6 +6653,21 @@
         }
       },
       "unevaluatedProperties": false
+    },
+    "CitationLabelMode": {
+      "description": "Declarative presentation mode for numeric citation labels.",
+      "oneOf": [
+        {
+          "description": "Do not generate or render numeric citation labels.",
+          "type": "string",
+          "const": "none"
+        },
+        {
+          "description": "Generate numeric citation labels from processor-owned citation numbers.",
+          "type": "string",
+          "const": "numeric"
+        }
+      ]
     },
     "LabelWrap": {
       "description": "Wrapper punctuation supported by citation and bibliography label options.",

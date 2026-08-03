@@ -22,9 +22,10 @@ options:
       use-first: 1
   titles: scientific
 citation:
+  options:
+    label-mode: numeric
+    label-wrap: brackets
   template-ref: numeric-citation
-  wrap:
-    punctuation: brackets
   multi-cite-delimiter: ","
 bibliography:
   options:
@@ -33,6 +34,8 @@ bibliography:
       delimiter-precedes-last: never
     entry-suffix: .
     separator: ". "
+    label-mode: numeric
+    label-wrap: brackets
     compound-numeric:
       collapse-subentries: true
   type-variants:

@@ -31,6 +31,8 @@ options:
   titles: humanities
   punctuation-in-quote: true
 citation:
+  options:
+    label-mode: numeric
   template:
   - delimiter: ""
     wrap:

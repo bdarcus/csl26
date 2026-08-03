@@ -948,7 +948,7 @@ fn ungrouped_chapter_citation_uses_entry_dictionary_variant_alias() {
         processor
             .process_citation(&citation)
             .expect("ungrouped chapter citation should render"),
-        "(Encyclopedia Entry)"
+        "(1, Encyclopedia Entry)"
     );
 }
 

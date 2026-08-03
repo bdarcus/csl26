@@ -5,7 +5,7 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus and Citum contributors
 
 //! Citation number and compound subentry collapsing.
 
-use super::Renderer;
+use super::{CitationChunk, NumericCitationLabel, Renderer};
 use crate::values::range::{ConsecutiveSegment, consecutive_segments};
 #[cfg(test)]
 use std::sync::Arc;
@@ -15,59 +15,57 @@ impl Renderer<'_> {
     ///
     /// Only applies when:
     /// - The chunk contains exactly one reference ID.
-    /// - The chunk content is just the citation number.
+    /// - The chunk is semantically a bare numeric label.
     /// - The citation numbers are consecutive.
     #[allow(clippy::indexing_slicing, reason = "loop-guaranteed indices")]
     pub(super) fn collapse_numeric_citation_chunks(
         &self,
-        chunks: Vec<(Vec<String>, String)>,
-    ) -> Vec<(Vec<String>, String)> {
-        let citation_numbers = self
-            .citation_numbers
-            .read()
-            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        chunks: Vec<CitationChunk>,
+    ) -> Vec<CitationChunk> {
         let mut collapsed = Vec::new();
         let mut i = 0;
 
         while i < chunks.len() {
-            let Some(ref_id) = chunks[i].0.first() else {
+            let Some(_ref_id) = chunks[i].ids.first() else {
                 collapsed.push(chunks[i].clone());
                 i += 1;
                 continue;
             };
-            if chunks[i].0.len() != 1 {
+            if chunks[i].ids.len() != 1 {
                 collapsed.push(chunks[i].clone());
                 i += 1;
                 continue;
             }
-            let Some(&citation_number) = citation_numbers.get(ref_id) else {
+            let Some(label) = chunks[i].numeric_label.as_ref() else {
                 collapsed.push(chunks[i].clone());
                 i += 1;
                 continue;
             };
-            if chunks[i].1 != citation_number.to_string() {
+            if label.sub_label.is_some() {
                 collapsed.push(chunks[i].clone());
                 i += 1;
                 continue;
             }
+            let citation_number = label.number;
 
             let mut j = i;
             let mut block_ids = Vec::new();
             let mut end_number = citation_number;
 
             while j < chunks.len() {
-                let Some(candidate_id) = chunks[j].0.first() else {
+                let Some(candidate_id) = chunks[j].ids.first() else {
                     break;
                 };
-                if chunks[j].0.len() != 1 {
+                if chunks[j].ids.len() != 1 {
                     break;
                 }
-                let Some(&candidate_number) = citation_numbers.get(candidate_id) else {
+                let Some(candidate_label) = chunks[j].numeric_label.as_ref() else {
                     break;
                 };
-                if chunks[j].1 != candidate_number.to_string() {
+                if candidate_label.sub_label.is_some() {
                     break;
                 }
+                let candidate_number = candidate_label.number;
                 if !block_ids.is_empty() && candidate_number != end_number + 1 {
                     break;
                 }
@@ -83,7 +81,15 @@ impl Renderer<'_> {
                 continue;
             }
 
-            collapsed.push((block_ids, format!("{citation_number}–{end_number}")));
+            collapsed.push(CitationChunk {
+                ids: block_ids,
+                content: format!("{citation_number}–{end_number}"),
+                numeric_label: Some(NumericCitationLabel {
+                    number: citation_number,
+                    sub_label: None,
+                }),
+                label_wrap: chunks[i].label_wrap,
+            });
             i = j;
         }
 
@@ -99,8 +105,8 @@ impl Renderer<'_> {
     #[allow(clippy::indexing_slicing, reason = "loop-guaranteed indices")]
     pub(super) fn collapse_compound_citation_chunks(
         &self,
-        chunks: Vec<(Vec<String>, String)>,
-    ) -> Vec<(Vec<String>, String)> {
+        chunks: Vec<CitationChunk>,
+    ) -> Vec<CitationChunk> {
         let Some(compound) = self
             .bibliography_config
             .as_ref()
@@ -116,15 +122,11 @@ impl Renderer<'_> {
             return chunks;
         }
 
-        let citation_numbers = self
-            .citation_numbers
-            .read()
-            .unwrap_or_else(std::sync::PoisonError::into_inner);
         let mut collapsed = Vec::new();
         let mut i = 0;
 
         while i < chunks.len() {
-            let Some(ref_id) = chunks[i].0.first() else {
+            let Some(ref_id) = chunks[i].ids.first() else {
                 collapsed.push(chunks[i].clone());
                 i += 1;
                 continue;
@@ -134,23 +136,27 @@ impl Renderer<'_> {
                 i += 1;
                 continue;
             };
-            let Some(&citation_number) = citation_numbers.get(ref_id) else {
+            let Some(label) = chunks[i].numeric_label.as_ref() else {
                 collapsed.push(chunks[i].clone());
                 i += 1;
                 continue;
             };
+            let citation_number = label.number;
 
             let mut j = i;
             let mut block_ids = Vec::new();
             let mut member_ordinals = Vec::new();
 
             while j < chunks.len() {
-                let Some(candidate_id) = chunks[j].0.first() else {
+                let Some(candidate_id) = chunks[j].ids.first() else {
                     break;
                 };
-                if chunks[j].0.len() != 1
+                if chunks[j].ids.len() != 1
                     || self.compound_set_by_ref.get(candidate_id) != Some(group_id)
-                    || citation_numbers.get(candidate_id).copied() != Some(citation_number)
+                    || chunks[j]
+                        .numeric_label
+                        .as_ref()
+                        .is_none_or(|candidate| candidate.number != citation_number)
                 {
                     break;
                 }
@@ -159,13 +165,10 @@ impl Renderer<'_> {
                 else {
                     break;
                 };
-                let expected = format!(
-                    "{}{}",
-                    citation_number,
-                    self.citation_sub_label_for_ref(candidate_id)
-                        .unwrap_or_default()
-                );
-                if chunks[j].1 != expected {
+                let Some(candidate_label) = chunks[j].numeric_label.as_ref() else {
+                    break;
+                };
+                if candidate_label.sub_label.is_none() {
                     break;
                 }
 
@@ -195,7 +198,15 @@ impl Renderer<'_> {
                 .collect::<Vec<_>>()
                 .join(",");
 
-            collapsed.push((block_ids, format!("{citation_number}{labels}")));
+            collapsed.push(CitationChunk {
+                ids: block_ids,
+                content: format!("{citation_number}{labels}"),
+                numeric_label: Some(NumericCitationLabel {
+                    number: citation_number,
+                    sub_label: Some(labels),
+                }),
+                label_wrap: chunks[i].label_wrap,
+            });
             i = j;
         }
 
@@ -316,7 +327,31 @@ mod tests {
         ];
 
         for (chunks, expected) in cases {
-            assert_eq!(renderer.collapse_numeric_citation_chunks(chunks), expected);
+            let chunks = chunks
+                .into_iter()
+                .map(|(ids, content)| CitationChunk {
+                    numeric_label: ids.first().and_then(|id| {
+                        citation_numbers
+                            .read()
+                            .unwrap()
+                            .get(id)
+                            .copied()
+                            .map(|number| NumericCitationLabel {
+                                number,
+                                sub_label: None,
+                            })
+                    }),
+                    ids,
+                    content,
+                    label_wrap: None,
+                })
+                .collect();
+            let actual = renderer.collapse_numeric_citation_chunks(chunks);
+            let actual = actual
+                .into_iter()
+                .map(|chunk| (chunk.ids, chunk.content))
+                .collect::<Vec<_>>();
+            assert_eq!(actual, expected);
         }
     }
 }

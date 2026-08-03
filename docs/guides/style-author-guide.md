@@ -342,6 +342,7 @@ Use the option block that matches the scope of the behavior:
 |---|---|---|---|
 | `bibliography.options.date-position` | `after-author`, `after-title`, `terminal` | the style should move the year within bibliography entries | `after-author` |
 | `options.contributors` | contributor presets such as `apa`, `chicago`, `springer`, `vancouver` | the style should switch contributor formatting | `springer` |
+| `citation.options.label-mode` | `none`, `numeric` | the style should generate or suppress numeric citation labels | `numeric` |
 | `citation.options.label-wrap` | `none`, `parentheses`, `brackets`, `superscript` | the style should change citation label punctuation | `brackets` |
 | `bibliography.options.label-mode` | `none`, `numeric`, `author-date` | the style should change bibliography label display | `numeric` |
 
@@ -777,17 +778,36 @@ options:
   processing: numeric
 
 citation:
+  options:
+    label-mode: numeric
+    label-wrap: brackets
+  collapse: citation-number
   template:
-    - number: citation-number
-      wrap: brackets
+    - variable: locator
+      prefix: ", "
 
 bibliography:
+  options:
+    label-mode: numeric
+    label-wrap: brackets
   template:
-    - number: citation-number
-      suffix: ". "
     - contributor: author
     - title: primary
-      prefix: " "
+```
+
+For an integral numeric citation, the generated label follows the authored
+narrative content:
+
+```yaml
+citation:
+  options:
+    label-mode: numeric
+    label-wrap: brackets
+  integral:
+    delimiter: " "
+    template:
+      - contributor: author
+        form: short
 ```
 
 ### Example 3: Style Inheritance with Scoped Options

@@ -2422,6 +2422,44 @@ fn test_numeric_integral_citation_author_year() {
     assert_eq!(result, "Kuhn [1]");
 }
 
+/// Verifies the implicit numeric integral fallback honors declarative label wrapping.
+#[test]
+fn test_numeric_integral_citation_label_wrap_override() {
+    use crate::render::html::Html;
+    use citum_schema::citation::CitationMode;
+    use citum_schema::options::{CitationLabelMode, LabelWrap, Processing};
+
+    let mut style = make_style();
+    style.options = Some(Config {
+        processing: Some(Processing::Numeric),
+        ..Default::default()
+    });
+    style.citation.as_mut().unwrap().options = Some(citum_schema::CitationOptions {
+        label_mode: Some(CitationLabelMode::Numeric),
+        label_wrap: Some(LabelWrap::Superscript),
+        ..Default::default()
+    });
+
+    let processor = Processor::new(style, make_bibliography());
+    let citation = Citation {
+        mode: CitationMode::Integral,
+        items: vec![crate::reference::CitationItem {
+            id: "kuhn1962".to_string(),
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+    let mut run = processor.begin_run();
+    let result = processor
+        .process_citation_with_format::<Html>(&citation, &mut run)
+        .unwrap();
+
+    assert_eq!(
+        result,
+        r#"<span class="citum-citation" data-ref="kuhn1962">Kuhn <sup>1</sup></span>"#
+    );
+}
+
 /// Tests the behavior of `test_numeric_non_integral_citation_number`.
 #[test]
 fn test_numeric_non_integral_citation_number() {
@@ -2464,6 +2502,173 @@ fn test_numeric_non_integral_citation_number() {
     let result = processor.process_citation(&citation).unwrap();
     // For numeric+non-integral, expect number format: "[1]"
     assert_eq!(result, "[1]");
+}
+
+/// Verifies an empty numeric citation template receives a runtime label and collapses before wrapping.
+#[test]
+fn test_declarative_numeric_citation_label_collapses_before_wrap() {
+    use citum_schema::citation::CitationMode;
+    use citum_schema::options::{CitationLabelMode, Processing};
+
+    let mut style = make_style();
+    style.options = Some(Config {
+        processing: Some(Processing::Numeric),
+        ..Default::default()
+    });
+    style.citation = Some(citum_schema::CitationSpec {
+        options: Some(citum_schema::CitationOptions {
+            label_mode: Some(CitationLabelMode::Numeric),
+            label_wrap: Some(citum_schema::options::LabelWrap::Brackets),
+            ..Default::default()
+        }),
+        template: Some(Vec::new()),
+        multi_cite_delimiter: Some(",".into()),
+        collapse: Some(citum_schema::CitationCollapse::CitationNumber),
+        ..Default::default()
+    });
+
+    let processor = Processor::new(
+        style,
+        make_numeric_books(&[
+            ("book-1", "Author A", 2001, "Book One"),
+            ("book-2", "Author B", 2002, "Book Two"),
+            ("book-3", "Author C", 2003, "Book Three"),
+        ]),
+    );
+    let citation = Citation {
+        mode: CitationMode::NonIntegral,
+        items: ["book-1", "book-2", "book-3"]
+            .into_iter()
+            .map(|id| crate::reference::CitationItem {
+                id: id.to_string(),
+                ..Default::default()
+            })
+            .collect(),
+        ..Default::default()
+    };
+
+    assert_eq!(processor.process_citation(&citation).unwrap(), "[1–3]");
+}
+
+/// Verifies an explicit `none` mode removes a legacy numeric component at runtime.
+#[test]
+fn test_declarative_numeric_citation_label_none_suppresses_legacy_number() {
+    use citum_schema::options::{CitationLabelMode, Processing};
+
+    let mut style = make_style();
+    style.options = Some(Config {
+        processing: Some(Processing::Numeric),
+        ..Default::default()
+    });
+    style.citation = Some(citum_schema::CitationSpec {
+        options: Some(citum_schema::CitationOptions {
+            label_mode: Some(CitationLabelMode::None),
+            ..Default::default()
+        }),
+        template: Some(vec![TemplateComponent::Number(
+            citum_schema::template::TemplateNumber {
+                number: citum_schema::template::NumberVariable::CitationNumber,
+                ..Default::default()
+            },
+        )]),
+        ..Default::default()
+    });
+
+    let processor = Processor::new(style, make_bibliography());
+    assert_eq!(
+        processor
+            .process_citation(&Citation::simple("kuhn1962"))
+            .unwrap(),
+        ""
+    );
+}
+
+/// Verifies generated labels remain separate from locator content.
+#[test]
+fn test_declarative_numeric_citation_label_with_locator() {
+    use citum_schema::options::{CitationLabelMode, Processing};
+
+    let mut style = make_style();
+    style.options = Some(Config {
+        processing: Some(Processing::Numeric),
+        ..Default::default()
+    });
+    style.citation = Some(citum_schema::CitationSpec {
+        options: Some(citum_schema::CitationOptions {
+            label_mode: Some(CitationLabelMode::Numeric),
+            label_wrap: Some(citum_schema::options::LabelWrap::Brackets),
+            ..Default::default()
+        }),
+        template: Some(vec![TemplateComponent::Variable(
+            citum_schema::template::TemplateVariable {
+                variable: citum_schema::template::SimpleVariable::Locator,
+                rendering: Rendering {
+                    prefix: Some(", ".into()),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+        )]),
+        delimiter: Some("".into()),
+        ..Default::default()
+    });
+
+    let processor = Processor::new(style, make_bibliography());
+    let citation = Citation {
+        items: vec![crate::reference::CitationItem {
+            id: "kuhn1962".to_string(),
+            locator: Some(citum_schema::citation::CitationLocator::single(
+                citum_schema::citation::LocatorType::Page,
+                "23",
+            )),
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+    assert_eq!(processor.process_citation(&citation).unwrap(), "[1], p. 23");
+}
+
+/// Verifies an explicit integral template receives its label after authored content.
+#[test]
+fn test_declarative_numeric_integral_label_follows_authored_content() {
+    use citum_schema::citation::CitationMode;
+    use citum_schema::options::{CitationLabelMode, Processing};
+
+    let mut style = make_style();
+    style.options = Some(Config {
+        processing: Some(Processing::Numeric),
+        ..Default::default()
+    });
+    style.citation = Some(citum_schema::CitationSpec {
+        options: Some(citum_schema::CitationOptions {
+            label_mode: Some(CitationLabelMode::Numeric),
+            label_wrap: Some(citum_schema::options::LabelWrap::Brackets),
+            ..Default::default()
+        }),
+        integral: Some(Box::new(citum_schema::CitationSpec {
+            delimiter: Some(" ".into()),
+            template: Some(vec![TemplateComponent::Contributor(
+                citum_schema::template::TemplateContributor {
+                    contributor: citum_schema::template::ContributorRole::Author.into(),
+                    form: citum_schema::template::ContributorForm::Short,
+                    ..Default::default()
+                },
+            )]),
+            ..Default::default()
+        })),
+        ..Default::default()
+    });
+
+    let processor = Processor::new(style, make_bibliography());
+    let citation = Citation {
+        mode: CitationMode::Integral,
+        items: vec![crate::reference::CitationItem {
+            id: "kuhn1962".to_string(),
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+    assert_eq!(processor.process_citation(&citation).unwrap(), "Kuhn [1]");
 }
 
 /// Verifies adjacent numeric citations collapse into ranges when requested by style.

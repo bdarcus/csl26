@@ -33,6 +33,9 @@ options:
   dates: long
   titles: humanities
 citation:
+  options:
+    label-mode: numeric
+    label-wrap: brackets
   template-ref: numeric-citation
   collapse: citation-number
   multi-cite-delimiter: ","

@@ -54,8 +54,8 @@ pub use processing::{
     SortKey, SortSpec,
 };
 pub use scoped::{
-    BibliographyLabelMode, BibliographyLabelWrap, CitationGroupDelimiter, DatePosition, LabelWrap,
-    RepeatedAuthorRendering, TitleTerminator,
+    BibliographyLabelMode, BibliographyLabelWrap, CitationGroupDelimiter, CitationLabelMode,
+    DatePosition, LabelWrap, RepeatedAuthorRendering, TitleTerminator,
 };
 pub use sorting::{SortingConfig, SortingLocale, SortingMultilingualMode};
 pub use substitute::{
@@ -283,6 +283,9 @@ pub struct CitationOptions {
     /// Organizational name abbreviation expansion policy.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub org_abbreviation_memory: Option<OrgAbbreviationMemoryConfig>,
+    /// Declarative mode for processor-generated numeric citation labels.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub label_mode: Option<CitationLabelMode>,
     /// Label wrap policy applied to citation labels.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub label_wrap: Option<LabelWrap>,
@@ -813,6 +816,7 @@ impl CitationOptions {
             notes,
             integral_name_memory,
             org_abbreviation_memory,
+            label_mode,
             label_wrap,
             group_delimiter,
             custom,
@@ -854,6 +858,8 @@ impl BibliographyOptions {
             suppress_period_after_url: self.suppress_period_after_url,
             entry_suffix_after_url: self.entry_suffix_after_url,
             entry_suffix_after_doi: self.entry_suffix_after_doi,
+            label_mode: self.label_mode,
+            label_wrap: self.label_wrap,
             custom: None,
             compound_numeric: self.compound_numeric.clone(),
             sort_partitioning: self.sort_partitioning.clone(),

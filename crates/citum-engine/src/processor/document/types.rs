@@ -316,9 +316,9 @@ impl DocumentOptionsOverride {
     /// Apply bibliography overrides from this override block to a resolved style.
     ///
     /// Writes non-`None` bibliography fields into `style.bibliography.options`,
-    /// then calls `apply_scoped_options` to propagate changes into the style's
-    /// templates. Locale and integral-name-memory are handled by the pipeline
-    /// and CLI layers respectively.
+    /// then calls `apply_scoped_options` for structural changes. Label mode and
+    /// label wrapping remain runtime bibliography presentation settings. Locale
+    /// and integral-name-memory are handled by the pipeline and CLI layers.
     pub(super) fn apply_bibliography_to(&self, style: &mut Style) {
         if let Some(multilingual) = &self.multilingual
             && let Some(width) = multilingual.punctuation_width

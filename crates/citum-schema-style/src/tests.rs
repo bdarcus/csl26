@@ -1363,9 +1363,15 @@ bibliography:
             .citation
             .as_ref()
             .and_then(|citation| citation.wrap.clone()),
-        Some(template::WrapConfig::from(
-            template::WrapPunctuation::Brackets
-        ))
+        None
+    );
+    assert_eq!(
+        resolved
+            .citation
+            .as_ref()
+            .and_then(|citation| citation.options.as_ref())
+            .and_then(|options| options.label_wrap),
+        Some(options::LabelWrap::Brackets)
     );
     assert_eq!(
         resolved
@@ -1429,35 +1435,18 @@ citation:
     .try_into_resolved()
     .expect("superscript citation wrap should resolve");
 
-    let citation_number_rendering = resolved
-        .citation
-        .as_ref()
-        .and_then(|citation| citation.resolve_template())
-        .and_then(|template| {
-            template.iter().find_map(|component| match component {
-                template::TemplateComponent::Number(number)
-                    if matches!(
-                        number.number,
-                        template::NumberVariable::CitationNumber
-                            | template::NumberVariable::CitationLabel
-                    ) =>
-                {
-                    Some(number.rendering.clone())
-                }
-                _ => None,
-            })
-        })
-        .expect("numeric citation template should include a citation label");
-
     assert_eq!(
-        citation_number_rendering.vertical_align,
-        Some(VerticalAlign::Superscript)
+        resolved
+            .citation
+            .as_ref()
+            .and_then(|citation| citation.options.as_ref())
+            .and_then(|options| options.label_wrap),
+        Some(options::LabelWrap::Superscript)
     );
-    assert_eq!(citation_number_rendering.wrap, None);
 }
 
 #[test]
-fn citation_bracket_label_wrap_keeps_label_component_bare() {
+fn citation_label_wrap_preserves_authored_template() {
     let resolved = Style::from_yaml_str(
         r#"
 citation:
@@ -1475,11 +1464,13 @@ citation:
         .citation
         .as_ref()
         .expect("resolved style should include citation");
+    assert_eq!(citation.wrap, None);
     assert_eq!(
-        citation.wrap,
-        Some(template::WrapConfig::from(
-            template::WrapPunctuation::Brackets
-        ))
+        citation
+            .options
+            .as_ref()
+            .and_then(|options| options.label_wrap),
+        Some(options::LabelWrap::Brackets)
     );
 
     let citation_label_rendering = citation
@@ -1500,7 +1491,62 @@ citation:
 }
 
 #[test]
-fn bibliography_bracket_label_wrap_still_wraps_label_component() {
+fn citation_label_mode_round_trips_and_is_inherited() {
+    let parent = Style::from_yaml_str(
+        r#"
+info: { id: numeric-label-parent, title: Numeric Label Parent }
+options:
+  processing: numeric
+citation:
+  options:
+    label-mode: numeric
+    label-wrap: brackets
+  template: []
+"#,
+    )
+    .unwrap()
+    .try_into_resolved()
+    .expect("numeric citation label mode should resolve");
+    let citation_options = parent
+        .citation
+        .as_ref()
+        .and_then(|citation| citation.options.as_ref())
+        .expect("citation options should be present");
+    assert_eq!(
+        citation_options.label_mode,
+        Some(options::CitationLabelMode::Numeric)
+    );
+    let serialized: serde_yaml::Value = serde_yaml::from_str(
+        &serde_yaml::to_string(&parent).expect("resolved style should serialize"),
+    )
+    .expect("serialized style should remain valid YAML");
+    assert_eq!(
+        serialized["citation"]["options"]["label-mode"].as_str(),
+        Some("numeric")
+    );
+
+    let mut child = parent.clone();
+    child
+        .citation
+        .as_mut()
+        .and_then(|citation| citation.options.as_mut())
+        .expect("citation options should remain present")
+        .label_mode = Some(options::CitationLabelMode::None);
+    let resolved_child = child
+        .try_into_resolved()
+        .expect("explicit none should resolve");
+    assert_eq!(
+        resolved_child
+            .citation
+            .as_ref()
+            .and_then(|citation| citation.options.as_ref())
+            .and_then(|options| options.label_mode),
+        Some(options::CitationLabelMode::None)
+    );
+}
+
+#[test]
+fn bibliography_label_wrap_preserves_authored_template() {
     let resolved = Style::from_yaml_str(
         r#"
 bibliography:
@@ -1530,11 +1576,14 @@ bibliography:
         })
         .expect("bibliography template should include citation-label");
 
+    assert_eq!(bibliography_label_rendering.wrap, None);
     assert_eq!(
-        bibliography_label_rendering.wrap,
-        Some(template::WrapConfig::from(
-            template::WrapPunctuation::Brackets
-        ))
+        resolved
+            .bibliography
+            .as_ref()
+            .and_then(|bibliography| bibliography.options.as_ref())
+            .and_then(|options| options.label_wrap),
+        Some(options::BibliographyLabelWrap::Brackets)
     );
 }
 
@@ -1581,22 +1630,9 @@ bibliography:
         resolved
             .citation
             .as_ref()
-            .and_then(|citation| citation.resolve_template())
-            .and_then(|template| {
-                template.iter().find_map(|component| match component {
-                    template::TemplateComponent::Number(number)
-                        if matches!(
-                            number.number,
-                            template::NumberVariable::CitationNumber
-                                | template::NumberVariable::CitationLabel
-                        ) =>
-                    {
-                        Some(number.rendering.vertical_align.clone())
-                    }
-                    _ => None,
-                })
-            }),
-        Some(Some(VerticalAlign::Superscript))
+            .and_then(|citation| citation.options.as_ref())
+            .and_then(|options| options.label_wrap),
+        Some(options::LabelWrap::Superscript)
     );
     assert_eq!(
         resolved
@@ -2226,7 +2262,7 @@ bibliography:
 }
 
 #[test]
-fn numeric_label_mode_wraps_auto_inserted_label_flush_against_next_component() {
+fn numeric_label_mode_does_not_mutate_authored_template() {
     let resolved = Style::from_yaml_str(
         r#"
 info: { id: numeric-flush-wrap, title: Numeric Flush Wrap }
@@ -2249,31 +2285,20 @@ bibliography:
         .and_then(|bib| bib.template.as_ref())
         .expect("bibliography template should be present");
 
-    let template::TemplateComponent::Group(group) = &template[0] else {
-        panic!(
-            "expected the auto-inserted label wrapped in a group, got {:?}",
-            template[0]
-        );
-    };
-    assert_eq!(
-        group.delimiter,
-        Some(template::DelimiterPunctuation::Custom(String::new()))
-    );
-    assert_eq!(group.group.len(), 2);
+    assert_eq!(template.len(), 2);
     assert!(matches!(
-        &group.group[0],
-        template::TemplateComponent::Number(number)
-            if number.number == template::NumberVariable::CitationNumber
-    ));
-    assert!(matches!(
-        &group.group[1],
+        &template[0],
         template::TemplateComponent::Contributor(contributor)
             if contributor.contributor == template::ContributorRoles::Single(template::ContributorRole::Author)
+    ));
+    assert!(matches!(
+        &template[1],
+        template::TemplateComponent::Title(_)
     ));
 }
 
 #[test]
-fn label_wrap_period_sets_suffix_and_clears_an_inherited_bracket_wrap() {
+fn label_wrap_period_does_not_mutate_authored_template() {
     let resolved = Style::from_yaml_str(
         r#"
 info: { id: numeric-period-wrap, title: Numeric Period Wrap }
@@ -2300,10 +2325,18 @@ bibliography:
         .expect("bibliography template should be present");
 
     let template::TemplateComponent::Number(number) = &template[0] else {
-        panic!("expected a bare label component, got {:?}", template[0]);
+        panic!(
+            "expected an authored label component, got {:?}",
+            template[0]
+        );
     };
-    assert_eq!(number.rendering.suffix.as_deref(), Some("."));
-    assert_eq!(number.rendering.wrap, None);
+    assert_eq!(number.rendering.suffix, None);
+    assert_eq!(
+        number.rendering.wrap,
+        Some(template::WrapConfig::from(
+            template::WrapPunctuation::Brackets
+        ))
+    );
 }
 
 #[test]
@@ -2351,10 +2384,6 @@ bibliography:
 
     let label_count = template
         .iter()
-        .flat_map(|component| match component {
-            template::TemplateComponent::Group(group) => group.group.iter().collect::<Vec<_>>(),
-            other => vec![other],
-        })
         .filter(|component| {
             matches!(
                 component,
@@ -2364,8 +2393,8 @@ bibliography:
         })
         .count();
     assert_eq!(
-        label_count, 1,
-        "resolving citation-number twice (parent then child) must not duplicate the label"
+        label_count, 0,
+        "numeric label mode must remain runtime-owned across inheritance levels"
     );
 }
 
