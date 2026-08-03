@@ -121,7 +121,7 @@ pub enum FormatDocumentError {
 ///
 /// Uses the same null-aware, typed-merge semantics as `extends` inheritance.
 /// Calls `apply_scoped_options` after the merge so that overlay fields that affect
-/// scoped options (label_wrap, date_position, repeated_author_rendering, etc.) take
+/// structural scoped options (date_position, repeated_author_rendering, etc.) take
 /// effect in the same way they do during normal style resolution.
 ///
 /// # Errors

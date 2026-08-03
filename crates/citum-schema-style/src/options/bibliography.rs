@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 use crate::locale::{GeneralTerm, TermForm};
+use crate::options::scoped::{BibliographyLabelMode, BibliographyLabelWrap};
 use crate::template::DelimiterPunctuation;
 
 /// Bibliography-specific configuration.
@@ -16,6 +17,12 @@ use crate::template::DelimiterPunctuation;
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub struct BibliographyConfig {
+    /// Runtime bibliography label mode after style inheritance and document overrides.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub label_mode: Option<BibliographyLabelMode>,
+    /// Runtime presentation policy for numeric or legacy bibliography labels.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub label_wrap: Option<BibliographyLabelWrap>,
     /// Article-journal-specific bibliography policies.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub article_journal: Option<ArticleJournalBibliographyConfig>,
@@ -318,6 +325,8 @@ pub struct CompoundNumericConfig {
 impl Default for BibliographyConfig {
     fn default() -> Self {
         Self {
+            label_mode: None,
+            label_wrap: None,
             article_journal: None,
             subsequent_author_substitute: None,
             subsequent_author_substitute_rule: None,

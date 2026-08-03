@@ -39,9 +39,10 @@ options:
   punctuation-in-quote: true
 
 citation:
+  options:
+    label-mode: numeric
+    label-wrap: brackets
   template-ref: numeric-citation
-  wrap:
-    punctuation: brackets
   multi-cite-delimiter: ','
   delimiter: ''
 bibliography:

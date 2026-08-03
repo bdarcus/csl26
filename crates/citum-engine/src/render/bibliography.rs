@@ -277,7 +277,7 @@ pub(crate) fn render_entry_body_components_with_format<F: OutputFormat<Output = 
         PunctuationPosition::Separator,
     );
 
-    // Bibliography numeric labels (`update_label_mode`'s injected
+    // Bibliography numeric labels (the renderer's synthetic
     // `[label, following]` group with `following` empty, e.g. no author)
     // render real, non-empty text but must attach directly to whatever
     // content actually opens the entry — no separator, exactly as if the
@@ -830,7 +830,7 @@ mod tests {
         #[case] label_only: bool,
         #[case] expected: &str,
     ) {
-        // A bibliography numeric-label component (`update_label_mode`'s
+        // A bibliography numeric-label component (the renderer's synthetic
         // synthetic `[label, following]` group with `following` empty --
         // e.g. no author) renders real, non-empty text ("[15]") but must
         // never engage normal separator logic with whatever comes next.

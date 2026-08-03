@@ -67,7 +67,7 @@ pub(super) fn is_term_only_component(component: &TemplateComponent) -> bool {
     }
 }
 
-/// True for the bibliography numeric-label component (`update_label_mode`'s
+/// True for the bibliography numeric-label component (the renderer's
 /// injected `number: citation-number` node), the one piece of "content" a
 /// bibliography entry always carries regardless of whether its sibling in
 /// the synthetic `[label, following]` group has any data.

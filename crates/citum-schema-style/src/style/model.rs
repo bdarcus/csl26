@@ -115,11 +115,9 @@ impl Style {
 
     /// Apply scoped citation and bibliography option overrides to this style.
     ///
-    /// Translates typed option values (label mode, label wrap, repeated-author
-    /// rendering, date position, title terminator) into concrete template mutations.
-    /// Call this after mutating `bibliography.options` at runtime — e.g. after
-    /// applying per-document overrides — so that template state stays consistent
-    /// with the option values.
+    /// Applies structural scoped options such as group delimiters, date position,
+    /// title terminators, and repeated-author rendering. Label mode and label wrap
+    /// remain runtime presentation settings and do not mutate authored templates.
     pub fn apply_scoped_options(&mut self) {
         crate::options::scoped::apply_scoped_style_options(self);
     }
@@ -132,7 +130,8 @@ impl Style {
     ///   `overlay.raw_yaml` is populated (e.g. via `Style::from_yaml_bytes`).
     ///
     /// The caller is responsible for calling [`apply_scoped_options`](Self::apply_scoped_options)
-    /// afterwards if scoped-option side-effects (label-wrap, date-position, etc.) are needed.
+    /// afterwards if structural scoped-option side-effects (date position, title
+    /// terminator, etc.) are needed.
     pub fn apply_overlay(&mut self, overlay: &Style) {
         super::overlay::merge_style_overlay(self, overlay);
     }

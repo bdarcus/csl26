@@ -205,14 +205,16 @@ impl Renderer<'_> {
                     note_start_text_case: params.note_start_text_case,
                     delimiter: params.intra_delimiter,
                 },
-            ) && let Some((ids, content)) = self.build_citation_chunk(
+            ) && let Some(chunk) = self.build_citation_chunk(
                 &fmt,
                 vec![item.id.clone()],
                 item_str,
                 item.prefix.as_deref(),
                 item.suffix.as_deref(),
+                None,
+                None,
             ) {
-                rendered_items.push(fmt.citation(ids, content));
+                rendered_items.push(fmt.citation(chunk.ids, chunk.content));
             }
         }
         Ok(rendered_items)
@@ -919,6 +921,7 @@ impl Renderer<'_> {
 
         let template = self.apply_anonymous_entry_bibliography_policy(reference, template)?;
         let template = self.apply_article_journal_bibliography_policy(reference, template);
+        let template = self.materialize_bibliography_template(template);
 
         self.process_template_request_with_format::<F>(
             reference,
@@ -1264,7 +1267,7 @@ impl Renderer<'_> {
     /// Render the children of a template group into rendered strings, dropping
     /// empty values. Returns `None` when no child carries meaningful content
     /// (i.e. only term-only siblings produced output) — except for the
-    /// bibliography numeric-label pattern (`update_label_mode`'s injected
+    /// bibliography numeric-label pattern (the renderer's synthetic
     /// `[label, following]` group), where the label alone is still real
     /// content that must render even when `following` is empty (e.g. no
     /// author); the second element of the returned tuple flags that case so

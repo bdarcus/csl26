@@ -68,17 +68,11 @@ fn reject_invalid_inferred_citation(
 
 fn inferred_citation_reject_reason(
     template: &[TemplateComponent],
-    options: &citum_schema::options::Config,
+    _options: &citum_schema::options::Config,
     legacy_style: &csl_legacy::model::Style,
 ) -> Option<&'static str> {
     if template.is_empty() {
         Some("empty citation template")
-    } else if matches!(
-        options.processing,
-        Some(citum_schema::options::Processing::Numeric)
-    ) && !citation_template_has_citation_number(template)
-    {
-        Some("numeric style citation template missing citation-number")
     } else if legacy_style.class == "note" && note_citation_template_is_underfit(template) {
         Some("note style citation template is contributor-only underfit")
     } else {

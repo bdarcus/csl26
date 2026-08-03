@@ -269,12 +269,31 @@ pub(crate) fn resolve_migrated_bibliography_sort(
 
 /// Assembles the final Citum Style from compiled output and legacy metadata.
 fn build_final_style(legacy_style: &csl_legacy::model::Style, mut c: CompiledOutput) -> Style {
+    let declarative_numeric = matches!(
+        c.options.processing,
+        Some(citum_schema::options::Processing::Numeric)
+    );
+    if declarative_numeric {
+        strip_simple_leading_numeric_label(&mut c.new_cit);
+        if let Some(template) = c.citation_subsequent_override.as_mut() {
+            strip_simple_leading_numeric_label(template);
+        }
+        if let Some(template) = c.citation_ibid_override.as_mut() {
+            strip_simple_leading_numeric_label(template);
+        }
+    }
+
     let citation_scope_options =
-        c.citation_contributor_overrides
-            .map(|contributors| citum_schema::CitationOptions {
-                contributors: Some(contributors),
+        if declarative_numeric || c.citation_contributor_overrides.is_some() {
+            Some(citum_schema::CitationOptions {
+                label_mode: declarative_numeric
+                    .then_some(citum_schema::options::CitationLabelMode::Numeric),
+                contributors: c.citation_contributor_overrides,
                 ..Default::default()
-            });
+            })
+        } else {
+            None
+        };
     let mut bibliography_scope_options = c.bibliography_options.take().unwrap_or_default();
     if let Some(contributors) = c.bibliography_contributor_overrides.take() {
         bibliography_scope_options.contributors = Some(contributors);
@@ -352,6 +371,58 @@ fn build_final_style(legacy_style: &csl_legacy::model::Style, mut c: CompiledOut
         }),
         ..Default::default()
     }
+}
+
+/// Remove only a simple generated leading citation-number component.
+///
+/// Conditional, nested, affixed, and non-leading labels remain authored in the
+/// migrated template so they can be verified individually rather than guessed at.
+fn strip_simple_leading_numeric_label(template: &mut Vec<TemplateComponent>) -> bool {
+    fn is_plain_label(component: &TemplateComponent) -> bool {
+        matches!(
+            component,
+            TemplateComponent::Number(number)
+                if number.number == citum_schema::template::NumberVariable::CitationNumber
+                    && number.rendering == citum_schema::template::Rendering::default()
+        )
+    }
+
+    if template.first().is_some_and(is_plain_label) {
+        template.remove(0);
+        return true;
+    }
+
+    let Some(TemplateComponent::Group(group)) = template.first_mut() else {
+        return false;
+    };
+    let simple_group = group.render_when.is_none()
+        && group.rendering == citum_schema::template::Rendering::default()
+        && group.custom.is_none()
+        && group
+            .delimiter
+            .as_ref()
+            .is_none_or(|delimiter| match delimiter {
+                citum_schema::template::DelimiterPunctuation::None => true,
+                citum_schema::template::DelimiterPunctuation::Custom(text) => text.is_empty(),
+                _ => false,
+            });
+    if !simple_group || !group.group.first().is_some_and(is_plain_label) {
+        return false;
+    }
+    group.group.remove(0);
+    if group.group.len() == 1
+        && group.render_when.is_none()
+        && group.rendering == citum_schema::template::Rendering::default()
+        && group.custom.is_none()
+    {
+        let child = group.group.remove(0);
+        if let Some(first) = template.first_mut() {
+            *first = child;
+        }
+    } else if group.group.is_empty() {
+        template.remove(0);
+    }
+    true
 }
 
 fn select_and_process_bibliography_template(
@@ -821,6 +892,48 @@ mod tests {
                 .and_then(|citation| citation.collapse.clone()),
             Some(CitationCollapse::CitationNumber)
         );
+    }
+
+    #[test]
+    fn strips_only_simple_leading_numeric_citation_labels() {
+        let mut simple = vec![
+            TemplateComponent::Number(citum_schema::TemplateNumber {
+                number: citum_schema::template::NumberVariable::CitationNumber,
+                ..Default::default()
+            }),
+            TemplateComponent::Title(citum_schema::TemplateTitle::default()),
+        ];
+        assert!(strip_simple_leading_numeric_label(&mut simple));
+        assert!(matches!(simple.first(), Some(TemplateComponent::Title(_))));
+
+        let mut conditional = vec![TemplateComponent::Group(citum_schema::TemplateGroup {
+            render_when: Some(Default::default()),
+            group: vec![TemplateComponent::Number(citum_schema::TemplateNumber {
+                number: citum_schema::template::NumberVariable::CitationNumber,
+                ..Default::default()
+            })],
+            ..Default::default()
+        })];
+        assert!(!strip_simple_leading_numeric_label(&mut conditional));
+
+        let mut non_leading = vec![
+            TemplateComponent::Title(citum_schema::TemplateTitle::default()),
+            TemplateComponent::Number(citum_schema::TemplateNumber {
+                number: citum_schema::template::NumberVariable::CitationNumber,
+                ..Default::default()
+            }),
+        ];
+        assert!(!strip_simple_leading_numeric_label(&mut non_leading));
+
+        let mut affixed = vec![TemplateComponent::Number(citum_schema::TemplateNumber {
+            number: citum_schema::template::NumberVariable::CitationNumber,
+            rendering: citum_schema::template::Rendering {
+                prefix: Some(", ".into()),
+                ..Default::default()
+            },
+            ..Default::default()
+        })];
+        assert!(!strip_simple_leading_numeric_label(&mut affixed));
     }
 
     #[test]

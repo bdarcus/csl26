@@ -43,6 +43,7 @@ The schema no longer exposes a dedicated profile-only namespace.
 The initial replacement fields are:
 
 - top-level `options.contributors`
+- `citation.options.label-mode`
 - `citation.options.label-wrap`
 - `citation.options.group-delimiter`
 - `bibliography.options.label-mode`
@@ -59,9 +60,23 @@ Style resolution keeps the current structural rule for profile wrappers:
 - profile wrappers inherit templates intact from their base
 - profile wrappers may not override template-bearing fields
 
-After a style is resolved, the engine applies the new scoped options to the
-effective citation and bibliography specs. This happens for both profile
-wrappers and standalone styles, so the option semantics are uniform.
+After a style is resolved, the engine applies structural scoped options to the
+effective specs and retains label mode/wrap as runtime presentation metadata.
+The renderer materializes a semantic label slot only after locale and type
+variant selection; authored templates are not rewritten. This happens for both
+profile wrappers and standalone styles, so the option semantics are uniform.
+
+`citation.options.label-mode` supports `numeric` and `none`. When omitted,
+numeric processing implies `numeric`; other processing modes preserve existing
+template behavior. `none` suppresses inherited or legacy `citation-number`
+components. `citation.options.label-wrap` presents the generated label itself;
+`citation.wrap` continues to wrap the citation cluster.
+
+`bibliography.options.label-mode` and `label-wrap` are likewise runtime-owned.
+Numeric bibliography labels are inserted as a leading semantic group after
+type-variant resolution, preserving label-only separator behavior for entries
+whose content is otherwise empty. Existing explicit label components remain
+accepted and prevent duplicate insertion.
 
 ### 2a. Runtime Scope Cascade Merge Semantics
 
@@ -116,11 +131,14 @@ current code-as-schema model while removing the separate profile vocabulary.
 - [ ] Styles using `options.profile` fail with a migration-oriented error.
 - [ ] Embedded profile wrappers use only the new scoped fields.
 - [ ] Standalone styles can use the same fields without `extends:`.
+- [ ] Numeric labels are materialized at render time without mutating authored templates.
 
 ## Changelog
 
 - 2026-07-30: §2a — the runtime scope cascade merges nested option blocks
   field-by-field from chain-merged authored scope captures, with a typed
   whole-block fallback (bean `csl26-yz4w`).
+- 2026-08-03: Numeric citation and bibliography labels became declarative
+  runtime presentation settings; template mutation was removed.
 - 2026-04-22: Activated alongside the schema and embedded-style migration.
 - 2026-04-22: Initial version.

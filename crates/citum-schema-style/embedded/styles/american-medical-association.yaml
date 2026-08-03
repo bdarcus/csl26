@@ -45,6 +45,9 @@ options:
   page-range-delimiter: "-"
   punctuation-in-quote: true
 citation:
+  options:
+    label-mode: numeric
+    label-wrap: brackets
   template:
   - delimiter: ""
     group:

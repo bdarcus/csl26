@@ -31,11 +31,11 @@ use citum_schema::{
     citation::{Citation, CitationItem, CitationMode, IntegralNameState},
     grouping::{GroupSort, GroupSortEntry, GroupSortKey, SortKey as GroupSortKeyType},
     options::{
-        AndOptions, Config, ContributorConfig, DateConfig, DelimiterPrecedesLast, DisplayAsSort,
-        GivennameRule, IntegralNameContexts, IntegralNameMemoryConfig, IntegralNameScope,
-        MultilingualConfig, MultilingualMode, NameForm, Processing, ProcessingCustom,
-        ShortenListOptions, SubsequentNameForm, Substitute, SubstituteConfig,
-        SubstituteTitleQuoteMode, TitleRendering, TitlesConfig,
+        AndOptions, CitationLabelMode, Config, ContributorConfig, DateConfig,
+        DelimiterPrecedesLast, DisplayAsSort, GivennameRule, IntegralNameContexts,
+        IntegralNameMemoryConfig, IntegralNameScope, MultilingualConfig, MultilingualMode,
+        NameForm, Processing, ProcessingCustom, ShortenListOptions, SubsequentNameForm, Substitute,
+        SubstituteConfig, SubstituteTitleQuoteMode, TitleRendering, TitlesConfig,
     },
     reference::{DateValue, InputReference, Monograph, MonographType, Title},
 };
@@ -74,6 +74,10 @@ fn build_title_year_citation_style(sort: Vec<GroupSortKey>) -> Style {
             ..Default::default()
         }),
         citation: Some(CitationSpec {
+            options: Some(CitationOptions {
+                label_mode: Some(CitationLabelMode::None),
+                ..Default::default()
+            }),
             sort: Some(GroupSortEntry::Explicit(GroupSort { template: sort })),
             template: Some(vec![
                 citum_schema::tc_title!(Primary),
@@ -3032,6 +3036,10 @@ fn role_label_defaults_bundle_never_fires_in_citation_context() {
             ..Default::default()
         }),
         citation: Some(CitationSpec {
+            options: Some(CitationOptions {
+                label_mode: Some(CitationLabelMode::None),
+                ..Default::default()
+            }),
             template: Some(vec![citum_schema::tc_contributor!(Editor, Long)]),
             ..Default::default()
         }),

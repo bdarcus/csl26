@@ -27,9 +27,9 @@ use common::*;
 
 use citum_engine::Processor;
 use citum_schema::{
-    CitationSpec, Style, StyleInfo,
+    CitationOptions, CitationSpec, Style, StyleInfo,
     locale::{GeneralTerm, TermForm},
-    options::{Config, ContributorConfig, Processing, ShortenListOptions},
+    options::{CitationLabelMode, Config, ContributorConfig, Processing, ShortenListOptions},
     template::{
         ContributorForm, ContributorRole, DateForm, DateVariable as TDateVar, TemplateComponent,
         TemplateContributor, TemplateDate, TemplateTerm,
@@ -54,6 +54,10 @@ fn build_name_style(form: ContributorForm, shorten: Option<ShortenListOptions>) 
             ..Default::default()
         }),
         citation: Some(CitationSpec {
+            options: Some(CitationOptions {
+                label_mode: Some(CitationLabelMode::None),
+                ..Default::default()
+            }),
             template: Some(vec![TemplateComponent::Contributor(TemplateContributor {
                 contributor: ContributorRole::Author.into(),
                 form,
@@ -77,6 +81,10 @@ fn build_date_style(form: DateForm) -> Style {
             ..Default::default()
         }),
         citation: Some(CitationSpec {
+            options: Some(CitationOptions {
+                label_mode: Some(CitationLabelMode::None),
+                ..Default::default()
+            }),
             template: Some(vec![TemplateComponent::Date(TemplateDate {
                 date: TDateVar::Issued,
                 form,

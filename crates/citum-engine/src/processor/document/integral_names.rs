@@ -173,7 +173,8 @@ impl Processor {
     /// Build a new processor with bibliography overrides from a `DocumentOptionsOverride` applied.
     ///
     /// Writes non-`None` bibliography option fields into a cloned style and
-    /// calls `apply_scoped_options` so that template mutations stay consistent.
+    /// calls `apply_scoped_options` for structural scoped options; label
+    /// presentation is resolved at render time.
     pub(super) fn processor_with_bibliography_override(
         &self,
         options: &DocumentOptionsOverride,

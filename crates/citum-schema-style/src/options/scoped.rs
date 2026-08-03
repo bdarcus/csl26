@@ -27,6 +27,17 @@ pub enum LabelWrap {
     Superscript,
 }
 
+/// Declarative presentation mode for numeric citation labels.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+#[serde(rename_all = "kebab-case")]
+pub enum CitationLabelMode {
+    /// Do not generate or render numeric citation labels.
+    None,
+    /// Generate numeric citation labels from processor-owned citation numbers.
+    Numeric,
+}
+
 impl LabelWrap {
     /// Convert a supported punctuation style into a concrete wrap config.
     #[must_use]
@@ -182,16 +193,10 @@ pub(crate) fn apply_scoped_style_options(style: &mut Style) {
 fn apply_citation_options_recursive(citation: &mut CitationSpec) {
     let options = citation.options.clone();
 
-    if let Some(options) = options {
-        if let Some(delimiter) = options.group_delimiter {
-            citation.multi_cite_delimiter = Some(delimiter.as_str().into());
-        }
-        if let Some(wrap) = options.label_wrap {
-            if citation.template.is_none() && citation.template_ref.is_some() {
-                citation.template = citation.resolve_template();
-            }
-            set_citation_wrap(citation, wrap);
-        }
+    if let Some(options) = options
+        && let Some(delimiter) = options.group_delimiter
+    {
+        citation.multi_cite_delimiter = Some(delimiter.as_str().into());
     }
 
     for child in [
@@ -213,20 +218,11 @@ fn apply_bibliography_options(bibliography: &mut BibliographySpec) {
         return;
     };
 
-    let needs_template = options.label_mode.is_some()
-        || options.label_wrap.is_some()
-        || options.date_position.is_some()
-        || options.title_terminator.is_some();
+    let needs_template = options.date_position.is_some() || options.title_terminator.is_some();
     if needs_template && bibliography.template.is_none() && bibliography.template_ref.is_some() {
         bibliography.template = bibliography.resolve_template();
     }
 
-    if let Some(mode) = options.label_mode {
-        apply_bibliography_label_mode(bibliography, mode);
-    }
-    if let Some(wrap) = options.label_wrap {
-        apply_bibliography_label_wrap(bibliography, wrap);
-    }
     if let Some(position) = options.date_position {
         apply_date_position(bibliography, position);
     }
@@ -235,34 +231,6 @@ fn apply_bibliography_options(bibliography: &mut BibliographySpec) {
     }
     if let Some(repeated) = options.repeated_author_rendering {
         apply_repeated_author_rendering(bibliography, repeated);
-    }
-}
-
-fn set_citation_wrap(citation: &mut CitationSpec, wrap: LabelWrap) {
-    if wrap == LabelWrap::Superscript {
-        citation.wrap = None;
-        apply_citation_wrap_recursive(citation, wrap);
-        return;
-    }
-    citation.wrap = wrap.as_wrap_config();
-    apply_citation_wrap_recursive(citation, wrap);
-}
-
-fn apply_bibliography_label_mode(bibliography: &mut BibliographySpec, mode: BibliographyLabelMode) {
-    update_label_mode(bibliography.template.as_mut(), mode);
-    if let Some(variants) = bibliography.type_variants.as_mut() {
-        for variant in variants.values_mut() {
-            update_label_mode(variant.as_template_mut(), mode);
-        }
-    }
-}
-
-fn apply_bibliography_label_wrap(bibliography: &mut BibliographySpec, wrap: BibliographyLabelWrap) {
-    update_label_wrap(bibliography.template.as_mut(), wrap);
-    if let Some(variants) = bibliography.type_variants.as_mut() {
-        for variant in variants.values_mut() {
-            update_label_wrap(variant.as_template_mut(), wrap);
-        }
     }
 }
 
@@ -304,221 +272,6 @@ fn apply_repeated_author_rendering(
             options.subsequent_author_substitute_rule =
                 Some(SubsequentAuthorSubstituteRule::CompleteAll);
         }
-    }
-}
-
-/// Whether `component` is the citation-number/citation-label variable used
-/// as a bibliography entry label.
-fn is_bibliography_label(component: &TemplateComponent) -> bool {
-    matches!(
-        component,
-        TemplateComponent::Number(number)
-            if matches!(
-                number.number,
-                crate::template::NumberVariable::CitationNumber
-                    | crate::template::NumberVariable::CitationLabel
-            )
-    )
-}
-
-/// Whether a label is present anywhere in `components`, including nested groups —
-/// e.g. the `delimiter: ""` group the `Numeric` branch below wraps it in.
-fn template_has_label(components: &[TemplateComponent]) -> bool {
-    components.iter().any(|component| {
-        is_bibliography_label(component)
-            || matches!(
-                component,
-                TemplateComponent::Group(group) if template_has_label(&group.group)
-            )
-    })
-}
-
-/// Remove any bibliography label from `components`, recursing into groups and
-/// collapsing groups left empty or with a single trivial child behind.
-fn strip_bibliography_label(components: &mut Vec<TemplateComponent>) {
-    components.retain_mut(|component| {
-        if is_bibliography_label(component) {
-            return false;
-        }
-        if let TemplateComponent::Group(group) = component {
-            strip_bibliography_label(&mut group.group);
-        }
-        true
-    });
-    collapse_trivial_groups(components);
-}
-
-/// Drop empty groups and flatten groups left with exactly one child that carry
-/// no other semantics (no render condition, rendering affixes, or custom fields).
-fn collapse_trivial_groups(components: &mut Vec<TemplateComponent>) {
-    let mut index = 0;
-    while index < components.len() {
-        let Some(TemplateComponent::Group(group)) = components.get(index) else {
-            index += 1;
-            continue;
-        };
-        if group.group.is_empty() {
-            components.remove(index);
-            continue;
-        }
-        if group.group.len() == 1
-            && group.render_when.is_none()
-            && group.rendering == crate::template::Rendering::default()
-            && group.custom.is_none()
-        {
-            if let TemplateComponent::Group(mut group) = components.remove(index)
-                && let Some(child) = group.group.pop()
-            {
-                components.insert(index, child);
-            }
-            continue;
-        }
-        index += 1;
-    }
-}
-
-fn update_label_mode(template: Option<&mut Template>, mode: BibliographyLabelMode) {
-    let Some(template) = template else {
-        return;
-    };
-    match mode {
-        BibliographyLabelMode::None | BibliographyLabelMode::AuthorDate => {
-            strip_bibliography_label(template);
-        }
-        BibliographyLabelMode::Numeric => {
-            if template_has_label(template) {
-                return;
-            }
-            let label = TemplateComponent::Number(crate::TemplateNumber {
-                number: crate::template::NumberVariable::CitationNumber,
-                ..Default::default()
-            });
-            if template.is_empty() {
-                template.push(label);
-                return;
-            }
-            let following = template.remove(0);
-            template.insert(
-                0,
-                TemplateComponent::Group(crate::template::TemplateGroup {
-                    group: vec![label, following],
-                    delimiter: Some(crate::template::DelimiterPunctuation::Custom(String::new())),
-                    ..Default::default()
-                }),
-            );
-        }
-    }
-}
-
-trait LabelWrapConfig {
-    fn wrap_config(self) -> Option<WrapConfig>;
-
-    /// Literal suffix this wrap style appends to the label, if any.
-    fn suffix(self) -> Option<&'static str>
-    where
-        Self: Sized,
-    {
-        None
-    }
-}
-
-impl LabelWrapConfig for LabelWrap {
-    fn wrap_config(self) -> Option<WrapConfig> {
-        self.as_wrap_config()
-    }
-}
-
-impl LabelWrapConfig for BibliographyLabelWrap {
-    fn wrap_config(self) -> Option<WrapConfig> {
-        self.as_wrap_config()
-    }
-
-    fn suffix(self) -> Option<&'static str> {
-        self.as_suffix()
-    }
-}
-
-fn update_label_wrap<W>(template: Option<&mut Template>, wrap: W)
-where
-    W: Copy + LabelWrapConfig,
-{
-    let Some(template) = template else {
-        return;
-    };
-    update_label_wrap_components(template, wrap);
-}
-
-fn update_label_wrap_components<W>(components: &mut [TemplateComponent], wrap: W)
-where
-    W: Copy + LabelWrapConfig,
-{
-    for component in components.iter_mut() {
-        match component {
-            TemplateComponent::Number(number)
-                if matches!(
-                    number.number,
-                    crate::template::NumberVariable::CitationNumber
-                        | crate::template::NumberVariable::CitationLabel
-                ) =>
-            {
-                number.rendering.wrap = wrap.wrap_config();
-                number.rendering.suffix = wrap.suffix().map(ToString::to_string).map(Into::into);
-            }
-            TemplateComponent::Group(group) => {
-                update_label_wrap_components(&mut group.group, wrap);
-            }
-            _ => {}
-        }
-    }
-}
-
-fn apply_citation_superscript(template: Option<&mut Template>) {
-    let Some(template) = template else {
-        return;
-    };
-    for component in template.iter_mut() {
-        if let TemplateComponent::Number(number) = component
-            && matches!(
-                number.number,
-                crate::template::NumberVariable::CitationNumber
-                    | crate::template::NumberVariable::CitationLabel
-            )
-        {
-            number.rendering.vertical_align = Some(crate::VerticalAlign::Superscript);
-            number.rendering.wrap = None;
-        }
-    }
-}
-
-fn apply_citation_wrap_recursive(citation: &mut CitationSpec, wrap: LabelWrap) {
-    if wrap == LabelWrap::Superscript && citation.template.is_none() {
-        citation.template = citation.resolve_template();
-    }
-
-    if wrap == LabelWrap::Superscript {
-        apply_citation_superscript(citation.template.as_mut());
-        if let Some(variants) = citation.type_variants.as_mut() {
-            for variant in variants.values_mut() {
-                apply_citation_superscript(variant.as_template_mut());
-            }
-        }
-    }
-
-    for child in [
-        citation.integral.as_deref_mut(),
-        citation.non_integral.as_deref_mut(),
-        citation.subsequent.as_deref_mut(),
-        citation.ibid.as_deref_mut(),
-    ]
-    .into_iter()
-    .flatten()
-    {
-        child.wrap = if wrap == LabelWrap::Superscript {
-            None
-        } else {
-            wrap.as_wrap_config()
-        };
-        apply_citation_wrap_recursive(child, wrap);
     }
 }
 

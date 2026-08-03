@@ -115,7 +115,42 @@ the source style supplies another fallback, such as a localized no-date term.
 - message: term.no-date
 ```
 
-### §2.3 MF2 Message Components
+### §2.3 Declarative Numeric Citation Labels
+
+Processor-generated `citation-number` values are style semantics rather than
+authored data selection. Numeric citation styles SHOULD declare their label
+policy in scoped options and keep the number out of ordinary templates:
+
+```yaml
+options:
+  processing: numeric
+
+citation:
+  options:
+    label-mode: numeric
+    label-wrap: brackets
+  collapse: citation-number
+```
+
+The engine resolves locale and type variants first, then materializes a semantic
+numeric-label slot before collapse and final formatting. Non-integral labels
+lead the item; explicit integral templates receive the label after authored
+content using the effective integral delimiter. An omitted citation label mode
+implies `numeric` only for numeric processing. `label-mode: none` suppresses
+inherited or legacy numeric labels.
+
+Existing explicit `number: citation-number` components remain valid for
+compatibility and suppress duplicate generation. `citation-label` is a separate
+alphabetic-label feature and is not redesigned here. `citation.wrap` remains
+cluster-level; `citation.options.label-wrap` controls the label itself.
+
+Bibliographies use the canonical `bibliography.options.label-mode` setting. The
+renderer inserts numeric labels as a synthetic leading group after type-variant
+resolution and applies label wrapping at runtime, without rewriting the style
+template. This preserves label-only separator behavior for entries with no
+rendered author or body.
+
+### §2.4 MF2 Message Components
 
 Templates MAY call an MF2 phrase with `message:`. Message bodies normally come
 from the active locale, but a style MAY define specialized messages in
