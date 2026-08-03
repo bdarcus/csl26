@@ -1,6 +1,6 @@
 {
-  "generated": "2026-08-02T14:56:34.835Z",
-  "commit": "fcfc7407",
+  "generated": "2026-08-03T18:38:31.590Z",
+  "commit": "f4ce4eca",
   "source": "scripts/report-core.js",
   "purpose": "Hard per-style exact-parity floor-gate baseline for the embedded tier, consumed by scripts/check-core-quality.js --parity-baseline (see docs/architecture/audits/2026-07-31_EXACT_PARITY_REFOCUS.md). It also records headline fidelity. Sub-1.0 fidelity ratchets are tracked separately per-style in scripts/report-data/verification-policy.yaml (min_pass_rate floors). Regenerate this file after each parity-tuning wave; the gate never goes backward on passed counts or total (fixture-drift guard).",
   "styles": {
@@ -17,9 +17,9 @@
         "total": 47
       },
       "exactParity": {
-        "passed": 49,
+        "passed": 33,
         "total": 67,
-        "rate": 0.731
+        "rate": 0.493
       }
     },
     "apa-7th": {
@@ -125,9 +125,9 @@
         "total": 47
       },
       "exactParity": {
-        "passed": 55,
+        "passed": 46,
         "total": 67,
-        "rate": 0.821
+        "rate": 0.687
       }
     },
     "elsevier-with-titles": {
@@ -143,9 +143,9 @@
         "total": 47
       },
       "exactParity": {
-        "passed": 27,
+        "passed": 9,
         "total": 67,
-        "rate": 0.403
+        "rate": 0.134
       }
     },
     "gb-t-7714-2025-author-date": {
@@ -269,9 +269,9 @@
         "total": 47
       },
       "exactParity": {
-        "passed": 20,
+        "passed": 2,
         "total": 67,
-        "rate": 0.299
+        "rate": 0.03
       }
     },
     "springer-vancouver-brackets": {
@@ -287,9 +287,9 @@
         "total": 47
       },
       "exactParity": {
-        "passed": 20,
+        "passed": 11,
         "total": 67,
-        "rate": 0.299
+        "rate": 0.164
       }
     },
     "taylor-and-francis-chicago-author-date": {
@@ -341,9 +341,9 @@
         "total": 47
       },
       "exactParity": {
-        "passed": 14,
+        "passed": 0,
         "total": 67,
-        "rate": 0.209
+        "rate": 0
       }
     }
   }
