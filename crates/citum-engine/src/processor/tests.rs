@@ -6532,3 +6532,385 @@ fn given_arc_config_and_rwlock_run_state_when_checked_then_processor_and_finaliz
     assert_send_sync::<Processor>();
     assert_send_sync::<FinalizedRun>();
 }
+
+/// Native bibliography for the declarative alphabetic label tests.
+///
+/// Built directly as `InputReference` values rather than via a `csl_legacy`
+/// round-trip, so the trigraph the processor generates comes from the native
+/// data model.
+fn make_alphabetic_bibliography() -> Bibliography {
+    use citum_schema::reference::{
+        Contributor, ContributorList, DateValue, InputReference, Monograph, MonographType,
+        MultilingualString, StructuredName, Title,
+    };
+
+    let entry = |id: &str, family: &str, year: &str, title: &str| {
+        InputReference::Monograph(Box::new(Monograph {
+            id: Some(id.into()),
+            r#type: MonographType::Book,
+            title: Some(Title::Single(title.to_string())),
+            author: Some(Contributor::ContributorList(ContributorList(vec![
+                Contributor::StructuredName(StructuredName {
+                    family: MultilingualString::Simple(family.to_string()),
+                    given: MultilingualString::Simple("Alex".to_string()),
+                    suffix: None,
+                    dropping_particle: None,
+                    non_dropping_particle: None,
+                }),
+            ]))),
+            issued: DateValue::new(year.to_string()),
+            ..Default::default()
+        }))
+    };
+
+    let mut bib = Bibliography::new();
+    bib.insert(
+        "kuhn1962".to_string(),
+        entry(
+            "kuhn1962",
+            "Kuhn",
+            "1962",
+            "The Structure of Scientific Revolutions",
+        ),
+    );
+    bib.insert(
+        "brown1954".to_string(),
+        entry("brown1954", "Brown", "1954", "Methods of Surveying"),
+    );
+    bib
+}
+
+/// A label-style `Style` whose citation template carries no label component.
+fn make_alphabetic_style() -> Style {
+    let mut style = make_style();
+    style.options = Some(Config {
+        processing: Some(Processing::Label(LabelConfig {
+            preset: LabelPreset::Alpha,
+            ..Default::default()
+        })),
+        ..Default::default()
+    });
+    style.citation = Some(CitationSpec {
+        template: Some(Vec::new()),
+        delimiter: Some("".into()),
+        ..Default::default()
+    });
+    style
+}
+
+#[rstest]
+#[case::declared_alphabetic(Some(citum_schema::options::CitationLabelMode::Alphabetic))]
+#[case::inferred_from_label_processing(None)]
+fn given_a_label_style_with_no_authored_label_when_a_citation_renders_then_the_trigraph_is_materialized(
+    #[case] label_mode: Option<citum_schema::options::CitationLabelMode>,
+) {
+    // given a label style whose citation template is empty
+    let mut style = make_alphabetic_style();
+    style.citation.as_mut().unwrap().options = Some(citum_schema::CitationOptions {
+        label_mode,
+        ..Default::default()
+    });
+
+    // when a citation renders
+    let processor = Processor::new(style, make_alphabetic_bibliography());
+    let citation = Citation {
+        items: vec![CitationItem {
+            id: "kuhn1962".to_string(),
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+
+    // then the processor-generated trigraph is the rendered content
+    assert_eq!(processor.process_citation(&citation).unwrap(), "Kuh62");
+}
+
+#[rstest]
+#[case::brackets(citum_schema::options::LabelWrap::Brackets, "[Kuh62]")]
+#[case::parentheses(citum_schema::options::LabelWrap::Parentheses, "(Kuh62)")]
+fn given_a_declarative_alphabetic_label_when_label_wrap_is_set_then_the_label_is_wrapped(
+    #[case] wrap: citum_schema::options::LabelWrap,
+    #[case] expected: &str,
+) {
+    // given a label style that wraps the label itself rather than the cluster
+    let mut style = make_alphabetic_style();
+    style.citation.as_mut().unwrap().options = Some(citum_schema::CitationOptions {
+        label_mode: Some(citum_schema::options::CitationLabelMode::Alphabetic),
+        label_wrap: Some(wrap),
+        ..Default::default()
+    });
+
+    // when a citation renders
+    let processor = Processor::new(style, make_alphabetic_bibliography());
+    let citation = Citation {
+        items: vec![CitationItem {
+            id: "kuhn1962".to_string(),
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+
+    // then the generated label carries the declared wrap
+    assert_eq!(processor.process_citation(&citation).unwrap(), expected);
+}
+
+#[rstest]
+#[case::authored_label_is_not_duplicated(
+    Some(citum_schema::options::CitationLabelMode::Alphabetic),
+    "Kuh62, p. 23"
+)]
+// Stripping the label leaves the locator's own authored prefix in place —
+// removing a component never rewrites its neighbours' affixes.
+#[case::label_mode_none_strips_the_authored_label(
+    Some(citum_schema::options::CitationLabelMode::None),
+    ", p. 23"
+)]
+fn given_an_authored_citation_label_when_a_label_mode_is_declared_then_the_template_is_respected(
+    #[case] label_mode: Option<citum_schema::options::CitationLabelMode>,
+    #[case] expected: &str,
+) {
+    // given a label style that still authors its label component
+    let mut style = make_alphabetic_style();
+    let citation = style.citation.as_mut().unwrap();
+    citation.options = Some(citum_schema::CitationOptions {
+        label_mode,
+        ..Default::default()
+    });
+    citation.template = Some(vec![
+        TemplateComponent::Number(TemplateNumber {
+            number: NumberVariable::CitationLabel,
+            ..Default::default()
+        }),
+        TemplateComponent::Variable(TemplateVariable {
+            variable: SimpleVariable::Locator,
+            rendering: Rendering {
+                prefix: Some(", ".into()),
+                ..Default::default()
+            },
+            ..Default::default()
+        }),
+    ]);
+
+    // when a citation with a locator renders
+    let processor = Processor::new(style, make_alphabetic_bibliography());
+    let citation = Citation {
+        items: vec![CitationItem {
+            id: "kuhn1962".to_string(),
+            locator: Some(citum_schema::citation::CitationLocator::single(
+                citum_schema::citation::LocatorType::Page,
+                "23",
+            )),
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+
+    // then the label appears exactly once, or not at all under `none`
+    assert_eq!(processor.process_citation(&citation).unwrap(), expected);
+}
+
+#[rstest]
+#[case::only_the_inherited_number(vec![NumberVariable::CitationNumber])]
+#[case::both_labels_present(vec![NumberVariable::CitationNumber, NumberVariable::CitationLabel])]
+#[case::both_labels_reversed(vec![NumberVariable::CitationLabel, NumberVariable::CitationNumber])]
+fn given_an_inherited_numeric_citation_label_when_alphabetic_mode_is_declared_then_the_number_is_replaced(
+    #[case] authored: Vec<NumberVariable>,
+) {
+    // given a citation template carrying an inherited numeric label — the shape
+    // a label style inherits from a numeric parent family, with and without the
+    // style's own alphabetic label already alongside it
+    let mut style = make_alphabetic_style();
+    let citation_spec = style.citation.as_mut().unwrap();
+    citation_spec.options = Some(citum_schema::CitationOptions {
+        label_mode: Some(citum_schema::options::CitationLabelMode::Alphabetic),
+        ..Default::default()
+    });
+    citation_spec.template = Some(
+        authored
+            .into_iter()
+            .map(|number| {
+                TemplateComponent::Number(TemplateNumber {
+                    number,
+                    ..Default::default()
+                })
+            })
+            .collect(),
+    );
+
+    // when a citation renders
+    let processor = Processor::new(style, make_alphabetic_bibliography());
+    let citation = Citation {
+        items: vec![CitationItem {
+            id: "kuhn1962".to_string(),
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+
+    // then the trigraph is the only label, never joined to the number
+    assert_eq!(processor.process_citation(&citation).unwrap(), "Kuh62");
+}
+
+#[rstest]
+#[case::collapse_requested(Some(citum_schema::CitationCollapse::CitationNumber))]
+#[case::collapse_absent(None)]
+fn given_adjacent_alphabetic_labels_when_numeric_collapse_is_configured_then_labels_are_not_collapsed(
+    #[case] collapse: Option<citum_schema::CitationCollapse>,
+) {
+    // given a label style whose citations are label-only, with numeric collapse
+    // configured — the trigraphs have no numeric ordering to collapse into a range
+    let mut style = make_alphabetic_style();
+    let citation_spec = style.citation.as_mut().unwrap();
+    citation_spec.options = Some(citum_schema::CitationOptions {
+        label_mode: Some(citum_schema::options::CitationLabelMode::Alphabetic),
+        ..Default::default()
+    });
+    citation_spec.collapse = collapse;
+    citation_spec.multi_cite_delimiter = Some(", ".into());
+
+    // when two adjacent items render in one cluster
+    let processor = Processor::new(style, make_alphabetic_bibliography());
+    let citation = Citation {
+        items: vec![
+            CitationItem {
+                id: "kuhn1962".to_string(),
+                ..Default::default()
+            },
+            CitationItem {
+                id: "brown1954".to_string(),
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    };
+
+    // then both trigraphs survive intact
+    assert_eq!(
+        processor.process_citation(&citation).unwrap(),
+        "Kuh62, Bro54"
+    );
+}
+
+#[test]
+fn given_no_declared_label_mode_when_a_template_authors_a_label_then_it_is_left_alone() {
+    // given an author-date style that authors its own numeric label and declares
+    // no label mode at all — the absent mode must not be read as "strip"
+    let mut style = make_style();
+    style.bibliography = Some(BibliographySpec {
+        template: Some(vec![
+            TemplateComponent::Number(TemplateNumber {
+                number: NumberVariable::CitationNumber,
+                rendering: Rendering {
+                    wrap: Some(WrapPunctuation::Brackets.into()),
+                    suffix: Some(" ".into()),
+                    ..Default::default()
+                },
+                ..Default::default()
+            }),
+            TemplateComponent::Contributor(TemplateContributor {
+                contributor: ContributorRole::Author.into(),
+                form: ContributorForm::Long,
+                ..Default::default()
+            }),
+        ]),
+        ..Default::default()
+    });
+
+    // when the entry renders
+    let mut bib = Bibliography::new();
+    let full = make_alphabetic_bibliography();
+    bib.insert(
+        "kuhn1962".to_string(),
+        full.get("kuhn1962").expect("fixture entry").clone(),
+    );
+    let processor = Processor::new(style, bib);
+
+    // then the authored label survives untouched
+    assert_eq!(processor.render_bibliography(), "[1] Kuhn, Alex");
+}
+
+#[rstest]
+#[case::flush(None, "Kuh62Alex Kuhn")]
+#[case::spaced(Some(DelimiterPunctuation::Custom(" ".to_string())), "Kuh62 Alex Kuhn")]
+fn given_a_declarative_alphabetic_bibliography_label_when_a_separator_is_set_then_it_joins_label_and_entry(
+    #[case] label_separator: Option<DelimiterPunctuation>,
+    #[case] expected: &str,
+) {
+    // given a label style whose bibliography template authors no label
+    let mut style = make_alphabetic_style();
+    style.bibliography = Some(BibliographySpec {
+        options: Some(BibliographyOptions {
+            label_mode: Some(citum_schema::options::BibliographyLabelMode::Alphabetic),
+            label_separator,
+            separator: Some(DelimiterPunctuation::Custom(". ".to_string())),
+            ..Default::default()
+        }),
+        template: Some(vec![TemplateComponent::Contributor(TemplateContributor {
+            contributor: ContributorRole::Author.into(),
+            form: ContributorForm::Long,
+            ..Default::default()
+        })]),
+        ..Default::default()
+    });
+
+    // when the entry for a single reference renders
+    let mut bib = Bibliography::new();
+    let full = make_alphabetic_bibliography();
+    bib.insert(
+        "kuhn1962".to_string(),
+        full.get("kuhn1962").expect("fixture entry").clone(),
+    );
+    let processor = Processor::new(style, bib);
+    let rendered = processor.render_bibliography();
+
+    // then the separator supplies the gap between label and entry body
+    assert_eq!(rendered, expected);
+}
+
+#[rstest]
+#[case::only_the_inherited_number(vec![NumberVariable::CitationNumber])]
+#[case::both_labels_present(vec![NumberVariable::CitationNumber, NumberVariable::CitationLabel])]
+#[case::both_labels_reversed(vec![NumberVariable::CitationLabel, NumberVariable::CitationNumber])]
+fn given_an_inherited_numeric_bibliography_label_when_alphabetic_mode_is_declared_then_the_number_is_replaced(
+    #[case] authored: Vec<NumberVariable>,
+) {
+    // given a bibliography template carrying an inherited numeric label — the
+    // shape a label style inherits from a numeric parent family, with and
+    // without the style's own alphabetic label already alongside it
+    let mut style = make_alphabetic_style();
+    let mut template: Vec<TemplateComponent> = authored
+        .into_iter()
+        .map(|number| {
+            TemplateComponent::Number(TemplateNumber {
+                number,
+                ..Default::default()
+            })
+        })
+        .collect();
+    template.push(TemplateComponent::Contributor(TemplateContributor {
+        contributor: ContributorRole::Author.into(),
+        form: ContributorForm::Long,
+        ..Default::default()
+    }));
+    style.bibliography = Some(BibliographySpec {
+        options: Some(BibliographyOptions {
+            label_mode: Some(citum_schema::options::BibliographyLabelMode::Alphabetic),
+            label_separator: Some(DelimiterPunctuation::Custom(" ".to_string())),
+            ..Default::default()
+        }),
+        template: Some(template),
+        ..Default::default()
+    });
+
+    // when the entry renders
+    let mut bib = Bibliography::new();
+    let full = make_alphabetic_bibliography();
+    bib.insert(
+        "kuhn1962".to_string(),
+        full.get("kuhn1962").expect("fixture entry").clone(),
+    );
+    let processor = Processor::new(style, bib);
+
+    // then the numeric label is gone and exactly one trigraph leads the entry
+    assert_eq!(processor.render_bibliography(), "Kuh62 Alex Kuhn");
+}

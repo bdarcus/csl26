@@ -42,8 +42,9 @@ pub struct ProcTemplateComponent {
     /// Whether the value is already pre-formatted (e.g. from a List or substitution).
     pub pre_formatted: bool,
     /// True when this component's rendered text is *only* a bibliography
-    /// numeric label (the renderer's synthetic `[label, following]`
-    /// group with an empty `following`, e.g. no author). Bibliography
+    /// label — numeric or alphabetic (the renderer's synthetic
+    /// `[label, following]` group with an empty `following`, e.g. no
+    /// author). Bibliography
     /// assembly must still write the label text, but must not treat it as
     /// real preceding content for the *next* component's separator decision
     /// — the label attaches directly to whatever content actually opens the

@@ -6655,10 +6655,10 @@
       "unevaluatedProperties": false
     },
     "CitationLabelMode": {
-      "description": "Declarative presentation mode for numeric citation labels.",
+      "description": "Declarative presentation mode for processor-generated citation labels.",
       "oneOf": [
         {
-          "description": "Do not generate or render numeric citation labels.",
+          "description": "Do not generate or render citation labels of either kind.",
           "type": "string",
           "const": "none"
         },
@@ -6666,6 +6666,11 @@
           "description": "Generate numeric citation labels from processor-owned citation numbers.",
           "type": "string",
           "const": "numeric"
+        },
+        {
+          "description": "Generate alphabetic (trigraph) citation labels, as in biblatex `alpha`.",
+          "type": "string",
+          "const": "alphabetic"
         }
       ]
     },
@@ -7584,6 +7589,17 @@
             }
           ]
         },
+        "label-separator": {
+          "description": "Text placed between the bibliography label and the entry body.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DelimiterPunctuation"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "date-position": {
           "description": "Placement of issued dates within bibliography entries.",
           "anyOf": [
@@ -7888,6 +7904,11 @@
           "description": "Numeric bibliography labels.",
           "type": "string",
           "const": "numeric"
+        },
+        {
+          "description": "Alphabetic (trigraph) bibliography labels, as in biblatex `alpha`.",
+          "type": "string",
+          "const": "alphabetic"
         },
         {
           "description": "Author-date bibliography labels.",

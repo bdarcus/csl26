@@ -10,7 +10,7 @@ use super::super::{
     strip_leading_group_affixes,
 };
 use super::component_predicates::{
-    is_citation_number_component, is_term_only_component, resolve_localized_type_variant,
+    is_bibliography_label_component, is_term_only_component, resolve_localized_type_variant,
     resolve_type_variant,
 };
 use super::group_citation_items_by_author;
@@ -1267,7 +1267,7 @@ impl Renderer<'_> {
     /// Render the children of a template group into rendered strings, dropping
     /// empty values. Returns `None` when no child carries meaningful content
     /// (i.e. only term-only siblings produced output) — except for the
-    /// bibliography numeric-label pattern (the renderer's synthetic
+    /// bibliography label pattern (the renderer's synthetic
     /// `[label, following]` group), where the label alone is still real
     /// content that must render even when `following` is empty (e.g. no
     /// author); the second element of the returned tuple flags that case so
@@ -1286,7 +1286,7 @@ impl Renderer<'_> {
         F: crate::render::format::OutputFormat<Output = String>,
     {
         let mut has_meaningful_content = false;
-        let mut has_citation_number_label = false;
+        let mut has_bibliography_label = false;
         let mut values = Vec::with_capacity(group.group.len());
 
         for item in &group.group {
@@ -1304,18 +1304,18 @@ impl Renderer<'_> {
             if rendered_detailed.text.trim().is_empty() {
                 continue;
             }
-            if is_citation_number_component(item) {
-                has_citation_number_label = true;
+            if is_bibliography_label_component(item) {
+                has_bibliography_label = true;
             } else if !is_term_only_component(item) {
                 has_meaningful_content = true;
             }
             values.push(rendered_detailed);
         }
 
-        if values.is_empty() || !(has_meaningful_content || has_citation_number_label) {
+        if values.is_empty() || !(has_meaningful_content || has_bibliography_label) {
             return None;
         }
-        Some((values, !has_meaningful_content && has_citation_number_label))
+        Some((values, !has_meaningful_content && has_bibliography_label))
     }
 
     fn apply_issued_no_date_fallback(

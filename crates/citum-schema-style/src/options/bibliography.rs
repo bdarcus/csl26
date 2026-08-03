@@ -23,6 +23,13 @@ pub struct BibliographyConfig {
     /// Runtime presentation policy for numeric or legacy bibliography labels.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub label_wrap: Option<BibliographyLabelWrap>,
+    /// Text placed between the bibliography label and the entry body.
+    ///
+    /// Unset means the label sits flush against the following content, which is
+    /// how citeproc-js's `second-field-align` output flattens to text (IEEE's
+    /// `[1]`, AMA's `1.`). Variable-width alphabetic labels normally want `' '`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub label_separator: Option<DelimiterPunctuation>,
     /// Article-journal-specific bibliography policies.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub article_journal: Option<ArticleJournalBibliographyConfig>,
@@ -327,6 +334,7 @@ impl Default for BibliographyConfig {
         Self {
             label_mode: None,
             label_wrap: None,
+            label_separator: None,
             article_journal: None,
             subsequent_author_substitute: None,
             subsequent_author_substitute_rule: None,

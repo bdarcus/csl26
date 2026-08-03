@@ -17,6 +17,7 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus and Citum contributors
 
 use super::*;
 use indexmap::IndexMap;
+use rstest::rstest;
 
 #[test]
 fn test_style_minimal_deserialization() {
@@ -2259,6 +2260,99 @@ bibliography:
         Some(&["〔".to_string(), "〕".to_string()])
     );
     assert_eq!(realization.colon, None);
+}
+
+#[rstest]
+#[case::numeric("numeric", options::CitationLabelMode::Numeric)]
+#[case::alphabetic("alphabetic", options::CitationLabelMode::Alphabetic)]
+#[case::none("none", options::CitationLabelMode::None)]
+fn given_a_citation_label_mode_when_a_style_round_trips_then_the_vocabulary_is_preserved(
+    #[case] authored: &str,
+    #[case] expected: options::CitationLabelMode,
+) {
+    // given a style declaring one of the citation label modes
+    let resolved = Style::from_yaml_str(&format!(
+        r#"
+info: {{ id: label-mode-vocabulary, title: Label Mode Vocabulary }}
+citation:
+  options:
+    label-mode: {authored}
+  template: []
+"#
+    ))
+    .unwrap()
+    .try_into_resolved()
+    .expect("citation label mode should resolve");
+
+    // when the resolved style is read back and re-serialized
+    let parsed = resolved
+        .citation
+        .as_ref()
+        .and_then(|citation| citation.options.as_ref())
+        .and_then(|options| options.label_mode);
+    let serialized: serde_yaml::Value = serde_yaml::from_str(
+        &serde_yaml::to_string(&resolved).expect("resolved style should serialize"),
+    )
+    .expect("serialized style should remain valid YAML");
+
+    // then both the typed value and the authored spelling survive
+    assert_eq!(parsed, Some(expected));
+    assert_eq!(
+        serialized["citation"]["options"]["label-mode"].as_str(),
+        Some(authored)
+    );
+}
+
+#[test]
+fn given_an_alphabetic_bibliography_label_when_a_style_round_trips_then_mode_and_separator_survive()
+{
+    // given a label style declaring alphabetic bibliography labels with spacing
+    let resolved = Style::from_yaml_str(
+        r#"
+info: { id: alphabetic-bibliography-label, title: Alphabetic Bibliography Label }
+bibliography:
+  options:
+    label-mode: alphabetic
+    label-wrap: brackets
+    label-separator: ' '
+  template:
+    - contributor: author
+      form: long
+"#,
+    )
+    .unwrap()
+    .try_into_resolved()
+    .expect("alphabetic label-mode should resolve");
+
+    // when the bibliography options are read back
+    let options = resolved
+        .bibliography
+        .as_ref()
+        .and_then(|bib| bib.options.as_ref())
+        .expect("bibliography options should be present");
+
+    // then the mode, wrap, and separator are all retained, and the authored
+    // template is left untouched — the label is materialized at render time
+    assert_eq!(
+        options.label_mode,
+        Some(options::BibliographyLabelMode::Alphabetic)
+    );
+    assert_eq!(
+        options.label_wrap,
+        Some(options::BibliographyLabelWrap::Brackets)
+    );
+    assert_eq!(
+        options.label_separator,
+        Some(template::DelimiterPunctuation::Custom(" ".to_string()))
+    );
+    assert_eq!(
+        resolved
+            .bibliography
+            .as_ref()
+            .and_then(|bib| bib.template.as_ref())
+            .map(Vec::len),
+        Some(1)
+    );
 }
 
 #[test]

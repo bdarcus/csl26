@@ -6,7 +6,7 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus and Citum contributors
 //! Typed scoped options that normalize resolved citation and bibliography specs.
 
 use crate::options::bibliography::SubsequentAuthorSubstituteRule;
-use crate::template::{TemplateComponent, WrapConfig, WrapPunctuation};
+use crate::template::{NumberVariable, TemplateComponent, WrapConfig, WrapPunctuation};
 use crate::{BibliographySpec, CitationSpec, Style, Template};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
@@ -27,15 +27,29 @@ pub enum LabelWrap {
     Superscript,
 }
 
-/// Declarative presentation mode for numeric citation labels.
+/// Declarative presentation mode for processor-generated citation labels.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub enum CitationLabelMode {
-    /// Do not generate or render numeric citation labels.
+    /// Do not generate or render citation labels of either kind.
     None,
     /// Generate numeric citation labels from processor-owned citation numbers.
     Numeric,
+    /// Generate alphabetic (trigraph) citation labels, as in biblatex `alpha`.
+    Alphabetic,
+}
+
+impl CitationLabelMode {
+    /// The number variable this label mode generates, if any.
+    #[must_use]
+    pub fn label_variable(self) -> Option<NumberVariable> {
+        match self {
+            CitationLabelMode::None => None,
+            CitationLabelMode::Numeric => Some(NumberVariable::CitationNumber),
+            CitationLabelMode::Alphabetic => Some(NumberVariable::CitationLabel),
+        }
+    }
 }
 
 impl LabelWrap {
@@ -127,8 +141,22 @@ pub enum BibliographyLabelMode {
     None,
     /// Numeric bibliography labels.
     Numeric,
+    /// Alphabetic (trigraph) bibliography labels, as in biblatex `alpha`.
+    Alphabetic,
     /// Author-date bibliography labels.
     AuthorDate,
+}
+
+impl BibliographyLabelMode {
+    /// The number variable this label mode generates, if any.
+    #[must_use]
+    pub fn label_variable(self) -> Option<NumberVariable> {
+        match self {
+            BibliographyLabelMode::None | BibliographyLabelMode::AuthorDate => None,
+            BibliographyLabelMode::Numeric => Some(NumberVariable::CitationNumber),
+            BibliographyLabelMode::Alphabetic => Some(NumberVariable::CitationLabel),
+        }
+    }
 }
 
 /// Placement of issued dates inside bibliography entries.

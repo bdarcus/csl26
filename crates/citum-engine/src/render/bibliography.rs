@@ -187,9 +187,9 @@ pub fn render_entry_body_with_format<F: OutputFormat<Output = String>>(
 /// or, when `suppress` is set, as a raw append with no separator at all.
 ///
 /// `suppress` is set when the *previous* flush was a bare bibliography
-/// numeric label (`ProcTemplateComponent::label_only`) — see its docs for
-/// why such a label must never engage normal inter-component separator
-/// logic with whatever comes next.
+/// label — numeric or alphabetic (`ProcTemplateComponent::label_only`) — see
+/// its docs for why such a label must never engage normal inter-component
+/// separator logic with whatever comes next.
 #[allow(
     clippy::too_many_arguments,
     reason = "threads shared per-entry punctuation state"
@@ -277,7 +277,7 @@ pub(crate) fn render_entry_body_components_with_format<F: OutputFormat<Output = 
         PunctuationPosition::Separator,
     );
 
-    // Bibliography numeric labels (the renderer's synthetic
+    // Bibliography labels (the renderer's synthetic
     // `[label, following]` group with `following` empty, e.g. no author)
     // render real, non-empty text but must attach directly to whatever
     // content actually opens the entry — no separator, exactly as if the

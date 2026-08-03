@@ -267,27 +267,49 @@ pub(crate) fn resolve_migrated_bibliography_sort(
     }
 }
 
-/// Assembles the final Citum Style from compiled output and legacy metadata.
-fn build_final_style(legacy_style: &csl_legacy::model::Style, mut c: CompiledOutput) -> Style {
-    let declarative_numeric = matches!(
-        c.options.processing,
-        Some(citum_schema::options::Processing::Numeric)
-    );
-    if declarative_numeric {
-        strip_simple_leading_numeric_label(&mut c.new_cit);
+/// Resolve the declarative citation label mode implied by the migrated
+/// processing preset, and remove the label component the engine now generates.
+///
+/// Returns the mode so the caller can record it in `citation.options`.
+fn adopt_declarative_citation_label(
+    c: &mut CompiledOutput,
+) -> Option<citum_schema::options::CitationLabelMode> {
+    let mode = match c.options.processing {
+        Some(citum_schema::options::Processing::Numeric) => {
+            Some(citum_schema::options::CitationLabelMode::Numeric)
+        }
+        Some(citum_schema::options::Processing::Label(_)) => {
+            Some(citum_schema::options::CitationLabelMode::Alphabetic)
+        }
+        _ => None,
+    };
+    if let Some(variable) = mode.and_then(citum_schema::options::CitationLabelMode::label_variable)
+    {
+        strip_simple_leading_label(&mut c.new_cit, &variable);
         if let Some(template) = c.citation_subsequent_override.as_mut() {
-            strip_simple_leading_numeric_label(template);
+            strip_simple_leading_label(template, &variable);
         }
         if let Some(template) = c.citation_ibid_override.as_mut() {
-            strip_simple_leading_numeric_label(template);
+            strip_simple_leading_label(template, &variable);
         }
     }
+    mode
+}
+
+/// Assembles the final Citum Style from compiled output and legacy metadata.
+fn build_final_style(legacy_style: &csl_legacy::model::Style, mut c: CompiledOutput) -> Style {
+    let declarative_label_mode = adopt_declarative_citation_label(&mut c);
 
     let citation_scope_options =
-        if declarative_numeric || c.citation_contributor_overrides.is_some() {
+        if declarative_label_mode.is_some() || c.citation_contributor_overrides.is_some() {
             Some(citum_schema::CitationOptions {
-                label_mode: declarative_numeric
-                    .then_some(citum_schema::options::CitationLabelMode::Numeric),
+                label_mode: declarative_label_mode,
+                // CSL alphabetic styles bracket the layout, not the label, so
+                // cancel any per-label wrap a numeric ancestor contributes —
+                // otherwise the cluster and the label both wrap (`[[Kuh62]]`).
+                label_wrap: (declarative_label_mode
+                    == Some(citum_schema::options::CitationLabelMode::Alphabetic))
+                .then_some(citum_schema::options::LabelWrap::None),
                 contributors: c.citation_contributor_overrides,
                 ..Default::default()
             })
@@ -373,19 +395,22 @@ fn build_final_style(legacy_style: &csl_legacy::model::Style, mut c: CompiledOut
     }
 }
 
-/// Remove only a simple generated leading citation-number component.
+/// Remove only a simple generated leading label component for `variable`.
 ///
 /// Conditional, nested, affixed, and non-leading labels remain authored in the
 /// migrated template so they can be verified individually rather than guessed at.
-fn strip_simple_leading_numeric_label(template: &mut Vec<TemplateComponent>) -> bool {
-    fn is_plain_label(component: &TemplateComponent) -> bool {
+fn strip_simple_leading_label(
+    template: &mut Vec<TemplateComponent>,
+    variable: &citum_schema::template::NumberVariable,
+) -> bool {
+    let is_plain_label = |component: &TemplateComponent| {
         matches!(
             component,
             TemplateComponent::Number(number)
-                if number.number == citum_schema::template::NumberVariable::CitationNumber
+                if number.number == *variable
                     && number.rendering == citum_schema::template::Rendering::default()
         )
-    }
+    };
 
     if template.first().is_some_and(is_plain_label) {
         template.remove(0);
@@ -754,6 +779,8 @@ fn bibliography_sort_matches_processing_default(
 )]
 mod tests {
     use super::*;
+    use rstest::rstest;
+
     use citum_schema::{
         BibliographySpec, CitationSpec,
         options::{
@@ -894,46 +921,65 @@ mod tests {
         );
     }
 
-    #[test]
-    fn strips_only_simple_leading_numeric_citation_labels() {
-        let mut simple = vec![
+    #[rstest]
+    #[case::numeric(citum_schema::template::NumberVariable::CitationNumber)]
+    #[case::alphabetic(citum_schema::template::NumberVariable::CitationLabel)]
+    fn given_a_migrated_citation_template_when_stripping_a_generated_label_then_only_the_simple_leading_form_goes(
+        #[case] variable: citum_schema::template::NumberVariable,
+    ) {
+        let label = || {
             TemplateComponent::Number(citum_schema::TemplateNumber {
-                number: citum_schema::template::NumberVariable::CitationNumber,
+                number: variable.clone(),
                 ..Default::default()
-            }),
+            })
+        };
+
+        // given a plain leading label, when stripped, then it is removed
+        let mut simple = vec![
+            label(),
             TemplateComponent::Title(citum_schema::TemplateTitle::default()),
         ];
-        assert!(strip_simple_leading_numeric_label(&mut simple));
+        assert!(strip_simple_leading_label(&mut simple, &variable));
         assert!(matches!(simple.first(), Some(TemplateComponent::Title(_))));
 
+        // given a conditional label, when stripped, then it stays authored
         let mut conditional = vec![TemplateComponent::Group(citum_schema::TemplateGroup {
             render_when: Some(Default::default()),
-            group: vec![TemplateComponent::Number(citum_schema::TemplateNumber {
-                number: citum_schema::template::NumberVariable::CitationNumber,
-                ..Default::default()
-            })],
+            group: vec![label()],
             ..Default::default()
         })];
-        assert!(!strip_simple_leading_numeric_label(&mut conditional));
+        assert!(!strip_simple_leading_label(&mut conditional, &variable));
 
+        // given a non-leading label, when stripped, then it stays authored
         let mut non_leading = vec![
             TemplateComponent::Title(citum_schema::TemplateTitle::default()),
-            TemplateComponent::Number(citum_schema::TemplateNumber {
-                number: citum_schema::template::NumberVariable::CitationNumber,
-                ..Default::default()
-            }),
+            label(),
         ];
-        assert!(!strip_simple_leading_numeric_label(&mut non_leading));
+        assert!(!strip_simple_leading_label(&mut non_leading, &variable));
 
+        // given an affixed label, when stripped, then it stays authored
         let mut affixed = vec![TemplateComponent::Number(citum_schema::TemplateNumber {
-            number: citum_schema::template::NumberVariable::CitationNumber,
+            number: variable.clone(),
             rendering: citum_schema::template::Rendering {
                 prefix: Some(", ".into()),
                 ..Default::default()
             },
             ..Default::default()
         })];
-        assert!(!strip_simple_leading_numeric_label(&mut affixed));
+        assert!(!strip_simple_leading_label(&mut affixed, &variable));
+
+        // given the other label variable, when stripped, then it is untouched
+        let other = match variable {
+            citum_schema::template::NumberVariable::CitationNumber => {
+                citum_schema::template::NumberVariable::CitationLabel
+            }
+            _ => citum_schema::template::NumberVariable::CitationNumber,
+        };
+        let mut foreign = vec![
+            label(),
+            TemplateComponent::Title(citum_schema::TemplateTitle::default()),
+        ];
+        assert!(!strip_simple_leading_label(&mut foreign, &other));
     }
 
     #[test]

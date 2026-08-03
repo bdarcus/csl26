@@ -420,6 +420,9 @@ pub struct BibliographyOptions {
     /// Label wrap policy applied to bibliography labels.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub label_wrap: Option<BibliographyLabelWrap>,
+    /// Text placed between the bibliography label and the entry body.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub label_separator: Option<DelimiterPunctuation>,
     /// Placement of issued dates within bibliography entries.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub date_position: Option<DatePosition>,
@@ -860,6 +863,7 @@ impl BibliographyOptions {
             entry_suffix_after_doi: self.entry_suffix_after_doi,
             label_mode: self.label_mode,
             label_wrap: self.label_wrap,
+            label_separator: self.label_separator.clone(),
             custom: None,
             compound_numeric: self.compound_numeric.clone(),
             sort_partitioning: self.sort_partitioning.clone(),
@@ -929,6 +933,13 @@ impl BibliographyOptions {
 
     /// Merge `other` into `self`, with `other` taking precedence for each field.
     pub fn merge(&mut self, other: &BibliographyOptions) {
+        self.merge_content_fields(other);
+        self.merge_presentation_fields(other);
+        self.merge_shared_fields(other);
+    }
+
+    /// Merge the fields that select and shape entry content.
+    fn merge_content_fields(&mut self, other: &BibliographyOptions) {
         crate::merge_options!(
             self,
             other,
@@ -942,23 +953,30 @@ impl BibliographyOptions {
             volume_pages_delimiter,
             strip_periods,
             article_journal,
+            compound_numeric,
+            sort_partitioning,
+            anonymous_entries,
+            custom,
+        );
+    }
+
+    /// Merge the fields that govern entry labelling, spacing, and layout.
+    fn merge_presentation_fields(&mut self, other: &BibliographyOptions) {
+        crate::merge_options!(
+            self,
+            other,
             subsequent_author_substitute,
             subsequent_author_substitute_rule,
             hanging_indent,
             entry_suffix,
             separator,
-            compound_numeric,
-            sort_partitioning,
-            anonymous_entries,
             label_mode,
             label_wrap,
+            label_separator,
             date_position,
             title_terminator,
             repeated_author_rendering,
-            custom,
         );
-
-        self.merge_shared_fields(other);
     }
 
     fn merge_shared_fields(&mut self, other: &BibliographyOptions) {

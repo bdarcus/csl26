@@ -280,6 +280,9 @@ pub struct DocumentBibliographyOverride {
     /// Bibliography label wrap punctuation.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub label_wrap: Option<BibliographyLabelWrap>,
+    /// Text placed between the bibliography label and the entry body.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub label_separator: Option<citum_schema::template::DelimiterPunctuation>,
 }
 
 /// Per-document presentation overrides parsed from frontmatter `options:` block.
@@ -369,6 +372,9 @@ impl DocumentOptionsOverride {
         }
         if let Some(lm) = bib_override.label_mode {
             opts.label_mode = Some(lm);
+        }
+        if let Some(ls) = bib_override.label_separator.clone() {
+            opts.label_separator = Some(ls);
         }
         if let Some(lw) = bib_override.label_wrap {
             opts.label_wrap = Some(lw);
