@@ -7,11 +7,14 @@ use std::collections::HashMap;
 use std::fmt::Write;
 
 use crate::api::{AnnotationFormat, AnnotationStyle};
-use crate::render::component::{ProcEntry, ProcTemplateComponent, render_component_with_format};
+use crate::render::component::{
+    ProcEntry, ProcTemplateComponent, RenderedComponent, render_component_detailed,
+};
 use crate::render::format::{OutputFormat, PunctuationPosition, RealizedPunctuation};
 use crate::render::plain::PlainText;
 use crate::render::punctuation::{
-    is_strong_terminal, move_punctuation_into_quote, strong_terminal_comma_policy,
+    is_strong_terminal, leading_movable_mark, move_punctuation_into_quote,
+    strong_terminal_comma_policy, visible_projection,
 };
 use crate::render::rich_text::{render_djot_inline, render_org_inline};
 use citum_schema::template::DelimiterPunctuation;
@@ -81,6 +84,16 @@ fn first_visible_char<F: OutputFormat<Output = String>>(input: &str) -> Option<c
     F::default().visible_text(input).chars().next()
 }
 
+/// Returns the last character of the visible (markup-stripped) text for
+/// format `F`, which may be whitespace. Unlike a raw `chars().last()`, this
+/// is not fooled by trailing markup (an HTML `</span>`, a LaTeX `}`, ...):
+/// under those formats the raw last byte is always the markup's own closing
+/// character, never whitespace, which would otherwise make every boundary
+/// look "non-space" regardless of the actual rendered content.
+fn last_visible_char<F: OutputFormat<Output = String>>(input: &str) -> Option<char> {
+    F::default().visible_text(input).chars().last()
+}
+
 /// Returns the last non-whitespace visible character, used for punctuation deduplication.
 fn last_visible_non_space_char<F: OutputFormat<Output = String>>(input: &str) -> Option<char> {
     F::default()
@@ -128,7 +141,7 @@ pub(crate) fn component_starts_new_sentence<F: OutputFormat<Output = String>>(
         return true;
     }
 
-    let last_char = entry_output.chars().last().unwrap_or(' ');
+    let last_char = last_visible_char::<F>(entry_output).unwrap_or(' ');
     let trimmed_last = last_visible_non_space_char::<F>(entry_output).unwrap_or(' ');
     if !last_char.is_whitespace()
         && !first_char.is_whitespace()
@@ -142,15 +155,18 @@ pub(crate) fn component_starts_new_sentence<F: OutputFormat<Output = String>>(
 
     punctuation_in_quote
         && default_separator.core() == Some('.')
-        && ends_with_close_quote(entry_output, close_quote)
+        && ends_with_close_quote::<F>(entry_output, close_quote)
 }
 
 /// Returns true if `text` ends with the locale-resolved closing quote glyph
 /// (or the legacy straight-quote fallback), matching the same acceptance
 /// [`move_punctuation_into_quote`] uses when relocating trailing punctuation.
-fn ends_with_close_quote(text: &str, close_quote: &str) -> bool {
-    (!close_quote.is_empty() && text.ends_with(close_quote))
-        || (close_quote != "\"" && text.ends_with('"'))
+/// Checked against the *visible* text under `F`, so trailing markup (an HTML
+/// `</span>`, a LaTeX `}`, ...) does not hide the quote glyph.
+fn ends_with_close_quote<F: OutputFormat<Output = String>>(text: &str, close_quote: &str) -> bool {
+    let visible = F::default().visible_text(text);
+    (!close_quote.is_empty() && visible.ends_with(close_quote))
+        || (close_quote != "\"" && visible.ends_with('"'))
 }
 
 /// Render processed templates into a final bibliography string using `PlainText` format.
@@ -180,7 +196,7 @@ pub fn render_entry_body_with_format<F: OutputFormat<Output = String>>(
 )]
 fn append_or_suppress<F: OutputFormat<Output = String>>(
     entry_output: &mut String,
-    rendered: &str,
+    rendered: &RenderedComponent,
     suppress: bool,
     default_separator: &RealizedPunctuation<'_>,
     punctuation_in_quote: bool,
@@ -188,7 +204,7 @@ fn append_or_suppress<F: OutputFormat<Output = String>>(
     close_quote: &str,
 ) {
     if suppress {
-        entry_output.push_str(rendered);
+        entry_output.push_str(&rendered.text);
     } else {
         append_rendered_component::<F>(
             entry_output,
@@ -207,9 +223,9 @@ fn append_or_suppress<F: OutputFormat<Output = String>>(
 /// true once nothing after it actually rendered.
 fn trim_trailing_only_suffix<F: OutputFormat<Output = String>>(
     last_component: &ProcTemplateComponent,
-    rendered: String,
+    rendered: RenderedComponent,
     is_truly_last: bool,
-) -> String {
+) -> RenderedComponent {
     if is_truly_last {
         return rendered;
     }
@@ -220,7 +236,7 @@ fn trim_trailing_only_suffix<F: OutputFormat<Output = String>>(
         wrap_config.inner_suffix = None;
     }
     trimmed_component.suffix = None;
-    render_component_with_format::<F>(&trimmed_component)
+    render_component_detailed::<F>(&trimmed_component)
 }
 
 /// Render processed bibliography components without outer entry/bibliography wrappers.
@@ -232,7 +248,7 @@ pub(crate) fn render_entry_body_components_with_format<F: OutputFormat<Output = 
     let mut pending_component: Option<(
         usize,
         &crate::render::component::ProcTemplateComponent,
-        String,
+        RenderedComponent,
     )> = None;
 
     // Check locale option for punctuation placement in quotes.
@@ -271,8 +287,8 @@ pub(crate) fn render_entry_body_components_with_format<F: OutputFormat<Output = 
     let mut suppress_next_separator = false;
 
     for (index, component) in proc_template.iter().enumerate() {
-        let rendered = render_component_with_format::<F>(component);
-        if rendered.is_empty() {
+        let rendered = render_component_detailed::<F>(component);
+        if rendered.text.is_empty() {
             continue;
         }
 
@@ -337,7 +353,7 @@ pub(crate) fn render_entry_body_components_with_format<F: OutputFormat<Output = 
                 && realized_suffix.tail().is_empty()
                 && punctuation_in_quote
                 && !entry_output.ends_with(suffix_core)
-                && move_punctuation_into_quote(&mut entry_output, '.', close_quote);
+                && move_punctuation_into_quote::<F>(&mut entry_output, '.', close_quote);
             if !moved_into_quote && !suppress && !entry_output.ends_with(suffix_core) {
                 entry_output.push_str(suffix);
             }
@@ -354,21 +370,17 @@ pub(crate) fn render_entry_body_components_with_format<F: OutputFormat<Output = 
 /// The separator logic inspects the boundary between the accumulated output
 /// and the incoming `rendered` string; `punctuation_in_quote` controls whether
 /// a period should be pulled inside a preceding closing quotation mark.
-#[allow(
-    clippy::string_slice,
-    reason = "UTF-8 safe slicing based on char boundary checks"
-)]
 pub(crate) fn append_rendered_component<F: OutputFormat<Output = String>>(
     entry_output: &mut String,
-    rendered: &str,
+    rendered: &RenderedComponent,
     default_separator: &RealizedPunctuation<'_>,
     punctuation_in_quote: bool,
     strong_terminal_comma_policy: citum_schema::options::StrongTerminalCommaPolicy,
     close_quote: &str,
 ) {
     if !entry_output.is_empty() {
-        let last_char = entry_output.chars().last().unwrap_or(' ');
-        let first_char = first_visible_char::<F>(rendered).unwrap_or(' ');
+        let last_char = last_visible_char::<F>(entry_output).unwrap_or(' ');
+        let first_char = first_visible_char::<F>(&rendered.text).unwrap_or(' ');
         let sep_first_char = default_separator.core().unwrap_or('.');
         let trimmed_last = last_visible_non_space_char::<F>(entry_output).unwrap_or(' ');
         let ends_with_punctuation = is_final_punctuation(trimmed_last);
@@ -380,18 +392,15 @@ pub(crate) fn append_rendered_component<F: OutputFormat<Output = String>>(
         // punctuation coming from `default_separator`. This must be checked
         // before `starts_with_separator` below, since such text always matches
         // that condition and would otherwise short-circuit before the quote can
-        // be examined. Only the incoming text's *raw* leading char is stripped
-        // (via `len_utf8`), so this only fires when the raw string genuinely
-        // starts with the visible char that was matched — safe even if a format
-        // wraps the value itself in markup further in.
-        let raw_first_char = rendered.chars().next();
+        // be examined. `leading_movable_mark` compares the rendered string's
+        // *visible* first character (not its raw one) against the mark, so a
+        // semantic wrapper's markup preceding it in the raw string no longer
+        // hides it.
         if punctuation_in_quote
-            && raw_first_char == Some(first_char)
-            && matches!(first_char, '.' | ',')
-            && move_punctuation_into_quote(entry_output, first_char, close_quote)
+            && let Some((mark, rest)) = leading_movable_mark::<F>(&rendered.text)
+            && move_punctuation_into_quote::<F>(entry_output, mark, close_quote)
         {
-            let remainder = &rendered[first_char.len_utf8()..];
-            entry_output.push_str(remainder);
+            entry_output.push_str(&rest);
             return;
         }
 
@@ -421,7 +430,7 @@ pub(crate) fn append_rendered_component<F: OutputFormat<Output = String>>(
             }
         } else if punctuation_in_quote
             && (sep_first_char == '.' || sep_first_char == ',')
-            && move_punctuation_into_quote(entry_output, sep_first_char, close_quote)
+            && move_punctuation_into_quote::<F>(entry_output, sep_first_char, close_quote)
         {
             // Punctuation-in-quote: pull the leading period or comma of the
             // separator inside the closing quotation mark, then append the rest
@@ -442,7 +451,7 @@ pub(crate) fn append_rendered_component<F: OutputFormat<Output = String>>(
         }
     }
 
-    let _ = write!(entry_output, "{rendered}");
+    let _ = write!(entry_output, "{}", rendered.text);
 }
 
 /// Render processed templates into a final bibliography string using a specific format.
@@ -594,17 +603,8 @@ fn cleanup_dangling_punctuation<F: OutputFormat<Output = String>>(
     output: &mut String,
     strong_terminal_comma_policy: citum_schema::options::StrongTerminalCommaPolicy,
 ) {
-    let fmt = F::default();
     loop {
-        let runs = fmt.visible_runs(output);
-        let mut visible = String::with_capacity(output.len());
-        let mut raw_pos = Vec::with_capacity(output.len());
-        for run in &runs {
-            if let Some(slice) = output.get(run.clone()) {
-                visible.push_str(slice);
-                raw_pos.extend(run.clone());
-            }
-        }
+        let (visible, raw_pos) = visible_projection::<F>(output);
 
         let locale_pattern = if strong_terminal_comma_policy
             == citum_schema::options::StrongTerminalCommaPolicy::KeepTerminal
@@ -685,6 +685,18 @@ mod tests {
     /// from `render_entry_body_components_with_format` in production.
     fn sep(text: &str) -> RealizedPunctuation<'static> {
         RealizedPunctuation::new(text.to_string().into())
+    }
+
+    /// A rendered component, standing in for the detailed render
+    /// [`append_rendered_component`] receives from
+    /// `render_entry_body_components_with_format` in production. A leading
+    /// `.`/`,` in `text` is detected the same way production does — from the
+    /// rendered text's own visible content — so no separate "with mark"
+    /// variant is needed.
+    fn rendered(text: &str) -> RenderedComponent {
+        RenderedComponent {
+            text: text.to_string(),
+        }
     }
 
     #[test]
@@ -963,7 +975,7 @@ mod tests {
         // when the next component (the journal title) is appended
         append_rendered_component::<PlainText>(
             &mut entry_output,
-            "Nature",
+            &rendered("Nature"),
             &sep(", "),
             true,
             Default::default(),
@@ -980,7 +992,7 @@ mod tests {
         // when the next component is appended
         append_rendered_component::<PlainText>(
             &mut entry_output,
-            "Nature",
+            &rendered("Nature"),
             &sep(". "),
             true,
             Default::default(),
@@ -997,7 +1009,7 @@ mod tests {
         // when the next component is appended with a comma separator
         append_rendered_component::<PlainText>(
             &mut entry_output,
-            "Nature",
+            &rendered("Nature"),
             &sep(", "),
             false,
             Default::default(),
@@ -1019,11 +1031,10 @@ mod tests {
         // date component) — the leading punctuation comes from `rendered`,
         // not from `default_separator`.
         let mut entry_output = "\u{201C}The Universe in a Nutshell\u{201D}".to_string();
-        let rendered = format!("{mark} Aired September 28");
 
         append_rendered_component::<PlainText>(
             &mut entry_output,
-            &rendered,
+            &rendered(&format!("{mark} Aired September 28")),
             &sep(", "),
             true,
             Default::default(),
@@ -1038,13 +1049,70 @@ mod tests {
     }
 
     #[test]
+    fn append_rendered_component_moves_next_component_own_leading_mark_behind_a_semantic_span() {
+        // Under `Html` (with semantics on, the default), `apply_component_semantics`
+        // wraps the *already-affixed* output in a `<span class="...">` — so the
+        // rendered component's raw first character is markup, never the mark
+        // itself. `leading_movable_mark` compares the *visible* first character
+        // (not the raw one) and must still find and relocate it.
+        use crate::render::html::Html;
+
+        let mut entry_output =
+            r#"<span class="citum-title">“The Universe in a Nutshell”</span>"#.to_string();
+
+        append_rendered_component::<Html>(
+            &mut entry_output,
+            &rendered(r#"<span class="citum-issued">. Aired September 28</span>"#),
+            &sep(", "),
+            true,
+            Default::default(),
+            "\u{201D}",
+        );
+
+        assert_eq!(
+            entry_output,
+            "<span class=\"citum-title\">\u{201C}The Universe in a Nutshell.\u{201D}</span>\
+<span class=\"citum-issued\"> Aired September 28</span>"
+        );
+    }
+
+    #[test]
+    fn append_rendered_component_reads_the_visible_last_char_not_the_markups_raw_last_byte() {
+        // Regression (Copilot review, PR #1135): under `Html`, a raw
+        // `entry_output.chars().last()` is always the closing tag's `>`,
+        // never whitespace -- even when the *visible* content genuinely
+        // ends in a space (e.g. a contributor component's own trailing
+        // space before its semantic span closes). Reading the raw last
+        // byte would wrongly treat this boundary as "both sides non-space"
+        // and insert a second separator on top of the trailing space
+        // already there.
+        use crate::render::html::Html;
+
+        let mut entry_output = r#"<span class="citum-author">Smith </span>"#.to_string();
+
+        append_rendered_component::<Html>(
+            &mut entry_output,
+            &rendered("2020"),
+            &sep(". "),
+            false,
+            Default::default(),
+            "\u{201D}",
+        );
+
+        assert_eq!(
+            entry_output,
+            r#"<span class="citum-author">Smith </span>2020"#
+        );
+    }
+
+    #[test]
     fn append_rendered_component_leaves_next_component_own_leading_mark_outside_quote_when_disabled()
      {
         let mut entry_output = "\u{201C}The Universe in a Nutshell\u{201D}".to_string();
 
         append_rendered_component::<PlainText>(
             &mut entry_output,
-            ". Aired September 28",
+            &rendered(". Aired September 28"),
             &sep(", "),
             false,
             Default::default(),
@@ -1058,6 +1126,29 @@ mod tests {
     }
 
     #[test]
+    fn append_rendered_component_moves_separator_led_mark_behind_trailing_latex_markup() {
+        // The *separator*-driven move (not the component's own leading mark):
+        // `entry_output` already ends with an `\emph{...}` wrapping the closing
+        // quote, so the quote glyph is not the raw string's last character.
+        // `move_punctuation_into_quote` must still find it via the visible
+        // projection under `Latex`.
+        use crate::render::latex::Latex;
+
+        let mut entry_output = r"\emph{“Deep Learning”}".to_string();
+
+        append_rendered_component::<Latex>(
+            &mut entry_output,
+            &rendered("Nature"),
+            &sep(", "),
+            true,
+            Default::default(),
+            "\u{201D}",
+        );
+
+        assert_eq!(entry_output, "\\emph{“Deep Learning,”} Nature");
+    }
+
+    #[test]
     fn append_rendered_component_moves_mark_inside_a_locale_specific_close_quote() {
         // A French-style guillemet close quote rather than the en-US curly
         // quote — the hardcoded '"'/'\u{201D}' match this replaces would never
@@ -1066,7 +1157,7 @@ mod tests {
 
         append_rendered_component::<PlainText>(
             &mut entry_output,
-            "Suite",
+            &rendered("Suite"),
             &sep(", "),
             true,
             Default::default(),
@@ -1082,7 +1173,7 @@ mod tests {
             let mut keep_both = format!("Title{terminal}");
             append_rendered_component::<PlainText>(
                 &mut keep_both,
-                "Next",
+                &rendered("Next"),
                 &sep(", "),
                 false,
                 citum_schema::options::StrongTerminalCommaPolicy::KeepBoth,
@@ -1093,7 +1184,7 @@ mod tests {
             let mut keep_terminal = format!("Title{terminal}");
             append_rendered_component::<PlainText>(
                 &mut keep_terminal,
-                "Next",
+                &rendered("Next"),
                 &sep(", "),
                 false,
                 citum_schema::options::StrongTerminalCommaPolicy::KeepTerminal,
@@ -1108,7 +1199,7 @@ mod tests {
         let mut entry_output = "Title?".to_string();
         append_rendered_component::<PlainText>(
             &mut entry_output,
-            "Next",
+            &rendered("Next"),
             &sep(",\u{00A0}"),
             false,
             citum_schema::options::StrongTerminalCommaPolicy::KeepTerminal,
@@ -1548,7 +1639,7 @@ mod tests {
         let mut entry_output = Latex.emph("Title.".to_string());
         append_rendered_component::<Latex>(
             &mut entry_output,
-            "Next",
+            &rendered("Next"),
             &sep(". "),
             false,
             Default::default(),

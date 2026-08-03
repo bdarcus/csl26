@@ -12,7 +12,7 @@ use crate::render::ProcTemplateComponent;
 use crate::render::bibliography::{
     append_rendered_component, component_starts_new_sentence, realize_bibliography_punctuation,
 };
-use crate::render::component::render_component_with_format;
+use crate::render::component::{render_component_detailed, render_component_with_format};
 use crate::render::format::PunctuationPosition;
 use crate::render::punctuation::strong_terminal_comma_policy;
 use crate::values::RenderContext;
@@ -87,7 +87,7 @@ impl Renderer<'_> {
                 self.apply_sentence_initial_transform(component, None);
             }
 
-            let rendered = render_component_with_format::<F>(component);
+            let rendered = render_component_detailed::<F>(component);
             append_rendered_component::<F>(
                 &mut entry_output,
                 &rendered,
