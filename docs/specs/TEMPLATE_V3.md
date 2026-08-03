@@ -115,11 +115,12 @@ the source style supplies another fallback, such as a localized no-date term.
 - message: term.no-date
 ```
 
-### §2.3 Declarative Numeric Citation Labels
+### §2.3 Declarative Citation Labels
 
-Processor-generated `citation-number` values are style semantics rather than
-authored data selection. Numeric citation styles SHOULD declare their label
-policy in scoped options and keep the number out of ordinary templates:
+Processor-generated `citation-number` and `citation-label` values are style
+semantics rather than authored data selection. Styles that carry a label SHOULD
+declare their label policy in scoped options and keep the label component out of
+ordinary templates:
 
 ```yaml
 options:
@@ -132,23 +133,42 @@ citation:
   collapse: citation-number
 ```
 
+The label mode names the variable the processor generates: `numeric` generates
+`citation-number`, `alphabetic` generates the `citation-label` trigraph used by
+biblatex `alpha`-family styles, and `none` generates neither.
+
 The engine resolves locale and type variants first, then materializes a semantic
-numeric-label slot before collapse and final formatting. Non-integral labels
-lead the item; explicit integral templates receive the label after authored
-content using the effective integral delimiter. An omitted citation label mode
-implies `numeric` only for numeric processing. `label-mode: none` suppresses
-inherited or legacy numeric labels.
+label slot before collapse and final formatting. Non-integral labels lead the
+item; explicit integral templates receive the label after authored content using
+the effective integral delimiter. An omitted citation label mode is inferred
+from the processing preset — `numeric` under numeric processing, `alphabetic`
+under label processing. `label-mode: none` suppresses inherited or legacy labels
+of either kind.
 
-Existing explicit `number: citation-number` components remain valid for
-compatibility and suppress duplicate generation. `citation-label` is a separate
-alphabetic-label feature and is not redesigned here. `citation.wrap` remains
-cluster-level; `citation.options.label-wrap` controls the label itself.
+Only numeric labels participate in `collapse: citation-number`; alphabetic
+labels have no numeric ordering to collapse into a range, so their presentation
+is applied directly rather than deferred past the collapse pass.
 
-Bibliographies use the canonical `bibliography.options.label-mode` setting. The
-renderer inserts numeric labels as a synthetic leading group after type-variant
-resolution and applies label wrapping at runtime, without rewriting the style
-template. This preserves label-only separator behavior for entries with no
-rendered author or body.
+Existing explicit `number: citation-number` and `number: citation-label`
+components remain valid for compatibility and suppress duplicate generation.
+`citation.wrap` remains cluster-level; `citation.options.label-wrap` controls the
+label itself. The two are not interchangeable: a style whose cluster reads
+`[ABC96, DEF97]` wraps the cluster, while `label-wrap` would produce
+`[ABC96], [DEF97]`.
+
+Bibliographies use the canonical `bibliography.options.label-mode` setting with
+the same vocabulary plus `author-date`. The renderer inserts the label as a
+synthetic leading group after type-variant resolution and applies label wrapping
+at runtime, without rewriting the style template. This preserves label-only
+separator behavior for entries with no rendered author or body. Because the mode
+names the label variable, a label of the *other* kind — typically inherited from
+a parent family — is removed rather than rendered alongside the declared one.
+
+`bibliography.options.label-separator` supplies the text between the label and
+the entry body. It is unset by default, which leaves the label flush against the
+following content and matches how citeproc-js's `second-field-align` output
+flattens to text (`[1]`, `1.`). Variable-width alphabetic labels normally
+declare `label-separator: ' '`.
 
 ### §2.4 MF2 Message Components
 

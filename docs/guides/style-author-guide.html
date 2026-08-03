@@ -585,11 +585,21 @@ blocks used by standalone styles.</p>
                     <tr><th class="px-4 py-3 text-left font-semibold text-slate-900">Field</th><th class="px-4 py-3 text-left font-semibold text-slate-900">Allowed values</th><th class="px-4 py-3 text-left font-semibold text-slate-900">Use when</th><th class="px-4 py-3 text-left font-semibold text-slate-900">Example value</th></tr>
                 </thead>
                 <tbody class="divide-y divide-slate-200">
-                    <tr class="hover:bg-slate-50"><td class="px-4 py-3 text-slate-600"><code>bibliography.options.date-position</code></td><td class="px-4 py-3 text-slate-600"><code>after-author</code>, <code>after-title</code>, <code>terminal</code></td><td class="px-4 py-3 text-slate-600">the style should move the year within bibliography entries</td><td class="px-4 py-3 text-slate-600"><code>after-author</code></td></tr><tr class="hover:bg-slate-50"><td class="px-4 py-3 text-slate-600"><code>options.contributors</code></td><td class="px-4 py-3 text-slate-600">contributor presets such as <code>apa</code>, <code>chicago</code>, <code>springer</code>, <code>vancouver</code></td><td class="px-4 py-3 text-slate-600">the style should switch contributor formatting</td><td class="px-4 py-3 text-slate-600"><code>springer</code></td></tr><tr class="hover:bg-slate-50"><td class="px-4 py-3 text-slate-600"><code>citation.options.label-mode</code></td><td class="px-4 py-3 text-slate-600"><code>none</code>, <code>numeric</code></td><td class="px-4 py-3 text-slate-600">the style should generate or suppress numeric citation labels</td><td class="px-4 py-3 text-slate-600"><code>numeric</code></td></tr><tr class="hover:bg-slate-50"><td class="px-4 py-3 text-slate-600"><code>citation.options.label-wrap</code></td><td class="px-4 py-3 text-slate-600"><code>none</code>, <code>parentheses</code>, <code>brackets</code>, <code>superscript</code></td><td class="px-4 py-3 text-slate-600">the style should change citation label punctuation</td><td class="px-4 py-3 text-slate-600"><code>brackets</code></td></tr><tr class="hover:bg-slate-50"><td class="px-4 py-3 text-slate-600"><code>bibliography.options.label-mode</code></td><td class="px-4 py-3 text-slate-600"><code>none</code>, <code>numeric</code>, <code>author-date</code></td><td class="px-4 py-3 text-slate-600">the style should change bibliography label display</td><td class="px-4 py-3 text-slate-600"><code>numeric</code></td></tr>
+                    <tr class="hover:bg-slate-50"><td class="px-4 py-3 text-slate-600"><code>bibliography.options.date-position</code></td><td class="px-4 py-3 text-slate-600"><code>after-author</code>, <code>after-title</code>, <code>terminal</code></td><td class="px-4 py-3 text-slate-600">the style should move the year within bibliography entries</td><td class="px-4 py-3 text-slate-600"><code>after-author</code></td></tr><tr class="hover:bg-slate-50"><td class="px-4 py-3 text-slate-600"><code>options.contributors</code></td><td class="px-4 py-3 text-slate-600">contributor presets such as <code>apa</code>, <code>chicago</code>, <code>springer</code>, <code>vancouver</code></td><td class="px-4 py-3 text-slate-600">the style should switch contributor formatting</td><td class="px-4 py-3 text-slate-600"><code>springer</code></td></tr><tr class="hover:bg-slate-50"><td class="px-4 py-3 text-slate-600"><code>citation.options.label-mode</code></td><td class="px-4 py-3 text-slate-600"><code>none</code>, <code>numeric</code>, <code>alphabetic</code></td><td class="px-4 py-3 text-slate-600">the style should generate or suppress citation labels</td><td class="px-4 py-3 text-slate-600"><code>numeric</code></td></tr><tr class="hover:bg-slate-50"><td class="px-4 py-3 text-slate-600"><code>citation.options.label-wrap</code></td><td class="px-4 py-3 text-slate-600"><code>none</code>, <code>parentheses</code>, <code>brackets</code>, <code>superscript</code></td><td class="px-4 py-3 text-slate-600">the style should change citation label punctuation</td><td class="px-4 py-3 text-slate-600"><code>brackets</code></td></tr><tr class="hover:bg-slate-50"><td class="px-4 py-3 text-slate-600"><code>bibliography.options.label-mode</code></td><td class="px-4 py-3 text-slate-600"><code>none</code>, <code>numeric</code>, <code>alphabetic</code>, <code>author-date</code></td><td class="px-4 py-3 text-slate-600">the style should change bibliography label display</td><td class="px-4 py-3 text-slate-600"><code>numeric</code></td></tr><tr class="hover:bg-slate-50"><td class="px-4 py-3 text-slate-600"><code>bibliography.options.label-separator</code></td><td class="px-4 py-3 text-slate-600">any literal string</td><td class="px-4 py-3 text-slate-600">the label needs a gap before the entry body</td><td class="px-4 py-3 text-slate-600"><code>&#39; &#39;</code></td></tr>
                 </tbody>
             </table>
         </div>
-    
+    <p><code>label-mode</code> names the label the processor generates: <code>numeric</code> generates a
+citation number, <code>alphabetic</code> generates the <code>citation-label</code> trigraph used by
+biblatex <code>alpha</code>-family styles, and <code>none</code> generates neither. Leave the label
+component out of your templates — declaring the mode is enough.</p>
+<p><code>alphabetic</code> needs <code>options.processing: label:</code> as well; the trigraph is built
+from the label parameters declared there, so without it the label renders empty.</p>
+<p><code>citation.options.label-wrap</code> wraps the <em>label</em>; <code>citation.wrap</code> wraps the whole
+<em>cluster</em>. A style whose cites read <code>[ABC96, DEF97]</code> wraps the cluster, so it
+must leave <code>label-wrap</code> unset (or set it to <code>none</code> to cancel an inherited value).
+Setting <code>label-wrap: brackets</code> there would produce <code>[ABC96], [DEF97]</code> instead.</p>
+
         <div class="bg-slate-900 rounded-lg p-6 overflow-x-auto mb-8 not-prose workshop-block">
             <pre class="font-mono text-sm text-slate-300 leading-relaxed"><code class="language-yaml"><span class="text-slate-500"># Standalone style: <span class="text-emerald-400">configure</span> the style directly</span>
 <span class="text-indigo-400">options</span>:
@@ -1064,7 +1074,38 @@ narrative content:</p>
       <span class="text-slate-400">- </span><span class="text-primary">contributor</span>: <span class="text-emerald-400">author</span>
         <span class="text-primary">form</span>: <span class="text-emerald-400">short</span></code></pre>
         </div>
-    <h3 id="example-3-style-inheritance-with-scoped-options" class="font-bold text-slate-900 mt-8 mb-4">Example 3: Style Inheritance with Scoped Options</h3><p>Inherit from a shared base and tune it via normal scoped options. No templates
+    <p>An alphabetic (trigraph) label style declares the same way. Note that the
+brackets here belong to the <em>cluster</em>, so <code>label-wrap</code> stays unset:</p>
+
+        <div class="bg-slate-900 rounded-lg p-6 overflow-x-auto mb-8 not-prose workshop-block">
+            <pre class="font-mono text-sm text-slate-300 leading-relaxed"><code class="language-yaml"><span class="text-indigo-400">options</span>:
+  <span class="text-primary">processing</span>:
+    <span class="text-primary">label</span>:
+      <span class="text-primary">preset</span>: <span class="text-emerald-400">alpha</span>
+
+<span class="text-primary">citation</span>:
+  <span class="text-primary">options</span>:
+    <span class="text-primary">label-mode</span>: <span class="text-emerald-400">alphabetic</span>
+  <span class="text-primary">template</span>:
+    <span class="text-slate-400">- </span><span class="text-primary">variable</span>: <span class="text-emerald-400">locator</span>
+      <span class="text-primary">prefix</span>: <span class="text-emerald-400">", "</span>
+  <span class="text-primary">wrap</span>:
+    <span class="text-primary">punctuation</span>: <span class="text-emerald-400">brackets</span>
+  <span class="text-primary">delimiter</span>: <span class="text-emerald-400">""</span>
+  <span class="text-primary">multi-cite-delimiter</span>: <span class="text-emerald-400">", "</span>
+
+<span class="text-primary">bibliography</span>:
+  <span class="text-primary">options</span>:
+    <span class="text-primary">label-mode</span>: <span class="text-emerald-400">alphabetic</span>
+    <span class="text-primary">label-wrap</span>: <span class="text-emerald-400">brackets</span>
+    <span class="text-primary">label-separator</span>: <span class="text-emerald-400">" "</span>
+  <span class="text-primary">template</span>:
+    <span class="text-slate-400">- </span><span class="text-primary">contributor</span>: <span class="text-emerald-400">author</span>
+    <span class="text-slate-400">- </span><span class="text-primary">title</span>: <span class="text-emerald-400">primary</span></code></pre>
+        </div>
+    <p>This renders <code>[ABC96, DEF97]</code> in text and <code>[ABC96] Author, Title.</code> in the
+bibliography.</p>
+<h3 id="example-3-style-inheritance-with-scoped-options" class="font-bold text-slate-900 mt-8 mb-4">Example 3: Style Inheritance with Scoped Options</h3><p>Inherit from a shared base and tune it via normal scoped options. No templates
 needed — the base supplies them.</p>
 
         <div class="bg-slate-900 rounded-lg p-6 overflow-x-auto mb-8 not-prose workshop-block">

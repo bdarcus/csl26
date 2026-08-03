@@ -342,9 +342,23 @@ Use the option block that matches the scope of the behavior:
 |---|---|---|---|
 | `bibliography.options.date-position` | `after-author`, `after-title`, `terminal` | the style should move the year within bibliography entries | `after-author` |
 | `options.contributors` | contributor presets such as `apa`, `chicago`, `springer`, `vancouver` | the style should switch contributor formatting | `springer` |
-| `citation.options.label-mode` | `none`, `numeric` | the style should generate or suppress numeric citation labels | `numeric` |
+| `citation.options.label-mode` | `none`, `numeric`, `alphabetic` | the style should generate or suppress citation labels | `numeric` |
 | `citation.options.label-wrap` | `none`, `parentheses`, `brackets`, `superscript` | the style should change citation label punctuation | `brackets` |
-| `bibliography.options.label-mode` | `none`, `numeric`, `author-date` | the style should change bibliography label display | `numeric` |
+| `bibliography.options.label-mode` | `none`, `numeric`, `alphabetic`, `author-date` | the style should change bibliography label display | `numeric` |
+| `bibliography.options.label-separator` | any literal string | the label needs a gap before the entry body | `' '` |
+
+`label-mode` names the label the processor generates: `numeric` generates a
+citation number, `alphabetic` generates the `citation-label` trigraph used by
+biblatex `alpha`-family styles, and `none` generates neither. Leave the label
+component out of your templates — declaring the mode is enough.
+
+`alphabetic` needs `options.processing: label:` as well; the trigraph is built
+from the label parameters declared there, so without it the label renders empty.
+
+`citation.options.label-wrap` wraps the *label*; `citation.wrap` wraps the whole
+*cluster*. A style whose cites read `[ABC96, DEF97]` wraps the cluster, so it
+must leave `label-wrap` unset (or set it to `none` to cancel an inherited value).
+Setting `label-wrap: brackets` there would produce `[ABC96], [DEF97]` instead.
 
 ```yaml
 # Standalone style: configure the style directly
@@ -809,6 +823,39 @@ citation:
       - contributor: author
         form: short
 ```
+
+An alphabetic (trigraph) label style declares the same way. Note that the
+brackets here belong to the *cluster*, so `label-wrap` stays unset:
+
+```yaml
+options:
+  processing:
+    label:
+      preset: alpha
+
+citation:
+  options:
+    label-mode: alphabetic
+  template:
+    - variable: locator
+      prefix: ", "
+  wrap:
+    punctuation: brackets
+  delimiter: ""
+  multi-cite-delimiter: ", "
+
+bibliography:
+  options:
+    label-mode: alphabetic
+    label-wrap: brackets
+    label-separator: " "
+  template:
+    - contributor: author
+    - title: primary
+```
+
+This renders `[ABC96, DEF97]` in text and `[ABC96] Author, Title.` in the
+bibliography.
 
 ### Example 3: Style Inheritance with Scoped Options
 

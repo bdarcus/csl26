@@ -48,6 +48,7 @@ The initial replacement fields are:
 - `citation.options.group-delimiter`
 - `bibliography.options.label-mode`
 - `bibliography.options.label-wrap`
+- `bibliography.options.label-separator`
 - `bibliography.options.date-position`
 - `bibliography.options.title-terminator`
 - `bibliography.options.repeated-author-rendering`
@@ -66,17 +67,26 @@ The renderer materializes a semantic label slot only after locale and type
 variant selection; authored templates are not rewritten. This happens for both
 profile wrappers and standalone styles, so the option semantics are uniform.
 
-`citation.options.label-mode` supports `numeric` and `none`. When omitted,
-numeric processing implies `numeric`; other processing modes preserve existing
-template behavior. `none` suppresses inherited or legacy `citation-number`
-components. `citation.options.label-wrap` presents the generated label itself;
-`citation.wrap` continues to wrap the citation cluster.
+`citation.options.label-mode` supports `numeric`, `alphabetic`, and `none`.
+Each mode names the label variable the processor generates: `citation-number`,
+the `citation-label` trigraph, or nothing. When omitted, the mode is inferred
+from the processing preset — `numeric` under numeric processing, `alphabetic`
+under label processing; other processing modes preserve existing template
+behavior. A label component of a variable the mode does not name is treated as
+an artifact of an inherited template and is removed, so declaring a mode never
+yields two labels. `citation.options.label-wrap` presents the generated label
+itself; `citation.wrap` continues to wrap the citation cluster, and the two are
+not interchangeable — a style that brackets its cluster (`[ABC96, DEF97]`) must
+leave `label-wrap` unset or `none`.
 
-`bibliography.options.label-mode` and `label-wrap` are likewise runtime-owned.
-Numeric bibliography labels are inserted as a leading semantic group after
+`bibliography.options.label-mode`, `label-wrap`, and `label-separator` are
+likewise runtime-owned. Labels are inserted as a leading semantic group after
 type-variant resolution, preserving label-only separator behavior for entries
-whose content is otherwise empty. Existing explicit label components remain
-accepted and prevent duplicate insertion.
+whose content is otherwise empty. Existing explicit label components of the
+declared variable remain accepted and prevent duplicate insertion.
+`label-separator` supplies the text between label and entry body; unset leaves
+the label flush, matching citeproc-js's `second-field-align` output flattened to
+text.
 
 ### 2a. Runtime Scope Cascade Merge Semantics
 
@@ -132,6 +142,7 @@ current code-as-schema model while removing the separate profile vocabulary.
 - [ ] Embedded profile wrappers use only the new scoped fields.
 - [ ] Standalone styles can use the same fields without `extends:`.
 - [ ] Numeric labels are materialized at render time without mutating authored templates.
+- [ ] Alphabetic labels use the same runtime path and never enter numeric collapse.
 
 ## Changelog
 
