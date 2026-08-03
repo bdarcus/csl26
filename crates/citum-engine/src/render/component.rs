@@ -149,6 +149,35 @@ pub fn render_component_with_format<F: OutputFormat<Output = String>>(
     render_component_with_format_and_renderer::<F>(component, &F::default(), true)
 }
 
+/// A rendered component's text.
+///
+/// Exists so punctuation-in-quote join sites (`render/bibliography.rs`,
+/// `render/citation.rs`, `render/punctuation.rs`) have a named type to
+/// extend if a future increment needs to carry more than the text — today
+/// they detect a movable leading mark from `text` itself, via
+/// `render::punctuation::leading_movable_mark`, which compares the rendered
+/// string's *visible* first character (not its raw one) against the
+/// *visible* closing quote it might relocate into. An earlier version of
+/// this fix instead typed the mark from the component's realized outer
+/// `prefix`, gating the move on that alone; a CJK regression test caught
+/// that this misses leading marks supplied by other means (value-extraction
+/// prefixes, nested-group joins), so the visible-character check — a strict
+/// superset of what the old raw sniff caught, just no longer defeated by a
+/// semantic wrapper's markup — is the actual fix.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub(crate) struct RenderedComponent {
+    /// The fully rendered component text (affixes, wraps, semantics applied).
+    pub(crate) text: String,
+}
+
+/// As [`render_component_with_format`], but returns a [`RenderedComponent`]
+/// rather than a bare string.
+pub(crate) fn render_component_detailed<F: OutputFormat<Output = String>>(
+    component: &ProcTemplateComponent,
+) -> RenderedComponent {
+    render_component_detailed_with_format_and_renderer::<F>(component, &F::default(), true)
+}
+
 fn realized_component_affixes<'a>(
     rendering: &'a Rendering,
     script: crate::values::ScriptClass,
@@ -203,12 +232,24 @@ pub fn render_component_with_format_and_renderer<F: OutputFormat<Output = String
     fmt: &F,
     show_semantics: bool,
 ) -> F::Output {
+    render_component_detailed_with_format_and_renderer::<F>(component, fmt, show_semantics).text
+}
+
+/// As [`render_component_with_format_and_renderer`], but returns a
+/// [`RenderedComponent`] rather than a bare string.
+pub(crate) fn render_component_detailed_with_format_and_renderer<
+    F: OutputFormat<Output = String>,
+>(
+    component: &ProcTemplateComponent,
+    fmt: &F,
+    show_semantics: bool,
+) -> RenderedComponent {
     // Get merged rendering (global config + local settings + overrides)
     let rendering = get_effective_rendering(component);
 
     // Check if suppressed
     if rendering.suppress == Some(true) {
-        return fmt.text("");
+        return RenderedComponent::default();
     }
 
     let multilingual = component
@@ -317,7 +358,7 @@ pub fn render_component_with_format_and_renderer<F: OutputFormat<Output = String
         output = remap_to_latin_punctuation(output);
     }
 
-    output
+    RenderedComponent { text: output }
 }
 
 /// Whether this component opts into the legacy literal-punctuation remap.

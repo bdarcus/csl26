@@ -3,12 +3,12 @@ SPDX-License-Identifier: MIT OR Apache-2.0
 SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus and Citum contributors
 */
 
-use crate::render::component::{ProcTemplate, render_component_with_format};
+use crate::render::component::{ProcTemplate, RenderedComponent, render_component_detailed};
 use crate::render::format::{OutputFormat, RealizedPunctuation};
 use crate::render::plain::PlainText;
 use crate::render::punctuation::{
-    is_terminal_punctuation, move_punctuation_into_quote, resolve_punctuation_collision,
-    strong_terminal_comma_policy,
+    is_terminal_punctuation, leading_movable_mark, move_punctuation_into_quote,
+    resolve_punctuation_collision, strong_terminal_comma_policy,
 };
 use citum_schema::template::WrapPunctuation;
 
@@ -35,14 +35,10 @@ use citum_schema::template::WrapPunctuation;
 /// `delim` must already be decomposed from the same string that will be
 /// spliced into `content` — see [`RealizedPunctuation`].
 #[inline]
-#[allow(
-    clippy::string_slice,
-    reason = "UTF-8 safe slicing based on char boundary checks"
-)]
 fn push_delimiter<F: OutputFormat<Output = String>>(
     content: &mut String,
     delim: &RealizedPunctuation<'_>,
-    next: &str,
+    next: &RenderedComponent,
     punctuation_in_quote: bool,
     strong_terminal_comma_policy: citum_schema::options::StrongTerminalCommaPolicy,
     close_quote: &str,
@@ -51,32 +47,31 @@ fn push_delimiter<F: OutputFormat<Output = String>>(
 
     if punctuation_in_quote {
         if matches!(delim_first, Some('.' | ','))
-            && move_punctuation_into_quote(content, delim_first.unwrap_or('.'), close_quote)
+            && move_punctuation_into_quote::<F>(content, delim_first.unwrap_or('.'), close_quote)
         {
             // Case 1: pull the leading period/comma of the delimiter inside the quote.
             content.push_str(delim.tail());
-            content.push_str(next);
+            content.push_str(&next.text);
             return;
         }
         if delim_first.is_none()
-            && let Some(next_first) = next.chars().next()
-            && matches!(next_first, '.' | ',')
-            && move_punctuation_into_quote(content, next_first, close_quote)
+            && let Some((mark, rest)) = leading_movable_mark::<F>(&next.text)
+            && move_punctuation_into_quote::<F>(content, mark, close_quote)
         {
             // Case 2: `next` supplies its own leading punctuation.
-            content.push_str(&next[next_first.len_utf8()..]);
+            content.push_str(&rest);
             return;
         }
     }
 
     let Some(first) = delim_first else {
         content.push_str(delim.text());
-        content.push_str(next);
+        content.push_str(&next.text);
         return;
     };
     let Some(visible_last) = F::default().visible_text(content).chars().last() else {
         content.push_str(delim.text());
-        content.push_str(next);
+        content.push_str(&next.text);
         return;
     };
 
@@ -106,7 +101,7 @@ fn push_delimiter<F: OutputFormat<Output = String>>(
             content.push_str(delim.tail());
         }
     }
-    content.push_str(next);
+    content.push_str(&next.text);
 }
 
 /// Render a processed template into a final citation string using `PlainText` format.
@@ -130,11 +125,11 @@ pub fn citation_to_string_with_format<F: OutputFormat<Output = String>>(
     suffix: Option<&str>,
     delimiter: Option<&str>,
 ) -> String {
-    let mut parts: Vec<String> = Vec::new();
+    let mut parts: Vec<RenderedComponent> = Vec::new();
 
     for component in proc_template {
-        let rendered = render_component_with_format::<F>(component);
-        if !rendered.is_empty() {
+        let rendered = render_component_detailed::<F>(component);
+        if !rendered.text.is_empty() {
             parts.push(rendered);
         }
     }
@@ -157,7 +152,7 @@ pub fn citation_to_string_with_format<F: OutputFormat<Output = String>>(
     let mut content = String::new();
     for (i, part) in parts.iter().enumerate() {
         if i == 0 {
-            content.push_str(part);
+            content.push_str(&part.text);
         } else {
             push_delimiter::<F>(
                 &mut content,
@@ -218,6 +213,16 @@ mod tests {
         TemplateContributor, TemplateDate, TemplateTitle, TitleType,
     };
     use rstest::rstest;
+
+    /// A rendered part, standing in for the detailed render
+    /// `push_delimiter`'s caller produces in production. A leading `.`/`,`
+    /// in `text` is detected via `leading_movable_mark` from the text's own
+    /// visible content, so no separate "with mark" variant is needed.
+    fn part(text: &str) -> RenderedComponent {
+        RenderedComponent {
+            text: text.to_string(),
+        }
+    }
 
     #[test]
     fn test_citation_to_string() {
@@ -353,7 +358,7 @@ mod tests {
         push_delimiter::<PlainText>(
             &mut content,
             &delim,
-            "Next",
+            &part("Next"),
             true,
             citum_schema::options::StrongTerminalCommaPolicy::default(),
             "”",
@@ -378,7 +383,7 @@ mod tests {
         // `prefix` (e.g. `prefix: ". Aired "` on the following component) — the
         // shape the delimiter-only check never saw.
         let mut content = "“Title”".to_string();
-        let next = format!("{mark} Aired 1980");
+        let next = part(&format!("{mark} Aired 1980"));
         let delim = RealizedPunctuation::new("".into());
 
         push_delimiter::<PlainText>(
@@ -408,13 +413,45 @@ mod tests {
         push_delimiter::<PlainText>(
             &mut content,
             &delim,
-            "Suite",
+            &part("Suite"),
             true,
             citum_schema::options::StrongTerminalCommaPolicy::default(),
             "»",
         );
 
         assert_eq!(content, "«Titre,» Suite");
+    }
+
+    #[test]
+    fn push_delimiter_moves_next_part_own_leading_mark_when_it_is_not_a_typed_prefix() {
+        // Regression: `test_chinese_article_three_part_title` caught an
+        // earlier version of this fix that typed the leading mark from the
+        // component's realized outer `prefix` and gated the move on that
+        // alone. Here the leading `, ` comes from somewhere else entirely
+        // (a value-extraction prefix or a nested group's own join, not a
+        // template `prefix:`) — `leading_movable_mark` must not care about
+        // the source, only whether the visible text opens with the mark.
+        let mut content = "“Qingdai yilai Sanxia diqu shuihan zaihai de chubu yanjiu \
+            [A preliminary study of floods and droughts since the Qing dynasty]”"
+            .to_string();
+        let next = part(", Zhongguo shehui kexue 1 (1999): 168-79.");
+        let delim = RealizedPunctuation::new("".into());
+
+        push_delimiter::<PlainText>(
+            &mut content,
+            &delim,
+            &next,
+            true,
+            citum_schema::options::StrongTerminalCommaPolicy::default(),
+            "”",
+        );
+
+        assert_eq!(
+            content,
+            "“Qingdai yilai Sanxia diqu shuihan zaihai de chubu yanjiu \
+            [A preliminary study of floods and droughts since the Qing dynasty],” \
+            Zhongguo shehui kexue 1 (1999): 168-79."
+        );
     }
 
     #[test]

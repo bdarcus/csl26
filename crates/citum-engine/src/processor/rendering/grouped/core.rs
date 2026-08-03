@@ -403,7 +403,7 @@ impl Renderer<'_> {
             } else {
                 None
             };
-        let Some(content) = self.build_grouped_citation_content(
+        let Some(content) = self.build_grouped_citation_content::<F>(
             &author_part,
             &item_parts,
             params,
@@ -434,7 +434,7 @@ impl Renderer<'_> {
         )))
     }
 
-    fn build_grouped_citation_content(
+    fn build_grouped_citation_content<F: crate::render::format::OutputFormat<Output = String>>(
         &self,
         author_part: &str,
         item_parts: &[String],
@@ -465,7 +465,7 @@ impl Renderer<'_> {
                         author_item_delimiter
                     };
                     let joined_items = item_parts.join(repeated_item_delimiter);
-                    self.format_non_integral_grouped_items(
+                    self.format_non_integral_grouped_items::<F>(
                         author_part,
                         author_item_delimiter,
                         &joined_items,
@@ -499,7 +499,9 @@ impl Renderer<'_> {
         }
     }
 
-    fn format_non_integral_grouped_items(
+    fn format_non_integral_grouped_items<
+        F: crate::render::format::OutputFormat<Output = String>,
+    >(
         &self,
         author_part: &str,
         author_item_delimiter: &str,
@@ -511,7 +513,7 @@ impl Renderer<'_> {
         }
 
         if let Some(adjusted) =
-            self.adjust_grouped_author_quote_punctuation(author_part, author_item_delimiter)
+            self.adjust_grouped_author_quote_punctuation::<F>(author_part, author_item_delimiter)
         {
             return format!("{adjusted}{joined_items}");
         }
@@ -519,7 +521,9 @@ impl Renderer<'_> {
         format!("{author_part}{author_item_delimiter}{joined_items}")
     }
 
-    fn adjust_grouped_author_quote_punctuation(
+    fn adjust_grouped_author_quote_punctuation<
+        F: crate::render::format::OutputFormat<Output = String>,
+    >(
         &self,
         author_part: &str,
         author_item_delimiter: &str,
@@ -530,7 +534,7 @@ impl Renderer<'_> {
 
         let close_quote = crate::render::format::QuoteMarks::from(self.locale).close;
         let mut adjusted = author_part.to_string();
-        if !crate::render::punctuation::move_punctuation_into_quote(
+        if !crate::render::punctuation::move_punctuation_into_quote::<F>(
             &mut adjusted,
             ',',
             &close_quote,
@@ -1228,7 +1232,7 @@ impl Renderer<'_> {
         let escaped_delimiter =
             crate::render::format::RealizedPunctuation::new(escaped_delimiter.into());
         let close_quote = crate::render::format::QuoteMarks::from(ctx.options.locale).close;
-        let joined_value = crate::render::punctuation::join_with_quote_movement(
+        let joined_value = crate::render::punctuation::join_with_quote_movement::<F>(
             values,
             &escaped_delimiter,
             ctx.options.config.punctuation_in_quote,
@@ -1274,7 +1278,7 @@ impl Renderer<'_> {
         ctx: &TemplateRenderContext<'_>,
         group: &citum_schema::template::TemplateGroup,
         tracker: &mut TemplateComponentTracker,
-    ) -> Option<(Vec<String>, bool)>
+    ) -> Option<(Vec<crate::render::component::RenderedComponent>, bool)>
     where
         F: crate::render::format::OutputFormat<Output = String>,
     {
@@ -1288,12 +1292,13 @@ impl Renderer<'_> {
             else {
                 continue;
             };
-            let rendered_str = crate::render::render_component_with_format_and_renderer::<F>(
-                &rendered,
-                fmt,
-                ctx.options.show_semantics,
-            );
-            if rendered_str.trim().is_empty() {
+            let rendered_detailed =
+                crate::render::component::render_component_detailed_with_format_and_renderer::<F>(
+                    &rendered,
+                    fmt,
+                    ctx.options.show_semantics,
+                );
+            if rendered_detailed.text.trim().is_empty() {
                 continue;
             }
             if is_citation_number_component(item) {
@@ -1301,7 +1306,7 @@ impl Renderer<'_> {
             } else if !is_term_only_component(item) {
                 has_meaningful_content = true;
             }
-            values.push(rendered_str);
+            values.push(rendered_detailed);
         }
 
         if values.is_empty() || !(has_meaningful_content || has_citation_number_label) {

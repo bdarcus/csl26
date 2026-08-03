@@ -56,12 +56,13 @@ impl ComponentValues for TemplateGroup {
                 label_only: false,
             };
 
-            let rendered = crate::render::render_component_with_format_and_renderer::<F>(
-                &proc_item,
-                &fmt,
-                options.show_semantics,
-            );
-            if !rendered.is_empty() {
+            let rendered =
+                crate::render::component::render_component_detailed_with_format_and_renderer::<F>(
+                    &proc_item,
+                    &fmt,
+                    options.show_semantics,
+                );
+            if !rendered.text.is_empty() {
                 values.push(rendered);
             }
         }
@@ -99,7 +100,7 @@ impl ComponentValues for TemplateGroup {
             crate::render::format::RealizedPunctuation::new(escaped_delimiter.into());
 
         let close_quote = crate::render::format::QuoteMarks::from(options.locale).close;
-        let joined = crate::render::punctuation::join_with_quote_movement(
+        let joined = crate::render::punctuation::join_with_quote_movement::<F>(
             values,
             &escaped_delimiter,
             options.config.punctuation_in_quote,
