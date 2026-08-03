@@ -298,6 +298,20 @@ However, refactoring current ad-hoc code into a clean function would prevent bug
 
 ## Changelog
 
+- **2026-08-03**: Punctuation-in-quote quote movement now applies in every
+  output format, not just plain text. Two prior gaps, both raw-string
+  assumptions: (1) the join sites that detect a component's own leading
+  `.`/`,` (e.g. a `prefix: ". Aired "`) compared a raw first character
+  against the rendered text's *visible* first character, which are never
+  equal once `apply_component_semantics` wraps the affixed output in a
+  format's semantic markup (an HTML `<span>`, ...); (2) `move_punctuation_into_quote`
+  matched the closing quote glyph against the raw end of the accumulated
+  string, which fails once markup (an HTML `</span>`, a LaTeX `}`) trails it.
+  Both are fixed via a `visible_runs`-backed projection (`render::punctuation::
+  leading_movable_mark`, `visible_suffix_raw_index`) that locates the mark in
+  the *visible* text and edits the *raw* string at the corresponding byte
+  offset. No schema or format-trait change — `visible_runs` already existed
+  for this exact purpose (`cleanup_dangling_punctuation`).
 - **2026-07-12**: Activated the compatibility-first collision policy. Finalized
   `strong-terminal-comma-policy`,
   `delimiter-suppressing-terminal-marks`, direct style overrides, locale
