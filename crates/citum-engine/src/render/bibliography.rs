@@ -176,20 +176,23 @@ pub fn refs_to_string(proc_entries: Vec<ProcEntry>) -> String {
 }
 
 /// Render one processed bibliography entry body without outer entry/bibliography wrappers.
+///
+/// The entry's reference marker leads the body, carrying its own wrap and
+/// `label-separator`; it is not a template component and never took part in the
+/// entry's component-separator logic. See `docs/specs/REFERENCE_MARKERS.md`.
 #[must_use]
 pub fn render_entry_body_with_format<F: OutputFormat<Output = String>>(
     entry: &ProcEntry,
 ) -> String {
-    render_entry_body_components_with_format::<F>(&entry.template)
+    let body = render_entry_body_components_with_format::<F>(&entry.template);
+    match entry.marker.as_deref() {
+        Some(marker) => format!("{marker}{body}"),
+        None => body,
+    }
 }
 
 /// Append `rendered` to `entry_output`, either via the normal separator logic
 /// or, when `suppress` is set, as a raw append with no separator at all.
-///
-/// `suppress` is set when the *previous* flush was a bare bibliography
-/// numeric label (`ProcTemplateComponent::label_only`) — see its docs for
-/// why such a label must never engage normal inter-component separator
-/// logic with whatever comes next.
 #[allow(
     clippy::too_many_arguments,
     reason = "threads shared per-entry punctuation state"
@@ -277,34 +280,22 @@ pub(crate) fn render_entry_body_components_with_format<F: OutputFormat<Output = 
         PunctuationPosition::Separator,
     );
 
-    // Bibliography numeric labels (the renderer's synthetic
-    // `[label, following]` group with `following` empty, e.g. no author)
-    // render real, non-empty text but must attach directly to whatever
-    // content actually opens the entry — no separator, exactly as if the
-    // label were not there. Tracks whether the item just written to
-    // `entry_output` was such a label, so the *next* flush skips normal
-    // separator logic instead of treating the label as preceding content.
-    let mut suppress_next_separator = false;
-
     for (index, component) in proc_template.iter().enumerate() {
         let rendered = render_component_detailed::<F>(component);
         if rendered.text.is_empty() {
             continue;
         }
 
-        if let Some((_, previous_component, previous)) =
-            pending_component.replace((index, component, rendered))
-        {
+        if let Some((_, _, previous)) = pending_component.replace((index, component, rendered)) {
             append_or_suppress::<F>(
                 &mut entry_output,
                 &previous,
-                suppress_next_separator,
+                false,
                 &default_separator,
                 punctuation_in_quote,
                 strong_terminal_comma_policy,
                 close_quote,
             );
-            suppress_next_separator = previous_component.label_only;
         }
     }
 
@@ -317,7 +308,7 @@ pub(crate) fn render_entry_body_components_with_format<F: OutputFormat<Output = 
         append_or_suppress::<F>(
             &mut entry_output,
             &final_rendered,
-            suppress_next_separator,
+            false,
             &default_separator,
             punctuation_in_quote,
             strong_terminal_comma_policy,
@@ -785,7 +776,6 @@ mod tests {
             quote_marks: Default::default(),
             sentence_initial: false,
             pre_formatted: false,
-            label_only: false,
         };
 
         let c2 = ProcTemplateComponent {
@@ -811,10 +801,10 @@ mod tests {
             quote_marks: Default::default(),
             sentence_initial: false,
             pre_formatted: false,
-            label_only: false,
         };
 
         let entries = vec![ProcEntry {
+            marker: None,
             id: "id1".to_string(),
             template: vec![c1, c2],
             metadata: crate::render::format::ProcEntryMetadata::default(),
@@ -823,49 +813,26 @@ mod tests {
         assert_eq!(result, "Publisher1. Place");
     }
 
+    /// The reference marker leads an entry from its own slot, outside the
+    /// component-separator logic: it attaches flush to whatever opens the body,
+    /// carrying only its own `label-separator`. An entry with no marker starts
+    /// at its first component as usual. See `docs/specs/REFERENCE_MARKERS.md`.
     #[rstest]
-    #[case::label_only_component_suppresses_the_separator(true, "[15]Title Text")]
-    #[case::ordinary_first_component_keeps_the_separator(false, "[15]. Title Text")]
-    fn given_a_leading_component_when_label_only_flag_varies_then_separator_follows_it(
-        #[case] label_only: bool,
+    #[case::marker_attaches_flush_to_the_body(Some("[15]"), "[15]Title Text")]
+    #[case::no_marker_leaves_the_body_alone(None, "Title Text")]
+    fn test_marker_leads_the_entry_body_flush(
+        #[case] marker: Option<&str>,
         #[case] expected: &str,
     ) {
-        // A bibliography numeric-label component (the renderer's synthetic
-        // synthetic `[label, following]` group with `following` empty --
-        // e.g. no author) renders real, non-empty text ("[15]") but must
-        // never engage normal separator logic with whatever comes next.
-        // Contrasted against an ordinary component of otherwise identical
-        // shape, which *does* get the normal separator.
         use citum_schema::options::{BibliographyConfig, Config};
 
+        // given an entry body whose only component is a title
         let config = Config::default();
         let bibliography_config = BibliographyConfig {
             separator: Some(". ".into()),
             entry_suffix: Some(String::new().into()),
             ..Default::default()
         };
-
-        let label = ProcTemplateComponent {
-            template_component: TemplateComponent::Number(citum_schema::template::TemplateNumber {
-                number: citum_schema::template::NumberVariable::CitationNumber,
-                rendering: Rendering::default(),
-                ..Default::default()
-            }),
-            template_index: None,
-            value: "[15]".to_string(),
-            prefix: None,
-            suffix: None,
-            ref_type: None,
-            config: Some(config.clone().into()),
-            bibliography_config: Some(bibliography_config.clone().into()),
-            url: None,
-            item_language: None,
-            quote_marks: Default::default(),
-            sentence_initial: false,
-            pre_formatted: true,
-            label_only,
-        };
-
         let content = ProcTemplateComponent {
             template_component: TemplateComponent::Title(citum_schema::template::TemplateTitle {
                 title: citum_schema::template::TitleType::Primary,
@@ -884,16 +851,18 @@ mod tests {
             quote_marks: Default::default(),
             sentence_initial: false,
             pre_formatted: false,
-            label_only: false,
         };
 
+        // when the entry renders with and without a marker
         let entries = vec![ProcEntry {
+            marker: marker.map(str::to_string),
             id: "id1".to_string(),
-            template: vec![label, content],
+            template: vec![content],
             metadata: crate::render::format::ProcEntryMetadata::default(),
         }];
-        let result = refs_to_string(entries);
-        assert_eq!(result, expected);
+
+        // then the marker sits flush ahead of the body, with no separator
+        assert_eq!(refs_to_string(entries), expected);
     }
 
     #[test]
@@ -934,7 +903,6 @@ mod tests {
             quote_marks: Default::default(),
             sentence_initial: false,
             pre_formatted: false,
-            label_only: false,
         };
 
         let c2 = ProcTemplateComponent {
@@ -955,10 +923,10 @@ mod tests {
             quote_marks: Default::default(),
             sentence_initial: false,
             pre_formatted: false,
-            label_only: false,
         };
 
         let entries = vec![ProcEntry {
+            marker: None,
             id: "id1".to_string(),
             template: vec![c1, c2],
             metadata: crate::render::format::ProcEntryMetadata::default(),
@@ -1221,6 +1189,7 @@ mod tests {
         };
 
         let entries = vec![ProcEntry {
+            marker: None,
             id: "ref-1".to_string(),
             template: vec![c1],
             metadata: crate::render::format::ProcEntryMetadata::default(),
@@ -1269,7 +1238,6 @@ mod tests {
             quote_marks: Default::default(),
             sentence_initial: false,
             pre_formatted: false,
-            label_only: false,
         };
 
         let c2 = ProcTemplateComponent {
@@ -1293,10 +1261,10 @@ mod tests {
             quote_marks: Default::default(),
             sentence_initial: false,
             pre_formatted: false,
-            label_only: false,
         };
 
         let entries = vec![ProcEntry {
+            marker: None,
             id: "hawking1988".to_string(),
             template: vec![c1, c2],
             metadata: crate::render::format::ProcEntryMetadata::default(),
@@ -1338,7 +1306,6 @@ mod tests {
             quote_marks: Default::default(),
             sentence_initial: false,
             pre_formatted: false,
-            label_only: false,
         };
 
         let pages = ProcTemplateComponent {
@@ -1359,10 +1326,10 @@ mod tests {
             quote_marks: Default::default(),
             sentence_initial: false,
             pre_formatted: false,
-            label_only: false,
         };
 
         let result = refs_to_string(vec![ProcEntry {
+            marker: None,
             id: "book-without-pages".to_string(),
             template: vec![date, pages],
             metadata: crate::render::format::ProcEntryMetadata::default(),
@@ -1413,7 +1380,6 @@ mod tests {
             quote_marks: Default::default(),
             sentence_initial: false,
             pre_formatted: false,
-            label_only: false,
         };
 
         let pages = ProcTemplateComponent {
@@ -1438,7 +1404,6 @@ mod tests {
             quote_marks: Default::default(),
             sentence_initial: false,
             pre_formatted: false,
-            label_only: false,
         };
 
         let doi = ProcTemplateComponent {
@@ -1462,11 +1427,11 @@ mod tests {
             quote_marks: Default::default(),
             sentence_initial: false,
             pre_formatted: false,
-            label_only: false,
         };
 
         let result = refs_to_string_with_format::<Html>(
             vec![ProcEntry {
+                marker: None,
                 id: "einstein1905".to_string(),
                 template: vec![volume_issue, pages, doi],
                 metadata: crate::render::format::ProcEntryMetadata::default(),
@@ -1495,6 +1460,7 @@ mod tests {
 
     fn make_entry(id: &str, value: &str) -> ProcEntry {
         ProcEntry {
+            marker: None,
             id: id.to_string(),
             template: vec![ProcTemplateComponent {
                 template_component: TemplateComponent::Variable(
@@ -1516,7 +1482,6 @@ mod tests {
                 quote_marks: Default::default(),
                 sentence_initial: false,
                 pre_formatted: false,
-                label_only: false,
             }],
             metadata: crate::render::format::ProcEntryMetadata::default(),
         }

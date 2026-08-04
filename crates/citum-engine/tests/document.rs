@@ -821,7 +821,10 @@ fn given_a_style_without_a_bibliography_when_rendering_a_document_then_citations
             ..Default::default()
         }),
         citation: Some(CitationSpec {
-            template: Some(vec![citum_schema::tc_number!(CitationNumber)]),
+            options: Some(citum_schema::CitationOptions {
+                label_mode: Some(citum_schema::options::CitationLabelMode::Numeric),
+                ..Default::default()
+            }),
             wrap: Some(citum_schema::template::WrapPunctuation::Brackets.into()),
             ..Default::default()
         }),

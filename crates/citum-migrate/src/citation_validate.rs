@@ -7,9 +7,8 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus and Citum contributors
 
 use citum_migrate::{
     fixups::{
-        citation_template_has_citation_number, citation_template_is_author_year_only,
-        normalize_author_date_inferred_contributors, normalize_contributor_form_to_short,
-        note_citation_template_is_underfit,
+        citation_template_is_author_year_only, normalize_author_date_inferred_contributors,
+        normalize_contributor_form_to_short, note_citation_template_is_underfit,
     },
     template_resolver,
 };
@@ -140,8 +139,9 @@ fn normalize_in_text_citation(
     if !is_inferred_source(&resolved_cit.source) {
         return;
     }
-    let is_author_year_shape = citation_template_is_author_year_only(&resolved_cit.template)
-        && !citation_template_has_citation_number(&resolved_cit.template);
+    // No template can carry a reference marker, so an author-year shape is
+    // decided by its components alone. See docs/specs/REFERENCE_MARKERS.md.
+    let is_author_year_shape = citation_template_is_author_year_only(&resolved_cit.template);
     if is_author_year_shape
         && normalize_author_date_inferred_contributors(
             &mut resolved_cit.template,

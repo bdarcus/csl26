@@ -75,7 +75,7 @@ note. The `—` marker in the Tests column means no targeted test exists yet.
 | [`LEGAL_CITATIONS.md`](./LEGAL_CITATIONS.md) — legal-case type support and jurisdiction-aware rendering | Draft | — |
 | [`LOCATOR_RENDERING.md`](./LOCATOR_RENDERING.md) — style-level LocatorConfig replacing per-template locator fields | Active | `citations.rs` |
 | [`NON_STANDARD_NUMBERING_AND_LOCATOR_KINDS.md`](./NON_STANDARD_NUMBERING_AND_LOCATOR_KINDS.md) — domain-specific numbering and locator labels | Active | `citations.rs` |
-| [`REFERENCE_MARKERS.md`](./REFERENCE_MARKERS.md) — processor-owned numeric and label markers; removes label components from templates | Draft | `citations.rs` |
+| [`REFERENCE_MARKERS.md`](./REFERENCE_MARKERS.md) — processor-owned numeric and label markers; removes label components from templates | Active | `citations.rs` |
 
 ### Bibliography
 

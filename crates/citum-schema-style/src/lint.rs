@@ -666,9 +666,7 @@ fn number_variable_to_locator(number: NumberVariable) -> Option<LocatorType> {
         | NumberVariable::PatentNumber
         | NumberVariable::StandardNumber
         | NumberVariable::ReportNumber
-        | NumberVariable::PrintingNumber
-        | NumberVariable::CitationNumber
-        | NumberVariable::CitationLabel => Some(LocatorType::Number),
+        | NumberVariable::PrintingNumber => Some(LocatorType::Number),
         NumberVariable::PartNumber => Some(LocatorType::Part),
         NumberVariable::SupplementNumber => Some(LocatorType::Supplement),
         NumberVariable::Custom(kind) => Some(LocatorType::Custom(kind)),

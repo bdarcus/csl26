@@ -41,14 +41,6 @@ pub struct ProcTemplateComponent {
     pub sentence_initial: bool,
     /// Whether the value is already pre-formatted (e.g. from a List or substitution).
     pub pre_formatted: bool,
-    /// True when this component's rendered text is *only* a bibliography
-    /// numeric label (the renderer's synthetic `[label, following]`
-    /// group with an empty `following`, e.g. no author). Bibliography
-    /// assembly must still write the label text, but must not treat it as
-    /// real preceding content for the *next* component's separator decision
-    /// — the label attaches directly to whatever content actually opens the
-    /// entry, exactly as if the label were not there.
-    pub label_only: bool,
 }
 
 /// A processed template (list of rendered components).
@@ -59,6 +51,10 @@ pub type ProcTemplate = Vec<ProcTemplateComponent>;
 pub struct ProcEntry {
     /// The reference ID.
     pub id: String,
+    /// The rendered reference marker this entry leads with, wrap and
+    /// `label-separator` already applied. `None` when the style declares no
+    /// marker. See `docs/specs/REFERENCE_MARKERS.md`.
+    pub marker: Option<String>,
     /// The processed template components.
     pub template: ProcTemplate,
     /// Metadata for interactivity (tooltips, etc.)

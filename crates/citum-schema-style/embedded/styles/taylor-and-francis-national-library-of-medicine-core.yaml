@@ -25,8 +25,9 @@ options:
   page-range-format: expanded
   punctuation-in-quote: true
 citation:
+  options:
+    label-mode: numeric
   template:
-  - number: citation-number
   - variable: locator
     prefix: ","
   wrap:

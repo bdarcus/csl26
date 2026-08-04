@@ -143,6 +143,7 @@ impl Processor {
             .filter_map(|r| {
                 r.id().map(|id| ProcEntry {
                     id: id.to_string(),
+                    marker: None,
                     template: vec![],
                     metadata: ProcEntryMetadata::default(),
                 })
@@ -805,7 +806,7 @@ impl Processor {
                     .collect();
                 let section_rendered = rendered
                     .iter()
-                    .filter(|(reference, _)| {
+                    .filter(|(reference, _, _)| {
                         reference
                             .id()
                             .as_deref()

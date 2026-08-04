@@ -23,6 +23,13 @@ pub struct BibliographyConfig {
     /// Runtime presentation policy for numeric or legacy bibliography labels.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub label_wrap: Option<BibliographyLabelWrap>,
+    /// Text between the reference marker and the entry body.
+    ///
+    /// Defaults to empty, which renders flush (`[1]J. Smith`) and matches
+    /// citeproc-js `second-field-align` output flattened to text. A style that
+    /// wants a gap declares it. See `docs/specs/REFERENCE_MARKERS.md`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub label_separator: Option<String>,
     /// Article-journal-specific bibliography policies.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub article_journal: Option<ArticleJournalBibliographyConfig>,
@@ -327,6 +334,7 @@ impl Default for BibliographyConfig {
         Self {
             label_mode: None,
             label_wrap: None,
+            label_separator: None,
             article_journal: None,
             subsequent_author_substitute: None,
             subsequent_author_substitute_rule: None,

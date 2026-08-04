@@ -73,6 +73,7 @@ struct CompiledOutput {
     bibliography_locales: Option<Vec<citum_schema::LocalizedTemplateSpec>>,
     type_templates: Option<TypeTemplateMap>,
     citation_wrap: Option<WrapPunctuation>,
+    citation_item_wrap: Option<citum_schema::options::LabelWrap>,
     citation_prefix: Option<String>,
     citation_suffix: Option<String>,
     citation_delimiter: Option<String>,
@@ -129,8 +130,13 @@ impl StandaloneAssembly<'_> {
             &mut bibliography_options,
         );
 
-        let (citation_wrap, citation_prefix, citation_suffix, citation_delimiter) =
-            resolve_citation_metadata(resolved, self.legacy_style, self.options, &mut new_cit);
+        let (
+            citation_wrap,
+            citation_item_wrap,
+            citation_prefix,
+            citation_suffix,
+            citation_delimiter,
+        ) = resolve_citation_metadata(resolved, self.legacy_style, self.options, &mut new_cit);
 
         Ok(build_final_style(
             self.legacy_style,
@@ -151,6 +157,7 @@ impl StandaloneAssembly<'_> {
                     .and_then(|output| output.bibliography_locales.clone()),
                 type_templates,
                 citation_wrap,
+                citation_item_wrap,
                 citation_prefix,
                 citation_suffix,
                 citation_delimiter,
@@ -269,31 +276,29 @@ pub(crate) fn resolve_migrated_bibliography_sort(
 
 /// Assembles the final Citum Style from compiled output and legacy metadata.
 fn build_final_style(legacy_style: &csl_legacy::model::Style, mut c: CompiledOutput) -> Style {
-    let declarative_numeric = matches!(
-        c.options.processing,
-        Some(citum_schema::options::Processing::Numeric)
-    );
-    if declarative_numeric {
-        strip_simple_leading_numeric_label(&mut c.new_cit);
-        if let Some(template) = c.citation_subsequent_override.as_mut() {
-            strip_simple_leading_numeric_label(template);
+    // The template compiler drops marker variables, so the regime decides which
+    // marker the style declares. See docs/specs/REFERENCE_MARKERS.md.
+    let declared_label_mode = match c.options.processing {
+        Some(citum_schema::options::Processing::Numeric) => {
+            Some(citum_schema::options::CitationLabelMode::Numeric)
         }
-        if let Some(template) = c.citation_ibid_override.as_mut() {
-            strip_simple_leading_numeric_label(template);
+        Some(citum_schema::options::Processing::Label(_)) => {
+            Some(citum_schema::options::CitationLabelMode::Alphabetic)
         }
-    }
+        _ => None,
+    };
+    let declares_marker = declared_label_mode.is_some();
 
-    let citation_scope_options =
-        if declarative_numeric || c.citation_contributor_overrides.is_some() {
-            Some(citum_schema::CitationOptions {
-                label_mode: declarative_numeric
-                    .then_some(citum_schema::options::CitationLabelMode::Numeric),
-                contributors: c.citation_contributor_overrides,
-                ..Default::default()
-            })
-        } else {
-            None
-        };
+    let citation_scope_options = if declares_marker || c.citation_contributor_overrides.is_some() {
+        Some(citum_schema::CitationOptions {
+            label_mode: declared_label_mode,
+            item_wrap: c.citation_item_wrap,
+            contributors: c.citation_contributor_overrides,
+            ..Default::default()
+        })
+    } else {
+        None
+    };
     let mut bibliography_scope_options = c.bibliography_options.take().unwrap_or_default();
     if let Some(contributors) = c.bibliography_contributor_overrides.take() {
         bibliography_scope_options.contributors = Some(contributors);
@@ -371,58 +376,6 @@ fn build_final_style(legacy_style: &csl_legacy::model::Style, mut c: CompiledOut
         }),
         ..Default::default()
     }
-}
-
-/// Remove only a simple generated leading citation-number component.
-///
-/// Conditional, nested, affixed, and non-leading labels remain authored in the
-/// migrated template so they can be verified individually rather than guessed at.
-fn strip_simple_leading_numeric_label(template: &mut Vec<TemplateComponent>) -> bool {
-    fn is_plain_label(component: &TemplateComponent) -> bool {
-        matches!(
-            component,
-            TemplateComponent::Number(number)
-                if number.number == citum_schema::template::NumberVariable::CitationNumber
-                    && number.rendering == citum_schema::template::Rendering::default()
-        )
-    }
-
-    if template.first().is_some_and(is_plain_label) {
-        template.remove(0);
-        return true;
-    }
-
-    let Some(TemplateComponent::Group(group)) = template.first_mut() else {
-        return false;
-    };
-    let simple_group = group.render_when.is_none()
-        && group.rendering == citum_schema::template::Rendering::default()
-        && group.custom.is_none()
-        && group
-            .delimiter
-            .as_ref()
-            .is_none_or(|delimiter| match delimiter {
-                citum_schema::template::DelimiterPunctuation::None => true,
-                citum_schema::template::DelimiterPunctuation::Custom(text) => text.is_empty(),
-                _ => false,
-            });
-    if !simple_group || !group.group.first().is_some_and(is_plain_label) {
-        return false;
-    }
-    group.group.remove(0);
-    if group.group.len() == 1
-        && group.render_when.is_none()
-        && group.rendering == citum_schema::template::Rendering::default()
-        && group.custom.is_none()
-    {
-        let child = group.group.remove(0);
-        if let Some(first) = template.first_mut() {
-            *first = child;
-        }
-    } else if group.group.is_empty() {
-        template.remove(0);
-    }
-    true
 }
 
 fn select_and_process_bibliography_template(
@@ -549,10 +502,12 @@ fn resolve_citation_metadata(
     new_cit: &mut Vec<TemplateComponent>,
 ) -> (
     Option<citum_schema::template::WrapPunctuation>,
+    Option<citum_schema::options::LabelWrap>,
     Option<String>,
     Option<String>,
     Option<String>,
 ) {
+    let mut citation_item_wrap = None;
     let (mut citation_wrap, mut citation_prefix, mut citation_suffix) =
         analysis::citation::infer_citation_wrapping(&legacy_style.citation.layout);
     let mut citation_delimiter = analysis::citation::extract_citation_delimiter(
@@ -581,11 +536,8 @@ fn resolve_citation_metadata(
             new_cit,
             &mut citation_delimiter,
         );
-        move_group_wrap_to_citation_items(
-            &legacy_style.citation.layout,
-            new_cit,
-            &mut citation_wrap,
-        );
+        citation_item_wrap =
+            move_group_wrap_to_citation_items(&legacy_style.citation.layout, &mut citation_wrap);
     } else if legacy_style.class == "in-text" {
         normalize_author_date_locator_citation_component(
             &legacy_style.citation.layout,
@@ -596,6 +548,7 @@ fn resolve_citation_metadata(
 
     (
         citation_wrap,
+        citation_item_wrap,
         citation_prefix,
         citation_suffix,
         citation_delimiter,
@@ -877,6 +830,7 @@ mod tests {
                 bibliography_locales: None,
                 type_templates: None,
                 citation_wrap: None,
+                citation_item_wrap: None,
                 citation_prefix: None,
                 citation_suffix: None,
                 citation_delimiter: None,
@@ -892,48 +846,6 @@ mod tests {
                 .and_then(|citation| citation.collapse.clone()),
             Some(CitationCollapse::CitationNumber)
         );
-    }
-
-    #[test]
-    fn strips_only_simple_leading_numeric_citation_labels() {
-        let mut simple = vec![
-            TemplateComponent::Number(citum_schema::TemplateNumber {
-                number: citum_schema::template::NumberVariable::CitationNumber,
-                ..Default::default()
-            }),
-            TemplateComponent::Title(citum_schema::TemplateTitle::default()),
-        ];
-        assert!(strip_simple_leading_numeric_label(&mut simple));
-        assert!(matches!(simple.first(), Some(TemplateComponent::Title(_))));
-
-        let mut conditional = vec![TemplateComponent::Group(citum_schema::TemplateGroup {
-            render_when: Some(Default::default()),
-            group: vec![TemplateComponent::Number(citum_schema::TemplateNumber {
-                number: citum_schema::template::NumberVariable::CitationNumber,
-                ..Default::default()
-            })],
-            ..Default::default()
-        })];
-        assert!(!strip_simple_leading_numeric_label(&mut conditional));
-
-        let mut non_leading = vec![
-            TemplateComponent::Title(citum_schema::TemplateTitle::default()),
-            TemplateComponent::Number(citum_schema::TemplateNumber {
-                number: citum_schema::template::NumberVariable::CitationNumber,
-                ..Default::default()
-            }),
-        ];
-        assert!(!strip_simple_leading_numeric_label(&mut non_leading));
-
-        let mut affixed = vec![TemplateComponent::Number(citum_schema::TemplateNumber {
-            number: citum_schema::template::NumberVariable::CitationNumber,
-            rendering: citum_schema::template::Rendering {
-                prefix: Some(", ".into()),
-                ..Default::default()
-            },
-            ..Default::default()
-        })];
-        assert!(!strip_simple_leading_numeric_label(&mut affixed));
     }
 
     #[test]
@@ -961,6 +873,7 @@ mod tests {
                 bibliography_locales: Some(vec![localized]),
                 type_templates: None,
                 citation_wrap: None,
+                citation_item_wrap: None,
                 citation_prefix: None,
                 citation_suffix: None,
                 citation_delimiter: None,
@@ -1078,6 +991,7 @@ mod tests {
             bibliography_locales: None,
             type_templates: Some(type_templates),
             citation_wrap: None,
+            citation_item_wrap: None,
             citation_prefix: None,
             citation_suffix: None,
             citation_delimiter: None,

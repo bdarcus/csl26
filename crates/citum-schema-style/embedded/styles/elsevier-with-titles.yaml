@@ -2,9 +2,6 @@ info:
   title: Elsevier (numeric, with titles)
   description: A style for many of Elsevier's journals that includes article titles in the reference list
 extends: elsevier-with-titles-core
-citation:
-  options:
-    label-wrap: brackets
 bibliography:
   options:
     label-mode: numeric

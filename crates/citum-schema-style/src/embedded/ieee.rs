@@ -8,15 +8,17 @@ use crate::{
     tc_date, tc_number, tc_title,
     template::{
         ContributorForm, ContributorRole, LabelForm, NumberVariable, TemplateComponent,
-        TemplateContributor, TemplateNumber, WrapPunctuation,
+        TemplateContributor, TemplateNumber,
     },
 };
 
 /// Embedded citation template for IEEE style.
 ///
-/// Renders as: \[1\]
+/// Empty: the citation is its reference marker (`[1]`), declared with
+/// `label-mode: numeric` and `item-wrap: brackets`.
+/// See `docs/specs/REFERENCE_MARKERS.md`.
 pub fn citation() -> Vec<TemplateComponent> {
-    vec![tc_number!(CitationNumber, wrap = WrapPunctuation::Brackets)]
+    Vec::new()
 }
 
 /// Embedded bibliography template for IEEE style.
@@ -24,12 +26,6 @@ pub fn citation() -> Vec<TemplateComponent> {
 /// Renders as: \[1\] A. B. Author and C. D. Author, "Title," *Journal*, vol. X, no. Y, localized pages, Year.
 pub fn bibliography() -> Vec<TemplateComponent> {
     vec![
-        // [Citation number]
-        tc_number!(
-            CitationNumber,
-            wrap = WrapPunctuation::Brackets,
-            suffix = " "
-        ),
         // Author
         TemplateComponent::Contributor(TemplateContributor {
             contributor: ContributorRole::Author.into(),

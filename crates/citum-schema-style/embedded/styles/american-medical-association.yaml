@@ -49,12 +49,10 @@ citation:
     label-mode: numeric
     label-wrap: brackets
   template:
-  - delimiter: ""
-    group:
-    - number: citation-number
-    - variable: locator
-      wrap:
-        punctuation: parentheses
+  - variable: locator
+    wrap:
+      punctuation: parentheses
+  delimiter: ""
   multi-cite-delimiter: ","
   collapse: citation-number
 bibliography:

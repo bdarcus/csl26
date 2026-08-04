@@ -158,9 +158,7 @@ mod tests {
     use citum_schema::citation::CitationMode;
     use citum_schema::grouping::{GroupSort, GroupSortEntry, GroupSortKey, SortKey};
     use citum_schema::options::{Config, Processing};
-    use citum_schema::template::{
-        NumberVariable, TemplateComponent, TemplateNumber, WrapPunctuation,
-    };
+    use citum_schema::template::WrapPunctuation;
     use std::time::{SystemTime, UNIX_EPOCH};
 
     #[test]
@@ -168,10 +166,10 @@ mod tests {
         let _ = create_processor; // silence unused-import in this test fn
         let style = Style {
             citation: Some(citum_schema::CitationSpec {
-                template: Some(vec![TemplateComponent::Number(TemplateNumber {
-                    number: NumberVariable::CitationNumber,
+                options: Some(citum_schema::CitationOptions {
+                    label_mode: Some(citum_schema::options::CitationLabelMode::Numeric),
                     ..Default::default()
-                })]),
+                }),
                 wrap: Some(WrapPunctuation::Brackets.into()),
                 ..Default::default()
             }),

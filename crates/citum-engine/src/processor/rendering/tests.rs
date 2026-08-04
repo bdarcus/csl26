@@ -924,10 +924,10 @@ fn ungrouped_chapter_citation_uses_entry_dictionary_variant_alias() {
         }),
         citation: Some(CitationSpec {
             type_variants: Some(type_variants),
-            template: Some(vec![TemplateComponent::Number(TemplateNumber {
-                number: NumberVariable::CitationNumber,
+            options: Some(citum_schema::CitationOptions {
+                label_mode: Some(citum_schema::options::CitationLabelMode::Numeric),
                 ..Default::default()
-            })]),
+            }),
             wrap: Some(WrapPunctuation::Parentheses.into()),
             ..Default::default()
         }),
@@ -1075,6 +1075,7 @@ fn test_bibliography_type_specific_rendering() {
         crate::render::plain::PlainText,
     >(&crate::render::component::ProcEntry {
         id: "ref1".to_string(),
+        marker: None,
         template: proc_template,
         metadata: crate::render::format::ProcEntryMetadata::default(),
     });

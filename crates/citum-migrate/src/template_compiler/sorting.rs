@@ -4,8 +4,7 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus and Citum contributors
 */
 
 use super::{
-    ContributorRole, DateVariable, NumberVariable, TemplateCompiler, TemplateComponent,
-    TemplateTitle, TitleType,
+    ContributorRole, DateVariable, TemplateCompiler, TemplateComponent, TemplateTitle, TitleType,
 };
 
 impl TemplateCompiler {
@@ -29,8 +28,6 @@ impl TemplateCompiler {
         is_numeric: bool,
     ) {
         components.sort_by_key(|c| match c {
-            // Citation number goes first for numeric bibliography styles
-            TemplateComponent::Number(n) if n.number == NumberVariable::CitationNumber => 0,
             TemplateComponent::Contributor(c) if c.contributor == ContributorRole::Author => 1,
             TemplateComponent::Date(d) if d.date == DateVariable::Issued => {
                 if is_numeric {

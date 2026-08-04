@@ -5,7 +5,8 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus and Citum contributors
 
 //! Citation number and compound subentry collapsing.
 
-use super::{CitationChunk, NumericCitationLabel, Renderer};
+use super::{CitationChunk, Renderer};
+use crate::processor::rendering::marker::MarkerValue;
 use crate::values::range::{ConsecutiveSegment, consecutive_segments};
 #[cfg(test)]
 use std::sync::Arc;
@@ -36,17 +37,15 @@ impl Renderer<'_> {
                 i += 1;
                 continue;
             }
-            let Some(label) = chunks[i].numeric_label.as_ref() else {
+            let Some(citation_number) = chunks[i]
+                .marker
+                .as_ref()
+                .and_then(|marker| marker.value.collapsible_number())
+            else {
                 collapsed.push(chunks[i].clone());
                 i += 1;
                 continue;
             };
-            if label.sub_label.is_some() {
-                collapsed.push(chunks[i].clone());
-                i += 1;
-                continue;
-            }
-            let citation_number = label.number;
 
             let mut j = i;
             let mut block_ids = Vec::new();
@@ -59,13 +58,13 @@ impl Renderer<'_> {
                 if chunks[j].ids.len() != 1 {
                     break;
                 }
-                let Some(candidate_label) = chunks[j].numeric_label.as_ref() else {
+                let Some(candidate_number) = chunks[j]
+                    .marker
+                    .as_ref()
+                    .and_then(|marker| marker.value.collapsible_number())
+                else {
                     break;
                 };
-                if candidate_label.sub_label.is_some() {
-                    break;
-                }
-                let candidate_number = candidate_label.number;
                 if !block_ids.is_empty() && candidate_number != end_number + 1 {
                     break;
                 }
@@ -83,12 +82,11 @@ impl Renderer<'_> {
 
             collapsed.push(CitationChunk {
                 ids: block_ids,
-                content: format!("{citation_number}–{end_number}"),
-                numeric_label: Some(NumericCitationLabel {
-                    number: citation_number,
-                    sub_label: None,
+                content: String::new(),
+                marker: chunks[i].marker.clone().map(|mut marker| {
+                    marker.value = MarkerValue::Range(format!("{citation_number}–{end_number}"));
+                    marker
                 }),
-                label_wrap: chunks[i].label_wrap,
             });
             i = j;
         }
@@ -136,12 +134,15 @@ impl Renderer<'_> {
                 i += 1;
                 continue;
             };
-            let Some(label) = chunks[i].numeric_label.as_ref() else {
+            let Some((citation_number, _)) = chunks[i]
+                .marker
+                .as_ref()
+                .and_then(|marker| marker.value.number_parts())
+            else {
                 collapsed.push(chunks[i].clone());
                 i += 1;
                 continue;
             };
-            let citation_number = label.number;
 
             let mut j = i;
             let mut block_ids = Vec::new();
@@ -154,9 +155,10 @@ impl Renderer<'_> {
                 if chunks[j].ids.len() != 1
                     || self.compound_set_by_ref.get(candidate_id) != Some(group_id)
                     || chunks[j]
-                        .numeric_label
+                        .marker
                         .as_ref()
-                        .is_none_or(|candidate| candidate.number != citation_number)
+                        .and_then(|marker| marker.value.number_parts())
+                        .is_none_or(|(number, _)| number != citation_number)
                 {
                     break;
                 }
@@ -165,12 +167,13 @@ impl Renderer<'_> {
                 else {
                     break;
                 };
-                let Some(candidate_label) = chunks[j].numeric_label.as_ref() else {
+                let Some((_, Some(_))) = chunks[j]
+                    .marker
+                    .as_ref()
+                    .and_then(|marker| marker.value.number_parts())
+                else {
                     break;
                 };
-                if candidate_label.sub_label.is_none() {
-                    break;
-                }
 
                 block_ids.push(candidate_id.clone());
                 member_ordinals.push((member_index + 1) as u32);
@@ -200,12 +203,14 @@ impl Renderer<'_> {
 
             collapsed.push(CitationChunk {
                 ids: block_ids,
-                content: format!("{citation_number}{labels}"),
-                numeric_label: Some(NumericCitationLabel {
-                    number: citation_number,
-                    sub_label: Some(labels),
+                content: String::new(),
+                marker: chunks[i].marker.clone().map(|mut marker| {
+                    marker.value = MarkerValue::Number {
+                        number: citation_number,
+                        sub_label: Some(labels),
+                    };
+                    marker
                 }),
-                label_wrap: chunks[i].label_wrap,
             });
             i = j;
         }
@@ -329,27 +334,38 @@ mod tests {
         for (chunks, expected) in cases {
             let chunks = chunks
                 .into_iter()
-                .map(|(ids, content)| CitationChunk {
-                    numeric_label: ids.first().and_then(|id| {
-                        citation_numbers
-                            .read()
-                            .unwrap()
-                            .get(id)
-                            .copied()
-                            .map(|number| NumericCitationLabel {
-                                number,
-                                sub_label: None,
-                            })
+                .map(|(ids, _content)| CitationChunk {
+                    marker: ids.first().and_then(|id| {
+                        citation_numbers.read().unwrap().get(id).copied().map(
+                            |number| crate::processor::rendering::ResolvedMarker {
+                                value: MarkerValue::Number {
+                                    number,
+                                    sub_label: None,
+                                },
+                                spec: crate::processor::rendering::marker::CitationMarkerSpec {
+                                    kind: crate::processor::rendering::marker::MarkerKind::Numeric,
+                                    label_wrap: None,
+                                    item_wrap: None,
+                                    placement: crate::processor::rendering::marker::MarkerPlacement::Leading,
+                                },
+                            },
+                        )
                     }),
                     ids,
-                    content,
-                    label_wrap: None,
+                    content: String::new(),
                 })
                 .collect();
             let actual = renderer.collapse_numeric_citation_chunks(chunks);
             let actual = actual
                 .into_iter()
-                .map(|chunk| (chunk.ids, chunk.content))
+                .map(|chunk| {
+                    let text = chunk
+                        .marker
+                        .as_ref()
+                        .map(|marker| marker.value.as_text())
+                        .unwrap_or(chunk.content);
+                    (chunk.ids, text)
+                })
                 .collect::<Vec<_>>();
             assert_eq!(actual, expected);
         }

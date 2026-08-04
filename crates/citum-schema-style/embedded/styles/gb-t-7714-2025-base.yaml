@@ -103,6 +103,10 @@ options:
 bibliography:
   sort: citation-number
   options:
+    # Every entry leads with its bracketed reference marker, flush against the
+    # body. See docs/specs/REFERENCE_MARKERS.md.
+    label-mode: numeric
+    label-wrap: brackets
     # The runtime scope cascade merges nested blocks field-by-field
     # (csl26-yz4w), so this block only opts into the bibliography-only
     # `note-wrap` shared by all GB/T leaf styles — every other dates field
@@ -121,9 +125,6 @@ bibliography:
     entry-suffix-after-url: true
     entry-suffix-after-doi: true
   template:
-  - number: citation-number
-    wrap:
-      punctuation: brackets
   - number: volume
   - contributor: author
     form: long
@@ -178,10 +179,6 @@ bibliography:
   - locale:
     - en
     template:
-    - number: citation-number
-      wrap:
-        punctuation: brackets
-      suppress: false
     - number: volume
       suppress: false
     - contributor: author
@@ -270,9 +267,6 @@ bibliography:
       suppress: false
     type-variants:
       chapter,entry-dictionary,entry-encyclopedia:
-      - number: citation-number
-        wrap:
-          punctuation: brackets
       - contributor: author
         form: long
         name-order: family-first
@@ -342,9 +336,6 @@ bibliography:
       - variable: doi
         prefix: '. DOI:'
       book,thesis,map:
-      - number: citation-number
-        wrap:
-          punctuation: brackets
       - contributor: author
         form: long
         name-order: family-first
@@ -410,10 +401,6 @@ bibliography:
         prefix: '. DOI:'
   - default: true
     template:
-    - number: citation-number
-      wrap:
-        punctuation: brackets
-      suppress: false
     - number: volume
       suppress: false
     - contributor: author
@@ -501,9 +488,6 @@ bibliography:
       suppress: false
   type-variants:
     article,dataset,preprint:
-    - number: citation-number
-      wrap:
-        punctuation: brackets
     - contributor: author
       form: long
       name-order: family-first
@@ -538,9 +522,6 @@ bibliography:
     - variable: doi
       prefix: '. DOI:'
     article-journal,article-magazine:
-    - number: citation-number
-      wrap:
-        punctuation: brackets
     - contributor: author
       form: long
       name-order: family-first
@@ -601,9 +582,6 @@ bibliography:
     - variable: doi
       prefix: '. DOI:'
     article-newspaper:
-    - number: citation-number
-      wrap:
-        punctuation: brackets
     - contributor: author
       form: long
       name-order: family-first
@@ -644,9 +622,6 @@ bibliography:
     - variable: doi
       prefix: '. DOI:'
     chapter,entry-dictionary,entry-encyclopedia:
-    - number: citation-number
-      wrap:
-        punctuation: brackets
     - contributor: author
       form: long
       name-order: family-first
@@ -715,9 +690,6 @@ bibliography:
     - variable: doi
       prefix: '. DOI:'
     periodical:
-    - number: citation-number
-      wrap:
-        punctuation: brackets
     - contributor: author
       form: long
       name-order: family-first
@@ -750,9 +722,6 @@ bibliography:
     - variable: doi
       prefix: '. DOI:'
     manuscript,personal_communication,pamphlet:
-    - number: citation-number
-      wrap:
-        punctuation: brackets
     - contributor: author
       form: long
       name-order: family-first
@@ -790,9 +759,6 @@ bibliography:
     - variable: doi
       prefix: '. DOI:'
     book,thesis,map:
-    - number: citation-number
-      wrap:
-        punctuation: brackets
     - contributor: author
       form: long
       name-order: family-first
@@ -880,9 +846,6 @@ bibliography:
     - variable: doi
       prefix: '. DOI:'
     software:
-    - number: citation-number
-      wrap:
-        punctuation: brackets
     - contributor: author
       form: long
       name-order: family-first
@@ -912,9 +875,6 @@ bibliography:
     - variable: doi
       prefix: '. DOI:'
     paper-conference:
-    - number: citation-number
-      wrap:
-        punctuation: brackets
     - contributor: author
       form: long
       name-order: family-first
@@ -959,9 +919,6 @@ bibliography:
     - variable: doi
       prefix: '. DOI:'
     patent:
-    - number: citation-number
-      wrap:
-        punctuation: brackets
     - contributor: author
       form: long
       name-order: family-first
@@ -990,9 +947,6 @@ bibliography:
     - variable: doi
       prefix: '. DOI:'
     graphic:
-    - number: citation-number
-      wrap:
-        punctuation: brackets
     - contributor: author
       form: long
       name-order: family-first
@@ -1022,9 +976,6 @@ bibliography:
     - variable: doi
       prefix: '. DOI:'
     webpage,post,post-weblog:
-    - number: citation-number
-      wrap:
-        punctuation: brackets
     - contributor: author
       form: long
       name-order: family-first
@@ -1054,9 +1005,6 @@ bibliography:
     - variable: doi
       prefix: '. DOI:'
     report:
-    - number: citation-number
-      wrap:
-        punctuation: brackets
     - contributor: author
       form: long
       name-order: family-first
@@ -1092,9 +1040,6 @@ bibliography:
     - variable: doi
       prefix: '. DOI:'
     standard:
-    - number: citation-number
-      wrap:
-        punctuation: brackets
     - contributor: author
       form: long
       name-order: family-first
@@ -1117,9 +1062,6 @@ bibliography:
     - variable: doi
       prefix: '. DOI:'
     legal-case:
-    - number: citation-number
-      wrap:
-        punctuation: brackets
     - group:
       - title: primary
       - message: gb-t-7714-type-code
@@ -1143,9 +1085,6 @@ bibliography:
       - number: pages
       delimiter: { mark: colon }
     treaty:
-    - number: citation-number
-      wrap:
-        punctuation: brackets
     - contributor: author
       form: long
       name-order: family-first
@@ -1175,9 +1114,6 @@ bibliography:
       - number: pages
       delimiter: { mark: colon }
     regulation,statute:
-    - number: citation-number
-      wrap:
-        punctuation: brackets
     - group:
       - title: primary
       - message: gb-t-7714-type-code
@@ -1201,9 +1137,6 @@ bibliography:
     - variable: doi
       prefix: '. DOI:'
     hearing:
-    - number: citation-number
-      wrap:
-        punctuation: brackets
     - group:
       - title: primary
       - number: number
@@ -1226,9 +1159,6 @@ bibliography:
     - variable: doi
       prefix: '. DOI:'
     motion-picture:
-    - number: citation-number
-      wrap:
-        punctuation: brackets
     - contributor: author
       form: long
       name-order: family-first
@@ -1253,9 +1183,6 @@ bibliography:
     - variable: doi
       prefix: '. DOI:'
     broadcast:
-    - number: citation-number
-      wrap:
-        punctuation: brackets
     - contributor: author
       form: long
       name-order: family-first
@@ -1287,9 +1214,6 @@ bibliography:
     - variable: doi
       prefix: '. DOI:'
     interview:
-    - number: citation-number
-      wrap:
-        punctuation: brackets
     - contributor: author
       form: long
       name-order: family-first

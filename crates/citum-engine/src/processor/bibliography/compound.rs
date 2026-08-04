@@ -11,7 +11,7 @@ use crate::render::ProcEntry;
 use crate::render::bibliography::render_entry_body_components_with_format;
 use crate::render::component::ProcTemplateComponent;
 use crate::render::format::OutputFormat;
-use citum_schema::template::{NumberVariable, TemplateComponent};
+use citum_schema::template::TemplateComponent;
 use indexmap::IndexMap;
 use std::collections::HashMap;
 
@@ -20,13 +20,6 @@ impl Processor {
         &self,
     ) -> Option<citum_schema::options::bibliography::CompoundNumericConfig> {
         self.get_bibliography_options().compound_numeric.clone()
-    }
-
-    pub(super) fn is_citation_number_label(component: &ProcTemplateComponent) -> bool {
-        matches!(
-            &component.template_component,
-            TemplateComponent::Number(number) if number.number == NumberVariable::CitationNumber
-        )
     }
 
     pub(super) fn build_compound_group_lookup(
@@ -50,12 +43,9 @@ impl Processor {
         entries
             .iter()
             .map(|entry| {
-                let content_components = entry
-                    .template
-                    .iter()
-                    .filter(|component| !Self::is_citation_number_label(component))
-                    .cloned()
-                    .collect::<Vec<_>>();
+                // The marker is not a template component, so the body is
+                // already marker-free.
+                let content_components = entry.template.clone();
                 (
                     entry.id.clone(),
                     render_entry_body_components_with_format::<F>(&content_components)
@@ -120,13 +110,9 @@ impl Processor {
             merged_body.push_str(rendered);
         }
 
-        let mut merged_template: Vec<_> = entry
-            .template
-            .iter()
-            .filter(|component| Self::is_citation_number_label(component))
-            .cloned()
-            .collect();
-        merged_template.push(ProcTemplateComponent {
+        // The marker rides on the entry, so the merged body is a single
+        // pre-formatted component.
+        let merged_template: Vec<ProcTemplateComponent> = vec![ProcTemplateComponent {
             template_component: TemplateComponent::default(),
             value: merged_body,
             sentence_initial: false,
@@ -136,9 +122,10 @@ impl Processor {
                 .first()
                 .and_then(|component| component.config.clone()),
             ..Default::default()
-        });
+        }];
 
         ProcEntry {
+            marker: entry.marker.clone(),
             id: entry.id,
             template: merged_template,
             metadata: entry.metadata,

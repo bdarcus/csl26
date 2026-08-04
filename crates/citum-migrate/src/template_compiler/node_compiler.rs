@@ -374,8 +374,10 @@ impl TemplateCompiler {
             Variable::ChapterNumber => Some(NumberVariable::ChapterNumber),
             Variable::CollectionNumber => Some(NumberVariable::CollectionNumber),
             Variable::NumberOfPages => Some(NumberVariable::NumberOfPages),
-            Variable::CitationNumber => Some(NumberVariable::CitationNumber),
-            Variable::CitationLabel => Some(NumberVariable::CitationLabel),
+            // Reference markers are processor-owned and declared via
+            // `label-mode`, not emitted as components.
+            // See docs/specs/REFERENCE_MARKERS.md.
+            Variable::CitationNumber | Variable::CitationLabel => None,
             Variable::Number => Some(NumberVariable::Number),
             _ => None,
         }

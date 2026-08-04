@@ -4,8 +4,7 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus and Citum contributors
 */
 
 use citum_schema::template::{
-    DelimiterPunctuation, Rendering, SimpleVariable, TemplateComponent, TemplateGroup,
-    TemplateVariable, WrapPunctuation,
+    Rendering, SimpleVariable, TemplateComponent, TemplateVariable, WrapPunctuation,
 };
 use csl_legacy::model::{CslNode, Layout, Macro};
 use std::collections::HashSet;
@@ -13,7 +12,7 @@ use std::collections::HashSet;
 #[allow(clippy::indexing_slicing, reason = "idx is found via position()")]
 pub(super) fn ensure_numeric_locator_citation_component(
     layout: &Layout,
-    template: &mut [TemplateComponent],
+    template: &mut Vec<TemplateComponent>,
 ) {
     if !layout_uses_citation_locator(layout) || citation_template_has_locator(template) {
         return;
@@ -28,21 +27,10 @@ pub(super) fn ensure_numeric_locator_citation_component(
         ..Default::default()
     });
 
-    if let Some(idx) = template.iter().position(component_has_citation_number) {
-        if let TemplateComponent::Group(list) = &mut template[idx] {
-            list.group.push(locator_component);
-            if list.delimiter.is_none() {
-                list.delimiter = Some(DelimiterPunctuation::None);
-            }
-        } else {
-            let original = template[idx].clone();
-            template[idx] = TemplateComponent::Group(TemplateGroup {
-                group: vec![original, locator_component],
-                delimiter: Some(DelimiterPunctuation::None),
-                ..Default::default()
-            });
-        }
-    }
+    // The reference marker is not a component, so the locator is simply the
+    // citation body; the marker slot renders ahead of it.
+    // See docs/specs/REFERENCE_MARKERS.md.
+    template.push(locator_component);
 }
 
 pub(super) fn normalize_wrapped_numeric_locator_citation_component(
@@ -56,7 +44,7 @@ pub(super) fn normalize_wrapped_numeric_locator_citation_component(
         return;
     };
 
-    if !citation_template_has_citation_number(template) || !citation_template_has_locator(template)
+    if !nodes_contain_citation_number(&layout.children) || !citation_template_has_locator(template)
     {
         return;
     }
@@ -350,43 +338,22 @@ fn infer_locator_prefix_from_nodes(
 
 pub(super) fn move_group_wrap_to_citation_items(
     layout: &Layout,
-    template: &mut [TemplateComponent],
     citation_wrap: &mut Option<WrapPunctuation>,
-) {
-    let Some(wrap) = citation_wrap.clone() else {
-        return;
-    };
-
+) -> Option<citum_schema::options::LabelWrap> {
+    let wrap = citation_wrap.clone()?;
     if !layout_has_group_wrap_for_citation_number(layout, &wrap) {
-        return;
+        return None;
     }
-
-    for component in template.iter_mut() {
-        if component_has_citation_number(component) {
-            apply_wrap_to_component(component, wrap.clone());
-        }
-    }
-    *citation_wrap = None;
-}
-
-fn apply_wrap_to_component(component: &mut TemplateComponent, wrap: WrapPunctuation) {
-    use citum_schema::template::WrapConfig;
-
-    let wrap_config = WrapConfig {
-        punctuation: wrap,
-        inner_prefix: None,
-        inner_suffix: None,
+    // The bracket encloses the marker together with the locator (`[1, p. 5]`),
+    // which is an item wrap rather than a cluster wrap.
+    // See docs/specs/REFERENCE_MARKERS.md.
+    let item_wrap = match wrap {
+        WrapPunctuation::Brackets => citum_schema::options::LabelWrap::Brackets,
+        WrapPunctuation::Parentheses => citum_schema::options::LabelWrap::Parentheses,
+        WrapPunctuation::Quotes => return None,
     };
-
-    match component {
-        TemplateComponent::Number(n) if n.rendering.wrap.is_none() => {
-            n.rendering.wrap = Some(wrap_config);
-        }
-        TemplateComponent::Group(list) if list.rendering.wrap.is_none() => {
-            list.rendering.wrap = Some(wrap_config);
-        }
-        _ => {}
-    }
+    *citation_wrap = None;
+    Some(item_wrap)
 }
 
 fn citation_template_has_locator(template: &[TemplateComponent]) -> bool {
@@ -493,20 +460,6 @@ fn node_contains_citation_number(node: &CslNode) -> bool {
                     .as_ref()
                     .is_some_and(|children| nodes_contain_citation_number(children))
         }
-        _ => false,
-    }
-}
-
-pub(super) fn citation_template_has_citation_number(template: &[TemplateComponent]) -> bool {
-    template.iter().any(component_has_citation_number)
-}
-
-fn component_has_citation_number(component: &TemplateComponent) -> bool {
-    match component {
-        TemplateComponent::Number(n) => {
-            n.number == citum_schema::template::NumberVariable::CitationNumber
-        }
-        TemplateComponent::Group(list) => list.group.iter().any(component_has_citation_number),
         _ => false,
     }
 }

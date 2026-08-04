@@ -283,12 +283,24 @@ pub struct CitationOptions {
     /// Organizational name abbreviation expansion policy.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub org_abbreviation_memory: Option<OrgAbbreviationMemoryConfig>,
-    /// Declarative mode for processor-generated numeric citation labels.
+    /// Declarative mode for the processor-generated reference marker this
+    /// citation renders — numeric (`[1]`), alphabetic (`[Kuh62]`), or none.
+    /// See `docs/specs/REFERENCE_MARKERS.md`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub label_mode: Option<CitationLabelMode>,
-    /// Label wrap policy applied to citation labels.
+    /// Label wrap policy applied to the reference marker alone.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub label_wrap: Option<LabelWrap>,
+    /// Wrap policy applied to one citation item as a whole — the reference
+    /// marker together with the item body, such as a locator.
+    ///
+    /// Distinct from [`Self::label_wrap`], which encloses only the marker, and
+    /// from `CitationSpec::wrap`, which encloses the whole assembled citation.
+    /// IEEE renders `[1, p. 737]` with `item-wrap`; the American Medical
+    /// Association style renders `[1](p737)` with `label-wrap`.
+    /// See `docs/specs/REFERENCE_MARKERS.md`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub item_wrap: Option<LabelWrap>,
     /// Delimiter between grouped citation items.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub group_delimiter: Option<CitationGroupDelimiter>,
@@ -414,12 +426,21 @@ pub struct BibliographyOptions {
     /// Delimiter between volume/issue and pages for serial sources.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub volume_pages_delimiter: Option<DelimiterPunctuation>,
-    /// Bibliography label mode for label-bearing styles.
+    /// Declarative mode for the processor-generated reference marker each
+    /// entry leads with — numeric (`[1]`), alphabetic (`[Kuh62]`), author-date,
+    /// or none. See `docs/specs/REFERENCE_MARKERS.md`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub label_mode: Option<BibliographyLabelMode>,
-    /// Label wrap policy applied to bibliography labels.
+    /// Wrap policy applied to the bibliography reference marker.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub label_wrap: Option<BibliographyLabelWrap>,
+    /// Text between the reference marker and the entry body.
+    ///
+    /// Defaults to empty, which renders flush (`[1]J. Smith`) and matches
+    /// citeproc-js `second-field-align` output flattened to text. A style that
+    /// wants a gap declares it. See `docs/specs/REFERENCE_MARKERS.md`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub label_separator: Option<String>,
     /// Placement of issued dates within bibliography entries.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub date_position: Option<DatePosition>,
@@ -818,6 +839,7 @@ impl CitationOptions {
             org_abbreviation_memory,
             label_mode,
             label_wrap,
+            item_wrap,
             group_delimiter,
             custom,
         );
@@ -860,6 +882,7 @@ impl BibliographyOptions {
             entry_suffix_after_doi: self.entry_suffix_after_doi,
             label_mode: self.label_mode,
             label_wrap: self.label_wrap,
+            label_separator: self.label_separator.clone(),
             custom: None,
             compound_numeric: self.compound_numeric.clone(),
             sort_partitioning: self.sort_partitioning.clone(),
@@ -950,15 +973,22 @@ impl BibliographyOptions {
             compound_numeric,
             sort_partitioning,
             anonymous_entries,
-            label_mode,
-            label_wrap,
             date_position,
             title_terminator,
             repeated_author_rendering,
             custom,
         );
 
+        self.merge_marker_fields(other);
         self.merge_shared_fields(other);
+    }
+
+    /// Merge the reference-marker fields, with `other` taking precedence.
+    ///
+    /// Split from [`Self::merge`] to keep that function under the cognitive
+    /// complexity limit. See `docs/specs/REFERENCE_MARKERS.md`.
+    fn merge_marker_fields(&mut self, other: &BibliographyOptions) {
+        crate::merge_options!(self, other, label_mode, label_wrap, label_separator);
     }
 
     fn merge_shared_fields(&mut self, other: &BibliographyOptions) {

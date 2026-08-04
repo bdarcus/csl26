@@ -86,6 +86,10 @@ citation:
   multi-cite-delimiter: { mark: semicolon }
 bibliography:
   options:
+    # Author-date entries carry no reference marker; this cancels the numeric
+    # one declared on gb-t-7714-2025-base for its numeric and note leaves.
+    # See docs/specs/REFERENCE_MARKERS.md.
+    label-mode: author-date
     # GB/T 7714 author-date has no title-as-author substitution convention:
     # an item with no author (and no editor/translator to promote) renders
     # the locale's 佚名 (anonymous-author) term via `contributor: author`'s

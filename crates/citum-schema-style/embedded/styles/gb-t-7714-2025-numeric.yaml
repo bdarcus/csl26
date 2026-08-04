@@ -33,8 +33,8 @@ options:
     name-form: initials
   page-range-format: expanded
 citation:
-  template:
-  - number: citation-number
+  options:
+    label-mode: numeric
   wrap:
     punctuation: brackets
   multi-cite-delimiter: ','

@@ -21,8 +21,8 @@ use citum_schema::reference::{
     Contributor, DateValue, Monograph, MonographType, MultilingualString, StructuredName, Title,
 };
 use citum_schema::template::{
-    ContributorForm, ContributorRole, NumberVariable, Rendering, TemplateComponent,
-    TemplateContributor, TemplateNumber, TemplateTitle, TitleType, WrapPunctuation,
+    ContributorForm, ContributorRole, Rendering, TemplateComponent, TemplateContributor,
+    TemplateTitle, TitleType,
 };
 use citum_schema::{BibliographySpec, Style, StyleInfo};
 
@@ -110,8 +110,8 @@ fn author_date_style() -> Style {
     }
 }
 
-/// A numeric style built from [`author_date_style`], with a citation-number
-/// component prepended so `begin_run` pre-assigns `citation_numbers`
+/// A numeric style built from [`author_date_style`], declaring a numeric
+/// reference marker so `begin_run` pre-assigns `citation_numbers`
 /// (`setup.rs::initialize_numeric_bibliography_numbers`) instead of the
 /// lazy, render-time fallback author-date styles use.
 fn numeric_style() -> Style {
@@ -120,16 +120,11 @@ fn numeric_style() -> Style {
     let Some(bibliography) = style.bibliography.as_mut() else {
         unreachable!("author_date_style always sets bibliography");
     };
+    let options = bibliography.options.get_or_insert_with(Default::default);
+    options.label_mode = Some(citum_schema::options::BibliographyLabelMode::Numeric);
+    options.label_wrap = Some(citum_schema::options::BibliographyLabelWrap::Brackets);
+    options.label_separator = Some(" ".to_string());
     bibliography.template = Some(vec![
-        TemplateComponent::Number(TemplateNumber {
-            number: NumberVariable::CitationNumber,
-            rendering: Rendering {
-                wrap: Some(WrapPunctuation::Brackets.into()),
-                suffix: Some(" ".into()),
-                ..Default::default()
-            },
-            ..Default::default()
-        }),
         TemplateComponent::Contributor(TemplateContributor {
             contributor: ContributorRole::Author.into(),
             form: ContributorForm::Long,

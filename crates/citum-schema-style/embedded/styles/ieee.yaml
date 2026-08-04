@@ -33,14 +33,13 @@ options:
 citation:
   options:
     label-mode: numeric
+    # The bracket encloses the marker together with the locator (`[1, p. 737]`),
+    # so it is an item wrap, not a label wrap. See docs/specs/REFERENCE_MARKERS.md.
+    item-wrap: brackets
   template:
-  - delimiter: ""
-    wrap:
-      punctuation: brackets
-    group:
-    - number: citation-number
-    - variable: locator
-      prefix: ", "
+  - variable: locator
+    prefix: ", "
+  delimiter: ""
   multi-cite-delimiter: ", "
 bibliography:
   options:

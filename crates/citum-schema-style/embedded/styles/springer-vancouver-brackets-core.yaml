@@ -50,9 +50,6 @@ citation:
         and-others: et-al
         delimiter-precedes-last: contextual
       and: text
-    - number: citation-number
-      wrap:
-        punctuation: brackets
     delimiter: " "
   multi-cite-delimiter: ","
   delimiter: ""

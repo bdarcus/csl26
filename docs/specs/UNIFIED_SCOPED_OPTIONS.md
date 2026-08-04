@@ -66,17 +66,21 @@ The renderer materializes a semantic label slot only after locale and type
 variant selection; authored templates are not rewritten. This happens for both
 profile wrappers and standalone styles, so the option semantics are uniform.
 
-`citation.options.label-mode` supports `numeric` and `none`. When omitted,
-numeric processing implies `numeric`; other processing modes preserve existing
-template behavior. `none` suppresses inherited or legacy `citation-number`
-components. `citation.options.label-wrap` presents the generated label itself;
-`citation.wrap` continues to wrap the citation cluster.
+`citation.options.label-mode` supports `numeric`, `alphabetic` and `none`. When
+omitted, numeric processing implies `numeric`; other processing modes render no
+marker. `none` suppresses an inherited marker, and a declared mode strips a
+marker of any other kind inherited from a parent.
 
-`bibliography.options.label-mode` and `label-wrap` are likewise runtime-owned.
-Numeric bibliography labels are inserted as a leading semantic group after
-type-variant resolution, preserving label-only separator behavior for entries
-whose content is otherwise empty. Existing explicit label components remain
-accepted and prevent duplicate insertion.
+Three wrap scopes are distinct: `citation.wrap` wraps the citation cluster,
+`citation.options.item-wrap` wraps the marker together with the item body, and
+`citation.options.label-wrap` wraps the marker alone. See
+[REFERENCE_MARKERS](REFERENCE_MARKERS.md).
+
+`bibliography.options.label-mode`, `label-wrap` and `label-separator` are
+likewise runtime-owned. The marker is materialized as a leading slot after
+type-variant resolution, and `label-separator` supplies the gap to the entry
+body (empty by default, i.e. flush). Marker components are not authorable and
+are rejected at parse time.
 
 ### 2a. Runtime Scope Cascade Merge Semantics
 
