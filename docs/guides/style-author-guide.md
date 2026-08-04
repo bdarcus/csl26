@@ -342,9 +342,16 @@ Use the option block that matches the scope of the behavior:
 |---|---|---|---|
 | `bibliography.options.date-position` | `after-author`, `after-title`, `terminal` | the style should move the year within bibliography entries | `after-author` |
 | `options.contributors` | contributor presets such as `apa`, `chicago`, `springer`, `vancouver` | the style should switch contributor formatting | `springer` |
-| `citation.options.label-mode` | `none`, `numeric` | the style should generate or suppress numeric citation labels | `numeric` |
-| `citation.options.label-wrap` | `none`, `parentheses`, `brackets`, `superscript` | the style should change citation label punctuation | `brackets` |
-| `bibliography.options.label-mode` | `none`, `numeric`, `author-date` | the style should change bibliography label display | `numeric` |
+| `citation.options.label-mode` | `none`, `numeric`, `alphabetic` | the style should generate or suppress a reference marker (`[1]`, `[Kuh62]`) | `numeric` |
+| `citation.options.label-wrap` | `none`, `parentheses`, `brackets`, `superscript` | punctuation should wrap the marker **alone** (AMA's `[1](p737)`) | `brackets` |
+| `citation.options.item-wrap` | `none`, `parentheses`, `brackets`, `superscript` | punctuation should wrap the marker **and the item body** (IEEE's `[1, p. 737]`) | `brackets` |
+| `bibliography.options.label-mode` | `none`, `numeric`, `alphabetic`, `author-date` | the style should change bibliography marker display | `numeric` |
+| `bibliography.options.label-separator` | any string | a gap should sit between marker and entry body; empty (the default) renders flush | `' '` |
+
+Reference markers are processor-owned: declare `label-mode` rather than writing
+a `number: citation-number` or `number: citation-label` component, which are not
+template components and are rejected. See
+[REFERENCE_MARKERS](../specs/REFERENCE_MARKERS.md).
 
 ```yaml
 # Standalone style: configure the style directly

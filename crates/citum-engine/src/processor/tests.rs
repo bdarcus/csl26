@@ -316,6 +316,9 @@ fn make_grouped_compound_selection_style() -> Style {
         }),
         bibliography: Some(BibliographySpec {
             options: Some(BibliographyOptions {
+                label_mode: Some(citum_schema::options::BibliographyLabelMode::Numeric),
+                label_wrap: Some(citum_schema::options::BibliographyLabelWrap::Brackets),
+                label_separator: Some(" ".to_string()),
                 compound_numeric: Some(CompoundNumericConfig {
                     sub_label_suffix: ")".to_string(),
                     sub_delimiter: ", ".to_string(),
@@ -324,16 +327,6 @@ fn make_grouped_compound_selection_style() -> Style {
                 ..Default::default()
             }),
             template: Some(vec![
-                TemplateComponent::Number(TemplateNumber {
-                    number: NumberVariable::CitationNumber,
-                    form: None,
-                    rendering: Rendering {
-                        wrap: Some(WrapPunctuation::Brackets.into()),
-                        suffix: Some(" ".into()),
-                        ..Default::default()
-                    },
-                    ..Default::default()
-                }),
                 TemplateComponent::Contributor(TemplateContributor {
                     contributor: ContributorRole::Author.into(),
                     form: ContributorForm::Long,
@@ -1724,15 +1717,14 @@ fn test_numeric_citation_numbers_with_repeated_refs() {
     // Citing ref1, ref2, ref1 again should give numbers 1, 2, 1.
     use citum_schema::CitationSpec;
     use citum_schema::options::{Config, Processing};
-    use citum_schema::template::{NumberVariable, TemplateNumber};
 
     let style = Style {
         citation: Some(CitationSpec {
             wrap: Some(citum_schema::template::WrapPunctuation::Brackets.into()),
-            template: Some(vec![TemplateComponent::Number(TemplateNumber {
-                number: NumberVariable::CitationNumber,
+            options: Some(citum_schema::CitationOptions {
+                label_mode: Some(citum_schema::options::CitationLabelMode::Numeric),
                 ..Default::default()
-            })]),
+            }),
             ..Default::default()
         }),
         options: Some(Config {
@@ -1884,15 +1876,14 @@ fn test_processor_is_reusable_across_independent_runs() {
 fn test_numeric_citation_numbers_follow_registry_order() {
     use citum_schema::CitationSpec;
     use citum_schema::options::{Config, Processing};
-    use citum_schema::template::{NumberVariable, TemplateNumber};
 
     let style = Style {
         citation: Some(CitationSpec {
             wrap: Some(citum_schema::template::WrapPunctuation::Brackets.into()),
-            template: Some(vec![TemplateComponent::Number(TemplateNumber {
-                number: NumberVariable::CitationNumber,
+            options: Some(citum_schema::CitationOptions {
+                label_mode: Some(citum_schema::options::CitationLabelMode::Numeric),
                 ..Default::default()
-            })]),
+            }),
             ..Default::default()
         }),
         options: Some(Config {
@@ -2006,10 +1997,10 @@ fn test_label_mode_does_not_group_by_author() {
         ..Default::default()
     });
     style.citation = Some(CitationSpec {
-        template: Some(vec![TemplateComponent::Number(TemplateNumber {
-            number: NumberVariable::CitationLabel,
+        options: Some(citum_schema::CitationOptions {
+            label_mode: Some(citum_schema::options::CitationLabelMode::Alphabetic),
             ..Default::default()
-        })]),
+        }),
         wrap: Some(WrapPunctuation::Brackets.into()),
         ..Default::default()
     });
@@ -2473,14 +2464,10 @@ fn test_numeric_non_integral_citation_number() {
         ..Default::default()
     });
     style.citation = Some(citum_schema::CitationSpec {
-        template: Some(vec![TemplateComponent::Number(
-            citum_schema::template::TemplateNumber {
-                number: citum_schema::template::NumberVariable::CitationNumber,
-                form: None,
-                rendering: Rendering::default(),
-                ..Default::default()
-            },
-        )]),
+        options: Some(citum_schema::CitationOptions {
+            label_mode: Some(citum_schema::options::CitationLabelMode::Numeric),
+            ..Default::default()
+        }),
         wrap: Some(WrapPunctuation::Brackets.into()),
         ..Default::default()
     });
@@ -2565,12 +2552,6 @@ fn test_declarative_numeric_citation_label_none_suppresses_legacy_number() {
             label_mode: Some(CitationLabelMode::None),
             ..Default::default()
         }),
-        template: Some(vec![TemplateComponent::Number(
-            citum_schema::template::TemplateNumber {
-                number: citum_schema::template::NumberVariable::CitationNumber,
-                ..Default::default()
-            },
-        )]),
         ..Default::default()
     });
 
@@ -2628,6 +2609,74 @@ fn test_declarative_numeric_citation_label_with_locator() {
     assert_eq!(processor.process_citation(&citation).unwrap(), "[1], p. 23");
 }
 
+/// Pins the three wrap scopes apart. `label-wrap` encloses the reference marker
+/// alone, so the locator falls outside it (the American Medical Association
+/// shape); `item-wrap` encloses the marker together with the item body, so the
+/// locator falls inside it (the IEEE shape). See
+/// `docs/specs/REFERENCE_MARKERS.md`.
+#[rstest]
+#[case::label_wrap_encloses_the_marker_alone(
+    Some(citum_schema::options::LabelWrap::Brackets),
+    None,
+    "[1], p. 23"
+)]
+#[case::item_wrap_encloses_marker_and_locator(
+    None,
+    Some(citum_schema::options::LabelWrap::Brackets),
+    "[1, p. 23]"
+)]
+fn test_wrap_scope_decides_where_the_bracket_sits(
+    #[case] label_wrap: Option<citum_schema::options::LabelWrap>,
+    #[case] item_wrap: Option<citum_schema::options::LabelWrap>,
+    #[case] expected: &str,
+) {
+    use citum_schema::options::{CitationLabelMode, Processing};
+
+    // given a numeric style whose citation body is just a locator
+    let mut style = make_style();
+    style.options = Some(Config {
+        processing: Some(Processing::Numeric),
+        ..Default::default()
+    });
+    style.citation = Some(citum_schema::CitationSpec {
+        options: Some(citum_schema::CitationOptions {
+            label_mode: Some(CitationLabelMode::Numeric),
+            label_wrap,
+            item_wrap,
+            ..Default::default()
+        }),
+        template: Some(vec![TemplateComponent::Variable(
+            citum_schema::template::TemplateVariable {
+                variable: citum_schema::template::SimpleVariable::Locator,
+                rendering: Rendering {
+                    prefix: Some(", ".into()),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+        )]),
+        delimiter: Some("".into()),
+        ..Default::default()
+    });
+
+    // when a cite carrying a page locator renders
+    let processor = Processor::new(style, make_bibliography());
+    let citation = Citation {
+        items: vec![crate::reference::CitationItem {
+            id: "kuhn1962".to_string(),
+            locator: Some(citum_schema::citation::CitationLocator::single(
+                citum_schema::citation::LocatorType::Page,
+                "23",
+            )),
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+
+    // then the bracket sits at the scope that was declared
+    assert_eq!(processor.process_citation(&citation).unwrap(), expected);
+}
+
 /// Verifies an explicit integral template receives its label after authored content.
 #[test]
 fn test_declarative_numeric_integral_label_follows_authored_content() {
@@ -2683,12 +2732,6 @@ fn test_numeric_citation_number_collapse_enabled() {
         ..Default::default()
     });
     style.citation = Some(citum_schema::CitationSpec {
-        template: Some(vec![TemplateComponent::Number(
-            citum_schema::template::TemplateNumber {
-                number: citum_schema::template::NumberVariable::CitationNumber,
-                ..Default::default()
-            },
-        )]),
         wrap: Some(WrapPunctuation::Brackets.into()),
         multi_cite_delimiter: Some(",".into()),
         collapse: Some(citum_schema::CitationCollapse::CitationNumber),
@@ -2742,12 +2785,6 @@ fn test_numeric_citation_number_collapse_skips_affixed_items() {
         ..Default::default()
     });
     style.citation = Some(citum_schema::CitationSpec {
-        template: Some(vec![TemplateComponent::Number(
-            citum_schema::template::TemplateNumber {
-                number: citum_schema::template::NumberVariable::CitationNumber,
-                ..Default::default()
-            },
-        )]),
         wrap: Some(WrapPunctuation::Brackets.into()),
         multi_cite_delimiter: Some(",".into()),
         collapse: Some(citum_schema::CitationCollapse::CitationNumber),
@@ -2797,12 +2834,6 @@ fn test_numeric_citation_numbers_follow_bibliography_sort() {
         ..Default::default()
     });
     style.citation = Some(citum_schema::CitationSpec {
-        template: Some(vec![TemplateComponent::Number(
-            citum_schema::template::TemplateNumber {
-                number: citum_schema::template::NumberVariable::CitationNumber,
-                ..Default::default()
-            },
-        )]),
         wrap: Some(WrapPunctuation::Brackets.into()),
         ..Default::default()
     });
@@ -2958,21 +2989,18 @@ fn test_label_integral_citation_uses_author_text() {
     });
     // Citation template now includes both author and label
     style.citation = Some(citum_schema::CitationSpec {
-        template: Some(vec![
-            TemplateComponent::Contributor(TemplateContributor {
-                contributor: ContributorRole::Author.into(),
-                form: ContributorForm::Short,
-                name_order: None,
-                delimiter: None,
-                rendering: Rendering::default(),
-                ..Default::default()
-            }),
-            TemplateComponent::Number(TemplateNumber {
-                number: citum_schema::template::NumberVariable::CitationLabel,
-                rendering: Rendering::default(),
-                ..Default::default()
-            }),
-        ]),
+        template: Some(vec![TemplateComponent::Contributor(TemplateContributor {
+            contributor: ContributorRole::Author.into(),
+            form: ContributorForm::Short,
+            name_order: None,
+            delimiter: None,
+            rendering: Rendering::default(),
+            ..Default::default()
+        })]),
+        options: Some(citum_schema::CitationOptions {
+            label_mode: Some(citum_schema::options::CitationLabelMode::Alphabetic),
+            ..Default::default()
+        }),
         wrap: Some(WrapPunctuation::Brackets.into()),
         ..Default::default()
     });
@@ -3507,30 +3535,21 @@ fn test_grouped_numeric_bibliography_rerender_preserves_numbers_and_substitution
     use citum_schema::grouping::{BibliographyGroup, FieldMatcher, GroupHeading, GroupSelector};
 
     let mut style = make_style();
-    let group_template = vec![
-        TemplateComponent::Number(TemplateNumber {
-            number: NumberVariable::CitationNumber,
-            form: None,
-            rendering: Rendering {
-                wrap: Some(WrapPunctuation::Brackets.into()),
-                suffix: Some(" ".into()),
-                ..Default::default()
-            },
-            ..Default::default()
-        }),
-        TemplateComponent::Contributor(TemplateContributor {
-            contributor: ContributorRole::Author.into(),
-            form: ContributorForm::Long,
-            name_order: None,
-            delimiter: None,
-            and: None,
-            rendering: Rendering::default(),
-            ..Default::default()
-        }),
-    ];
+    let group_template = vec![TemplateComponent::Contributor(TemplateContributor {
+        contributor: ContributorRole::Author.into(),
+        form: ContributorForm::Long,
+        name_order: None,
+        delimiter: None,
+        and: None,
+        rendering: Rendering::default(),
+        ..Default::default()
+    })];
     style.options.as_mut().unwrap().processing = Some(Processing::Numeric);
     style.bibliography = Some(BibliographySpec {
         options: Some(BibliographyOptions {
+            label_mode: Some(citum_schema::options::BibliographyLabelMode::Numeric),
+            label_wrap: Some(citum_schema::options::BibliographyLabelWrap::Brackets),
+            label_separator: Some(" ".to_string()),
             subsequent_author_substitute: Some("———".to_string()),
             ..Default::default()
         }),
@@ -4529,10 +4548,10 @@ bibliography:
       sub-delimiter: ", "
     entry-suffix: .
     separator: ". "
+    label-mode: numeric
+    label-wrap: brackets
+    label-separator: " "
   template:
-    - number: citation-number
-      wrap: brackets
-      suffix: " "
     - contributor: author
       form: long
     - title: primary
@@ -4630,10 +4649,10 @@ bibliography:
       sub-delimiter: ", "
     entry-suffix: .
     separator: ". "
+    label-mode: numeric
+    label-wrap: brackets
+    label-separator: " "
   template:
-    - number: citation-number
-      wrap: brackets
-      suffix: " "
     - contributor: author
       form: long
     - title: primary
@@ -4986,16 +5005,15 @@ fn test_compound_numeric_citation_subentry_disabled() {
     use citum_schema::CitationSpec;
     use citum_schema::options::bibliography::CompoundNumericConfig;
     use citum_schema::options::{Config, Processing};
-    use citum_schema::template::{NumberVariable, TemplateNumber};
     use indexmap::IndexMap;
 
     let style = Style {
         citation: Some(CitationSpec {
             wrap: Some(WrapPunctuation::Brackets.into()),
-            template: Some(vec![TemplateComponent::Number(TemplateNumber {
-                number: NumberVariable::CitationNumber,
+            options: Some(citum_schema::CitationOptions {
+                label_mode: Some(citum_schema::options::CitationLabelMode::Numeric),
                 ..Default::default()
-            })]),
+            }),
             ..Default::default()
         }),
         options: Some(Config {
@@ -5173,10 +5191,10 @@ bibliography:
   options:
     compound-numeric: {}
     entry-suffix: .
+    label-mode: numeric
+    label-wrap: brackets
+    label-separator: " "
   template:
-    - number: citation-number
-      wrap: brackets
-      suffix: " "
     - contributor: author
       form: long
     - title: primary
@@ -5253,10 +5271,10 @@ bibliography:
     compound-numeric: {}
     entry-suffix: .
     separator: ". "
+    label-mode: numeric
+    label-wrap: brackets
+    label-separator: " "
   template:
-    - number: citation-number
-      wrap: brackets
-      suffix: " "
     - contributor: author
       form: long
     - title: primary
@@ -5328,10 +5346,10 @@ bibliography:
       sub-label-suffix: ")"
     entry-suffix: .
     separator: ". "
+    label-mode: numeric
+    label-wrap: brackets
+    label-separator: " "
   template:
-    - number: citation-number
-      wrap: brackets
-      suffix: " "
     - contributor: author
       form: long
     - title: primary
@@ -5404,16 +5422,15 @@ fn test_compound_numeric_citation_subentry_collapse_disabled() {
     use citum_schema::CitationSpec;
     use citum_schema::options::bibliography::CompoundNumericConfig;
     use citum_schema::options::{Config, Processing};
-    use citum_schema::template::{NumberVariable, TemplateNumber};
     use indexmap::IndexMap;
 
     let style = Style {
         citation: Some(CitationSpec {
             wrap: Some(WrapPunctuation::Brackets.into()),
-            template: Some(vec![TemplateComponent::Number(TemplateNumber {
-                number: NumberVariable::CitationNumber,
+            options: Some(citum_schema::CitationOptions {
+                label_mode: Some(citum_schema::options::CitationLabelMode::Numeric),
                 ..Default::default()
-            })]),
+            }),
             delimiter: Some(",".into()),
             multi_cite_delimiter: Some(",".into()),
             ..Default::default()
@@ -5488,16 +5505,15 @@ fn test_compound_numeric_citation_subentry_collapse_enabled() {
     use citum_schema::CitationSpec;
     use citum_schema::options::bibliography::CompoundNumericConfig;
     use citum_schema::options::{Config, Processing};
-    use citum_schema::template::{NumberVariable, TemplateNumber};
     use indexmap::IndexMap;
 
     let style = Style {
         citation: Some(CitationSpec {
             wrap: Some(WrapPunctuation::Brackets.into()),
-            template: Some(vec![TemplateComponent::Number(TemplateNumber {
-                number: NumberVariable::CitationNumber,
+            options: Some(citum_schema::CitationOptions {
+                label_mode: Some(citum_schema::options::CitationLabelMode::Numeric),
                 ..Default::default()
-            })]),
+            }),
             delimiter: Some(",".into()),
             multi_cite_delimiter: Some(",".into()),
             ..Default::default()
@@ -5844,21 +5860,18 @@ fn test_label_integral_citation_includes_label() {
     });
     // Citation template with citation label
     style.citation = Some(CitationSpec {
-        template: Some(vec![
-            TemplateComponent::Contributor(TemplateContributor {
-                contributor: ContributorRole::Author.into(),
-                form: ContributorForm::Short,
-                name_order: None,
-                delimiter: None,
-                rendering: Rendering::default(),
-                ..Default::default()
-            }),
-            TemplateComponent::Number(TemplateNumber {
-                number: NumberVariable::CitationLabel,
-                rendering: Rendering::default(),
-                ..Default::default()
-            }),
-        ]),
+        template: Some(vec![TemplateComponent::Contributor(TemplateContributor {
+            contributor: ContributorRole::Author.into(),
+            form: ContributorForm::Short,
+            name_order: None,
+            delimiter: None,
+            rendering: Rendering::default(),
+            ..Default::default()
+        })]),
+        options: Some(citum_schema::CitationOptions {
+            label_mode: Some(citum_schema::options::CitationLabelMode::Alphabetic),
+            ..Default::default()
+        }),
         wrap: Some(WrapPunctuation::Brackets.into()),
         ..Default::default()
     });
@@ -5892,14 +5905,13 @@ fn test_label_integral_citation_includes_label() {
 fn make_compound_numeric_style_for_dynamic() -> Style {
     use citum_schema::options::bibliography::CompoundNumericConfig;
     use citum_schema::options::{Config, Processing};
-    use citum_schema::template::{NumberVariable, TemplateNumber};
     Style {
         citation: Some(CitationSpec {
             wrap: Some(WrapPunctuation::Brackets.into()),
-            template: Some(vec![TemplateComponent::Number(TemplateNumber {
-                number: NumberVariable::CitationNumber,
+            options: Some(citum_schema::CitationOptions {
+                label_mode: Some(citum_schema::options::CitationLabelMode::Numeric),
                 ..Default::default()
-            })]),
+            }),
             delimiter: Some(",".into()),
             multi_cite_delimiter: Some(",".into()),
             ..Default::default()

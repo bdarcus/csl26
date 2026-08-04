@@ -39,7 +39,6 @@ use citum_schema::{
     template::{
         ContributorRole, NumberVariable, Rendering, SimpleVariable, TemplateComponent,
         TemplateContributor, TemplateNumber, TemplateTitle, TemplateVariable, TitleType,
-        WrapPunctuation,
     },
 };
 use criterion::{BatchSize, Criterion, criterion_group, criterion_main};
@@ -814,15 +813,6 @@ fn build_compound_bench_style() -> Style {
                 ..Default::default()
             }),
             template: Some(vec![
-                TemplateComponent::Number(TemplateNumber {
-                    number: NumberVariable::CitationNumber,
-                    rendering: Rendering {
-                        wrap: Some(WrapPunctuation::Brackets.into()),
-                        suffix: Some(" ".into()),
-                        ..Default::default()
-                    },
-                    ..Default::default()
-                }),
                 TemplateComponent::Contributor(TemplateContributor {
                     contributor: ContributorRole::Author.into(),
                     form: citum_schema::template::ContributorForm::Long,

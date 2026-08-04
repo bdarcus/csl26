@@ -32,10 +32,12 @@ pub enum LabelWrap {
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub enum CitationLabelMode {
-    /// Do not generate or render numeric citation labels.
+    /// Do not generate or render a reference marker.
     None,
-    /// Generate numeric citation labels from processor-owned citation numbers.
+    /// Generate numeric markers from processor-owned citation numbers.
     Numeric,
+    /// Generate alphabetic trigraph markers, such as `Kuh62`.
+    Alphabetic,
 }
 
 impl LabelWrap {
@@ -125,8 +127,10 @@ impl CitationGroupDelimiter {
 pub enum BibliographyLabelMode {
     /// No explicit label component.
     None,
-    /// Numeric bibliography labels.
+    /// Numeric bibliography markers.
     Numeric,
+    /// Alphabetic trigraph bibliography markers, such as `Kuh62`.
+    Alphabetic,
     /// Author-date bibliography labels.
     AuthorDate,
 }

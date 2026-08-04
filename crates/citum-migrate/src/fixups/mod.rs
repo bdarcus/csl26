@@ -82,7 +82,7 @@ pub fn ensure_inferred_patent_type_template(
 /// Adds a numeric locator component when the legacy citation layout uses one.
 pub fn ensure_numeric_locator_citation_component(
     layout: &Layout,
-    template: &mut [TemplateComponent],
+    template: &mut Vec<TemplateComponent>,
 ) {
     locator::ensure_numeric_locator_citation_component(layout, template);
 }
@@ -109,19 +109,15 @@ pub fn normalize_author_date_locator_citation_component(
     locator::normalize_author_date_locator_citation_component(layout, macros, template);
 }
 
-/// Moves citation-number wrapping from a legacy layout group to migrated citation items.
+/// Converts a legacy layout group wrapping the citation number into the
+/// declarative `item-wrap` that encloses marker plus item body, clearing the
+/// cluster wrap. See `docs/specs/REFERENCE_MARKERS.md`.
+#[must_use]
 pub fn move_group_wrap_to_citation_items(
     layout: &Layout,
-    template: &mut [TemplateComponent],
     citation_wrap: &mut Option<WrapPunctuation>,
-) {
-    locator::move_group_wrap_to_citation_items(layout, template, citation_wrap);
-}
-
-/// Returns whether a citation template contains a citation-number component.
-#[must_use]
-pub fn citation_template_has_citation_number(template: &[TemplateComponent]) -> bool {
-    locator::citation_template_has_citation_number(template)
+) -> Option<citum_schema::options::LabelWrap> {
+    locator::move_group_wrap_to_citation_items(layout, citation_wrap)
 }
 
 /// Returns whether a note citation template is too small to preserve note semantics.

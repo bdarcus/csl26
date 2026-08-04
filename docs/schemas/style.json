@@ -6611,7 +6611,7 @@
           ]
         },
         "label-mode": {
-          "description": "Declarative mode for processor-generated numeric citation labels.",
+          "description": "Declarative mode for the processor-generated reference marker this\ncitation renders — numeric (`[1]`), alphabetic (`[Kuh62]`), or none.\nSee `docs/specs/REFERENCE_MARKERS.md`.",
           "anyOf": [
             {
               "$ref": "#/$defs/CitationLabelMode"
@@ -6622,7 +6622,18 @@
           ]
         },
         "label-wrap": {
-          "description": "Label wrap policy applied to citation labels.",
+          "description": "Label wrap policy applied to the reference marker alone.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/LabelWrap"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "item-wrap": {
+          "description": "Wrap policy applied to one citation item as a whole — the reference\nmarker together with the item body, such as a locator.\n\nDistinct from [`Self::label_wrap`], which encloses only the marker, and\nfrom `CitationSpec::wrap`, which encloses the whole assembled citation.\nIEEE renders `[1, p. 737]` with `item-wrap`; the American Medical\nAssociation style renders `[1](p737)` with `label-wrap`.\nSee `docs/specs/REFERENCE_MARKERS.md`.",
           "anyOf": [
             {
               "$ref": "#/$defs/LabelWrap"
@@ -6658,14 +6669,19 @@
       "description": "Declarative presentation mode for numeric citation labels.",
       "oneOf": [
         {
-          "description": "Do not generate or render numeric citation labels.",
+          "description": "Do not generate or render a reference marker.",
           "type": "string",
           "const": "none"
         },
         {
-          "description": "Generate numeric citation labels from processor-owned citation numbers.",
+          "description": "Generate numeric markers from processor-owned citation numbers.",
           "type": "string",
           "const": "numeric"
+        },
+        {
+          "description": "Generate alphabetic trigraph markers, such as `Kuh62`.",
+          "type": "string",
+          "const": "alphabetic"
         }
       ]
     },
@@ -7563,7 +7579,7 @@
           ]
         },
         "label-mode": {
-          "description": "Bibliography label mode for label-bearing styles.",
+          "description": "Declarative mode for the processor-generated reference marker each\nentry leads with — numeric (`[1]`), alphabetic (`[Kuh62]`), author-date,\nor none. See `docs/specs/REFERENCE_MARKERS.md`.",
           "anyOf": [
             {
               "$ref": "#/$defs/BibliographyLabelMode"
@@ -7574,7 +7590,7 @@
           ]
         },
         "label-wrap": {
-          "description": "Label wrap policy applied to bibliography labels.",
+          "description": "Wrap policy applied to the bibliography reference marker.",
           "anyOf": [
             {
               "$ref": "#/$defs/BibliographyLabelWrap"
@@ -7582,6 +7598,13 @@
             {
               "type": "null"
             }
+          ]
+        },
+        "label-separator": {
+          "description": "Text between the reference marker and the entry body.\n\nDefaults to empty, which renders flush (`[1]J. Smith`) and matches\nciteproc-js `second-field-align` output flattened to text. A style that\nwants a gap declares it. See `docs/specs/REFERENCE_MARKERS.md`.",
+          "type": [
+            "string",
+            "null"
           ]
         },
         "date-position": {
@@ -7885,9 +7908,14 @@
           "const": "none"
         },
         {
-          "description": "Numeric bibliography labels.",
+          "description": "Numeric bibliography markers.",
           "type": "string",
           "const": "numeric"
+        },
+        {
+          "description": "Alphabetic trigraph bibliography markers, such as `Kuh62`.",
+          "type": "string",
+          "const": "alphabetic"
         },
         {
           "description": "Author-date bibliography labels.",

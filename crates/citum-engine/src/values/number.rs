@@ -92,32 +92,6 @@ fn resolve_number_value(
         NumberVariable::FirstReferenceNoteNumber => {
             hints.first_reference_note_number.map(|n| n.to_string())
         }
-        NumberVariable::CitationNumber => hints.citation_number.map(|n| {
-            if options.context == crate::values::RenderContext::Citation
-                && let Some(sub_label) = &hints.citation_sub_label
-            {
-                return format!("{n}{sub_label}");
-            }
-            n.to_string()
-        }),
-        NumberVariable::CitationLabel => {
-            let Some(citum_schema::options::Processing::Label(config)) =
-                options.config.processing.as_ref()
-            else {
-                return None;
-            };
-            let params = config.effective_params();
-            let base = crate::processor::labels::generate_base_label(reference, &params);
-            if base.is_empty() {
-                return None;
-            }
-            let suffix = if hints.disamb_condition && hints.group_index > 0 {
-                crate::values::int_to_letter(hints.group_index as u32).unwrap_or_default()
-            } else {
-                String::new()
-            };
-            Some(format!("{base}{suffix}"))
-        }
         _ => None,
     }
 }
@@ -216,9 +190,12 @@ fn render_ordinal(value: String, options: &RenderOptions<'_>) -> String {
 
 /// Replace ASCII digits in a rendered numeric value with the locale's configured glyphs.
 ///
+/// Reference markers render outside the template pipeline but still need this,
+/// so it is visible to the marker module.
+///
 /// Non-digit characters remain unchanged, so ranges and mixed identifiers preserve their
 /// punctuation and letters while their numeric portions follow locale conventions.
-fn localize_digits(value: String, digit_system: &DigitSystem) -> String {
+pub(crate) fn localize_digits(value: String, digit_system: &DigitSystem) -> String {
     let digits = match digit_system {
         DigitSystem::Western => return value,
         DigitSystem::ArabicIndic => ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'],

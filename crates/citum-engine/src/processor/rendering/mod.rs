@@ -15,10 +15,9 @@ use crate::values::{ProcHints, RenderContext, RenderOptions};
 use citum_schema::citation::CitationLocator;
 use citum_schema::locale::Locale;
 use citum_schema::options::{
-    BibliographyLabelMode, BibliographyLabelWrap, CitationLabelMode, Config, LabelWrap,
-    bibliography::BibliographyConfig,
+    CitationLabelMode, Config, LabelWrap, bibliography::BibliographyConfig,
 };
-use citum_schema::template::{NumberVariable, TemplateComponent};
+use citum_schema::template::TemplateComponent;
 use grouped::component_predicates::{resolve_localized_type_variant, resolve_type_variant};
 use indexmap::IndexMap;
 use std::borrow::Cow;
@@ -116,6 +115,7 @@ mod collapse;
 mod grouped;
 mod grouped_fallback;
 mod helpers;
+mod marker;
 
 #[cfg(test)]
 #[allow(
@@ -169,17 +169,17 @@ struct UngroupedItemRenderState<'a> {
     reference: &'a Reference,
     template: Cow<'a, [TemplateComponent]>,
     delimiter: &'a str,
-    numeric_label_only: bool,
-    label_wrap: Option<LabelWrap>,
+    /// The reference marker this item renders, if the style declares one.
+    marker: Option<marker::CitationMarkerSpec>,
 }
 
-/// Semantic metadata carried by a citation chunk while numeric presentation is deferred.
+/// A resolved reference marker: its value plus how to present it.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(super) struct NumericCitationLabel {
-    /// Processor-assigned base citation number.
-    pub number: usize,
-    /// Optional compound-entry sub-label, such as `a` in `1a`.
-    pub sub_label: Option<String>,
+pub(super) struct ResolvedMarker {
+    /// The generated token.
+    pub value: marker::MarkerValue,
+    /// How the marker is placed and wrapped.
+    pub spec: marker::CitationMarkerSpec,
 }
 
 /// A rendered citation item plus the metadata needed for semantic collapsing.
@@ -189,10 +189,10 @@ pub(super) struct CitationChunk {
     pub ids: Vec<String>,
     /// Rendered chunk content before final numeric-label presentation.
     pub content: String,
-    /// Numeric label identity, when this chunk is a label-only citation item.
-    pub numeric_label: Option<NumericCitationLabel>,
-    /// Scoped label presentation to apply after numeric collapsing.
-    pub label_wrap: Option<LabelWrap>,
+    /// The reference marker, when this chunk is exactly its marker and so can
+    /// still take part in numeric collapse. Presentation is realized after
+    /// collapse; a chunk that has already been composed carries `None`.
+    pub marker: Option<ResolvedMarker>,
 }
 
 /// Shared, citation-wide parameters threaded into each ungrouped item render.
@@ -378,304 +378,7 @@ impl<'a> Renderer<'a> {
 
     /// Resolve the effective declarative citation label mode for one citation spec.
     fn citation_label_mode(&self, spec: &citum_schema::CitationSpec) -> Option<CitationLabelMode> {
-        spec.options
-            .as_ref()
-            .and_then(|options| options.label_mode)
-            .or_else(|| {
-                matches!(
-                    self.config.effective_processing(),
-                    citum_schema::options::Processing::Numeric
-                )
-                .then_some(CitationLabelMode::Numeric)
-            })
-    }
-
-    /// Whether a template contains an authored `citation-number` component.
-    fn template_has_citation_number(components: &[TemplateComponent]) -> bool {
-        components.iter().any(|component| match component {
-            TemplateComponent::Number(number) => number.number == NumberVariable::CitationNumber,
-            TemplateComponent::Group(group) => Self::template_has_citation_number(&group.group),
-            _ => false,
-        })
-    }
-
-    /// Remove numeric citation labels from a cloned template without mutating the style.
-    fn strip_citation_numbers(components: &mut Vec<TemplateComponent>) {
-        components.retain_mut(|component| match component {
-            TemplateComponent::Number(number)
-                if number.number == NumberVariable::CitationNumber =>
-            {
-                false
-            }
-            TemplateComponent::Group(group) => {
-                Self::strip_citation_numbers(&mut group.group);
-                !group.group.is_empty()
-            }
-            _ => true,
-        });
-    }
-
-    /// Apply a citation label presentation to explicit or generated numeric nodes.
-    fn apply_citation_label_wrap(components: &mut [TemplateComponent], wrap: LabelWrap) {
-        for component in components {
-            match component {
-                TemplateComponent::Number(number)
-                    if number.number == NumberVariable::CitationNumber =>
-                {
-                    number.rendering.wrap = wrap.as_wrap_config();
-                    number.rendering.vertical_align = (wrap == LabelWrap::Superscript)
-                        .then_some(citum_schema::VerticalAlign::Superscript);
-                    number.rendering.suffix = None;
-                }
-                TemplateComponent::Group(group) => {
-                    Self::apply_citation_label_wrap(&mut group.group, wrap);
-                }
-                _ => {}
-            }
-        }
-    }
-
-    /// Whether the visible template is only a numeric citation label.
-    fn template_is_numeric_label_only(components: &[TemplateComponent]) -> bool {
-        let Some(component) = components.first() else {
-            return false;
-        };
-        if components.len() != 1 {
-            return false;
-        }
-        match component {
-            TemplateComponent::Number(number) => {
-                number.number == NumberVariable::CitationNumber
-                    && number.rendering.suppress != Some(true)
-                    && number.rendering.prefix.is_none()
-                    && number.rendering.suffix.is_none()
-                    && number.rendering.emph.is_none()
-                    && number.rendering.strong.is_none()
-                    && number.rendering.small_caps.is_none()
-                    && number.rendering.quote.is_none()
-            }
-            TemplateComponent::Group(group) => {
-                group.render_when.is_none()
-                    && group.rendering == citum_schema::template::Rendering::default()
-                    && group.custom.is_none()
-                    && group
-                        .delimiter
-                        .as_ref()
-                        .is_none_or(|delimiter| match delimiter {
-                            citum_schema::template::DelimiterPunctuation::None => true,
-                            citum_schema::template::DelimiterPunctuation::Custom(text) => {
-                                text.is_empty()
-                            }
-                            _ => false,
-                        })
-                    && Self::template_is_numeric_label_only(&group.group)
-            }
-            _ => false,
-        }
-    }
-
-    /// Whether a label-only template carries authored presentation that should be retained.
-    fn template_has_label_presentation(components: &[TemplateComponent]) -> bool {
-        let Some(component) = components.first() else {
-            return false;
-        };
-        if components.len() != 1 {
-            return false;
-        }
-        match component {
-            TemplateComponent::Number(number) => {
-                number.rendering.wrap.is_some() || number.rendering.vertical_align.is_some()
-            }
-            TemplateComponent::Group(group) => Self::template_has_label_presentation(&group.group),
-            _ => false,
-        }
-    }
-
-    /// Materialize declarative citation labels after the effective template is selected.
-    fn materialize_citation_template<'b>(
-        &self,
-        template: Cow<'b, [TemplateComponent]>,
-        spec: &citum_schema::CitationSpec,
-        mode: &citum_schema::citation::CitationMode,
-    ) -> (Cow<'b, [TemplateComponent]>, bool, Option<LabelWrap>) {
-        let label_mode = self.citation_label_mode(spec);
-        let label_wrap = spec.options.as_ref().and_then(|options| options.label_wrap);
-        let has_number = Self::template_has_citation_number(template.as_ref());
-        let needs_label = label_mode == Some(CitationLabelMode::Numeric) && !has_number;
-        let suppress_label = label_mode == Some(CitationLabelMode::None) && has_number;
-        let needs_wrap =
-            label_mode != Some(CitationLabelMode::None) && label_wrap.is_some() && has_number;
-
-        if !needs_label && !suppress_label && !needs_wrap {
-            let label_only = Self::template_is_numeric_label_only(template.as_ref())
-                && !Self::template_has_label_presentation(template.as_ref());
-            return (template, label_only, None);
-        }
-
-        let mut owned = template.into_owned();
-        if suppress_label {
-            Self::strip_citation_numbers(&mut owned);
-        }
-        if needs_label {
-            let label = TemplateComponent::Number(citum_schema::TemplateNumber {
-                number: NumberVariable::CitationNumber,
-                ..Default::default()
-            });
-            if matches!(mode, citum_schema::citation::CitationMode::Integral) {
-                owned.push(label);
-            } else {
-                owned.insert(0, label);
-            }
-        }
-
-        let label_only = label_mode == Some(CitationLabelMode::Numeric)
-            && Self::template_is_numeric_label_only(&owned);
-        let defer_wrap = label_only && label_wrap.is_some();
-        if let Some(wrap) = label_wrap {
-            Self::apply_citation_label_wrap(&mut owned, wrap);
-        }
-        if defer_wrap {
-            // Keep the semantic number bare until collapse has run; wrapping the
-            // finished range is equivalent to wrapping each source label but keeps
-            // the collapse predicate independent of presentation punctuation.
-            Self::clear_citation_label_presentation(&mut owned);
-        }
-
-        (
-            Cow::Owned(owned),
-            label_only,
-            defer_wrap.then_some(label_wrap).flatten(),
-        )
-    }
-
-    /// Clear only presentation fields that would obscure a semantic numeric label.
-    fn clear_citation_label_presentation(components: &mut [TemplateComponent]) {
-        for component in components {
-            match component {
-                TemplateComponent::Number(number)
-                    if number.number == NumberVariable::CitationNumber =>
-                {
-                    number.rendering.wrap = None;
-                    number.rendering.vertical_align = None;
-                    number.rendering.suffix = None;
-                }
-                TemplateComponent::Group(group) => {
-                    Self::clear_citation_label_presentation(&mut group.group);
-                }
-                _ => {}
-            }
-        }
-    }
-
-    /// Materialize runtime bibliography label presentation without changing the style AST.
-    pub(super) fn materialize_bibliography_template<'b>(
-        &self,
-        template: Cow<'b, [TemplateComponent]>,
-    ) -> Cow<'b, [TemplateComponent]> {
-        let Some(config) = self.bibliography_config.as_ref() else {
-            return template;
-        };
-        let mode = config.label_mode;
-        let wrap = config.label_wrap;
-        let has_label = Self::template_has_bibliography_label(&template);
-        let needs_strip = matches!(
-            mode,
-            Some(BibliographyLabelMode::None | BibliographyLabelMode::AuthorDate)
-        );
-        let needs_insert = mode == Some(BibliographyLabelMode::Numeric) && !has_label;
-        let needs_wrap = wrap.is_some() && has_label && !needs_strip;
-        if !needs_strip && !needs_insert && !needs_wrap {
-            return template;
-        }
-
-        let mut owned = template.into_owned();
-        if needs_strip {
-            Self::strip_bibliography_labels(&mut owned);
-        }
-        if needs_insert {
-            let mut label = citum_schema::TemplateNumber {
-                number: NumberVariable::CitationNumber,
-                ..Default::default()
-            };
-            if let Some(wrap) = wrap {
-                label.rendering.wrap = wrap.as_wrap_config();
-                label.rendering.suffix = wrap.as_suffix().map(Into::into);
-            }
-            let label = TemplateComponent::Number(label);
-            if owned.is_empty() {
-                owned.push(label);
-            } else {
-                let following = owned.remove(0);
-                owned.insert(
-                    0,
-                    TemplateComponent::Group(citum_schema::TemplateGroup {
-                        group: vec![label, following],
-                        delimiter: Some(citum_schema::template::DelimiterPunctuation::Custom(
-                            String::new(),
-                        )),
-                        ..Default::default()
-                    }),
-                );
-            }
-        } else if let Some(wrap) = wrap {
-            Self::apply_bibliography_label_wrap(&mut owned, wrap);
-        }
-        Cow::Owned(owned)
-    }
-
-    /// Whether a bibliography template contains a numeric or alphabetic label component.
-    fn template_has_bibliography_label(template: &[TemplateComponent]) -> bool {
-        template.iter().any(|component| match component {
-            TemplateComponent::Number(number) => matches!(
-                number.number,
-                NumberVariable::CitationNumber | NumberVariable::CitationLabel
-            ),
-            TemplateComponent::Group(group) => Self::template_has_bibliography_label(&group.group),
-            _ => false,
-        })
-    }
-
-    /// Remove legacy bibliography label components from a runtime template clone.
-    fn strip_bibliography_labels(components: &mut Vec<TemplateComponent>) {
-        components.retain_mut(|component| match component {
-            TemplateComponent::Number(number)
-                if matches!(
-                    number.number,
-                    NumberVariable::CitationNumber | NumberVariable::CitationLabel
-                ) =>
-            {
-                false
-            }
-            TemplateComponent::Group(group) => {
-                Self::strip_bibliography_labels(&mut group.group);
-                !group.group.is_empty()
-            }
-            _ => true,
-        });
-    }
-
-    /// Apply bibliography label wrapping to legacy explicit label components.
-    fn apply_bibliography_label_wrap(
-        components: &mut [TemplateComponent],
-        wrap: BibliographyLabelWrap,
-    ) {
-        for component in components {
-            match component {
-                TemplateComponent::Number(number)
-                    if matches!(
-                        number.number,
-                        NumberVariable::CitationNumber | NumberVariable::CitationLabel
-                    ) =>
-                {
-                    number.rendering.wrap = wrap.as_wrap_config();
-                    number.rendering.suffix = wrap.as_suffix().map(Into::into);
-                }
-                TemplateComponent::Group(group) => {
-                    Self::apply_bibliography_label_wrap(&mut group.group, wrap);
-                }
-                _ => {}
-            }
-        }
+        marker::citation_label_mode(&self.config, spec)
     }
 
     /// Apply a citation label wrapper after semantic numeric collapse.
@@ -869,67 +572,192 @@ impl<'a> Renderer<'a> {
     }
 
     /// Pair rendered content with associated reference IDs to form a semantic chunk.
+    /// Present a bibliography marker: its wrap, any wrap-implied suffix, then
+    /// the `label-separator` that joins it to the entry body.
+    fn present_bibliography_marker_with_format<F>(
+        &self,
+        fmt: &F,
+        spec: &marker::BibliographyMarkerSpec,
+        value: &marker::MarkerValue,
+        ref_id: Option<&str>,
+    ) -> String
+    where
+        F: crate::render::format::OutputFormat<Output = String>,
+    {
+        let text = fmt.text(&value.as_localized_text(&self.locale.number_formats.digit_system));
+        let wrapped = match spec.wrap {
+            Some(wrap) => self.wrap_bibliography_label_with_format(fmt, text, wrap, ref_id),
+            None => text,
+        };
+        let suffix = spec
+            .wrap
+            .and_then(citum_schema::options::BibliographyLabelWrap::as_suffix)
+            .unwrap_or_default();
+        format!("{wrapped}{suffix}{}", spec.separator)
+    }
+
+    /// Apply a bibliography label wrap, reusing the citation wrap machinery so
+    /// punctuation realization and quote marks resolve identically.
+    fn wrap_bibliography_label_with_format<F>(
+        &self,
+        fmt: &F,
+        content: String,
+        wrap: citum_schema::options::BibliographyLabelWrap,
+        ref_id: Option<&str>,
+    ) -> String
+    where
+        F: crate::render::format::OutputFormat<Output = String>,
+    {
+        let Some(config) = wrap.as_wrap_config() else {
+            return content;
+        };
+        let language = ref_id
+            .and_then(|id| self.bibliography.get(id))
+            .and_then(crate::values::effective_item_language);
+        let (script, realization) = crate::values::punctuation_realization_context(
+            language.as_deref(),
+            self.config.multilingual.as_ref(),
+            self.locale.punctuation_realization.as_ref(),
+        );
+        let marks = crate::render::format::QuoteMarks::from(&self.locale.grammar_options);
+        fmt.wrap_punctuation(
+            &config.punctuation,
+            content,
+            &marks,
+            script,
+            realization.as_deref(),
+        )
+    }
+
+    /// Render a resolved marker to text, with its own `label-wrap` applied.
+    fn present_marker_with_format<F>(
+        &self,
+        fmt: &F,
+        resolved: &ResolvedMarker,
+        ref_id: Option<&str>,
+    ) -> String
+    where
+        F: crate::render::format::OutputFormat<Output = String>,
+    {
+        let text = fmt.text(
+            &resolved
+                .value
+                .as_localized_text(&self.locale.number_formats.digit_system),
+        );
+        self.wrap_citation_label_with_format(fmt, text, resolved.spec.label_wrap, ref_id)
+    }
+
+    /// Join a marker to the item body it belongs to, honouring placement.
+    fn compose_marker_with_body(
+        marker: String,
+        body: String,
+        placement: marker::MarkerPlacement,
+        delimiter: &str,
+    ) -> String {
+        if body.is_empty() {
+            return marker;
+        }
+        match placement {
+            marker::MarkerPlacement::Leading => format!("{marker}{delimiter}{body}"),
+            marker::MarkerPlacement::Trailing => format!("{body}{delimiter}{marker}"),
+        }
+    }
+
+    /// Pair rendered content with associated reference IDs to form a semantic chunk.
+    ///
+    /// A chunk whose body is empty keeps its marker unrendered so numeric
+    /// collapse can still merge it; every other chunk is composed here, because
+    /// the marker and any `item-wrap` sit *inside* the cite's own prefix and
+    /// suffix ("see also [2]", not "[see also 2]").
     #[allow(
         clippy::too_many_arguments,
-        reason = "chunk assembly keeps rendering affixes and semantic label metadata together"
+        reason = "chunk assembly keeps rendering affixes and marker metadata together"
     )]
     fn build_citation_chunk<F>(
         &self,
         fmt: &F,
         ids: Vec<String>,
-        content: String,
+        body: String,
         prefix: Option<&str>,
         suffix: Option<&str>,
-        numeric_label: Option<NumericCitationLabel>,
-        label_wrap: Option<LabelWrap>,
+        resolved: Option<ResolvedMarker>,
+        delimiter: &str,
     ) -> Option<CitationChunk>
     where
         F: crate::render::format::OutputFormat<Output = String>,
     {
-        if content.is_empty() {
-            None
-        } else {
-            let affixed = self.affix_content(
-                fmt,
-                content,
-                prefix,
-                suffix,
-                ids.first().map(String::as_str),
-            );
-            Some(CitationChunk {
+        let ref_id = ids.first().cloned();
+        let ref_id = ref_id.as_deref();
+        let collapsible = body.is_empty()
+            && prefix.is_none()
+            && suffix.is_none()
+            && resolved
+                .as_ref()
+                .is_some_and(|resolved| resolved.value.is_numeric());
+
+        if collapsible {
+            return Some(CitationChunk {
                 ids,
-                content: affixed,
-                numeric_label,
-                label_wrap,
-            })
+                content: String::new(),
+                marker: resolved,
+            });
         }
+
+        let content = match &resolved {
+            Some(resolved) => {
+                let marker_text = self.present_marker_with_format(fmt, resolved, ref_id);
+                let composed = Self::compose_marker_with_body(
+                    marker_text,
+                    body,
+                    resolved.spec.placement,
+                    delimiter,
+                );
+                self.wrap_citation_label_with_format(fmt, composed, resolved.spec.item_wrap, ref_id)
+            }
+            None => body,
+        };
+        if content.is_empty() {
+            return None;
+        }
+        Some(CitationChunk {
+            ids,
+            content: self.affix_content(fmt, content, prefix, suffix, ref_id),
+            marker: None,
+        })
     }
 
-    /// Build a citation chunk for a single item from its rendered content.
+    /// Build a citation chunk for a single item from its rendered body.
     fn build_item_chunk<F>(
         &self,
         fmt: &F,
         item: &crate::reference::CitationItem,
-        content: String,
-        numeric_label_only: bool,
-        label_wrap: Option<LabelWrap>,
+        reference: &Reference,
+        body: String,
+        spec: Option<marker::CitationMarkerSpec>,
+        delimiter: &str,
     ) -> Option<CitationChunk>
     where
         F: crate::render::format::OutputFormat<Output = String>,
     {
-        let numeric_label = (numeric_label_only && item.prefix.is_none() && item.suffix.is_none())
-            .then(|| NumericCitationLabel {
-                number: self.get_or_assign_citation_number(&item.id),
-                sub_label: self.citation_sub_label_for_ref(&item.id),
-            });
+        let resolved = spec.and_then(|spec| {
+            marker::marker_value(
+                spec.kind,
+                &self.config,
+                reference,
+                Some(self.get_or_assign_citation_number(&item.id)),
+                self.citation_sub_label_for_ref(&item.id),
+                self.hints.get(&item.id),
+            )
+            .map(|value| ResolvedMarker { value, spec })
+        });
         self.build_citation_chunk(
             fmt,
             vec![item.id.clone()],
-            content,
+            body,
             item.prefix.as_deref(),
             item.suffix.as_deref(),
-            numeric_label,
-            label_wrap,
+            resolved,
+            delimiter,
         )
     }
 
@@ -1018,15 +846,11 @@ impl<'a> Renderer<'a> {
             .or_else(|| localized.map(|resolved| Cow::Owned(resolved.template)))
             .unwrap_or(Cow::Borrowed(&[] as &[TemplateComponent]));
 
-        let (template, numeric_label_only, label_wrap) =
-            self.materialize_citation_template(template, spec, mode);
-
         Ok(UngroupedItemRenderState {
             reference,
             template,
             delimiter: intra_delimiter,
-            numeric_label_only,
-            label_wrap,
+            marker: marker::resolve_citation_marker(&self.config, spec, mode),
         })
     }
 
@@ -1136,7 +960,7 @@ impl<'a> Renderer<'a> {
             citation_number,
             label_wrap,
         );
-        Ok(self.build_item_chunk(fmt, item, item_str, false, None))
+        Ok(self.build_item_chunk(fmt, item, reference, item_str, None, ""))
     }
 
     /// Render one ungrouped item from its resolved template state.
@@ -1158,16 +982,22 @@ impl<'a> Renderer<'a> {
             params.position,
             params.note_start_text_case,
         );
-        self.render_item_from_template_with_format::<F>(state.reference, request, state.delimiter)
-            .and_then(|item_str| {
-                self.build_item_chunk(
-                    fmt,
-                    item,
-                    item_str,
-                    state.numeric_label_only,
-                    state.label_wrap,
-                )
-            })
+        // A marker-only style has an empty body template, so the body render
+        // yields nothing; the marker still has to produce a chunk.
+        let body = self
+            .render_item_from_template_with_format::<F>(state.reference, request, state.delimiter)
+            .unwrap_or_default();
+        if body.is_empty() && state.marker.is_none() {
+            return None;
+        }
+        self.build_item_chunk(
+            fmt,
+            item,
+            state.reference,
+            body,
+            state.marker,
+            state.delimiter,
+        )
     }
 
     /// Render citation items without grouping, using plain text format.
@@ -1263,15 +1093,22 @@ impl<'a> Renderer<'a> {
         Ok(chunks
             .into_iter()
             .map(|chunk| {
-                let content = if chunk.numeric_label.is_some() {
-                    self.wrap_citation_label_with_format(
-                        &fmt,
-                        chunk.content,
-                        chunk.label_wrap,
-                        chunk.ids.first().map(String::as_str),
-                    )
-                } else {
-                    chunk.content
+                let ref_id = chunk.ids.first().map(String::as_str);
+                // A chunk that still carries a marker was held back for
+                // collapse; its presentation is realized here, once, with the
+                // label wrap enclosing the marker and the item wrap enclosing
+                // the whole item.
+                let content = match &chunk.marker {
+                    Some(resolved) => {
+                        let marker_text = self.present_marker_with_format(&fmt, resolved, ref_id);
+                        self.wrap_citation_label_with_format(
+                            &fmt,
+                            marker_text,
+                            resolved.spec.item_wrap,
+                            ref_id,
+                        )
+                    }
+                    None => chunk.content,
                 };
                 fmt.citation(chunk.ids, content)
             })

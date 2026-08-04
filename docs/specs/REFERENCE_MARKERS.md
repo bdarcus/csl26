@@ -1,6 +1,6 @@
 ---
 title: Reference Markers
-status: Draft
+status: Active
 created: 2026-08-04
 ---
 
@@ -238,22 +238,22 @@ The reservation still holds — the style is rejected, not silently degraded.
 
 ## Acceptance criteria
 
-- [ ] No template component can denote a marker: `NumberVariable::CitationNumber`
+- [x] No template component can denote a marker: `NumberVariable::CitationNumber`
       and `CitationLabel` are gone from the schema, and the two names are
       reserved so they cannot degrade into `Custom` numbering kinds.
-- [ ] The marker is a value in the render model, not a synthesized template
+- [x] The marker is a value in the render model, not a synthesized template
       node: `CitationChunk` and `ProcEntry` carry it, and nothing pattern-matches
       the template AST to find one.
-- [ ] Every helper that re-derived marker identity is gone, including
+- [x] Every helper that re-derived marker identity is gone, including
       `ProcTemplateComponent::label_only` and `is_citation_number_component`.
-- [ ] Marker presentation is applied exactly once, after collapse; no code path
+- [x] Marker presentation is applied exactly once, after collapse; no code path
       sets wrap or vertical-align and then clears it.
-- [ ] All shipped styles declare their marker; none authors one.
-- [ ] `item-wrap`, `label-wrap` and `citation.wrap` are independently
+- [x] All shipped styles declare their marker; none authors one.
+- [x] `item-wrap`, `label-wrap` and `citation.wrap` are independently
       observable: `ieee` renders `[1, p. 737]` and `american-medical-association`
       renders `[1](p737)` from the same locator.
-- [ ] `citum-migrate` emits `label-mode` and no marker component.
-- [ ] `just pre-commit` and `just check-core-quality` green.
+- [x] `citum-migrate` emits `label-mode` and no marker component.
+- [x] `just pre-commit` and `just check-core-quality` green.
 
 ## Related specs
 

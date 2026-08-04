@@ -122,7 +122,6 @@ fn render_message_arg<F: crate::render::format::OutputFormat<Output = String>>(
         quote_marks: crate::render::format::QuoteMarks::from(options.locale),
         sentence_initial: false,
         pre_formatted: values.pre_formatted,
-        label_only: false,
     };
 
     let rendered = crate::render::render_component_with_format_and_renderer::<F>(

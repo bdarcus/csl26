@@ -17,6 +17,7 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus and Citum contributors
 
 use super::*;
 use indexmap::IndexMap;
+use rstest::rstest;
 
 #[test]
 fn test_style_minimal_deserialization() {
@@ -385,12 +386,13 @@ bibliography:
     // Vancouver bib has roughly 8 components
     assert!(bib_template.len() >= 5);
 
-    // Verify first component is citation number
+    // The entry leads with the author: its reference marker is declared, not
+    // authored, so it is not a template component.
     match &bib_template[0] {
-        template::TemplateComponent::Number(n) => {
-            assert_eq!(n.number, template::NumberVariable::CitationNumber);
+        template::TemplateComponent::Contributor(c) => {
+            assert_eq!(c.contributor, template::ContributorRole::Author);
         }
-        _ => panic!("Expected Number"),
+        other => panic!("Expected Contributor, got {other:?}"),
     }
 }
 
@@ -1445,49 +1447,33 @@ citation:
     );
 }
 
-#[test]
-fn citation_label_wrap_preserves_authored_template() {
-    let resolved = Style::from_yaml_str(
+/// Reference markers are processor-owned: a style declares `label-mode` and
+/// the processor materializes the component. Authoring one directly is
+/// rejected at parse time, so a marker never has two spellings and never
+/// degrades silently into a `Custom` variable that renders nothing.
+/// See `docs/specs/REFERENCE_MARKERS.md`.
+#[rstest]
+#[case::numeric_marker("citation-number")]
+#[case::alphabetic_marker("citation-label")]
+fn test_authoring_a_reference_marker_is_rejected(#[case] variable: &str) {
+    // given a style whose citation template names a marker variable
+    let yaml = format!(
         r#"
 citation:
-  options:
-    label-wrap: brackets
   template:
-    - number: citation-label
-"#,
-    )
-    .unwrap()
-    .try_into_resolved()
-    .expect("bracket citation label wrap should resolve");
-
-    let citation = resolved
-        .citation
-        .as_ref()
-        .expect("resolved style should include citation");
-    assert_eq!(citation.wrap, None);
-    assert_eq!(
-        citation
-            .options
-            .as_ref()
-            .and_then(|options| options.label_wrap),
-        Some(options::LabelWrap::Brackets)
+    - number: {variable}
+"#
     );
 
-    let citation_label_rendering = citation
-        .resolve_template()
-        .and_then(|template| {
-            template.iter().find_map(|component| match component {
-                template::TemplateComponent::Number(number)
-                    if matches!(number.number, template::NumberVariable::CitationLabel) =>
-                {
-                    Some(number.rendering.clone())
-                }
-                _ => None,
-            })
-        })
-        .expect("citation template should include citation-label");
+    // when it is parsed
+    let result = Style::from_yaml_str(&yaml);
 
-    assert_eq!(citation_label_rendering.wrap, None);
+    // then it is rejected rather than accepted as an unknown variable
+    assert!(
+        result.is_err(),
+        "authoring `{variable}` should be rejected, got: {:?}",
+        result.map(|style| style.citation)
+    );
 }
 
 #[test]
@@ -1542,48 +1528,6 @@ citation:
             .and_then(|citation| citation.options.as_ref())
             .and_then(|options| options.label_mode),
         Some(options::CitationLabelMode::None)
-    );
-}
-
-#[test]
-fn bibliography_label_wrap_preserves_authored_template() {
-    let resolved = Style::from_yaml_str(
-        r#"
-bibliography:
-  options:
-    label-wrap: brackets
-  template:
-    - number: citation-label
-"#,
-    )
-    .unwrap()
-    .try_into_resolved()
-    .expect("bracket bibliography label wrap should resolve");
-
-    let bibliography_label_rendering = resolved
-        .bibliography
-        .as_ref()
-        .and_then(|bibliography| bibliography.resolve_template())
-        .and_then(|template| {
-            template.iter().find_map(|component| match component {
-                template::TemplateComponent::Number(number)
-                    if matches!(number.number, template::NumberVariable::CitationLabel) =>
-                {
-                    Some(number.rendering.clone())
-                }
-                _ => None,
-            })
-        })
-        .expect("bibliography template should include citation-label");
-
-    assert_eq!(bibliography_label_rendering.wrap, None);
-    assert_eq!(
-        resolved
-            .bibliography
-            .as_ref()
-            .and_then(|bibliography| bibliography.options.as_ref())
-            .and_then(|options| options.label_wrap),
-        Some(options::BibliographyLabelWrap::Brackets)
     );
 }
 
@@ -1652,7 +1596,7 @@ info:
 extends: elsevier-vancouver-core
 citation:
   template:
-    - number: citation-number
+    - number: volume
 "#;
     let resolved = Style::from_yaml_str(yaml)
         .unwrap()
@@ -2298,48 +2242,6 @@ bibliography:
 }
 
 #[test]
-fn label_wrap_period_does_not_mutate_authored_template() {
-    let resolved = Style::from_yaml_str(
-        r#"
-info: { id: numeric-period-wrap, title: Numeric Period Wrap }
-bibliography:
-  options:
-    label-mode: numeric
-    label-wrap: period
-  template:
-    - number: citation-number
-      wrap:
-        punctuation: brackets
-    - contributor: author
-      form: long
-"#,
-    )
-    .unwrap()
-    .try_into_resolved()
-    .expect("period label-wrap should resolve");
-
-    let template = resolved
-        .bibliography
-        .as_ref()
-        .and_then(|bib| bib.template.as_ref())
-        .expect("bibliography template should be present");
-
-    let template::TemplateComponent::Number(number) = &template[0] else {
-        panic!(
-            "expected an authored label component, got {:?}",
-            template[0]
-        );
-    };
-    assert_eq!(number.rendering.suffix, None);
-    assert_eq!(
-        number.rendering.wrap,
-        Some(template::WrapConfig::from(
-            template::WrapPunctuation::Brackets
-        ))
-    );
-}
-
-#[test]
 fn numeric_label_mode_is_idempotent_across_inheritance_levels() {
     use std::io::Write;
     use std::time::{SystemTime, UNIX_EPOCH};
@@ -2382,18 +2284,19 @@ bibliography:
         .and_then(|bib| bib.template.as_ref())
         .expect("bibliography template should be present");
 
-    let label_count = template
-        .iter()
-        .filter(|component| {
-            matches!(
-                component,
-                template::TemplateComponent::Number(number)
-                    if number.number == template::NumberVariable::CitationNumber
-            )
-        })
-        .count();
+    // The marker is never a template component, so inheritance can only carry
+    // the declared mode. See docs/specs/REFERENCE_MARKERS.md.
+    assert!(
+        !template.is_empty(),
+        "the inherited bibliography template should survive, got {template:?}"
+    );
     assert_eq!(
-        label_count, 0,
+        resolved
+            .bibliography
+            .as_ref()
+            .and_then(|bib| bib.options.as_ref())
+            .and_then(|options| options.label_mode),
+        Some(options::BibliographyLabelMode::Numeric),
         "numeric label mode must remain runtime-owned across inheritance levels"
     );
 }
@@ -2442,21 +2345,14 @@ bibliography:
         .and_then(|bib| bib.template.as_ref())
         .expect("bibliography template should be present");
 
-    assert!(
-        !template.iter().any(|component| matches!(
-            component,
-            template::TemplateComponent::Number(number)
-                if number.number == template::NumberVariable::CitationNumber
-        ) || matches!(
-            component,
-            template::TemplateComponent::Group(group)
-                if group.group.iter().any(|inner| matches!(
-                    inner,
-                    template::TemplateComponent::Number(number)
-                        if number.number == template::NumberVariable::CitationNumber
-                ))
-        )),
-        "author-date label-mode must strip the label the numeric parent inserted, got {template:?}"
+    assert_eq!(
+        resolved
+            .bibliography
+            .as_ref()
+            .and_then(|bib| bib.options.as_ref())
+            .and_then(|options| options.label_mode),
+        Some(options::BibliographyLabelMode::AuthorDate),
+        "author-date label-mode must win over the numeric parent's, got {template:?}"
     );
     assert!(matches!(
         &template[0],

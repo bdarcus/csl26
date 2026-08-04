@@ -42,7 +42,6 @@ options:
       emph: true
 citation:
   template:
-  - number: citation-number
   collapse: citation-number
   multi-cite-delimiter: ","
 bibliography:
@@ -56,6 +55,10 @@ bibliography:
       no-page-fallback: doi
     entry-suffix: .
     separator: ", "
+    # The CSL bibliography layout renders citation-number for every entry
+    # (second-field-align="flush"); only six type-variants carried it, which
+    # was an incomplete migration. See docs/specs/REFERENCE_MARKERS.md.
+    label-mode: numeric
   type-variants:
     article-journal:
     - contributor: author
@@ -104,13 +107,10 @@ bibliography:
           before:
             variable: publisher-place
     dataset:
-    - delimiter: ""
-      group:
-      - number: citation-number
-      - contributor: author
-        form: long
-        name-order: given-first
-        and: text
+    - contributor: author
+      form: long
+      name-order: given-first
+      and: text
     - date: issued
       form: year
     entry-encyclopedia:
@@ -134,24 +134,17 @@ bibliography:
         - match:
             title: primary
     standard:
-    - delimiter: ""
-      group:
-      - number: citation-number
-      - date: issued
-        form: year
+    - date: issued
+      form: year
     thesis:
-    - delimiter: ""
-      group:
-      - number: citation-number
-      - contributor: author
-        form: long
-        name-order: given-first
+    - contributor: author
+      form: long
+      name-order: given-first
     - variable: genre
     - variable: publisher
     - date: issued
       form: year
     webpage:
-    - number: citation-number
     - contributor: author
       form: long
       and: text
@@ -163,20 +156,14 @@ bibliography:
           date: accessed
           form: full
     legal_case:
-    - delimiter: ""
-      group:
-      - number: citation-number
-      - title: primary
-        emph: true
+    - title: primary
+      emph: true
     - date: issued
       form: year
     - number: volume
       prefix: "vol. "
     patent:
-    - delimiter: ""
-      group:
-      - number: citation-number
-      - variable: authority
+    - variable: authority
     - number: number
     - title: parent-serial
       emph: true

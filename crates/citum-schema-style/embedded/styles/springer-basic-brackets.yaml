@@ -2,9 +2,6 @@ info:
   title: Springer - Basic (numeric, brackets)
   description: Springer Numbered Style for the disciplines Medicine, Biomedicine, Life Sciences, Chemistry, Geosciences, Computer Science, Engineering, Economics. This style is based on Harvard style and recommendations of the Council of Biology Editors.
 extends: springer-basic-brackets-core
-citation:
-  options:
-    label-wrap: brackets
 bibliography:
   options:
     label-mode: numeric

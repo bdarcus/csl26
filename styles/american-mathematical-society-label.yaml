@@ -48,9 +48,12 @@ options:
     serial:
       emph: true
 citation:
+  options:
+    # The bracket wraps the whole cluster, not each marker, so the per-marker
+    # bracket inherited from elsevier-with-titles is cancelled.
+    label-mode: alphabetic
+    label-wrap: none
   sort: author-date-title
-  template:
-  - number: citation-label
   wrap:
     punctuation: brackets
   delimiter: ''
@@ -65,12 +68,13 @@ bibliography:
       sort-separator: ', '
     entry-suffix: .
     separator: ', '
+    # Each entry leads with its generated trigraph, then a space.
+    # See docs/specs/REFERENCE_MARKERS.md.
+    label-mode: alphabetic
+    label-wrap: brackets
+    label-separator: ' '
   type-variants:
     article-journal:
-    - number: citation-label
-      wrap:
-        punctuation: brackets
-      suffix: ' '
     - contributor: author
       form: long
       name-order: family-first
@@ -88,10 +92,6 @@ bibliography:
     - number: pages
       prefix: ' '
     all:
-    - number: citation-label
-      wrap:
-        punctuation: brackets
-      suffix: ' '
     - contributor: author
       form: long
       name-order: family-first
@@ -106,10 +106,6 @@ bibliography:
     - number: pages
       prefix: ' '
   template:
-  - number: citation-label
-    wrap:
-      punctuation: brackets
-    suffix: ' '
   - contributor: author
     form: long
     name-order: family-first

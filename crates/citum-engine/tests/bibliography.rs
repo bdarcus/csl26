@@ -69,13 +69,20 @@ fn build_numeric_style() -> Style {
             ..Default::default()
         }),
         citation: Some(CitationSpec {
-            template: Some(vec![citum_schema::tc_number!(CitationNumber)]),
+            options: Some(citum_schema::CitationOptions {
+                label_mode: Some(citum_schema::options::CitationLabelMode::Numeric),
+                ..Default::default()
+            }),
             wrap: Some(citum_schema::template::WrapPunctuation::Brackets.into()),
             ..Default::default()
         }),
         bibliography: Some(BibliographySpec {
+            options: Some(citum_schema::BibliographyOptions {
+                label_mode: Some(citum_schema::options::BibliographyLabelMode::Numeric),
+                label_separator: Some(". ".to_string()),
+                ..Default::default()
+            }),
             template: Some(vec![
-                citum_schema::tc_number!(CitationNumber, suffix = ". "),
                 citum_schema::tc_contributor!(Author, Long),
                 citum_schema::tc_date!(Issued, Year, prefix = " (", suffix = ")"),
             ]),
@@ -1008,6 +1015,8 @@ fn build_bibliography_local_note_sort_style() -> Style {
         bibliography: Some(BibliographySpec {
             options: Some(BibliographyOptions {
                 processing: Some(Processing::Note),
+                label_mode: Some(citum_schema::options::BibliographyLabelMode::Numeric),
+                label_separator: Some(". ".to_string()),
                 ..Default::default()
             }),
             template: Some(vec![
@@ -1035,12 +1044,11 @@ fn build_bibliography_local_numeric_style() -> Style {
         bibliography: Some(BibliographySpec {
             options: Some(BibliographyOptions {
                 processing: Some(Processing::Numeric),
+                label_mode: Some(citum_schema::options::BibliographyLabelMode::Numeric),
+                label_separator: Some(". ".to_string()),
                 ..Default::default()
             }),
-            template: Some(vec![
-                citum_schema::tc_number!(CitationNumber, suffix = ". "),
-                citum_schema::tc_contributor!(Author, Long),
-            ]),
+            template: Some(vec![citum_schema::tc_contributor!(Author, Long)]),
             ..Default::default()
         }),
         ..Default::default()
@@ -1059,17 +1067,21 @@ fn build_numeric_citation_style_with_bibliography_local_note_sort() -> Style {
             ..Default::default()
         }),
         citation: Some(CitationSpec {
-            template: Some(vec![citum_schema::tc_number!(CitationNumber)]),
+            options: Some(citum_schema::CitationOptions {
+                label_mode: Some(citum_schema::options::CitationLabelMode::Numeric),
+                ..Default::default()
+            }),
             wrap: Some(citum_schema::template::WrapPunctuation::Brackets.into()),
             ..Default::default()
         }),
         bibliography: Some(BibliographySpec {
             options: Some(BibliographyOptions {
                 processing: Some(Processing::Note),
+                label_mode: Some(citum_schema::options::BibliographyLabelMode::Numeric),
+                label_separator: Some(". ".to_string()),
                 ..Default::default()
             }),
             template: Some(vec![
-                citum_schema::tc_number!(CitationNumber, suffix = ". "),
                 citum_schema::tc_contributor!(Author, Long),
                 citum_schema::tc_title!(Primary, prefix = ". "),
             ]),
@@ -3584,9 +3596,13 @@ fn royal_society_of_chemistry_restores_legacy_page_less_doi_behavior() {
             vec!["ITEM-1".to_string()],
         );
 
+    // The leading `1` is the reference marker: the CSL bibliography layout
+    // renders citation-number for every entry (second-field-align="flush"),
+    // which the style now declares once via bibliography label-mode rather
+    // than authoring on six type-variants. See docs/specs/REFERENCE_MARKERS.md.
     assert_eq!(
         result,
-        "T. S. Kuhn, _International Encyclopedia of Unified Science_, DOI:10.1234/example."
+        "1T. S. Kuhn, _International Encyclopedia of Unified Science_, DOI:10.1234/example."
     );
 }
 

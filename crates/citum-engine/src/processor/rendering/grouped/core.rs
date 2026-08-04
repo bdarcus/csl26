@@ -10,8 +10,7 @@ use super::super::{
     strip_leading_group_affixes,
 };
 use super::component_predicates::{
-    is_citation_number_component, is_term_only_component, resolve_localized_type_variant,
-    resolve_type_variant,
+    is_term_only_component, resolve_localized_type_variant, resolve_type_variant,
 };
 use super::group_citation_items_by_author;
 use crate::error::ProcessorError;
@@ -212,7 +211,7 @@ impl Renderer<'_> {
                 item.prefix.as_deref(),
                 item.suffix.as_deref(),
                 None,
-                None,
+                "",
             ) {
                 rendered_items.push(fmt.citation(chunk.ids, chunk.content));
             }
@@ -888,6 +887,36 @@ impl Renderer<'_> {
         )
     }
 
+    /// Render the reference marker one bibliography entry leads with, if the
+    /// style declares one.
+    ///
+    /// The marker is not a template component, so it never reaches the template
+    /// pipeline; entry assembly writes it ahead of the body.
+    /// See `docs/specs/REFERENCE_MARKERS.md`.
+    #[must_use]
+    pub(crate) fn bibliography_marker_with_format<F>(
+        &self,
+        reference: &Reference,
+        entry_number: usize,
+    ) -> Option<String>
+    where
+        F: crate::render::format::OutputFormat<Output = String>,
+    {
+        let spec =
+            super::super::marker::resolve_bibliography_marker(self.bibliography_config.as_deref())?;
+        let ref_id = reference.id().unwrap_or_default().to_string();
+        let value = super::super::marker::marker_value(
+            spec.kind,
+            &self.config,
+            reference,
+            Some(entry_number),
+            None,
+            self.hints.get(&ref_id),
+        )?;
+        let fmt = F::default();
+        Some(self.present_bibliography_marker_with_format(&fmt, &spec, &value, Some(&ref_id)))
+    }
+
     /// Process a bibliography entry with specific format.
     #[must_use]
     pub fn process_bibliography_entry_with_format<F>(
@@ -921,7 +950,6 @@ impl Renderer<'_> {
 
         let template = self.apply_anonymous_entry_bibliography_policy(reference, template)?;
         let template = self.apply_article_journal_bibliography_policy(reference, template);
-        let template = self.materialize_bibliography_template(template);
 
         self.process_template_request_with_format::<F>(
             reference,
@@ -1181,7 +1209,6 @@ impl Renderer<'_> {
             quote_marks: crate::render::format::QuoteMarks::from(ctx.options.locale),
             sentence_initial: false,
             pre_formatted: values.pre_formatted,
-            label_only: false,
         })
     }
 
@@ -1207,8 +1234,7 @@ impl Renderer<'_> {
 
         let fmt = F::default();
         let mut group_tracker = tracker.clone();
-        let (values, label_only) =
-            self.render_group_child_values(&fmt, ctx, group, &mut group_tracker)?;
+        let values = self.render_group_child_values(&fmt, ctx, group, &mut group_tracker)?;
         let default_delimiter = citum_schema::template::DelimiterPunctuation::Comma;
         let punctuation = group.delimiter.as_ref().unwrap_or(&default_delimiter);
         let (script, realization) = crate::values::punctuation_realization_context(
@@ -1260,7 +1286,6 @@ impl Renderer<'_> {
             quote_marks: crate::render::format::QuoteMarks::from(ctx.options.locale),
             sentence_initial: false,
             pre_formatted: true,
-            label_only,
         })
     }
 
@@ -1281,12 +1306,11 @@ impl Renderer<'_> {
         ctx: &TemplateRenderContext<'_>,
         group: &citum_schema::template::TemplateGroup,
         tracker: &mut TemplateComponentTracker,
-    ) -> Option<(Vec<crate::render::component::RenderedComponent>, bool)>
+    ) -> Option<Vec<crate::render::component::RenderedComponent>>
     where
         F: crate::render::format::OutputFormat<Output = String>,
     {
         let mut has_meaningful_content = false;
-        let mut has_citation_number_label = false;
         let mut values = Vec::with_capacity(group.group.len());
 
         for item in &group.group {
@@ -1304,18 +1328,16 @@ impl Renderer<'_> {
             if rendered_detailed.text.trim().is_empty() {
                 continue;
             }
-            if is_citation_number_component(item) {
-                has_citation_number_label = true;
-            } else if !is_term_only_component(item) {
+            if !is_term_only_component(item) {
                 has_meaningful_content = true;
             }
             values.push(rendered_detailed);
         }
 
-        if values.is_empty() || !(has_meaningful_content || has_citation_number_label) {
+        if values.is_empty() || !has_meaningful_content {
             return None;
         }
-        Some((values, !has_meaningful_content && has_citation_number_label))
+        Some(values)
     }
 
     fn apply_issued_no_date_fallback(

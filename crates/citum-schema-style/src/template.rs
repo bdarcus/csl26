@@ -1208,12 +1208,10 @@ pub enum NumberVariable {
     CollectionNumber,
     NumberOfPages,
     NumberOfVolumes,
-    CitationNumber,
     /// First-occurrence note number for the cited reference (note styles only).
     /// Populated from the document processor; omitted (not rendered) when the
     /// citation is not in a subsequent position or no first-note number is available.
     FirstReferenceNoteNumber,
-    CitationLabel,
     Number,
     DocketNumber,
     PatentNumber,
@@ -1239,9 +1237,7 @@ impl NumberVariable {
             Self::CollectionNumber => Cow::Borrowed("collection-number"),
             Self::NumberOfPages => Cow::Borrowed("number-of-pages"),
             Self::NumberOfVolumes => Cow::Borrowed("number-of-volumes"),
-            Self::CitationNumber => Cow::Borrowed("citation-number"),
             Self::FirstReferenceNoteNumber => Cow::Borrowed("first-reference-note-number"),
-            Self::CitationLabel => Cow::Borrowed("citation-label"),
             Self::Number => Cow::Borrowed("number"),
             Self::DocketNumber => Cow::Borrowed("docket-number"),
             Self::PatentNumber => Cow::Borrowed("patent-number"),
@@ -1268,9 +1264,28 @@ impl NumberVariable {
             "collection-number" => Self::CollectionNumber,
             "number-of-pages" => Self::NumberOfPages,
             "number-of-volumes" => Self::NumberOfVolumes,
-            "citation-number" => Self::CitationNumber,
+            // `NumberVariable` is an open vocabulary — unknown kebab-case keys
+            // become `Custom` numbering kinds. These two names are reserved:
+            // they denote processor-owned reference markers, so without an
+            // explicit reservation they would parse as custom kinds and render
+            // nothing. See `docs/specs/REFERENCE_MARKERS.md`.
+            "citation-number" => {
+                return Err(
+                    "`citation-number` is a processor-owned reference marker, not a \
+                            number variable: declare `label-mode: numeric` on citation.options \
+                            or bibliography.options"
+                        .to_string(),
+                );
+            }
+            "citation-label" => {
+                return Err(
+                    "`citation-label` is a processor-owned reference marker, not a \
+                            number variable: declare `label-mode: alphabetic` on \
+                            citation.options or bibliography.options"
+                        .to_string(),
+                );
+            }
             "first-reference-note-number" => Self::FirstReferenceNoteNumber,
-            "citation-label" => Self::CitationLabel,
             "number" => Self::Number,
             "docket-number" => Self::DocketNumber,
             "patent-number" => Self::PatentNumber,
@@ -2215,7 +2230,7 @@ group:
             r#"
 delimiter: ""
 group:
-- number: citation-number
+- number: volume
   wrap:
     punctuation: brackets
 - contributor: author
@@ -2227,7 +2242,7 @@ group:
             fields: BTreeMap::from([(
                 "group".to_string(),
                 serde_json::json!([
-                    { "number": "citation-number" },
+                    { "number": "volume" },
                     { "contributor": "author" }
                 ]),
             )]),

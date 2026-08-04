@@ -50,16 +50,16 @@ bibliography:
         use-first: 99
     entry-suffix: .
     separator: ""
+    # Every entry leads with its reference marker, flush against the body.
+    # See docs/specs/REFERENCE_MARKERS.md.
+    label-mode: numeric
+    label-wrap: brackets
   type-variants:
     # `all` matches every type and is resolved first (engine returns the first
     # matching selector), so any type-specific variant must precede it to take
     # effect. Journal articles place the year in parentheses between volume and
     # pages (`Nature 521 (2015) 436–444`) per the Elsevier with-titles guide.
     article-journal:
-    - number: citation-number
-      wrap:
-        punctuation: brackets
-      suffix: ""
     - delimiter: { mark: comma }
       group:
       - contributor: author
@@ -107,10 +107,6 @@ bibliography:
           anchor: component
         suffix: "."
     all:
-    - number: citation-number
-      wrap:
-        punctuation: brackets
-      suffix: ""
     - delimiter: { mark: comma }
       group:
       - contributor: author
@@ -170,10 +166,6 @@ bibliography:
           anchor: component
         suffix: "."
     article-magazine:
-    - number: citation-number
-      wrap:
-        punctuation: brackets
-      suffix: ""
     - delimiter: { mark: comma }
       group:
       - contributor: author
@@ -232,10 +224,6 @@ bibliography:
           anchor: component
         suffix: "."
     article-newspaper:
-    - number: citation-number
-      wrap:
-        punctuation: brackets
-      suffix: ""
     - delimiter: { mark: comma }
       group:
       - contributor: author
@@ -294,10 +282,6 @@ bibliography:
           anchor: component
         suffix: "."
     book:
-    - number: citation-number
-      wrap:
-        punctuation: brackets
-      suffix: ""
     - delimiter: { mark: comma }
       group:
       - contributor: author
@@ -342,10 +326,6 @@ bibliography:
           anchor: component
         suffix: "."
     chapter:
-    - number: citation-number
-      wrap:
-        punctuation: brackets
-      suffix: ""
     - contributor: author
       form: long
       suffix: ", "
@@ -382,10 +362,6 @@ bibliography:
         prefix: " "
         label-form: short
     dataset:
-    - number: citation-number
-      wrap:
-        punctuation: brackets
-      suffix: ""
     - delimiter: { mark: comma }
       group:
       - contributor: author
@@ -445,10 +421,6 @@ bibliography:
           anchor: component
         suffix: "."
     interview:
-    - number: citation-number
-      wrap:
-        punctuation: brackets
-      suffix: ""
     - contributor: author
       form: long
       suffix: ", "
@@ -466,20 +438,12 @@ bibliography:
         anchor: component
       suffix: "."
     legal-case:
-    - number: citation-number
-      wrap:
-        punctuation: brackets
-      suffix: ""
     - title: primary
     - date: issued
       form: year
       prefix: ", "
       suffix: "."
     paper-conference:
-    - number: citation-number
-      wrap:
-        punctuation: brackets
-      suffix: ""
     - contributor: author
       form: long
       suffix: ", "
@@ -511,10 +475,6 @@ bibliography:
           before:
             date: issued
     report:
-    - number: citation-number
-      wrap:
-        punctuation: brackets
-      suffix: ""
     - contributor: author
       form: long
       suffix: ", "
@@ -539,10 +499,6 @@ bibliography:
           before:
             variable: publisher
     webpage:
-    - number: citation-number
-      wrap:
-        punctuation: brackets
-      suffix: ""
     - delimiter: { mark: comma }
       group:
       - contributor: author
@@ -602,10 +558,6 @@ bibliography:
           anchor: component
         suffix: "."
     [webpage, dataset]:
-    - number: citation-number
-      wrap:
-        punctuation: brackets
-      suffix: ""
     - contributor: author
       form: long
       suffix: ", "
@@ -634,10 +586,6 @@ bibliography:
       wrap:
         punctuation: parentheses
     [article-newspaper, broadcast]:
-    - number: citation-number
-      wrap:
-        punctuation: brackets
-      suffix: ""
     - contributor: author
       form: long
       suffix: ", "
@@ -665,10 +613,6 @@ bibliography:
         - match:
             variable: url
   template:
-  - number: citation-number
-    wrap:
-      punctuation: brackets
-    suffix: ""
   - delimiter: { mark: comma }
     group:
     - contributor: author

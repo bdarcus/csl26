@@ -40,12 +40,10 @@ options:
     range-delimiter: –
 citation:
   template:
-  - delimiter: ""
-    group:
-    - number: citation-number
-    - variable: locator
-      wrap:
-        punctuation: parentheses
+  - variable: locator
+    wrap:
+      punctuation: parentheses
+  delimiter: ""
   multi-cite-delimiter: ','
 bibliography:
   options:

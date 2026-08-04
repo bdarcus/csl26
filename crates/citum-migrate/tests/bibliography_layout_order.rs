@@ -141,8 +141,10 @@ fn base_template_visible_components_follow_default_branch_order() {
 
     assert_eq!(
         visible_keys,
+        // The reference marker is no longer a template component; the style
+        // declares label-mode and the processor materializes it.
+        // See docs/specs/REFERENCE_MARKERS.md.
         vec![
-            "number:CitationNumber",
             "contributor:Author",
             "title:Primary",
             "title:ContainerTitle",

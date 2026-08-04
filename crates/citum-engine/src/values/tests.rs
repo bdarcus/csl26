@@ -3245,10 +3245,6 @@ fn template_number_localizes_digits_for_the_active_locale() {
         ..Default::default()
     });
 
-    let citation_number = TemplateNumber {
-        number: NumberVariable::CitationNumber,
-        ..Default::default()
-    };
     let pages = TemplateNumber {
         number: NumberVariable::Pages,
         ..Default::default()
@@ -3258,20 +3254,6 @@ fn template_number_localizes_digits_for_the_active_locale() {
         ..Default::default()
     };
 
-    assert_eq!(
-        citation_number
-            .values::<PlainText>(
-                &reference,
-                &ProcHints {
-                    citation_number: Some(12),
-                    ..Default::default()
-                },
-                &options,
-            )
-            .expect("citation number should render")
-            .value,
-        "١٢"
-    );
     assert_eq!(
         pages
             .values::<PlainText>(&reference, &ProcHints::default(), &options)
@@ -3285,44 +3267,6 @@ fn template_number_localizes_digits_for_the_active_locale() {
             .expect("report number should render")
             .value,
         "TR-٧"
-    );
-}
-
-#[test]
-fn template_number_without_digit_system_preserves_western_digits() {
-    let config = make_config();
-    let locale = make_locale();
-    let options = RenderOptions {
-        config: Arc::new(config),
-        bibliography_config: None,
-        locale: &locale,
-        context: RenderContext::Citation,
-        mode: citum_schema::citation::CitationMode::NonIntegral,
-        suppress_author: false,
-        locator_raw: None,
-        ref_type: None,
-        show_semantics: true,
-        current_template_index: None,
-        abbreviation_map: None,
-    };
-    let citation_number = TemplateNumber {
-        number: NumberVariable::CitationNumber,
-        ..Default::default()
-    };
-
-    assert_eq!(
-        citation_number
-            .values::<PlainText>(
-                &make_reference(),
-                &ProcHints {
-                    citation_number: Some(12),
-                    ..Default::default()
-                },
-                &options,
-            )
-            .expect("citation number should render")
-            .value,
-        "12"
     );
 }
 

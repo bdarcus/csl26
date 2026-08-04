@@ -10,9 +10,11 @@ use crate::{
 
 /// Embedded citation template for Vancouver (numeric) style.
 ///
-/// Renders as: \[1\]
+/// Empty: the citation is its reference marker (`[1]`), declared with
+/// `label-mode: numeric` and `label-wrap: brackets`.
+/// See `docs/specs/REFERENCE_MARKERS.md`.
 pub fn citation() -> Vec<TemplateComponent> {
-    vec![tc_number!(CitationNumber, wrap = WrapPunctuation::Brackets)]
+    Vec::new()
 }
 
 /// Embedded bibliography template for Vancouver style.
@@ -20,8 +22,6 @@ pub fn citation() -> Vec<TemplateComponent> {
 /// Renders as: 1. Author AA, Author BB. Title. Journal. Year;Volume(Issue):Pages.
 pub fn bibliography() -> Vec<TemplateComponent> {
     vec![
-        // Citation number.
-        tc_number!(CitationNumber, suffix = ". "),
         // Author (Vancouver format - all initials, no periods)
         tc_contributor!(Author, Long, suffix = ". "),
         // Title

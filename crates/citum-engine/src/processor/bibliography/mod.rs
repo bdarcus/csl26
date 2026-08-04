@@ -191,7 +191,7 @@ impl Processor {
         &self,
         numbered_refs: &[(&'a Reference, usize)],
         ctx: &EntryRenderContext<'_>,
-    ) -> Vec<(&'a Reference, Option<ProcTemplate>)>
+    ) -> Vec<(&'a Reference, Option<ProcTemplate>, Option<String>)>
     where
         F: OutputFormat<Output = String>,
     {
@@ -208,7 +208,7 @@ impl Processor {
         &self,
         numbered_refs: &[(&'a Reference, usize)],
         ctx: &EntryRenderContext<'_>,
-    ) -> Vec<(&'a Reference, Option<ProcTemplate>)>
+    ) -> Vec<(&'a Reference, Option<ProcTemplate>, Option<String>)>
     where
         F: OutputFormat<Output = String>,
     {
@@ -219,6 +219,7 @@ impl Processor {
                 (
                     reference,
                     renderer.process_bibliography_entry_with_format::<F>(reference, entry_number),
+                    renderer.bibliography_marker_with_format::<F>(reference, entry_number),
                 )
             })
             .collect()
@@ -238,7 +239,7 @@ impl Processor {
         &self,
         numbered_refs: &[(&'a Reference, usize)],
         ctx: &EntryRenderContext<'_>,
-    ) -> Vec<(&'a Reference, Option<ProcTemplate>)>
+    ) -> Vec<(&'a Reference, Option<ProcTemplate>, Option<String>)>
     where
         F: OutputFormat<Output = String>,
     {
@@ -250,6 +251,7 @@ impl Processor {
                 (
                     reference,
                     renderer.process_bibliography_entry_with_format::<F>(reference, entry_number),
+                    renderer.bibliography_marker_with_format::<F>(reference, entry_number),
                 )
             })
             .collect()
@@ -329,7 +331,7 @@ impl Processor {
     /// matching.
     fn apply_substitution_post_pass<F>(
         &self,
-        rendered: Vec<(&Reference, Option<ProcTemplate>)>,
+        rendered: Vec<(&Reference, Option<ProcTemplate>, Option<String>)>,
         substitute: Option<&String>,
         ctx: &EntryRenderContext<'_>,
     ) -> Vec<ProcEntry>
@@ -340,7 +342,7 @@ impl Processor {
         let mut bibliography = Vec::with_capacity(rendered.len());
         let mut previous_reference: Option<&Reference> = None;
 
-        for (reference, processed) in rendered {
+        for (reference, processed, marker) in rendered {
             let Some(mut processed) = processed else {
                 continue;
             };
@@ -357,6 +359,7 @@ impl Processor {
             let ref_id = reference.id().unwrap_or_default().to_string();
             bibliography.push(ProcEntry {
                 id: ref_id,
+                marker,
                 template: processed,
                 metadata: self.extract_metadata(reference, ctx),
             });

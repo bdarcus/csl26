@@ -11,8 +11,8 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus and Citum contributors
 
 use citum_migrate::{compilation, fixups::normalize_author_date_locator_citation_component};
 use citum_schema::template::{
-    ContributorLabelMode, ContributorMergeOrder, ContributorRole, DateVariable, NumberVariable,
-    Rendering, SimpleVariable, TemplateComponent, TemplateDate, TemplateNumber, TemplateVariable,
+    ContributorLabelMode, ContributorMergeOrder, ContributorRole, DateVariable, Rendering,
+    SimpleVariable, TemplateComponent, TemplateDate, TemplateVariable,
 };
 use csl_legacy::{
     model::{CslNode, Formatting, Group, Layout, Text},
@@ -316,7 +316,7 @@ fn author_date_locator_prefers_group_delimiter() {
 }
 
 #[test]
-fn compile_from_xml_maps_citation_label_variable_into_citation_template() {
+fn compile_from_xml_drops_the_citation_label_variable_from_the_template() {
     let legacy_style = parse_legacy_style(
         r#"
 <style xmlns="http://purl.org/net/xbiblio/csl" version="1.0" class="in-text">
@@ -337,15 +337,12 @@ fn compile_from_xml_maps_citation_label_variable_into_citation_template() {
     let tracker = citum_migrate::provenance::ProvenanceTracker::new(false);
     let out = compilation::compile_from_xml(&legacy_style, &mut options, false, &tracker);
 
+    // The reference marker is processor-owned: the style declares `label-mode`
+    // and the processor materializes it, so no component is emitted.
+    // See docs/specs/REFERENCE_MARKERS.md.
     assert!(
-        template_contains(&out.citation, &|component| matches!(
-            component,
-            TemplateComponent::Number(TemplateNumber {
-                number: NumberVariable::CitationLabel,
-                ..
-            })
-        )),
-        "citation-label should compile to a citation-label number component, got: {:?}",
+        out.citation.is_empty(),
+        "citation-label should not compile to a template component, got: {:?}",
         out.citation
     );
 }

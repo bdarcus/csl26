@@ -31,9 +31,11 @@ options:
     display-as-sort: all
   titles: humanities
 citation:
+  options:
+    # The bracket wraps the whole cluster, not each marker, so no label-wrap.
+    label-mode: alphabetic
   sort: author-date-title
   template:
-  - number: citation-label
   - variable: locator
     prefix: ', '
   wrap:
@@ -50,12 +52,13 @@ bibliography:
       display-as-sort: all
     entry-suffix: .
     separator: ', '
+    # Each entry leads with its generated trigraph, then a space.
+    # See docs/specs/REFERENCE_MARKERS.md.
+    label-mode: alphabetic
+    label-wrap: brackets
+    label-separator: ' '
   type-variants:
     article-journal:
-    - number: citation-label
-      wrap:
-        punctuation: brackets
-      suffix: ' '
     - contributor: author
       form: long
       name-order: family-first
@@ -86,10 +89,6 @@ bibliography:
             number: pages
           label-form: short
   template:
-  - number: citation-label
-    wrap:
-      punctuation: brackets
-    suffix: ' '
   - contributor: author
     form: long
     name-order: family-first

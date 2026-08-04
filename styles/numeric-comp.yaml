@@ -25,6 +25,7 @@ citation:
   options:
     label-mode: numeric
     label-wrap: brackets
+    label-separator: '. '
   template-ref: numeric-citation
   multi-cite-delimiter: ","
 bibliography:
@@ -36,14 +37,11 @@ bibliography:
     separator: ". "
     label-mode: numeric
     label-wrap: brackets
+    label-separator: '. '
     compound-numeric:
       collapse-subentries: true
   type-variants:
     book:
-    - number: citation-number
-      wrap:
-        punctuation: brackets
-      suffix: " "
     - contributor: author
       form: long
       name-order: given-first
@@ -69,10 +67,6 @@ bibliography:
       prefix: " doi: "
     - variable: url
     report:
-    - number: citation-number
-      wrap:
-        punctuation: brackets
-      suffix: " "
     - contributor: author
       form: long
       name-order: given-first
@@ -98,10 +92,6 @@ bibliography:
       prefix: " doi: "
     - variable: url
     webpage:
-    - number: citation-number
-      wrap:
-        punctuation: brackets
-      suffix: " "
     - contributor: author
       form: long
       name-order: given-first
@@ -127,10 +117,6 @@ bibliography:
       prefix: " doi: "
     - variable: url
     patent:
-    - number: citation-number
-      wrap:
-        punctuation: brackets
-      suffix: " "
     - contributor: author
       form: long
       name-order: given-first
@@ -146,10 +132,6 @@ bibliography:
     - date: issued
       form: year
   template:
-  - number: citation-number
-    wrap:
-      punctuation: brackets
-    suffix: " "
   - contributor: author
     form: long
     name-order: given-first

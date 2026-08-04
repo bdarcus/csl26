@@ -154,24 +154,11 @@ mod tests {
     }
 
     #[test]
-    fn test_vancouver_citation_is_numeric() {
-        let template = vancouver_citation();
-        assert_eq!(template.len(), 1);
-
-        match &template[0] {
-            TemplateComponent::Number(n) => {
-                assert_eq!(n.number, NumberVariable::CitationNumber);
-                assert_eq!(
-                    n.rendering.wrap,
-                    Some(WrapConfig {
-                        punctuation: WrapPunctuation::Brackets,
-                        inner_prefix: None,
-                        inner_suffix: None,
-                    })
-                );
-            }
-            _ => panic!("Vancouver citation should be a Number component"),
-        }
+    fn test_vancouver_citation_is_marker_only() {
+        // The citation is its reference marker, which the style declares with
+        // `label-mode`; the preset carries no components at all.
+        // See docs/specs/REFERENCE_MARKERS.md.
+        assert_eq!(vancouver_citation(), Vec::new());
     }
 
     #[test]
