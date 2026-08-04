@@ -1,0 +1,113 @@
+# yaml-language-server: $schema=https://docs.citum.org/schemas/bib.json
+#
+# Focused structured-multilingual fixture for styles/acta-psychologica-sinica.yaml.
+# The style exercises translated-first rendering for titles and container
+# titles, translated-first name configuration with Latin fallback data, a
+# simple English control, and missing-translation fallbacks.
+
+info:
+  description: Acta Psychologica Sinica bilingual numeric overlay examples
+
+references:
+  - id: chinese-psychology-article
+    class: serial-component
+    type: article
+    language: zh
+    title:
+      original: 中国心理学的过去与未来
+      lang: zh
+      translations:
+        en: The past and future of Chinese psychology
+    author:
+      - original:
+          family: 张
+          given: 三
+        lang: zh
+        transliterations:
+          zh-Latn-pinyin:
+            family: Zhang
+            given: S.
+        translations:
+          en:
+            family: Zhang
+            given: S.
+    issued: "2008"
+    volume: "40"
+    pages: "210-215"
+    container:
+      class: serial
+      type: academic-journal
+      title:
+        original: 心理学报
+        lang: zh
+        translations:
+          en: Acta Psychologica Sinica
+
+  - id: chinese-psychology-book
+    class: monograph
+    type: book
+    language: zh
+    title:
+      original: 现代汉语频率词典
+      lang: zh
+      translations:
+        en: Modern Chinese Frequency Dictionary
+    author:
+      - original:
+          family: 王
+          given: 五
+        lang: zh
+        transliterations:
+          zh-Latn-pinyin:
+            family: Wang
+            given: W.
+        translations:
+          en:
+            family: Wang
+            given: W.
+    issued: "1986"
+    publisher:
+      name:
+        original: 北京语言学院出版社
+        lang: zh
+        translations:
+          en: Beijing Language and Culture University Press
+      place: 北京
+
+  - id: chinese-missing-translation
+    class: serial-component
+    type: article
+    language: zh
+    title:
+      original: 没有英文翻译的中文题名
+      lang: zh
+    author:
+      - original:
+          family: 李
+          given: 四
+        lang: zh
+        transliterations:
+          zh-Latn-pinyin:
+            family: Li
+            given: S.
+    issued: "2010"
+    container:
+      class: serial
+      type: academic-journal
+      title: 中文期刊
+
+  - id: english-control
+    class: serial-component
+    type: article
+    language: en
+    title: A control article with ordinary English metadata
+    author:
+      - family: Smith
+        given: J.
+    issued: "2020"
+    volume: "12"
+    pages: "1-10"
+    container:
+      class: serial
+      type: academic-journal
+      title: Journal of Citation Testing

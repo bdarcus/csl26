@@ -1,0 +1,42 @@
+# yaml-language-server: $schema=https://docs.citum.org/schemas/style.json
+#
+# Numeric bilingual overlay for Acta Psychologica Sinica (心理学报).
+# The journal's convention puts translated English metadata first and appends
+# the original Chinese metadata in brackets for Chinese-language references.
+
+extends: gb-t-7714-2025-numeric
+
+info:
+  id: https://zotero-chinese.com/styles/心理学报
+  title: 心理学报 (Acta Psychologica Sinica) — GB/T numeric bilingual
+  description: >-
+    A GB/T 7714—2025 numeric overlay for Acta Psychologica Sinica that
+    renders structured multilingual names and titles as translated English
+    followed by the original Chinese in brackets.
+  fields:
+    - psychology
+  default-locale: en-US
+  source:
+    csl-id: https://zotero-chinese.com/styles/心理学报
+    license: http://creativecommons.org/licenses/by-sa/3.0/
+    original-authors:
+      - name: Zeping Lee
+    links:
+      - href: https://zotero-chinese.com/styles/心理学报
+        rel: self
+      - href: https://journal.psych.ac.cn/xlxb/fileup/0439-755X/ITEM/20220223114333.pdf
+        rel: documentation
+
+options:
+  multilingual:
+    preferred-script: Latn
+    title-mode:
+      pattern:
+        - view: translated
+        - view: original-script
+          wrap: brackets
+    name-mode:
+      pattern:
+        - view: translated
+        - view: original-script
+          wrap: brackets
