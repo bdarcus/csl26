@@ -1,10 +1,10 @@
 # Template Schema v3 Specification
 
 **Status:** Active
-**Version:** 0.5
-**Date:** 2026-06-24
+**Version:** 0.6
+**Date:** 2026-08-05
 **Supersedes:** `docs/specs/TEMPLATE_V2.md`
-**Related:** csl26-t3v1, `docs/specs/DISTRIBUTED_RESOLVER.md`
+**Related:** csl26-t3v1, csl26-zaxo, `docs/specs/DISTRIBUTED_RESOLVER.md`
 
 ## Purpose
 
@@ -302,12 +302,121 @@ bibliography:
 
 Engines SHOULD treat unreachable or invalid parent URIs as resolution errors; style authors MUST NOT assume offline resolution if remote parents are unavailable.
 
+### §5 — Layering: What Belongs in a Template
+
+A recurring authoring failure is putting a **cross-cutting rendering policy** into a
+template, then re-stating it per type. This section names the boundary.
+
+#### 5.1 Templates own structure; options own rendering policy
+
+Templates own **which components appear and in what order**. Rendering policy that varies
+by *what kind of work a reference is* — title quoting and emphasis above all — belongs in
+`options`, which the engine keys by reference type through `titles.type-mapping`.
+
+The distinction is not stylistic. Category-level configuration is read by **paths a
+template cannot reach**. When a title substitutes for a missing author, the substitute
+chain resolves its quoting and text-case from `options.titles` alone; there is no
+`TemplateTitle` in that path to carry a component-level override. A style that encodes
+title quoting as a component `wrap:` therefore gets the wrong result for substituted
+titles no matter how many type-variants it writes.
+
+The failure mode is mechanical. A style that sets a quoting `wrap:` on its base
+`title: primary` has applied it to every reference type, and must then add one variant per
+type that should *not* be quoted — variants that differ from the base in nothing else. The
+same policy expressed once in `options.titles` needs no variants at all.
+
+```yaml
+# Wrong: a category policy in the structure layer.
+bibliography:
+  template:
+    - title: primary
+      wrap: { punctuation: quotes }   # now true for every type
+  type-variants:
+    book:      # …and one of these per type that must undo it
+    broadcast:
+    dataset:
+
+# Right: the policy stated once, keyed by type.
+options:
+  titles:
+    type-mapping: { thesis: component, report: component }
+    component: { quote: true }
+    monograph: { emph: true }
+```
+
+Style authors SHOULD reach for `options` first for any rendering decision that follows
+from the reference's type or category, and reserve template-component rendering for
+decisions genuinely local to one position in one template.
+
+#### 5.2 The `all` selector and variant precedence
+
+A type-variant selector MAY be the keyword `all`, which matches every reference type. This
+is the supported way to express a template diff that is deliberately **not** type-specific,
+and it composes with `modify`, `add`, and `remove` like any other selector.
+
+Because `all` overlaps every other selector, precedence must be defined. Engines MUST
+resolve a reference's variant by **specificity**, not by authored order:
+
+1. an exact single-type selector;
+2. a multi-type selector containing that type;
+3. `all`.
+
+Authored order MUST NOT decide the outcome between selectors of different specificity, and
+a style MUST NOT need to order its `type-variants` map defensively. Where two selectors of
+the *same* specificity match, the first authored one wins, consistent with §3.
+
+> **Implementation note.** An engine that instead resolves the first authored match silently
+> makes every type-specific variant written after an `all` entry unreachable, with no
+> diagnostic. Validators SHOULD flag that shape.
+
+`extends: all` is permitted and resolves to the `all` variant's own resolved template.
+`all` MAY itself carry `extends`, following §1.
+
+#### 5.3 Presets are not macros
+
+Style `options` accept named **presets** (`titles: ieee`, `contributors: apa`,
+`substitute: standard`). Because a preset is a name that expands to something reusable, it
+invites comparison with CSL macros. The comparison does not hold, and acting on it leads
+authors back to the structure the spec rejects.
+
+| | CSL macro | Citum preset |
+|---|---|---|
+| Defined by | the style author, inline | the schema, as a closed set |
+| Referenced from | a template body, anywhere | an `options.*` slot only |
+| Expands to | template nodes that render output | a typed configuration value |
+| Takes arguments | closes over the render context | no |
+| Composes | nests freely | no |
+
+A macro is a named fragment of *template*; a preset is a named bundle of *policy*. Presets
+are the concrete form of §2's "Logic-Heavy Options": they absorb what authors historically
+used macros **for** — consistent contributor, date, and title formatting — without adopting
+what macros **are**, a call mechanism inside the structure layer.
+
+Consequently: presets MUST NOT become style-definable, MUST NOT be referenceable from a
+template body, and MUST NOT compose. A style needing a policy no preset expresses writes
+the explicit config, which every preset is sugar for.
+
+#### 5.4 What remains forbidden
+
+Unchanged from §"Scope", and restated because §5.2 introduces a selector that spans types:
+
+- There is no named fragment a **template body** can invoke. `all` is a selector over
+  reference types, not a callable fragment.
+- Type-variants remain diffs over one section's base template. They are not reusable
+  component sequences, cannot be shared across `citation` and `bibliography`, and take no
+  arguments.
+- Resolution stays total and static: every variant is derivable to a concrete template
+  before rendering, with no runtime dispatch.
+
 ---
 
 ## Acceptance Criteria
 
 - [x] Macros are absent from the spec.
 - [ ] `type-variants` schema supports `extends`, `modify`, `add`, and `remove` with defined matching and ordering semantics.
+- [ ] Variant selection is decided by selector specificity, so a type-specific variant is never shadowed by an `all` entry authored before it (§5.2).
+- [ ] A validator flags a type-variant that an earlier `all` entry would make unreachable.
+- [ ] Title quoting and emphasis are expressible once in `options.titles` for every reference type, with no per-type variant needed to undo a base-template rendering (§5.1).
 - [ ] Style-level `options` expanded to handle contributor and date formatting policies, with clear precedence rules vs local component hints.
 - [ ] Engine resolution logic supports cross-URI template diffing, including recursive parent chains and error handling for missing parents.
 
@@ -315,6 +424,12 @@ Engines SHOULD treat unreachable or invalid parent URIs as resolution errors; st
 
 ## Changelog
 
+- v0.6 (2026-08-05): Add §5 — the boundary between template structure and
+  `options` rendering policy, the `all` selector with specificity-based variant
+  precedence, and why presets are not macros. Supersedes a withdrawn draft that
+  proposed `unset` and `abstract-variants`: measuring the embedded corpus showed
+  the duplication those addressed came from a category policy sitting in the
+  template layer, not from a gap in the diff model.
 - v0.5 (2026-07-15): Clarify family inheritance, forbid named cross-section
   fragments, define authoritative date-fallback omission semantics, and allow
   narrowly scoped style-owned MF2 messages for textual classification.
