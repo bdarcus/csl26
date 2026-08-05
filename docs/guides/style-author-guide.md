@@ -741,7 +741,10 @@ References use a `class` (top-level discriminator) and `type` (subtype). In styl
 > [!TIP]
 > **Using Type Values in type-variants**
 > - Use the `type` value (e.g., `article-journal`, `book`) in `type-variants:`.
-> - Special keywords `default` and `all` also work.
+> - The special keyword `default` also works.
+> - There is no wildcard selector. A type with no entry renders the section
+>   `template:`, which is also the implicit parent of every variant that omits
+>   `extends`.
 > - For components, parents are embedded under the `parent:` key.
 
 ## [code] Complete Examples
