@@ -28,7 +28,38 @@ options:
     initialize-with: ". "
     demote-non-dropping-particle: sort-only
   dates: short
-  titles: humanities
+  # Title rendering is a category-level policy, not a per-component one: the
+  # engine keys it by reference type, and the substitute chain (a title standing
+  # in for a missing author) reads it too — a template `wrap:` can never reach
+  # that path. Component titles are quoted; standalone works are italicised.
+  titles:
+    # Keys are canonical Citum ref-type names (`Reference::ref_type`), which are
+    # hyphenated — `type-mapping` is looked up verbatim and does not normalise
+    # the CSL underscore spellings.
+    type-mapping:
+      # IEEE quotes theses and reports; the default table treats both as
+      # monographs, which would italicise them instead.
+      thesis: component
+      report: component
+      # Standalone works IEEE italicises but the default table leaves
+      # uncategorised, so they would otherwise pick up `default`'s quotes.
+      legal-case: monograph
+      motion-picture: monograph
+      software: monograph
+      standard: monograph
+      statute: monograph
+    # IEEE quotes the title of the work itself and italicises only standalone
+    # monographs, so `default` quotes rather than falling through to bare.
+    default:
+      quote: true
+    component:
+      quote: true
+    monograph:
+      emph: true
+    periodical:
+      emph: true
+    serial:
+      emph: true
   punctuation-in-quote: true
 citation:
   options:
@@ -64,60 +95,10 @@ bibliography:
             number: pages
           label-form: short
     book:
-    - contributor: author
-      form: long
-      and: text
-      name-order: given-first
-      shorten:
-        min: 7
-        use-first: 1
-    - title: primary
-    - title: parent-monograph
-      emph: true
-    - title: parent-serial
-      emph: true
-    - number: edition
-    - number: volume
-      prefix: ", vol. "
-    - number: issue
-      prefix: ", no. "
-    - variable: publisher-place
-      prefix: ". "
-    - variable: publisher
-      prefix: ": "
-    - number: pages
-    - date: issued
-      form: year
-    - variable: doi
-      prefix: ", doi: "
-    - variable: url
-    broadcast:
-    - contributor: author
-      form: long
-      and: text
-      name-order: given-first
-      shorten:
-        min: 7
-        use-first: 1
-    - title: primary
-    - title: parent-monograph
-      emph: true
-    - title: parent-serial
-      emph: true
-    - number: edition
-    - number: volume
-      prefix: ", vol. "
-    - number: issue
-      prefix: ", no. "
-    - variable: publisher-place
-    - variable: publisher
-      prefix: ": "
-    - number: pages
-    - date: issued
-      form: year
-    - variable: doi
-      prefix: ", doi: "
-    - variable: url
+      modify:
+        - match:
+            variable: publisher-place
+          prefix: ". "
     chapter:
     - contributor: author
       form: long
@@ -150,69 +131,18 @@ bibliography:
       form: year
     - number: pages
       label-form: short
-    dataset:
-    - contributor: author
-      form: long
-      and: text
-      name-order: given-first
-      shorten:
-        min: 7
-        use-first: 1
-    - title: primary
-    - title: parent-monograph
-      emph: true
-    - title: parent-serial
-      emph: true
-    - number: edition
-    - number: volume
-      prefix: ", vol. "
-    - number: issue
-      prefix: ", no. "
-    - variable: publisher-place
-    - variable: publisher
-      prefix: ": "
-    - number: pages
-    - date: issued
-      form: year
-    - variable: doi
-      prefix: ", doi: "
-    - variable: url
     entry-encyclopedia:
-      extends: broadcast
       modify:
         - match:
             number: pages
           label-form: short
     motion-picture:
-    - contributor: author
-      form: long
-      and: text
-      name-order: given-first
-      shorten:
-        min: 7
-        use-first: 1
-    - title: primary
-    - title: parent-monograph
-      emph: true
-    - title: parent-serial
-      emph: true
-    - number: edition
-    - number: volume
-      prefix: ", vol. "
-    - number: issue
-      prefix: ", no. "
-    - variable: publisher-place
-    - variable: publisher
-      prefix: ": "
-    - number: pages
-    - date: issued
-      form: year
-      wrap:
-        punctuation: parentheses
-      prefix: ", "
-    - variable: doi
-      prefix: ", doi: "
-    - variable: url
+      modify:
+        - match:
+            date: issued
+          prefix: ", "
+          wrap:
+            punctuation: parentheses
     paper-conference:
     - contributor: author
       form: long
@@ -249,62 +179,6 @@ bibliography:
     - number: patent-number
     - date: issued
       form: full
-    personal_communication:
-    - contributor: author
-      form: long
-      and: text
-      name-order: given-first
-      shorten:
-        min: 7
-        use-first: 1
-    - title: primary
-      wrap:
-        punctuation: quotes
-    - title: parent-monograph
-      emph: true
-    - title: parent-serial
-      emph: true
-    - number: edition
-    - number: volume
-      prefix: ", vol. "
-    - number: issue
-      prefix: ", no. "
-    - variable: publisher-place
-    - variable: publisher
-      prefix: ": "
-    - number: pages
-    - date: issued
-      form: year
-    - variable: doi
-      prefix: ", doi: "
-    - variable: url
-    report:
-    - contributor: author
-      form: long
-      and: text
-      name-order: given-first
-      shorten:
-        min: 7
-        use-first: 1
-    - title: primary
-    - title: parent-monograph
-      emph: true
-    - title: parent-serial
-      emph: true
-    - number: edition
-    - number: volume
-      prefix: ", vol. "
-    - number: issue
-      prefix: ", no. "
-    - variable: publisher-place
-    - variable: publisher
-      prefix: ": "
-    - number: pages
-    - date: issued
-      form: year
-    - variable: doi
-      prefix: ", doi: "
-    - variable: url
     thesis:
     - contributor: author
       form: long
@@ -339,8 +213,6 @@ bibliography:
       min: 7
       use-first: 1
   - title: primary
-    wrap:
-      punctuation: quotes
   - title: parent-monograph
     emph: true
   - title: parent-serial
