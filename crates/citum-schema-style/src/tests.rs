@@ -743,6 +743,46 @@ fn style_validate_emits_warning_for_unknown_type_in_bib_type_variants() {
 }
 
 #[test]
+fn style_validate_emits_warning_for_unknown_title_mapping_type() {
+    let style: Style = serde_yaml::from_str(
+        r#"
+info:
+  title: Future type mapping
+options:
+  titles:
+    type-mapping:
+      dance-performance: component
+"#,
+    )
+    .unwrap();
+
+    assert_eq!(
+        style.validate(),
+        vec![SchemaWarning::UnknownTypeName {
+            name: "dance-performance".to_string(),
+            location: "options.titles.type-mapping".to_string(),
+        }]
+    );
+}
+
+#[test]
+fn style_validate_accepts_normalized_known_title_mapping_type() {
+    let style: Style = serde_yaml::from_str(
+        r#"
+info:
+  title: Known type mapping
+options:
+  titles:
+    type-mapping:
+      personal_communication: component
+"#,
+    )
+    .unwrap();
+
+    assert!(style.validate().is_empty());
+}
+
+#[test]
 fn style_validate_no_warnings_for_valid_style() {
     let mut type_variants = IndexMap::new();
     type_variants.insert(

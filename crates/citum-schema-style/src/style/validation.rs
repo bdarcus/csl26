@@ -39,7 +39,7 @@ impl std::fmt::Display for SchemaWarning {
                 write!(
                     f,
                     "unknown reference type \"{name}\" in {location} \
-                     (will silently match nothing; check for typos)"
+                     (may not match a reference; check for typos)"
                 )
             }
         }
@@ -83,7 +83,7 @@ impl Style {
     ///
     /// This method checks for issues that are syntactically valid but
     /// semantically suspect, such as unrecognized reference type names in
-    /// `TypeSelector` values.
+    /// selectors or title mappings.
     ///
     /// Warnings do not prevent rendering; they are informational only.
     pub fn validate(&self) -> Vec<SchemaWarning> {
@@ -94,6 +94,19 @@ impl Style {
 
     /// Collect warnings for all `TypeSelector` values in the style.
     fn collect_type_selector_warnings(&self, warnings: &mut Vec<SchemaWarning>) {
+        if let Some(type_mapping) = self
+            .options
+            .as_ref()
+            .and_then(|options| options.titles.as_ref())
+            .and_then(|titles| titles.type_mapping.as_ref())
+        {
+            for reference_type in type_mapping.keys().filter(|name| !name.is_known()) {
+                warnings.push(SchemaWarning::UnknownTypeName {
+                    name: reference_type.to_string(),
+                    location: "options.titles.type-mapping".to_string(),
+                });
+            }
+        }
         if let Some(bib) = &self.bibliography
             && let Some(type_variants) = &bib.type_variants
         {

@@ -408,24 +408,19 @@ fn effective_title_rendering(
         TitleDefaultContext::Unknown => return None,
     };
     let titles = options.titles.as_ref()?;
-    let mapped_category = ref_type.and_then(|rt| {
-        titles
-            .type_mapping
-            .as_ref()
-            .and_then(|mapping| mapping.get(rt))
-    });
+    let mapped_category = ref_type.and_then(|rt| titles.mapped_category(rt));
 
     let rendering = match title_type {
         TitleType::ContainerTitle => {
             if let Some(category) = mapped_category {
-                match category.as_str() {
-                    "periodical" => titles.periodical.as_ref(),
-                    "serial" => titles.serial.as_ref(),
-                    "monograph" | "collection" => titles
+                match category {
+                    TitleCategory::Periodical => titles.periodical.as_ref(),
+                    TitleCategory::Serial => titles.serial.as_ref(),
+                    TitleCategory::Monograph | TitleCategory::ContainerMonograph => titles
                         .container_monograph
                         .as_ref()
                         .or(titles.monograph.as_ref()),
-                    _ => titles.default.as_ref(),
+                    TitleCategory::Component | TitleCategory::Default => titles.default.as_ref(),
                 }
             } else if let Some(ref_type) = ref_type {
                 match container_title_category(ref_type) {
@@ -442,10 +437,13 @@ fn effective_title_rendering(
         }
         TitleType::ParentSerial => {
             if let Some(category) = mapped_category {
-                match category.as_str() {
-                    "periodical" => titles.periodical.as_ref(),
-                    "serial" => titles.serial.as_ref(),
-                    _ => titles.periodical.as_ref(),
+                match category {
+                    TitleCategory::Periodical => titles.periodical.as_ref(),
+                    TitleCategory::Serial => titles.serial.as_ref(),
+                    TitleCategory::Component
+                    | TitleCategory::Monograph
+                    | TitleCategory::ContainerMonograph
+                    | TitleCategory::Default => titles.periodical.as_ref(),
                 }
             } else if let Some(ref_type) = ref_type {
                 match parent_serial_title_category(ref_type) {
@@ -467,10 +465,13 @@ fn effective_title_rendering(
             .or(titles.default.as_ref()),
         TitleType::Primary => {
             if let Some(category) = mapped_category {
-                match category.as_str() {
-                    "component" => titles.component.as_ref(),
-                    "monograph" => titles.monograph.as_ref(),
-                    _ => titles.default.as_ref(),
+                match category {
+                    TitleCategory::Component => titles.component.as_ref(),
+                    TitleCategory::Monograph => titles.monograph.as_ref(),
+                    TitleCategory::Periodical
+                    | TitleCategory::Serial
+                    | TitleCategory::ContainerMonograph
+                    | TitleCategory::Default => titles.default.as_ref(),
                 }
             } else if let Some(ref_type) = ref_type {
                 match title_category(ref_type) {
@@ -617,8 +618,8 @@ mod tests {
     use citum_engine::{Processor, reference::Bibliography};
     use citum_schema::{
         options::{
-            NameForm, RoleOptions, RoleRendering, TextCase, TitleRendering, TitlesConfig,
-            classified_ref_types,
+            NameForm, ReferenceTypeName, RoleOptions, RoleRendering, TextCase, TitleCategory,
+            TitleRendering, TitlesConfig, classified_ref_types,
         },
         template::{
             ContributorForm, ContributorRole, TemplateGroup, TemplateTitle, TemplateVariable,
@@ -989,7 +990,10 @@ mod tests {
             TemplateVariant::Full(vec![container_title(Some(TextCase::SentenceApa))]),
         );
         let mut type_mapping = std::collections::HashMap::new();
-        type_mapping.insert("article-journal".to_string(), "periodical".to_string());
+        type_mapping.insert(
+            ReferenceTypeName::from("article-journal"),
+            TitleCategory::Periodical,
+        );
         let style = Style {
             options: Some(citum_schema::options::Config {
                 titles: Some(TitlesConfig {
@@ -1329,6 +1333,81 @@ mod tests {
                 after, before,
                 "ref_type={ref_type} title_type={title_type:?}"
             );
+        }
+    }
+
+    #[test]
+    fn mapped_title_categories_agree_between_engine_and_migration() {
+        let categories = [
+            TitleCategory::Component,
+            TitleCategory::Monograph,
+            TitleCategory::Periodical,
+            TitleCategory::Serial,
+            TitleCategory::ContainerMonograph,
+            TitleCategory::Default,
+        ];
+        let title_types = [
+            TitleType::Primary,
+            TitleType::ContainerTitle,
+            TitleType::ParentSerial,
+        ];
+
+        for category in categories {
+            let titles = TitlesConfig {
+                type_mapping: Some(std::collections::HashMap::from([(
+                    ReferenceTypeName::from("article-journal"),
+                    category,
+                )])),
+                component: Some(TitleRendering {
+                    text_case: Some(TextCase::Title),
+                    ..TitleRendering::default()
+                }),
+                monograph: Some(TitleRendering {
+                    text_case: Some(TextCase::SentenceApa),
+                    ..TitleRendering::default()
+                }),
+                container_monograph: Some(TitleRendering {
+                    text_case: Some(TextCase::SentenceNlm),
+                    ..TitleRendering::default()
+                }),
+                periodical: Some(TitleRendering {
+                    text_case: Some(TextCase::Uppercase),
+                    ..TitleRendering::default()
+                }),
+                serial: Some(TitleRendering {
+                    text_case: Some(TextCase::Lowercase),
+                    ..TitleRendering::default()
+                }),
+                default: Some(TitleRendering {
+                    text_case: Some(TextCase::CapitalizeFirst),
+                    ..TitleRendering::default()
+                }),
+                ..TitlesConfig::default()
+            };
+            let options = citum_schema::options::Config {
+                titles: Some(titles),
+                ..citum_schema::options::Config::default()
+            };
+
+            for title_type in &title_types {
+                let engine = citum_engine::render::component::get_title_category_title_rendering(
+                    title_type,
+                    Some("article-journal"),
+                    None,
+                    &options,
+                )
+                .map(|rendering| rendering.to_rendering());
+                let migration = effective_title_rendering(
+                    title_type,
+                    TitleDefaultContext::RefType("article-journal"),
+                    &options,
+                );
+
+                assert_eq!(
+                    migration, engine,
+                    "category={category:?} title_type={title_type:?}"
+                );
+            }
         }
     }
 

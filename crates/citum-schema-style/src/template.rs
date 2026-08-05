@@ -293,43 +293,9 @@ impl From<WrapPunctuation> for WrapConfig {
 
 /// Canonical reference type names recognized by the Citum engine.
 ///
-/// Used by [`validate_type_name`] to detect likely typos.
-pub const VALID_TYPE_NAMES: &[&str] = &[
-    "book",
-    "manual",
-    "report",
-    "thesis",
-    "webpage",
-    "map",
-    "post",
-    "interview",
-    "manuscript",
-    "personal-communication",
-    "document",
-    "chapter",
-    "entry-dictionary",
-    "paper-conference",
-    "article-journal",
-    "article-magazine",
-    "article-newspaper",
-    "broadcast",
-    "motion-picture",
-    "collection",
-    "legal-case",
-    "statute",
-    "treaty",
-    "hearing",
-    "regulation",
-    "brief",
-    "classic",
-    "patent",
-    "dataset",
-    "standard",
-    "software",
-    // Special keywords
-    "all",
-    "default",
-];
+/// Template-only selector keywords are accepted by [`validate_type_name`] but
+/// are not members of this reference-type vocabulary.
+pub use crate::options::KNOWN_REFERENCE_TYPE_NAMES as VALID_TYPE_NAMES;
 
 /// Returns `true` if `s` is a recognized reference type name.
 ///
@@ -337,8 +303,8 @@ pub const VALID_TYPE_NAMES: &[&str] = &[
 /// `"article_journal"` and `"article-journal"` are accepted.
 /// Returns `false` for unrecognized names (likely typos).
 pub fn validate_type_name(s: &str) -> bool {
-    let normalized = s.replace('_', "-");
-    VALID_TYPE_NAMES.iter().any(|&known| known == normalized)
+    let normalized = crate::options::ReferenceTypeName::from(s);
+    normalized.is_known() || matches!(normalized.as_str(), "all" | "default")
 }
 
 /// Selector for reference types in overrides.
