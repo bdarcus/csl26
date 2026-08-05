@@ -1,7 +1,7 @@
 ---
 # csl26-g6bi
 title: Fix Eds./Trans. role-label trailing punctuation without regressing shared styles
-status: in-progress
+status: completed
 type: bug
 priority: normal
 tags:
@@ -9,7 +9,7 @@ tags:
     - style
     - fidelity
 created_at: 2026-08-02T00:09:00Z
-updated_at: 2026-08-05T12:30:25Z
+updated_at: 2026-08-05T17:32:21Z
 parent: csl26-ccdt
 ---
 
@@ -49,7 +49,7 @@ Plan: docs/../plans -- PR1 of three (engine -> schema docs -> style).
 - [x] Regression cases: "Title." + ". " unchanged; "Title!" + ", " unchanged under both StrongTerminalCommaPolicy values
 - [x] just pre-commit
 - [x] Full embedded sweep vs baseline: chicago-author-date-18th 172/540 and american-medical-association 49/67 unmoved
-- [ ] CI green
+- [x] CI green
 
 ## Result
 

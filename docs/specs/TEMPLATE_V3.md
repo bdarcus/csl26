@@ -328,6 +328,37 @@ specific template position. See
 [`TYPED_TITLE_MAPPING.md`](./TYPED_TITLE_MAPPING.md) for the mapping's typed
 contract.
 
+### §6 — The Section Template Is the Only Wildcard
+
+A section's `template` is what a reference renders when no `type-variants` key
+matches it, and it is the implicit parent of every variant that omits `extends`
+(§1). It is therefore already the style's wildcard, and it is the only one.
+
+The `all` selector keyword is **removed**. It matched every reference type, so
+in a resolver that returns the first matching selector it could only ever
+shadow: any type-specific variant authored after it became unreachable, and a
+variant authored before it made `all` a partial default whose coverage depended
+on authoring order rather than on anything the author declared. Neither reading
+adds expressiveness the section template does not already provide.
+
+`default` is retained. It is not a wildcard — it names the entry rendered for
+the `default` reference type, and matches only that.
+
+A style that still authors `all:` is not a load error. The name simply leaves
+the reference-type vocabulary, so it flows through the existing
+`SchemaWarning::UnknownTypeName` path and matches nothing at render time.
+Rejecting it outright is the published schema's job, not the engine's: the
+`type-variants` key vocabulary becomes a `propertyNames` enum that no longer
+contains `all`. See [`TYPED_TITLE_MAPPING.md`](./TYPED_TITLE_MAPPING.md) for
+that contract and for why the enum is hyphenated only.
+
+**Migration.** Authors move the `all` body into the section `template` when the
+style has no other default, or delete it when the section template already
+expresses the same shape. The one embedded style that used `all`
+(`elsevier-with-titles-core`) was the second case: its `all` body differed from
+its section template only by contributor initialization that the style's own
+`options.contributors` preset already supplied.
+
 ---
 
 ## Acceptance Criteria
@@ -342,6 +373,8 @@ contract.
 
 ## Changelog
 
+- v0.7 (2026-08-05): Remove the `all` selector keyword; the section template is
+  the only wildcard. Retain `default`.
 - v0.6 (2026-08-05): State the boundary between structural templates and
   category-level title rendering policy.
 - v0.5 (2026-07-15): Clarify family inheritance, forbid named cross-section

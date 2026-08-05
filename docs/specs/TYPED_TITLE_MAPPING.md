@@ -65,13 +65,60 @@ Any other category value is a parse error rather than a silent fallback.
 ### Key validation and lookup
 
 Known reference-type names share one authoritative vocabulary with template
-type-selector validation. `all` and `default` remain selector keywords and are
-not reference-type names.
+type-selector validation. `default` remains a selector keyword and is not a
+reference-type name. `all` was also such a keyword and is removed; see
+[`TEMPLATE_V3.md`](./TEMPLATE_V3.md) §6.
 
 Unknown canonical keys remain loadable for forward compatibility, but
 `Style::validate` emits `SchemaWarning::UnknownTypeName` at
 `options.titles.type-mapping`. This distinguishes an intentional future type
 from a likely typo without preventing an older engine from loading the style.
+
+#### The key vocabulary belongs in the published schema
+
+The paragraph above is a statement about the **engine**: an unknown name loads,
+warns, and matches nothing. That tolerance is deliberate, and it is not a reason
+for `docs/schemas/style.json` to be silent about the vocabulary — but silent is
+what it has been. `type-mapping` is `HashMap<ReferenceTypeName, TitleCategory>`,
+and the published schema constrains only the value half. schemars generates
+`additionalProperties` for map types and discards the key type, so the key half —
+a validated, normalizing Rust type — reaches the schema as a free string.
+
+This is not specific to `type-mapping`. `propertyNames` appears **nowhere** in
+any of the eight published schemas, so every map-keyed vocabulary in Citum is an
+open string space to a schema consumer.
+
+The rule, stated once: **the published schema is the authoring contract and
+carries the key vocabulary; the engine is the runtime and stays
+forward-compatible.** A style using a reference type Citum does not yet know
+fails schema validation in an editor and still renders correctly.
+
+Applied to reference types, which are a closed vocabulary:
+
+```json
+"type-variants": {
+  "type": "object",
+  "propertyNames": { "enum": ["article-journal", "book", "…", "default"] },
+  "additionalProperties": { "$ref": "#/$defs/TemplateVariant" }
+}
+```
+
+The enum is **hyphenated only**. Authored underscore spellings are dropped
+rather than enumerated alongside their canonical forms: normalizing the
+authored side let two spellings of one name coexist, which is the ambiguity the
+duplicate-key rule below already rejects within a single mapping. Normalization
+of *incoming reference data* is unaffected — that is input tolerance, not an
+authoring surface, and a hyphenated selector still matches a reference whose
+type arrives with underscores.
+
+Vocabularies that are genuinely open-ended — locale codes, message keys, field
+names — take `propertyNames: { "pattern": … }` rather than an enum, so a typo is
+caught without freezing an extensible namespace.
+
+Scope note: this spec change lands the four reference-type maps
+(`type-mapping` plus the three `type-variants` sites). The remaining nine
+vocabularies are tracked separately; they span locales, messages, and
+contributor roles and want their own review.
 
 Lookup compares canonical spellings. Consequently, an authored
 `personal_communication` key matches the engine's
