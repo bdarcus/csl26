@@ -14,6 +14,15 @@ const rootDir = path.join(__dirname, '..');
 const schemaDir = path.join(rootDir, 'docs/schemas');
 const skippedExampleFiles = new Set(['chicago-bib.yaml']);
 
+// Styles with a known schema gap, tracked and expected to be removed from here.
+// Keep this list empty-by-default; an entry is a debt, not a configuration knob.
+const skippedStyleFiles = new Map([
+  // Authors `contributor: narrator` and `contributor: contributor`, which are
+  // not ContributorRole variants. `str_enum!` accepts them via its Unknown
+  // fallback while the derived schema is a closed enum. See csl26-9gb9.
+  ['chicago-author-date-18th.yaml', 'csl26-9gb9']
+]);
+
 const schemas = {
   style: JSON.parse(fs.readFileSync(path.join(schemaDir, 'style.json'), 'utf8')),
   bib: JSON.parse(fs.readFileSync(path.join(schemaDir, 'bib.json'), 'utf8')),
@@ -121,18 +130,49 @@ function validateWithCli(kind, flag, filePath) {
 
 let allValid = true;
 
+// `--scope=styles,locales` limits the run to the sections that are green and
+// gated in CI. The examples section still has pre-existing failures in bib and
+// citation fixtures, unrelated to style or locale schemas; running it locally
+// without the flag remains the way to see them.
+const scopeArg = process.argv.slice(2).find(arg => arg.startsWith('--scope='));
+const scope = scopeArg
+  ? new Set(
+      scopeArg
+        .slice('--scope='.length)
+        .split(',')
+        .map(part => part.trim())
+        .filter(Boolean)
+    )
+  : null;
+const inScope = section => scope === null || scope.has(section);
+
 // Validate Styles
+//
+// `styles/` holds tracked exemplar styles; `styles/embedded` symlinks the
+// crate's embedded tier. A plain readdir of `styles/` skips the subdirectory,
+// which hid the embedded corpus — the larger and more load-bearing half — from
+// every schema check. Both are validated.
+if (inScope('styles')) {
 console.log('\n--- Validating Styles ---');
-const styleDirs = [path.join(rootDir, 'styles')];
+const styleDirs = [
+  path.join(rootDir, 'styles'),
+  path.join(rootDir, 'crates/citum-schema-style/embedded/styles')
+];
 styleDirs.forEach(dir => {
   fs.readdirSync(dir).forEach(file => {
+    if (skippedStyleFiles.has(file)) {
+      console.log(`SKIP ${path.join(dir, file)} — known schema gap, see ${skippedStyleFiles.get(file)}`);
+      return;
+    }
     if (file.endsWith('.yaml') || file.endsWith('.json')) {
       if (!validate(path.join(dir, file), 'style')) allValid = false;
     }
   });
 });
+}
 
 // Validate Locales
+if (inScope('locales')) {
 console.log('\n--- Validating Locales ---');
 const localeDir = path.join(rootDir, 'locales');
 fs.readdirSync(localeDir).forEach(file => {
@@ -140,8 +180,10 @@ fs.readdirSync(localeDir).forEach(file => {
     if (!validate(path.join(localeDir, file), 'locale')) allValid = false;
   }
 });
+}
 
 // Validate Bibliographies in examples
+if (inScope('examples')) {
 console.log('\n--- Validating Examples (Bibliographies) ---');
 const examplesDir = path.join(rootDir, 'examples');
 fs.readdirSync(examplesDir).forEach(file => {
@@ -163,6 +205,7 @@ fs.readdirSync(examplesDir).forEach(file => {
     }
   }
 });
+}
 
 if (!allValid) {
   process.exit(1);

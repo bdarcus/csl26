@@ -206,7 +206,6 @@ bibliography:
     - variable: url
       prefix: ". "
     personal-communication: []
-    personal_communication: []
     patent:
     - contributor: author
       form: long

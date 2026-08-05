@@ -142,7 +142,7 @@ bibliography:
       prefix: ", "
     - variable: archive-location
       prefix: ", "
-    personal_communication:
+    personal-communication:
       extends: manuscript
       remove:
         - match:

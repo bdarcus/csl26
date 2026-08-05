@@ -25,7 +25,6 @@ citation:
   options:
     label-mode: numeric
     label-wrap: brackets
-    label-separator: '. '
   template-ref: numeric-citation
   multi-cite-delimiter: ","
 bibliography:

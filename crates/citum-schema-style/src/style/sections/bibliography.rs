@@ -44,7 +44,13 @@ pub struct BibliographySpec {
     /// Type-specific template overrides. When present, replaces the default
     /// template for entries of the specified types. Keys are reference type
     /// names (e.g., "chapter", "article-journal").
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(
+        feature = "schema",
+        schemars(
+            schema_with = "crate::template::type_keyed_map_schema::<crate::template::TemplateVariant>"
+        )
+    )]
     pub type_variants: Option<TemplateVariants>,
     /// Optional global bibliography sorting specification.
     ///

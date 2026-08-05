@@ -193,7 +193,6 @@ pub enum WrapPunctuation {
 /// Combines the wrap punctuation with optional text that appears inside the wrap
 /// (between the wrap character and the rendered content).
 #[derive(Debug, Clone, PartialEq, Serialize)]
-#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub struct WrapConfig {
     /// The wrapping punctuation style.
@@ -204,6 +203,39 @@ pub struct WrapConfig {
     /// Text inserted after the content but before the closing wrap character.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub inner_suffix: Option<String>,
+}
+
+/// Mirrors the shorthand accepted by [`WrapConfig`]'s hand-written
+/// `Deserialize`: either a bare punctuation string (`wrap: parentheses`) or the
+/// full mapping. A derived schema described only the mapping, so every embedded
+/// style using the shorthand failed validation once `propertyNames` made the
+/// published schema enforceable.
+#[cfg(feature = "schema")]
+impl JsonSchema for WrapConfig {
+    fn schema_name() -> std::borrow::Cow<'static, str> {
+        "WrapConfig".into()
+    }
+
+    fn json_schema(generator: &mut schemars::SchemaGenerator) -> schemars::Schema {
+        let punctuation = generator.subschema_for::<WrapPunctuation>();
+        schemars::json_schema!({
+            "description": "Wrapping punctuation, as a bare punctuation name or \
+                            a mapping with optional inner affixes.",
+            "oneOf": [
+                punctuation,
+                {
+                    "type": "object",
+                    "properties": {
+                        "punctuation": generator.subschema_for::<WrapPunctuation>(),
+                        "inner-prefix": { "type": ["string", "null"] },
+                        "inner-suffix": { "type": ["string", "null"] },
+                    },
+                    "required": ["punctuation"],
+                    "additionalProperties": false,
+                },
+            ],
+        })
+    }
 }
 
 impl<'de> serde::Deserialize<'de> for WrapConfig {
@@ -293,27 +325,160 @@ impl From<WrapPunctuation> for WrapConfig {
 
 /// Canonical reference type names recognized by the Citum engine.
 ///
-/// Template-only selector keywords are accepted by [`validate_type_name`] but
-/// are not members of this reference-type vocabulary.
+/// The template-only selector keyword `default` is accepted by
+/// [`validate_type_name`] but is not a member of this reference-type
+/// vocabulary.
 pub use crate::options::KNOWN_REFERENCE_TYPE_NAMES as VALID_TYPE_NAMES;
 
 /// Returns `true` if `s` is a recognized reference type name.
 ///
-/// Normalizes underscores to hyphens before comparing, so both
-/// `"article_journal"` and `"article-journal"` are accepted.
+/// Comparison is against the canonical hyphenated spelling only. An authored
+/// `"article_journal"` is *not* accepted: the published schema enumerates the
+/// hyphenated vocabulary, and letting the engine silently accept a second
+/// spelling would put the two contracts out of step. Normalization of incoming
+/// *reference data* is unaffected — see [`TypeSelector::matches`].
+///
 /// Returns `false` for unrecognized names (likely typos).
 pub fn validate_type_name(s: &str) -> bool {
-    let normalized = crate::options::ReferenceTypeName::from(s);
-    normalized.is_known() || matches!(normalized.as_str(), "all" | "default")
+    crate::options::ReferenceTypeName::is_known_canonical(s) || s == "default"
 }
 
 /// Selector for reference types in overrides.
 /// Can be a single type string or a list of types.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub enum TypeSelector {
     Single(String),
     Multiple(Vec<String>),
+}
+
+/// The canonical reference-type vocabulary, plus the `default` keyword, as
+/// JSON Schema enum values.
+///
+/// This is the authoring contract: the engine additionally tolerates underscore
+/// spellings in *reference data*, but not in authored selectors.
+#[cfg(feature = "schema")]
+fn selector_atom_names() -> Vec<serde_json::Value> {
+    VALID_TYPE_NAMES
+        .iter()
+        .copied()
+        .chain(std::iter::once("default"))
+        .map(|name| serde_json::Value::String(name.to_string()))
+        .collect()
+}
+
+/// The JSON Schema for a reference-type name used as a bare map key or scalar.
+///
+/// Excludes `default` and the multi-type form; see
+/// [`reference_type_keyed_map_schema`].
+#[cfg(feature = "schema")]
+#[must_use]
+pub fn reference_type_name_schema() -> schemars::Schema {
+    let names: Vec<serde_json::Value> = VALID_TYPE_NAMES
+        .iter()
+        .map(|name| serde_json::Value::String((*name).to_string()))
+        .collect();
+    schemars::json_schema!({
+        "type": "string",
+        "enum": names,
+    })
+}
+
+/// The JSON Schema for a single authored type selector.
+///
+/// [`TypeSelector::Multiple`] serializes as a comma-joined string, and embedded
+/// styles author keys such as `manuscript,personal-communication,pamphlet`, so
+/// a bare enum of single names would reject valid selectors. This constrains
+/// every comma-separated atom to the vocabulary while allowing the joined form.
+#[cfg(feature = "schema")]
+#[must_use]
+pub fn type_selector_name_schema() -> schemars::Schema {
+    let alternation = VALID_TYPE_NAMES
+        .iter()
+        .copied()
+        .chain(std::iter::once("default"))
+        .map(regex_escape)
+        .collect::<Vec<_>>()
+        .join("|");
+    let atom = format!("(?:{alternation})");
+    schemars::json_schema!({
+        "type": "string",
+        "pattern": format!("^\\s*{atom}(?:\\s*,\\s*{atom})*\\s*$"),
+    })
+}
+
+/// Escape the regex metacharacters that can occur in a reference type name.
+///
+/// The vocabulary is kebab-case ASCII, so only `-` and `.` are plausible, but
+/// escaping keeps the generated pattern correct if a name ever gains more.
+#[cfg(feature = "schema")]
+fn regex_escape(value: &str) -> String {
+    value
+        .chars()
+        .flat_map(|c| {
+            let escape = matches!(
+                c,
+                '.' | '+' | '*' | '?' | '(' | ')' | '[' | ']' | '{' | '}' | '|' | '^' | '$' | '\\'
+            );
+            escape.then_some('\\').into_iter().chain(std::iter::once(c))
+        })
+        .collect()
+}
+
+/// The JSON Schema for an optional map keyed by type selector.
+///
+/// `propertyNames` carries the key vocabulary that schemars drops when it
+/// generates a map type: without it the published schema accepts any key at
+/// all, which is how a removed keyword or a typo validated silently. See
+/// `TYPED_TITLE_MAPPING.md`.
+#[cfg(feature = "schema")]
+pub fn type_keyed_map_schema<V: JsonSchema>(
+    generator: &mut schemars::SchemaGenerator,
+) -> schemars::Schema {
+    let value = generator.subschema_for::<V>();
+    schemars::json_schema!({
+        "type": ["object", "null"],
+        "propertyNames": type_selector_name_schema(),
+        "additionalProperties": value,
+    })
+}
+
+/// The JSON Schema for an optional map keyed by a plain reference type name.
+///
+/// Unlike [`type_keyed_map_schema`], keys are single canonical reference types:
+/// no `default`, no comma-joined multi-type form. Used where the Rust key type
+/// is `ReferenceTypeName` rather than [`TypeSelector`].
+#[cfg(feature = "schema")]
+pub fn reference_type_keyed_map_schema<V: JsonSchema>(
+    generator: &mut schemars::SchemaGenerator,
+) -> schemars::Schema {
+    let value = generator.subschema_for::<V>();
+    schemars::json_schema!({
+        "type": ["object", "null"],
+        "propertyNames": reference_type_name_schema(),
+        "additionalProperties": value,
+    })
+}
+
+#[cfg(feature = "schema")]
+impl JsonSchema for TypeSelector {
+    fn schema_name() -> std::borrow::Cow<'static, str> {
+        "TypeSelector".into()
+    }
+
+    fn json_schema(_generator: &mut schemars::SchemaGenerator) -> schemars::Schema {
+        schemars::json_schema!({
+            "description": "A reference type name, a comma-joined list of them, \
+                            or a sequence of them.",
+            "oneOf": [
+                type_selector_name_schema(),
+                {
+                    "type": "array",
+                    "items": { "type": "string", "enum": selector_atom_names() },
+                    "minItems": 1,
+                },
+            ],
+        })
+    }
 }
 
 impl Serialize for TypeSelector {
@@ -390,11 +555,14 @@ impl std::str::FromStr for TypeSelector {
 impl TypeSelector {
     /// Check whether this selector matches a reference type.
     ///
-    /// Type names are compared after normalizing underscores to hyphens, so
-    /// "legal_case" and "legal-case" are treated as equivalent (matching both
-    /// CSL 1.0 underscore convention and Citum hyphen convention).
+    /// The incoming `ref_type` is normalized from the CSL 1.0 underscore
+    /// convention to Citum's hyphen convention, so a `legal-case` selector
+    /// matches a reference arriving as `legal_case`. The *selector* is not
+    /// normalized: it is an authoring surface, and the published schema
+    /// enumerates only the hyphenated spelling.
     ///
-    /// The special keyword "all" always matches any reference type.
+    /// There is no wildcard selector. A reference type that matches nothing
+    /// renders the section template — see `TEMPLATE_V3.md` §6.
     pub fn matches(&self, ref_type: &str) -> bool {
         let normalized_ref = ref_type.replace('_', "-");
         let base_ref = normalized_ref
@@ -403,9 +571,8 @@ impl TypeSelector {
             .unwrap_or(&normalized_ref);
         let eq = |s: &str| -> bool {
             s == ref_type
-                || s.replace('_', "-") == normalized_ref
-                || s.replace('_', "-") == base_ref
-                || s == "all"
+                || s == normalized_ref
+                || s == base_ref
                 || (s == "default" && ref_type == "default")
         };
         match self {

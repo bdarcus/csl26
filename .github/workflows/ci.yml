@@ -28,6 +28,7 @@ jobs:
       rust: ${{ steps.filter.outputs.rust }}
       docs: ${{ steps.filter.outputs.docs }}
       scripts: ${{ steps.filter.outputs.scripts }}
+      styles: ${{ steps.filter.outputs.styles }}
       beans: ${{ steps.filter.outputs.beans }}
       infra: ${{ steps.filter.outputs.infra }}
       semver: ${{ steps.filter.outputs.semver }}
@@ -53,6 +54,7 @@ jobs:
             echo "rust=$(has '^(crates/|Cargo\.toml$|Cargo\.lock$|rust-toolchain\.toml$)')"
             echo "docs=$(has '\.md$|^(docs/|CONTRIBUTING\.md$|examples/|\.github/)')"
             echo "scripts=$(has '^(scripts/|examples/)')"
+            echo "styles=$(has '^(styles/|locales/|docs/schemas/)')"
             echo "beans=$(has '^(registry/|locales/|templates/|\.beans\.yml$|\.beans/)')"
             echo "infra=$(has '^(scripts/|crates/)')"
             echo "semver=$(has '^crates/(csl-legacy|citum-schema-data|citum-schema-style|citum-schema|citum-migrate|citum-engine|citum-cli|citum-bindings)/')"
@@ -299,7 +301,7 @@ jobs:
   hygiene-data-model-docs:
     name: Hygiene Checks — Data Model Docs
     needs: changes
-    if: ${{ needs.changes.outputs.docs == 'true' || needs.changes.outputs.scripts == 'true' }}
+    if: ${{ needs.changes.outputs.docs == 'true' || needs.changes.outputs.scripts == 'true' || needs.changes.outputs.styles == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6
@@ -321,6 +323,9 @@ jobs:
           diff -ru "$tmp_dir/generated" docs/reference/generated
           diff -u "$tmp_dir/BIBLATEX_MAPPING.md" docs/reference/BIBLATEX_MAPPING.md
           diff -u "$tmp_dir/NATIVE_FORMAT.md" docs/reference/NATIVE_FORMAT.md
+
+      - name: Validate styles and locales against published schemas
+        run: node scripts/validate-schemas.js --scope=styles,locales
 
       - name: Check internal doc links
         run: |

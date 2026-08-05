@@ -875,30 +875,35 @@
       ]
     },
     "WrapConfig": {
-      "description": "Wrapping punctuation and optional inner affixes applied around a rendered value.\n\nCombines the wrap punctuation with optional text that appears inside the wrap\n(between the wrap character and the rendered content).",
-      "type": "object",
-      "properties": {
-        "punctuation": {
-          "description": "The wrapping punctuation style.",
+      "description": "Wrapping punctuation, as a bare punctuation name or a mapping with optional inner affixes.",
+      "oneOf": [
+        {
           "$ref": "#/$defs/WrapPunctuation"
         },
-        "inner-prefix": {
-          "description": "Text inserted after the opening wrap character but before the content.",
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "inner-suffix": {
-          "description": "Text inserted after the content but before the closing wrap character.",
-          "type": [
-            "string",
-            "null"
-          ]
+        {
+          "type": "object",
+          "properties": {
+            "punctuation": {
+              "$ref": "#/$defs/WrapPunctuation"
+            },
+            "inner-prefix": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "inner-suffix": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "punctuation"
+          ],
+          "additionalProperties": false
         }
-      },
-      "required": [
-        "punctuation"
       ]
     },
     "WrapPunctuation": {
@@ -5537,6 +5542,54 @@
             "object",
             "null"
           ],
+          "propertyNames": {
+            "type": "string",
+            "enum": [
+              "book",
+              "manual",
+              "report",
+              "thesis",
+              "webpage",
+              "map",
+              "post",
+              "interview",
+              "manuscript",
+              "personal-communication",
+              "document",
+              "chapter",
+              "entry",
+              "entry-dictionary",
+              "entry-encyclopedia",
+              "post-weblog",
+              "preprint",
+              "paper-conference",
+              "article-journal",
+              "article-magazine",
+              "article-newspaper",
+              "broadcast",
+              "collection",
+              "legal-case",
+              "statute",
+              "treaty",
+              "hearing",
+              "regulation",
+              "brief",
+              "classic",
+              "patent",
+              "dataset",
+              "standard",
+              "software",
+              "motion-picture",
+              "article",
+              "pamphlet",
+              "periodical",
+              "graphic",
+              "event",
+              "song",
+              "bill-proceeding",
+              "bill-record"
+            ]
+          },
           "additionalProperties": {
             "$ref": "#/$defs/TitleCategory"
           }
@@ -6307,6 +6360,10 @@
             "object",
             "null"
           ],
+          "propertyNames": {
+            "type": "string",
+            "pattern": "^\\s*(?:book|manual|report|thesis|webpage|map|post|interview|manuscript|personal-communication|document|chapter|entry|entry-dictionary|entry-encyclopedia|post-weblog|preprint|paper-conference|article-journal|article-magazine|article-newspaper|broadcast|collection|legal-case|statute|treaty|hearing|regulation|brief|classic|patent|dataset|standard|software|motion-picture|article|pamphlet|periodical|graphic|event|song|bill-proceeding|bill-record|default)(?:\\s*,\\s*(?:book|manual|report|thesis|webpage|map|post|interview|manuscript|personal-communication|document|chapter|entry|entry-dictionary|entry-encyclopedia|post-weblog|preprint|paper-conference|article-journal|article-magazine|article-newspaper|broadcast|collection|legal-case|statute|treaty|hearing|regulation|brief|classic|patent|dataset|standard|software|motion-picture|article|pamphlet|periodical|graphic|event|song|bill-proceeding|bill-record|default))*\\s*$"
+          },
           "additionalProperties": {
             "$ref": "#/$defs/TemplateVariant"
           }
@@ -6825,6 +6882,10 @@
             "object",
             "null"
           ],
+          "propertyNames": {
+            "type": "string",
+            "pattern": "^\\s*(?:book|manual|report|thesis|webpage|map|post|interview|manuscript|personal-communication|document|chapter|entry|entry-dictionary|entry-encyclopedia|post-weblog|preprint|paper-conference|article-journal|article-magazine|article-newspaper|broadcast|collection|legal-case|statute|treaty|hearing|regulation|brief|classic|patent|dataset|standard|software|motion-picture|article|pamphlet|periodical|graphic|event|song|bill-proceeding|bill-record|default)(?:\\s*,\\s*(?:book|manual|report|thesis|webpage|map|post|interview|manuscript|personal-communication|document|chapter|entry|entry-dictionary|entry-encyclopedia|post-weblog|preprint|paper-conference|article-journal|article-magazine|article-newspaper|broadcast|collection|legal-case|statute|treaty|hearing|regulation|brief|classic|patent|dataset|standard|software|motion-picture|article|pamphlet|periodical|graphic|event|song|bill-proceeding|bill-record|default))*\\s*$"
+          },
           "additionalProperties": {
             "type": "array",
             "items": {
@@ -6894,34 +6955,64 @@
       "additionalProperties": false
     },
     "TypeSelector": {
-      "description": "Selector for reference types in overrides.\nCan be a single type string or a list of types.",
+      "description": "A reference type name, a comma-joined list of them, or a sequence of them.",
       "oneOf": [
         {
-          "type": "object",
-          "properties": {
-            "Single": {
-              "type": "string"
-            }
-          },
-          "required": [
-            "Single"
-          ],
-          "additionalProperties": false
+          "type": "string",
+          "pattern": "^\\s*(?:book|manual|report|thesis|webpage|map|post|interview|manuscript|personal-communication|document|chapter|entry|entry-dictionary|entry-encyclopedia|post-weblog|preprint|paper-conference|article-journal|article-magazine|article-newspaper|broadcast|collection|legal-case|statute|treaty|hearing|regulation|brief|classic|patent|dataset|standard|software|motion-picture|article|pamphlet|periodical|graphic|event|song|bill-proceeding|bill-record|default)(?:\\s*,\\s*(?:book|manual|report|thesis|webpage|map|post|interview|manuscript|personal-communication|document|chapter|entry|entry-dictionary|entry-encyclopedia|post-weblog|preprint|paper-conference|article-journal|article-magazine|article-newspaper|broadcast|collection|legal-case|statute|treaty|hearing|regulation|brief|classic|patent|dataset|standard|software|motion-picture|article|pamphlet|periodical|graphic|event|song|bill-proceeding|bill-record|default))*\\s*$"
         },
         {
-          "type": "object",
-          "properties": {
-            "Multiple": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            }
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "book",
+              "manual",
+              "report",
+              "thesis",
+              "webpage",
+              "map",
+              "post",
+              "interview",
+              "manuscript",
+              "personal-communication",
+              "document",
+              "chapter",
+              "entry",
+              "entry-dictionary",
+              "entry-encyclopedia",
+              "post-weblog",
+              "preprint",
+              "paper-conference",
+              "article-journal",
+              "article-magazine",
+              "article-newspaper",
+              "broadcast",
+              "collection",
+              "legal-case",
+              "statute",
+              "treaty",
+              "hearing",
+              "regulation",
+              "brief",
+              "classic",
+              "patent",
+              "dataset",
+              "standard",
+              "software",
+              "motion-picture",
+              "article",
+              "pamphlet",
+              "periodical",
+              "graphic",
+              "event",
+              "song",
+              "bill-proceeding",
+              "bill-record",
+              "default"
+            ]
           },
-          "required": [
-            "Multiple"
-          ],
-          "additionalProperties": false
+          "minItems": 1
         }
       ]
     },
@@ -7318,6 +7409,10 @@
             "object",
             "null"
           ],
+          "propertyNames": {
+            "type": "string",
+            "pattern": "^\\s*(?:book|manual|report|thesis|webpage|map|post|interview|manuscript|personal-communication|document|chapter|entry|entry-dictionary|entry-encyclopedia|post-weblog|preprint|paper-conference|article-journal|article-magazine|article-newspaper|broadcast|collection|legal-case|statute|treaty|hearing|regulation|brief|classic|patent|dataset|standard|software|motion-picture|article|pamphlet|periodical|graphic|event|song|bill-proceeding|bill-record|default)(?:\\s*,\\s*(?:book|manual|report|thesis|webpage|map|post|interview|manuscript|personal-communication|document|chapter|entry|entry-dictionary|entry-encyclopedia|post-weblog|preprint|paper-conference|article-journal|article-magazine|article-newspaper|broadcast|collection|legal-case|statute|treaty|hearing|regulation|brief|classic|patent|dataset|standard|software|motion-picture|article|pamphlet|periodical|graphic|event|song|bill-proceeding|bill-record|default))*\\s*$"
+          },
           "additionalProperties": {
             "$ref": "#/$defs/TemplateVariant"
           }

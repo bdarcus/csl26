@@ -24,8 +24,13 @@ use std::borrow::Borrow;
 /// Canonical reference-type names understood by the current style schema.
 ///
 /// Unknown names remain valid inputs for forward compatibility, but style
-/// validation warns about them. Template selector keywords such as `all` and
-/// `default` are deliberately excluded because they are not reference types.
+/// validation warns about them. The template selector keyword `default` is
+/// deliberately excluded because it is not a reference type.
+///
+/// This list is the vocabulary the published schema enumerates, so a name
+/// missing here is not merely un-warned — it fails schema validation. Every
+/// entry in [`classified_ref_types`] must appear here; the invariant is
+/// enforced by test.
 pub const KNOWN_REFERENCE_TYPE_NAMES: &[&str] = &[
     "book",
     "manual",
@@ -39,7 +44,11 @@ pub const KNOWN_REFERENCE_TYPE_NAMES: &[&str] = &[
     "personal-communication",
     "document",
     "chapter",
+    "entry",
     "entry-dictionary",
+    "entry-encyclopedia",
+    "post-weblog",
+    "preprint",
     "paper-conference",
     "article-journal",
     "article-magazine",
@@ -58,6 +67,19 @@ pub const KNOWN_REFERENCE_TYPE_NAMES: &[&str] = &[
     "standard",
     "software",
     "motion-picture",
+    // Authored by the embedded corpus but not returned by `Reference::ref_type()`:
+    // these are CSL genre values or pre-conversion input types, so the selectors
+    // keying on them are probably unreachable. They stay in the vocabulary because
+    // the shipped styles author them and the published schema must not reject what
+    // Citum ships. csl26-1uyz tracks proving reachability and removing the dead ones.
+    "article",
+    "pamphlet",
+    "periodical",
+    "graphic",
+    "event",
+    "song",
+    "bill-proceeding",
+    "bill-record",
 ];
 
 /// A canonical reference-type name used as a style-configuration key.
@@ -86,6 +108,17 @@ impl ReferenceTypeName {
     #[must_use]
     pub fn is_known(&self) -> bool {
         KNOWN_REFERENCE_TYPE_NAMES.contains(&self.as_str())
+    }
+
+    /// Return whether `value` is a known reference type spelled canonically.
+    ///
+    /// Unlike [`Self::is_known`], this performs no normalization: an authored
+    /// `"article_journal"` returns `false`. Authoring surfaces validate with
+    /// this so the engine and the published schema — which enumerates the
+    /// hyphenated vocabulary — accept the same set of spellings.
+    #[must_use]
+    pub fn is_known_canonical(value: &str) -> bool {
+        KNOWN_REFERENCE_TYPE_NAMES.contains(&value)
     }
 }
 
@@ -344,5 +377,29 @@ mod tests {
             let _ = container_title_category(ref_type);
             let _ = parent_serial_title_category(ref_type);
         }
+    }
+
+    #[test]
+    fn given_classified_ref_types_when_checked_against_vocabulary_then_all_known() {
+        // given the reference types this module classifies for title rendering
+        // when each is checked against the schema's reference-type vocabulary
+        // then every one is present
+        //
+        // The two lists drifted apart once already: `entry`, `entry-encyclopedia`
+        // and `post-weblog` were classified while absent from the vocabulary, so
+        // styles keyed on them warned despite rendering correctly. The vocabulary
+        // is now enumerated in the published schema, where that gap is a hard
+        // validation failure rather than a warning.
+        let missing: Vec<&str> = classified_ref_types()
+            .iter()
+            .filter(|name| !KNOWN_REFERENCE_TYPE_NAMES.contains(name))
+            .copied()
+            .collect();
+
+        assert_eq!(
+            missing,
+            Vec::<&str>::new(),
+            "classified reference types missing from KNOWN_REFERENCE_TYPE_NAMES"
+        );
     }
 }

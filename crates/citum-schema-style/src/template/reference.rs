@@ -117,7 +117,13 @@ pub struct LocalizedTemplateSpec {
     /// Locale-owned type-specific template replacements.
     ///
     /// These take precedence over the section-level type variants when this locale matches.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(
+        feature = "schema",
+        schemars(
+            schema_with = "crate::template::type_keyed_map_schema::<crate::template::Template>"
+        )
+    )]
     pub type_variants: Option<LocalizedTemplateVariants>,
     /// Forward-compat: captures unknown keys when an older engine reads a
     /// style produced by a newer schema. Empty by default; treated as a

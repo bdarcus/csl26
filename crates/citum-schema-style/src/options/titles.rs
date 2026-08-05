@@ -87,6 +87,12 @@ pub struct TitlesConfig {
         deserialize_with = "deserialize_type_mapping",
         skip_serializing_if = "Option::is_none"
     )]
+    #[cfg_attr(
+        feature = "schema",
+        schemars(
+            schema_with = "crate::template::reference_type_keyed_map_schema::<crate::options::TitleCategory>"
+        )
+    )]
     pub type_mapping: Option<HashMap<ReferenceTypeName, TitleCategory>>,
     /// Formatting for component titles (articles, chapters).
     #[serde(skip_serializing_if = "Option::is_none")]

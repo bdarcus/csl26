@@ -91,20 +91,6 @@ bibliography:
       prefix: ' '
     - number: pages
       prefix: ' '
-    all:
-    - contributor: author
-      form: long
-      name-order: family-first
-    - title: primary
-    - title: parent-monograph
-    - title: parent-serial
-    - variable: publisher
-    - variable: publisher-place
-    - number: volume
-    - date: issued
-      form: year
-    - number: pages
-      prefix: ' '
   template:
   - contributor: author
     form: long

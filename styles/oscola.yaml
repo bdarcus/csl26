@@ -161,7 +161,7 @@ bibliography:
     - variable: url
       prefix: " &#60;"
       suffix: "&#62;"
-    personal_communication:
+    personal-communication:
     - contributor: author
       form: long
       sort-separator: " "
@@ -186,7 +186,7 @@ bibliography:
         punctuation: quotes
     - date: issued
       form: full
-    legal_case:
+    legal-case:
     - title: primary
       emph: true
     - date: issued
