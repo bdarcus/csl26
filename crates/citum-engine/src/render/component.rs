@@ -468,27 +468,23 @@ pub fn get_title_category_title_rendering(
 ) -> Option<TitleRendering> {
     let titles_config = config.titles.as_ref()?;
 
-    // Use type_mapping if available to resolve category
-    let mapped_category = ref_type.and_then(|rt| {
-        titles_config
-            .type_mapping
-            .as_ref()
-            .and_then(|mapping| mapping.get(rt))
-    });
+    let mapped_category = ref_type.and_then(|rt| titles_config.mapped_category(rt));
 
     use crate::values::type_class::TitleCategory;
 
     let rendering = match title_type {
         TitleType::ContainerTitle => {
             if let Some(cat) = mapped_category {
-                match cat.as_str() {
-                    "periodical" => titles_config.periodical.as_ref(),
-                    "serial" => titles_config.serial.as_ref(),
-                    "monograph" | "collection" => titles_config
+                match cat {
+                    TitleCategory::Periodical => titles_config.periodical.as_ref(),
+                    TitleCategory::Serial => titles_config.serial.as_ref(),
+                    TitleCategory::Monograph | TitleCategory::ContainerMonograph => titles_config
                         .container_monograph
                         .as_ref()
                         .or(titles_config.monograph.as_ref()),
-                    _ => titles_config.default.as_ref(),
+                    TitleCategory::Component | TitleCategory::Default => {
+                        titles_config.default.as_ref()
+                    }
                 }
             } else if let Some(rt) = ref_type {
                 match crate::values::type_class::container_title_category(rt) {
@@ -505,10 +501,13 @@ pub fn get_title_category_title_rendering(
         }
         TitleType::ParentSerial => {
             if let Some(cat) = mapped_category {
-                match cat.as_str() {
-                    "periodical" => titles_config.periodical.as_ref(),
-                    "serial" => titles_config.serial.as_ref(),
-                    _ => titles_config.periodical.as_ref(),
+                match cat {
+                    TitleCategory::Periodical => titles_config.periodical.as_ref(),
+                    TitleCategory::Serial => titles_config.serial.as_ref(),
+                    TitleCategory::Component
+                    | TitleCategory::Monograph
+                    | TitleCategory::ContainerMonograph
+                    | TitleCategory::Default => titles_config.periodical.as_ref(),
                 }
             } else if let Some(rt) = ref_type {
                 match crate::values::type_class::parent_serial_title_category(rt) {
@@ -530,10 +529,13 @@ pub fn get_title_category_title_rendering(
             .or(titles_config.default.as_ref()),
         TitleType::Primary => {
             if let Some(cat) = mapped_category {
-                match cat.as_str() {
-                    "component" => titles_config.component.as_ref(),
-                    "monograph" => titles_config.monograph.as_ref(),
-                    _ => titles_config.default.as_ref(),
+                match cat {
+                    TitleCategory::Component => titles_config.component.as_ref(),
+                    TitleCategory::Monograph => titles_config.monograph.as_ref(),
+                    TitleCategory::Periodical
+                    | TitleCategory::Serial
+                    | TitleCategory::ContainerMonograph
+                    | TitleCategory::Default => titles_config.default.as_ref(),
                 }
             } else if let Some(rt) = ref_type {
                 match crate::values::type_class::title_category(rt) {
@@ -648,5 +650,23 @@ mod tests {
 
         let result = render_component(&component);
         assert_eq!(result, "(\u{201C}Title\u{201D})");
+    }
+
+    #[test]
+    fn underscore_title_mapping_key_matches_canonical_reference_type() {
+        let config: Config = serde_yaml::from_str(
+            "titles:\n  type-mapping:\n    personal_communication: component\n  component:\n    quote: true\n",
+        )
+        .expect("title configuration should parse");
+
+        let rendering = get_title_category_title_rendering(
+            &TitleType::Primary,
+            Some("personal-communication"),
+            None,
+            &config,
+        )
+        .expect("the normalized mapping should select component rendering");
+
+        assert_eq!(rendering.quote, Some(true));
     }
 }

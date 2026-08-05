@@ -5532,13 +5532,13 @@
       "type": "object",
       "properties": {
         "type-mapping": {
-          "description": "Mapping of reference types to title categories.\nCategory keys: monograph, periodical, component.\nExample: { \"thesis\": \"monograph\", \"article-journal\": \"periodical\" }\n`None` means \"not configured at this level\" and will not override an\ninherited value; explicit `type-mapping: ~` clears an inherited\nmapping entirely (see `docs/specs/STYLE_INHERITANCE.md`).",
+          "description": "Mapping of canonical reference types to title categories.\n\nUnknown reference types are retained for forward compatibility and\nreported by style validation. Category values are a closed vocabulary.\nExample: { \"thesis\": \"monograph\", \"article-journal\": \"periodical\" }\n`None` means \"not configured at this level\" and will not override an\ninherited value; explicit `type-mapping: ~` clears an inherited\nmapping entirely (see `docs/specs/STYLE_INHERITANCE.md`).",
           "type": [
             "object",
             "null"
           ],
           "additionalProperties": {
-            "type": "string"
+            "$ref": "#/$defs/TitleCategory"
           }
         },
         "component": {
@@ -5617,6 +5617,19 @@
         }
       },
       "unevaluatedProperties": false
+    },
+    "TitleCategory": {
+      "description": "Closed title-rendering category vocabulary. `collection` is accepted as a compatibility alias for `container-monograph`.",
+      "type": "string",
+      "enum": [
+        "component",
+        "monograph",
+        "periodical",
+        "serial",
+        "container-monograph",
+        "collection",
+        "default"
+      ]
     },
     "TitleRendering": {
       "description": "Rendering options for titles.",

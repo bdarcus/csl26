@@ -73,7 +73,7 @@ pub use grouping::{
 };
 pub use locale::Locale;
 pub use options::TextCase;
-pub use options::{BibliographyOptions, CitationOptions, Config};
+pub use options::{BibliographyOptions, CitationOptions, Config, ReferenceTypeName, TitleCategory};
 pub use presets::{ContributorPreset, DatePreset, SortPreset, SubstitutePreset, TitlePreset};
 pub use registry::{RegistryEntry, StyleRegistry};
 pub use style::{

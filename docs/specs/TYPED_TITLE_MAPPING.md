@@ -1,6 +1,6 @@
 # Typed Title Mapping Specification
 
-**Status:** Draft
+**Status:** Active
 **Version:** 1.0
 **Date:** 2026-08-05
 **Supersedes:** The `titles.type-mapping` open question in PR #1142
@@ -111,13 +111,19 @@ fallback.
 
 ## Acceptance Criteria
 
-- [ ] Invalid title-category values fail style parsing with the offending value.
-- [ ] Underscore-spelled mapping keys resolve against canonical kebab-case reference types.
-- [ ] Unknown reference-type keys load and produce a location-specific validation warning.
-- [ ] Duplicate keys after normalization fail style parsing.
-- [ ] Valid existing embedded styles render identically before and after the change.
-- [ ] Engine rendering and migration refinement agree for every title category and title position.
+- [x] Invalid title-category values fail style parsing with the offending value.
+- [x] Underscore-spelled mapping keys resolve against canonical kebab-case
+  reference types.
+- [x] Unknown reference-type keys load and produce a location-specific
+  validation warning.
+- [x] Duplicate keys after normalization fail style parsing.
+- [x] Valid existing embedded styles render identically before and after the
+  change.
+- [x] Engine rendering and migration refinement agree for every title category
+  and title position.
 
 ## Changelog
 
 - v1.0 (2026-08-05): Initial specification.
+- v1.0 implementation (2026-08-05): Activated after schema, engine, migration,
+  and embedded-style regression validation.

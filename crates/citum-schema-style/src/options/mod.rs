@@ -598,8 +598,8 @@ pub enum PageRangeFormat {
 pub mod titles;
 
 pub use title_class::{
-    TitleCategory, classified_ref_types, container_title_category, parent_serial_title_category,
-    title_category,
+    KNOWN_REFERENCE_TYPE_NAMES, ReferenceTypeName, TitleCategory, classified_ref_types,
+    container_title_category, parent_serial_title_category, title_category,
 };
 pub use titles::{TextCase, TitleRendering, TitlesConfig, TitlesConfigEntry};
 

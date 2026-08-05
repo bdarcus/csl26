@@ -5,8 +5,11 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus and Citum contributors
 
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
+use serde::de::Error as _;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+
+use super::{ReferenceTypeName, TitleCategory};
 
 /// Text-case transform applied to title-like fields.
 ///
@@ -71,14 +74,20 @@ impl TitlesConfigEntry {
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub struct TitlesConfig {
-    /// Mapping of reference types to title categories.
-    /// Category keys: monograph, periodical, component.
+    /// Mapping of canonical reference types to title categories.
+    ///
+    /// Unknown reference types are retained for forward compatibility and
+    /// reported by style validation. Category values are a closed vocabulary.
     /// Example: { "thesis": "monograph", "article-journal": "periodical" }
     /// `None` means "not configured at this level" and will not override an
     /// inherited value; explicit `type-mapping: ~` clears an inherited
     /// mapping entirely (see `docs/specs/STYLE_INHERITANCE.md`).
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub type_mapping: Option<HashMap<String, String>>,
+    #[serde(
+        default,
+        deserialize_with = "deserialize_type_mapping",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub type_mapping: Option<HashMap<ReferenceTypeName, TitleCategory>>,
     /// Formatting for component titles (articles, chapters).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub component: Option<TitleRendering>,
@@ -110,6 +119,62 @@ pub struct TitlesConfig {
     )]
     #[cfg_attr(feature = "schema", schemars(skip))]
     pub unknown_fields: std::collections::BTreeMap<String, serde_yaml::Value>,
+}
+
+impl TitlesConfig {
+    /// Return the authored category for a reference type, using canonical
+    /// underscore-to-hyphen normalization for lookup.
+    #[must_use]
+    pub fn mapped_category(&self, reference_type: &str) -> Option<TitleCategory> {
+        let key = ReferenceTypeName::from(reference_type);
+        self.type_mapping.as_ref()?.get(key.as_str()).copied()
+    }
+}
+
+struct TypeMapping(HashMap<ReferenceTypeName, TitleCategory>);
+
+impl<'de> Deserialize<'de> for TypeMapping {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        struct TypeMappingVisitor;
+
+        impl<'de> serde::de::Visitor<'de> for TypeMappingVisitor {
+            type Value = TypeMapping;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                formatter.write_str("a reference-type to title-category mapping")
+            }
+
+            fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
+            where
+                A: serde::de::MapAccess<'de>,
+            {
+                let mut result = HashMap::with_capacity(map.size_hint().unwrap_or(0));
+                while let Some((raw_key, category)) = map.next_entry::<String, TitleCategory>()? {
+                    let key = ReferenceTypeName::new(raw_key);
+                    if result.insert(key.clone(), category).is_some() {
+                        return Err(A::Error::custom(format!(
+                            "duplicate title type-mapping key `{key}` after normalization"
+                        )));
+                    }
+                }
+                Ok(TypeMapping(result))
+            }
+        }
+
+        deserializer.deserialize_map(TypeMappingVisitor)
+    }
+}
+
+fn deserialize_type_mapping<'de, D>(
+    deserializer: D,
+) -> Result<Option<HashMap<ReferenceTypeName, TitleCategory>>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    Option::<TypeMapping>::deserialize(deserializer).map(|mapping| mapping.map(|value| value.0))
 }
 
 /// Rendering options for titles.
@@ -221,5 +286,82 @@ mod tests {
     fn test_title_case_preset_name_resolves_through_config_entry() {
         let entry: TitlesConfigEntry = serde_yaml::from_str("title-case").unwrap();
         assert_eq!(entry.resolve(), TitlePreset::TitleCase.config());
+    }
+
+    #[test]
+    fn type_mapping_rejects_invalid_category() {
+        let error = serde_yaml::from_str::<TitlesConfig>(
+            "type-mapping:\n  article-journal: not-a-title-category\n",
+        )
+        .unwrap_err();
+
+        assert!(
+            error
+                .to_string()
+                .contains("unknown variant `not-a-title-category`")
+        );
+    }
+
+    #[test]
+    fn type_mapping_normalizes_underscore_keys_for_lookup_and_serialization() {
+        let config: TitlesConfig =
+            serde_yaml::from_str("type-mapping:\n  personal_communication: component\n").unwrap();
+
+        assert_eq!(
+            config.mapped_category("personal-communication"),
+            Some(TitleCategory::Component)
+        );
+        assert_eq!(
+            serde_yaml::to_string(&config).unwrap(),
+            "type-mapping:\n  personal-communication: component\n"
+        );
+    }
+
+    #[test]
+    fn type_mapping_rejects_duplicate_keys_after_normalization() {
+        let error = serde_yaml::from_str::<TitlesConfig>(
+            "type-mapping:\n  article_journal: component\n  article-journal: periodical\n",
+        )
+        .unwrap_err();
+
+        assert!(
+            error
+                .to_string()
+                .contains("duplicate title type-mapping key `article-journal` after normalization")
+        );
+    }
+
+    #[test]
+    fn type_mapping_accepts_collection_as_container_monograph_alias() {
+        let config: TitlesConfig =
+            serde_yaml::from_str("type-mapping:\n  chapter: collection\n").unwrap();
+
+        assert_eq!(
+            config.mapped_category("chapter"),
+            Some(TitleCategory::ContainerMonograph)
+        );
+        assert_eq!(
+            serde_yaml::to_string(&config).unwrap(),
+            "type-mapping:\n  chapter: container-monograph\n"
+        );
+    }
+
+    #[cfg(feature = "schema")]
+    #[test]
+    fn title_category_schema_includes_collection_compatibility_alias() {
+        let schema = serde_json::to_value(schemars::schema_for!(TitleCategory)).unwrap();
+
+        assert_eq!(
+            schema.get("enum"),
+            Some(&serde_json::json!([
+                "component",
+                "monograph",
+                "periodical",
+                "serial",
+                "container-monograph",
+                "collection",
+                "default"
+            ]))
+        );
     }
 }
