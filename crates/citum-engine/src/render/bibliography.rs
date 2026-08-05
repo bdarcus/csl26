@@ -13,7 +13,7 @@ use crate::render::component::{
 use crate::render::format::{OutputFormat, PunctuationPosition, RealizedPunctuation};
 use crate::render::plain::PlainText;
 use crate::render::punctuation::{
-    is_strong_terminal, leading_movable_mark, move_punctuation_into_quote,
+    leading_movable_mark, move_punctuation_into_quote, resolve_punctuation_collision,
     strong_terminal_comma_policy, visible_projection,
 };
 use crate::render::rich_text::{render_djot_inline, render_org_inline};
@@ -402,12 +402,20 @@ pub(crate) fn append_rendered_component<F: OutputFormat<Output = String>>(
                 entry_output.push(' ');
             }
         } else if ends_with_punctuation {
-            // English-compatible locales retain a comma after a strong terminal mark;
-            // locales configured for collapsing retain only the terminal mark.
-            if sep_first_char == ',' && is_strong_terminal(trimmed_last) {
-                if strong_terminal_comma_policy
-                    == citum_schema::options::StrongTerminalCommaPolicy::KeepBoth
-                {
+            // A comma separator meeting an already-punctuated boundary defers to
+            // the shared collision matrix, which is the single source of truth
+            // for what a pair of adjacent marks resolves to. It applies the
+            // locale's `strong-terminal-comma-policy` to `!?…`, keeps both marks
+            // after an abbreviation-ending period ("Eds." + ", " → "Eds., ") —
+            // a period is a *weak* terminal, so treating it as sentence-ending
+            // and dropping the comma was wrong — and collapses only where the
+            // comma is genuinely redundant ("Smith," + ", " → "Smith, ").
+            if sep_first_char == ',' {
+                let resolved =
+                    resolve_punctuation_collision(trimmed_last, ',', strong_terminal_comma_policy);
+                // The matrix returns either the trailing mark alone (the comma
+                // collapsed away) or that mark followed by the surviving comma.
+                if resolved.chars().count() > 1 && resolved.ends_with(',') {
                     entry_output.push_str(default_separator.text());
                 } else {
                     // `sep_first_char == ','` here is guaranteed by the outer
@@ -1175,6 +1183,86 @@ mod tests {
         );
 
         assert_eq!(entry_output, "Title?\u{00A0}Next");
+    }
+
+    /// given a component whose text ends in an *abbreviation* period (a role
+    /// label, an et-al phrase, an initialized institutional name), when the
+    /// style's separator is a comma, then the comma survives — a period is a
+    /// weak terminal, not a sentence end, so it must not swallow the
+    /// separator. Regression for csl26-g6bi: ieee rendered "Eds. The Handbook"
+    /// where citeproc-js renders "Eds., The Handbook".
+    #[rstest]
+    #[case("A. Bennett and D. Cho, Eds.", "The Handbook of Civic Archives")]
+    #[case("M. Lopez, Trans.", "Voices Across Borders")]
+    #[case("A. Vaswani et al.", "\u{201C}Attention Is All You Need,\u{201D}")]
+    #[case(
+        "U.K., U.S., and U.S.S.R.",
+        "\u{201C}Treaty Banning Nuclear Weapon Tests\u{201D}"
+    )]
+    fn given_a_trailing_abbreviation_period_when_the_separator_is_a_comma_then_the_comma_survives(
+        #[case] accumulated: &str,
+        #[case] next: &str,
+    ) {
+        let mut entry_output = accumulated.to_string();
+
+        append_rendered_component::<PlainText>(
+            &mut entry_output,
+            &rendered(next),
+            &sep(", "),
+            false,
+            citum_schema::options::StrongTerminalCommaPolicy::KeepBoth,
+            "\u{201D}",
+        );
+
+        assert_eq!(entry_output, format!("{accumulated}, {next}"));
+    }
+
+    /// given a boundary the comma separator is genuinely redundant at, when
+    /// the components are joined, then only one comma is emitted — the
+    /// collision matrix collapses `,` + `,` rather than doubling it.
+    #[rstest]
+    #[case("H. T. Reis and C. M. Judd,", "Eds.")]
+    #[case("Cambridge,", "MA")]
+    fn given_a_trailing_comma_when_the_separator_is_a_comma_then_it_is_not_doubled(
+        #[case] accumulated: &str,
+        #[case] next: &str,
+    ) {
+        let mut entry_output = accumulated.to_string();
+
+        append_rendered_component::<PlainText>(
+            &mut entry_output,
+            &rendered(next),
+            &sep(", "),
+            false,
+            citum_schema::options::StrongTerminalCommaPolicy::KeepBoth,
+            "\u{201D}",
+        );
+
+        assert_eq!(entry_output, format!("{accumulated} {next}"));
+    }
+
+    /// given a period-separator style (chicago, apa, the embedded majority),
+    /// when a component ends in a period, then the separator's period is not
+    /// re-emitted — the comma-separator change must leave this path untouched.
+    #[rstest]
+    #[case("Chicago: University of Chicago Press.", "2020")]
+    #[case("Smith, J. R.", "Foundations of Declarative Bibliography")]
+    fn given_a_period_separator_when_a_component_ends_in_a_period_then_no_period_is_added(
+        #[case] accumulated: &str,
+        #[case] next: &str,
+    ) {
+        let mut entry_output = accumulated.to_string();
+
+        append_rendered_component::<PlainText>(
+            &mut entry_output,
+            &rendered(next),
+            &sep(". "),
+            false,
+            citum_schema::options::StrongTerminalCommaPolicy::KeepBoth,
+            "\u{201D}",
+        );
+
+        assert_eq!(entry_output, format!("{accumulated} {next}"));
     }
 
     #[test]
