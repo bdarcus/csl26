@@ -1,10 +1,10 @@
 # Template Schema v3 Specification
 
 **Status:** Active
-**Version:** 0.5
-**Date:** 2026-06-24
+**Version:** 0.6
+**Date:** 2026-08-05
 **Supersedes:** `docs/specs/TEMPLATE_V2.md`
-**Related:** csl26-t3v1, `docs/specs/DISTRIBUTED_RESOLVER.md`
+**Related:** csl26-t3v1, csl26-zaxo, `docs/specs/DISTRIBUTED_RESOLVER.md`
 
 ## Purpose
 
@@ -273,7 +273,7 @@ The engine MUST process each operation list (`modify`, `remove`, `add`) in the o
     *   If no component matches, the operation MUST be ignored or treated as a validation error (implementation-defined, but validators SHOULD treat this as an error).
     *   If multiple components match, engines MUST treat this as a validation error or select the first match deterministically; style authors SHOULD avoid ambiguous `match` selectors.
 2.  **Apply Operation:**
-    *   `modify`: Overwrites rendering hints. If a `modify` operation attempts to change the component’s kind or primary value (e.g., `contributor: author` to `contributor: editor` or `variable: publisher` to `variable: url`), the style is invalid and must be rejected by validators or ignored by non-validating engines (implementation-defined).
+    *   `modify`: Overwrites rendering hints, and MAY clear inherited ones via `unset` (§5.1). If a `modify` operation attempts to change the component’s kind or primary value (e.g., `contributor: author` to `contributor: editor` or `variable: publisher` to `variable: url`), the style is invalid and must be rejected by validators or ignored by non-validating engines (implementation-defined).
     *   `remove`: Deletes the anchor from the list.
     *   `add`: Inserts a new component `before` or `after` the anchor. An `add` operation MAY specify either `before` or `after`, but not both. If both are present, the style is invalid. If the anchor in `before`/`after` does not match any component, the engine MUST append the new component to the end of the list.
 
@@ -302,12 +302,219 @@ bibliography:
 
 Engines SHOULD treat unreachable or invalid parent URIs as resolution errors; style authors MUST NOT assume offline resolution if remote parents are unavailable.
 
+### §5 — Variant Reuse Without Duplication
+
+§1–§4 give a diff model but leave two shapes inexpressible, and authors have
+been paying for both by pasting whole templates. This section closes them
+**without** relaxing the macro prohibition: neither addition introduces a named
+fragment that a template can call, and neither is reachable from a template
+body. They act only on the variant-resolution graph, which already exists.
+
+#### 5.1 Clearing an inherited field (`unset`)
+
+A `modify` operation can set a rendering field but not clear one. `Rendering`
+fields are all `Option`, and the merge assigns only where the incoming value is
+`Some`, so there is no value an author can write that means "the parent set
+this; I don't want it."
+
+The practical consequence is severe. A base template whose `title: primary`
+carries `wrap: { punctuation: quotes }` cannot be specialized into a variant
+that renders the title bare. The author's only recourse is `remove` + `add`,
+which restates the component *and its position* — reintroducing exactly the
+fragility the diff model exists to remove, because a later change to the base
+template's ordering silently stops flowing through.
+
+A `modify` operation MAY therefore carry `unset`, a list of rendering field
+names to clear on the anchor:
+
+```yaml
+type-variants:
+  book:
+    modify:
+      - match: { title: primary }
+        unset: [wrap]
+```
+
+Semantics:
+
+- Field names use the schema's kebab-case rendering vocabulary: `text-case`,
+  `emph`, `quote`, `strong`, `small-caps`, `vertical-align`, `prefix`,
+  `suffix`, `wrap`, `suppress`, `initialize-with`, `name-form`,
+  `strip-periods`, and `label-form` (the last valid only on a `number:`
+  anchor, matching where `modify` already accepts it).
+- An unrecognized field name is a validation error. It MUST NOT be silently
+  ignored: a typo that quietly leaves inherited quotes in place is precisely
+  the failure this operation exists to prevent.
+- Clearing a field the parent never set is a **no-op, not an error**. A diff
+  must stay valid when an upstream parent stops setting a field.
+- Within one operation, `unset` applies **before** that operation's own
+  rendering merge. `{ unset: [wrap], wrap: { punctuation: parentheses } }` is
+  therefore a replace, not a self-cancelling no-op. Ordering across separate
+  operations remains authored order, per §3.
+- `unset` MUST NOT change the component's kind or primary value; the §3
+  `modify` rule applies unchanged. `unset: [title]` is invalid.
+
+Alternative considered and rejected: an explicit YAML `null` (`wrap: null`).
+Serde cannot distinguish an absent key from an explicit null on `Option<T>`
+without lifting every field to `Option<Option<T>>` or hand-writing a
+deserializer for `Rendering` — a large, invasive change to the most-touched
+struct in the schema, in exchange for a spelling that reads as ambiguous
+(`prefix: null` vs `prefix: ""`). `unset` is self-describing, additive, costs
+one new field on the modify operation, and leaves `Rendering` untouched.
+
+#### 5.2 Abstract variants (`abstract-variants`)
+
+`extends` can only name something that is itself a reference type. When several
+types share a specialization, the author must either repeat it or pick one
+arbitrary type as the donor. `ieee.yaml` does the latter today —
+`entry-encyclopedia` extends `broadcast`, which asserts a relationship between
+encyclopedia entries and broadcasts that does not exist. Nothing in the file
+records that both are really "a standalone work, whose title is not quoted."
+
+A section MAY therefore declare `abstract-variants`, a sibling map to
+`type-variants` holding named, non-type bases:
+
+```yaml
+bibliography:
+  abstract-variants:
+    standalone-work:
+      modify:
+        - match: { title: primary }
+          unset: [wrap]
+
+  type-variants:
+    [broadcast, dataset, report]:
+      extends: standalone-work
+    book:
+      extends: standalone-work
+      modify:
+        - match: { variable: publisher-place }
+          prefix: ". "
+```
+
+Semantics:
+
+- An `abstract-variants` entry has the same value shape as a `type-variants`
+  entry: a full template or a diff. Omitting `extends` implicitly extends the
+  section's base `template`, exactly as in §1.
+- Its key is a **name, not a type selector**. It is never compared against a
+  reference type, so it can never be selected for rendering. Type-name
+  validation (`unknown reference type "…"`) MUST NOT fire for these keys.
+- `extends: X` resolves in order: local `type-variants[X]`, local
+  `abstract-variants[X]`, inherited `type-variants[X]`, inherited
+  `abstract-variants[X]`. A name defined in both local maps is a validation
+  error rather than a silent precedence win.
+- An abstract variant MAY extend another abstract variant. Cycles are detected
+  by the same mechanism as type-variant cycles and are a resolution error.
+- Abstract variants are a **resolution-time construct only**. A fully resolved
+  style contains concrete `type-variants` and no `abstract-variants`; the
+  renderer never sees them.
+- An abstract variant that nothing extends is dead weight, not an error.
+  Linters SHOULD warn.
+- Under §4, a child style MAY extend a remote parent's abstract variant, and
+  abstract variants merge by name on the same terms as type-variants.
+
+Alternative considered and rejected: a reserved sigil inside the existing
+`type-variants` key space (`_standalone-work`). It keeps one map but forces
+`TypeSelector` to mean two different things depending on a leading character,
+and every consumer — `matches`, `unknown_type_names`, validation, lint, the
+JSON schema — needs a carve-out. A separate map keeps `TypeSelector` meaning
+"reference type" and requires no carve-outs.
+
+#### 5.3 Worked example
+
+`ieee.yaml` today spells out six near-identical bibliography variants. Measured
+against its own base `template`, `personal_communication` is byte-identical;
+`broadcast`, `dataset`, and `report` are identical to each other and differ from
+the base only in dropping the title's quote wrap; `book` and `motion-picture`
+add one field each on top of that. Roughly 150 lines encode about four real
+decisions.
+
+Before (abridged — this shape repeats six times):
+
+```yaml
+type-variants:
+  broadcast:
+  - contributor: author
+    form: long
+    and: text
+    name-order: given-first
+    shorten: { min: 7, use-first: 1 }
+  - title: primary
+  - title: parent-monograph
+    emph: true
+  # … nine more components, copied verbatim from the base template …
+```
+
+After:
+
+```yaml
+abstract-variants:
+  standalone-work:
+    modify:
+      - match: { title: primary }
+        unset: [wrap]
+
+type-variants:
+  [broadcast, dataset, report]:
+    extends: standalone-work
+  book:
+    extends: standalone-work
+    modify:
+      - match: { variable: publisher-place }
+        prefix: ". "
+  entry-encyclopedia:
+    extends: standalone-work
+    modify:
+      - match: { number: pages }
+        label-form: short
+  # `personal_communication` is deleted: it was the base template.
+```
+
+Each variant now states its one real difference, and a change to the base
+template flows into all of them.
+
+#### 5.4 What remains forbidden
+
+This section MUST NOT be read as reopening macros. Unchanged from §"Scope":
+
+- There is still no named fragment a **template body** can invoke. Both
+  additions act on the variant graph; neither is reachable from a component
+  list.
+- `abstract-variants` entries are diffs over one section's base template, not
+  reusable component sequences. They cannot be shared across `citation` and
+  `bibliography`, and they take no arguments.
+- Resolution stays total and static: every variant is still derivable to a
+  concrete template before rendering, with no runtime dispatch.
+
+#### 5.5 Schema and tooling impact
+
+- `TemplateModifyOperation` gains `unset: Vec<RenderingField>`, defaulting to
+  empty and skipped when empty on serialize. `Rendering` is unchanged.
+- Each template section gains
+  `abstract-variants: Option<IndexMap<String, TemplateVariant>>`, skipped when
+  absent. `TypeSelector` is unchanged.
+- `just schema-gen` regenerates `docs/schemas/style.json`; `unset` surfaces as
+  an enum-constrained string array, `abstract-variants` as an object with
+  free-form keys and the existing `TemplateVariant` value schema.
+- Both fields are additive. Existing styles parse and resolve unchanged, so no
+  style migration is required.
+- `citum-migrate` SHOULD NOT start emitting either form on this change.
+  Converter output is compared against a pinned corpus, and changing its shape
+  would move migration-fidelity numbers for reasons unrelated to converter
+  quality. Teaching the converter to factor shared specializations out is
+  separate work, worth its own bean once hand-authored styles have exercised
+  the syntax.
+
 ---
 
 ## Acceptance Criteria
 
 - [x] Macros are absent from the spec.
 - [ ] `type-variants` schema supports `extends`, `modify`, `add`, and `remove` with defined matching and ordering semantics.
+- [ ] A `modify` operation can clear an inherited rendering field without restating the component's position (§5.1).
+- [ ] Several reference types can share one specialization through a named non-type base, without one of them being designated the arbitrary donor (§5.2).
+- [ ] A fully resolved style contains no `abstract-variants`, and abstract names never reach reference-type validation.
 - [ ] Style-level `options` expanded to handle contributor and date formatting policies, with clear precedence rules vs local component hints.
 - [ ] Engine resolution logic supports cross-URI template diffing, including recursive parent chains and error handling for missing parents.
 
@@ -315,6 +522,9 @@ Engines SHOULD treat unreachable or invalid parent URIs as resolution errors; st
 
 ## Changelog
 
+- v0.6 (2026-08-05): Add §5 — `unset` on `modify` for clearing an inherited
+  rendering field, and `abstract-variants` for named non-type bases. Both act
+  on the variant graph only; the macro prohibition is restated in §5.4.
 - v0.5 (2026-07-15): Clarify family inheritance, forbid named cross-section
   fragments, define authoritative date-fallback omission semantics, and allow
   narrowly scoped style-owned MF2 messages for textual classification.

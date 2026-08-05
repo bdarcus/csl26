@@ -1,10 +1,11 @@
 # Locale Messages Specification
 
 **Status:** Active
-**Version:** 1.7
-**Date:** 2026-06-26
+**Version:** 1.8
+**Date:** 2026-08-05
 **Supersedes:** (none)
-**Related:** bean `csl26-qrpo` (ICU4X upgrade), bean `csl26-v6ok`
+**Related:** bean `csl26-zaxo` (locale vocab override), bean `csl26-qrpo`
+(ICU4X upgrade), bean `csl26-v6ok`
 (locale-authored date patterns), bean `csl26-fdzc` (style phrase migration),
 bean `csl26-eh5c` (contributor phrase messages),
 [`CONTRIBUTOR_PHRASE_MESSAGES.md`](./CONTRIBUTOR_PHRASE_MESSAGES.md)
@@ -722,11 +723,63 @@ locale for a specific style or document. It lives in `locales/overrides/`.
 | `dateFormats` | `map` | Partial — only keys to override. |
 | `grammarOptions` | `map` | Partial — only keys to override. |
 | `dates` | `object` | Partial month/season name overrides, keyed by EDTF sub-year code — see [`LOCALE_DATE_NAME_KEYING.md`](./LOCALE_DATE_NAME_KEYING.md). |
+| `vocab` | `object` | Partial `genre` / `medium` display-name overrides — see §4.1. |
 
 **Merge semantics:** shallow key-level replacement. For each map
-(`messages`, `dateFormats`, `grammarOptions`, `dates`), keys present in the
-override replace matching keys in the base. Keys absent from the override
-retain their base values. There is no deep-merge or list-append behavior.
+(`messages`, `dateFormats`, `grammarOptions`, `dates`, `vocab`), keys present
+in the override replace matching keys in the base. Keys absent from the
+override retain their base values. There is no deep-merge or list-append
+behavior.
+
+#### 4.1 `vocab` — per-style genre and medium names
+
+`LocalePreset` carries a `vocab` block mapping canonical genre and medium keys
+to display text, resolved through `Locale::lookup_genre` /
+`Locale::lookup_medium`, with a kebab-to-display fallback for unknown keys.
+`LocaleOverride` cannot reach it, so display text for these keys is currently
+global to a base locale.
+
+That is too coarse. The canonical key is style-neutral by design — a reference
+records `genre: phd-thesis` — but its rendered form is a house-style decision.
+IEEE's published examples use `Ph.D. dissertation`, while en-US ships the
+generic `PhD thesis`. Today the only ways to render IEEE's form are to change
+the shared en-US locale (wrong for every other style) or to author a complete
+replacement locale (defeats the point of sparse overrides).
+
+`LocaleOverride` therefore gains a `vocab` block with the same shape as
+`LocalePreset.vocab`:
+
+```yaml
+# locales/overrides/en-US-ieee.yaml
+id: en-US-ieee
+base-locale: en-US
+
+vocab:
+  genre:
+    phd-thesis: "Ph.D. dissertation"
+```
+
+Semantics:
+
+- Merge is key-by-key within each of `vocab.genre` and `vocab.medium`,
+  matching `messages` and `dates` rather than `grammar-options`. Overriding one
+  genre key MUST NOT drop the base locale's remaining genre or medium entries.
+  A whole-block replacement would force every override to restate the full
+  vocabulary to change one entry, which is the shape
+  [`LOCALE_DATE_NAME_KEYING.md`](./LOCALE_DATE_NAME_KEYING.md) already rejected
+  for month names.
+- `genre` and `medium` merge independently; supplying one leaves the other at
+  its base values.
+- Keys are canonical kebab-case keys, not display strings. An override keyed by
+  display text (`"PhD thesis": …`) silently never matches; linters SHOULD warn
+  on a key that is absent from the base locale's vocabulary, since that is
+  almost always this mistake rather than a deliberate new key.
+- The unknown-key fallback is unchanged: a key in neither the base nor the
+  override still renders through kebab-to-display.
+
+Structurally this mirrors what `dates` already does, in the same three places:
+the `LocaleOverride` type, its raw deserialization mirror, and `apply_override`.
+No new resolution stage, and no change to `LocalePreset`.
 
 **Example — Chicago English:**
 
@@ -1141,6 +1194,9 @@ Engine behavior by `localeSchemaVersion`:
 
 ## Changelog
 
+- v1.8 (2026-08-05): Add `vocab` to `LocaleOverride` (§4.1) so a style can
+  override individual genre or medium display names on top of a base locale,
+  merged key-by-key like `messages` and `dates`.
 - v1.7 (2026-06-26): Link the dedicated contributor phrase message spec and
   replace the earlier deferred placeholder with the initial
   `pattern.in-contributor-container` and `pattern.container-contributor-title`
