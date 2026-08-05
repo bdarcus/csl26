@@ -721,7 +721,7 @@ bibliography:
       prefix: '. CSTR:'
     - variable: doi
       prefix: '. DOI:'
-    manuscript,personal_communication,pamphlet:
+    manuscript,personal-communication,pamphlet:
     - contributor: author
       form: long
       name-order: family-first

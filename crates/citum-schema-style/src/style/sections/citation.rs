@@ -62,7 +62,17 @@ pub struct CitationSpec {
     /// Type-variant lookup happens after mode (integral/non-integral) resolution.
     /// If both the main spec and the active mode sub-spec have a `type-variants`
     /// entry for the same type, the mode-specific one wins.
-    #[serde(skip_serializing_if = "Option::is_none", rename = "type-variants")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        rename = "type-variants"
+    )]
+    #[cfg_attr(
+        feature = "schema",
+        schemars(
+            schema_with = "crate::template::type_keyed_map_schema::<crate::template::TemplateVariant>"
+        )
+    )]
     pub type_variants: Option<TemplateVariants>,
     /// Wrap the entire citation in punctuation. Preferred over prefix/suffix.
     #[serde(skip_serializing_if = "Option::is_none")]

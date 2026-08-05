@@ -55,10 +55,10 @@ bibliography:
     label-mode: numeric
     label-wrap: brackets
   type-variants:
-    # `all` matches every type and is resolved first (engine returns the first
-    # matching selector), so any type-specific variant must precede it to take
-    # effect. Journal articles place the year in parentheses between volume and
-    # pages (`Nature 521 (2015) 436–444`) per the Elsevier with-titles guide.
+    # Types with no entry here render the section `template:` below, which is
+    # the style's only wildcard. Journal articles place the year in parentheses
+    # between volume and pages (`Nature 521 (2015) 436–444`) per the Elsevier
+    # with-titles guide.
     article-journal:
     - delimiter: { mark: comma }
       group:
@@ -83,65 +83,6 @@ bibliography:
       - number: edition
       - variable: publisher
       - variable: publisher-place
-      - variable: url
-        links:
-          target: url
-          anchor: component
-      - message: pattern.accessed-date
-        args:
-          date:
-            group:
-              - date: accessed
-                form: month-day
-              - date: accessed
-                form: year
-                prefix: ", "
-            delimiter: " "
-        wrap:
-          punctuation: parentheses
-      - variable: number
-      - variable: doi
-        prefix: ". https://doi.org/"
-        links:
-          target: doi
-          anchor: component
-        suffix: "."
-    all:
-    - delimiter: { mark: comma }
-      group:
-      - contributor: author
-        form: long
-        name-form: initials
-        initialize-with: "."
-      - title: primary
-      - delimiter: { mark: comma }
-        group:
-        - delimiter: ": "
-          group:
-          - message: pattern.in-container
-            args:
-              container:
-                contributor: editor
-                form: long
-                initialize-with: "."
-                label:
-                  term: editor
-                  form: short
-                  placement: suffix
-                  prefix: " ("
-                  suffix: ")"
-                  text-case: capitalize-first
-        - title: parent-monograph
-        - delimiter: " "
-          group:
-          - title: parent-serial
-          - number: volume
-          - number: pages
-      - number: edition
-      - variable: publisher
-      - variable: publisher-place
-      - date: issued
-        form: year
       - variable: url
         links:
           target: url

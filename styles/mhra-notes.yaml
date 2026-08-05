@@ -306,7 +306,6 @@ bibliography:
           - date: issued
             form: year
             prefix: ", "
-    personal_communication: []
     personal-communication: []
     interview:
       - contributor: interviewer
@@ -338,7 +337,7 @@ bibliography:
         form: year
         prefix: ", "
         suffix: ")"
-    motion_picture:
+    motion-picture:
       - contributor: author
         form: long
         name-order: family-first

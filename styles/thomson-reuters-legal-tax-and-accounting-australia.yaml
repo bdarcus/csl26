@@ -86,7 +86,7 @@ citation:
             prefix: ', '
             wrap:
               punctuation: quotes
-      legislation:
+      statute:
         modify:
           - match:
               title: primary

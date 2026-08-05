@@ -213,7 +213,7 @@ pub(super) fn ensure_inferred_media_type_templates(
             },
         ));
         if template.len() >= 3 {
-            map.insert(TypeSelector::Single("motion_picture".to_string()), template);
+            map.insert(TypeSelector::Single("motion-picture".to_string()), template);
         }
     }
 
@@ -293,7 +293,7 @@ pub(super) fn ensure_personal_communication_omitted(
     }
     let map = type_templates.get_or_insert_with(indexmap::IndexMap::new);
     map.insert(
-        TypeSelector::Single("personal_communication".to_string()),
+        TypeSelector::Single("personal-communication".to_string()),
         Vec::new(),
     );
     map.insert(

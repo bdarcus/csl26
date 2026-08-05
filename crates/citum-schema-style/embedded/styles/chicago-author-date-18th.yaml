@@ -104,7 +104,7 @@ citation:
         and-others: et-al
     - title: primary
       prefix: ", "
-    personal_communication:
+    personal-communication:
     - group:
       - contributor: author
         form: short
@@ -837,7 +837,7 @@ bibliography:
       remove:
         - match:
             contributor: translator
-    personal_communication:
+    personal-communication:
     - group:
       - contributor: author
         form: long
@@ -917,7 +917,6 @@ bibliography:
         field-present: publisher
         field-absent: archive-location
       delimiter: ". "
-    personal-communication: []
   template:
   - contributor: author
     form: long

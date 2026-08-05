@@ -699,14 +699,46 @@ bibliography:
 fn validate_type_name_accepts_known_types() {
     assert!(template::validate_type_name("article-journal"));
     assert!(template::validate_type_name("legal-case"));
-    assert!(template::validate_type_name("all"));
     assert!(template::validate_type_name("default"));
 }
 
-#[test]
-fn validate_type_name_normalizes_underscores() {
-    assert!(template::validate_type_name("article_journal"));
-    assert!(template::validate_type_name("legal_case"));
+#[rstest::rstest]
+#[case::removed_wildcard("all")]
+#[case::underscore_spelling("article_journal")]
+#[case::underscore_legal_case("legal_case")]
+fn given_a_non_canonical_selector_name_when_validated_then_rejected(#[case] name: &str) {
+    // given a selector name that is not the canonical hyphenated spelling
+    // when validating it as a reference type name
+    // then it is rejected, matching the vocabulary the schema enumerates
+    assert!(!template::validate_type_name(name));
+}
+
+#[rstest::rstest]
+#[case::book("book", "book")]
+#[case::underscore_reference_data("legal-case", "legal_case")]
+fn given_a_canonical_selector_when_matching_reference_data_then_matches(
+    #[case] selector: &str,
+    #[case] ref_type: &str,
+) {
+    // given a canonically spelled selector
+    // when matched against reference data, including underscore-spelled data
+    // then it matches: normalization applies to incoming data, not to authoring
+    let selector = template::TypeSelector::Single(selector.to_string());
+    assert!(selector.matches(ref_type));
+}
+
+#[rstest::rstest]
+#[case::wildcard_gone_for_book("all", "book")]
+#[case::wildcard_gone_for_article("all", "article-journal")]
+fn given_the_removed_all_selector_when_matching_any_type_then_no_match(
+    #[case] selector: &str,
+    #[case] ref_type: &str,
+) {
+    // given the removed `all` selector
+    // when matched against any reference type
+    // then it matches nothing; the section template is the only wildcard
+    let selector = template::TypeSelector::Single(selector.to_string());
+    assert!(!selector.matches(ref_type));
 }
 
 #[test]

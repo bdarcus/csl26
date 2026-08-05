@@ -14,6 +14,10 @@ pre-commit:
 test:
     ./scripts/dev-env.sh cargo nextest run
 
+# Validate tracked styles and locales against the published JSON schemas
+schema-validate:
+    node scripts/validate-schemas.js --scope=styles,locales
+
 # Regenerate schemas when crates/citum-cli or schema crates change
 schema-gen:
     ./scripts/dev-env.sh cargo run --bin citum --features schema -- schema --out-dir docs/schemas

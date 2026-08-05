@@ -129,7 +129,7 @@ bibliography:
             contributor: editor
             form: short
             name-order: given-first
-    personal_communication:
+    personal-communication:
       remove:
         - match:
             title: primary
@@ -155,7 +155,7 @@ bibliography:
         date:
           date: accessed
           form: full
-    legal_case:
+    legal-case:
     - title: primary
       emph: true
     - date: issued
