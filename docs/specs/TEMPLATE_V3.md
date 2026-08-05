@@ -1,8 +1,8 @@
 # Template Schema v3 Specification
 
 **Status:** Active
-**Version:** 0.5
-**Date:** 2026-06-24
+**Version:** 0.6
+**Date:** 2026-08-05
 **Supersedes:** `docs/specs/TEMPLATE_V2.md`
 **Related:** csl26-t3v1, `docs/specs/DISTRIBUTED_RESOLVER.md`
 
@@ -302,12 +302,39 @@ bibliography:
 
 Engines SHOULD treat unreachable or invalid parent URIs as resolution errors; style authors MUST NOT assume offline resolution if remote parents are unavailable.
 
+### §5 — Templates Own Structure; Options Own Rendering Policy
+
+Templates own which components appear and in what order. Rendering policy that
+varies by what kind of work a reference is, especially title quoting, emphasis,
+and text case, belongs in `options.titles`, keyed by reference type through
+`type-mapping`.
+
+This is a behavioral boundary, not an authoring preference. When a title
+substitutes for a missing contributor, there is no `TemplateTitle` from which
+to inherit component-local rendering. The substitute path therefore resolves
+title rendering from `options.titles`. A template-level quote wrapper can make
+the ordinary title look correct while leaving the substituted title wrong.
+
+```yaml
+options:
+  titles:
+    type-mapping: { thesis: component, report: component }
+    component: { quote: true }
+    monograph: { emph: true }
+```
+
+Style authors SHOULD use template rendering only for policy local to that
+specific template position. See
+[`TYPED_TITLE_MAPPING.md`](./TYPED_TITLE_MAPPING.md) for the mapping's typed
+contract.
+
 ---
 
 ## Acceptance Criteria
 
 - [x] Macros are absent from the spec.
 - [ ] `type-variants` schema supports `extends`, `modify`, `add`, and `remove` with defined matching and ordering semantics.
+- [ ] Title quoting, emphasis, and text case are expressible once in `options.titles` for every reference type.
 - [ ] Style-level `options` expanded to handle contributor and date formatting policies, with clear precedence rules vs local component hints.
 - [ ] Engine resolution logic supports cross-URI template diffing, including recursive parent chains and error handling for missing parents.
 
@@ -315,6 +342,8 @@ Engines SHOULD treat unreachable or invalid parent URIs as resolution errors; st
 
 ## Changelog
 
+- v0.6 (2026-08-05): State the boundary between structural templates and
+  category-level title rendering policy.
 - v0.5 (2026-07-15): Clarify family inheritance, forbid named cross-section
   fragments, define authoritative date-fallback omission semantics, and allow
   narrowly scoped style-owned MF2 messages for textual classification.
