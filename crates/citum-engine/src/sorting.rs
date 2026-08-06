@@ -34,8 +34,16 @@ enum PrimaryContributorSpec<'a> {
     Bibliography(&'a citum_schema::BibliographySpec),
 }
 
-fn compare_optional_years(a_year: Option<i32>, b_year: Option<i32>) -> std::cmp::Ordering {
-    match (a_year, b_year) {
+/// Compares two optional values, with `None` sorting after every `Some`.
+/// `Option::cmp`'s default (`None` first) is not equivalent and must not be
+/// substituted for this. Shared by full-date `Issued` comparisons
+/// (`ReferenceSorter::compare_by_issued`, `cache_sort_value`) and reference-id
+/// comparisons (`ReferenceSorter::compare_cached_ids`,
+/// `Disambiguator::compare_reference_ids` in `processor/disambiguation.rs`)
+/// so the tiebreak semantics can't drift between the two — csl26-m8la,
+/// PR #1150 review.
+pub(crate) fn compare_none_last<T: Ord>(a: Option<T>, b: Option<T>) -> std::cmp::Ordering {
+    match (a, b) {
         (Some(a), Some(b)) => a.cmp(&b),
         (Some(_), None) => std::cmp::Ordering::Less,
         (None, Some(_)) => std::cmp::Ordering::Greater,
@@ -67,7 +75,7 @@ enum CachedSortValue {
     RefType { name: String, rank: Option<usize> },
     OptionalText(Option<String>),
     Text(String),
-    Issued(Option<i32>),
+    Issued(Option<(i32, u32, u32)>),
 }
 
 enum CompiledSortKey<'a> {
@@ -206,16 +214,10 @@ impl<'a> ReferenceSorter<'a> {
             .collect()
     }
 
-    /// Deterministic tiebreaker: compare cached reference IDs as `&str`.
-    ///
-    /// `None` IDs sort last (missing ID > any present ID).
+    /// Deterministic tiebreaker: compare cached reference IDs as `&str`,
+    /// with a missing ID sorting last (see [`compare_none_last`]).
     fn compare_cached_ids(a: &CachedReference<'_>, b: &CachedReference<'_>) -> std::cmp::Ordering {
-        match (&a.id, &b.id) {
-            (Some(a_id), Some(b_id)) => a_id.as_str().cmp(b_id.as_str()),
-            (Some(_), None) => std::cmp::Ordering::Less,
-            (None, Some(_)) => std::cmp::Ordering::Greater,
-            (None, None) => std::cmp::Ordering::Equal,
-        }
+        compare_none_last(a.id.as_deref(), b.id.as_deref())
     }
 
     /// Compare two references by a single sort key.
@@ -370,7 +372,9 @@ impl<'a> ReferenceSorter<'a> {
                 self.extract_author_sort_key_opt(reference, *name_order),
             ),
             CompiledSortKey::Title { .. } => CachedSortValue::Text(self.title_sort_key(reference)),
-            CompiledSortKey::Issued { .. } => CachedSortValue::Issued(Self::issued_year(reference)),
+            CompiledSortKey::Issued { .. } => {
+                CachedSortValue::Issued(Self::issued_date_parts(reference))
+            }
             CompiledSortKey::Field { field_name, .. } => {
                 CachedSortValue::Text(Self::field_sort_value(reference, field_name))
             }
@@ -444,8 +448,8 @@ impl<'a> ReferenceSorter<'a> {
             (CachedSortValue::Text(a_text), CachedSortValue::Text(b_text)) => {
                 self.text_collator.compare(a_text, b_text)
             }
-            (CachedSortValue::Issued(a_year), CachedSortValue::Issued(b_year)) => {
-                compare_optional_years(*a_year, *b_year)
+            (CachedSortValue::Issued(a_date), CachedSortValue::Issued(b_date)) => {
+                compare_none_last(*a_date, *b_date)
             }
             _ => std::cmp::Ordering::Equal,
         }
@@ -588,11 +592,9 @@ impl<'a> ReferenceSorter<'a> {
         self.text_collator.compare(&a_title, &b_title)
     }
 
-    /// Compare by issued date.
+    /// Compare by full issued date (year, month, day).
     fn compare_by_issued(a: &Reference, b: &Reference) -> std::cmp::Ordering {
-        let a_year = Self::issued_year(a);
-        let b_year = Self::issued_year(b);
-        compare_optional_years(a_year, b_year)
+        compare_none_last(Self::issued_date_parts(a), Self::issued_date_parts(b))
     }
 
     /// Compare by custom field.
@@ -604,11 +606,15 @@ impl<'a> ReferenceSorter<'a> {
         title_sort_key_with_options(reference, self.locale, &self.sort_key_options)
     }
 
-    fn issued_year(reference: &Reference) -> Option<i32> {
-        reference
-            .effective_issued_date()
-            .and_then(|d| d.year().parse::<i32>().ok())
-            .filter(|year| *year != 0)
+    /// Full (year, month, day) for sort comparison. A missing month or day
+    /// defaults to `0`, sorting before any real value - the less precise a
+    /// date is, the earlier it's treated, matching EDTF's own
+    /// could-be-anywhere-in-range convention for reduced precision.
+    fn issued_date_parts(reference: &Reference) -> Option<(i32, u32, u32)> {
+        let date = reference.effective_issued_date()?;
+        let (year, month, day) = date.date_parts()?;
+        let year = i32::try_from(year).ok().filter(|year| *year != 0)?;
+        Some((year, month.unwrap_or(0), day.unwrap_or(0)))
     }
 
     fn field_sort_value(reference: &Reference, field_name: &str) -> String {

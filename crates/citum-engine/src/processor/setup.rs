@@ -642,7 +642,7 @@ impl Processor {
         let bibliography_config = self.get_bibliography_config();
         let bibliography_sort = self.resolved_bibliography_sort();
 
-        let mut disambiguator = if let Some((resolved_sort, _id_tiebreak)) = &bibliography_sort {
+        let mut disambiguator = if let Some((resolved_sort, id_tiebreak)) = &bibliography_sort {
             Disambiguator::with_group_sort(
                 &self.bibliography,
                 config,
@@ -650,6 +650,7 @@ impl Processor {
                 &self.locale,
                 resolved_sort,
             )
+            .with_id_tiebreak(*id_tiebreak)
         } else {
             Disambiguator::new(
                 &self.bibliography,

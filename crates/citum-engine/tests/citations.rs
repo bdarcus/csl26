@@ -24,6 +24,7 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus and Citum contributors
 mod common;
 use citum_schema::reference::ClassExtension;
 use common::*;
+use rstest::rstest;
 
 use citum_engine::{Processor, render::html::Html};
 use citum_schema::{
@@ -3127,4 +3128,131 @@ fn leading_non_author_contributor_renders_once_in_grouped_citation() {
     let result = process_citation_ids(&processor, &["item1"]);
 
     assert_eq!(result, "Tr Translatorsen");
+}
+
+/// **Given** an author-date style whose resolved bibliography sort has no
+/// keys that distinguish a same-author/same-year collision group — either no
+/// keys at all (the `citation-number` preset, which is how
+/// `gb-t-7714-2025-author-date` reached this bug via its inherited numeric
+/// base) or keys that tie for every member (an explicit `author`+`issued`
+/// template, since both references below share both),
+/// **When** each reference is cited,
+/// **Then** the year-suffix letter follows the bibliography's registration
+/// (registry) order — matching how `ReferenceSorter` renders that same tie,
+/// since disambiguation hints are computed once for the whole processor and
+/// shared by citation and bibliography rendering — not an independently
+/// computed title order. csl26-m8la.
+#[rstest]
+#[case::citation_number_preset_empty_template(GroupSortEntry::Preset(
+    citum_schema::SortPreset::CitationNumber
+))]
+#[case::explicit_author_issued_template(GroupSortEntry::Explicit(GroupSort {
+    template: vec![
+        GroupSortKey {
+            key: GroupSortKeyType::Author,
+            ascending: true,
+            order: None,
+            sort_order: None,
+        },
+        GroupSortKey {
+            key: GroupSortKeyType::Issued,
+            ascending: true,
+            order: None,
+            sort_order: None,
+        },
+    ],
+}))]
+fn given_a_tied_bibliography_sort_when_citing_then_year_suffixes_follow_registration_order(
+    #[case] bibliography_sort: GroupSortEntry,
+) {
+    use citum_schema::reference::{Contributor, StructuredName};
+
+    let style = Style {
+        info: StyleInfo {
+            title: Some("Year Suffix Registration Order Test".to_string()),
+            id: Some("year-suffix-registration-order-test".into()),
+            ..Default::default()
+        },
+        options: Some(Config {
+            processing: Some(Processing::Custom(ProcessingCustom {
+                base: None,
+                disambiguate: Some(citum_schema::options::Disambiguation {
+                    names: false,
+                    add_givenname: false,
+                    givenname_rule: GivennameRule::default(),
+                    year_suffix: true,
+                }),
+                ..Default::default()
+            })),
+            ..Default::default()
+        }),
+        citation: Some(CitationSpec {
+            template: Some(vec![
+                citum_schema::tc_contributor!(Author, Short),
+                citum_schema::tc_date!(
+                    Issued,
+                    Year,
+                    wrap = citum_schema::template::WrapPunctuation::Parentheses
+                ),
+            ]),
+            ..Default::default()
+        }),
+        bibliography: Some(citum_schema::BibliographySpec {
+            sort: Some(bibliography_sort),
+            template: Some(vec![citum_schema::tc_title!(Primary)]),
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
+
+    // Registered in an order that disagrees with title-alphabetical (which
+    // would put "Alpha Report" first) — proving suffixes follow registration,
+    // not a fresh title computation.
+    let mut bibliography = indexmap::IndexMap::new();
+    bibliography.insert(
+        "gamma".to_string(),
+        InputReference::Monograph(Box::new(Monograph {
+            id: Some("gamma".into()),
+            r#type: MonographType::Book,
+            title: Some(Title::Single("Gamma Report".to_string())),
+            author: Some(Contributor::StructuredName(StructuredName {
+                given: "Same".into(),
+                family: "Smith".into(),
+                ..Default::default()
+            })),
+            issued: DateValue::new("2020".to_string()),
+            ..Default::default()
+        })),
+    );
+    bibliography.insert(
+        "alpha".to_string(),
+        InputReference::Monograph(Box::new(Monograph {
+            id: Some("alpha".into()),
+            r#type: MonographType::Book,
+            title: Some(Title::Single("Alpha Report".to_string())),
+            author: Some(Contributor::StructuredName(StructuredName {
+                given: "Same".into(),
+                family: "Smith".into(),
+                ..Default::default()
+            })),
+            issued: DateValue::new("2020".to_string()),
+            ..Default::default()
+        })),
+    );
+
+    let processor = Processor::new(style, bibliography);
+
+    // Both references share author and year, so their rendered citations
+    // differ only by the year-suffix letter the disambiguator assigns. The
+    // suffix must follow registration order ("gamma" then "alpha"): "a" then
+    // "b" — not title order, which would put "Alpha Report" ("alpha") first.
+    let gamma_rendered = processor
+        .process_citation(&Citation::simple("gamma"))
+        .expect("gamma citation should render");
+    let alpha_rendered = processor
+        .process_citation(&Citation::simple("alpha"))
+        .expect("alpha citation should render");
+
+    assert_eq!(gamma_rendered, "Smith, (2020a)");
+    assert_eq!(alpha_rendered, "Smith, (2020b)");
 }
