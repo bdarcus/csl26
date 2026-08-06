@@ -10,7 +10,7 @@ use citum_schema::reference::Title;
 use std::collections::{HashMap, HashSet};
 use std::fmt::Write as _;
 
-use crate::sorting::ReferenceSorter;
+use crate::sorting::{ReferenceSorter, compare_none_last};
 use citum_schema::grouping::GroupSort;
 use citum_schema::locale::Locale;
 
@@ -65,6 +65,12 @@ pub struct Disambiguator<'a> {
     citation_spec: Option<&'a citum_schema::CitationSpec>,
     citation_primary_may_be_list: bool,
     bibliography_spec: Option<&'a citum_schema::BibliographySpec>,
+    /// Whether the resolved bibliography sort breaks ties by reference id, as
+    /// `ReferenceSorter::sort_references_with_id_tiebreak` does. Mirrors the
+    /// renderer's tiebreak in `sort_group_for_year_suffix` so year-suffix
+    /// order agrees with render order even when the sort keys alone don't
+    /// fully determine it. csl26-m8la.
+    id_tiebreak: bool,
 }
 
 #[derive(Clone, Copy, Default)]
@@ -133,6 +139,12 @@ struct CachedReferenceData {
     group_key: String,
     names: Vec<crate::reference::FlatName>,
     title_key: Option<String>,
+    /// Position of this reference in the bibliography's registry
+    /// (`IndexMap`) order — the same order `ReferenceSorter` falls back to
+    /// when a resolved sort has no keys, or no keys, left to compare. Used by
+    /// `sort_group_for_year_suffix` to mirror the renderer's tiebreak instead
+    /// of an independently-computed title order. csl26-m8la.
+    index: usize,
 }
 
 impl<'a> Disambiguator<'a> {
@@ -157,6 +169,7 @@ impl<'a> Disambiguator<'a> {
             citation_spec: None,
             citation_primary_may_be_list: false,
             bibliography_spec: None,
+            id_tiebreak: false,
         }
     }
 
@@ -182,6 +195,7 @@ impl<'a> Disambiguator<'a> {
             citation_spec: None,
             citation_primary_may_be_list: false,
             bibliography_spec: None,
+            id_tiebreak: false,
         }
     }
 
@@ -197,6 +211,18 @@ impl<'a> Disambiguator<'a> {
     #[must_use]
     pub fn with_bibliography_spec(mut self, spec: &'a citum_schema::BibliographySpec) -> Self {
         self.bibliography_spec = Some(spec);
+        self
+    }
+
+    /// Mark that the resolved bibliography sort breaks ties by reference id.
+    ///
+    /// Pass the same flag `Processor::resolved_bibliography_sort` returns for
+    /// the sort used to render the final bibliography
+    /// (`ReferenceSorter::sort_references_with_id_tiebreak`), so year-suffix
+    /// order agrees with render order.
+    #[must_use]
+    pub fn with_id_tiebreak(mut self, id_tiebreak: bool) -> Self {
+        self.id_tiebreak = id_tiebreak;
         self
     }
 
@@ -361,6 +387,7 @@ impl<'a> Disambiguator<'a> {
                         group_key,
                         names,
                         title_key,
+                        index,
                     },
                 }
             })
@@ -798,18 +825,48 @@ impl<'a> Disambiguator<'a> {
             } else if let Some(spec) = self.citation_spec {
                 sorter = sorter.with_citation_spec(spec);
             }
-            // Pre-sort by title_key so that entries which compare equal under the primary
-            // sort_spec retain a stable, deterministic order (title ascending as tiebreaker).
-            // `sort_by_keys` uses sort_by (stable), so the pre-sort order is preserved for
-            // entries that compare equal under the primary key.
+            // Pre-sort so entries that compare equal under the primary sort_spec keep a
+            // stable, deterministic order — matching the renderer, not an independently
+            // computed title order. `sort_by_keys` uses sort_by (stable), so the pre-sort
+            // order survives for entries that tie under the primary key.
+            //
+            // The renderer (`ReferenceSorter::sort_references_impl`, sorting.rs) stable-
+            // sorts the registry-ordered bibliography and, only when the resolved sort
+            // opts into it, breaks ties by reference id afterward (`compare_cached_ids`).
+            // An empty template is a renderer no-op — `sort_references_impl` early-
+            // returns on `compiled_keys.is_empty()` — so neither the id nor the date
+            // comparison below may run for it; registry order must survive untouched.
+            // Only once the template is non-empty does the renderer's stable sort
+            // actually engage those finer tiebreaks, so both steps are gated on that,
+            // not just on `id_tiebreak`.
+            //
+            // No date comparison here: `sort_by_keys` below (shared with the real
+            // bibliography renderer) already compares full issued dates — not just the
+            // year — for a resolved `Issued` sort key
+            // (`ReferenceSorter::compare_by_issued`/`issued_date_parts`, sorting.rs). A
+            // same-year, no-title collision pair that used to tie under a year-only
+            // Issued key (`chicago-author-date-18th`'s May/September Gourmet magazine
+            // entries) now resolves through that one shared comparator instead of a
+            // second, independently-maintained date comparison here — duplicating it
+            // would only risk the two drifting apart again. Only registry `index` is
+            // still needed as the final tiebreak, for entries that remain fully tied
+            // after every key in the resolved template. Gated on a non-empty template:
+            // an empty one is a renderer no-op (`sort_references_impl`'s early return),
+            // so `sort_by_keys` never runs and `index` alone must decide order.
             let mut pre_sorted: Vec<&CachedReference<'_>> = group.to_vec();
-            pre_sorted.sort_by(|a, b| {
-                let a_title = a.data.title_key.as_deref().unwrap_or_default();
-                let b_title = b.data.title_key.as_deref().unwrap_or_default();
-                a_title.cmp(b_title).then_with(|| {
-                    year_suffix_date_key(a.reference).cmp(&year_suffix_date_key(b.reference))
-                })
-            });
+            if sort_spec.template.is_empty() {
+                pre_sorted.sort_by_key(|cached| cached.data.index);
+            } else if self.id_tiebreak {
+                pre_sorted.sort_by(|a, b| {
+                    compare_none_last(
+                        a.reference.id().map(|id| id.0),
+                        b.reference.id().map(|id| id.0),
+                    )
+                    .then_with(|| a.data.index.cmp(&b.data.index))
+                });
+            } else {
+                pre_sorted.sort_by_key(|cached| cached.data.index);
+            }
             sorter.sort_by_keys(pre_sorted, &sort_spec.template, |cached| {
                 Some(cached.reference)
             })
@@ -1125,6 +1182,36 @@ mod tests {
         }))
     }
 
+    /// Like `make_ref`, but with an independently chosen title — `make_ref`'s
+    /// title is derived from `id`, which makes id order and title order
+    /// coincide and so cannot distinguish which one a sort actually used.
+    fn make_ref_with_title(
+        id: &str,
+        family: &str,
+        given: &str,
+        year: i32,
+        title: &str,
+    ) -> Reference {
+        Reference::Monograph(Box::new(Monograph {
+            id: Some(id.into()),
+            r#type: MonographType::Book,
+            title: Some(Title::Single(title.to_string())),
+            short_title: None,
+            container: None,
+            author: Some(Contributor::StructuredName(StructuredName {
+                family: MultilingualString::Simple(family.to_string()),
+                given: MultilingualString::Simple(given.to_string()),
+                suffix: None,
+                dropping_particle: None,
+                non_dropping_particle: None,
+            })),
+            editor: None,
+            translator: None,
+            issued: DateValue::new(year.to_string()),
+            ..Default::default()
+        }))
+    }
+
     fn make_ref_without_id(title_suffix: &str, family: &str, given: &str, year: i32) -> Reference {
         let title = format!("Title {title_suffix}");
         Reference::Monograph(Box::new(Monograph {
@@ -1280,6 +1367,202 @@ mod tests {
             rendered_r2.contains("2020a"),
             "expected r2 to sort first: {rendered_r2}"
         );
+    }
+
+    /// Two same-author/same-year references whose registration order
+    /// disagrees with both title order ("Alpha Report" < "Beta Report") and id order
+    /// ("a-ref" < "b-ref"), so each ordering is independently distinguishable
+    /// in the tests below. csl26-m8la.
+    fn build_diverging_order_group() -> Bibliography {
+        let mut bib = Bibliography::new();
+        bib.insert(
+            "b-ref".to_string(),
+            make_ref_with_title("b-ref", "Smith", "Same", 2020, "Beta Report"),
+        );
+        bib.insert(
+            "a-ref".to_string(),
+            make_ref_with_title("a-ref", "Smith", "Same", 2020, "Alpha Report"),
+        );
+        bib
+    }
+
+    #[test]
+    fn test_empty_group_sort_template_follows_registration_order() {
+        let bib = build_diverging_order_group();
+        let config = Config::default();
+        let locale = Locale::en_us();
+        let sort_spec = GroupSort { template: vec![] };
+
+        let disamb = Disambiguator::with_group_sort(&bib, &config, &config, &locale, &sort_spec);
+        let hints = disamb.calculate_hints();
+
+        // Registered first, not title-first ("Alpha Report" would win under the old
+        // title-alphabetical pre-sort) or id-first ("a-ref" < "b-ref").
+        assert_eq!(hints.get("b-ref").unwrap().group_index, 1);
+        assert_eq!(hints.get("a-ref").unwrap().group_index, 2);
+    }
+
+    #[test]
+    fn test_empty_group_sort_template_ignores_id_tiebreak() {
+        let bib = build_diverging_order_group();
+        let config = Config::default();
+        let locale = Locale::en_us();
+        let sort_spec = GroupSort { template: vec![] };
+
+        // An empty template is a renderer no-op regardless of id_tiebreak
+        // (ReferenceSorter::sort_references_impl's early return) — the flag
+        // must not reorder by id here.
+        let disamb = Disambiguator::with_group_sort(&bib, &config, &config, &locale, &sort_spec)
+            .with_id_tiebreak(true);
+        let hints = disamb.calculate_hints();
+
+        assert_eq!(hints.get("b-ref").unwrap().group_index, 1);
+        assert_eq!(hints.get("a-ref").unwrap().group_index, 2);
+    }
+
+    #[test]
+    fn test_non_empty_template_with_equal_keys_follows_registration_order_without_id_tiebreak() {
+        let bib = build_diverging_order_group();
+        let config = Config::default();
+        let locale = Locale::en_us();
+        // Author and issued are equal across the group, so this template
+        // doesn't itself resolve the tie.
+        let sort_spec = GroupSort {
+            template: vec![
+                GroupSortKey {
+                    key: SortKey::Author,
+                    ascending: true,
+                    order: None,
+                    sort_order: None,
+                },
+                GroupSortKey {
+                    key: SortKey::Issued,
+                    ascending: true,
+                    order: None,
+                    sort_order: None,
+                },
+            ],
+        };
+
+        let disamb = Disambiguator::with_group_sort(&bib, &config, &config, &locale, &sort_spec);
+        let hints = disamb.calculate_hints();
+
+        assert_eq!(hints.get("b-ref").unwrap().group_index, 1);
+        assert_eq!(hints.get("a-ref").unwrap().group_index, 2);
+    }
+
+    #[test]
+    fn test_non_empty_template_with_equal_keys_follows_id_order_with_id_tiebreak() {
+        let bib = build_diverging_order_group();
+        let config = Config::default();
+        let locale = Locale::en_us();
+        let sort_spec = GroupSort {
+            template: vec![
+                GroupSortKey {
+                    key: SortKey::Author,
+                    ascending: true,
+                    order: None,
+                    sort_order: None,
+                },
+                GroupSortKey {
+                    key: SortKey::Issued,
+                    ascending: true,
+                    order: None,
+                    sort_order: None,
+                },
+            ],
+        };
+
+        let disamb = Disambiguator::with_group_sort(&bib, &config, &config, &locale, &sort_spec)
+            .with_id_tiebreak(true);
+        let hints = disamb.calculate_hints();
+
+        // "a-ref" < "b-ref" — id order, not the "b-ref" first registration order.
+        assert_eq!(hints.get("a-ref").unwrap().group_index, 1);
+        assert_eq!(hints.get("b-ref").unwrap().group_index, 2);
+    }
+
+    #[test]
+    fn test_id_tiebreak_sorts_missing_id_last() {
+        let mut bib = Bibliography::new();
+        // Registered first but has no id: must still sort *after* the
+        // reference that does, mirroring ReferenceSorter::compare_cached_ids.
+        bib.insert(
+            "missing".to_string(),
+            make_ref_without_id("missing", "Smith", "Same", 2020),
+        );
+        bib.insert(
+            "with-id".to_string(),
+            make_ref("with-id", "Smith", "Same", 2020),
+        );
+
+        let config = Config::default();
+        let locale = Locale::en_us();
+        let sort_spec = GroupSort {
+            template: vec![
+                GroupSortKey {
+                    key: SortKey::Author,
+                    ascending: true,
+                    order: None,
+                    sort_order: None,
+                },
+                GroupSortKey {
+                    key: SortKey::Issued,
+                    ascending: true,
+                    order: None,
+                    sort_order: None,
+                },
+            ],
+        };
+
+        let disamb = Disambiguator::with_group_sort(&bib, &config, &config, &locale, &sort_spec)
+            .with_id_tiebreak(true);
+        let hints = disamb.calculate_hints();
+
+        // Missing-id references key the hints map under the empty string
+        // (`insert_hint`'s `id().unwrap_or_default()`).
+        assert_eq!(hints.get("with-id").unwrap().group_index, 1);
+        assert_eq!(hints.get("").unwrap().group_index, 2);
+    }
+
+    #[test]
+    fn test_non_empty_template_title_key_still_governs_over_registration_and_id_order() {
+        let bib = build_diverging_order_group();
+        let config = Config::default();
+        let locale = Locale::en_us();
+        let sort_spec = GroupSort {
+            template: vec![
+                GroupSortKey {
+                    key: SortKey::Author,
+                    ascending: true,
+                    order: None,
+                    sort_order: None,
+                },
+                GroupSortKey {
+                    key: SortKey::Issued,
+                    ascending: true,
+                    order: None,
+                    sort_order: None,
+                },
+                GroupSortKey {
+                    key: SortKey::Title,
+                    ascending: true,
+                    order: None,
+                    sort_order: None,
+                },
+            ],
+        };
+
+        let disamb = Disambiguator::with_group_sort(&bib, &config, &config, &locale, &sort_spec)
+            .with_id_tiebreak(true);
+        let hints = disamb.calculate_hints();
+
+        // A real Title sort key resolves the tie itself: "Alpha Report" < "Beta Report",
+        // overriding both registration order ("b-ref" first) and id order
+        // ("a-ref" < "b-ref" would coincidentally agree here, but the point is
+        // this is driven by the template's own Title key, not our tiebreak).
+        assert_eq!(hints.get("a-ref").unwrap().group_index, 1);
+        assert_eq!(hints.get("b-ref").unwrap().group_index, 2);
     }
 
     #[test]

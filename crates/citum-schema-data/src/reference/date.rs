@@ -64,10 +64,30 @@ impl DateValue {
         }
     }
 
+    /// Extract the month from the date.
+    pub fn month(&self) -> Option<u32> {
+        match self.parse() {
+            RefDate::Edtf(edtf) => edtf.month(),
+            RefDate::Literal(_) => None,
+        }
+    }
+
     /// Extract the day from the date.
     pub fn day(&self) -> Option<u32> {
         match self.parse() {
             RefDate::Edtf(edtf) => edtf.day().filter(|&d| d > 0),
+            RefDate::Literal(_) => None,
+        }
+    }
+
+    /// Extract (year, month, day) from a single EDTF parse, avoiding the
+    /// separate re-parse each of `.year()`, `.month()`, and `.day()` would
+    /// otherwise incur. `None` for an unparseable (`Literal`) date, matching
+    /// `.year()`'s empty-string / `.month()`'s and `.day()`'s `None`
+    /// behavior for that case.
+    pub fn date_parts(&self) -> Option<(i64, Option<u32>, Option<u32>)> {
+        match self.parse() {
+            RefDate::Edtf(edtf) => Some((edtf.year(), edtf.month(), edtf.day().filter(|&d| d > 0))),
             RefDate::Literal(_) => None,
         }
     }
