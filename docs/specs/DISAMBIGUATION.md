@@ -171,18 +171,59 @@ decision to the current citation and preserves the existing position model.
 ### 3. Year-suffix assignment ordering
 
 Within a collision group, suffixes (`a`, `b`, `c`…) **follow the effective
-bibliography sort order** — never citation order. Author and year are equal across
-a same-author/same-year group, so the operative tiebreaker is the title, sorted
-with the *same* normalization the bibliography uses: leading-article stripping plus
-locale collation via `sort_support::title_sort_key`. A raw lowercased title is
-**not** used — it sorts "An Ecology…" before "Biology…", yielding `2019b` before
-`2019a` (fixed for csl26-2zy6, guide-conformance audit row 138). The raw title
-survives only as a deterministic final tiebreaker.
+bibliography sort order** — never citation order. This matches the CSL spec and
+APA/Chicago guidance: `a`/`b`/`c` correspond to the order in which entries appear
+in the sorted reference list, so suffixes are *derived* from bibliography order.
+When the bibliography context changes, suffixes are recomputed; they are not
+user-stable keys.
 
-This matches the CSL spec and APA/Chicago guidance: `a`/`b`/`c` correspond to the
-order in which entries appear in the sorted reference list, so suffixes are
-*derived* from bibliography order. When the bibliography context changes, suffixes
-are recomputed; they are not user-stable keys.
+Author and year are equal across a same-author/same-year group, so what breaks the
+tie depends on whether the style has a resolved `group_sort` at all:
+
+- **No resolved bibliography sort** (a style with no `bibliography.sort` and no
+  `processing` preset supplying one): the tiebreaker is the title, sorted with the
+  *same* normalization the bibliography uses — leading-article stripping plus
+  locale collation via `sort_support::title_sort_key`. A raw lowercased title is
+  **not** used — it sorts "An Ecology…" before "Biology…", yielding `2019b` before
+  `2019a` (fixed for csl26-2zy6, guide-conformance audit row 138). The raw title
+  survives only as a deterministic final tiebreaker.
+- **A resolved bibliography sort exists but doesn't fully order the group**
+  (either its template is empty — e.g. the `citation-number` preset, which is
+  registry order by definition — or its keys tie for every member): entries take
+  **registry order**, the same tiebreak the renderer's stable sort falls back to
+  (`ReferenceSorter::sort_references_impl`'s empty-template early return, or a
+  stable sort over registry-ordered input when keys tie). An empty template stays
+  registry-order only — the finer tiebreaks below are a renderer no-op for it, per
+  `sort_references_impl`'s early return, so `Disambiguator` must not apply them
+  either. For a non-empty template, `Disambiguator` calls the same
+  `ReferenceSorter::sort_by_keys` the bibliography renderer itself uses — so
+  every key in the resolved template, including a full-date-aware `Issued`
+  comparison (year, month, and day; see below), applies identically in both
+  places. Only entries that remain fully tied after every resolved key fall
+  through to a final tiebreak: present ids compare as text and a missing id
+  sorts after every present one, when the resolved sort carries the opt-in id
+  tiebreak (`ReferenceSorter::sort_references_with_id_tiebreak`); then
+  registry order. There is no separate date-comparison step here — comparing
+  dates twice, once in the shared `Issued` key and again as a
+  Disambiguator-only pre-sort, would just risk the two drifting apart. Fixed
+  for csl26-m8la — the previous behavior pre-sorted every group
+  title-alphabetically before applying the resolved sort, which could diverge
+  from the renderer's own tiebreak whenever the resolved sort's keys didn't
+  fully determine order (observed in `gb-t-7714-2025-author-date`'s large
+  anonymous-author collision bucket, where render position and assigned
+  letter had no correlation at all).
+
+  A same-year, no-title collision pair in `chicago-author-date-18th`
+  (two Gourmet magazine entries, May and September 2000) exposed a second,
+  independent defect during this fix: `ReferenceSorter`'s `Issued` sort key
+  used to compare only the year, so `sort_by_keys` couldn't distinguish them
+  and fell through to a stable-sort tie — silently wrong for any style
+  sorting same-year entries by date, not specific to this bean's grouping
+  logic. Fixed by widening the `Issued` sort key to compare the full
+  `(year, month, day)` (`ReferenceSorter::issued_date_parts`, `sorting.rs`),
+  with a missing month or day defaulting to `0` (sorts before any real
+  value, matching EDTF's own less-precise-could-be-anywhere-in-range
+  convention).
 
 When a `BibliographyGroup` defines a `sort`, that sort takes precedence within the
 group (see §5 below).
@@ -333,6 +374,57 @@ added to the citation context.
 
 ## Changelog
 
+- 2026-08-06: Fixed §3's resolved-`group_sort` case (csl26-m8la).
+  `Disambiguator::sort_group_for_year_suffix` pre-sorted every collision group
+  title-alphabetically before applying the resolved sort, regardless of whether
+  a `group_sort` was configured; this could diverge from the renderer's own
+  tiebreak (registry order, or id order when the sort carries the opt-in id
+  tiebreak) whenever the resolved sort's keys didn't fully order the group. Now
+  calls the same `ReferenceSorter::sort_by_keys` the renderer itself uses for a
+  non-empty template — see above — falling back to id (when set) and then
+  registry order only for entries still tied after every resolved key; an
+  empty template stays registry order only.
+
+  A second, independent engine defect surfaced while fixing this: the
+  `Issued` sort key used by that shared `sort_by_keys` path only ever compared
+  the year, silently mis-ordering any style's same-year entries with
+  different months (exposed by `chicago-author-date-18th`'s May/September
+  Gourmet magazine pair). Widened `CachedSortValue::Issued` and its
+  comparators to the full `(year, month, day)` (`sorting.rs`), and added
+  `DateValue::month()` alongside the existing `.year()`/`.day()`
+  (`citum-schema-data`) to support it.
+
+  `gb-t-7714-2025-author-date`'s adjusted bibliography oracle failures went from
+  42 to 30 (out of 203), with zero regressions across citum-engine's test suite.
+  This is not full oracle parity — the style's bibliography still renders in
+  registry order rather than a real author+date order, since its own
+  `bibliography.sort` is still missing (`csl26-q67h`, deliberately not
+  restored in the same change — see below) — it makes citum's own suffix
+  letters consistent with citum's own render, which is the failure mode this
+  bean reported. A residual ~9-entry gap in the English anonymous-undated
+  bucket traces to a separate, architectural mismatch between citum's
+  variable-based collision grouping and citeproc-js's render-text-based
+  grouping — tracked in `csl26-huuz`, not fixed here.
+
+  Two further defects were found and investigated but deliberately **not**
+  shipped in this change, because measuring them together showed no benefit
+  and a severe regression elsewhere:
+  - Restoring `gb-t-7714-2025-author-date.yaml`'s own `bibliography.sort`
+    (lost during migration — the leaf silently inherits `citation-number`,
+    registry order, from its numeric base).
+  - A companion fix to `ReferenceSorter::extract_author_sort_key_opt`
+    (`sorting.rs`), needed to keep that restoration net-neutral for this
+    style: it unconditionally fell back to a title-derived sort key whenever
+    the substitute chain resolved to nothing promotable, even when title was
+    never in the active chain.
+
+  Measured together, gb-t-7714-2025-author-date's own oracle numbers were no
+  better than the engine fix alone, and the `sorting.rs` change — a shared
+  path across all 157 styles — caused `american-medical-association-alphabetical`
+  to collapse from 21/67 to 1/67 exact-parity in the full corpus check. Both
+  are tracked together in `csl26-q67h` with the measurements, for a future
+  attempt that lands them independently and verifies each against the full
+  corpus on its own.
 - 2026-07-23: Added `TemplateDate.suppress_disamb_suffix` (rendering-level
   opt-out for a redundant `issued` occurrence) and a stable sentinel author
   key for references falling through to a component-level
