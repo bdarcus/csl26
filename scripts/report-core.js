@@ -3334,9 +3334,13 @@ function generateHtmlSqiExplainer(report) {
                     parity values are advisory and do not appear in this report at all.
                 </p>
                 <p class="text-sm text-slate-600 mb-3">
-                    <strong>Compatibility</strong> is the existing lenient regression gate; it can tolerate meaningful text-level drift.
-                    <strong>Oracle text parity</strong> is the stricter, symmetric comparison of visible renderer text.
-                    <strong>SQI</strong> (Style Quality Index) is secondary: it scores maintainability and fallback quality.
+                    <strong>Oracle text parity</strong> is the headline metric: the stricter, symmetric, byte-level
+                    comparison of visible renderer text against the oracle. <strong>Fidelity</strong> (labelled
+                    "Compatibility" in the per-style table for historical reasons) is a coarser, lenient pass/fail
+                    rate over the same comparisons — it carries no information exact parity doesn't already carry,
+                    so it is retained only as a regression tripwire, not as an independent quality dimension.
+                    <strong>SQI</strong> (Style Quality Index) is separate again: it scores maintainability and
+                    fallback quality, not oracle agreement.
                     Most styles are verified against the <strong>citeproc-js</strong> oracle; a small number of biblatex-derived
                     styles (currently just <code>numeric-comp</code>, in the exemplar tier) instead use
                     <strong>biblatex</strong> as their primary authority, because biblatex is the only origin format for the
@@ -3349,9 +3353,10 @@ function generateHtmlSqiExplainer(report) {
                     <code>${meanCompat}% compatibility</code> and <code>${meanSqi} SQI</code> (mean across ${embeddedStyles.length} styles).
                     These are directional targets, not a per-style gate — the enforced gate
                     (<code>scripts/check-core-quality.js</code>) checks fidelity and exact-parity drift against a recorded
-                    baseline per style: fidelity must stay at 1.0, and a style's exact-parity <code>passed</code> count may
-                    never drop below its baseline floor (SQI drift is warn-only outside the embedded tier). Exact parity is
-                    the primary tuning objective for embedded-core styles; residuals an agent cannot classify are recorded in
+                    baseline per style: fidelity (the tripwire) must stay at 1.0, and a style's exact-parity
+                    <code>passed</code> count may never drop below its baseline floor (SQI drift is warn-only outside
+                    the embedded tier). Exact parity is the primary tuning objective for embedded-core styles;
+                    residuals an agent cannot classify are recorded in
                     <code>scripts/report-data/parity-adjudication.json</code> as <code>unclear</code> and escalated rather than
                     excluded unilaterally.
                 </p>
@@ -3545,13 +3550,13 @@ function generateHtmlTable(report) {
                     <td class="hidden md:table-cell px-6 py-4">
                         ${componentRateHtml}
                     </td>
-                    <td class="px-6 py-4 text-sm font-mono text-slate-600">${fidelityPct}%</td>
                     <td class="px-6 py-4">
                         <span class="inline-flex items-center px-3 py-1 rounded text-xs font-medium ${exactParityBadge}">
                             ${exactParityText}
                         </span>
                         ${style.exactParity?.notComparable > 0 ? `<div class="mt-1 text-[10px] text-slate-400">${style.exactParity.notComparable} N/A</div>` : ''}
                     </td>
+                    <td class="px-6 py-4 text-sm font-mono text-slate-600">${fidelityPct}%</td>
                     <td class="hidden md:table-cell px-6 py-4 text-sm font-mono text-slate-600">${qualityPct}%</td>
                     <td class="px-6 py-4">
                         <span class="inline-flex items-center px-3 py-1 rounded text-xs font-medium ${sqiBadgeClass}">
@@ -3634,13 +3639,13 @@ ${generateDetailContent(style)}
                                 </button>
                             </th>
                             <th class="text-left px-6 py-4 text-xs font-semibold text-slate-700">
-                                <button class="inline-flex items-center gap-1 hover:text-primary transition-colors" onclick="sortCompatTable('fidelity')">
-                                    Compatibility <span class="text-slate-400" id="sort-ind-fidelity">↕</span>
-                                </button>
-                            </th>
-                            <th class="text-left px-6 py-4 text-xs font-semibold text-slate-700">
                                 <button class="inline-flex items-center gap-1 hover:text-primary transition-colors" onclick="sortCompatTable('exact-parity')">
                                     Oracle Text <span class="text-slate-400" id="sort-ind-exact-parity">↕</span>
+                                </button>
+                            </th>
+                            <th class="text-left px-6 py-4 text-xs font-semibold text-slate-700" title="Coarse regression tripwire — carries no information Oracle Text parity doesn't already carry">
+                                <button class="inline-flex items-center gap-1 hover:text-primary transition-colors" onclick="sortCompatTable('fidelity')">
+                                    Fidelity <span class="text-slate-400" id="sort-ind-fidelity">↕</span>
                                 </button>
                             </th>
                             <th class="hidden md:table-cell text-left px-6 py-4 text-xs font-semibold text-slate-700">

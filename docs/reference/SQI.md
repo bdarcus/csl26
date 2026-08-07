@@ -2,16 +2,34 @@
 
 SQI is a secondary quality metric for Citum styles.
 
-Use SQI to improve style maintainability only after fidelity is correct.
+Use SQI to improve style maintainability only after correctness is settled.
 
 ## Priority Order
 
-1. Fidelity (hard gate): output must match the style's declared primary authority.
-2. SQI (secondary): choose cleaner, more robust style definitions when fidelity is comparable.
+1. **Exact parity** (headline correctness signal): byte-level, symmetric
+   comparison of rendered text against the style's oracle. This is what
+   `report-core.js`'s `exactParityOverall` measures and what
+   `check-core-quality.js` gates per style — a style's exact-parity `passed`
+   count may never drop below its recorded baseline floor.
+2. **Fidelity** (coarse regression tripwire, retained for historical/legacy
+   styles): a normalized-text pass/fail rate over the same comparisons —
+   strictly weaker than exact parity and carrying no information it doesn't
+   already carry. For styles listed in `core-quality-baseline.json`, fidelity
+   must additionally stay at exactly `1.0` (a hard gate); for styles outside
+   that baseline, including the Chicago family, exact parity alone is the
+   tuning target — see
+   [`CHICAGO_FAMILY_STRATEGY.md`](../specs/CHICAGO_FAMILY_STRATEGY.md) for the
+   reasoning.
+3. SQI (secondary): choose cleaner, more robust style definitions when
+   correctness is comparable.
 
-Never accept an SQI gain that causes a fidelity regression.
+Never accept an SQI gain that causes an exact-parity or fidelity regression.
 
-SQI is not the structural lint. Deterministic style-shape rules such as anonymous-anchor rejection and dead-config detection are enforced separately by `scripts/style-structure-lint.js`.
+SQI is not the structural lint. Deterministic style-shape rules — anonymous-anchor
+rejection, dead-config detection, and localization integrity (`STYLE010`:
+hardcoded prose that duplicates an existing locale term, see
+[`LOCALIZATION_INTEGRITY.md`](../policies/LOCALIZATION_INTEGRITY.md)) — are
+enforced separately by `scripts/style-structure-lint.js`.
 
 ## What SQI Measures
 
@@ -37,14 +55,18 @@ Current wave target, as a mean across the **embedded tier only**
 (`docs/compat.html`'s headline; exemplar and community styles are reported
 separately and are not held to this target):
 
-- `>= 0.95` mean fidelity
+- `>= 0.95` mean fidelity (reported as "Compatibility" in `docs/compat.html`'s
+  per-style table for historical reasons; see the priority order above)
 - `>= 0.90` mean SQI
 
 These are directional wave-planning targets, not a per-style gate and not a
 replacement for oracle checks. The actual enforced gate is
-`scripts/check-core-quality.js`, which checks each style's fidelity and SQI
-drift against a recorded baseline (`scripts/report-data/core-quality-baseline.json`),
-not this aggregate.
+`scripts/check-core-quality.js`: a per-style exact-parity floor (never drop
+below the recorded `passed` count in `scripts/report-data/embedded-parity-baseline.json`)
+plus, for styles listed in `scripts/report-data/core-quality-baseline.json`,
+a hard `fidelityScore === 1.0` requirement. SQI drift (`concision`,
+`presetUsage` subscores) is checked against the same baseline but is
+warn-only, not gating.
 
 ## Commands
 

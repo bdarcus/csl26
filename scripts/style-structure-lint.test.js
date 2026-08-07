@@ -12,8 +12,11 @@ const {
   lintEmptyStyleVersion,
   lintDeprecatedTemplateTerms,
   lintPhraseLikeTermMessages,
+  lintHardcodedLocaleProse,
   lintLegacyItemsAlias,
   lintParsedStyle,
+  loadLocaleAffixValueSet,
+  normalizeAffixText,
   removeEmptyVersionInText,
   stripAnonymousAnchorMarkersInText,
 } = require('./style-structure-lint');
@@ -450,6 +453,91 @@ test('STYLE009 allows lexical term-backed messages', () => {
   const violations = lintPhraseLikeTermMessages('styles/fixture.yaml', content);
 
   assert.equal(violations.length, 0);
+});
+
+test('STYLE010 flags a hardcoded prefix that duplicates a locale role verb', () => {
+  const localeValueSet = new Set(['translated by', 'written by']);
+  const content = `bibliography:
+  template:
+    - contributor: translator
+      prefix: "Translated by "
+`;
+
+  const violations = lintHardcodedLocaleProse('styles/fixture.yaml', content, localeValueSet);
+
+  assert.equal(violations.length, 1);
+  assert.equal(violations[0].ruleId, 'STYLE010');
+  assert.equal(violations[0].line, 4);
+  assert.equal(violations[0].fixable, false);
+});
+
+test('STYLE010 ignores structural punctuation and non-linguistic literals', () => {
+  const localeValueSet = new Set(['translated by']);
+  const content = `bibliography:
+  template:
+    - number: issue
+      prefix: " ("
+      suffix: ")"
+    - variable: doi
+      prefix: ". https://doi.org/"
+`;
+
+  const violations = lintHardcodedLocaleProse('styles/fixture.yaml', content, localeValueSet);
+
+  assert.equal(violations.length, 0);
+});
+
+test('STYLE010 does not flag prose with no locale equivalent', () => {
+  const localeValueSet = new Set(['translated by']);
+  const content = `bibliography:
+  template:
+    - date: issued
+      prefix: "Recorded "
+`;
+
+  const violations = lintHardcodedLocaleProse('styles/fixture.yaml', content, localeValueSet);
+
+  assert.equal(violations.length, 0);
+});
+
+test('normalizeAffixText strips quotes, punctuation, and casefolds', () => {
+  assert.equal(normalizeAffixText('"Translated by "'), 'translated by');
+  assert.equal(normalizeAffixText('", written by "'), 'written by');
+  assert.equal(normalizeAffixText('" ("'), '');
+  assert.equal(normalizeAffixText('". https://doi.org/"'), 'https://doi.org/');
+});
+
+test('normalizeAffixText strips a trailing YAML comment without leaking it into the value', () => {
+  assert.equal(normalizeAffixText('"Illustrated by " # FIX locale-specific string'), 'illustrated by');
+  assert.equal(
+    normalizeAffixText('", written by "  # FIX locale-specific string; also duplicating logic'),
+    'written by'
+  );
+});
+
+test('STYLE010 flags a hardcoded prefix even when annotated with a trailing FIX comment', () => {
+  const localeValueSet = new Set(['illustrated by']);
+  const content = `bibliography:
+  template:
+    - contributor: illustrator
+      form: long
+      prefix: "Illustrated by " # FIX locale-specific string
+`;
+
+  const violations = lintHardcodedLocaleProse('styles/fixture.yaml', content, localeValueSet);
+
+  assert.equal(violations.length, 1);
+  assert.equal(violations[0].ruleId, 'STYLE010');
+});
+
+test('loadLocaleAffixValueSet builds a matchable set from en-US.yaml', () => {
+  const values = loadLocaleAffixValueSet();
+
+  assert.ok(values.has('translated by'));
+  assert.ok(values.has('edited by'));
+  assert.ok(values.has('written by'));
+  // Multi-line .match MF2 messages are excluded — no single literal to compare against.
+  assert.ok(!values.has('track'));
 });
 
 test('applyFixes removes empty version properties', () => {
