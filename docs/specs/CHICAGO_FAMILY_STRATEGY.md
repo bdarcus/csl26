@@ -200,7 +200,10 @@ documented separation between the two. Report-only for now (not in
       shortened-notes 13/473) with each cluster landed — cluster 1 held both
       at 172/546 (zero entries changed either direction, verified
       entry-by-entry, not just aggregate counts); it was a pure localization
-      pass, not a fidelity lift, by design
+      pass, not a fidelity lift, by design. Cluster 2 moved author-date and
+      T&F to 173/546 (article-newspaper quoting fix, inherited by T&F for
+      free); notes-18th and shortened-notes-bibliography unchanged at 22/72
+      and 13/473 (defect didn't reach them this pass — see csl26-87yl)
 - [x] `csl26-h7oc` is restructured to cluster-shaped children per the ordered
       list above
 - [x] Cluster 1 (contributor-role localization) lands with a verified
@@ -229,3 +232,13 @@ substitute.rs, raw_conversion.rs); full `cargo nextest run` (2420/2420),
 - 2026-08-07: Cluster 1 (contributor-role localization) landed for
   `chicago-author-date-18th` and `taylor-and-francis-chicago-author-date-core`;
   acceptance criteria updated with verified results.
+- 2026-08-07: Cluster 2 (title quoting boundary) landed `article-newspaper`
+  and `thesis` quoting fixes for `chicago-author-date-18th`, inherited by
+  `taylor-and-francis-chicago-author-date-core`. `map` and the
+  `chicago-notes-18th`/`chicago-shortened-notes-bibliography-core`
+  `dataset`/`report`/`thesis`/`webpage` entanglement deferred to future work
+  — see csl26-87yl for the evidence. Confirms the LOC-reduction half of the
+  originating commit's framing is not being pursued by the cluster plan as
+  scoped: `chicago-18-base.yaml` stays untouched by design (per Implementation
+  Notes above), so gains come from the existing extends chain propagating a
+  fix for free, not from new shared abstraction.

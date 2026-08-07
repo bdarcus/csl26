@@ -5,7 +5,7 @@ status: in-progress
 type: epic
 priority: high
 created_at: 2026-06-30T14:30:24Z
-updated_at: 2026-08-07T15:24:49Z
+updated_at: 2026-08-07T17:49:00Z
 parent: csl26-40n4
 ---
 
@@ -69,7 +69,10 @@ Author-date/T&F (73-74%) are closest to the bar; notes (47%) and shortened
       (completed; landed in PR #1151, no exact-parity movement by design —
       see csl26-ey4f/csl26-dfq0 for the localization-coverage numbers that
       metric can't show)
-- [ ] csl26-87yl: Cluster 2 — title quoting boundary by source type
+- [x] csl26-87yl: Cluster 2 — title quoting boundary by source type
+      (landed article-newspaper + thesis quoting fixes; author-date/T&F
+      172/546 -> 173/546; notes/shortened unchanged; map + notes-family
+      dataset/report/thesis/webpage deferred, see csl26-87yl summary)
 - [ ] csl26-vf5x: Cluster 3 — container-title terminal punctuation
 - [ ] csl26-yqma: Cluster 4 — name-list conjunction punctuation
 - [ ] csl26-cz0p: Cluster 5 — archival/manuscript/document-routed refs

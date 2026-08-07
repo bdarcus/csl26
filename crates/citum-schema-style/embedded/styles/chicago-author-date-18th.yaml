@@ -293,6 +293,8 @@ bibliography:
     - date: issued
       form: year
     - title: primary
+      wrap:
+        punctuation: quotes
     - title: parent-serial
       emph: true
     - date: issued
@@ -900,6 +902,12 @@ bibliography:
       remove:
         - match:
             contributor: translator
+      modify:
+        - match:
+            title: primary
+          emph: false
+          wrap:
+            punctuation: quotes
     personal-communication:
     - group:
       - contributor: author
