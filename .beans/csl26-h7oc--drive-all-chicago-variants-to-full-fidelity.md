@@ -5,7 +5,7 @@ status: in-progress
 type: epic
 priority: high
 created_at: 2026-06-30T14:30:24Z
-updated_at: 2026-07-30T19:09:49Z
+updated_at: 2026-08-07T15:24:49Z
 parent: csl26-40n4
 ---
 
@@ -59,11 +59,23 @@ gains, leaving shortened to only need its own bibliography surface tuned.
 Author-date/T&F (73-74%) are closest to the bar; notes (47%) and shortened
 (40%) need the most work but inherit upstream wins.
 
-## Todo
+## Todo (restructured 2026-08-07, see docs/specs/CHICAGO_FAMILY_STRATEGY.md)
 - [x] Decide and implement the gating-policy recommendation above
-- [ ] Land child tune: chicago-author-date-18th
-- [ ] Land child tune: taylor-and-francis-chicago-author-date
-- [ ] Land child tune: chicago-notes-18th
-- [ ] Land child tune: chicago-shortened-notes-bibliography
-- [ ] Final `report-core.js` sweep confirming all four at target; ratchet
-      `min_pass_rate` floors upward as each variant clears them
+- [x] Restructure from per-style tuning (csl26-giun, csl26-7jht — both
+      scrapped, evidence preserved) to per-defect-cluster children, since the
+      per-style loop repeatedly deferred the same structural defects across
+      six-plus sessions instead of converging
+- [x] csl26-ey4f: Cluster 1 — contributor-role/pattern localization
+      (completed; landed in PR #1151, no exact-parity movement by design —
+      see csl26-ey4f/csl26-dfq0 for the localization-coverage numbers that
+      metric can't show)
+- [ ] csl26-87yl: Cluster 2 — title quoting boundary by source type
+- [ ] csl26-vf5x: Cluster 3 — container-title terminal punctuation
+- [ ] csl26-yqma: Cluster 4 — name-list conjunction punctuation
+- [ ] csl26-cz0p: Cluster 5 — archival/manuscript/document-routed refs
+- [ ] csl26-rpza: Cluster 6 — broadcast/episode grammar
+- [ ] csl26-s2kt: Cluster 7 — multi-volume/legal/patents/original-reprint trailers
+- [ ] Final `report-core.js` sweep confirming all four styles' exact parity
+      moved upward from the 2026-08-07 baseline (author-date 172/546, T&F
+      172/546, notes 22/72, shortened 13/473); ratchet `min_pass_rate` floors
+      upward as each cluster clears

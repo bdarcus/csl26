@@ -1,11 +1,11 @@
 ---
 # csl26-giun
 title: Tune chicago-author-date-18th to full fidelity
-status: in-progress
+status: scrapped
 type: task
 priority: high
 created_at: 2026-06-30T18:46:08Z
-updated_at: 2026-08-02T14:19:30Z
+updated_at: 2026-08-07T13:21:28Z
 parent: csl26-h7oc
 blocked_by:
     - csl26-t0m4
@@ -170,3 +170,27 @@ Not independently investigated/fixed — recorded as residual-defect input for t
 
 
 2026-07-31 follow-up: reclassified the stale container-period cluster against current evidence and fixed the live paper-conference fallback template instead. Pages now use a colon when volume/issue is present and a comma when both are absent. Added a focused paper-conference fixture and bibliography regression test. Fresh selected report: exact parity improved 170/540 -> 172/540; embedded fidelity stayed 0.926 with citations 63/63 and bibliography 437/477; shared Chicago corpus stayed 15/15 citations and 339/379 bibliography; inherited Taylor & Francis matched 172/540 with no regression; SQI stayed 0.920. The escalated authoritative gate passed format, clippy, and 2,304 nextest tests. Full fidelity, clean SQI, and final QA remain open.
+
+## Reasons for Scrapping
+
+Superseded by the cluster-driven restructuring in
+docs/specs/CHICAGO_FAMILY_STRATEGY.md (2026-08-07). This bean's own history —
+six-plus sessions repeatedly deferring the same structural defects (broadcast
+grammar, multi-volume chains, legal, patents, original/reprint trailers) as
+"explicitly out of scope" — is the direct evidence that per-style/per-entry
+tuning against this style in isolation doesn't converge: each pass fixed the
+next failing entry rather than the defect class, so the same classes recur.
+
+Not deleted — this body is preserved as the evidence base for the successor
+cluster beans, all children of csl26-h7oc:
+- csl26-ey4f (contributor-role localization — in progress this session)
+- csl26-87yl (title quoting boundary)
+- csl26-vf5x (container-title terminal punctuation)
+- csl26-yqma (name-list conjunction punctuation)
+- csl26-cz0p (archival/manuscript/document-routed refs)
+- csl26-rpza (broadcast/episode grammar — this bean's own repeated deferral)
+- csl26-s2kt (multi-volume/legal/patents/original-reprint trailers — this
+  bean's other repeated deferrals)
+
+Each cluster spans all four Chicago-family styles at once, not just
+chicago-author-date-18th, since T&F inherits this style's gaps directly.

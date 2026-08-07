@@ -1,11 +1,11 @@
 ---
 # csl26-7jht
 title: Tune chicago-shortened-notes-bibliography to full fidelity
-status: todo
+status: scrapped
 type: task
 priority: high
 created_at: 2026-06-30T18:46:09Z
-updated_at: 2026-07-31T12:16:50Z
+updated_at: 2026-08-07T13:21:38Z
 parent: csl26-h7oc
 blocked_by:
     - csl26-lxy3
@@ -69,3 +69,20 @@ Enabled `bibliography.options.entry-suffix-after-url` and `entry-suffix-after-do
 
 
 Direct verification: `just workflow-test styles-legacy/chicago-shortened-notes-bibliography.csl` passed **20/20 citations** and **46/46 bibliography entries** against citeproc-js after the suffix-policy change.
+
+## Reasons for Scrapping
+
+Superseded by the cluster-driven restructuring in
+docs/specs/CHICAGO_FAMILY_STRATEGY.md (2026-08-07), for the same reason as
+csl26-giun (scrapped alongside this bean): this style's worst-in-portfolio
+parity (2.4% at last measurement) traces to systemic per-entry punctuation/
+quoting/case drift, not per-entry defects, and per-style tuning against one
+variant in isolation can't converge when the defect classes are shared across
+the family (this style inherits chicago-notes-18th's citation baseline
+directly).
+
+Not deleted — preserved as evidence for the successor cluster beans (children
+of csl26-h7oc): csl26-87yl (title quoting), csl26-vf5x (container-title
+punctuation), csl26-yqma (name-list conjunction punctuation), and the shared
+terminal-link punctuation work already landed (entry-suffix-after-url/-doi)
+stays as a completed baseline these clusters build on.
