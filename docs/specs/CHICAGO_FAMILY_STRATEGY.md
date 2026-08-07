@@ -4,7 +4,7 @@
 **Version:** 1.0
 **Date:** 2026-08-07
 **Supersedes:** (none — refines `csl26-40n4`/`csl26-h7oc` execution, does not replace them)
-**Related:** [`docs/architecture/audits/2026-06-30_CHICAGO_FAMILY_AUDIT.md`](../architecture/audits/2026-06-30_CHICAGO_FAMILY_AUDIT.md), [`CHICAGO_18_COVERAGE.md`](./CHICAGO_18_COVERAGE.md), [`CONTRIBUTOR_PHRASE_MESSAGES.md`](./CONTRIBUTOR_PHRASE_MESSAGES.md), [`LOCALE_MESSAGES.md`](./LOCALE_MESSAGES.md), beans `csl26-40n4`, `csl26-h7oc`, `csl26-dfq0`
+**Related:** [`docs/architecture/audits/2026-06-30_CHICAGO_FAMILY_AUDIT.md`](../architecture/audits/2026-06-30_CHICAGO_FAMILY_AUDIT.md), [`CHICAGO_18_COVERAGE.md`](./CHICAGO_18_COVERAGE.md), [`CONTRIBUTOR_PHRASE_MESSAGES.md`](./CONTRIBUTOR_PHRASE_MESSAGES.md), [`LOCALE_MESSAGES.md`](./LOCALE_MESSAGES.md), [`CHICAGO_VARIANT_AXES.md`](./CHICAGO_VARIANT_AXES.md), beans `csl26-40n4`, `csl26-h7oc`, `csl26-dfq0`, `csl26-ztl9`
 
 ## Purpose
 
@@ -228,6 +228,14 @@ substitute.rs, raw_conversion.rs); full `cargo nextest run` (2420/2420),
 
 ## Changelog
 
+- 2026-08-07: Added `CHICAGO_VARIANT_AXES.md` — a mapping spec showing that
+  the Chicago-family variant tooling maintained upstream
+  (`citation-style-language/style-variant-builder`, one template plus 74
+  `.diff` patches) corresponds to Citum's native `extends:` and template
+  patches, with no engine or schema change needed for most of the variation
+  found. Does not change this strategy's cluster plan or touch
+  `chicago-18-base.yaml`; tracked as a parallel, later track once Citum's
+  own Chicago styles reach the acceptance criteria above.
 - 2026-08-07: Initial version.
 - 2026-08-07: Cluster 1 (contributor-role localization) landed for
   `chicago-author-date-18th` and `taylor-and-francis-chicago-author-date-core`;
