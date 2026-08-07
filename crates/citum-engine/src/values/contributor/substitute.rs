@@ -94,6 +94,7 @@ fn parse_known_role(value: &str) -> Option<ContributorRole> {
         "director" => ContributorRole::Director,
         "composer" => ContributorRole::Composer,
         "illustrator" => ContributorRole::Illustrator,
+        "narrator" => ContributorRole::Narrator,
         "collection-editor" => ContributorRole::CollectionEditor,
         "container-author" => ContributorRole::ContainerAuthor,
         "editorial-director" => ContributorRole::EditorialDirector,
@@ -148,6 +149,7 @@ fn data_role_for_builtin(role: &ContributorRole) -> Option<DataRole> {
         ContributorRole::Interviewer => DataRole::Interviewer,
         ContributorRole::Guest => DataRole::Guest,
         ContributorRole::Performer => DataRole::Performer,
+        ContributorRole::Narrator => DataRole::Narrator,
         ContributorRole::Writer => DataRole::Writer,
         ContributorRole::ContainerAuthor
         | ContributorRole::CollectionEditor

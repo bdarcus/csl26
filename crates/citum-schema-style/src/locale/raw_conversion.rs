@@ -394,6 +394,7 @@ impl Locale {
             "director" => Some(ContributorRole::Director),
             "compiler" => Some(ContributorRole::Composer),
             "illustrator" => Some(ContributorRole::Illustrator),
+            "narrator" => Some(ContributorRole::Narrator),
             "collection-editor" => Some(ContributorRole::CollectionEditor),
             "container-author" => Some(ContributorRole::ContainerAuthor),
             "editorial-director" => Some(ContributorRole::EditorialDirector),
