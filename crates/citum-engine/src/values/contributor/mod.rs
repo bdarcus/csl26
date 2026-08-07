@@ -70,6 +70,7 @@ pub(crate) fn contributor_role_to_reference_role(
         ContributorRole::Writer => Some(citum_schema::reference::ContributorRole::Writer),
         ContributorRole::Producer => Some(citum_schema::reference::ContributorRole::Producer),
         ContributorRole::Illustrator => Some(citum_schema::reference::ContributorRole::Illustrator),
+        ContributorRole::Narrator => Some(citum_schema::reference::ContributorRole::Narrator),
         ContributorRole::Inventor => Some(citum_schema::reference::ContributorRole::Unknown(
             "inventor".to_string(),
         )),

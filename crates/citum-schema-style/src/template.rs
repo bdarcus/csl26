@@ -1129,6 +1129,7 @@ crate::str_enum! {
         EditorialDirector = "editorial-director",
         TextualEditor = "textual-editor",
         Illustrator = "illustrator",
+        Narrator = "narrator",
         OriginalAuthor = "original-author",
         ReviewedAuthor = "reviewed-author"
     }

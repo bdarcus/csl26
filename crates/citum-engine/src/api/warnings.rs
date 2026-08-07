@@ -428,6 +428,21 @@ mod tests {
     }
 
     #[test]
+    fn unknown_enum_warnings_does_not_flag_director_role_label_term() {
+        let yaml = "info:\n  title: Test\nbibliography:\n  template:\n    - contributor: director\n      form: long\n      label: {term: director, form: short}\n";
+        let style = citum_schema::Style::from_yaml_str(yaml).unwrap();
+        let processor = Processor::new(style, Bibliography::new());
+
+        let warnings = unknown_enum_warnings(&processor);
+        assert!(
+            !warnings.iter().any(|w| w.code == "unknown_role_label_term"),
+            "did not expect a warning for the director role-label term \
+             (chicago-author-date-18th's song type-variant relies on this), \
+             got: {warnings:?}"
+        );
+    }
+
+    #[test]
     fn unknown_enum_warnings_reports_unknown_term_in_type_variants() {
         let yaml = "info:\n  title: Test\ncitation:\n  type-variants:\n    book:\n      - term: not-a-real-term-2\n";
         let style = citum_schema::Style::from_yaml_str(yaml).unwrap();
