@@ -6,6 +6,10 @@ const yaml = require('js-yaml');
 
 const PROJECT_ROOT = path.resolve(__dirname, '..');
 const STYLES_DIR = path.join(PROJECT_ROOT, 'styles');
+const REFERENCE_LOCALE_PATH = path.join(
+  PROJECT_ROOT,
+  'crates/citum-schema-style/embedded/locales/en-US.yaml'
+);
 
 const RULES = {
   STYLE001: 'Anonymous generated YAML anchors are not allowed in committed styles.',
@@ -17,6 +21,7 @@ const RULES = {
   STYLE007: 'Empty style version values should be omitted so schema defaults apply.',
   STYLE008: 'Rendered template terms are deprecated; use message components instead.',
   STYLE009: 'Phrase-like term-backed messages must use localized pattern messages.',
+  STYLE010: 'Hardcoded prefix/suffix prose duplicates an existing locale role verb, term, or message; use the locale mechanism instead so the text localizes. See docs/policies/LOCALIZATION_INTEGRITY.md.',
 };
 
 const FATAL_RULE_IDS = new Set(['STYLE008', 'STYLE009']);
@@ -269,6 +274,112 @@ function lintPhraseLikeTermMessages(filePath, content) {
       file: repoRelative(filePath),
       line: content.slice(0, match.index).split('\n').length,
       message: `${RULES.STYLE009} Found message: term.${messageId}.`,
+      fixable: false,
+    });
+  }
+
+  return violations;
+}
+
+const AFFIX_STRIP_PATTERN = /^[\s,.:;()"'‘’“”]+|[\s,.:;()"'‘’“”]+$/g;
+const MF2_PLACEHOLDER_PATTERN = /\{\$[^}]+\}/g;
+
+function normalizeAffixText(rawValue) {
+  if (typeof rawValue !== 'string') return '';
+  let value = rawValue.trim();
+
+  // A YAML string value may be followed by a trailing `# comment` (e.g. the
+  // FIX/TODO annotations this rule exists to catch). Extract only the quoted
+  // value itself so the comment text never leaks into the comparison.
+  if (value.startsWith('"')) {
+    const closeIndex = value.indexOf('"', 1);
+    value = closeIndex === -1 ? value.slice(1) : value.slice(1, closeIndex);
+  } else if (value.startsWith("'")) {
+    const closeIndex = value.indexOf("'", 1);
+    value = closeIndex === -1 ? value.slice(1) : value.slice(1, closeIndex);
+  } else {
+    const commentIndex = value.search(/\s#/);
+    if (commentIndex !== -1) value = value.slice(0, commentIndex);
+  }
+
+  value = value.replace(MF2_PLACEHOLDER_PATTERN, ' ');
+  value = value.replace(AFFIX_STRIP_PATTERN, '');
+  return value.trim().toLowerCase();
+}
+
+/**
+ * Builds the set of normalized strings a hardcoded prefix/suffix may
+ * legitimately be replaced by: role verb/short-verb/long/short labels,
+ * plain terms, and single-line message pattern bodies. Multi-line MF2
+ * `.match` messages (plural/gender dispatch) are intentionally excluded —
+ * they have no single literal string to compare against.
+ */
+function loadLocaleAffixValueSet(localePath = REFERENCE_LOCALE_PATH) {
+  const values = new Set();
+  let locale;
+  try {
+    locale = yaml.load(fs.readFileSync(localePath, 'utf8'));
+  } catch {
+    return values;
+  }
+  if (!locale || typeof locale !== 'object') return values;
+
+  const addValue = (value) => {
+    const normalized = normalizeAffixText(value);
+    if (normalized) values.add(normalized);
+  };
+
+  const addFormBlock = (formBlock) => {
+    if (!formBlock) return;
+    if (typeof formBlock === 'string') {
+      addValue(formBlock);
+      return;
+    }
+    if (typeof formBlock === 'object') {
+      addValue(formBlock.singular);
+      addValue(formBlock.plural);
+    }
+  };
+
+  for (const role of Object.values(locale.roles || {})) {
+    if (!role || typeof role !== 'object') continue;
+    addFormBlock(role.long);
+    addFormBlock(role.short);
+    addValue(role.verb);
+    addValue(role['verb-short']);
+  }
+
+  for (const term of Object.values(locale.terms || {})) {
+    if (!term || typeof term !== 'object') continue;
+    addFormBlock(term.long);
+    addFormBlock(term.short);
+  }
+
+  for (const message of Object.values(locale.messages || {})) {
+    if (typeof message !== 'string') continue;
+    if (message.trim().startsWith('.match')) continue;
+    addValue(message);
+  }
+
+  return values;
+}
+
+function lintHardcodedLocaleProse(filePath, content, localeValueSet) {
+  const violations = [];
+  if (!localeValueSet || localeValueSet.size === 0) return violations;
+
+  const pattern = /^(\s*)(prefix|suffix):\s*(.+)$/gm;
+  let match;
+
+  while ((match = pattern.exec(content)) !== null) {
+    const normalized = normalizeAffixText(match[3]);
+    if (!normalized || !localeValueSet.has(normalized)) continue;
+
+    violations.push({
+      ruleId: 'STYLE010',
+      file: repoRelative(filePath),
+      line: content.slice(0, match.index).split('\n').length,
+      message: `${RULES.STYLE010} Found ${match[2]}: ${match[3].trim()}`,
       fixable: false,
     });
   }
@@ -715,13 +826,23 @@ function applyFixes(data) {
   return changed;
 }
 
+let cachedLocaleAffixValueSet = null;
+function getLocaleAffixValueSet() {
+  if (!cachedLocaleAffixValueSet) {
+    cachedLocaleAffixValueSet = loadLocaleAffixValueSet();
+  }
+  return cachedLocaleAffixValueSet;
+}
+
 function lintStyleFile(filePath, options = {}) {
   const content = fs.readFileSync(filePath, 'utf8');
+  const localeValueSet = getLocaleAffixValueSet();
   const violations = lintAnonymousAnchors(filePath, content);
   violations.push(...lintLegacyItemsAlias(filePath, content));
   violations.push(...lintEmptyStyleVersion(filePath, content));
   violations.push(...lintDeprecatedTemplateTerms(filePath, content));
   violations.push(...lintPhraseLikeTermMessages(filePath, content));
+  violations.push(...lintHardcodedLocaleProse(filePath, content, localeValueSet));
   let workingContent = content;
   let fixed = false;
 
@@ -792,6 +913,7 @@ function lintStyleFile(filePath, options = {}) {
     ...lintEmptyStyleVersion(filePath, refreshedContent),
     ...lintDeprecatedTemplateTerms(filePath, refreshedContent),
     ...lintPhraseLikeTermMessages(filePath, refreshedContent),
+    ...lintHardcodedLocaleProse(filePath, refreshedContent, localeValueSet),
   ];
   if (parsed && typeof parsed === 'object' && !fixed) {
     refreshedViolations.push(...lintParsedStyle(filePath, refreshedContent, parsed));
@@ -872,10 +994,13 @@ module.exports = {
   lintEmptyStyleVersion,
   lintDeprecatedTemplateTerms,
   lintPhraseLikeTermMessages,
+  lintHardcodedLocaleProse,
   lintAnonymousAnchors,
   lintLegacyItemsAlias,
   lintParsedStyle,
   lintStyleFile,
+  loadLocaleAffixValueSet,
+  normalizeAffixText,
   parseAnonymousAnchorBlocks,
   parseInlineAnonymousAnchors,
   removeEmptyVersionInText,
