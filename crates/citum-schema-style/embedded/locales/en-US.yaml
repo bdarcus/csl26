@@ -958,6 +958,10 @@ messages:
     .match {$count :plural}
     when one {fig.}
     when * {figs.}
+  term.track-label-long: |
+    .match {$count :plural}
+    when one {track}
+    when * {tracks}
   # Conjunctions and connectors
   term.and: "and"
   term.and-symbol: "&"
@@ -1049,6 +1053,8 @@ messages:
   pattern.chicago-to: "to {$name}"
   pattern.chicago-with: "with {$name}"
   pattern.chicago-written-by: "written by {$name}"
+  pattern.chicago-recorded-date: "recorded {$date}"
+  pattern.chicago-released-date: "released {$date}"
   date.open-ended: "present"
 
 date-formats:

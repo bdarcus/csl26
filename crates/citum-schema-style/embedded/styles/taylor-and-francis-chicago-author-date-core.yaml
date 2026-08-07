@@ -22,6 +22,9 @@ options:
   # categories through inheritance (see csl26-svfg / STYLE_INHERITANCE.md
   # rule 1 and 3).
   titles:
+    # Not a defect: documented workaround for the open proper-noun text-case
+    # bug csl26-4kt3 (see csl26-svfg's summary). Remove this null-clear once
+    # csl26-4kt3 lands; tracked in that bean's acceptance criteria.
     type-mapping: ~
     component:
       text-case: sentence
@@ -65,9 +68,9 @@ bibliography:
       form: year
     - title: primary
     - contributor: translator
-      form: long
+      form: verb
       name-order: given-first
-      prefix: "Translated by "
+      text-case: capitalize-first
     - title: parent-serial
     - number: volume
       prefix: " "
@@ -88,9 +91,9 @@ bibliography:
       form: year
     - title: primary
     - contributor: translator
-      form: long
+      form: verb
       name-order: given-first
-      prefix: "Translated by "
+      text-case: capitalize-first
     - variable: publisher-place
     - variable: publisher
       prefix: ": "
@@ -111,15 +114,19 @@ bibliography:
     - title: primary
       suffix: "."
     - contributor: translator
-      form: long
+      form: verb
       name-order: given-first
-      prefix: "Translated by "
-    - title: parent-monograph
-      prefix: " In "
+      text-case: capitalize-first
+    - message: pattern.in-container
+      args:
+        container:
+          title: parent-monograph
+      text-case: capitalize-first
+      prefix: " "
     - contributor: editor
-      form: long
+      form: verb
       name-order: given-first
-      prefix: ", edited by "
+      prefix: ", "
     - number: pages
       prefix: ", "
     - delimiter: ": "
@@ -137,12 +144,16 @@ bibliography:
     - date: issued
       form: year
     - title: primary
-    - title: parent-monograph
-      prefix: " In "
+    - message: pattern.in-container
+      args:
+        container:
+          title: parent-monograph
+      text-case: capitalize-first
+      prefix: " "
     - contributor: editor
-      form: long
+      form: verb
       name-order: given-first
-      prefix: ", edited by "
+      prefix: ", "
     - title: parent-serial
     - number: volume
       prefix: " "
@@ -171,10 +182,13 @@ bibliography:
     - date: issued
       form: year
     - title: primary
-    - contributor: interviewer
-      form: long
-      name-order: given-first
-      prefix: "Interview by "
+    - message: pattern.chicago-interview-by
+      args:
+        name:
+          contributor: interviewer
+          form: long
+          name-order: given-first
+      text-case: capitalize-first
     - delimiter: ", "
       group:
       - date: issued
@@ -194,6 +208,13 @@ bibliography:
     - title: primary
     - variable: genre
       text-case: capitalize-first
+    # STYLE010 exception: text matches locale director.verb ("directed by"),
+    # but this component declares `contributor: author`, not `director` — the
+    # same author is being credited twice under different roles/name-orders.
+    # Converting to `contributor: director, form: verb` would change which
+    # reference field is read (author vs. a separate director field), a
+    # correctness question, not a wording one, and out of scope here. Left
+    # literal; the role mismatch itself may be worth its own bean.
     - contributor: author
       form: long
       name-order: given-first
@@ -210,15 +231,19 @@ bibliography:
     form: year
   - title: primary
   - contributor: translator
-    form: long
+    form: verb
     name-order: given-first
-    prefix: "Translated by "
-  - title: parent-monograph
-    prefix: " In "
+    text-case: capitalize-first
+  - message: pattern.in-container
+    args:
+      container:
+        title: parent-monograph
+    text-case: capitalize-first
+    prefix: " "
   - contributor: editor
-    form: long
+    form: verb
     name-order: given-first
-    prefix: ", edited by "
+    prefix: ", "
   - title: parent-serial
   - number: volume
     prefix: " "
