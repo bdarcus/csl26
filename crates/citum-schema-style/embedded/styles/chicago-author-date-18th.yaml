@@ -112,9 +112,12 @@ citation:
           min: 3
           use-first: 1
           and-others: et-al
-      - contributor: recipient
-        form: short
-        prefix: " to "
+      - message: pattern.chicago-to
+        args:
+          name:
+            contributor: recipient
+            form: short
+        prefix: " "
       - date: issued
         form: year
         prefix: " "
@@ -243,8 +246,9 @@ bibliography:
       - group:
         - number: volume
         - number: issue
-          prefix: " ("
-          suffix: ")"
+          prefix: " "
+          wrap:
+            punctuation: parentheses
         delimiter: ''
         prefix: " "
       - number: pages
@@ -351,17 +355,20 @@ bibliography:
       prefix: ". "
       text-case: capitalize-first
     - contributor: illustrator
-      form: long
+      form: verb
       name-order: given-first
-      prefix: "Illustrated by "
+      text-case: capitalize-first
     - contributor: narrator
-      form: long
+      form: verb
       name-order: given-first
-      prefix: "Narrated by "
-    - contributor: contributor
-      form: long
-      name-order: given-first
-      prefix: "With "
+      text-case: capitalize-first
+    - message: pattern.chicago-with
+      args:
+        name:
+          contributor: contributor
+          form: long
+          name-order: given-first
+      text-case: capitalize-first
     - group:
       - contributor: editor
         form: verb
@@ -373,8 +380,9 @@ bibliography:
     - group:
       - number: volume
       - number: issue
-        prefix: " ("
-        suffix: ")"
+        prefix: " "
+        wrap:
+          punctuation: parentheses
     - group:
       - variable: original-publisher
       render-when:
@@ -415,6 +423,10 @@ bibliography:
       render-when:
         field-present: original-title
     broadcast:
+    # Not a special rule: identical to the default template's author component
+    # (form/name-order/shorten) — this type-variant just can't share it
+    # structurally without an extends/modify refactor (see legal-case/report/
+    # thesis below for that pattern). Confirmed, not a gap.
     - contributor: author
       form: long
       name-order: family-first
@@ -433,22 +445,32 @@ bibliography:
         punctuation: quotes
       prefix: ", "
     - contributor: writer
-      form: long
+      form: verb
       name-order: given-first
-      prefix: ", written by "
+      prefix: ", "
     - contributor: performer
-      form: long
+      form: verb
       name-order: given-first
-      prefix: ", performed by "
-    - contributor: contributor
-      form: long
-      name-order: given-first
-      prefix: ", with "
-    - date: issued
-      form: month-day
-      prefix: ". Aired "
-    - variable: publisher
-      prefix: ", on "
+      prefix: ", "
+    - message: pattern.chicago-with
+      args:
+        name:
+          contributor: contributor
+          form: long
+          name-order: given-first
+      prefix: ", "
+    - message: pattern.chicago-aired-date
+      args:
+        date:
+          date: issued
+          form: month-day
+      text-case: capitalize-first
+      prefix: ". "
+    - message: pattern.chicago-on
+      args:
+        source:
+          variable: publisher
+      prefix: ", "
     - variable: dimensions
       prefix: ". "
     - variable: url
@@ -458,6 +480,8 @@ bibliography:
     # docs/specs/CSL_TYPE_CONVERSION_CONTRACT.md. Both route to the same
     # archival rendering shape (author/title substitute, archive fields).
     manuscript, collection:
+    # Same finding as broadcast above: identical to the default author
+    # component, not a special rule.
     - contributor: author
       form: long
       name-order: family-first
@@ -548,10 +572,13 @@ bibliography:
           punctuation: quotes
       - date: issued
         form: year
-      - contributor: interviewer
-        form: long
-        name-order: given-first
-        prefix: "Interview by "
+      - message: pattern.chicago-interview-by
+        args:
+          name:
+            contributor: interviewer
+            form: long
+            name-order: given-first
+        text-case: capitalize-first
       - variable: event-title
       - date: event-date
         form: full
@@ -581,10 +608,13 @@ bibliography:
           use-first: 3
       - date: issued
         form: year
-      - contributor: interviewer
-        form: long
-        name-order: given-first
-        prefix: "Interview by "
+      - message: pattern.chicago-interview-by
+        args:
+          name:
+            contributor: interviewer
+            form: long
+            name-order: given-first
+        text-case: capitalize-first
       - variable: raw-genre
         text-case: capitalize-first
       - group:
@@ -704,13 +734,25 @@ bibliography:
     - title: primary
       text-case: title
     - variable: raw-genre
+    # STYLE010 exception: matches locale term.version (short "v.") in
+    # en-US.yaml, but `variable:` components have no label-form mechanism
+    # (only `number:` does, and `version` isn't a NumberVariable — would need
+    # a schema change) and STYLE009 disallows an ad hoc `message: term.version`
+    # for a non-allowlisted lexical term. Left literal; see csl26-07ww
+    # (lint.rs port) for whether variable-level label-form is worth adding.
     - variable: version
       prefix: "V. "
-    - date: issued
-      form: month-day
-      prefix: "Released "
+    - message: pattern.chicago-released-date
+      args:
+        date:
+          date: issued
+          form: month-day
+      text-case: capitalize-first
+    # No "Released" prefix here — the oracle renders one "Released {date}"
+    # clause followed by the medium as its own sentence, not two ("Released
+    # {date}. Released. {medium}."); confirmed against citeproc-js output for
+    # the Gran Turismo 7 fixture item (both fields present).
     - variable: raw-medium
-      prefix: "Released. "
     - variable: url
     legal-case:
       extends: book
@@ -737,10 +779,13 @@ bibliography:
     - date: issued
       form: year
     - title: primary
-    - contributor: contributor
-      form: long
-      name-order: given-first
-      prefix: "With "
+    - message: pattern.chicago-with
+      args:
+        name:
+          contributor: contributor
+          form: long
+          name-order: given-first
+      text-case: capitalize-first
     - variable: publisher
     - group:
       - variable: raw-medium
@@ -759,41 +804,59 @@ bibliography:
       - contributor: director
         form: long
         name-order: family-first
-        suffix: ", dir."
+        label:
+          term: director
+          form: short
       delimiter: ''
     - date: issued
       form: year
     - title: primary
     - contributor: narrator
-      form: long
+      form: verb
       name-order: given-first
-      prefix: "Narrated by "
+      text-case: capitalize-first
     - contributor: performer
-      form: long
+      form: verb
       name-order: given-first
-      prefix: "Performed by "
+      text-case: capitalize-first
       shorten:
         min: 4
         use-first: 3
         and-others: et-al
-    - contributor: contributor
-      form: long
-      name-order: given-first
-      prefix: "With "
-      shorten:
-        min: 4
-        use-first: 3
-        and-others: et-al
+    - message: pattern.chicago-with
+      args:
+        name:
+          contributor: contributor
+          form: long
+          name-order: given-first
+          shorten:
+            min: 4
+            use-first: 3
+            and-others: et-al
+      text-case: capitalize-first
     - group:
+      # "Track " has no clean locale mechanism: number: components resolve
+      # their label from their OWN semantic field, and this field is
+      # chapter-number repurposed for track numbering, not a genuine
+      # track-number accessor — attaching term.track-label-long here would
+      # need a message wrapper with a $count arg tied to the number value,
+      # which is a bigger change than this pass. Left literal; noted for
+      # csl26-rpza (broadcast/episode grammar cluster).
       - number: chapter-number
         prefix: "Track "
-      - title: parent-monograph
-        emph: true
-        prefix: " on "
+      - message: pattern.chicago-on
+        args:
+          source:
+            title: parent-monograph
+            emph: true
+        prefix: " "
       delimiter: ''
-    - date: event-date
-      form: full
-      prefix: "Recorded "
+    - message: pattern.chicago-recorded-date
+      args:
+        date:
+          date: event-date
+          form: full
+      text-case: capitalize-first
     - group:
       - variable: publisher
       - variable: number
@@ -850,18 +913,24 @@ bibliography:
       - group:
         - variable: genre
           text-case: capitalize-first
-        - contributor: recipient
-          form: long
-          name-order: given-first
-          prefix: " to "
+        - message: pattern.chicago-to
+          args:
+            name:
+              contributor: recipient
+              form: long
+              name-order: given-first
+          prefix: " "
         render-when:
           field-present: genre
         delimiter: ''
       - group:
-        - contributor: recipient
-          form: long
-          name-order: given-first
-          prefix: "To "
+        - message: pattern.chicago-to
+          args:
+            name:
+              contributor: recipient
+              form: long
+              name-order: given-first
+          text-case: capitalize-first
         render-when:
           field-present: recipient
           field-absent: genre
@@ -886,18 +955,24 @@ bibliography:
       - group:
         - variable: genre
           text-case: capitalize-first
-        - contributor: recipient
-          form: long
-          name-order: given-first
-          prefix: " to "
+        - message: pattern.chicago-to
+          args:
+            name:
+              contributor: recipient
+              form: long
+              name-order: given-first
+          prefix: " "
         render-when:
           field-present: genre
         delimiter: ''
       - group:
-        - contributor: recipient
-          form: long
-          name-order: given-first
-          prefix: "To "
+        - message: pattern.chicago-to
+          args:
+            name:
+              contributor: recipient
+              form: long
+              name-order: given-first
+          text-case: capitalize-first
         render-when:
           field-present: recipient
           field-absent: genre
@@ -940,8 +1015,9 @@ bibliography:
   - group:
     - number: volume
     - number: issue
-      prefix: " ("
-      suffix: ")"
+      prefix: " "
+      wrap:
+        punctuation: parentheses
     prefix: " "
     delimiter: ""
   - group:
