@@ -89,7 +89,7 @@ bibliography:
     entry-suffix: .
     entry-suffix-after-url: true
     entry-suffix-after-doi: true
-    separator: ", "
+    separator: ". "
     anonymous-entries: notes-only
   type-variants:
     article-journal:
