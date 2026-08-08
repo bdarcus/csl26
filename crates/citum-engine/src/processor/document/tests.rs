@@ -481,7 +481,7 @@ fn test_note_style_integral_citation_keeps_prose_anchor() {
 
     assert_eq!(
         result,
-        "Narrative Doe[^citum-auto-1] continues.\n\n[^citum-auto-1]: Doe, _Book One_.\n\n\n# Bibliography\n\nDoe, John, _Book One_, 2020."
+        "Narrative Doe[^citum-auto-1] continues.\n\n[^citum-auto-1]: Doe, _Book One_.\n\n\n# Bibliography\n\nDoe, John. _Book One_, 2020."
     );
 }
 
@@ -578,7 +578,7 @@ fn test_real_chicago_note_style_generates_djot_footnotes() {
 
     assert_eq!(
         result,
-        "Text.[^citum-auto-1]\n\n[^citum-auto-1]: Doe, _Book One_.\n\n\n# Bibliography\n\nDoe, John, _Book One_, 2020."
+        "Text.[^citum-auto-1]\n\n[^citum-auto-1]: Doe, _Book One_.\n\n\n# Bibliography\n\nDoe, John. _Book One_, 2020."
     );
 }
 
