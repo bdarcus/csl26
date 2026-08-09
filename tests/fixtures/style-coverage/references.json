@@ -1,0 +1,15 @@
+{
+  "ITEM-1": {
+    "id": "ITEM-1",
+    "type": "book",
+    "title": "A Book",
+    "publisher": "Example Press",
+    "license": "CC0"
+  },
+  "ITEM-2": {
+    "id": "ITEM-2",
+    "type": "article-journal",
+    "title": "An Article",
+    "issue": "2"
+  }
+}

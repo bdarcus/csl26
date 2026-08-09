@@ -1,7 +1,7 @@
 ---
 # csl26-02yg
 title: Make style coverage packets auditable and reproducible
-status: todo
+status: completed
 type: task
 priority: high
 tags:
@@ -9,7 +9,7 @@ tags:
     - harness
     - coverage
 created_at: 2026-08-09T14:41:10Z
-updated_at: 2026-08-09T14:41:10Z
+updated_at: 2026-08-09T17:54:39Z
 ---
 
 Build the coverage packet contract specified by
@@ -36,9 +36,14 @@ baseline. Its working-tree provenance, missing row identity, broken parity
 join, and truncated Markdown output must be fixed before its 23/482 parity or
 119 uncovered observations are used as gates.
 
-- [ ] Audit manifest schema and validation are implemented.
-- [ ] Observation identities are stable and unique.
-- [ ] Relevance, intentional omission, and comparability are explicit.
-- [ ] Packet generation is complete, deterministic, and freshness-tested.
-- [ ] Supplied parity evidence produces joined non-null exact-match rows.
-- [ ] Resolver evidence comes from the engine or passes conformance fixtures.
+- [x] Audit manifest schema and validation are implemented.
+- [x] Observation identities are stable and unique.
+- [x] Relevance, intentional omission, and comparability are explicit.
+- [x] Packet generation is complete, deterministic, and freshness-tested.
+- [x] Supplied parity evidence produces joined non-null exact-match rows.
+- [x] Resolver evidence comes from the engine or passes conformance fixtures.
+- [x] Audited source revisions remain pinned while clean later revisions can regenerate packets.
+
+Validation: all 259 JavaScript script tests pass, including byte-for-byte golden freshness and
+the distinct audited-source/generator-revision provenance case. The repository Rust gate also
+passes with 2,447 tests on the stacked child.

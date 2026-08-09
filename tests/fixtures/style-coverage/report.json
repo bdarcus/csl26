@@ -1,0 +1,33 @@
+{
+  "styles": [
+    {
+      "name": "coverage-fixture",
+      "exactParity": {
+        "passed": 2,
+        "total": 3,
+        "notComparable": 1
+      },
+      "citationEntries": [
+        {
+          "id": "cite-1",
+          "evidenceRunId": "baseline",
+          "exactMatch": true
+        }
+      ],
+      "oracleDetail": [
+        {
+          "id": "ITEM-1",
+          "evidenceRunId": "baseline",
+          "exactParityEligible": true,
+          "exactMatch": false
+        },
+        {
+          "id": "ITEM-2",
+          "evidenceRunId": "baseline",
+          "exactParityEligible": false,
+          "exactMatch": null
+        }
+      ]
+    }
+  ]
+}

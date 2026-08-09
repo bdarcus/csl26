@@ -531,6 +531,9 @@ pub(crate) enum StyleCommands {
         /// Output format
         #[arg(long, value_enum, default_value_t = StyleCatalogFormat::Text)]
         format: StyleCatalogFormat,
+        /// Include the fully resolved style in JSON output
+        #[arg(long)]
+        include_resolved: bool,
     },
 }
 

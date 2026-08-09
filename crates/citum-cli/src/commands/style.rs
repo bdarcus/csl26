@@ -163,26 +163,28 @@ pub(super) fn run_style_pin(
 
 /// Validate a style end-to-end: parse, resolve `extends`, run lint warnings,
 /// verify any `extends-pin`, and check `citum-version`.
-pub(super) fn run_style_validate(target: &str, format: StyleCatalogFormat) -> CliResult {
+pub(super) fn run_style_validate(
+    target: &str,
+    format: StyleCatalogFormat,
+    include_resolved: bool,
+) -> CliResult {
+    if include_resolved && format != StyleCatalogFormat::Json {
+        return Err("--include-resolved requires --format json".into());
+    }
     let style = load_unresolved_style(target)?;
     let warnings = style.validate();
     // try_into_resolved walks extends, runs extends-pin verification, and
     // applies the citum-version check on every URI-resolved parent — this is
     // the same code path the engine uses at render time.
-    let resolved = style
+    let mut resolved = style
         .clone()
         .try_into_resolved_with(Some(&build_chain_resolver()?))?;
+    resolved.extends = None;
     let canonical = serde_yaml::to_string(&style)?;
     let cid = citum_store::cid::compute_style_cid(canonical.as_bytes());
 
     if format == StyleCatalogFormat::Json {
-        let value = serde_json::json!({
-            "target": target,
-            "ok": warnings.is_empty(),
-            "warnings": warnings.iter().map(ToString::to_string).collect::<Vec<_>>(),
-            "cid": cid,
-            "citum-version": resolved.info.citum_version,
-        });
+        let value = style_validation_json(target, &warnings, &cid, &resolved, include_resolved)?;
         println!("{}", serde_json::to_string_pretty(&value)?);
     } else {
         println!("OK   {target}");
@@ -195,6 +197,29 @@ pub(super) fn run_style_validate(target: &str, format: StyleCatalogFormat) -> Cl
         }
     }
     Ok(())
+}
+
+fn style_validation_json(
+    target: &str,
+    warnings: &[citum_schema::SchemaWarning],
+    cid: &str,
+    resolved: &Style,
+    include_resolved: bool,
+) -> Result<serde_json::Value, serde_json::Error> {
+    let mut value = serde_json::json!({
+        "target": target,
+        "ok": warnings.is_empty(),
+        "warnings": warnings.iter().map(ToString::to_string).collect::<Vec<_>>(),
+        "cid": cid,
+        "citum-version": resolved.info.citum_version,
+    });
+    if include_resolved && let Some(object) = value.as_object_mut() {
+        object.insert(
+            "resolved-style".to_string(),
+            serde_json::to_value(resolved)?,
+        );
+    }
+    Ok(value)
 }
 
 /// Read canonical Style bytes for a target argument that may be a file path or
@@ -307,7 +332,11 @@ pub(super) fn dispatch(command: StyleCommands) -> CliResult {
             uri,
             format,
         } => run_style_pin(&target, uri.as_deref(), format),
-        StyleCommands::Validate { target, format } => run_style_validate(&target, format),
+        StyleCommands::Validate {
+            target,
+            format,
+            include_resolved,
+        } => run_style_validate(&target, format, include_resolved),
     }
 }
 
@@ -338,4 +367,46 @@ pub(super) fn run_style_browse(query: Option<&str>, source: &str) -> CliResult {
         },
         &mut actions,
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::style_validation_json;
+    use citum_schema::Style;
+
+    #[test]
+    fn validation_json_includes_resolved_style_only_when_requested() {
+        let parsed = Style::from_yaml_str(
+            r#"
+info:
+  title: Resolved style
+citation:
+  template:
+    - title: primary
+"#,
+        );
+        assert!(parsed.is_ok(), "style fixture must parse");
+        let Some(parsed) = parsed.ok() else {
+            return;
+        };
+        let result = parsed.try_into_resolved();
+        assert!(result.is_ok(), "style fixture must parse and resolve");
+        let Some(style) = result.ok() else {
+            return;
+        };
+
+        let compact = style_validation_json("style.yaml", &[], "cid", &style, false);
+        let with_resolved = style_validation_json("style.yaml", &[], "cid", &style, true);
+        assert!(compact.is_ok(), "compact JSON must serialize");
+        assert!(with_resolved.is_ok(), "resolved JSON must serialize");
+        let (Some(compact), Some(with_resolved)) = (compact.ok(), with_resolved.ok()) else {
+            return;
+        };
+
+        assert!(compact.get("resolved-style").is_none());
+        assert_eq!(
+            with_resolved.pointer("/resolved-style/citation/template/0/title"),
+            Some(&serde_json::json!("primary"))
+        );
+    }
 }
