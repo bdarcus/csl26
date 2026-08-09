@@ -409,7 +409,7 @@ impl Processor {
         renderer_inter_delimiter: &str,
         note_start_text_case: Option<NoteStartTextCase>,
         run: &RunState,
-    ) -> Result<String, ProcessorError>
+    ) -> Result<(String, bool), ProcessorError>
     where
         F: crate::render::format::OutputFormat<Output = String>,
     {
@@ -441,6 +441,7 @@ impl Processor {
         };
         let scoped_hints = self.citation_scoped_by_cite_hints(&sorted_items, &citation_config);
         let renderer_hints = scoped_hints.as_ref().unwrap_or(&self.hints);
+        let punctuation_in_quote = citation_config.punctuation_in_quote;
         let citation_config = Arc::new(citation_config.into_owned());
         let renderer = Renderer::new(
             RendererResources {
@@ -500,17 +501,16 @@ impl Processor {
             )?
         };
 
-        Ok(
-            if matches!(
-                citation.mode,
-                citum_schema::citation::CitationMode::Integral
-            ) && !has_explicit_integral_multi_cite_delimiter
-            {
-                join_integral_groups(rendered_groups, &self.locale)
-            } else {
-                F::default().join(rendered_groups, renderer_inter_delimiter)
-            },
-        )
+        let rendered = if matches!(
+            citation.mode,
+            citum_schema::citation::CitationMode::Integral
+        ) && !has_explicit_integral_multi_cite_delimiter
+        {
+            join_integral_groups(rendered_groups, &self.locale)
+        } else {
+            F::default().join(rendered_groups, renderer_inter_delimiter)
+        };
+        Ok((rendered, punctuation_in_quote))
     }
 
     /// Apply user-supplied prefix and suffix from the citation input.
@@ -559,6 +559,7 @@ impl Processor {
         citation: &Citation,
         effective_spec: &citum_schema::CitationSpec,
         output: String,
+        punctuation_in_quote: bool,
         fmt: &F,
     ) -> String
     where
@@ -589,11 +590,34 @@ impl Processor {
                 )
             })
             .unwrap_or(Cow::Borrowed(""));
-
-        if matches!(
+        let spec_suffix = crate::render::format::RealizedPunctuation::new(spec_suffix);
+        let is_integral = matches!(
             citation.mode,
             citum_schema::citation::CitationMode::Integral
-        ) {
+        );
+        let suffix_applies = is_integral || effective_spec.wrap.is_none();
+        let mut output = output;
+        let suffix_core = spec_suffix.core();
+        let suffix_moved_inside_quote = if suffix_applies
+            && punctuation_in_quote
+            && let Some(mark @ ('.' | ',')) = suffix_core
+        {
+            let quote_marks = crate::render::format::QuoteMarks::from(&self.locale.grammar_options);
+            crate::render::punctuation::move_punctuation_into_quote::<F>(
+                &mut output,
+                mark,
+                &quote_marks.close,
+            )
+        } else {
+            false
+        };
+        let spec_suffix_text = if suffix_moved_inside_quote {
+            spec_suffix.tail()
+        } else {
+            spec_suffix.text()
+        };
+
+        if is_integral {
             if !spec_prefix.is_empty() || !spec_suffix.is_empty() {
                 crate::render::format::apply_punctuation_affixes(
                     fmt,
@@ -605,7 +629,7 @@ impl Processor {
                     effective_spec
                         .suffix
                         .as_ref()
-                        .map(|punctuation| (punctuation, spec_suffix.as_ref())),
+                        .map(|punctuation| (punctuation, spec_suffix_text)),
                 )
             } else {
                 output
@@ -637,7 +661,7 @@ impl Processor {
                 effective_spec
                     .suffix
                     .as_ref()
-                    .map(|punctuation| (punctuation, spec_suffix.as_ref())),
+                    .map(|punctuation| (punctuation, spec_suffix_text)),
             )
         } else {
             output
@@ -766,7 +790,7 @@ impl Processor {
         } else {
             renderer_inter_delimiter.into_owned()
         };
-        let content = self.render_citation_content::<F>(
+        let (content, punctuation_in_quote) = self.render_citation_content::<F>(
             citation,
             &effective_spec,
             &renderer_delimiter,
@@ -775,7 +799,13 @@ impl Processor {
             run,
         )?;
         let output = self.apply_citation_input_affixes(citation, content, &fmt);
-        let wrapped = self.apply_spec_wrap_and_affixes(citation, &effective_spec, output, &fmt);
+        let wrapped = self.apply_spec_wrap_and_affixes(
+            citation,
+            &effective_spec,
+            output,
+            punctuation_in_quote,
+            &fmt,
+        );
         let wrapped = if self.wants_latin_punctuation_for_citation(citation) {
             crate::render::component::remap_to_latin_punctuation(wrapped)
         } else {
@@ -844,5 +874,42 @@ impl Processor {
             .iter()
             .map(|citation| self.process_citation_with_format::<F>(citation, run))
             .collect()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::render::plain::PlainText;
+    use citum_schema::Style;
+    use citum_schema::template::DelimiterPunctuation;
+
+    fn apply_period_suffix(punctuation_in_quote: bool) -> String {
+        let style = Style {
+            options: Some(Config {
+                punctuation_in_quote,
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+        let processor = Processor::new(style, Default::default());
+        let spec = citum_schema::CitationSpec {
+            suffix: Some(DelimiterPunctuation::Custom(".".to_string())),
+            ..Default::default()
+        };
+
+        processor.apply_spec_wrap_and_affixes(
+            &Citation::default(),
+            &spec,
+            "“Title”".to_string(),
+            punctuation_in_quote,
+            &PlainText,
+        )
+    }
+
+    #[test]
+    fn citation_spec_suffix_respects_punctuation_in_quote() {
+        assert_eq!(apply_period_suffix(true), "“Title.”");
+        assert_eq!(apply_period_suffix(false), "“Title”.");
     }
 }
