@@ -50,6 +50,12 @@ Read first:
   `citeproc-correct` or `unclear`; only the user may record `citum-correct`.
 - Before editing a style, classify it by semantic class and implementation
   form using `docs/specs/STYLE_TAXONOMY.md` and the shared workflow docs.
+- Before editing, run
+  `node scripts/check-style-coverage-audits.js --status <style-id>` and report
+  `current`, `stale`, or `not registered`. Follow the shared workflow for
+  bounded cluster selection, `--update-manifest` recovery from a stale
+  packet, the shared-ancestor / full-portfolio-baseline rule, and final
+  packet regeneration.
 - Profile-family work may require a `create` pass for a hidden family root
   followed by `upgrade` reduction of the public handles.
 - Journal/profile reductions must choose parents from guide-backed authority,

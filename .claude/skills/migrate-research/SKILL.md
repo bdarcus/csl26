@@ -40,6 +40,13 @@ Run the full research loop without pausing for approval. Only interrupt for `Car
 
 ## Workflow
 - Use the shared execution guide for the evidence ladder, cluster reduction, and stop conditions.
+- Run `node scripts/check-style-coverage-audits.js --status <style-id>` and
+  report `current`, `stale`, or `not registered`. A current packet may select
+  one bounded cluster; stale evidence is rejected; an unregistered style does
+  not need a new packet.
+- Do not attribute a cluster to `citum-migrate` from a hand-authored packet.
+  Require a fresh migrated candidate from the relevant CSL source and
+  reproduce the cluster first.
 - Keep the file focused on the converter-specific loop and migration session state.
 
 ## Session State
@@ -48,4 +55,7 @@ Keep the existing `lab/` scratch structure under `.claude/skills/migrate-researc
 
 ## Output Contract
 
-Report the chosen cluster, classification, before/after evidence, exact change made if any, and the final verdict on whether the pass should continue, stop, or escalate.
+Report the chosen cluster, coverage-audit status, classification, before/after
+evidence, disposition and joined-parity deltas when registered, exact change
+made if any, and the final verdict on whether the pass should continue, stop,
+or escalate.

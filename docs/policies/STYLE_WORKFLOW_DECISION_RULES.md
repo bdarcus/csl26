@@ -1,12 +1,13 @@
 # Style Workflow Decision Rules
 
 **Status:** Active
-**Version:** 1.5
-**Date:** 2026-07-31
+**Version:** 1.7
+**Date:** 2026-08-11
 **Related:** [STYLE_WORKFLOW_EXECUTION.md](../guides/STYLE_WORKFLOW_EXECUTION.md),
 [SKILL_AGENT_REFACTOR.md](../architecture/SKILL_AGENT_REFACTOR.md),
 [MIGRATION_STRATEGY_ANALYSIS.md](../architecture/MIGRATION_STRATEGY_ANALYSIS.md),
 [CSL_TYPE_CONVERSION_CONTRACT.md](../specs/CSL_TYPE_CONVERSION_CONTRACT.md),
+[STYLE_TEMPLATE_EXPRESSIVENESS_AND_PARITY.md](../specs/STYLE_TEMPLATE_EXPRESSIVENESS_AND_PARITY.md),
 [2026-07-31_EXACT_PARITY_REFOCUS.md](../architecture/audits/2026-07-31_EXACT_PARITY_REFOCUS.md)
 
 ## Rule
@@ -25,6 +26,57 @@ Before editing YAML, shared style workflows must classify the target on **three*
 3. portfolio tier: `embedded-core` or `dependent`
 
 All three classifications are operational, not cosmetic.
+
+### Registered coverage-audit pre-flight
+
+Before editing a style, run
+`node scripts/check-style-coverage-audits.js --status <style-id>` and report
+exactly one status: `current`, `stale`, or `not registered`.
+
+- `current`: inspect the adjudication record and packet, then select one
+  bounded output cluster. Uncovered observations are investigation leads, not
+  proof that a field caused an Oracle/Citum mismatch.
+- `stale`: stop the style pass. A malformed, hash-stale, count-inconsistent,
+  or non-reproducible registered packet is invalid evidence and must be
+  regenerated before final QA. The manifest pins file hashes for the audited
+  style and every `style.chain` ancestor; editing any of them is the expected
+  cause of a `stale` result, not an anomaly. Recover with
+  `node scripts/style-coverage-review.js --manifest <path> --json-out <path>
+  --markdown-out <path> --update-manifest`, which re-pins the hashes and
+  observation count, then regenerate normally on a clean, committed tree to
+  restore baseline eligibility.
+- `not registered`: continue with the ordinary evidence ladder. Do not create
+  an audit merely because the style has none.
+
+Before final QA on a registered style, regenerate the packet from committed,
+baseline-eligible inputs and rerun the checker. Report render-disposition and
+joined exact-parity deltas. Count changes are evidence that requires an
+explanation; a higher uncovered count is not, by itself, an automatic failure.
+
+A registered audit of a hand-authored style cannot establish a
+`citum-migrate` defect. Converter attribution requires a fresh migrated
+candidate produced from the relevant CSL source, with an apples-to-apples
+comparison that reproduces the cluster.
+
+### Shared-ancestor edits and family coverage
+
+A registered coverage packet is scoped to one leaf `style_id`. It pins the
+hashes of every ancestor in `style.chain`, so an edit to a shared base (for
+example, a Chicago base shared by several embedded-core descendants) is
+correctly detected as staling the packet — but the packet's field-level
+evidence still speaks only for its own leaf. Sibling styles that extend the
+same ancestor get no disposition or observation detail from it.
+
+The existing, portfolio-wide protection for those siblings is
+`scripts/report-data/embedded-parity-baseline.json`: it tracks a per-style
+exact-parity floor for every `embedded-core` style individually, and the
+floor may never regress for any of them. Whenever a fix touches a file shared
+by other embedded-core styles, identify the siblings (`citum style list
+--source embedded`, cross-referenced against each candidate's `extends`) and
+regenerate `embedded-parity-baseline.json` from the full portfolio — not a
+`--style`-scoped run — before closing the pass. This is what turns a
+shared-ancestor fix into credited, verified improvement across the family
+instead of an unrecorded side effect.
 
 ### Conversion-layer pre-flight
 
@@ -100,8 +152,21 @@ Style work in Citum repeatedly follows the same decision logic: determine whethe
 - Run the conversion-layer pre-flight before classifying a type- or
   field-population-shaped mismatch; a `processor-defect` (conversion)
   claim needs the pre-flight evidence attached.
+- Report the registered coverage-audit status before editing. If it is
+  `current`, choose one bounded cluster from its output groups; if it is
+  `stale`, reject the evidence; if it is `not registered`, proceed without
+  creating a packet.
+- Editing a file in a registered audit's `style.chain` is expected to make
+  its packet `stale`; recover with `--update-manifest` rather than treating
+  the mismatch as a blocker.
+- Before closing a pass that touched a `style.chain` file shared by other
+  embedded-core styles, regenerate `embedded-parity-baseline.json` from the
+  full portfolio — the packet does not cover siblings, the baseline floor
+  does.
 - `style-defect` routes to style-local YAML repair.
 - `migration-artifact` stays in migration-focused work.
+- A `migration-artifact` claim requires fresh migrated-candidate evidence;
+  structural leads from a hand-authored audit are insufficient.
 - `processor-defect` routes to engine or processor follow-up.
 - `intentional divergence` is recorded and excluded from fix counts.
 - `profile` means both a semantic relationship and a config-wrapper contract.
@@ -128,6 +193,16 @@ Style work in Citum repeatedly follows the same decision logic: determine whethe
 - Rich-input evidence ordering and per-skill output phrasing live in the execution guide.
 
 ## Changelog
+- v1.7 (2026-08-11): Documented `--update-manifest` as the recovery path when
+  editing the audited style or a `style.chain` ancestor stales a registered
+  packet. Added the shared-ancestor / family-coverage rule: a packet is
+  leaf-scoped, so protecting and crediting sibling embedded-core styles that
+  share an edited ancestor requires a full-portfolio
+  `embedded-parity-baseline.json` regeneration, not a `--style`-scoped one.
+- v1.6 (2026-08-09): Added the registered coverage-audit pre-flight, bounded
+  cluster selection, final regeneration and delta reporting, stale-evidence
+  rejection, and the fresh migrated-candidate requirement for converter
+  attribution.
 - v1.5 (2026-07-31): Added exact parity as a hard gate for `embedded-core`
   styles in the portfolio-tier table, alongside fidelity and SQI. See
   [2026-07-31_EXACT_PARITY_REFOCUS.md](../architecture/audits/2026-07-31_EXACT_PARITY_REFOCUS.md).

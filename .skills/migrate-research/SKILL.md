@@ -26,6 +26,10 @@ Read first:
 ## Operating Rules
 
 - Start with the smallest trustworthy evidence surface.
+- Report the target's coverage-audit status as `current`, `stale`, or
+  `not registered` using `node scripts/check-style-coverage-audits.js --status
+  <style-id>`. Use a current packet to choose one bounded cluster, reject a
+  stale packet, and do not create one for an unregistered style.
 - State the target semantic class and implementation form before proposing a fix.
 - Classify each cluster as `migration-artifact`, `style-defect`, `processor-defect`,
   or `intentional divergence`. For type- or field-population-shaped clusters,
@@ -38,12 +42,16 @@ Read first:
   stop and reroute or escalate instead of breaking the profile contract.
 - Stop when the cluster is clearly out of scope or converged.
 - Keep the loop bounded to one cluster per pass.
+- Never attribute a cluster to `citum-migrate` from a hand-authored coverage
+  packet. Require a fresh migrated candidate from the relevant CSL source and
+  reproduce the cluster before calling it a converter defect.
 
 ## Output
 
-Report the chosen cluster, semantic class, implementation form, selected parent if any,
-classification, before/after evidence, exact change made if any, and whether the pass
-should continue, stop, or escalate.
+Report the chosen cluster, coverage-audit status, semantic class,
+implementation form, selected parent if any, classification, before/after
+evidence, disposition and parity deltas when registered, exact change made if
+any, and whether the pass should continue, stop, or escalate.
 
 ## Self-Improvement
 

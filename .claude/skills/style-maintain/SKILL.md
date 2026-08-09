@@ -28,13 +28,19 @@ Run the full fix loop without pausing for approval. Use the shared docs for the 
 ## Workflow
 
 1. Read `docs/adjudication/DIVERGENCE_REGISTER.md` before the first oracle run.
-2. Run the correct oracle with all failures visible.
-3. Classify each failure using the shared decision rules.
-4. Apply the smallest YAML fix needed for the selected defect.
-5. Re-run the oracle.
-6. If configured, capture supplemental rich-input evidence after the main oracle pass.
-7. Stop iterating on scenarios that have converged or belong to another layer.
-8. QA gate, then commit.
+2. Run `node scripts/check-style-coverage-audits.js --status <style-id>` and
+   report `current`, `stale`, or `not registered`. For a current packet, select
+   one bounded output cluster; reject stale evidence; do not create a packet
+   for an unregistered style.
+3. Run the correct oracle with all failures visible.
+4. Classify each failure using the shared decision rules.
+5. Apply the smallest YAML fix needed for the selected defect.
+6. Re-run the oracle.
+7. If configured, capture supplemental rich-input evidence after the main oracle pass.
+8. Before final QA, regenerate and validate any registered packet and report
+   disposition plus joined-parity deltas.
+9. Stop iterating on scenarios that have converged or belong to another layer.
+10. QA gate, then commit.
 
 ## Fix Ordering
 1. Component-level type variations and punctuation/wrap controls.

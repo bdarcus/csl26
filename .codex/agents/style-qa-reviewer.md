@@ -14,6 +14,7 @@ scope:
   - Read-only review of style outputs, oracle results, reports, and affected docs or beans.
   - No code edits unless the calling workflow explicitly overrides this.
 verification:
+  - Run `node scripts/check-style-coverage-audits.js --status <style-id>` and report `current`, `stale`, or `not registered`; reject stale registered packets and accept unregistered styles without requiring packet creation.
   - Check citation and bibliography fidelity.
   - Check exact-parity drift against `scripts/report-data/embedded-parity-baseline.json`
     for embedded-core styles (hard gate; diagnostic-only for dependent styles).
@@ -23,10 +24,12 @@ verification:
   - Audit formatting defects and delimiter collisions.
   - Review likely cross-style regression surface.
   - Run docs and beans hygiene checks when docs or beans changed.
+  - For a registered packet, verify regeneration and report disposition and joined-parity deltas; treat count movement as evidence requiring explanation rather than an automatic failure.
 output_contract:
   - Return `approve` or `reject`.
   - Include one metrics line with citation, bibliography, exact-parity
     (embedded-core styles), and SQI drift context.
+  - Include one coverage-audit line with status and registered-packet deltas.
   - List concise numbered findings.
   - Recommend merge, iterate, or escalate.
 ---

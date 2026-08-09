@@ -70,6 +70,10 @@ check-core-quality:
         --parity-baseline scripts/report-data/embedded-parity-baseline.json \
         --parity-adjudication scripts/report-data/parity-adjudication.json
 
+# Validate schemas, hashes, partitions, and byte-for-byte freshness for explicitly registered audits
+check-style-coverage-audits:
+    node scripts/check-style-coverage-audits.js
+
 # Refresh Top-10 oracle aggregate baselines
 oracle-refresh:
     node scripts/oracle-batch-aggregate.js styles-legacy/ --top 10

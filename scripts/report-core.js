@@ -42,6 +42,10 @@ const {
   loadReportProvenance,
 } = require('./lib/report-metadata');
 const {
+  coverageAuditMetadata,
+  loadCoverageAuditViews,
+} = require('./lib/style-coverage-audits');
+const {
   auditNoteStyle,
   discoverNoteStyles,
 } = require('./lib/note-position-audit');
@@ -2904,6 +2908,10 @@ async function generateReport(options) {
   const runtime = createReportRuntime(options);
   const preflightIssues = preflightSnapshots(coreStyles, verificationPolicy, stylesDir);
   const noteStyles = buildNoteStyleLookup();
+  const coverageAuditViews = loadCoverageAuditViews(
+    provenanceConfig,
+    coreStyles.map((style) => style.name)
+  );
 
   if (!runtime.allowLiveFallback && preflightIssues.length > 0) {
     for (const issue of preflightIssues) {
@@ -2927,7 +2935,12 @@ async function generateReport(options) {
   });
 
   const styles = styleJobs
-    .map((job) => job.styleRecord)
+    .map((job) => {
+      const coverageAudit = coverageAuditViews.get(job.styleRecord.name);
+      return coverageAudit
+        ? { ...job.styleRecord, coverageAudit }
+        : job.styleRecord;
+    })
     .sort((left, right) => left.name.localeCompare(right.name));
   const headlineJobs = styleJobs.filter((job) => job.styleRecord.tier === 'embedded');
   let citationsTotal = 0;
@@ -3029,6 +3042,7 @@ async function generateReport(options) {
           behavioralBands: null,
           derivability: null,
         },
+        coverageAudits: coverageAuditMetadata(provenanceConfig),
         ...(options.timings ? { timings: serializeTimingSummary(runtime) } : {}),
       },
       totalImpact: parseFloat(totalImpact),
@@ -3166,6 +3180,16 @@ function generateHtmlHeader(report) {
         .badge-pending {
             background-color: rgba(148, 163, 184, 0.1);
             color: #475569;
+        }
+        .audit-observation-id {
+            overflow-wrap: anywhere;
+        }
+        .audit-output[hidden] {
+            display: none;
+        }
+        :where(button, select, input, summary, a):focus-visible {
+            outline: 3px solid rgba(42, 148, 214, 0.45);
+            outline-offset: 2px;
         }
     </style>
     <link rel="stylesheet" href="assets/citum-theme.css">
@@ -3564,14 +3588,19 @@ function generateHtmlTable(report) {
                         </span>
                     </td>
                     <td class="px-6 py-4 text-right">
-                        <button class="text-slate-500 hover:text-primary text-xs font-medium transition-colors" onclick="toggleAccordion('${contentId}')">
+                        <button type="button"
+                            class="text-slate-500 hover:text-primary text-xs font-medium transition-colors"
+                            aria-label="Show details for ${escapeHtml(style.name)}"
+                            aria-controls="${contentId}"
+                            aria-expanded="false"
+                            onclick="toggleAccordion('${contentId}')">
                             <span class="material-icons text-base align-middle">expand_more</span>
                         </button>
                     </td>
                 </tr>
                 <tr class="accordion-content" id="${contentId}">
                     <td colspan="13" class="px-6 py-4 bg-slate-50">
-                        <div class="max-w-4xl">
+                        <div class="max-w-6xl">
 ${generateDetailContent(style)}
                         </div>
                     </td>
@@ -3731,13 +3760,13 @@ function renderInlineTextDifference(benchmarkText, citumText) {
 
   const renderSide = (characters, changeEnd, emptyLabel) => {
     if (characters.length === 0) {
-      return `<mark class="rounded bg-amber-200 px-0.5 text-slate-900">${escapeHtml(emptyLabel)}</mark>`;
+      return `<mark class="rounded bg-amber-200 px-0.5 text-amber-950">${escapeHtml(emptyLabel)}</mark>`;
     }
     const changed = characters.slice(prefixLength, Math.min(changeEnd, prefixLength + 72)).join('');
     const changeWasTruncated = changeEnd > prefixLength + 72;
     const before = `${prefixStart > 0 ? '…' : ''}${commonPrefix}`;
     const after = `${commonSuffix}${suffixEnd < benchmark.length ? '…' : ''}`;
-    return `${escapeHtml(before)}<mark class="rounded bg-amber-200 px-0.5 text-slate-900">${escapeHtml(changed)}${changeWasTruncated ? '…' : ''}</mark>${escapeHtml(after)}`;
+    return `${escapeHtml(before)}<mark class="rounded bg-amber-200 px-0.5 text-amber-950">${escapeHtml(changed)}${changeWasTruncated ? '…' : ''}</mark>${escapeHtml(after)}`;
   };
 
   return {
@@ -3944,6 +3973,162 @@ function renderBibliographyEvidence(style) {
                             </div>
 `;
   return html;
+}
+
+function auditDispositionBadge(disposition) {
+  const classes = {
+    rendered: 'bg-emerald-100 text-emerald-800',
+    fallback: 'bg-sky-100 text-sky-800',
+    suppressed: 'bg-slate-200 text-slate-700',
+    uncovered: 'bg-amber-100 text-amber-900',
+    excluded: 'bg-slate-100 text-slate-600',
+  };
+  return classes[disposition] || 'bg-slate-100 text-slate-600';
+}
+
+function auditComparisonBadge(state) {
+  const classes = {
+    'exact-match': 'bg-emerald-100 text-emerald-800',
+    mismatch: 'bg-rose-100 text-rose-800',
+    'not-comparable': 'bg-slate-100 text-slate-600',
+  };
+  return classes[state] || 'bg-slate-100 text-slate-600';
+}
+
+function renderCoverageAuditExplorer(style) {
+  const audit = style.coverageAudit;
+  if (!audit) return '';
+  const explorerId = `coverage-audit-${style.name}`;
+  const summary = audit.summary;
+  const exact = summary.joinedExactParity;
+  const cards = [
+    ['Rendered', summary.renderDisposition.rendered, 'Resolved type path'],
+    ['Fallback', summary.renderDisposition.fallback, 'Style-wide fallback path'],
+    ['Suppressed', summary.renderDisposition.suppressed, 'Declared omission'],
+    ['Uncovered', summary.renderDisposition.uncovered, 'No structural path'],
+    ['Excluded', summary.excludedObservations, 'Outside style obligations'],
+    ['Exact parity', `${exact.passed}/${exact.total}`, `${exact.notComparable} not comparable`],
+  ].map(([label, value, note]) => `
+                                    <div class="min-w-0 rounded-lg bg-[var(--citum-surface)] px-3 py-3 ring-1 ring-inset ring-slate-200">
+                                        <div class="text-[11px] font-semibold uppercase tracking-wide text-slate-500">${label}</div>
+                                        <div class="mt-1 text-xl font-semibold text-slate-900">${value}</div>
+                                        <div class="mt-1 text-[11px] leading-4 text-slate-500">${note}</div>
+                                    </div>`).join('');
+
+  const groups = audit.outputGroups.map((group) => {
+    const dispositionBadges = group.dispositions.map((disposition) => `
+                                            <span class="inline-flex items-center rounded px-2 py-1 text-[11px] font-medium ${auditDispositionBadge(disposition)}">
+                                                ${escapeHtml(disposition)} ${group.dispositionCounts[disposition]}
+                                            </span>`).join('');
+    const fields = group.fields.map((field) => `
+                                            <li class="grid min-w-0 grid-cols-1 gap-2 border-t border-slate-200 py-3 first:border-t-0 md:grid-cols-[minmax(8rem,0.6fr)_minmax(8rem,0.45fr)_minmax(16rem,1.8fr)] md:items-start">
+                                                <div class="min-w-0">
+                                                    <div class="font-medium text-slate-800">${escapeHtml(field.field)}</div>
+                                                    <div class="mt-1 text-[11px] text-slate-500">${escapeHtml(field.referenceId)} · ${escapeHtml(field.referenceType)}</div>
+                                                </div>
+                                                <div>
+                                                    <span class="inline-flex rounded px-2 py-1 text-[11px] font-medium ${auditDispositionBadge(field.disposition)}">${escapeHtml(field.disposition)}</span>
+                                                    ${field.rationale ? `<p class="mt-2 text-[11px] leading-4 text-slate-500">${escapeHtml(field.rationale)}</p>` : ''}
+                                                </div>
+                                                <code class="audit-observation-id min-w-0 text-[11px] leading-4 text-slate-500" title="Stable observation ID">${escapeHtml(field.observationId)}</code>
+                                            </li>`).join('');
+    const exactDifference = group.exactEvidence
+      ? (() => {
+        const diff = renderInlineTextDifference(group.exactEvidence.oracle, group.exactEvidence.citum);
+        return `
+                                        <details class="mt-3 rounded-lg bg-slate-100/80 ring-1 ring-inset ring-slate-200">
+                                            <summary class="cursor-pointer px-3 py-2 text-xs font-semibold text-slate-700">Exact Oracle/Citum difference · first change at character ${diff.position}</summary>
+                                            <div class="grid min-w-0 gap-3 px-3 pb-3 pt-1 lg:grid-cols-2">
+                                                <div class="min-w-0">
+                                                    <div class="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500">Oracle</div>
+                                                    <p class="audit-observation-id font-mono text-xs leading-5 text-slate-700" title="${escapeHtml(group.exactEvidence.oracle)}">${diff.benchmark}</p>
+                                                </div>
+                                                <div class="min-w-0">
+                                                    <div class="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500">Citum</div>
+                                                    <p class="audit-observation-id font-mono text-xs leading-5 text-slate-700" title="${escapeHtml(group.exactEvidence.citum)}">${diff.citum}</p>
+                                                </div>
+                                            </div>
+                                        </details>`;
+      })()
+      : '';
+
+    return `
+                                    <article class="audit-output rounded-xl bg-[var(--citum-surface)] p-4 ring-1 ring-inset ring-slate-200"
+                                        data-audit-surface="${escapeHtml(group.surface)}"
+                                        data-audit-dispositions="${escapeHtml(group.dispositions.join(' '))}"
+                                        data-audit-comparison="${escapeHtml(group.comparisonState)}"
+                                        data-audit-needs-review="${group.needsReview}">
+                                        <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                            <div class="min-w-0">
+                                                <h4 class="audit-observation-id text-sm font-semibold text-slate-900">${escapeHtml(group.outputId)}</h4>
+                                                <p class="mt-1 text-[11px] text-slate-500">${escapeHtml(group.surface)} · ${escapeHtml(group.referenceIds.join(', '))} · ${escapeHtml(group.referenceTypes.join(', '))}</p>
+                                            </div>
+                                            <div class="flex flex-wrap items-center gap-2">
+                                                <span class="inline-flex rounded px-2 py-1 text-[11px] font-medium ${auditComparisonBadge(group.comparisonState)}">${escapeHtml(group.comparisonState)}</span>
+                                                ${group.needsReview ? '<span class="inline-flex rounded px-2 py-1 text-[11px] font-semibold bg-amber-100 text-amber-900">needs review</span>' : ''}
+                                            </div>
+                                        </div>
+                                        <div class="mt-3 flex flex-wrap gap-2">${dispositionBadges}
+                                        </div>
+                                        <ul class="mt-3">${fields}
+                                        </ul>${exactDifference}
+                                    </article>`;
+  }).join('');
+
+  return `
+                            <section id="${explorerId}" class="mb-4 rounded-xl bg-slate-50 p-4 ring-1 ring-inset ring-slate-200" aria-labelledby="${explorerId}-title">
+                                <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                                    <div class="max-w-3xl">
+                                        <h3 id="${explorerId}-title" class="text-base font-semibold text-slate-900">Coverage audit explorer</h3>
+                                        <p class="mt-1 text-xs leading-5 text-slate-600">Registered packet <code>${escapeHtml(audit.packetId)}</code> · ${escapeHtml(audit.evidence)} evidence · status: <strong>${escapeHtml(audit.status)}</strong></p>
+                                    </div>
+                                    <a class="text-xs font-semibold text-primary hover:underline" href="${escapeHtml(audit.adjudicationRecord.href)}">${escapeHtml(audit.adjudicationRecord.label)}</a>
+                                </div>
+
+                                <div class="mt-4 rounded-lg bg-amber-50 px-4 py-3 ring-1 ring-inset ring-amber-200">
+                                    <div class="text-sm font-semibold text-amber-950">Investigation leads, not causal proof</div>
+                                    <p class="mt-1 text-xs leading-5 text-amber-900">An uncovered field shows that the resolved structure has no path for that observation. It does not prove that field caused an Oracle/Citum text mismatch. Review one bounded output cluster and its exact evidence before assigning a defect.</p>
+                                </div>
+
+                                <div class="mt-4 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">${cards}
+                                </div>
+
+                                <div class="mt-5 grid grid-cols-1 gap-3 rounded-lg bg-[var(--citum-surface)] p-3 ring-1 ring-inset ring-slate-200 sm:grid-cols-2 xl:grid-cols-[repeat(3,minmax(0,1fr))_auto] xl:items-end">
+                                    <label class="text-xs font-semibold text-slate-700">Surface
+                                        <select class="mt-1 block w-full rounded-md border-slate-300 text-base sm:text-sm" data-audit-filter="surface">
+                                            <option value="all">All surfaces</option>
+                                            <option value="citation">Citation</option>
+                                            <option value="bibliography">Bibliography</option>
+                                        </select>
+                                    </label>
+                                    <label class="text-xs font-semibold text-slate-700">Disposition
+                                        <select class="mt-1 block w-full rounded-md border-slate-300 text-base sm:text-sm" data-audit-filter="disposition">
+                                            <option value="all">All dispositions</option>
+                                            <option value="rendered">Rendered</option>
+                                            <option value="fallback">Fallback</option>
+                                            <option value="suppressed">Suppressed</option>
+                                            <option value="uncovered">Uncovered</option>
+                                            <option value="excluded">Excluded</option>
+                                        </select>
+                                    </label>
+                                    <label class="text-xs font-semibold text-slate-700">Comparison state
+                                        <select class="mt-1 block w-full rounded-md border-slate-300 text-base sm:text-sm" data-audit-filter="comparison">
+                                            <option value="all">All comparison states</option>
+                                            <option value="exact-match">Exact match</option>
+                                            <option value="mismatch">Mismatch</option>
+                                            <option value="not-comparable">Not comparable</option>
+                                        </select>
+                                    </label>
+                                    <label class="flex min-h-11 items-center gap-2 rounded-md px-2 text-xs font-semibold text-slate-700">
+                                        <input type="checkbox" class="rounded border-slate-300 text-primary focus:ring-primary" data-audit-filter="needs-review" />
+                                        Needs review only
+                                    </label>
+                                </div>
+                                <p class="mt-3 text-xs text-slate-500" data-audit-count aria-live="polite">${audit.outputGroups.length} output groups</p>
+                                <div class="mt-3 space-y-3" data-audit-groups>${groups}
+                                </div>
+                            </section>
+`;
 }
 
 function generateDetailContent(style) {
@@ -4202,7 +4387,9 @@ function generateDetailContent(style) {
 `;
   }
 
-  if (style.citationEntries && style.citationEntries.length > 0) {
+  if (style.coverageAudit) {
+    html += renderCoverageAuditExplorer(style);
+  } else if (style.citationEntries && style.citationEntries.length > 0) {
     const citationFindings = style.citationEntries.filter((entry) => {
       if (!entry.match) return true;
       if (typeof entry.exactMatch === 'boolean') return !entry.exactMatch;
@@ -4262,7 +4449,9 @@ function generateDetailContent(style) {
     }
   }
 
-  html += renderBibliographyEvidence(style);
+  if (!style.coverageAudit) {
+    html += renderBibliographyEvidence(style);
+  }
 
   if (style.knownDivergences && style.knownDivergences.length > 0) {
     html += `
@@ -4328,7 +4517,13 @@ function generateHtmlFooter() {
 
         function toggleAccordion(contentId) {
             const content = document.getElementById(contentId);
-            if (content) content.classList.toggle('active');
+            if (!content) return;
+            const isOpen = content.classList.toggle('active');
+            const toggle = document.querySelector('[aria-controls="' + CSS.escape(contentId) + '"]');
+            if (toggle) {
+                toggle.setAttribute('aria-expanded', String(isOpen));
+                toggle.setAttribute('aria-label', (isOpen ? 'Hide' : 'Show') + toggle.getAttribute('aria-label').slice(4));
+            }
         }
 
         function updateSortIndicators(activeKey, direction) {
@@ -4487,7 +4682,50 @@ function generateHtmlFooter() {
             applyStyleFilter();
         }
 
-        document.addEventListener('DOMContentLoaded', initStyleSearch);
+        function applyAuditFilters(explorer) {
+            const valueFor = (name) => {
+                const control = explorer.querySelector('[data-audit-filter="' + name + '"]');
+                if (!control) return name === 'needs-review' ? false : 'all';
+                return name === 'needs-review' ? control.checked : control.value;
+            };
+            const surface = valueFor('surface');
+            const disposition = valueFor('disposition');
+            const comparison = valueFor('comparison');
+            const needsReview = valueFor('needs-review');
+            const groups = Array.from(explorer.querySelectorAll('.audit-output'));
+            let visible = 0;
+
+            for (const group of groups) {
+                const dispositions = (group.dataset.auditDispositions || '').split(' ');
+                const matches = (surface === 'all' || group.dataset.auditSurface === surface)
+                    && (disposition === 'all' || dispositions.includes(disposition))
+                    && (comparison === 'all' || group.dataset.auditComparison === comparison)
+                    && (!needsReview || group.dataset.auditNeedsReview === 'true');
+                group.hidden = !matches;
+                if (matches) visible += 1;
+            }
+
+            const count = explorer.querySelector('[data-audit-count]');
+            if (count) {
+                count.textContent = visible === groups.length
+                    ? groups.length + ' output groups'
+                    : visible + ' of ' + groups.length + ' output groups';
+            }
+        }
+
+        function initCoverageAudits() {
+            document.querySelectorAll('[id^="coverage-audit-"]').forEach((explorer) => {
+                explorer.querySelectorAll('[data-audit-filter]').forEach((control) => {
+                    control.addEventListener('change', () => applyAuditFilters(explorer));
+                });
+                applyAuditFilters(explorer);
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initStyleSearch();
+            initCoverageAudits();
+        });
     </script>
 
 </body>

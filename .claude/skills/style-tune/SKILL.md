@@ -56,17 +56,25 @@ Authoritative shared process docs:
 Follow the full `tune` loop from `docs/guides/STYLE_WORKFLOW_EXECUTION.md`:
 
 1. **Seed** — run `citum-migrate` or accept the existing YAML. Record baseline
-   oracle fidelity and exact-parity floor.
+   oracle fidelity and exact-parity floor. Run
+   `node scripts/check-style-coverage-audits.js --status <style-id>` and report
+   `current`, `stale`, or `not registered`; a current packet selects one
+   bounded output cluster. Recover a `stale` result from a `style.chain` edit
+   with `style-coverage-review.js --update-manifest` per the shared execution
+   guide, rather than treating it as blocking.
 2. **Fidelity loop** — oracle → classify failure → smallest correct YAML fix →
    re-run. Repeat until 100%.
 3. **Exact-parity loop** (begins once fidelity is green) — `report-core --style
    --all-features` → classify each residual → smallest correct fix or ledger
    entry → re-run. Continue until no further residual is classifiable without
-   escalation; regenerate `embedded-parity-baseline.json` to ratchet the new
-   floor in.
+   escalation; regenerate `embedded-parity-baseline.json` from the full
+   portfolio (not `--style`-scoped) per the shared-ancestor rule to ratchet
+   the new floor in.
 4. **SQI loop** (only after fidelity and exact parity are stable) —
    `report-core` → hoist/preset/prune → oracle re-check → repeat until clean.
-5. **QA gate** — hand off to `../style-qa/SKILL.md` with `tier: embedded-core`.
+5. **QA gate** — regenerate and validate any registered packet on a clean,
+   committed tree, report disposition and joined-parity deltas, then hand off
+   to `../style-qa/SKILL.md` with `tier: embedded-core`.
 
 ## Failure Classification
 Use the shared decision rules for all mismatches. For type- or
@@ -100,6 +108,10 @@ Every completed tune pass delivers:
 - fidelity changes made (per mismatch cluster)
 - exact-parity changes made (per residual class), and any new
   `parity-adjudication.json` entries with their state
+- coverage-audit status and, when registered, render-disposition and joined
+  exact-parity deltas
+- if a `style.chain` ancestor shared with other embedded-core styles changed,
+  the full-portfolio `embedded-parity-baseline.json` deltas for those siblings
 - SQI changes made (hoisting, presets, type-variant compression)
 - residuals reclassified (processor-defect / divergence IDs / adjudication states)
 - QA verdict

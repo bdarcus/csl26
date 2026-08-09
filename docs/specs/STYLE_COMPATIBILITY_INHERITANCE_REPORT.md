@@ -1,10 +1,11 @@
 # Style Compatibility Inheritance Report Specification
 
 **Status:** Active
-**Version:** 1.2
-**Date:** 2026-07-28
-**Related:** beans `csl26-zik7`, `csl26-4hjr`, `csl26-t6dg`, `csl26-6th8`;
-[`STYLE_TAXONOMY.md`](./STYLE_TAXONOMY.md)
+**Version:** 1.3
+**Date:** 2026-08-09
+**Related:** beans `csl26-zik7`, `csl26-4hjr`, `csl26-t6dg`, `csl26-6th8`,
+`csl26-hk3u`; [`STYLE_TAXONOMY.md`](./STYLE_TAXONOMY.md),
+[`STYLE_TEMPLATE_EXPRESSIVENESS_AND_PARITY.md`](./STYLE_TEMPLATE_EXPRESSIVENESS_AND_PARITY.md)
 
 ## Purpose
 
@@ -26,6 +27,8 @@ In scope:
 - tri-state bibliography pairing with evidence-run attribution
 - graceful reporting for missing parents, inheritance cycles, and absent
   measurement artifacts
+- explicit coverage-audit registration, JSON exposure, and an audit-first
+  explorer for registered styles
 
 Out of scope:
 
@@ -151,6 +154,20 @@ Render-only native smoke tests are labeled as having no oracle comparison and
 never supply oracle-comparison rows. Bibliography findings identify their
 configured authority and evidence-run label.
 
+Coverage audits are opt-in report metadata, not directory discovery. A
+registered style exposes a `coverageAudit` object in report JSON and replaces
+its citation and bibliography diff tables with an audit-first explorer. The
+explorer shows rendered, fallback, suppressed, uncovered, excluded, and joined
+exact-parity summaries; filters output groups by surface, disposition,
+comparison state, and review need; lists field dispositions with stable
+observation IDs; and keeps exact Oracle/Citum differences collapsed beneath
+each mismatching output. It links only to the human maintainer adjudication,
+never to raw packet JSON. Supplemental benchmark summaries remain visible.
+
+Uncovered observations are structural investigation leads. The explorer must
+not present them as proof that a field caused a text mismatch. Styles without
+a registered audit retain the existing diff-based evidence view unchanged.
+
 ## Implementation Notes
 
 The embedded style registry is the canonical source for registry kind and
@@ -182,9 +199,15 @@ engine change; this report only exposes and tracks that mismatch.
   render-only.
 - [x] Full report generation, baseline validation, browser QA, and repository
   hygiene checks pass.
+- [x] The report registers Chicago explicitly, exposes its `coverageAudit`
+  object, renders the accessible responsive explorer, and preserves the
+  existing view for unregistered styles.
 
 ## Changelog
 
+- v1.3 (2026-08-09): Added explicit coverage-audit registration, report JSON,
+  the audit-first explorer, human adjudication linking, and unchanged fallback
+  behavior for unregistered styles.
 - v1.2 (2026-07-28): Added tri-state bibliography pairing, nullable comparison
   fields, evidence-run grouping, and neutral unpaired diagnostics.
 - v1.1 (2026-07-28): Preserved visible numbering, added unresolved

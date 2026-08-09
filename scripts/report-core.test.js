@@ -13,6 +13,7 @@ const {
 } = require('./lib/verification-policy');
 const { getEffectiveVerificationScopes } = require('./lib/style-verification');
 const { loadReportProvenance } = require('./lib/report-metadata');
+const { loadCoverageAuditViews } = require('./lib/style-coverage-audits');
 const {
   buildNoteStyleLookup,
   collectTemplateScopes,
@@ -1272,6 +1273,110 @@ test('generateHtml groups families and exposes unadjudicated oracle text drift',
   assert.doesNotMatch(html, /&lt;div&gt;Smith/);
 });
 
+test('generateHtml replaces registered diff tables with the accessible audit-first explorer', () => {
+  const provenance = loadReportProvenance();
+  const coverageAudit = loadCoverageAuditViews(
+    provenance,
+    ['chicago-shortened-notes-bibliography']
+  ).get('chicago-shortened-notes-bibliography');
+  const html = generateHtml({
+    generated: '2026-08-09T00:00:00.000Z',
+    commit: 'deadbee',
+    metadata: {
+      portfolioTiers: { embedded: ['chicago-shortened-notes-bibliography'] },
+    },
+    totalImpact: 0,
+    totalStyles: 1,
+    exemplarStyles: 0,
+    citationsOverall: { passed: 0, total: 1 },
+    bibliographyOverall: { passed: 0, total: 1, unresolvedPairing: 0 },
+    exactParityOverall: { passed: 0, total: 2, notComparable: 0, rate: 0 },
+    qualityOverall: { score: 1 },
+    styles: [{
+      name: 'chicago-shortened-notes-bibliography',
+      format: 'note',
+      hasBibliography: true,
+      cslReach: 1,
+      originLabel: 'CSL-derived',
+      benchmarkLabel: 'citeproc-js',
+      fidelityScore: 0,
+      compatibilityScore: 0,
+      exactParity: { passed: 0, total: 2, notComparable: 0, rate: 0 },
+      citations: { passed: 0, total: 1 },
+      bibliography: { passed: 0, total: 1 },
+      qualityScore: 1,
+      qualityBreakdown: {
+        score: 100,
+        subscores: {
+          typeCoverage: { score: 100 },
+          fallbackRobustness: { score: 100 },
+          concision: { score: 100 },
+          presetUsage: { score: 100 },
+        },
+      },
+      inheritance: {
+        chain: ['chicago-shortened-notes-bibliography'],
+        familyRoot: 'chicago-shortened-notes-bibliography',
+        implementationForm: 'standalone',
+      },
+      registry: { kind: 'base', aliases: [], aliasCount: 0 },
+      measurementEvidence: {},
+      benchmarkRunResults: [{
+        id: 'supplemental',
+        label: 'Supplemental benchmark remains visible',
+        runner: 'native-smoke',
+        scope: 'bibliography',
+        countTowardFidelity: false,
+        refsFixture: 'tests/fixtures/references-expanded.json',
+        status: 'pass',
+        bibliographyEntries: 1,
+      }],
+      citationEntries: [{
+        id: 'legacy-citation-row',
+        oracle: 'Oracle',
+        citum: 'Citum',
+        exactMatch: false,
+      }],
+      oracleDetail: [{
+        id: 'legacy-bibliography-row',
+        oracle: 'Oracle',
+        citum: 'Citum',
+        exactMatch: false,
+      }],
+      coverageAudit,
+    }],
+  });
+
+  assert.match(html, /Coverage audit explorer/);
+  assert.match(html, /Investigation leads, not causal proof/);
+  assert.match(html, />Rendered</);
+  assert.match(html, />Fallback</);
+  assert.match(html, />Suppressed</);
+  assert.match(html, />Uncovered</);
+  assert.match(html, />Excluded</);
+  assert.match(html, />Exact parity</);
+  assert.match(html, /data-audit-filter="surface"/);
+  assert.match(html, /data-audit-filter="disposition"/);
+  assert.match(html, /data-audit-filter="comparison"/);
+  assert.match(html, /data-audit-filter="needs-review"/);
+  assert.match(html, /aria-live="polite"/);
+  assert.match(html, /aria-controls="content-chicago-shortened-notes-bibliography"/);
+  assert.match(html, /aria-expanded="false"/);
+  assert.match(html, /grid-cols-1 gap-3[^>]*sm:grid-cols-2[^>]*xl:grid-cols/);
+  assert.match(html, /grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6/);
+  assert.match(html, /text-base sm:text-sm/);
+  assert.match(html, /chicago-shortened-notes-bibliography\/bibliography\/references-expanded\/ITEM-1\/article-journal\/issue\/entry/);
+  assert.match(html, /<details[^>]*>[\s\S]*Exact Oracle\/Citum difference/);
+  assert.doesNotMatch(html, /<details[^>]*open/);
+  assert.match(html, /Supplemental benchmark remains visible/);
+  assert.match(html, /Read the maintainer adjudication/);
+  assert.doesNotMatch(html, /href="[^"]+\.json/);
+  assert.doesNotMatch(html, /Citation Findings/);
+  assert.doesNotMatch(html, /Bibliography Evidence/);
+  assert.doesNotMatch(html, /legacy-citation-row/);
+  assert.doesNotMatch(html, /legacy-bibliography-row/);
+});
+
 test('generateReport supports style-scoped official reports', {
   skip: !hasLegacyStyles,
   timeout: 180000,
@@ -1285,6 +1390,27 @@ test('generateReport supports style-scoped official reports', {
   assert.deepEqual(report.metadata.styles, ['apa-7th']);
   assert.equal(report.metadata.styleSelector, 'style:apa-7th');
   assert.ok(report.metadata.richInputEvidence.headlineGate, 'should have headlineGate evidence');
+  assert.deepEqual(
+    report.metadata.coverageAudits.registeredStyles.map((entry) => entry.styleId),
+    ['chicago-shortened-notes-bibliography']
+  );
+});
+
+test('generateReport exposes the registered coverage audit on its corresponding style', {
+  skip: !hasLegacyStyles,
+  timeout: 180000,
+}, async () => {
+  const { report } = await generateReport({
+    styleName: 'chicago-shortened-notes-bibliography',
+    parallelism: 1,
+  });
+
+  const audit = report.styles[0].coverageAudit;
+  assert.equal(audit.status, 'current');
+  assert.equal(audit.summary.renderDisposition.uncovered, 200);
+  assert.equal(audit.summary.joinedExactParity.passed, 28);
+  assert.equal(audit.outputGroups.length, 81);
+  assert.equal(audit.outputGroups.some((group) => group.exactEvidence), true);
 });
 
 test('generateReport supports multi-style selected reports', {
