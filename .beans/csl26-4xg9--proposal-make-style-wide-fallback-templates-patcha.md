@@ -1,6 +1,6 @@
 ---
 # csl26-4xg9
-title: 'Proposal: make style-wide fallback templates patchable like reference-type templates'
+title: Implement inherited fallback-template diffs
 status: todo
 type: feature
 priority: normal
@@ -9,17 +9,35 @@ tags:
     - style
     - chicago
 created_at: 2026-08-07T23:53:13Z
-updated_at: 2026-08-07T23:53:13Z
+updated_at: 2026-08-09T14:48:58Z
 ---
 
-Surfaced in docs/specs/CHICAGO_VARIANT_AXES.md (Gap B) while checking whether Citum's inheritance covers the CSL Chicago family's -no-url variant. Every style has one fallback bibliography template (and one fallback citation template) used for any reference type without a template of its own -- BibliographySpec.template (crates/citum-schema-style/src/style/sections/bibliography.rs:40) and CitationSpec.template (crates/citum-schema-style/src/style/sections/citation.rs:56). Both are a plain Option<Template> (bare component list), not the Full-or-Diff TemplateVariant (crates/citum-schema-style/src/template.rs:653) that reference-type templates in type-variants already use. So modify:/remove:/add: only work per reference type; under extends: the fallback template is whole-replace only (confirmed by test_explicit_null_clears_bibliography_template, crates/citum-schema-style/tests/bdd_inheritance.rs:448). Concretely: chicago-author-date-18th.yaml's own fallback bibliography template renders variable: doi and variable: url unconditionally at its final two components (lines 1041-1043), and a child style cannot remove just those two components -- only copy the entire 41-line template, which then stops tracking the parent's future changes.
+Implement the fallback-template diff contract in
+docs/specs/STYLE_TEMPLATE_EXPRESSIVENESS_AND_PARITY.md. This is Gap B from
+docs/specs/CHICAGO_VARIANT_AXES.md.
 
-This looks accidental, not intentional: nothing in STYLE_INHERITANCE.md's merge rules explains why the fallback template should be exempt from the same patch mechanism reference-type templates already have -- it reads as an oversight in how the two fields were typed, not a deliberate constraint.
+BibliographySpec.template and CitationSpec.template are currently
+Option<Template>, while type-specific templates use TemplateVariant. A child
+style therefore has to replace an inherited fallback in full even when it only
+needs to remove or modify one component.
 
-Proposed direction: widen BibliographySpec.template and CitationSpec.template from Option<Template> to Option<TemplateVariant>, reusing the exact Full/Diff resolution already built and tested for reference-type templates (crates/citum-schema-style/src/template/resolution.rs), so a child's Diff patches the parent's already-resolved fallback template the same way it already patches a parent's reference-type template.
+Required direction:
 
-This is a schema and engine change. Per this project's policy, it needs its own docs-first spec PR (with rejected alternatives) before any implementation -- not done as part of the Chicago-axes mapping spec.
+- widen the existing template fields to Option<TemplateVariant> rather than
+  adding a sibling template-variant field;
+- preserve existing YAML sequences as TemplateVariant::Full;
+- resolve the parent's effective fallback, including template-ref, before a
+  child Diff applies;
+- reject a root Diff with no inherited fallback;
+- reject TemplateVariantDiff.extends on fallback templates;
+- reject template-ref plus Diff in the same section;
+- preserve explicit template: null clearing behavior;
+- leave only a concrete Full fallback after style resolution;
+- cover the same cases for citation and bibliography, including selector
+  diagnostics, and regenerate schemas in the implementation commit.
 
-- [ ] Draft a docs/specs/*.md spec proposing the Option<TemplateVariant> widening, including how existing Full-typed fallback templates in shipped styles stay valid (Full is one of the two TemplateVariant cases, so no migration needed) and any interaction with template_ref
-- [ ] Get the spec reviewed and merged as Draft
-- [ ] Implement in a follow-up PR, status flips to Active in that same commit
+- [x] Draft the docs/specs contract, including compatibility and template-ref
+      interaction.
+- [ ] Get the Draft specification reviewed and merged.
+- [ ] Implement the schema and resolver change in a follow-up PR.
+- [ ] Regenerate schemas and pass citation and bibliography conformance tests.
