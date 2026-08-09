@@ -1,0 +1,768 @@
+{
+  "schema": "citum.style-coverage-authority-report/v1",
+  "provenance": {
+    "sourceRevision": "727dba21",
+    "generated": "2026-08-09T19:02:03.144Z",
+    "sourceReportSha256": "1c3a71e72f3e1d9a889377ea53790eeac8c090b05e60751cf5fe2aa989162ecb",
+    "reportCommand": "cargo build -q --bin citum; node scripts/report-core.js --style chicago-shortened-notes-bibliography --cache-dir <empty> --citum-bin target/debug/citum",
+    "staleBinaryControl": {
+      "sourceReportSha256": "bee675b584758e455d35902a3acca0520aa0b2f59aa66c22cee4c2810382bc7e",
+      "exactParity": {
+        "passed": 20,
+        "total": 473,
+        "notComparable": 16
+      },
+      "explanation": "A fresh report cache alone reused a stale default-feature binary; the explicit Cargo build changed the result to 34/473."
+    }
+  },
+  "styles": [
+    {
+      "name": "chicago-shortened-notes-bibliography",
+      "exactParity": {
+        "passed": 34,
+        "total": 473,
+        "notComparable": 16,
+        "divergenceExcluded": 0,
+        "rate": 0.072,
+        "status": "divergence-adjusted",
+        "gating": true
+      },
+      "citationEntries": [
+        {
+          "id": "single-item-1",
+          "oracle": "Kuhn, “The Structure of Scientific Revolutions.”",
+          "citum": "Kuhn, “The Structure of Scientific Revolutions.”",
+          "exactMatch": true,
+          "evidenceRunId": "baseline",
+          "evidenceAuthority": "citeproc-js"
+        },
+        {
+          "id": "single-item-2",
+          "oracle": "Hawking, A Brief History of Time.",
+          "citum": "Hawking, A Brief History of Time.",
+          "exactMatch": true,
+          "evidenceRunId": "baseline",
+          "evidenceAuthority": "citeproc-js"
+        },
+        {
+          "id": "single-item-3",
+          "oracle": "LeCun et al, “Deep Learning.”",
+          "citum": "LeCun et al, “Deep Learning.”",
+          "exactMatch": true,
+          "evidenceRunId": "baseline",
+          "evidenceAuthority": "citeproc-js"
+        },
+        {
+          "id": "single-item-4",
+          "oracle": "Ericsson, “The Role of Deliberate Practice.”",
+          "citum": "Ericsson, “The Role of Deliberate Practice.”",
+          "exactMatch": true,
+          "evidenceRunId": "baseline",
+          "evidenceAuthority": "citeproc-js"
+        },
+        {
+          "id": "single-item-5",
+          "oracle": "World Bank, World Development Report 2023.",
+          "citum": "World Bank, World Development Report 2023.",
+          "exactMatch": true,
+          "evidenceRunId": "baseline",
+          "evidenceAuthority": "citeproc-js"
+        },
+        {
+          "id": "single-item-6",
+          "oracle": "Weinberg and Freedman, The Psychology of Computer Programming.",
+          "citum": "Weinberg and Freedman, The Psychology of Computer Programming.",
+          "exactMatch": true,
+          "evidenceRunId": "baseline",
+          "evidenceAuthority": "citeproc-js"
+        },
+        {
+          "id": "single-item-7",
+          "oracle": "Vaswani et al, “Attention Is All You Need.”",
+          "citum": "Vaswani et al, “Attention Is All You Need.”",
+          "exactMatch": true,
+          "evidenceRunId": "baseline",
+          "evidenceAuthority": "citeproc-js"
+        },
+        {
+          "id": "single-item-8",
+          "oracle": "Kuhn, “Scientific Paradigms and Normal Science.”",
+          "citum": "Kuhn, “Scientific Paradigms and Normal Science.”",
+          "exactMatch": true,
+          "evidenceRunId": "baseline",
+          "evidenceAuthority": "citeproc-js"
+        },
+        {
+          "id": "single-item-9",
+          "oracle": "Smith and Anderson, “Climate Change and Extreme Weather Events.”",
+          "citum": "Smith and Anderson, “Climate Change and Extreme Weather Events.”",
+          "exactMatch": true,
+          "evidenceRunId": "baseline",
+          "evidenceAuthority": "citeproc-js"
+        },
+        {
+          "id": "single-item-10",
+          "oracle": "Smith and Williams, “Machine Learning for Climate Prediction.”",
+          "citum": "Smith and Williams, “Machine Learning for Climate Prediction.”",
+          "exactMatch": true,
+          "evidenceRunId": "baseline",
+          "evidenceAuthority": "citeproc-js"
+        },
+        {
+          "id": "single-item-11",
+          "oracle": "Chen, “Neural Networks for Natural Language Understanding.”",
+          "citum": "Chen, Neural Networks for Natural Language Understanding.",
+          "exactMatch": false,
+          "evidenceRunId": "baseline",
+          "evidenceAuthority": "citeproc-js"
+        },
+        {
+          "id": "single-item-12",
+          "oracle": "Mikolov et al, “Distributed Representations of Words and Phrases.”",
+          "citum": "Mikolov et al, “Distributed Representations of Words and Phrases.”",
+          "exactMatch": true,
+          "evidenceRunId": "baseline",
+          "evidenceAuthority": "citeproc-js"
+        },
+        {
+          "id": "single-item-13",
+          "oracle": "State of JS Team, “The State of JavaScript 2023.”",
+          "citum": "State of JS Team, The State of JavaScript 2023.",
+          "exactMatch": false,
+          "evidenceRunId": "baseline",
+          "evidenceAuthority": "citeproc-js"
+        },
+        {
+          "id": "single-item-14",
+          "oracle": "Reis and Judd, Handbook of Research Methods in Social Psychology.",
+          "citum": "Reis and Judd, Handbook of Research Methods in Social Psychology.",
+          "exactMatch": true,
+          "evidenceRunId": "baseline",
+          "evidenceAuthority": "citeproc-js"
+        },
+        {
+          "id": "single-item-15",
+          "oracle": "“The Role of Theory in Research.”",
+          "citum": "“The Role of Theory in Research.”",
+          "exactMatch": true,
+          "evidenceRunId": "baseline",
+          "evidenceAuthority": "citeproc-js"
+        },
+        {
+          "id": "single-item-16",
+          "oracle": "Rodriguez, “Major Breakthrough in Quantum Computing Announced.”",
+          "citum": "Rodriguez, “Major Breakthrough in Quantum Computing Announced.”",
+          "exactMatch": true,
+          "evidenceRunId": "baseline",
+          "evidenceAuthority": "citeproc-js"
+        },
+        {
+          "id": "single-item-17",
+          "oracle": "Thompson, “The Art of Minimalism in Modern Design.”",
+          "citum": "Thompson, “The Art of Minimalism in Modern Design.”",
+          "exactMatch": true,
+          "evidenceRunId": "baseline",
+          "evidenceAuthority": "citeproc-js"
+        },
+        {
+          "id": "single-item-18",
+          "oracle": "Vasari, “Renaissance Art and Culture.”",
+          "citum": "Vasari, “Renaissance Art and Culture.”",
+          "exactMatch": true,
+          "evidenceRunId": "baseline",
+          "evidenceAuthority": "citeproc-js"
+        },
+        {
+          "id": "single-item-19",
+          "oracle": "NASA Goddard Institute for Space Studies, “Global Temperature Anomalies 1880-2023.”",
+          "citum": "NASA Goddard Institute for Space Studies, Global Temperature Anomalies 1880-2023.",
+          "exactMatch": false,
+          "evidenceRunId": "baseline",
+          "evidenceAuthority": "citeproc-js"
+        },
+        {
+          "id": "single-item-20",
+          "oracle": "Brown v. Board of Education.",
+          "citum": ", Brown v. Board of Education.",
+          "exactMatch": false,
+          "evidenceRunId": "baseline",
+          "evidenceAuthority": "citeproc-js"
+        },
+        {
+          "id": "single-item-21",
+          "oracle": "Johnson and Lee, Method for Efficient Data Compression.",
+          "citum": "Johnson and Lee, Method for Efficient Data Compression.",
+          "exactMatch": true,
+          "evidenceRunId": "baseline",
+          "evidenceAuthority": "citeproc-js"
+        },
+        {
+          "id": "single-item-22",
+          "oracle": "Lumière, The Arrival of a Train at La Ciotat Station.",
+          "citum": "Lumière, The Arrival of a Train at La Ciotat Station.",
+          "exactMatch": true,
+          "evidenceRunId": "baseline",
+          "evidenceAuthority": "citeproc-js"
+        },
+        {
+          "id": "single-item-23",
+          "oracle": "Sagan, “The Universe in a Nutshell.”",
+          "citum": "Sagan, The Universe in a Nutshell.",
+          "exactMatch": false,
+          "evidenceRunId": "baseline",
+          "evidenceAuthority": "citeproc-js"
+        },
+        {
+          "id": "single-item-24",
+          "oracle": "Bengio, “The Future of Artificial Intelligence.”",
+          "citum": "Bengio, The Future of Artificial Intelligence.",
+          "exactMatch": false,
+          "evidenceRunId": "baseline",
+          "evidenceAuthority": "citeproc-js"
+        },
+        {
+          "id": "single-item-25",
+          "oracle": "Kafka, Metamorphosis.",
+          "citum": "Kafka, Metamorphosis.",
+          "exactMatch": true,
+          "evidenceRunId": "baseline",
+          "evidenceAuthority": "citeproc-js"
+        },
+        {
+          "id": "single-item-26",
+          "oracle": "Spinoza, Éthique.",
+          "citum": "Spinoza, Éthique.",
+          "exactMatch": true,
+          "evidenceRunId": "baseline",
+          "evidenceAuthority": "citeproc-js"
+        },
+        {
+          "id": "single-item-27",
+          "oracle": "United Nations Environment Programme, State of the World’s Biodiversity.",
+          "citum": "United Nations Environment Programme, State of the World’s Biodiversity.",
+          "exactMatch": true,
+          "evidenceRunId": "baseline",
+          "evidenceAuthority": "citeproc-js"
+        },
+        {
+          "id": "single-item-28",
+          "oracle": "Patricia Smith to Bruce Darcus, “Discussion on Citum Schema Design.”",
+          "citum": "Smith., Discussion on Citum Schema Design.",
+          "exactMatch": false,
+          "evidenceRunId": "baseline",
+          "evidenceAuthority": "citeproc-js"
+        },
+        {
+          "id": "single-item-29",
+          "oracle": "Smith et al, “Adaptive Climate Risk Modeling in Coastal Cities.”",
+          "citum": "Smith, Lee, Kumar, et al, “Adaptive Climate Risk Modeling in Coastal Cities.”",
+          "exactMatch": false,
+          "evidenceRunId": "baseline",
+          "evidenceAuthority": "citeproc-js"
+        },
+        {
+          "id": "single-item-30",
+          "oracle": "Smith et al, “Adaptive Climate Risk Modeling for Inland Regions.”",
+          "citum": "Smith, Lee, Nguyen, et al, “Adaptive Climate Risk Modeling for Inland Regions.”",
+          "exactMatch": false,
+          "evidenceRunId": "baseline",
+          "evidenceAuthority": "citeproc-js"
+        },
+        {
+          "id": "single-item-31",
+          "oracle": "Garcia, “Methods for Robust Climate Attribution.”",
+          "citum": "Garcia, “Methods for Robust Climate Attribution.”",
+          "exactMatch": true,
+          "evidenceRunId": "baseline",
+          "evidenceAuthority": "citeproc-js"
+        },
+        {
+          "id": "single-item-32",
+          "oracle": "Garcia, “Methods for Probabilistic Climate Attribution.”",
+          "citum": "Garcia, “Methods for Probabilistic Climate Attribution.”",
+          "exactMatch": true,
+          "evidenceRunId": "baseline",
+          "evidenceAuthority": "citeproc-js"
+        },
+        {
+          "id": "note-disambiguate-add-names-et-al",
+          "oracle": "Smith et al, “Adaptive Climate Risk Modeling in Coastal Cities”; Smith et al, “Adaptive Climate Risk Modeling for Inland Regions.”",
+          "citum": "Smith, Lee, Kumar, et al, “Adaptive Climate Risk Modeling in Coastal Cities”; Smith, Lee, Nguyen, et al, “Adaptive Climate Risk Modeling for Inland Regions.”",
+          "exactMatch": false,
+          "evidenceRunId": "baseline",
+          "evidenceAuthority": "citeproc-js"
+        },
+        {
+          "id": "note-disambiguate-year-suffix",
+          "oracle": "Garcia, “Methods for Robust Climate Attribution”; Garcia, “Methods for Probabilistic Climate Attribution.”",
+          "citum": "Garcia, “Methods for Robust Climate Attribution”, “Methods for Probabilistic Climate Attribution.”",
+          "exactMatch": false,
+          "evidenceRunId": "baseline",
+          "evidenceAuthority": "citeproc-js"
+        }
+      ],
+      "oracleDetail": [
+        {
+          "id": "ITEM-34",
+          "oracle": "Adams, John. “Letter to James Smith.” 1797. Adams Papers, reel 45. Massachusetts Historical Society, Boston, MA.",
+          "citum": "Adams, John. “Letter to James Smith.” 1797. Adams Papers, reel 45. Massachusetts Historical Society, Boston, MA.",
+          "exactMatch": true,
+          "exactParityEligible": true,
+          "comparisonState": "paired",
+          "evidenceRunId": "baseline",
+          "evidenceAuthority": "citeproc-js"
+        },
+        {
+          "id": "ITEM-24",
+          "oracle": "Bengio, Yoshua. “The Future of Artificial Intelligence.” Video-interview by Stephen Colbert. Nov 10, 2023. https://example.com/interview.",
+          "citum": "Bengio, Yoshua. The Future of Artificial Intelligence, 2023. https://example.com/interview.",
+          "exactMatch": false,
+          "exactParityEligible": true,
+          "comparisonState": "paired",
+          "evidenceRunId": "baseline",
+          "evidenceAuthority": "citeproc-js"
+        },
+        {
+          "id": "ITEM-20",
+          "oracle": "Brown v. Board of Education, 347 U.S. Reports 483 (U.S. Supreme Court 1954).",
+          "citum": "Brown v. Board of Education. U.S. Reports. 347, 1954: 483.",
+          "exactMatch": false,
+          "exactParityEligible": true,
+          "comparisonState": "paired",
+          "evidenceRunId": "baseline",
+          "evidenceAuthority": "citeproc-js"
+        },
+        {
+          "id": "TLIB-SEL-MAP-1",
+          "oracle": "Cable, D. The Racial Dot Map. Map. University of Virginia, Weldon Cooper Center for Public Service, 2013. https://demographics.coopercenter.org/Racial-Dot-Map.",
+          "citum": "Cable, D. The racial dot map. University of Virginia, Weldon Cooper Center for Public Service, 2013. https://demographics.coopercenter.org/Racial-Dot-Map.",
+          "exactMatch": false,
+          "exactParityEligible": true,
+          "comparisonState": "paired",
+          "evidenceRunId": "baseline",
+          "evidenceAuthority": "citeproc-js"
+        },
+        {
+          "id": "ITEM-11",
+          "oracle": "Chen, Wei. “Neural Networks for Natural Language Understanding.” Phd-thesis, Stanford University, 2019.",
+          "citum": "Chen, Wei. Neural Networks for Natural Language Understanding. Stanford University, 2019.",
+          "exactMatch": false,
+          "exactParityEligible": true,
+          "comparisonState": "paired",
+          "evidenceRunId": "baseline",
+          "evidenceAuthority": "citeproc-js"
+        },
+        {
+          "id": "ITEM-38",
+          "oracle": "Chen, Wei. “Urban Heat Island Measurement Techniques.” Urban Climate 18 (2024): 45–62. https://doi.org/10.5555/uc.2024.18.45.",
+          "citum": "Chen, Wei. “Urban Heat Island Measurement Techniques.” Urban Climate. 18, 2024: 45–62. https://doi.org/10.5555/uc.2024.18.45.",
+          "exactMatch": false,
+          "exactParityEligible": true,
+          "comparisonState": "paired",
+          "evidenceRunId": "baseline",
+          "evidenceAuthority": "citeproc-js"
+        },
+        {
+          "id": "ITEM-37",
+          "oracle": "Chen, Wei. “Urban Heat Island Mitigation Strategies.” Urban Climate 15 (2022): 1–18. https://doi.org/10.5555/uc.2022.15.1.",
+          "citum": "Chen, Wei. “Urban Heat Island Mitigation Strategies.” Urban Climate. 15, 2022: 1–18. https://doi.org/10.5555/uc.2022.15.1.",
+          "exactMatch": false,
+          "exactParityEligible": true,
+          "comparisonState": "paired",
+          "evidenceRunId": "baseline",
+          "evidenceAuthority": "citeproc-js"
+        },
+        {
+          "id": "ITEM-4",
+          "oracle": "Ericsson, K. Anders. “The Role of Deliberate Practice.” In The Cambridge Handbook of Expertise and Expert Performance, edited by K. Anders Ericsson, Neil Charness, Paul J. Feltovich, and Robert R. Hoffman. Cambridge University Press, 2006.",
+          "citum": "Ericsson, K. Anders. “The Role of Deliberate Practice” In The Cambridge Handbook of Expertise and Expert Performance, edited by K. Anders Ericsson, Neil Charness, Paul J. Feltovich, and Robert R. Hoffman. Cambridge University Press, 2006: 683–703.",
+          "exactMatch": false,
+          "exactParityEligible": true,
+          "comparisonState": "paired",
+          "evidenceRunId": "baseline",
+          "evidenceAuthority": "citeproc-js"
+        },
+        {
+          "id": "TLIB-SEL-LEGISLATION-1",
+          "oracle": "Every Student Succeeds Act, 20 U.S.C. § 6301 (2015). https://www.congress.gov/114/plaws/publ95/PLAW-114publ95.pdf.",
+          "citum": "Every Student Succeeds Act. 20, 2015. https://www.congress.gov/114/plaws/publ95/PLAW-114publ95.pdf.",
+          "exactMatch": false,
+          "exactParityEligible": true,
+          "comparisonState": "paired",
+          "evidenceRunId": "baseline",
+          "evidenceAuthority": "citeproc-js"
+        },
+        {
+          "id": "ITEM-33",
+          "oracle": "Forthcoming, A. Foundations of Declarative Bibliography. University Press, n.d.",
+          "citum": "Forthcoming, A. Foundations of Declarative Bibliography. University Press, n.d.",
+          "exactMatch": true,
+          "exactParityEligible": true,
+          "comparisonState": "paired",
+          "evidenceRunId": "baseline",
+          "evidenceAuthority": "citeproc-js"
+        },
+        {
+          "id": "ITEM-32",
+          "oracle": "Garcia, Maria. “Methods for Probabilistic Climate Attribution.” Annual Review of Climate Science 4 (2019): 81–104. https://doi.org/10.5555/arcs.2019.4.81.",
+          "citum": "Garcia, Maria. “Methods for Probabilistic Climate Attribution.” Annual Review of Climate Science. 4, 2019: 81–104. https://doi.org/10.5555/arcs.2019.4.81.",
+          "exactMatch": false,
+          "exactParityEligible": true,
+          "comparisonState": "paired",
+          "evidenceRunId": "baseline",
+          "evidenceAuthority": "citeproc-js"
+        },
+        {
+          "id": "ITEM-31",
+          "oracle": "Garcia, Maria. “Methods for Robust Climate Attribution.” Annual Review of Climate Science 4 (2019): 55–80. https://doi.org/10.5555/arcs.2019.4.55.",
+          "citum": "Garcia, Maria. “Methods for Robust Climate Attribution.” Annual Review of Climate Science. 4, 2019: 55–80. https://doi.org/10.5555/arcs.2019.4.55.",
+          "exactMatch": false,
+          "exactParityEligible": true,
+          "comparisonState": "paired",
+          "evidenceRunId": "baseline",
+          "evidenceAuthority": "citeproc-js"
+        },
+        {
+          "id": "ITEM-2",
+          "oracle": "Hawking, Stephen. A Brief History of Time. Bantam Dell Publishing Group, 1988.",
+          "citum": "Hawking, Stephen. A Brief History of Time. Bantam Dell Publishing Group, 1988.",
+          "exactMatch": true,
+          "exactParityEligible": true,
+          "comparisonState": "paired",
+          "evidenceRunId": "baseline",
+          "evidenceAuthority": "citeproc-js"
+        },
+        {
+          "id": "ITEM-35",
+          "oracle": "Johnson, Alice. “Quantitative Methods in Sociology.” Sociological Review 68 (2020): 23–45.",
+          "citum": "Johnson, Alice. “Quantitative Methods in Sociology.” Sociological Review. 68, 2020: 23–45.",
+          "exactMatch": false,
+          "exactParityEligible": true,
+          "comparisonState": "paired",
+          "evidenceRunId": "baseline",
+          "evidenceAuthority": "citeproc-js"
+        },
+        {
+          "id": "ITEM-36",
+          "oracle": "Johnson, Brian. “Qualitative Methods in Sociology.” Sociological Review 68 (2020): 89–112.",
+          "citum": "Johnson, Brian. “Qualitative Methods in Sociology.” Sociological Review. 68, 2020: 89–112.",
+          "exactMatch": false,
+          "exactParityEligible": true,
+          "comparisonState": "paired",
+          "evidenceRunId": "baseline",
+          "evidenceAuthority": "citeproc-js"
+        },
+        {
+          "id": "ITEM-21",
+          "oracle": "Johnson, David, and Sarah Lee. Method for Efficient Data Compression. Patent US 11,043,211 B2, issued Jul 13, 2021.",
+          "citum": "Johnson, David and Sarah Lee. Method for Efficient Data Compression, issued Jul 13, 2021.",
+          "exactMatch": false,
+          "exactParityEligible": true,
+          "comparisonState": "paired",
+          "evidenceRunId": "baseline",
+          "evidenceAuthority": "citeproc-js"
+        },
+        {
+          "id": "ITEM-25",
+          "oracle": "Kafka, Franz. Metamorphosis. Translated by David Wyllie. Kurt Wolff Verlag, 1915.",
+          "citum": "Kafka, Franz. Metamorphosis. translated by David Wyllie. Kurt Wolff Verlag, 1915.",
+          "exactMatch": false,
+          "exactParityEligible": true,
+          "comparisonState": "paired",
+          "evidenceRunId": "baseline",
+          "evidenceAuthority": "citeproc-js"
+        },
+        {
+          "id": "ITEM-8",
+          "oracle": "Kuhn, Thomas S. “Scientific Paradigms and Normal Science.” Philosophy of Science 37, no. 1 (1970): 1–13. https://doi.org/10.1086/288273.",
+          "citum": "Kuhn, Thomas S. “Scientific Paradigms and Normal Science.” Philosophy of Science. 37, 1970: 1–13. https://doi.org/10.1086/288273.",
+          "exactMatch": false,
+          "exactParityEligible": true,
+          "comparisonState": "paired",
+          "evidenceRunId": "baseline",
+          "evidenceAuthority": "citeproc-js"
+        },
+        {
+          "id": "ITEM-1",
+          "oracle": "Kuhn, Thomas S. “The Structure of Scientific Revolutions.” International Encyclopedia of Unified Science (Chicago) 2, no. 2 (1962). https://doi.org/10.1234/example.",
+          "citum": "Kuhn, Thomas S. “The Structure of Scientific Revolutions.” International Encyclopedia of Unified Science. 2. University of Chicago Press, 1962. https://doi.org/10.1234/example.",
+          "exactMatch": false,
+          "exactParityEligible": true,
+          "comparisonState": "paired",
+          "evidenceRunId": "baseline",
+          "evidenceAuthority": "citeproc-js"
+        },
+        {
+          "id": "ITEM-3",
+          "oracle": "LeCun, Yann, Yoshua Bengio, and Geoffrey Hinton. “Deep Learning.” Nature 521 (2015): 436–44. https://doi.org/10.1038/nature14539.",
+          "citum": "LeCun, Yann, Yoshua Bengio, and Geoffrey Hinton. “Deep Learning.” Nature. 521, 2015: 436–44. https://doi.org/10.1038/nature14539.",
+          "exactMatch": false,
+          "exactParityEligible": true,
+          "comparisonState": "paired",
+          "evidenceRunId": "baseline",
+          "evidenceAuthority": "citeproc-js"
+        },
+        {
+          "id": "ITEM-22",
+          "oracle": "Lumière, Louis. The Arrival of a Train at La Ciotat Station. Short-film. Directed by Louis Lumière. 1896. Film.",
+          "citum": "Lumière, Louis. The Arrival of a Train at La Ciotat Station, 1896.",
+          "exactMatch": false,
+          "exactParityEligible": true,
+          "comparisonState": "paired",
+          "evidenceRunId": "baseline",
+          "evidenceAuthority": "citeproc-js"
+        },
+        {
+          "id": "TLIB-SEL-BILL-1",
+          "oracle": "Mental Health on Campus Improvement Act, H.R. 1100, 113th Cong. (2013). https://www.congress.gov/bill/113th-congress/housebill/1100.",
+          "citum": "Mental Health on Campus Improvement Act, 2013. https://www.congress.gov/bill/113th-congress/housebill/1100.",
+          "exactMatch": false,
+          "exactParityEligible": true,
+          "comparisonState": "paired",
+          "evidenceRunId": "baseline",
+          "evidenceAuthority": "citeproc-js"
+        },
+        {
+          "id": "TLIB-SEL-DICT-1",
+          "oracle": "Merriam-Webster.Com Dictionary. “Self-report.” Accessed Jul 12, 2019. https://www.merriam-webster.com/dictionary/self-report.",
+          "citum": "Merriam-Webster.com Dictionary. “Self-report.” Accessed Jul 12, 2019. https://www.merriam-webster.com/dictionary/self-report.",
+          "exactMatch": false,
+          "exactParityEligible": true,
+          "comparisonState": "paired",
+          "evidenceRunId": "baseline",
+          "evidenceAuthority": "citeproc-js"
+        },
+        {
+          "id": "ITEM-12",
+          "oracle": "Mikolov, Tomas, Ilya Sutskever, Kai Chen, Greg Corrado, and Jeff Dean. “Distributed Representations of Words and Phrases.” Proceedings of NIPS 2013, 2013, 3111–19.",
+          "citum": "Mikolov, Tomas, Ilya Sutskever, Kai Chen, Greg Corrado, and Jeff Dean. “Distributed Representations of Words and Phrases.” Proceedings of NIPS 2013, 2013: 3111–19.",
+          "exactMatch": false,
+          "exactParityEligible": true,
+          "comparisonState": "paired",
+          "evidenceRunId": "baseline",
+          "evidenceAuthority": "citeproc-js"
+        },
+        {
+          "id": "ITEM-19",
+          "oracle": "NASA Goddard Institute for Space Studies. “Global Temperature Anomalies 1880-2023.” NASA, 2024. https://data.giss.nasa.gov/gistemp/.",
+          "citum": "NASA Goddard Institute for Space Studies. Global Temperature Anomalies 1880-2023. NASA, 2024. https://data.giss.nasa.gov/gistemp/.",
+          "exactMatch": false,
+          "exactParityEligible": true,
+          "comparisonState": "paired",
+          "evidenceRunId": "baseline",
+          "evidenceAuthority": "citeproc-js"
+        },
+        {
+          "id": "TLIB-SEL-STANDARD-1",
+          "oracle": "National Information Standards Organization. Bibliographic References. ANSI/NISO Z39.29-2005 (R2010). NISO, approved Jun 9, 2005; reaffirmed May 13, 2010. https://doi.org/10.3789/ansi.niso.z39.29-2005R2010.",
+          "citum": "National Information Standards Organization. Bibliographic References. NISO, May 13, 2010. https://doi.org/10.3789/ansi.niso.z39.29-2005R2010.",
+          "exactMatch": false,
+          "exactParityEligible": true,
+          "comparisonState": "paired",
+          "evidenceRunId": "baseline",
+          "evidenceAuthority": "citeproc-js"
+        },
+        {
+          "id": "TLIB-SEL-REGULATION-1",
+          "oracle": "Protection of Human Subjects, 45 C.F.R. § 46 (2009). https://www.hhs.gov/ohrp/sites/default/files/ohrp/policy/ohrpregulations.pdf.",
+          "citum": "Protection of Human Subjects. 45, 2009. https://www.hhs.gov/ohrp/sites/default/files/ohrp/policy/ohrpregulations.pdf.",
+          "exactMatch": false,
+          "exactParityEligible": true,
+          "comparisonState": "paired",
+          "evidenceRunId": "baseline",
+          "evidenceAuthority": "citeproc-js"
+        },
+        {
+          "id": "ITEM-14",
+          "oracle": "Reis, Harry T., and Charles M. Judd, editors. Handbook of Research Methods in Social Psychology. Cambridge University Press, 2000.",
+          "citum": "Reis, Harry T. and Charles M. Judd editors. Handbook of Research Methods in Social Psychology. Cambridge University Press, 2000.",
+          "exactMatch": false,
+          "exactParityEligible": true,
+          "comparisonState": "paired",
+          "evidenceRunId": "baseline",
+          "evidenceAuthority": "citeproc-js"
+        },
+        {
+          "id": "ITEM-16",
+          "oracle": "Rodriguez, Maria. “Major Breakthrough in Quantum Computing Announced.” Science. The New York Times, Mar 15, 2024.",
+          "citum": "Rodriguez, Maria. “Major Breakthrough in Quantum Computing Announced.” The New York Times, 2024.",
+          "exactMatch": false,
+          "exactParityEligible": true,
+          "comparisonState": "paired",
+          "evidenceRunId": "baseline",
+          "evidenceAuthority": "citeproc-js"
+        },
+        {
+          "id": "ITEM-23",
+          "oracle": "Sagan, Carl. Cosmos: A Spacetime Odyssey. Episode 1, “The Universe in a Nutshell.” Aired Sep 28, 1980. Television.",
+          "citum": "Sagan, Carl. The Universe in a Nutshell. Cosmos: A Spacetime Odyssey, 1980.",
+          "exactMatch": false,
+          "exactParityEligible": true,
+          "comparisonState": "paired",
+          "evidenceRunId": "baseline",
+          "evidenceAuthority": "citeproc-js"
+        },
+        {
+          "id": "ITEM-10",
+          "oracle": "Smith, Jane, and Robert Williams. “Machine Learning for Climate Prediction.” Environmental Research Letters 15, no. 11 (2020): 114042. https://doi.org/10.1088/1748-9326/abc123.",
+          "citum": "Smith, Jane and Robert Williams. “Machine Learning for Climate Prediction.” Environmental Research Letters. 15, 2020: 114042. https://doi.org/10.1088/1748-9326/abc123.",
+          "exactMatch": false,
+          "exactParityEligible": true,
+          "comparisonState": "paired",
+          "evidenceRunId": "baseline",
+          "evidenceAuthority": "citeproc-js"
+        },
+        {
+          "id": "ITEM-9",
+          "oracle": "Smith, John, and Mary Anderson. “Climate Change and Extreme Weather Events.” Nature Climate Change 10 (2020): 850–55. https://doi.org/10.1038/s41558-020-0871-4.",
+          "citum": "Smith, John and Mary Anderson. “Climate Change and Extreme Weather Events.” Nature Climate Change. 10, 2020: 850–55. https://doi.org/10.1038/s41558-020-0871-4.",
+          "exactMatch": false,
+          "exactParityEligible": true,
+          "comparisonState": "paired",
+          "evidenceRunId": "baseline",
+          "evidenceAuthority": "citeproc-js"
+        },
+        {
+          "id": "ITEM-29",
+          "oracle": "Smith, John, Alice Lee, Priya Kumar, and Ming Zhou. “Adaptive Climate Risk Modeling in Coastal Cities.” Journal of Climate Analytics 12, no. 2 (2021): 101–19. https://doi.org/10.5555/jca.2021.12.2.101.",
+          "citum": "Smith, John, Alice Lee, Priya Kumar, and Ming Zhou. “Adaptive Climate Risk Modeling in Coastal Cities.” Journal of Climate Analytics. 12, 2021: 101–19. https://doi.org/10.5555/jca.2021.12.2.101.",
+          "exactMatch": false,
+          "exactParityEligible": true,
+          "comparisonState": "paired",
+          "evidenceRunId": "baseline",
+          "evidenceAuthority": "citeproc-js"
+        },
+        {
+          "id": "ITEM-30",
+          "oracle": "Smith, John, Alice Lee, Bao Nguyen, and Ravi Patel. “Adaptive Climate Risk Modeling for Inland Regions.” Journal of Climate Analytics 12, no. 3 (2021): 201–19. https://doi.org/10.5555/jca.2021.12.3.201.",
+          "citum": "Smith, John, Alice Lee, Bao Nguyen, and Ravi Patel. “Adaptive Climate Risk Modeling for Inland Regions.” Journal of Climate Analytics. 12, 2021: 201–19. https://doi.org/10.5555/jca.2021.12.3.201.",
+          "exactMatch": false,
+          "exactParityEligible": true,
+          "comparisonState": "paired",
+          "evidenceRunId": "baseline",
+          "evidenceAuthority": "citeproc-js"
+        },
+        {
+          "id": "ITEM-26",
+          "oracle": "Spinoza, Baruch. Éthique. Jan Rieuwertsz, 1677.",
+          "citum": "Spinoza, Baruch. Éthique. Jan Rieuwertsz, 1677.",
+          "exactMatch": true,
+          "exactParityEligible": true,
+          "comparisonState": "paired",
+          "evidenceRunId": "baseline",
+          "evidenceAuthority": "citeproc-js"
+        },
+        {
+          "id": "ITEM-13",
+          "oracle": "State of JS Team. “The State of JavaScript 2023.” 2023. https://stateofjs.com/2023.",
+          "citum": "State of JS Team. The State of JavaScript 2023, 2023. https://stateofjs.com/2023.",
+          "exactMatch": false,
+          "exactParityEligible": true,
+          "comparisonState": "paired",
+          "evidenceRunId": "baseline",
+          "evidenceAuthority": "citeproc-js"
+        },
+        {
+          "id": "TLIB-SEL-HEARING-1",
+          "oracle": "Strengthening the federal student loan program for borrowers: Hearing before the U.S. Senate Committee on Health, Education, Labor & Pensions, 113th Cong. (2014). https://www.help.senate.gov/hearings/strengthening-the-federal-student-loan-program-for-borrowers.",
+          "citum": "Strengthening the federal student loan program for borrowers, 2014. https://www.help.senate.gov/hearings/strengthening-the-federal-student-loan-program-for-borrowers.",
+          "exactMatch": false,
+          "exactParityEligible": true,
+          "comparisonState": "paired",
+          "evidenceRunId": "baseline",
+          "evidenceAuthority": "citeproc-js"
+        },
+        {
+          "id": "TLIB-SEL-SOFTWARE-1",
+          "oracle": "Tactile Labs. Latero Tactile Display. Model. Released 2015. Apparatus. http://tactilelabs.com/products/haptics/latero-tactile-display/.",
+          "citum": "Tactile Labs. Latero tactile display, 2015. http://tactilelabs.com/products/haptics/latero-tactile-display/.",
+          "exactMatch": false,
+          "exactParityEligible": true,
+          "comparisonState": "paired",
+          "evidenceRunId": "baseline",
+          "evidenceAuthority": "citeproc-js"
+        },
+        {
+          "id": "ITEM-15",
+          "oracle": "“The Role of Theory in Research.” Journal of Theoretical Psychology 28, no. 3 (2018): 201–15.",
+          "citum": "“The Role of Theory in Research.” Journal of Theoretical Psychology. 28, 2018: 201–15.",
+          "exactMatch": false,
+          "exactParityEligible": true,
+          "comparisonState": "paired",
+          "evidenceRunId": "baseline",
+          "evidenceAuthority": "citeproc-js"
+        },
+        {
+          "id": "ITEM-17",
+          "oracle": "Thompson, Alexander. “The Art of Minimalism in Modern Design.” Wired, Jun 2023.",
+          "citum": "Thompson, Alexander. “The Art of Minimalism in Modern Design.” Wired. 31, 2023: 42–49.",
+          "exactMatch": false,
+          "exactParityEligible": true,
+          "comparisonState": "paired",
+          "evidenceRunId": "baseline",
+          "evidenceAuthority": "citeproc-js"
+        },
+        {
+          "id": "TLIB-SEL-TREATY-1",
+          "oracle": "Treaty Banning Nuclear Weapon Tests in the Atmosphere, in Outer Space and Under Water, U.K.-U.S.-U.S.S.R., Aug 5, 1963, 14 U.S.T. 1313.",
+          "citum": "U.K., U.S., and U.S.S.R. Treaty Banning Nuclear Weapon Tests in the Atmosphere, in Outer Space and Under Water. U.S.T.. 14, 1963: 1313.",
+          "exactMatch": false,
+          "exactParityEligible": true,
+          "comparisonState": "paired",
+          "evidenceRunId": "baseline",
+          "evidenceAuthority": "citeproc-js"
+        },
+        {
+          "id": "ITEM-27",
+          "oracle": "United Nations Environment Programme. State of the World’s Biodiversity. Assessment-report. Edited by Sandra Díaz. UNEP, 2019.",
+          "citum": "United Nations Environment Programme. State of the World’s Biodiversity. Edited by Sandra Díaz. UNEP, 2019.",
+          "exactMatch": false,
+          "exactParityEligible": true,
+          "comparisonState": "paired",
+          "evidenceRunId": "baseline",
+          "evidenceAuthority": "citeproc-js"
+        },
+        {
+          "id": "ITEM-18",
+          "oracle": "Vasari, Giorgio. “Renaissance Art and Culture.” In Encyclopedia of World History, vol. 5. Oxford University Press, 2022.",
+          "citum": "Vasari, Giorgio. “Renaissance Art and Culture.” Encyclopedia of World History. 5. Oxford University Press, 2022: 234–56.",
+          "exactMatch": false,
+          "exactParityEligible": true,
+          "comparisonState": "paired",
+          "evidenceRunId": "baseline",
+          "evidenceAuthority": "citeproc-js"
+        },
+        {
+          "id": "ITEM-7",
+          "oracle": "Vaswani, Ashish, Noam Shazeer, Niki Parmar, et al “Attention Is All You Need.” Advances in Neural Information Processing Systems 30 (2017): 5998–6008.",
+          "citum": "Vaswani, Ashish, Noam Shazeer, Niki Parmar, et al “Attention Is All You Need.” Advances in Neural Information Processing Systems. 30, 2017: 5998–6008.",
+          "exactMatch": false,
+          "exactParityEligible": true,
+          "comparisonState": "paired",
+          "evidenceRunId": "baseline",
+          "evidenceAuthority": "citeproc-js"
+        },
+        {
+          "id": "ITEM-6",
+          "oracle": "Weinberg, Gerald M., and Daniel P. Freedman. The Psychology of Computer Programming. Silver Anniversary Edition. Van Nostrand Reinhold, 1971.",
+          "citum": "Weinberg, Gerald M. and Daniel P. Freedman. The Psychology of Computer Programming. Van Nostrand Reinhold, 1971.",
+          "exactMatch": false,
+          "exactParityEligible": true,
+          "comparisonState": "paired",
+          "evidenceRunId": "baseline",
+          "evidenceAuthority": "citeproc-js"
+        },
+        {
+          "id": "ITEM-5",
+          "oracle": "World Bank. World Development Report 2023. World Bank Group, 2023.",
+          "citum": "World Bank. World Development Report 2023. World Bank Group, 2023.",
+          "exactMatch": true,
+          "exactParityEligible": true,
+          "comparisonState": "paired",
+          "evidenceRunId": "baseline",
+          "evidenceAuthority": "citeproc-js"
+        }
+      ]
+    }
+  ]
+}

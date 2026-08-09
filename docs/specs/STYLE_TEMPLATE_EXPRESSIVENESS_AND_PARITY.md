@@ -329,13 +329,15 @@ manifest, trace, join, and parity-ratchet path.
       bibliography conformance tests.
 - [x] `csl26-02yg` implements the manifest, trace or conformance evidence,
       stable joins, complete output, and byte-regeneration gate.
-- [ ] A committed shortened-notes packet passes the new QA gates and replaces
+- [x] A committed shortened-notes packet passes the new QA gates and replaces
       the provisional pilot numbers.
 
 ## Changelog
 
 - 2026-08-09: Added the versioned audit manifest, Citum-resolved structural
   evidence, stable parity joins, complete output, and byte-regeneration gate.
+- 2026-08-09: Replaced the provisional shortened-notes pilot with a committed
+  565-observation packet and a clean source-built 34/473 exact-parity report.
 - 2026-08-09: Activated the fallback-template diff contract with schema,
   resolver, and citation/bibliography conformance coverage.
 - 2026-08-09: Initial Draft. Adjudicated the shortened-notes pilot, narrowed

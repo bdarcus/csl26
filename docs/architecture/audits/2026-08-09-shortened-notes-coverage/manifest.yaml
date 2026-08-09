@@ -1,0 +1,110 @@
+schema: citum.style-coverage-audit-manifest/v1
+packet-id: chicago-shortened-notes-coverage-2026-08-09
+surfaces:
+  - bibliography
+  - citation
+expected-observations: 565
+source:
+  revision: 727dba21f0af95c9554d1dc35ee62ad0dddc9976
+  worktree-clean: true
+style:
+  id: chicago-shortened-notes-bibliography
+  path: crates/citum-schema-style/embedded/styles/chicago-shortened-notes-bibliography.yaml
+  sha256: 5ee7afd5c74169d8882747d8ab6ede8b84aa12cd1760e1f0f3f544198cd1be94
+  chain:
+    - id: chicago-shortened-notes-bibliography
+      path: crates/citum-schema-style/embedded/styles/chicago-shortened-notes-bibliography.yaml
+      sha256: 5ee7afd5c74169d8882747d8ab6ede8b84aa12cd1760e1f0f3f544198cd1be94
+    - id: chicago-shortened-notes-bibliography-core
+      path: crates/citum-schema-style/embedded/styles/chicago-shortened-notes-bibliography-core.yaml
+      sha256: b3c419a71c6169b977c837e5a733886edef532e5579f47b6789296bb44d1c961
+    - id: chicago-notes-18th
+      path: crates/citum-schema-style/embedded/styles/chicago-notes-18th.yaml
+      sha256: 6585c66d1fc02addb97b7dc46200564065fd37c9eaad004bd43280c03a325ecf
+    - id: chicago-18-base
+      path: crates/citum-schema-style/embedded/styles/chicago-18-base.yaml
+      sha256: b93012ce48bd4bff58cabfdefd02d638f254f363914eba5203ef7b55c0805d2c
+fixtures:
+  references:
+    id: references-expanded
+    path: tests/fixtures/references-expanded.json
+    sha256: 8a51e07db96f23fcc11b6f268c9a1f174cab1b178462ec2577e9d25f1f9805eb
+  citations:
+    id: citations-note-expanded
+    path: tests/fixtures/citations-note-expanded.json
+    sha256: d1f01b362b29d763210f842a25e8e3aa8a124c5e025da39898bc283e52503e87
+authority:
+  name: citeproc-js
+  version: 2.4.63
+  evidence-run-id: baseline
+  inputs:
+    - id: chicago-shortened-notes-bibliography-csl
+      path: styles-legacy/chicago-shortened-notes-bibliography.csl
+      sha256: 3f933debd2f1310b9cf92d16c5dee1d1bfa008f9f09d1c01296946d0862e0a9c
+    - id: references-expanded
+      path: tests/fixtures/references-expanded.json
+      sha256: 8a51e07db96f23fcc11b6f268c9a1f174cab1b178462ec2577e9d25f1f9805eb
+    - id: citations-note-expanded
+      path: tests/fixtures/citations-note-expanded.json
+      sha256: d1f01b362b29d763210f842a25e8e3aa8a124c5e025da39898bc283e52503e87
+    - id: citeproc-js-package
+      path: scripts/node_modules/citeproc/package.json
+      sha256: fce7b24d1555ef8a32f0b07ecbc45720c812dae850104560739602ed89c98944
+  report:
+    path: docs/architecture/audits/2026-08-09-shortened-notes-coverage/authority-report.json
+    sha256: 9a7a34d0ca6d55a01d48b04a261891e1b3a21992882d6fd8b492b393e495f9bf
+relevance:
+  default: relevant
+  excluded:
+    - surface: '*'
+      field: citation-key
+      rationale: Fixture lookup metadata is not a Chicago rendering obligation.
+    - surface: '*'
+      field: license
+      rationale: License metadata is not a Chicago rendering obligation.
+    - surface: '*'
+      field: language
+      rationale: Language selects processing behavior but is not itself rendered as citation text.
+    - surface: '*'
+      field: note
+      rationale: Fixture notes carry ingest metadata and are not authority output fields.
+intentional-omissions:
+  - surface: citation
+    field: publisher-place
+    rationale: The paired shortened-note authority outputs omit publication place.
+  - surface: bibliography
+    reference-id: ITEM-2
+    field: publisher-place
+    rationale: The paired Chicago bibliography output omits publication place for this book.
+  - surface: bibliography
+    reference-id: ITEM-5
+    field: publisher-place
+    rationale: The paired Chicago bibliography output omits publication place for this report.
+  - surface: bibliography
+    reference-id: ITEM-6
+    field: publisher-place
+    rationale: The paired Chicago bibliography output omits publication place for this book.
+  - surface: bibliography
+    reference-id: ITEM-14
+    field: publisher-place
+    rationale: The paired Chicago bibliography output omits publication place for this edited book.
+  - surface: bibliography
+    reference-id: ITEM-25
+    field: publisher-place
+    rationale: The paired Chicago bibliography output omits publication place for this translated book.
+  - surface: bibliography
+    reference-id: ITEM-26
+    field: publisher-place
+    rationale: The paired Chicago bibliography output omits publication place for this book.
+  - surface: bibliography
+    reference-id: ITEM-27
+    field: publisher-place
+    rationale: The paired Chicago bibliography output omits publication place for this report.
+  - surface: bibliography
+    reference-id: ITEM-33
+    field: publisher-place
+    rationale: The paired Chicago bibliography output omits publication place for this forthcoming book.
+  - surface: bibliography
+    reference-id: TLIB-SEL-STANDARD-1
+    field: publisher-place
+    rationale: The paired Chicago bibliography output omits publication place for this standard.
