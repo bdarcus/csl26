@@ -4,7 +4,7 @@
 **Version:** 1.0
 **Date:** 2026-08-07
 **Supersedes:** (none — refines `csl26-40n4`/`csl26-h7oc` execution, does not replace them)
-**Related:** [`docs/architecture/audits/2026-06-30_CHICAGO_FAMILY_AUDIT.md`](../architecture/audits/2026-06-30_CHICAGO_FAMILY_AUDIT.md), [`CHICAGO_18_COVERAGE.md`](./CHICAGO_18_COVERAGE.md), [`CONTRIBUTOR_PHRASE_MESSAGES.md`](./CONTRIBUTOR_PHRASE_MESSAGES.md), [`LOCALE_MESSAGES.md`](./LOCALE_MESSAGES.md), [`CHICAGO_VARIANT_AXES.md`](./CHICAGO_VARIANT_AXES.md), beans `csl26-40n4`, `csl26-h7oc`, `csl26-dfq0`, `csl26-ztl9`
+**Related:** [`docs/architecture/audits/2026-06-30_CHICAGO_FAMILY_AUDIT.md`](../architecture/audits/2026-06-30_CHICAGO_FAMILY_AUDIT.md), [`CHICAGO_18_COVERAGE.md`](./CHICAGO_18_COVERAGE.md), [`CONTRIBUTOR_PHRASE_MESSAGES.md`](./CONTRIBUTOR_PHRASE_MESSAGES.md), [`LOCALE_MESSAGES.md`](./LOCALE_MESSAGES.md), [`CHICAGO_VARIANT_AXES.md`](./CHICAGO_VARIANT_AXES.md), [`STYLE_TEMPLATE_EXPRESSIVENESS_AND_PARITY.md`](./STYLE_TEMPLATE_EXPRESSIVENESS_AND_PARITY.md), beans `csl26-40n4`, `csl26-h7oc`, `csl26-dfq0`, `csl26-ztl9`
 
 ## Purpose
 

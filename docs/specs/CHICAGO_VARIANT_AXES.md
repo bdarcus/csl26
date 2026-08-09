@@ -7,6 +7,7 @@
 **Related:** [`CHICAGO_FAMILY_STRATEGY.md`](./CHICAGO_FAMILY_STRATEGY.md),
 [`STYLE_INHERITANCE.md`](./STYLE_INHERITANCE.md),
 [`STYLE_PRESET_ARCHITECTURE.md`](./STYLE_PRESET_ARCHITECTURE.md),
+[`STYLE_TEMPLATE_EXPRESSIVENESS_AND_PARITY.md`](./STYLE_TEMPLATE_EXPRESSIVENESS_AND_PARITY.md),
 [`NOTE_SHORTENING_POLICY.md`](./NOTE_SHORTENING_POLICY.md),
 beans `csl26-ztl9`, `csl26-adka`, `csl26-cfgw`, `csl26-4xg9`, external:
 [`citation-style-language/style-variant-builder`](https://github.com/citation-style-language/style-variant-builder)
