@@ -1,0 +1,53 @@
+schema: citum.style-coverage-audit-manifest/v1
+packet-id: coverage-fixture-v1
+surfaces:
+  - bibliography
+  - citation
+expected-observations: 8
+source:
+  revision: fixture
+  worktree-clean: false
+style:
+  id: coverage-fixture
+  path: tests/fixtures/style-coverage/style.yaml
+  sha256: 8d9a784d7bf49d1fc8249a7177843c715b960a84d9e6a3c73ad2a400cf11632b
+  chain:
+    - id: coverage-fixture
+      path: tests/fixtures/style-coverage/style.yaml
+      sha256: 8d9a784d7bf49d1fc8249a7177843c715b960a84d9e6a3c73ad2a400cf11632b
+fixtures:
+  references:
+    id: minimal-references
+    path: tests/fixtures/style-coverage/references.json
+    sha256: ed2e95e9be83f67e4dc60b25cffab1bde75d3a8c4364a4601b52f6ee8d3d87c9
+  citations:
+    id: minimal-citations
+    path: tests/fixtures/style-coverage/citations.json
+    sha256: a5e53174a0da3ba2ce7d206d34d786dfb6debb43c081881ebb7502f28c35dc2c
+authority:
+  name: citeproc-js
+  version: 2.4.63
+  evidence-run-id: baseline
+  inputs:
+    - id: authority-style
+      path: tests/fixtures/style-coverage/authority-style.csl
+      sha256: 1cb0051e2a184764d7795c2197628029596cc1fd481982e6e4340378d8784aef
+    - id: minimal-references
+      path: tests/fixtures/style-coverage/references.json
+      sha256: ed2e95e9be83f67e4dc60b25cffab1bde75d3a8c4364a4601b52f6ee8d3d87c9
+    - id: minimal-citations
+      path: tests/fixtures/style-coverage/citations.json
+      sha256: a5e53174a0da3ba2ce7d206d34d786dfb6debb43c081881ebb7502f28c35dc2c
+  report:
+    path: tests/fixtures/style-coverage/report.json
+    sha256: 2a4b47d56d76a0412285ecd56070978b7f61dcc81515ab3880e66de0d2ea8e98
+relevance:
+  default: relevant
+  excluded:
+    - surface: "*"
+      field: license
+      rationale: License metadata is not a citation rendering obligation.
+intentional-omissions:
+  - surface: citation
+    field: publisher
+    rationale: The fixture citation intentionally omits publication data.

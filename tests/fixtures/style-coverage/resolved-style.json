@@ -1,0 +1,31 @@
+{
+  "version": "0.75.0",
+  "info": {
+    "title": "Coverage fixture"
+  },
+  "citation": {
+    "template": [
+      {
+        "title": "primary"
+      }
+    ]
+  },
+  "bibliography": {
+    "template": [
+      {
+        "title": "primary"
+      }
+    ],
+    "type-variants": {
+      "book": [
+        {
+          "title": "primary"
+        },
+        {
+          "variable": "publisher"
+        }
+      ]
+    },
+    "groups-enabled": true
+  }
+}

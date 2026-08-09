@@ -1,0 +1,274 @@
+{
+  "auditManifest": {
+    "authority": {
+      "evidenceRunId": "baseline",
+      "inputs": [
+        {
+          "id": "authority-style",
+          "path": "tests/fixtures/style-coverage/authority-style.csl",
+          "sha256": "1cb0051e2a184764d7795c2197628029596cc1fd481982e6e4340378d8784aef"
+        },
+        {
+          "id": "minimal-references",
+          "path": "tests/fixtures/style-coverage/references.json",
+          "sha256": "ed2e95e9be83f67e4dc60b25cffab1bde75d3a8c4364a4601b52f6ee8d3d87c9"
+        },
+        {
+          "id": "minimal-citations",
+          "path": "tests/fixtures/style-coverage/citations.json",
+          "sha256": "a5e53174a0da3ba2ce7d206d34d786dfb6debb43c081881ebb7502f28c35dc2c"
+        }
+      ],
+      "name": "citeproc-js",
+      "report": {
+        "path": "tests/fixtures/style-coverage/report.json",
+        "sha256": "2a4b47d56d76a0412285ecd56070978b7f61dcc81515ab3880e66de0d2ea8e98"
+      },
+      "version": "2.4.63"
+    },
+    "expectedObservations": 8,
+    "fixtures": {
+      "citations": {
+        "id": "minimal-citations",
+        "path": "tests/fixtures/style-coverage/citations.json",
+        "sha256": "a5e53174a0da3ba2ce7d206d34d786dfb6debb43c081881ebb7502f28c35dc2c"
+      },
+      "references": {
+        "id": "minimal-references",
+        "path": "tests/fixtures/style-coverage/references.json",
+        "sha256": "ed2e95e9be83f67e4dc60b25cffab1bde75d3a8c4364a4601b52f6ee8d3d87c9"
+      }
+    },
+    "generator": {
+      "arguments": {
+        "manifest": "tests/fixtures/style-coverage/manifest.yaml"
+      },
+      "path": "scripts/style-coverage-review.js",
+      "sha256": "4109350fac7cdffc31c0989638f374be9980975c1e9b1fc17672b3d44735fc2f",
+      "version": 1
+    },
+    "intentionalOmissions": [
+      {
+        "field": "publisher",
+        "rationale": "The fixture citation intentionally omits publication data.",
+        "surface": "citation"
+      }
+    ],
+    "manifest": {
+      "path": "tests/fixtures/style-coverage/manifest.yaml",
+      "sha256": "6f3fec0add7eceafce76d36fa922e9231dbb481a5a75b6a0d65a8a2d98433145"
+    },
+    "relevance": {
+      "default": "relevant",
+      "excluded": [
+        {
+          "field": "license",
+          "rationale": "License metadata is not a citation rendering obligation.",
+          "surface": "*"
+        }
+      ]
+    },
+    "resolution": {
+      "coverageMode": "inferred-structural",
+      "evidence": "resolved-style",
+      "provider": "citum-cli",
+      "providerVersion": "citum 0.79.0"
+    },
+    "schema": "citum.style-coverage-audit-manifest/v1",
+    "source": {
+      "baselineEligible": false,
+      "revision": "fixture",
+      "worktreeClean": false
+    },
+    "style": {
+      "chain": [
+        {
+          "id": "coverage-fixture",
+          "path": "tests/fixtures/style-coverage/style.yaml",
+          "sha256": "8d9a784d7bf49d1fc8249a7177843c715b960a84d9e6a3c73ad2a400cf11632b"
+        }
+      ],
+      "id": "coverage-fixture",
+      "path": "tests/fixtures/style-coverage/style.yaml",
+      "resolvedSha256": "e3f23b87818a605faf87c72d5b3010f40b5b0bf60db1068f855f0424b0ae47ea",
+      "sha256": "8d9a784d7bf49d1fc8249a7177843c715b960a84d9e6a3c73ad2a400cf11632b"
+    },
+    "surfaces": [
+      "bibliography",
+      "citation"
+    ]
+  },
+  "observations": [
+    {
+      "comparisonEligibility": "comparable",
+      "coverageEvidence": "inferred-structural",
+      "exactMatch": false,
+      "field": "license",
+      "fixtureId": "minimal-references",
+      "observationId": "coverage-fixture/bibliography/minimal-references/ITEM-1/book/license/entry",
+      "occurrence": "entry",
+      "omissionRationale": null,
+      "referenceId": "ITEM-1",
+      "referenceType": "book",
+      "relevance": "excluded",
+      "relevanceRationale": "License metadata is not a citation rendering obligation.",
+      "renderDisposition": null,
+      "row": 1,
+      "surface": "bibliography",
+      "templatePath": null
+    },
+    {
+      "comparisonEligibility": "comparable",
+      "coverageEvidence": "inferred-structural",
+      "exactMatch": false,
+      "field": "publisher",
+      "fixtureId": "minimal-references",
+      "observationId": "coverage-fixture/bibliography/minimal-references/ITEM-1/book/publisher/entry",
+      "occurrence": "entry",
+      "omissionRationale": null,
+      "referenceId": "ITEM-1",
+      "referenceType": "book",
+      "relevance": "relevant",
+      "relevanceRationale": null,
+      "renderDisposition": "rendered",
+      "row": 2,
+      "surface": "bibliography",
+      "templatePath": "resolved.bibliography.type-variants.book.template[1].variable"
+    },
+    {
+      "comparisonEligibility": "comparable",
+      "coverageEvidence": "inferred-structural",
+      "exactMatch": false,
+      "field": "title",
+      "fixtureId": "minimal-references",
+      "observationId": "coverage-fixture/bibliography/minimal-references/ITEM-1/book/title/entry",
+      "occurrence": "entry",
+      "omissionRationale": null,
+      "referenceId": "ITEM-1",
+      "referenceType": "book",
+      "relevance": "relevant",
+      "relevanceRationale": null,
+      "renderDisposition": "rendered",
+      "row": 3,
+      "surface": "bibliography",
+      "templatePath": "resolved.bibliography.type-variants.book.template[0].title"
+    },
+    {
+      "comparisonEligibility": "not-comparable",
+      "coverageEvidence": "inferred-structural",
+      "exactMatch": null,
+      "field": "issue",
+      "fixtureId": "minimal-references",
+      "observationId": "coverage-fixture/bibliography/minimal-references/ITEM-2/article-journal/issue/entry",
+      "occurrence": "entry",
+      "omissionRationale": null,
+      "referenceId": "ITEM-2",
+      "referenceType": "article-journal",
+      "relevance": "relevant",
+      "relevanceRationale": null,
+      "renderDisposition": "uncovered",
+      "row": 4,
+      "surface": "bibliography",
+      "templatePath": null
+    },
+    {
+      "comparisonEligibility": "not-comparable",
+      "coverageEvidence": "inferred-structural",
+      "exactMatch": null,
+      "field": "title",
+      "fixtureId": "minimal-references",
+      "observationId": "coverage-fixture/bibliography/minimal-references/ITEM-2/article-journal/title/entry",
+      "occurrence": "entry",
+      "omissionRationale": null,
+      "referenceId": "ITEM-2",
+      "referenceType": "article-journal",
+      "relevance": "relevant",
+      "relevanceRationale": null,
+      "renderDisposition": "fallback",
+      "row": 5,
+      "surface": "bibliography",
+      "templatePath": "resolved.bibliography.template.template[0].title"
+    },
+    {
+      "comparisonEligibility": "comparable",
+      "coverageEvidence": "inferred-structural",
+      "exactMatch": true,
+      "field": "license",
+      "fixtureId": "minimal-citations",
+      "observationId": "coverage-fixture/citation/minimal-citations/ITEM-1/book/license/cite-1%3A1",
+      "occurrence": "cite-1:1",
+      "omissionRationale": null,
+      "referenceId": "ITEM-1",
+      "referenceType": "book",
+      "relevance": "excluded",
+      "relevanceRationale": "License metadata is not a citation rendering obligation.",
+      "renderDisposition": null,
+      "row": 6,
+      "surface": "citation",
+      "templatePath": null
+    },
+    {
+      "comparisonEligibility": "comparable",
+      "coverageEvidence": "inferred-structural",
+      "exactMatch": true,
+      "field": "publisher",
+      "fixtureId": "minimal-citations",
+      "observationId": "coverage-fixture/citation/minimal-citations/ITEM-1/book/publisher/cite-1%3A1",
+      "occurrence": "cite-1:1",
+      "omissionRationale": "The fixture citation intentionally omits publication data.",
+      "referenceId": "ITEM-1",
+      "referenceType": "book",
+      "relevance": "relevant",
+      "relevanceRationale": null,
+      "renderDisposition": "suppressed",
+      "row": 7,
+      "surface": "citation",
+      "templatePath": null
+    },
+    {
+      "comparisonEligibility": "comparable",
+      "coverageEvidence": "inferred-structural",
+      "exactMatch": true,
+      "field": "title",
+      "fixtureId": "minimal-citations",
+      "observationId": "coverage-fixture/citation/minimal-citations/ITEM-1/book/title/cite-1%3A1",
+      "occurrence": "cite-1:1",
+      "omissionRationale": null,
+      "referenceId": "ITEM-1",
+      "referenceType": "book",
+      "relevance": "relevant",
+      "relevanceRationale": null,
+      "renderDisposition": "fallback",
+      "row": 8,
+      "surface": "citation",
+      "templatePath": "resolved.citation.template.template[0].title"
+    }
+  ],
+  "packetId": "coverage-fixture-v1",
+  "reportExactParity": {
+    "notComparable": 1,
+    "passed": 2,
+    "total": 3
+  },
+  "schema": "citum.style-coverage-packet/v1",
+  "summary": {
+    "comparisonEligibility": {
+      "comparable": 6,
+      "not-comparable": 2
+    },
+    "excludedObservations": 2,
+    "joinedExactParity": {
+      "notComparable": 1,
+      "passed": 1,
+      "total": 2
+    },
+    "populatedObservations": 8,
+    "relevantObservations": 6,
+    "renderDisposition": {
+      "fallback": 2,
+      "rendered": 2,
+      "suppressed": 1,
+      "uncovered": 1
+    }
+  }
+}
