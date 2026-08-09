@@ -20,3 +20,11 @@ styles:
     lineage: biblatex-derived
   chem-biochem:
     lineage: biblatex-derived
+
+coverage_audits:
+  - style_id: chicago-shortened-notes-bibliography
+    manifest: docs/architecture/audits/2026-08-09-shortened-notes-coverage/manifest.yaml
+    packet: docs/architecture/audits/2026-08-09-shortened-notes-coverage/packet.json
+    markdown: docs/architecture/audits/2026-08-09-shortened-notes-coverage/packet.md
+    adjudication_record: docs/architecture/audits/2026-08-09-shortened-notes-coverage/README.md
+    adjudication_href: https://github.com/citum/citum-core/blob/main/docs/architecture/audits/2026-08-09-shortened-notes-coverage/README.md

@@ -56,15 +56,23 @@ Run the full wave without pausing between styles. Use the shared docs for the co
 
 ## Workflow
 1. Select the next priority wave.
-2. Seed the baseline with the smallest trustworthy evidence surface.
-3. Apply the fix according to the shared policy and execution guide.
-4. Re-run apples-to-apples comparison evidence.
-5. Treat supplemental rich-input evidence as confirmation when configured.
-6. Commit each passing style and produce final metrics plus follow-up recommendations.
+2. Report each target's coverage-audit status as `current`, `stale`, or
+   `not registered` with
+   `node scripts/check-style-coverage-audits.js --status <style-id>`. Use a
+   current packet to select one bounded cluster, reject a stale packet, and do
+   not create one for an unregistered style.
+3. Seed the baseline with the smallest trustworthy evidence surface.
+4. Apply the fix according to the shared policy and execution guide.
+5. Re-run apples-to-apples comparison evidence.
+6. Treat supplemental rich-input evidence as confirmation when configured.
+7. Commit each passing style and produce final metrics plus follow-up recommendations.
 
 ## Hard Gates
 - Never accept a fidelity regression.
 - Never classify a registered divergence as a migration or engine bug without updating adjudication first.
+- Never call a cluster a `citum-migrate` defect from a hand-authored coverage
+  packet. Require a fresh migrated candidate from the relevant CSL source and
+  reproduce the cluster against that candidate.
 - Exact parity is diagnostic-only in this skill for dependent styles, and not
   a gate here at all for embedded-core targets — the `tune` pass owns the
   exact-parity gate. Still capture the number as seed evidence when the

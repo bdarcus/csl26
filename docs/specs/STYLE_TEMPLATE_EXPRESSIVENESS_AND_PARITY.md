@@ -313,8 +313,10 @@ manifest, trace, join, and parity-ratchet path.
   style resolver.
 - Style and engine fixes discovered by the pilot remain separate changes with
   their own before-and-after evidence.
-- Workflow control surfaces should be updated only after the packet gates are
-  executable and proven. This Draft does not change contributor policy.
+- Workflow control surfaces consume only explicitly registered packets after
+  the packet gates are executable and proven. Unregistered styles continue
+  through the ordinary evidence ladder without being required to create an
+  audit.
 
 ## Acceptance Criteria
 
@@ -331,9 +333,15 @@ manifest, trace, join, and parity-ratchet path.
       stable joins, complete output, and byte-regeneration gate.
 - [x] A committed shortened-notes packet passes the new QA gates and replaces
       the provisional pilot numbers.
+- [x] Explicit report metadata registers the shortened-notes packet, CI checks
+      byte freshness with a source-built `citum`, and style workflows reject
+      stale packets while keeping unaudited styles optional.
 
 ## Changelog
 
+- 2026-08-09: Registered the shortened-notes audit in report metadata, added
+  source-built CI freshness enforcement, and integrated freshness-aware use
+  into shared style workflows.
 - 2026-08-09: Added the versioned audit manifest, Citum-resolved structural
   evidence, stable parity joins, complete output, and byte-regeneration gate.
 - 2026-08-09: Replaced the provisional shortened-notes pilot with a committed

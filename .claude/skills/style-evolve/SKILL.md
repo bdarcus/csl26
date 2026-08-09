@@ -72,6 +72,12 @@ Use `docs/policies/STYLE_WORKFLOW_DECISION_RULES.md` for failure classification 
   `citeproc-correct` or `unclear` only; `citum-correct` requires the user.
 - Before editing a style, classify it by semantic class, implementation form, and
   portfolio tier using the shared workflow docs and `docs/specs/STYLE_TAXONOMY.md`.
+- Before editing, run
+  `node scripts/check-style-coverage-audits.js --status <style-id>` and report
+  `current`, `stale`, or `not registered`. Follow the shared workflow for
+  bounded cluster selection, `--update-manifest` recovery from a stale
+  packet, the shared-ancestor / full-portfolio-baseline rule, and final
+  packet regeneration.
 - Profile-family work may require a `create` pass for a hidden family root
   followed by `upgrade` reduction of the public handles.
 - Journal/profile reductions must choose parents from guide-backed authority,
@@ -89,6 +95,7 @@ Every completed task delivers:
 - SQI delta
 - authority basis
 - rich input evidence summary
+- coverage-audit status and, when registered, disposition plus joined-parity deltas
 - divergences
 - code opportunities table
 - QA verdict

@@ -24,6 +24,8 @@ Authoritative shared process docs:
 - Optional `scripts/report-data/parity-adjudication.json` diff when the pass
   recorded new adjudication entries.
 - Optional docs/beans diff when task updates `.md` or `.beans/*`.
+- Coverage-audit status (`current`, `stale`, or `not registered`) and, when
+  registered, the regenerated packet plus disposition and joined-parity deltas.
 
 ## Required Checks
 1. Fidelity summary.
@@ -35,6 +37,9 @@ Authoritative shared process docs:
    `authority` and `confirmedBy`; reject if either is missing (the CI gate
    also enforces this, but QA should catch it first).
 7. Docs/beans hygiene when docs or beans are touched.
+8. Coverage-audit freshness — reject a registered packet unless
+   `node scripts/check-style-coverage-audits.js --status <style-id>` reports
+   `current`. `Not registered` is valid and does not require packet creation.
 
 ## Decision Rules
 - Reject when fidelity regresses — applies to all tiers.
@@ -53,6 +58,9 @@ Authoritative shared process docs:
 - Reject when an agent-authored `parity-adjudication.json` entry uses state
   `citum-correct` — that state is user-only.
 - Reject when formatting defects are introduced.
+- Reject stale or invalid registered packets. Treat explained count movement as
+  evidence, not an automatic failure; uncovered fields remain investigation
+  leads rather than proven causes.
 - Approve when fidelity is preserved or improved, exact parity is preserved
   or improved (for `embedded-core`), formatting is clean, and (for
   `embedded-core`) SQI is clean.
@@ -62,5 +70,7 @@ Authoritative shared process docs:
 - Tier: `embedded-core` or `dependent`
 - Metrics line: citations + bibliography + exact-parity passed/total (embedded-core
   only) + SQI score (and delta from baseline)
+- Coverage-audit line: `current`, `stale`, or `not registered`, plus
+  disposition and joined-parity deltas when registered
 - Findings: short numbered list
 - Next step: merge, iterate, or escalate to planner/processor

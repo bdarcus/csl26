@@ -1,0 +1,225 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://schemas.citum.org/style-coverage-packet-v1.json",
+  "title": "Citum style coverage packet",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "packetId", "auditManifest", "summary", "reportExactParity", "observations"],
+  "properties": {
+    "schema": { "const": "citum.style-coverage-packet/v1" },
+    "packetId": { "type": "string", "minLength": 1 },
+    "auditManifest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema", "source", "manifest", "generator", "surfaces",
+        "expectedObservations", "relevance", "intentionalOmissions", "style",
+        "fixtures", "authority", "resolution"
+      ],
+      "properties": {
+        "schema": { "const": "citum.style-coverage-audit-manifest/v1" },
+        "source": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["revision", "worktreeClean", "baselineEligible"],
+          "properties": {
+            "revision": { "type": "string", "minLength": 1 },
+            "worktreeClean": { "type": "boolean" },
+            "baselineEligible": { "type": "boolean" }
+          }
+        },
+        "manifest": { "$ref": "#/definitions/file" },
+        "generator": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["path", "version", "sha256", "arguments"],
+          "properties": {
+            "path": { "type": "string", "minLength": 1 },
+            "version": { "type": "integer", "minimum": 1 },
+            "sha256": { "$ref": "#/definitions/sha256" },
+            "arguments": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["manifest"],
+              "properties": { "manifest": { "type": "string", "minLength": 1 } }
+            }
+          }
+        },
+        "surfaces": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "enum": ["bibliography", "citation"] }
+        },
+        "expectedObservations": { "type": "integer", "minimum": 1 },
+        "relevance": { "type": "object" },
+        "intentionalOmissions": { "type": "array" },
+        "style": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "path", "sha256", "chain", "resolvedSha256"],
+          "properties": {
+            "id": { "type": "string", "minLength": 1 },
+            "path": { "type": "string", "minLength": 1 },
+            "sha256": { "$ref": "#/definitions/sha256" },
+            "chain": {
+              "type": "array",
+              "minItems": 1,
+              "items": { "$ref": "#/definitions/namedFile" }
+            },
+            "resolvedSha256": { "$ref": "#/definitions/sha256" }
+          }
+        },
+        "fixtures": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["references", "citations"],
+          "properties": {
+            "references": { "$ref": "#/definitions/namedFile" },
+            "citations": {
+              "anyOf": [
+                { "$ref": "#/definitions/namedFile" },
+                { "type": "null" }
+              ]
+            }
+          }
+        },
+        "authority": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["name", "version", "evidenceRunId", "inputs", "report"],
+          "properties": {
+            "name": { "type": "string", "minLength": 1 },
+            "version": { "type": "string", "minLength": 1 },
+            "evidenceRunId": { "type": "string", "minLength": 1 },
+            "inputs": {
+              "type": "array",
+              "minItems": 1,
+              "items": { "$ref": "#/definitions/namedFile" }
+            },
+            "report": { "$ref": "#/definitions/file" }
+          }
+        },
+        "resolution": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["provider", "providerVersion", "evidence", "coverageMode"],
+          "properties": {
+            "provider": { "type": "string", "minLength": 1 },
+            "providerVersion": { "type": "string", "minLength": 1 },
+            "evidence": { "type": "string", "minLength": 1 },
+            "coverageMode": { "const": "inferred-structural" }
+          }
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "populatedObservations", "relevantObservations", "excludedObservations",
+        "renderDisposition", "comparisonEligibility", "joinedExactParity"
+      ],
+      "properties": {
+        "populatedObservations": { "type": "integer", "minimum": 0 },
+        "relevantObservations": { "type": "integer", "minimum": 0 },
+        "excludedObservations": { "type": "integer", "minimum": 0 },
+        "renderDisposition": { "$ref": "#/definitions/renderDispositionCounts" },
+        "comparisonEligibility": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["comparable", "not-comparable"],
+          "properties": {
+            "comparable": { "type": "integer", "minimum": 0 },
+            "not-comparable": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "joinedExactParity": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["passed", "total", "notComparable"],
+          "properties": {
+            "passed": { "type": "integer", "minimum": 0 },
+            "total": { "type": "integer", "minimum": 0 },
+            "notComparable": { "type": "integer", "minimum": 0 }
+          }
+        }
+      }
+    },
+    "reportExactParity": {
+      "anyOf": [
+        { "type": "object" },
+        { "type": "null" }
+      ]
+    },
+    "observations": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/definitions/observation" }
+    }
+  },
+  "definitions": {
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "file": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "sha256": { "$ref": "#/definitions/sha256" }
+      }
+    },
+    "namedFile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "path", "sha256"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "path": { "type": "string", "minLength": 1 },
+        "sha256": { "$ref": "#/definitions/sha256" }
+      }
+    },
+    "renderDispositionCounts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["rendered", "fallback", "suppressed", "uncovered"],
+      "properties": {
+        "rendered": { "type": "integer", "minimum": 0 },
+        "fallback": { "type": "integer", "minimum": 0 },
+        "suppressed": { "type": "integer", "minimum": 0 },
+        "uncovered": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "observation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "observationId", "surface", "fixtureId", "occurrence", "referenceId",
+        "referenceType", "field", "relevance", "relevanceRationale",
+        "renderDisposition", "omissionRationale", "comparisonEligibility",
+        "exactMatch", "templatePath", "coverageEvidence", "row"
+      ],
+      "properties": {
+        "observationId": { "type": "string", "minLength": 1 },
+        "surface": { "enum": ["bibliography", "citation"] },
+        "fixtureId": { "type": "string", "minLength": 1 },
+        "occurrence": { "type": "string", "minLength": 1 },
+        "referenceId": { "type": "string", "minLength": 1 },
+        "referenceType": { "type": "string", "minLength": 1 },
+        "field": { "type": "string", "minLength": 1 },
+        "relevance": { "enum": ["relevant", "excluded"] },
+        "relevanceRationale": { "type": ["string", "null"] },
+        "renderDisposition": {
+          "type": ["string", "null"],
+          "enum": ["rendered", "fallback", "suppressed", "uncovered", null]
+        },
+        "omissionRationale": { "type": ["string", "null"] },
+        "comparisonEligibility": { "enum": ["comparable", "not-comparable"] },
+        "exactMatch": { "type": ["boolean", "null"] },
+        "templatePath": { "type": ["string", "null"] },
+        "coverageEvidence": { "const": "inferred-structural" },
+        "row": { "type": "integer", "minimum": 1 }
+      }
+    }
+  }
+}

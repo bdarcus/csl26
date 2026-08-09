@@ -64,6 +64,43 @@
         "Commits automatically after QA pass",
         "Final message does not end with an open-ended question to the user"
       ]
+    },
+    {
+      "id": 5,
+      "prompt": "/style-evolve upgrade crates/citum-schema-style/embedded/styles/chicago-shortened-notes-bibliography.yaml, but the registered coverage packet has a stale style-chain hash",
+      "expected_output": "Reports coverage audit status 'stale', rejects the packet as invalid evidence, and stops style editing until the packet is regenerated. A high or changed uncovered count is not used as the reason for rejection.",
+      "files": [],
+      "assertions": [
+        "Coverage-audit status is exactly 'stale'",
+        "Style editing stops until the registered packet is regenerated and validates",
+        "Rejection is based on freshness or validity, not the uncovered count itself",
+        "Does not claim uncovered fields caused text mismatches"
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "/style-evolve tune chicago-shortened-notes-bibliography using its current registered coverage audit",
+      "expected_output": "Reports coverage audit status 'current', inspects the adjudication record, selects one bounded output cluster from stable observation groups, and reports disposition plus joined exact-parity deltas after regeneration.",
+      "files": [],
+      "assertions": [
+        "Coverage-audit status is exactly 'current'",
+        "One bounded output cluster is selected before editing",
+        "Stable observation IDs are cited for the selected cluster",
+        "Uncovered observations are described as investigation leads rather than proven causes",
+        "Final output includes render-disposition and joined exact-parity deltas"
+      ]
+    },
+    {
+      "id": 7,
+      "prompt": "/style-evolve migrate styles-legacy/chicago-shortened-notes-bibliography.csl; the only suspected converter evidence is the registered hand-authored Chicago coverage audit",
+      "expected_output": "Does not attribute the cluster to citum-migrate from the hand-authored audit. Requires a fresh migrated candidate from the CSL source and an apples-to-apples reproduction before reporting a converter defect.",
+      "files": [],
+      "assertions": [
+        "Does not classify the hand-authored audit finding as a citum-migrate defect",
+        "Requires a fresh candidate generated from the relevant CSL source",
+        "Requires apples-to-apples reproduction of the bounded cluster",
+        "Reports coverage-audit status as current, stale, or not registered"
+      ]
     }
   ]
 }

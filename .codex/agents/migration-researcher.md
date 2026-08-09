@@ -16,6 +16,7 @@ scope:
   - Read supporting evidence from `docs/`, `scripts/`, `styles-legacy/`, and test fixtures as needed.
   - Stay cluster-bounded: one target cluster per pass.
 verification:
+  - Run `node scripts/check-style-coverage-audits.js --status <style-id>` and report `current`, `stale`, or `not registered`; reject stale evidence and do not require an audit for unregistered styles.
   - Reproduce baseline with the smallest trustworthy evidence surface first.
   - Re-run the reduced cluster after the change.
   - Re-run the primary oracle and style-scoped report before closing.
@@ -28,6 +29,8 @@ output_contract:
   - Preserve the config-wrapper contract for `profile + config-wrapper` targets.
   - Accept `journal + structural-wrapper` as a valid stopping point.
   - If classified as `migration-artifact`, make at most one tightly scoped code change for that pass.
+  - Never infer a `citum-migrate` defect from a hand-authored coverage packet; require a fresh migrated candidate from the relevant CSL source and reproduce the cluster first.
+  - Report coverage disposition and joined-parity deltas when a registered packet applies.
   - Report before/after evidence and note any remaining uncertainty.
 ---
 

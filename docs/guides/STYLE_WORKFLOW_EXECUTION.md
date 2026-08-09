@@ -1,10 +1,11 @@
 # Style Workflow Execution
 
 **Status:** Active
-**Version:** 1.0
-**Date:** 2026-04-04
+**Version:** 1.2
+**Date:** 2026-08-11
 **Related:** [STYLE_WORKFLOW_DECISION_RULES.md](../policies/STYLE_WORKFLOW_DECISION_RULES.md),
 [MIGRATE_RESEARCH_RICH_INPUTS.md](../specs/MIGRATE_RESEARCH_RICH_INPUTS.md),
+[STYLE_TEMPLATE_EXPRESSIVENESS_AND_PARITY.md](../specs/STYLE_TEMPLATE_EXPRESSIVENESS_AND_PARITY.md),
 [MIGRATION_STRATEGY_ANALYSIS.md](../architecture/MIGRATION_STRATEGY_ANALYSIS.md)
 
 ## Purpose
@@ -32,12 +33,37 @@ Out of scope:
      the predicate (`citum style list --source embedded`)
 3. Establish source authority before reading implementation artifacts:
    publisher guide first, then publisher house rules, then parent-style guidance.
-4. Capture the smallest trustworthy evidence surface first.
-5. Use reduced-cluster evidence before broad supplemental reruns.
-6. Classify each failure using the shared policy.
-7. Apply at most one tightly scoped fix per bounded cluster pass.
-8. Re-run the reduced evidence set, then the broader oracle or report surface.
-9. Stop when the cluster is reclassified, converged, or proven out of scope.
+4. Run `node scripts/check-style-coverage-audits.js --status <style-id>` and
+   report `current`, `stale`, or `not registered`.
+   - For `current`, inspect the human adjudication record and packet before
+     editing, then select one bounded output cluster.
+   - For `stale`, stop and regenerate valid evidence. If the cause is an
+     edit to the audited style or one of its `style.chain` ancestors (the
+     expected case — the manifest pins file hashes that do not self-heal),
+     regenerate with `node scripts/style-coverage-review.js --manifest
+     <path> --json-out <path> --markdown-out <path> --update-manifest`
+     first to re-pin the hashes and observation count, then regenerate the
+     packet normally on a clean, committed tree before it can be
+     baseline-eligible again.
+   - For `not registered`, continue without creating an audit.
+   - If the edit touches a `style.chain` file shared by other embedded-core
+     styles (check `citum style list --source embedded` plus each
+     candidate's `extends`), a registered packet only speaks for its own
+     leaf style — the shared-ancestor rule below is the mechanism that
+     protects and credits the rest of that family.
+5. Capture the smallest trustworthy evidence surface first. A registered
+   audit's uncovered fields are structural leads, not causal claims.
+6. Use reduced-cluster evidence before broad supplemental reruns.
+7. Classify each failure using the shared policy.
+8. Apply at most one tightly scoped fix per bounded cluster pass.
+9. Re-run the reduced evidence set, then the broader oracle or report surface.
+10. Before final QA on a registered style, regenerate the baseline-eligible
+    packet (`--update-manifest` first if a chain file changed, then a plain
+    regeneration on a clean, committed tree), rerun the checker, and explain
+    disposition and parity count deltas. If a shared ancestor changed, also
+    regenerate `embedded-parity-baseline.json` from the full portfolio and
+    report any sibling deltas.
+11. Stop when the cluster is reclassified, converged, or proven out of scope.
 
 ### Shared verification logic
 - Fidelity to the declared primary authority is a hard gate for all tiers.
@@ -54,6 +80,20 @@ Out of scope:
   starts). For `dependent` styles, SQI is advisory and a tie-breaker only.
 - QA must reject regressions and formatting defects.
 - Supplemental rich-input evidence is confirmation, not the first debugging surface.
+- Registered audit packets must be schema-valid, hash-current,
+  baseline-eligible, count-consistent, and byte-reproducible. Count changes are
+  evidence requiring explanation, not an automatic pass or failure.
+- **Shared-ancestor edits require a full-portfolio floor check.** A registered
+  coverage packet is scoped to one leaf style; it gives no field-level
+  evidence for siblings that extend the same `style.chain` ancestor (Chicago's
+  shared bases are the current example). The pre-existing, portfolio-wide
+  safety net is `scripts/report-data/embedded-parity-baseline.json`, which
+  tracks a per-style exact-parity floor for every `embedded-core` style
+  individually. Before closing any pass that edited a file shared by other
+  embedded-core styles, run the full-portfolio `report-core.js` (not
+  `--style`-scoped) and regenerate that baseline file — this is what catches
+  a sibling regression and credits a sibling improvement that the packet
+  itself cannot see.
 - CSL structure is verification evidence, not the source of truth for wrapper thickness.
 - For `profile` targets, verify that the file still satisfies the config-wrapper
   contract: no local templates, no local `type-variants`, and no
@@ -68,11 +108,16 @@ Every workflow should report:
 - semantic class, implementation form, and portfolio tier
 - classification and rationale
 - before/after evidence
+- registered coverage-audit status (`current`, `stale`, or `not registered`)
+- disposition and joined exact-parity deltas when a registered packet applies
 - exact change made, if any
 - whether the pass should continue, stop, or escalate
 
 ### Shared escalation
 - `migration-artifact` stays in migration work until the converter is fixed or disproven.
+- Do not classify a cluster as `migration-artifact` from a hand-authored
+  coverage packet. Require a fresh candidate generated by `citum-migrate` from
+  the relevant CSL source and reproduce the cluster against that candidate.
 - `style-defect` routes to style-local YAML repair.
 - `processor-defect` routes to processor or engine follow-up.
 - `intentional divergence` that generalizes beyond one style is recorded in
@@ -118,7 +163,12 @@ for why fidelity alone is not sufficient evidence of correct rendering.
 ### Execution order
 1. **Seed:** run `citum-migrate` (or accept the existing Citum YAML) to produce
    a concrete candidate. Record oracle fidelity baseline and exact-parity
-   baseline (`scripts/report-data/embedded-parity-baseline.json`).
+   baseline (`scripts/report-data/embedded-parity-baseline.json`). Report the
+   registered coverage-audit status and, when current, choose one bounded
+   packet cluster before editing. Editing the audited style or any of its
+   `style.chain` ancestors stales the packet's pinned hashes immediately —
+   regenerating with `--update-manifest` (see the shared execution order,
+   step 4) is the expected recovery, not a sign something went wrong.
 2. **Fidelity loop:**
    a. Run the oracle (`node scripts/oracle.js <legacy-style> --json`).
    b. Classify each failure per the shared decision rules; for type- or
@@ -144,7 +194,10 @@ for why fidelity alone is not sufficient evidence of correct rendering.
       rose and fidelity did not regress.
    d. Continue until no further residual is classifiable without escalation,
       or the floor is raised as far as this pass supports; regenerate
-      `embedded-parity-baseline.json` to ratchet the new floor in.
+      `embedded-parity-baseline.json` to ratchet the new floor in. Always
+      regenerate it from the full portfolio, not `--style`-scoped — this is
+      the only mechanism that protects (and credits) sibling styles when a
+      fix landed in a shared `style.chain` ancestor.
 4. **SQI loop (begins only when fidelity and exact parity are stable):**
    a. Run `node scripts/report-core.js --style <name>` to get the SQI score.
    b. Apply SQI improvements — hoist shared options, use presets, introduce
@@ -152,6 +205,8 @@ for why fidelity alone is not sufficient evidence of correct rendering.
       fidelity or exact parity. Re-run oracle after each SQI change to confirm.
    c. Continue until SQI is clean (no actionable SQI findings remain).
 5. **QA gate:** hand off to `style-qa` with tier = `embedded-core`.
+   Regenerate and validate any registered coverage packet first, then include
+   disposition and joined exact-parity deltas in the handoff.
 
 ### Stop conditions (same as all shared workflows)
 - Two distinct approaches fail on the same cluster → reclassify.
@@ -173,6 +228,17 @@ for why fidelity alone is not sufficient evidence of correct rendering.
 - [x] `tune` loop is defined here once, not in individual skill files.
 
 ## Changelog
+- 2026-08-11: Documented `style-coverage-review.js --update-manifest` as the
+  recovery path when a coverage-audit pre-flight goes stale from an edit to
+  the audited style or a shared `style.chain` ancestor. Added the
+  shared-ancestor / full-portfolio-baseline rule: a registered packet is
+  leaf-scoped, so sibling embedded-core styles sharing an edited ancestor are
+  protected and credited only by regenerating `embedded-parity-baseline.json`
+  from the full portfolio, not a `--style`-scoped run.
+- 2026-08-09: Added coverage-audit status reporting, current-packet cluster
+  selection, stale-packet rejection, final regeneration and delta reporting,
+  the unaudited-style opt-out, and fresh migrated-candidate evidence for
+  converter attribution.
 - 2026-07-31: Promoted exact parity to a hard gate for `embedded-core` styles,
   ordered between fidelity and SQI in the tier table and the `tune` loop
   (fidelity → exact parity → SQI). Added the parity-adjudication escalation
