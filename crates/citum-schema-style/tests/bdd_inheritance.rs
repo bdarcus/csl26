@@ -22,9 +22,9 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus and Citum contributors
 //! are resolved deterministically and predictably in `merge_style_overlay`.
 
 use citum_schema_style::{
-    Style, StyleDocumentFormat,
+    ResolutionError, Style, StyleDocumentFormat,
     locale::GeneralTerm,
-    template::{SimpleVariable, TemplateComponent, TypeSelector},
+    template::{DateVariable, SimpleVariable, TemplateComponent, TemplateVariant, TypeSelector},
 };
 use rstest::rstest;
 use std::collections::HashSet;
@@ -375,6 +375,479 @@ fn make_resolver(
         }
     }
     R(base)
+}
+
+#[derive(Clone, Copy, Debug)]
+enum FallbackSurface {
+    Citation,
+    Bibliography,
+}
+
+impl FallbackSurface {
+    fn key(self) -> &'static str {
+        match self {
+            Self::Citation => "citation",
+            Self::Bibliography => "bibliography",
+        }
+    }
+
+    fn template(self, style: &Style) -> Option<&[TemplateComponent]> {
+        match self {
+            Self::Citation => style.citation.as_ref()?.template.as_ref(),
+            Self::Bibliography => style.bibliography.as_ref()?.template.as_ref(),
+        }
+        .and_then(TemplateVariant::as_template)
+    }
+
+    fn resolves_template(self, style: &Style) -> bool {
+        match self {
+            Self::Citation => style
+                .citation
+                .as_ref()
+                .and_then(|spec| spec.resolve_template()),
+            Self::Bibliography => style
+                .bibliography
+                .as_ref()
+                .and_then(|spec| spec.resolve_template()),
+        }
+        .is_some()
+    }
+}
+
+fn fallback_style_yaml(
+    id: &str,
+    extends: Option<&str>,
+    surface: FallbackSurface,
+    body: &str,
+) -> String {
+    let extends = extends.map_or_else(String::new, |parent| format!("extends: {parent}\n"));
+    let body = body
+        .lines()
+        .map(|line| format!("  {line}"))
+        .collect::<Vec<_>>()
+        .join("\n");
+    format!(
+        "version: \"0.44.0\"\ninfo: {{ id: {id} }}\n{extends}{}:\n{body}\n",
+        surface.key()
+    )
+}
+
+fn resolve_fallback_overlay(base_yaml: &str, overlay_yaml: &str) -> Result<Style, ResolutionError> {
+    let base = parse_fallback_style(base_yaml);
+    let overlay = parse_fallback_style(overlay_yaml);
+    let mut visited = HashSet::new();
+    overlay.try_into_resolved_recursive_with(Some(&make_resolver(base)), &mut visited)
+}
+
+fn parse_fallback_style(yaml: &str) -> Style {
+    Style::from_yaml_str(yaml).expect("fallback conformance style should parse")
+}
+
+#[rstest]
+#[case::citation(FallbackSurface::Citation)]
+#[case::bibliography(FallbackSurface::Bibliography)]
+fn given_list_fallback_when_parsed_then_it_remains_a_full_template(
+    #[case] surface: FallbackSurface,
+) {
+    let yaml = fallback_style_yaml(
+        "full-template",
+        None,
+        surface,
+        "template:\n  - title: primary\n  - variable: doi",
+    );
+    let style = Style::from_yaml_str(&yaml).expect("legacy list template should parse");
+
+    let variant = match surface {
+        FallbackSurface::Citation => style
+            .citation
+            .as_ref()
+            .and_then(|spec| spec.template.as_ref()),
+        FallbackSurface::Bibliography => style
+            .bibliography
+            .as_ref()
+            .and_then(|spec| spec.template.as_ref()),
+    };
+    assert!(matches!(variant, Some(TemplateVariant::Full(template)) if template.len() == 2));
+}
+
+#[rstest]
+#[case::citation(FallbackSurface::Citation)]
+#[case::bibliography(FallbackSurface::Bibliography)]
+fn given_parent_full_fallback_when_child_removes_component_then_diff_resolves_to_full(
+    #[case] surface: FallbackSurface,
+) {
+    let base = fallback_style_yaml(
+        "base",
+        None,
+        surface,
+        "template:\n  - title: primary\n  - variable: doi",
+    );
+    let overlay = fallback_style_yaml(
+        "overlay",
+        Some("base"),
+        surface,
+        "template:\n  remove:\n    - match: { variable: doi }",
+    );
+    let resolved =
+        resolve_fallback_overlay(&base, &overlay).expect("inherited fallback diff should resolve");
+    let template = surface
+        .template(&resolved)
+        .expect("resolved fallback should be full");
+
+    assert_eq!(template.len(), 1);
+    assert!(matches!(template[0], TemplateComponent::Title(_)));
+}
+
+#[rstest]
+#[case::citation(FallbackSurface::Citation)]
+#[case::bibliography(FallbackSurface::Bibliography)]
+fn given_parent_template_ref_when_child_diffs_fallback_then_reference_is_the_base(
+    #[case] surface: FallbackSurface,
+) {
+    let base = fallback_style_yaml("base", None, surface, "template-ref: chicago-author-date");
+    let overlay = fallback_style_yaml(
+        "overlay",
+        Some("base"),
+        surface,
+        "template:\n  remove:\n    - match: { date: issued }",
+    );
+    let resolved = resolve_fallback_overlay(&base, &overlay)
+        .expect("a parent template reference should provide the diff base");
+    let template = surface
+        .template(&resolved)
+        .expect("resolved fallback should be full");
+
+    assert!(!template.iter().any(
+        |component| matches!(component, TemplateComponent::Date(date) if date.date == DateVariable::Issued)
+    ));
+}
+
+#[rstest]
+#[case::citation(FallbackSurface::Citation)]
+#[case::bibliography(FallbackSurface::Bibliography)]
+fn given_root_fallback_diff_when_resolved_then_missing_base_is_structured_error(
+    #[case] surface: FallbackSurface,
+) {
+    let yaml = fallback_style_yaml(
+        "root-diff",
+        None,
+        surface,
+        "template:\n  remove:\n    - match: { variable: doi }",
+    );
+    let error = Style::from_yaml_str(&yaml)
+        .expect("diff syntax should parse")
+        .try_into_resolved()
+        .expect_err("root diff must not resolve without a base");
+
+    assert!(matches!(
+        error,
+        ResolutionError::InvalidFallbackTemplateDiff { location, reason }
+            if location == format!("root-diff.{}.template", surface.key())
+                && reason == "no inherited fallback template is available"
+    ));
+}
+
+#[rstest]
+#[case::citation(FallbackSurface::Citation)]
+#[case::bibliography(FallbackSurface::Bibliography)]
+fn given_fallback_diff_extends_when_resolved_then_it_is_rejected(#[case] surface: FallbackSurface) {
+    let yaml = fallback_style_yaml(
+        "fallback-extends",
+        None,
+        surface,
+        "template:\n  extends: book\n  remove:\n    - match: { variable: doi }",
+    );
+    let error = Style::from_yaml_str(&yaml)
+        .expect("diff syntax should parse")
+        .try_into_resolved()
+        .expect_err("fallback extends must be rejected");
+
+    assert!(matches!(
+        error,
+        ResolutionError::InvalidFallbackTemplateDiff { reason, .. }
+            if reason.starts_with("extends is not allowed")
+    ));
+}
+
+#[rstest]
+#[case::citation(FallbackSurface::Citation)]
+#[case::bibliography(FallbackSurface::Bibliography)]
+fn given_template_ref_and_diff_in_one_section_when_resolved_then_conflict_is_rejected(
+    #[case] surface: FallbackSurface,
+) {
+    let yaml = fallback_style_yaml(
+        "conflicting-base",
+        None,
+        surface,
+        "template-ref: chicago-author-date\ntemplate:\n  remove:\n    - match: { date: issued }",
+    );
+    let error = Style::from_yaml_str(&yaml)
+        .expect("conflicting fields should parse independently")
+        .try_into_resolved()
+        .expect_err("same-section base selection must be rejected");
+
+    assert!(matches!(
+        error,
+        ResolutionError::InvalidFallbackTemplateDiff { reason, .. }
+            if reason == "template-ref and a template diff cannot be declared in the same section"
+    ));
+}
+
+#[rstest]
+#[case::citation(FallbackSurface::Citation)]
+#[case::bibliography(FallbackSurface::Bibliography)]
+fn given_parent_template_ref_when_child_clears_template_then_fallback_is_absent(
+    #[case] surface: FallbackSurface,
+) {
+    let base = fallback_style_yaml("base", None, surface, "template-ref: chicago-author-date");
+    let overlay = fallback_style_yaml("overlay", Some("base"), surface, "template: ~");
+    let resolved = resolve_fallback_overlay(&base, &overlay)
+        .expect("explicit null should clear an inherited fallback");
+
+    assert!(!surface.resolves_template(&resolved));
+}
+
+#[rstest]
+#[case::citation_missing(
+    FallbackSurface::Citation,
+    "template:\n  - title: primary",
+    "template:\n  remove:\n    - match: { variable: doi }",
+    false
+)]
+#[case::bibliography_missing(
+    FallbackSurface::Bibliography,
+    "template:\n  - title: primary",
+    "template:\n  remove:\n    - match: { variable: doi }",
+    false
+)]
+#[case::citation_ambiguous(
+    FallbackSurface::Citation,
+    "template:\n  - title: primary\n  - title: primary",
+    "template:\n  remove:\n    - match: { title: primary }",
+    true
+)]
+#[case::bibliography_ambiguous(
+    FallbackSurface::Bibliography,
+    "template:\n  - title: primary\n  - title: primary",
+    "template:\n  remove:\n    - match: { title: primary }",
+    true
+)]
+fn given_invalid_fallback_selector_when_resolved_then_existing_selector_error_is_preserved(
+    #[case] surface: FallbackSurface,
+    #[case] base_body: &str,
+    #[case] overlay_body: &str,
+    #[case] ambiguous: bool,
+) {
+    let base = fallback_style_yaml("base", None, surface, base_body);
+    let overlay = fallback_style_yaml("overlay", Some("base"), surface, overlay_body);
+    let error = resolve_fallback_overlay(&base, &overlay)
+        .expect_err("invalid fallback selector must not resolve");
+
+    assert!(
+        matches!(
+            error,
+            ResolutionError::TemplateVariantAmbiguousAnchor { .. }
+        ) == ambiguous
+            && matches!(error, ResolutionError::TemplateVariantAnchorNotFound { .. }) != ambiguous
+    );
+}
+
+#[test]
+fn nested_citation_fallback_diff_uses_the_effective_outer_fallback() {
+    let yaml = r#"
+version: "0.44.0"
+info: { id: nested-fallback }
+citation:
+  template:
+    - title: primary
+    - variable: publisher
+  subsequent:
+    integral:
+      template:
+        remove:
+          - match: { variable: publisher }
+"#;
+    let resolved = Style::from_yaml_str(yaml)
+        .expect("nested fallback diff should parse")
+        .try_into_resolved()
+        .expect("nested fallback diff should use the effective outer fallback");
+    let template = resolved
+        .citation
+        .as_ref()
+        .and_then(|citation| citation.subsequent.as_deref())
+        .and_then(|subsequent| subsequent.integral.as_deref())
+        .and_then(|integral| integral.template.as_ref())
+        .and_then(TemplateVariant::as_template)
+        .expect("nested fallback should resolve to full");
+
+    assert_eq!(template.len(), 1);
+    assert!(matches!(template[0], TemplateComponent::Title(_)));
+}
+
+#[test]
+fn inherited_nested_citation_fallback_diff_uses_the_parent_mode_fallback() {
+    let base = r#"
+version: "0.44.0"
+info: { id: base }
+citation:
+  template:
+    - title: primary
+  subsequent:
+    template:
+      - variable: doi
+      - variable: url
+"#;
+    let overlay = r#"
+version: "0.44.0"
+extends: base
+info: { id: overlay }
+citation:
+  subsequent:
+    template:
+      remove:
+        - match: { variable: url }
+"#;
+    let resolved = resolve_fallback_overlay(base, overlay)
+        .expect("nested diff should use the inherited mode-specific fallback");
+    let template = resolved
+        .citation
+        .as_ref()
+        .and_then(|citation| citation.subsequent.as_deref())
+        .and_then(|subsequent| subsequent.template.as_ref())
+        .and_then(TemplateVariant::as_template)
+        .expect("nested fallback should resolve to full");
+
+    assert_eq!(template.len(), 1);
+    assert!(matches!(
+        template[0],
+        TemplateComponent::Variable(ref variable) if variable.variable == SimpleVariable::Doi
+    ));
+}
+
+#[test]
+fn inherited_nested_citation_diff_does_not_bypass_an_unresolved_template_reference() {
+    let base = r#"
+version: "0.44.0"
+info: { id: base }
+citation:
+  template:
+    - title: primary
+  subsequent:
+    template-ref: https://example.com/citation-template
+"#;
+    let overlay = r#"
+version: "0.44.0"
+extends: base
+info: { id: overlay }
+citation:
+  subsequent:
+    template:
+      remove:
+        - match: { title: primary }
+"#;
+    let error = resolve_fallback_overlay(base, overlay)
+        .expect_err("an unresolved explicit template reference must still own the diff base");
+
+    assert!(matches!(
+        error,
+        ResolutionError::InvalidFallbackTemplateDiff { location, reason }
+            if location == "overlay.citation.subsequent.template"
+                && reason == "no inherited fallback template is available"
+    ));
+}
+
+#[test]
+fn nested_citation_null_clears_own_fallback_and_restores_outer_fallback() {
+    let base = r#"
+version: "0.44.0"
+info: { id: base }
+citation:
+  template:
+    - title: primary
+  subsequent:
+    template:
+      - variable: doi
+"#;
+    let overlay = r#"
+version: "0.44.0"
+extends: base
+info: { id: overlay }
+citation:
+  subsequent:
+    template: ~
+    type-variants:
+      book:
+        add:
+          - after: { title: primary }
+            component: { variable: publisher }
+"#;
+    let resolved = resolve_fallback_overlay(base, overlay)
+        .expect("cleared nested fallback should restore the effective outer fallback");
+    let subsequent = resolved
+        .citation
+        .as_ref()
+        .and_then(|citation| citation.subsequent.as_deref())
+        .expect("subsequent citation should remain");
+
+    assert!(subsequent.template.is_none());
+    let template = subsequent
+        .type_variants
+        .as_ref()
+        .and_then(|variants| variants.get(&TypeSelector::Single("book".to_string())))
+        .and_then(TemplateVariant::as_template)
+        .expect("type diff should resolve against the restored outer fallback");
+    assert_eq!(template.len(), 2);
+    assert!(matches!(template[0], TemplateComponent::Title(_)));
+    assert!(matches!(
+        template[1],
+        TemplateComponent::Variable(ref variable)
+            if variable.variable == SimpleVariable::Publisher
+    ));
+}
+
+#[rstest]
+#[case::citation(FallbackSurface::Citation)]
+#[case::bibliography(FallbackSurface::Bibliography)]
+fn given_fallback_and_type_diffs_when_resolved_then_fallback_resolves_first(
+    #[case] surface: FallbackSurface,
+) {
+    let base = fallback_style_yaml(
+        "base",
+        None,
+        surface,
+        "template:\n  - title: primary\n  - variable: doi",
+    );
+    let overlay = fallback_style_yaml(
+        "overlay",
+        Some("base"),
+        surface,
+        "template:\n  remove:\n    - match: { variable: doi }\ntype-variants:\n  book:\n    add:\n      - after: { title: primary }\n        component: { variable: publisher }",
+    );
+    let resolved = resolve_fallback_overlay(&base, &overlay)
+        .expect("fallback should resolve before its type variant");
+    let variants = match surface {
+        FallbackSurface::Citation => resolved
+            .citation
+            .as_ref()
+            .and_then(|spec| spec.type_variants.as_ref()),
+        FallbackSurface::Bibliography => resolved
+            .bibliography
+            .as_ref()
+            .and_then(|spec| spec.type_variants.as_ref()),
+    }
+    .expect("type variants should remain");
+    let template = variants
+        .get(&TypeSelector::Single("book".to_string()))
+        .and_then(TemplateVariant::as_template)
+        .expect("type diff should resolve to full");
+
+    assert_eq!(template.len(), 2);
+    assert!(matches!(template[0], TemplateComponent::Title(_)));
+    assert!(matches!(
+        template[1],
+        TemplateComponent::Variable(ref variable)
+            if variable.variable == SimpleVariable::Publisher
+    ));
 }
 
 #[test]

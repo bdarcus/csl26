@@ -321,7 +321,7 @@ fn build_final_style(legacy_style: &csl_legacy::model::Style, mut c: CompiledOut
         .filter(|t| t != &c.new_cit)
         .map(|t| {
             Box::new(CitationSpec {
-                template: Some(t),
+                template: Some(t.into()),
                 ..Default::default()
             })
         });
@@ -331,7 +331,7 @@ fn build_final_style(legacy_style: &csl_legacy::model::Style, mut c: CompiledOut
         .filter(|t| t != &c.new_cit)
         .map(|t| {
             Box::new(CitationSpec {
-                template: Some(t),
+                template: Some(t.into()),
                 ..Default::default()
             })
         });
@@ -348,7 +348,7 @@ fn build_final_style(legacy_style: &csl_legacy::model::Style, mut c: CompiledOut
         citation: Some(CitationSpec {
             options: citation_scope_options,
             template_ref: None,
-            template: Some(c.new_cit),
+            template: Some(c.new_cit.into()),
             locales: c.citation_locales,
             collapse: extract_citation_collapse(&legacy_style.citation),
             wrap: c.citation_wrap.map(Into::into),
@@ -368,7 +368,7 @@ fn build_final_style(legacy_style: &csl_legacy::model::Style, mut c: CompiledOut
         bibliography: Some(BibliographySpec {
             options: bibliography_scope_options,
             template_ref: None,
-            template: Some(new_bib),
+            template: Some(new_bib.into()),
             locales: c.bibliography_locales,
             type_variants,
             sort: bibliography_sort,
@@ -730,10 +730,13 @@ mod tests {
                 ..CitationSpec::default()
             }),
             bibliography: Some(BibliographySpec {
-                template: Some(vec![TemplateComponent::Variable(TemplateVariable {
-                    variable: SimpleVariable::Url,
-                    ..TemplateVariable::default()
-                })]),
+                template: Some(
+                    vec![TemplateComponent::Variable(TemplateVariable {
+                        variable: SimpleVariable::Url,
+                        ..TemplateVariable::default()
+                    })]
+                    .into(),
+                ),
                 ..BibliographySpec::default()
             }),
             ..Style::default()
@@ -744,10 +747,13 @@ mod tests {
                 ..CitationSpec::default()
             }),
             bibliography: Some(BibliographySpec {
-                template: Some(vec![TemplateComponent::Variable(TemplateVariable {
-                    variable: SimpleVariable::Doi,
-                    ..TemplateVariable::default()
-                })]),
+                template: Some(
+                    vec![TemplateComponent::Variable(TemplateVariable {
+                        variable: SimpleVariable::Doi,
+                        ..TemplateVariable::default()
+                    })]
+                    .into(),
+                ),
                 ..BibliographySpec::default()
             }),
             ..Style::default()
@@ -910,6 +916,7 @@ mod tests {
             .citation
             .as_ref()
             .and_then(|citation| citation.template.as_ref())
+            .and_then(TemplateVariant::as_template)
             .expect("citation template should be present");
         let TemplateComponent::Contributor(author) = citation_template
             .first()

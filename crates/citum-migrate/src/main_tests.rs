@@ -66,7 +66,7 @@ fn compile_from_xml_emits_ordered_localized_templates_with_default() {
         Some(true)
     );
     let citation = citum_schema::CitationSpec {
-        template: Some(output.citation.clone()),
+        template: Some(output.citation.clone().into()),
         locales: Some(citation_locales),
         ..Default::default()
     };

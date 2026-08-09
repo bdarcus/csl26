@@ -154,7 +154,7 @@ pub fn ensure_style_has_templates(style: &mut Style) {
                 },
                 ..Default::default()
             }));
-            citation.template = Some(template);
+            citation.template = Some(template.into());
             citation.template_ref = None;
         }
     }

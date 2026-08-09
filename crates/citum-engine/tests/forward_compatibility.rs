@@ -98,13 +98,13 @@ fn style_has_unknowns(style: &Style) -> bool {
     // catches Unknown variants captured by the tolerant deserializer.
     if let Some(citation) = &style.citation
         && let Some(template) = &citation.template
-        && template_has_unknowns(template)
+        && template.as_template().is_some_and(template_has_unknowns)
     {
         return true;
     }
     if let Some(bib) = &style.bibliography
         && let Some(template) = &bib.template
-        && template_has_unknowns(template)
+        && template.as_template().is_some_and(template_has_unknowns)
     {
         return true;
     }

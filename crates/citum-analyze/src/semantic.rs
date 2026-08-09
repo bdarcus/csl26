@@ -15,7 +15,8 @@ use std::collections::HashSet;
 use citum_schema::StyleBase;
 use citum_schema::locale::GeneralTerm;
 use citum_schema::template::{
-    ContributorRole, DateVariable, NumberVariable, SimpleVariable, TemplateComponent, TitleType,
+    ContributorRole, DateVariable, NumberVariable, SimpleVariable, TemplateComponent,
+    TemplateVariant, TitleType,
 };
 
 /// A simplified semantic representation of a compiled template component.
@@ -160,23 +161,28 @@ pub fn collect_base_semantic_sets()
                 .bibliography
                 .as_ref()
                 .and_then(|b| b.template.as_ref())
-                .map(|t| template_to_set(t))
+                .and_then(TemplateVariant::as_template)
+                .map(template_to_set)
                 .unwrap_or_default();
 
             let mut cit_sets = Vec::new();
             if let Some(cit) = &style.citation {
-                if let Some(t) = &cit.template {
-                    cit_sets.push(template_to_set(t));
+                if let Some(t) = &cit.template
+                    && let Some(template) = t.as_template()
+                {
+                    cit_sets.push(template_to_set(template));
                 }
                 if let Some(i) = &cit.integral
                     && let Some(t) = &i.template
+                    && let Some(template) = t.as_template()
                 {
-                    cit_sets.push(template_to_set(t));
+                    cit_sets.push(template_to_set(template));
                 }
                 if let Some(ni) = &cit.non_integral
                     && let Some(t) = &ni.template
+                    && let Some(template) = t.as_template()
                 {
-                    cit_sets.push(template_to_set(t));
+                    cit_sets.push(template_to_set(template));
                 }
             }
             (base.clone(), bib_set, cit_sets)

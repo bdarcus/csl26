@@ -77,7 +77,11 @@ fn collect_citation_templates<'a>(
     let Some(spec) = spec else {
         return;
     };
-    if let Some(template) = spec.template.as_ref() {
+    if let Some(template) = spec
+        .template
+        .as_ref()
+        .and_then(TemplateVariant::as_template)
+    {
         templates.push(template);
     }
     if let Some(type_variants) = spec.type_variants.as_ref() {
@@ -96,7 +100,11 @@ fn collect_bibliography_templates<'a>(
     let Some(spec) = spec else {
         return;
     };
-    if let Some(template) = spec.template.as_ref() {
+    if let Some(template) = spec
+        .template
+        .as_ref()
+        .and_then(TemplateVariant::as_template)
+    {
         templates.push(template);
     }
     if let Some(type_variants) = spec.type_variants.as_ref() {
@@ -160,7 +168,11 @@ fn encode_bibliography_type_variants(style: &mut Style) {
     let Some(bibliography) = style.bibliography.as_mut() else {
         return;
     };
-    let Some(base_template) = bibliography.template.as_ref() else {
+    let Some(base_template) = bibliography
+        .template
+        .as_ref()
+        .and_then(TemplateVariant::as_template)
+    else {
         return;
     };
     let Some(type_variants) = bibliography.type_variants.as_ref() else {
@@ -185,7 +197,7 @@ fn encode_bibliography_type_variants(style: &mut Style) {
         let TemplateVariant::Full(template) = variant else {
             continue;
         };
-        if template.as_slice() != base_template.as_slice() {
+        if template.as_slice() != base_template {
             type_templates.insert(selector, template);
         }
     }
@@ -264,7 +276,11 @@ fn prune_style_against_options(style: &mut Style) {
             || global_options.clone(),
             |options| options.merged_with(&global_options),
         );
-        if let Some(template) = bibliography.template.as_mut() {
+        if let Some(template) = bibliography
+            .template
+            .as_mut()
+            .and_then(TemplateVariant::as_template_mut)
+        {
             normalize_templates_against_options(
                 template,
                 TitleDefaultContext::Default,
@@ -280,7 +296,11 @@ fn prune_citation_spec(spec: &mut CitationSpec, inherited_options: &citum_schema
         || inherited_options.clone(),
         |options| options.merged_with(inherited_options),
     );
-    if let Some(template) = spec.template.as_mut() {
+    if let Some(template) = spec
+        .template
+        .as_mut()
+        .and_then(TemplateVariant::as_template_mut)
+    {
         normalize_templates_against_options(
             template,
             TitleDefaultContext::Default,
@@ -547,7 +567,11 @@ fn normalize_serialized_suppress_markers(style: &mut Style) {
         normalize_citation_suppress(citation);
     }
     if let Some(bibliography) = style.bibliography.as_mut() {
-        if let Some(template) = bibliography.template.as_mut() {
+        if let Some(template) = bibliography
+            .template
+            .as_mut()
+            .and_then(TemplateVariant::as_template_mut)
+        {
             normalize_visible_suppress(template);
         }
         normalize_variant_suppress(bibliography.type_variants.as_mut());
@@ -555,7 +579,11 @@ fn normalize_serialized_suppress_markers(style: &mut Style) {
 }
 
 fn normalize_citation_suppress(spec: &mut CitationSpec) {
-    if let Some(template) = spec.template.as_mut() {
+    if let Some(template) = spec
+        .template
+        .as_mut()
+        .and_then(TemplateVariant::as_template_mut)
+    {
         normalize_visible_suppress(template);
     }
     normalize_variant_suppress(spec.type_variants.as_mut());
@@ -699,11 +727,11 @@ mod tests {
     fn common_contributor_and_is_hoisted_to_global_options() {
         let style = Style {
             citation: Some(CitationSpec {
-                template: Some(vec![author(Some(AndOptions::Text))]),
+                template: Some(vec![author(Some(AndOptions::Text))].into()),
                 ..CitationSpec::default()
             }),
             bibliography: Some(BibliographySpec {
-                template: Some(vec![author(Some(AndOptions::Text))]),
+                template: Some(vec![author(Some(AndOptions::Text))].into()),
                 ..BibliographySpec::default()
             }),
             ..Style::default()
@@ -723,6 +751,7 @@ mod tests {
             .citation
             .as_ref()
             .and_then(|citation| citation.template.as_ref())
+            .and_then(TemplateVariant::as_template)
             .expect("citation template should exist");
         let TemplateComponent::Contributor(author) = &citation_template[0] else {
             panic!("citation component should be author");
@@ -734,11 +763,11 @@ mod tests {
     fn scope_contributor_and_is_hoisted_without_global_match() {
         let style = Style {
             citation: Some(CitationSpec {
-                template: Some(vec![author(Some(AndOptions::Symbol))]),
+                template: Some(vec![author(Some(AndOptions::Symbol))].into()),
                 ..CitationSpec::default()
             }),
             bibliography: Some(BibliographySpec {
-                template: Some(vec![primary_title(None)]),
+                template: Some(vec![primary_title(None)].into()),
                 ..BibliographySpec::default()
             }),
             ..Style::default()
@@ -776,11 +805,11 @@ mod tests {
                 ..citum_schema::options::Config::default()
             }),
             citation: Some(CitationSpec {
-                template: Some(vec![author(Some(AndOptions::Text))]),
+                template: Some(vec![author(Some(AndOptions::Text))].into()),
                 ..CitationSpec::default()
             }),
             bibliography: Some(BibliographySpec {
-                template: Some(vec![author(Some(AndOptions::Text))]),
+                template: Some(vec![author(Some(AndOptions::Text))].into()),
                 ..BibliographySpec::default()
             }),
             ..Style::default()
@@ -810,6 +839,7 @@ mod tests {
             .citation
             .as_ref()
             .and_then(|citation| citation.template.as_ref())
+            .and_then(TemplateVariant::as_template)
             .and_then(|template| template.first())
             .expect("citation author exists");
         let TemplateComponent::Contributor(citation_author) = citation_author else {
@@ -823,16 +853,19 @@ mod tests {
         let style = Style {
             options: Some(style_options()),
             citation: Some(CitationSpec {
-                template: Some(vec![
-                    author_with_name_options(),
-                    primary_title(Some(TextCase::SentenceApa)),
-                ]),
+                template: Some(
+                    vec![
+                        author_with_name_options(),
+                        primary_title(Some(TextCase::SentenceApa)),
+                    ]
+                    .into(),
+                ),
                 subsequent: Some(Box::new(CitationSpec {
-                    template: Some(vec![author_with_name_options()]),
+                    template: Some(vec![author_with_name_options()].into()),
                     ..CitationSpec::default()
                 })),
                 ibid: Some(Box::new(CitationSpec {
-                    template: Some(vec![author(Some(AndOptions::Text))]),
+                    template: Some(vec![author(Some(AndOptions::Text))].into()),
                     ..CitationSpec::default()
                 })),
                 ..CitationSpec::default()
@@ -842,7 +875,11 @@ mod tests {
 
         let refined = refine_style(style);
         let citation = refined.citation.as_ref().expect("citation should exist");
-        let template = citation.template.as_ref().expect("template should exist");
+        let template = citation
+            .template
+            .as_ref()
+            .and_then(TemplateVariant::as_template)
+            .expect("template should exist");
         let TemplateComponent::Contributor(author) = &template[0] else {
             panic!("first component should be contributor");
         };
@@ -858,6 +895,7 @@ mod tests {
             .subsequent
             .as_ref()
             .and_then(|spec| spec.template.as_ref())
+            .and_then(TemplateVariant::as_template)
             .expect("subsequent template should exist");
         let TemplateComponent::Contributor(subsequent_author) = &subsequent[0] else {
             panic!("subsequent component should be contributor");
@@ -869,6 +907,7 @@ mod tests {
             .ibid
             .as_ref()
             .and_then(|spec| spec.template.as_ref())
+            .and_then(TemplateVariant::as_template)
             .expect("ibid template should exist");
         let TemplateComponent::Contributor(ibid_author) = &ibid[0] else {
             panic!("ibid component should be contributor");
@@ -916,7 +955,7 @@ mod tests {
         let style = Style {
             options: Some(options),
             bibliography: Some(BibliographySpec {
-                template: Some(vec![merged]),
+                template: Some(vec![merged].into()),
                 ..BibliographySpec::default()
             }),
             ..Style::default()
@@ -927,6 +966,7 @@ mod tests {
             .bibliography
             .as_ref()
             .and_then(|bibliography| bibliography.template.as_ref())
+            .and_then(TemplateVariant::as_template)
             .expect("bibliography template should exist");
         let TemplateComponent::Contributor(contributor) = &template[0] else {
             panic!("component should be contributor");
@@ -958,7 +998,7 @@ mod tests {
                 ..citum_schema::options::Config::default()
             }),
             bibliography: Some(BibliographySpec {
-                template: Some(vec![author(Some(AndOptions::Text))]),
+                template: Some(vec![author(Some(AndOptions::Text))].into()),
                 type_variants: Some(type_variants),
                 ..BibliographySpec::default()
             }),
@@ -1007,7 +1047,7 @@ mod tests {
                 ..citum_schema::options::Config::default()
             }),
             bibliography: Some(BibliographySpec {
-                template: Some(vec![primary_title(None)]),
+                template: Some(vec![primary_title(None)].into()),
                 type_variants: Some(type_variants),
                 ..BibliographySpec::default()
             }),
@@ -1046,7 +1086,7 @@ mod tests {
                 ..citum_schema::options::Config::default()
             }),
             bibliography: Some(BibliographySpec {
-                template: Some(vec![primary_title(None)]),
+                template: Some(vec![primary_title(None)].into()),
                 type_variants: Some(type_variants),
                 ..BibliographySpec::default()
             }),
@@ -1083,7 +1123,7 @@ mod tests {
         );
         let style = Style {
             bibliography: Some(BibliographySpec {
-                template: Some(vec![visible_author]),
+                template: Some(vec![visible_author].into()),
                 type_variants: Some(type_variants),
                 ..BibliographySpec::default()
             }),
@@ -1096,6 +1136,7 @@ mod tests {
             bibliography
                 .template
                 .as_ref()
+                .and_then(TemplateVariant::as_template)
                 .and_then(|template| template[0].rendering().suppress),
             None
         );
@@ -1124,7 +1165,7 @@ mod tests {
         );
         let style = Style {
             bibliography: Some(BibliographySpec {
-                template: Some(vec![base_title]),
+                template: Some(vec![base_title].into()),
                 type_variants: Some(type_variants),
                 ..BibliographySpec::default()
             }),
@@ -1151,7 +1192,7 @@ mod tests {
         let style = Style {
             citation: Some(CitationSpec {
                 non_integral: Some(Box::new(CitationSpec {
-                    template: Some(vec![visible_author]),
+                    template: Some(vec![visible_author].into()),
                     ..CitationSpec::default()
                 })),
                 ..CitationSpec::default()
@@ -1165,6 +1206,7 @@ mod tests {
             .as_ref()
             .and_then(|citation| citation.non_integral.as_ref())
             .and_then(|spec| spec.template.as_ref())
+            .and_then(TemplateVariant::as_template)
             .expect("non-integral template exists");
         assert_eq!(non_integral[0].rendering().suppress, None);
     }
@@ -1188,10 +1230,13 @@ mod tests {
                 ..citum_schema::options::Config::default()
             }),
             bibliography: Some(BibliographySpec {
-                template: Some(vec![
-                    author_with_name_options(),
-                    primary_title(Some(TextCase::SentenceApa)),
-                ]),
+                template: Some(
+                    vec![
+                        author_with_name_options(),
+                        primary_title(Some(TextCase::SentenceApa)),
+                    ]
+                    .into(),
+                ),
                 ..BibliographySpec::default()
             }),
             ..Style::default()
@@ -1315,11 +1360,14 @@ mod tests {
                     ..citum_schema::options::Config::default()
                 }),
                 bibliography: Some(BibliographySpec {
-                    template: Some(vec![TemplateComponent::Title(TemplateTitle {
-                        title: title_type.clone(),
-                        rendering: rendering.to_rendering(),
-                        ..TemplateTitle::default()
-                    })]),
+                    template: Some(
+                        vec![TemplateComponent::Title(TemplateTitle {
+                            title: title_type.clone(),
+                            rendering: rendering.to_rendering(),
+                            ..TemplateTitle::default()
+                        })]
+                        .into(),
+                    ),
                     ..BibliographySpec::default()
                 }),
                 ..Style::default()
@@ -1415,13 +1463,16 @@ mod tests {
     fn contributor_without_explicit_and_blocks_hoist() {
         let style = Style {
             citation: Some(CitationSpec {
-                template: Some(vec![
-                    author(Some(AndOptions::Text)),
-                    TemplateComponent::Group(TemplateGroup {
-                        group: vec![author(None)],
-                        ..TemplateGroup::default()
-                    }),
-                ]),
+                template: Some(
+                    vec![
+                        author(Some(AndOptions::Text)),
+                        TemplateComponent::Group(TemplateGroup {
+                            group: vec![author(None)],
+                            ..TemplateGroup::default()
+                        }),
+                    ]
+                    .into(),
+                ),
                 ..CitationSpec::default()
             }),
             ..Style::default()
@@ -1442,6 +1493,7 @@ mod tests {
             .citation
             .as_ref()
             .and_then(|citation| citation.template.as_ref())
+            .and_then(TemplateVariant::as_template)
             .expect("citation template exists");
         let TemplateComponent::Contributor(author) = &template[0] else {
             panic!("first component should be contributor");

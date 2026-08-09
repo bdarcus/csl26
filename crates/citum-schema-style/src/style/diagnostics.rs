@@ -129,7 +129,12 @@ fn validate_bibliography_spec(value: &Value, path: &str) -> Result<(), String> {
 
 fn validate_common_section_templates(map: &serde_yaml::Mapping, path: &str) -> Result<(), String> {
     if let Some(template) = child(map, "template") {
-        validate_template(template, &format!("{path}.template"))?;
+        let template_path = format!("{path}.template");
+        if template.as_sequence().is_some() {
+            validate_template(template, &template_path)?;
+        } else if let Some(diff) = template.as_mapping() {
+            validate_diff(diff, &template_path)?;
+        }
     }
     if let Some(locales) = child(map, "locales")
         && let Some(locale_values) = locales.as_sequence()

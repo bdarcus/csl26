@@ -1,7 +1,7 @@
 ---
 # csl26-4xg9
 title: Implement inherited fallback-template diffs
-status: todo
+status: in-progress
 type: feature
 priority: normal
 tags:
@@ -9,7 +9,7 @@ tags:
     - style
     - chicago
 created_at: 2026-08-07T23:53:13Z
-updated_at: 2026-08-09T14:48:58Z
+updated_at: 2026-08-09T15:51:43Z
 ---
 
 Implement the fallback-template diff contract in
@@ -39,5 +39,5 @@ Required direction:
 - [x] Draft the docs/specs contract, including compatibility and template-ref
       interaction.
 - [ ] Get the Draft specification reviewed and merged.
-- [ ] Implement the schema and resolver change in a follow-up PR.
-- [ ] Regenerate schemas and pass citation and bibliography conformance tests.
+- [x] Implement the schema and resolver change in a follow-up PR.
+- [x] Regenerate schemas and pass citation and bibliography conformance tests.

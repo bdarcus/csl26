@@ -116,15 +116,10 @@ pub(crate) fn synthesize_bibliography_rounds(
             score: seed.seed_score,
         },
         &score_fn,
-        &|style: &Style| {
-            style
-                .bibliography
-                .as_ref()
-                .and_then(|bibliography| bibliography.template.clone())
-        },
+        &full_bibliography_template,
         &|style: &Style, template: Template| {
             let mut mutated = style.clone();
-            mutated.bibliography.as_mut()?.template = Some(template);
+            mutated.bibliography.as_mut()?.template = Some(template.into());
             Some(mutated)
         },
         &context,
@@ -169,6 +164,15 @@ pub(crate) fn synthesize_bibliography_rounds(
         synthesis_rounds: accepted_mutations.len(),
         accepted_mutations,
     })
+}
+
+fn full_bibliography_template(style: &Style) -> Option<Template> {
+    style
+        .bibliography
+        .as_ref()
+        .and_then(|bibliography| bibliography.template.as_ref())
+        .and_then(citum_schema::TemplateVariant::as_template)
+        .map(<[_]>::to_vec)
 }
 
 /// Print per-candidate seed-stage scores for bibliography selection debug.

@@ -58,11 +58,14 @@ fn build_name_style(form: ContributorForm, shorten: Option<ShortenListOptions>) 
                 label_mode: Some(CitationLabelMode::None),
                 ..Default::default()
             }),
-            template: Some(vec![TemplateComponent::Contributor(TemplateContributor {
-                contributor: ContributorRole::Author.into(),
-                form,
-                ..Default::default()
-            })]),
+            template: Some(
+                vec![TemplateComponent::Contributor(TemplateContributor {
+                    contributor: ContributorRole::Author.into(),
+                    form,
+                    ..Default::default()
+                })]
+                .into(),
+            ),
             ..Default::default()
         }),
         ..Default::default()
@@ -85,16 +88,19 @@ fn build_date_style(form: DateForm) -> Style {
                 label_mode: Some(CitationLabelMode::None),
                 ..Default::default()
             }),
-            template: Some(vec![TemplateComponent::Date(TemplateDate {
-                date: TDateVar::Issued,
-                form,
-                fallback: Some(vec![TemplateComponent::Term(TemplateTerm {
-                    term: GeneralTerm::NoDate,
-                    form: Some(TermForm::Short),
+            template: Some(
+                vec![TemplateComponent::Date(TemplateDate {
+                    date: TDateVar::Issued,
+                    form,
+                    fallback: Some(vec![TemplateComponent::Term(TemplateTerm {
+                        term: GeneralTerm::NoDate,
+                        form: Some(TermForm::Short),
+                        ..Default::default()
+                    })]),
                     ..Default::default()
-                })]),
-                ..Default::default()
-            })]),
+                })]
+                .into(),
+            ),
             ..Default::default()
         }),
         ..Default::default()

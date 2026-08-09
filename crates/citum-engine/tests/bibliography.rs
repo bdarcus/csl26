@@ -82,10 +82,13 @@ fn build_numeric_style() -> Style {
                 label_separator: Some(". ".to_string()),
                 ..Default::default()
             }),
-            template: Some(vec![
-                citum_schema::tc_contributor!(Author, Long),
-                citum_schema::tc_date!(Issued, Year, prefix = " (", suffix = ")"),
-            ]),
+            template: Some(
+                vec![
+                    citum_schema::tc_contributor!(Author, Long),
+                    citum_schema::tc_date!(Issued, Year, prefix = " (", suffix = ")"),
+                ]
+                .into(),
+            ),
             ..Default::default()
         }),
         ..Default::default()
@@ -136,10 +139,13 @@ fn build_sorted_style(sort: Vec<SortSpec>) -> Style {
             ..Default::default()
         }),
         bibliography: Some(BibliographySpec {
-            template: Some(vec![
-                citum_schema::tc_contributor!(Author, Long),
-                citum_schema::tc_date!(Issued, Year, prefix = " "),
-            ]),
+            template: Some(
+                vec![
+                    citum_schema::tc_contributor!(Author, Long),
+                    citum_schema::tc_date!(Issued, Year, prefix = " "),
+                ]
+                .into(),
+            ),
             ..Default::default()
         }),
         ..Default::default()
@@ -189,11 +195,14 @@ fn build_title_year_sorted_style(sort: Vec<SortSpec>) -> Style {
             ..Default::default()
         }),
         bibliography: Some(BibliographySpec {
-            template: Some(vec![
-                citum_schema::tc_contributor!(Author, Long),
-                citum_schema::tc_title!(Primary, prefix = ". "),
-                citum_schema::tc_date!(Issued, Year, prefix = " "),
-            ]),
+            template: Some(
+                vec![
+                    citum_schema::tc_contributor!(Author, Long),
+                    citum_schema::tc_title!(Primary, prefix = ". "),
+                    citum_schema::tc_date!(Issued, Year, prefix = " "),
+                ]
+                .into(),
+            ),
             ..Default::default()
         }),
         ..Default::default()
@@ -396,10 +405,13 @@ fn language_partition_substitute_style() -> Style {
         .bibliography
         .as_mut()
         .expect("partition substitute style should have bibliography")
-        .template = Some(vec![
-        citum_schema::tc_contributor!(Author, Long),
-        citum_schema::tc_title!(Primary, prefix = ". "),
-    ]);
+        .template = Some(
+        vec![
+            citum_schema::tc_contributor!(Author, Long),
+            citum_schema::tc_title!(Primary, prefix = ". "),
+        ]
+        .into(),
+    );
     style
 }
 
@@ -536,7 +548,7 @@ fn given_romanized_sorting_with_explicit_script_partitioning_then_romanized_orde
                 }),
                 ..Default::default()
             }),
-            template: Some(vec![citum_schema::tc_title!(Primary)]),
+            template: Some(vec![citum_schema::tc_title!(Primary)].into()),
             ..Default::default()
         }),
         ..Default::default()
@@ -787,26 +799,29 @@ fn build_container_title_short_style(title_type: TitleType) -> Style {
             ..Default::default()
         }),
         bibliography: Some(BibliographySpec {
-            template: Some(vec![TemplateComponent::Group(TemplateGroup {
-                group: vec![
-                    TemplateComponent::Variable(TemplateVariable {
-                        variable: SimpleVariable::ContainerTitleShort,
-                        ..Default::default()
-                    }),
-                    TemplateComponent::Title(TemplateTitle {
-                        title: title_type.clone(),
-                        form: Some(TitleForm::Short),
-                        ..Default::default()
-                    }),
-                    TemplateComponent::Title(TemplateTitle {
-                        title: title_type,
-                        form: Some(TitleForm::Long),
-                        ..Default::default()
-                    }),
-                ],
-                delimiter: Some(DelimiterPunctuation::Slash),
-                ..Default::default()
-            })]),
+            template: Some(
+                vec![TemplateComponent::Group(TemplateGroup {
+                    group: vec![
+                        TemplateComponent::Variable(TemplateVariable {
+                            variable: SimpleVariable::ContainerTitleShort,
+                            ..Default::default()
+                        }),
+                        TemplateComponent::Title(TemplateTitle {
+                            title: title_type.clone(),
+                            form: Some(TitleForm::Short),
+                            ..Default::default()
+                        }),
+                        TemplateComponent::Title(TemplateTitle {
+                            title: title_type,
+                            form: Some(TitleForm::Long),
+                            ..Default::default()
+                        }),
+                    ],
+                    delimiter: Some(DelimiterPunctuation::Slash),
+                    ..Default::default()
+                })]
+                .into(),
+            ),
             ..Default::default()
         }),
         ..Default::default()
@@ -821,24 +836,27 @@ fn build_group_with_suppressed_child_style() -> Style {
             ..Default::default()
         },
         bibliography: Some(BibliographySpec {
-            template: Some(vec![TemplateComponent::Group(TemplateGroup {
-                group: vec![
-                    TemplateComponent::Variable(TemplateVariable {
-                        variable: SimpleVariable::Url,
-                        rendering: Rendering {
-                            suppress: Some(true),
+            template: Some(
+                vec![TemplateComponent::Group(TemplateGroup {
+                    group: vec![
+                        TemplateComponent::Variable(TemplateVariable {
+                            variable: SimpleVariable::Url,
+                            rendering: Rendering {
+                                suppress: Some(true),
+                                ..Default::default()
+                            },
                             ..Default::default()
-                        },
-                        ..Default::default()
-                    }),
-                    TemplateComponent::Title(TemplateTitle {
-                        title: TitleType::Primary,
-                        ..Default::default()
-                    }),
-                ],
-                delimiter: Some(DelimiterPunctuation::Slash),
-                ..Default::default()
-            })]),
+                        }),
+                        TemplateComponent::Title(TemplateTitle {
+                            title: TitleType::Primary,
+                            ..Default::default()
+                        }),
+                    ],
+                    delimiter: Some(DelimiterPunctuation::Slash),
+                    ..Default::default()
+                })]
+                .into(),
+            ),
             ..Default::default()
         }),
         ..Default::default()
@@ -853,20 +871,23 @@ fn build_status_bibliography_style() -> Style {
             ..Default::default()
         },
         bibliography: Some(BibliographySpec {
-            template: Some(vec![
-                TemplateComponent::Title(TemplateTitle {
-                    title: TitleType::Primary,
-                    ..Default::default()
-                }),
-                TemplateComponent::Variable(TemplateVariable {
-                    variable: SimpleVariable::Status,
-                    rendering: Rendering {
-                        prefix: Some(". ".into()),
+            template: Some(
+                vec![
+                    TemplateComponent::Title(TemplateTitle {
+                        title: TitleType::Primary,
                         ..Default::default()
-                    },
-                    ..Default::default()
-                }),
-            ]),
+                    }),
+                    TemplateComponent::Variable(TemplateVariable {
+                        variable: SimpleVariable::Status,
+                        rendering: Rendering {
+                            prefix: Some(". ".into()),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    }),
+                ]
+                .into(),
+            ),
             ..Default::default()
         }),
         ..Default::default()
@@ -890,52 +911,55 @@ fn build_article_journal_no_page_fallback_style() -> Style {
                 separator: Some(", ".into()),
                 ..Default::default()
             }),
-            template: Some(vec![
-                TemplateComponent::Title(TemplateTitle {
-                    title: TitleType::ParentSerial,
-                    ..Default::default()
-                }),
-                TemplateComponent::Group(TemplateGroup {
-                    group: vec![
-                        TemplateComponent::Date(TemplateDate {
-                            date: DateVariable::Issued,
-                            form: DateForm::Year,
-                            ..Default::default()
-                        }),
-                        TemplateComponent::Number(TemplateNumber {
-                            number: NumberVariable::Volume,
-                            ..Default::default()
-                        }),
-                        TemplateComponent::Number(TemplateNumber {
-                            number: NumberVariable::Issue,
-                            rendering: Rendering {
-                                prefix: Some("(".into()),
-                                suffix: Some(")".into()),
-                                ..Default::default()
-                            },
-                            ..Default::default()
-                        }),
-                        TemplateComponent::Number(TemplateNumber {
-                            number: NumberVariable::Pages,
-                            rendering: Rendering {
-                                prefix: Some("pp. ".into()),
-                                ..Default::default()
-                            },
-                            ..Default::default()
-                        }),
-                    ],
-                    delimiter: Some(DelimiterPunctuation::Comma),
-                    ..Default::default()
-                }),
-                TemplateComponent::Variable(TemplateVariable {
-                    variable: SimpleVariable::Doi,
-                    rendering: Rendering {
-                        prefix: Some("DOI:".into()),
+            template: Some(
+                vec![
+                    TemplateComponent::Title(TemplateTitle {
+                        title: TitleType::ParentSerial,
                         ..Default::default()
-                    },
-                    ..Default::default()
-                }),
-            ]),
+                    }),
+                    TemplateComponent::Group(TemplateGroup {
+                        group: vec![
+                            TemplateComponent::Date(TemplateDate {
+                                date: DateVariable::Issued,
+                                form: DateForm::Year,
+                                ..Default::default()
+                            }),
+                            TemplateComponent::Number(TemplateNumber {
+                                number: NumberVariable::Volume,
+                                ..Default::default()
+                            }),
+                            TemplateComponent::Number(TemplateNumber {
+                                number: NumberVariable::Issue,
+                                rendering: Rendering {
+                                    prefix: Some("(".into()),
+                                    suffix: Some(")".into()),
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            }),
+                            TemplateComponent::Number(TemplateNumber {
+                                number: NumberVariable::Pages,
+                                rendering: Rendering {
+                                    prefix: Some("pp. ".into()),
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            }),
+                        ],
+                        delimiter: Some(DelimiterPunctuation::Comma),
+                        ..Default::default()
+                    }),
+                    TemplateComponent::Variable(TemplateVariable {
+                        variable: SimpleVariable::Doi,
+                        rendering: Rendering {
+                            prefix: Some("DOI:".into()),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    }),
+                ]
+                .into(),
+            ),
             ..Default::default()
         }),
         ..Default::default()
@@ -994,7 +1018,7 @@ fn build_bibliography_entry_link_style() -> Style {
                 }),
                 ..Default::default()
             }),
-            template: Some(vec![citum_schema::tc_title!(Primary)]),
+            template: Some(vec![citum_schema::tc_title!(Primary)].into()),
             ..Default::default()
         }),
         ..Default::default()
@@ -1019,11 +1043,14 @@ fn build_bibliography_local_note_sort_style() -> Style {
                 label_separator: Some(". ".to_string()),
                 ..Default::default()
             }),
-            template: Some(vec![
-                citum_schema::tc_contributor!(Author, Long),
-                citum_schema::tc_title!(Primary, prefix = ". "),
-                citum_schema::tc_date!(Issued, Year, prefix = " "),
-            ]),
+            template: Some(
+                vec![
+                    citum_schema::tc_contributor!(Author, Long),
+                    citum_schema::tc_title!(Primary, prefix = ". "),
+                    citum_schema::tc_date!(Issued, Year, prefix = " "),
+                ]
+                .into(),
+            ),
             ..Default::default()
         }),
         ..Default::default()
@@ -1048,7 +1075,7 @@ fn build_bibliography_local_numeric_style() -> Style {
                 label_separator: Some(". ".to_string()),
                 ..Default::default()
             }),
-            template: Some(vec![citum_schema::tc_contributor!(Author, Long)]),
+            template: Some(vec![citum_schema::tc_contributor!(Author, Long)].into()),
             ..Default::default()
         }),
         ..Default::default()
@@ -1081,10 +1108,13 @@ fn build_numeric_citation_style_with_bibliography_local_note_sort() -> Style {
                 label_separator: Some(". ".to_string()),
                 ..Default::default()
             }),
-            template: Some(vec![
-                citum_schema::tc_contributor!(Author, Long),
-                citum_schema::tc_title!(Primary, prefix = ". "),
-            ]),
+            template: Some(
+                vec![
+                    citum_schema::tc_contributor!(Author, Long),
+                    citum_schema::tc_title!(Primary, prefix = ". "),
+                ]
+                .into(),
+            ),
             ..Default::default()
         }),
         ..Default::default()
@@ -1099,33 +1129,34 @@ fn build_inline_article_journal_detail_group_style() -> Style {
             ..Default::default()
         },
         bibliography: Some(BibliographySpec {
-            template: Some(vec![
-                TemplateComponent::Contributor(citum_schema::template::TemplateContributor {
-                    contributor: citum_schema::template::ContributorRole::Author.into(),
-                    form: citum_schema::template::ContributorForm::Long,
-                    rendering: Rendering {
-                        suffix: Some(". ".into()),
-                        ..Default::default()
-                    },
-                    ..Default::default()
-                }),
-                TemplateComponent::Title(TemplateTitle {
-                    title: TitleType::ParentSerial,
-                    rendering: Rendering {
-                        emph: Some(true),
-                        suffix: Some(". ".into()),
-                        ..Default::default()
-                    },
-                    ..Default::default()
-                }),
-                TemplateComponent::Group(TemplateGroup {
-                    group: vec![
-                        TemplateComponent::Number(TemplateNumber {
-                            number: NumberVariable::Volume,
+            template: Some(
+                vec![
+                    TemplateComponent::Contributor(citum_schema::template::TemplateContributor {
+                        contributor: citum_schema::template::ContributorRole::Author.into(),
+                        form: citum_schema::template::ContributorForm::Long,
+                        rendering: Rendering {
+                            suffix: Some(". ".into()),
                             ..Default::default()
-                        }),
-                        TemplateComponent::Group(TemplateGroup {
-                            group: vec![
+                        },
+                        ..Default::default()
+                    }),
+                    TemplateComponent::Title(TemplateTitle {
+                        title: TitleType::ParentSerial,
+                        rendering: Rendering {
+                            emph: Some(true),
+                            suffix: Some(". ".into()),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    }),
+                    TemplateComponent::Group(TemplateGroup {
+                        group: vec![
+                            TemplateComponent::Number(TemplateNumber {
+                                number: NumberVariable::Volume,
+                                ..Default::default()
+                            }),
+                            TemplateComponent::Group(TemplateGroup {
+                                group: vec![
                                 TemplateComponent::Number(TemplateNumber {
                                     number: NumberVariable::Issue,
                                     ..Default::default()
@@ -1143,22 +1174,24 @@ fn build_inline_article_journal_detail_group_style() -> Style {
                                     ..Default::default()
                                 }),
                             ],
-                            delimiter: Some(DelimiterPunctuation::Space),
-                            ..Default::default()
-                        }),
-                        TemplateComponent::Number(TemplateNumber {
-                            number: NumberVariable::Pages,
-                            rendering: Rendering {
-                                prefix: Some("pp. ".into()),
+                                delimiter: Some(DelimiterPunctuation::Space),
                                 ..Default::default()
-                            },
-                            ..Default::default()
-                        }),
-                    ],
-                    delimiter: Some(DelimiterPunctuation::Comma),
-                    ..Default::default()
-                }),
-            ]),
+                            }),
+                            TemplateComponent::Number(TemplateNumber {
+                                number: NumberVariable::Pages,
+                                rendering: Rendering {
+                                    prefix: Some("pp. ".into()),
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            }),
+                        ],
+                        delimiter: Some(DelimiterPunctuation::Comma),
+                        ..Default::default()
+                    }),
+                ]
+                .into(),
+            ),
             ..Default::default()
         }),
         ..Default::default()
@@ -1173,22 +1206,25 @@ fn build_archive_eprint_style() -> Style {
             ..Default::default()
         },
         bibliography: Some(BibliographySpec {
-            template: Some(vec![
-                citum_schema::tc_title!(Primary, suffix = ". "),
-                variable_component(SimpleVariable::ArchiveName, None, None),
-                variable_component(SimpleVariable::ArchiveCollection, Some(", "), None),
-                variable_component(SimpleVariable::ArchiveCollectionId, Some(", "), None),
-                variable_component(SimpleVariable::ArchiveSeries, Some(", Series "), None),
-                variable_component(SimpleVariable::ArchiveBox, Some(", Box "), None),
-                variable_component(SimpleVariable::ArchiveFolder, Some(", Folder "), None),
-                variable_component(SimpleVariable::ArchiveItem, Some(", Item "), None),
-                variable_component(SimpleVariable::ArchiveLocation, Some(", "), None),
-                variable_component(SimpleVariable::ArchivePlace, Some(", "), None),
-                variable_component(SimpleVariable::ArchiveUrl, Some(", "), None),
-                variable_component(SimpleVariable::EprintServer, Some(", "), None),
-                variable_component(SimpleVariable::EprintId, Some(":"), None),
-                variable_component(SimpleVariable::EprintClass, Some(" ["), Some("]")),
-            ]),
+            template: Some(
+                vec![
+                    citum_schema::tc_title!(Primary, suffix = ". "),
+                    variable_component(SimpleVariable::ArchiveName, None, None),
+                    variable_component(SimpleVariable::ArchiveCollection, Some(", "), None),
+                    variable_component(SimpleVariable::ArchiveCollectionId, Some(", "), None),
+                    variable_component(SimpleVariable::ArchiveSeries, Some(", Series "), None),
+                    variable_component(SimpleVariable::ArchiveBox, Some(", Box "), None),
+                    variable_component(SimpleVariable::ArchiveFolder, Some(", Folder "), None),
+                    variable_component(SimpleVariable::ArchiveItem, Some(", Item "), None),
+                    variable_component(SimpleVariable::ArchiveLocation, Some(", "), None),
+                    variable_component(SimpleVariable::ArchivePlace, Some(", "), None),
+                    variable_component(SimpleVariable::ArchiveUrl, Some(", "), None),
+                    variable_component(SimpleVariable::EprintServer, Some(", "), None),
+                    variable_component(SimpleVariable::EprintId, Some(":"), None),
+                    variable_component(SimpleVariable::EprintClass, Some(" ["), Some("]")),
+                ]
+                .into(),
+            ),
             ..Default::default()
         }),
         ..Default::default()
@@ -1203,17 +1239,20 @@ fn build_archive_location_fallback_style() -> Style {
             ..Default::default()
         },
         bibliography: Some(BibliographySpec {
-            template: Some(vec![
-                citum_schema::tc_title!(Primary, suffix = ". "),
-                variable_component(SimpleVariable::ArchiveName, None, None),
-                variable_component(SimpleVariable::ArchiveCollection, Some(", "), None),
-                variable_component(SimpleVariable::ArchiveLocation, Some(", "), None),
-                variable_component(SimpleVariable::ArchivePlace, Some(", "), None),
-                variable_component(SimpleVariable::ArchiveUrl, Some(", "), None),
-                variable_component(SimpleVariable::EprintServer, Some(", "), None),
-                variable_component(SimpleVariable::EprintId, Some(":"), None),
-                variable_component(SimpleVariable::EprintClass, Some(" ["), Some("]")),
-            ]),
+            template: Some(
+                vec![
+                    citum_schema::tc_title!(Primary, suffix = ". "),
+                    variable_component(SimpleVariable::ArchiveName, None, None),
+                    variable_component(SimpleVariable::ArchiveCollection, Some(", "), None),
+                    variable_component(SimpleVariable::ArchiveLocation, Some(", "), None),
+                    variable_component(SimpleVariable::ArchivePlace, Some(", "), None),
+                    variable_component(SimpleVariable::ArchiveUrl, Some(", "), None),
+                    variable_component(SimpleVariable::EprintServer, Some(", "), None),
+                    variable_component(SimpleVariable::EprintId, Some(":"), None),
+                    variable_component(SimpleVariable::EprintClass, Some(" ["), Some("]")),
+                ]
+                .into(),
+            ),
             ..Default::default()
         }),
         ..Default::default()
@@ -1252,10 +1291,13 @@ fn build_multilingual_archive_name_style() -> Style {
             ..Default::default()
         }),
         bibliography: Some(BibliographySpec {
-            template: Some(vec![TemplateComponent::Variable(TemplateVariable {
-                variable: SimpleVariable::ArchiveName,
-                ..Default::default()
-            })]),
+            template: Some(
+                vec![TemplateComponent::Variable(TemplateVariable {
+                    variable: SimpleVariable::ArchiveName,
+                    ..Default::default()
+                })]
+                .into(),
+            ),
             ..Default::default()
         }),
         ..Default::default()
@@ -1646,11 +1688,14 @@ fn build_processing_style(processing: Processing) -> Style {
             ..Default::default()
         }),
         bibliography: Some(BibliographySpec {
-            template: Some(vec![
-                citum_schema::tc_contributor!(Author, Long),
-                citum_schema::tc_date!(Issued, Year, prefix = " "),
-                citum_schema::tc_title!(Primary, prefix = ". "),
-            ]),
+            template: Some(
+                vec![
+                    citum_schema::tc_contributor!(Author, Long),
+                    citum_schema::tc_date!(Issued, Year, prefix = " "),
+                    citum_schema::tc_title!(Primary, prefix = ". "),
+                ]
+                .into(),
+            ),
             ..Default::default()
         }),
         ..Default::default()
@@ -1680,10 +1725,13 @@ fn make_style_with_substitute(substitute: Option<String>) -> Style {
                 entry_suffix: Some(".".into()),
                 ..Default::default()
             }),
-            template: Some(vec![
-                citum_schema::tc_contributor!(Author, Long),
-                citum_schema::tc_date!(Issued, Year),
-            ]),
+            template: Some(
+                vec![
+                    citum_schema::tc_contributor!(Author, Long),
+                    citum_schema::tc_date!(Issued, Year),
+                ]
+                .into(),
+            ),
             ..Default::default()
         }),
         ..Default::default()
@@ -1846,10 +1894,13 @@ fn build_editor_verb_prefix_style(title_suffix: Option<&str>) -> Style {
             ..Default::default()
         }),
         bibliography: Some(BibliographySpec {
-            template: Some(vec![
-                citum_schema::tc_title!(Primary, suffix = title_suffix.unwrap_or("")),
-                citum_schema::tc_contributor!(Editor, Long),
-            ]),
+            template: Some(
+                vec![
+                    citum_schema::tc_title!(Primary, suffix = title_suffix.unwrap_or("")),
+                    citum_schema::tc_contributor!(Editor, Long),
+                ]
+                .into(),
+            ),
             ..Default::default()
         }),
         ..Default::default()
@@ -1868,7 +1919,7 @@ fn build_bare_long_form_editor_style(role: Option<ContributorConfig>) -> Style {
             ..Default::default()
         }),
         bibliography: Some(BibliographySpec {
-            template: Some(vec![citum_schema::tc_contributor!(Editor, Long)]),
+            template: Some(vec![citum_schema::tc_contributor!(Editor, Long)].into()),
             ..Default::default()
         }),
         ..Default::default()
@@ -1991,17 +2042,20 @@ fn build_sentence_initial_emph_group_style() -> Style {
             ..Default::default()
         },
         bibliography: Some(BibliographySpec {
-            template: Some(vec![TemplateComponent::Group(TemplateGroup {
-                group: vec![TemplateComponent::Title(TemplateTitle {
-                    title: TitleType::Primary,
-                    rendering: Rendering {
-                        emph: Some(true),
+            template: Some(
+                vec![TemplateComponent::Group(TemplateGroup {
+                    group: vec![TemplateComponent::Title(TemplateTitle {
+                        title: TitleType::Primary,
+                        rendering: Rendering {
+                            emph: Some(true),
+                            ..Default::default()
+                        },
                         ..Default::default()
-                    },
+                    })],
                     ..Default::default()
-                })],
-                ..Default::default()
-            })]),
+                })]
+                .into(),
+            ),
             ..Default::default()
         }),
         ..Default::default()
@@ -2054,7 +2108,7 @@ fn make_name_particle_style(display_as_sort: DisplayAsSort) -> Style {
             ..Default::default()
         }),
         bibliography: Some(BibliographySpec {
-            template: Some(vec![citum_schema::tc_contributor!(Author, Long)]),
+            template: Some(vec![citum_schema::tc_contributor!(Author, Long)].into()),
             ..Default::default()
         }),
         ..Default::default()
@@ -2206,10 +2260,13 @@ fn collection_title_component_renders_parent_series_title() {
             ..Default::default()
         },
         bibliography: Some(BibliographySpec {
-            template: Some(vec![TemplateComponent::Title(TemplateTitle {
-                title: TitleType::CollectionTitle,
-                ..Default::default()
-            })]),
+            template: Some(
+                vec![TemplateComponent::Title(TemplateTitle {
+                    title: TitleType::CollectionTitle,
+                    ..Default::default()
+                })]
+                .into(),
+            ),
             ..Default::default()
         }),
         ..Default::default()
@@ -2240,10 +2297,13 @@ fn container_title_component_renders_monograph_or_serial_parent_title() {
             ..Default::default()
         },
         bibliography: Some(BibliographySpec {
-            template: Some(vec![TemplateComponent::Title(TemplateTitle {
-                title: TitleType::ContainerTitle,
-                ..Default::default()
-            })]),
+            template: Some(
+                vec![TemplateComponent::Title(TemplateTitle {
+                    title: TitleType::ContainerTitle,
+                    ..Default::default()
+                })]
+                .into(),
+            ),
             ..Default::default()
         }),
         ..Default::default()
@@ -2284,24 +2344,27 @@ fn legal_case_parent_serial_uses_reporter_as_container_title() {
             ..Default::default()
         },
         bibliography: Some(BibliographySpec {
-            template: Some(vec![TemplateComponent::Group(TemplateGroup {
-                group: vec![
-                    TemplateComponent::Title(TemplateTitle {
-                        title: TitleType::ParentSerial,
-                        ..Default::default()
-                    }),
-                    TemplateComponent::Number(TemplateNumber {
-                        number: NumberVariable::Volume,
-                        ..Default::default()
-                    }),
-                    TemplateComponent::Number(TemplateNumber {
-                        number: NumberVariable::Pages,
-                        ..Default::default()
-                    }),
-                ],
-                delimiter: Some(DelimiterPunctuation::Slash),
-                ..Default::default()
-            })]),
+            template: Some(
+                vec![TemplateComponent::Group(TemplateGroup {
+                    group: vec![
+                        TemplateComponent::Title(TemplateTitle {
+                            title: TitleType::ParentSerial,
+                            ..Default::default()
+                        }),
+                        TemplateComponent::Number(TemplateNumber {
+                            number: NumberVariable::Volume,
+                            ..Default::default()
+                        }),
+                        TemplateComponent::Number(TemplateNumber {
+                            number: NumberVariable::Pages,
+                            ..Default::default()
+                        }),
+                    ],
+                    delimiter: Some(DelimiterPunctuation::Slash),
+                    ..Default::default()
+                })]
+                .into(),
+            ),
             ..Default::default()
         }),
         ..Default::default()
@@ -2506,11 +2569,14 @@ fn magic_subsequent_author_substitute_reuses_the_full_author_group() {
                 subsequent_author_substitute: Some("———".to_string()),
                 ..Default::default()
             }),
-            template: Some(vec![
-                citum_schema::tc_contributor!(Author, Long),
-                citum_schema::tc_title!(Primary, prefix = ", "),
-                citum_schema::tc_date!(Issued, Year, prefix = " (", suffix = ")"),
-            ]),
+            template: Some(
+                vec![
+                    citum_schema::tc_contributor!(Author, Long),
+                    citum_schema::tc_title!(Primary, prefix = ", "),
+                    citum_schema::tc_date!(Issued, Year, prefix = " (", suffix = ")"),
+                ]
+                .into(),
+            ),
             ..Default::default()
         }),
         ..Default::default()
@@ -2595,14 +2661,17 @@ fn make_two_author_and_style(
             ..Default::default()
         }),
         bibliography: Some(BibliographySpec {
-            template: Some(vec![TemplateComponent::Contributor(
-                citum_schema::template::TemplateContributor {
-                    contributor: citum_schema::template::ContributorRole::Author.into(),
-                    form: citum_schema::template::ContributorForm::Long,
-                    name_order,
-                    ..Default::default()
-                },
-            )]),
+            template: Some(
+                vec![TemplateComponent::Contributor(
+                    citum_schema::template::TemplateContributor {
+                        contributor: citum_schema::template::ContributorRole::Author.into(),
+                        form: citum_schema::template::ContributorForm::Long,
+                        name_order,
+                        ..Default::default()
+                    },
+                )]
+                .into(),
+            ),
             ..Default::default()
         }),
         ..Default::default()
@@ -4126,28 +4195,31 @@ fn original_published_date_variable_renders_when_reference_has_original_date() {
             ..Default::default()
         },
         bibliography: Some(BibliographySpec {
-            template: Some(vec![
-                TemplateComponent::Date(TemplateDate {
-                    date: DateVariable::OriginalPublished,
-                    form: DateForm::Year,
-                    rendering: Rendering {
-                        prefix: Some("(".into()),
-                        suffix: Some(") ".into()),
+            template: Some(
+                vec![
+                    TemplateComponent::Date(TemplateDate {
+                        date: DateVariable::OriginalPublished,
+                        form: DateForm::Year,
+                        rendering: Rendering {
+                            prefix: Some("(".into()),
+                            suffix: Some(") ".into()),
+                            ..Default::default()
+                        },
                         ..Default::default()
-                    },
-                    ..Default::default()
-                }),
-                TemplateComponent::Date(TemplateDate {
-                    date: DateVariable::Issued,
-                    form: DateForm::Year,
-                    ..Default::default()
-                }),
-                TemplateComponent::Title(TemplateTitle {
-                    title: TitleType::Primary,
-                    form: Some(TitleForm::Long),
-                    ..Default::default()
-                }),
-            ]),
+                    }),
+                    TemplateComponent::Date(TemplateDate {
+                        date: DateVariable::Issued,
+                        form: DateForm::Year,
+                        ..Default::default()
+                    }),
+                    TemplateComponent::Title(TemplateTitle {
+                        title: TitleType::Primary,
+                        form: Some(TitleForm::Long),
+                        ..Default::default()
+                    }),
+                ]
+                .into(),
+            ),
             ..Default::default()
         }),
         ..Default::default()
@@ -4185,28 +4257,31 @@ fn original_published_date_variable_renders_for_patent_references() {
             ..Default::default()
         },
         bibliography: Some(BibliographySpec {
-            template: Some(vec![
-                TemplateComponent::Date(TemplateDate {
-                    date: DateVariable::OriginalPublished,
-                    form: DateForm::Year,
-                    rendering: Rendering {
-                        prefix: Some("(".into()),
-                        suffix: Some(") ".into()),
+            template: Some(
+                vec![
+                    TemplateComponent::Date(TemplateDate {
+                        date: DateVariable::OriginalPublished,
+                        form: DateForm::Year,
+                        rendering: Rendering {
+                            prefix: Some("(".into()),
+                            suffix: Some(") ".into()),
+                            ..Default::default()
+                        },
                         ..Default::default()
-                    },
-                    ..Default::default()
-                }),
-                TemplateComponent::Date(TemplateDate {
-                    date: DateVariable::Issued,
-                    form: DateForm::Year,
-                    ..Default::default()
-                }),
-                TemplateComponent::Title(TemplateTitle {
-                    title: TitleType::Primary,
-                    form: Some(TitleForm::Long),
-                    ..Default::default()
-                }),
-            ]),
+                    }),
+                    TemplateComponent::Date(TemplateDate {
+                        date: DateVariable::Issued,
+                        form: DateForm::Year,
+                        ..Default::default()
+                    }),
+                    TemplateComponent::Title(TemplateTitle {
+                        title: TitleType::Primary,
+                        form: Some(TitleForm::Long),
+                        ..Default::default()
+                    }),
+                ]
+                .into(),
+            ),
             ..Default::default()
         }),
         ..Default::default()
@@ -4287,30 +4362,33 @@ fn given_original_publication_fields_when_a_bibliography_group_checks_field_pres
             ..Default::default()
         },
         bibliography: Some(BibliographySpec {
-            template: Some(vec![
-                TemplateComponent::Group(TemplateGroup {
-                    group: vec![TemplateComponent::Variable(TemplateVariable {
-                        variable: SimpleVariable::Doi,
+            template: Some(
+                vec![
+                    TemplateComponent::Group(TemplateGroup {
+                        group: vec![TemplateComponent::Variable(TemplateVariable {
+                            variable: SimpleVariable::Doi,
+                            ..Default::default()
+                        })],
+                        render_when: Some(TemplateGroupCondition {
+                            field_present: Some(TemplateConditionField::OriginalPublisher),
+                            field_absent: None,
+                        }),
                         ..Default::default()
-                    })],
-                    render_when: Some(TemplateGroupCondition {
-                        field_present: Some(TemplateConditionField::OriginalPublisher),
-                        field_absent: None,
                     }),
-                    ..Default::default()
-                }),
-                TemplateComponent::Group(TemplateGroup {
-                    group: vec![TemplateComponent::Variable(TemplateVariable {
-                        variable: SimpleVariable::Url,
+                    TemplateComponent::Group(TemplateGroup {
+                        group: vec![TemplateComponent::Variable(TemplateVariable {
+                            variable: SimpleVariable::Url,
+                            ..Default::default()
+                        })],
+                        render_when: Some(TemplateGroupCondition {
+                            field_present: Some(TemplateConditionField::OriginalPublisherPlace),
+                            field_absent: Some(TemplateConditionField::OriginalPublisher),
+                        }),
                         ..Default::default()
-                    })],
-                    render_when: Some(TemplateGroupCondition {
-                        field_present: Some(TemplateConditionField::OriginalPublisherPlace),
-                        field_absent: Some(TemplateConditionField::OriginalPublisher),
                     }),
-                    ..Default::default()
-                }),
-            ]),
+                ]
+                .into(),
+            ),
             ..Default::default()
         }),
         ..Default::default()
@@ -4353,17 +4431,20 @@ fn given_a_field_absent_only_condition_when_the_probed_field_is_present_or_absen
             ..Default::default()
         },
         bibliography: Some(BibliographySpec {
-            template: Some(vec![TemplateComponent::Group(TemplateGroup {
-                group: vec![TemplateComponent::Variable(TemplateVariable {
-                    variable: SimpleVariable::Doi,
+            template: Some(
+                vec![TemplateComponent::Group(TemplateGroup {
+                    group: vec![TemplateComponent::Variable(TemplateVariable {
+                        variable: SimpleVariable::Doi,
+                        ..Default::default()
+                    })],
+                    render_when: Some(TemplateGroupCondition {
+                        field_present: None,
+                        field_absent: Some(TemplateConditionField::OriginalPublished),
+                    }),
                     ..Default::default()
-                })],
-                render_when: Some(TemplateGroupCondition {
-                    field_present: None,
-                    field_absent: Some(TemplateConditionField::OriginalPublished),
-                }),
-                ..Default::default()
-            })]),
+                })]
+                .into(),
+            ),
             ..Default::default()
         }),
         ..Default::default()
@@ -4428,30 +4509,33 @@ fn given_nested_render_when_conditions_when_outer_and_inner_fields_vary_then_eac
             ..Default::default()
         },
         bibliography: Some(BibliographySpec {
-            template: Some(vec![TemplateComponent::Group(TemplateGroup {
-                group: vec![
-                    TemplateComponent::Variable(TemplateVariable {
-                        variable: SimpleVariable::Doi,
-                        ..Default::default()
-                    }),
-                    TemplateComponent::Group(TemplateGroup {
-                        group: vec![TemplateComponent::Variable(TemplateVariable {
-                            variable: SimpleVariable::OriginalPublisherPlace,
+            template: Some(
+                vec![TemplateComponent::Group(TemplateGroup {
+                    group: vec![
+                        TemplateComponent::Variable(TemplateVariable {
+                            variable: SimpleVariable::Doi,
                             ..Default::default()
-                        })],
-                        render_when: Some(TemplateGroupCondition {
-                            field_present: None,
-                            field_absent: Some(TemplateConditionField::OriginalPublisher),
                         }),
-                        ..Default::default()
+                        TemplateComponent::Group(TemplateGroup {
+                            group: vec![TemplateComponent::Variable(TemplateVariable {
+                                variable: SimpleVariable::OriginalPublisherPlace,
+                                ..Default::default()
+                            })],
+                            render_when: Some(TemplateGroupCondition {
+                                field_present: None,
+                                field_absent: Some(TemplateConditionField::OriginalPublisher),
+                            }),
+                            ..Default::default()
+                        }),
+                    ],
+                    render_when: Some(TemplateGroupCondition {
+                        field_present: Some(TemplateConditionField::OriginalTitle),
+                        field_absent: None,
                     }),
-                ],
-                render_when: Some(TemplateGroupCondition {
-                    field_present: Some(TemplateConditionField::OriginalTitle),
-                    field_absent: None,
-                }),
-                ..Default::default()
-            })]),
+                    ..Default::default()
+                })]
+                .into(),
+            ),
             ..Default::default()
         }),
         ..Default::default()
@@ -4496,22 +4580,25 @@ fn original_title_variable_renders_the_original_language_title() {
             ..Default::default()
         },
         bibliography: Some(BibliographySpec {
-            template: Some(vec![
-                TemplateComponent::Title(TemplateTitle {
-                    title: TitleType::Primary,
-                    form: Some(TitleForm::Long),
-                    ..Default::default()
-                }),
-                TemplateComponent::Title(TemplateTitle {
-                    title: TitleType::Original,
-                    form: Some(TitleForm::Long),
-                    rendering: Rendering {
-                        prefix: Some(" / ".into()),
+            template: Some(
+                vec![
+                    TemplateComponent::Title(TemplateTitle {
+                        title: TitleType::Primary,
+                        form: Some(TitleForm::Long),
                         ..Default::default()
-                    },
-                    ..Default::default()
-                }),
-            ]),
+                    }),
+                    TemplateComponent::Title(TemplateTitle {
+                        title: TitleType::Original,
+                        form: Some(TitleForm::Long),
+                        rendering: Rendering {
+                            prefix: Some(" / ".into()),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    }),
+                ]
+                .into(),
+            ),
             ..Default::default()
         }),
         ..Default::default()
@@ -4563,14 +4650,17 @@ fn given_a_number_component_with_free_text_when_a_text_case_override_is_set_then
             ..Default::default()
         },
         bibliography: Some(BibliographySpec {
-            template: Some(vec![TemplateComponent::Number(TemplateNumber {
-                number: NumberVariable::Edition,
-                rendering: Rendering {
-                    text_case,
+            template: Some(
+                vec![TemplateComponent::Number(TemplateNumber {
+                    number: NumberVariable::Edition,
+                    rendering: Rendering {
+                        text_case,
+                        ..Default::default()
+                    },
                     ..Default::default()
-                },
-                ..Default::default()
-            })]),
+                })]
+                .into(),
+            ),
             ..Default::default()
         }),
         ..Default::default()
@@ -4639,16 +4729,19 @@ fn archive_hierarchy_assembled_when_location_absent() {
             ..Default::default()
         }),
         bibliography: Some(BibliographySpec {
-            template: Some(vec![
-                TemplateComponent::Title(TemplateTitle {
-                    title: TitleType::Primary,
-                    ..Default::default()
-                }),
-                TemplateComponent::Variable(TemplateVariable {
-                    variable: SimpleVariable::ArchiveLocation,
-                    ..Default::default()
-                }),
-            ]),
+            template: Some(
+                vec![
+                    TemplateComponent::Title(TemplateTitle {
+                        title: TitleType::Primary,
+                        ..Default::default()
+                    }),
+                    TemplateComponent::Variable(TemplateVariable {
+                        variable: SimpleVariable::ArchiveLocation,
+                        ..Default::default()
+                    }),
+                ]
+                .into(),
+            ),
             ..Default::default()
         }),
         ..Default::default()
@@ -4692,16 +4785,19 @@ fn archive_location_string_bypasses_assembly() {
             ..Default::default()
         }),
         bibliography: Some(BibliographySpec {
-            template: Some(vec![
-                TemplateComponent::Title(TemplateTitle {
-                    title: TitleType::Primary,
-                    ..Default::default()
-                }),
-                TemplateComponent::Variable(TemplateVariable {
-                    variable: SimpleVariable::ArchiveLocation,
-                    ..Default::default()
-                }),
-            ]),
+            template: Some(
+                vec![
+                    TemplateComponent::Title(TemplateTitle {
+                        title: TitleType::Primary,
+                        ..Default::default()
+                    }),
+                    TemplateComponent::Variable(TemplateVariable {
+                        variable: SimpleVariable::ArchiveLocation,
+                        ..Default::default()
+                    }),
+                ]
+                .into(),
+            ),
             ..Default::default()
         }),
         ..Default::default()
@@ -4765,7 +4861,7 @@ fn processor_renders_bibliography_annotations() {
             ..Default::default()
         },
         bibliography: Some(citum_schema::BibliographySpec {
-            template: Some(vec![citum_schema::tc_title!(Primary)]),
+            template: Some(vec![citum_schema::tc_title!(Primary)].into()),
             ..Default::default()
         }),
         ..Default::default()
@@ -5006,14 +5102,17 @@ fn quoted_title_style(grouped: bool) -> Style {
             ..Default::default()
         },
         bibliography: Some(BibliographySpec {
-            template: Some(vec![TemplateComponent::Title(TemplateTitle {
-                title: TitleType::Primary,
-                rendering: Rendering {
-                    quote: Some(true),
+            template: Some(
+                vec![TemplateComponent::Title(TemplateTitle {
+                    title: TitleType::Primary,
+                    rendering: Rendering {
+                        quote: Some(true),
+                        ..Default::default()
+                    },
                     ..Default::default()
-                },
-                ..Default::default()
-            })]),
+                })]
+                .into(),
+            ),
             ..Default::default()
         }),
         ..Default::default()
@@ -5117,10 +5216,13 @@ fn given_multilingual_ref_when_rendering_html_then_data_attrs_match_displayed_fo
             ..Default::default()
         }),
         bibliography: Some(BibliographySpec {
-            template: Some(vec![TemplateComponent::Title(TemplateTitle {
-                title: TitleType::Primary,
-                ..Default::default()
-            })]),
+            template: Some(
+                vec![TemplateComponent::Title(TemplateTitle {
+                    title: TitleType::Primary,
+                    ..Default::default()
+                })]
+                .into(),
+            ),
             groups: Some(vec![citum_schema::grouping::BibliographyGroup {
                 id: "all".to_string(),
                 heading: None,
@@ -5270,11 +5372,14 @@ fn given_numeric_label_mode_when_label_wrap_varies_then_label_renders_flush_agai
                 separator: Some(". ".into()),
                 ..Default::default()
             }),
-            template: Some(vec![TemplateComponent::Contributor(TemplateContributor {
-                contributor: ContributorRole::Author.into(),
-                form: ContributorForm::Long,
-                ..Default::default()
-            })]),
+            template: Some(
+                vec![TemplateComponent::Contributor(TemplateContributor {
+                    contributor: ContributorRole::Author.into(),
+                    form: ContributorForm::Long,
+                    ..Default::default()
+                })]
+                .into(),
+            ),
             ..Default::default()
         }),
         ..Default::default()

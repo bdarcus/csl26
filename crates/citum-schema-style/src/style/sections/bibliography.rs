@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 use crate::grouping;
 use crate::options::BibliographyOptions;
 use crate::template::{
-    LocalizedTemplateSpec, ResolvedLocalizedTemplate, Template, TemplateReference,
+    LocalizedTemplateSpec, ResolvedLocalizedTemplate, Template, TemplateReference, TemplateVariant,
     TemplateVariants, matched_localized_template,
 };
 
@@ -32,12 +32,14 @@ pub struct BibliographySpec {
     pub options: Option<BibliographyOptions>,
     /// Reference to an embedded template preset or external template.
     ///
-    /// If both `template-ref` and `template` are present, `template` takes precedence.
+    /// A complete `template` takes precedence. Pairing `template-ref` with a
+    /// template diff in the same section is invalid.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub template_ref: Option<TemplateReference>,
-    /// Default template for entries when no localized override is selected.
+    /// Default template or inherited template diff when no localized override is selected.
+    /// Diffs are materialized as complete templates during style resolution.
     #[serde(skip_serializing_if = "Option::is_none", default)]
-    pub template: Option<Template>,
+    pub template: Option<TemplateVariant>,
     /// Locale-specific template overrides checked before the default template.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub locales: Option<Vec<LocalizedTemplateSpec>>,
@@ -110,14 +112,18 @@ impl Default for BibliographySpec {
 impl BibliographySpec {
     /// Resolve the effective template for this bibliography.
     ///
-    /// Returns the explicit `template` if present, otherwise resolves `template-ref`.
-    /// Returns `None` if neither is specified.
+    /// Returns the explicit resolved template if present, otherwise resolves
+    /// `template-ref`. A pending diff is not exposed as a concrete template.
     pub fn resolve_template(&self) -> Option<Template> {
-        self.template.clone().or_else(|| {
-            self.template_ref
-                .as_ref()
-                .and_then(TemplateReference::bibliography_template)
-        })
+        self.template
+            .as_ref()
+            .and_then(TemplateVariant::as_template)
+            .map(<[_]>::to_vec)
+            .or_else(|| {
+                self.template_ref
+                    .as_ref()
+                    .and_then(TemplateReference::bibliography_template)
+            })
     }
 
     /// Resolve a template and the locale selected by its localized branch.

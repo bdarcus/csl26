@@ -702,23 +702,26 @@ mod tests {
                 ..Default::default()
             }),
             citation: Some(CitationSpec {
-                template: Some(vec![
-                    TemplateComponent::Contributor(TemplateContributor {
-                        contributor: ContributorRole::Author.into(),
-                        form: ContributorForm::Short,
-                        rendering: Rendering::default(),
-                        ..Default::default()
-                    }),
-                    TemplateComponent::Date(TemplateDate {
-                        date: TemplateDateVariable::Issued,
-                        form: DateForm::Year,
-                        rendering: Rendering {
-                            prefix: Some(", ".into()),
+                template: Some(
+                    vec![
+                        TemplateComponent::Contributor(TemplateContributor {
+                            contributor: ContributorRole::Author.into(),
+                            form: ContributorForm::Short,
+                            rendering: Rendering::default(),
                             ..Default::default()
-                        },
-                        ..Default::default()
-                    }),
-                ]),
+                        }),
+                        TemplateComponent::Date(TemplateDate {
+                            date: TemplateDateVariable::Issued,
+                            form: DateForm::Year,
+                            rendering: Rendering {
+                                prefix: Some(", ".into()),
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        }),
+                    ]
+                    .into(),
+                ),
                 wrap: Some(WrapPunctuation::Parentheses.into()),
                 ..Default::default()
             }),
@@ -1047,31 +1050,37 @@ mod tests {
             }),
             citation: Some(CitationSpec {
                 integral: Some(Box::new(CitationSpec {
-                    template: Some(vec![TemplateComponent::Contributor(TemplateContributor {
-                        contributor: ContributorRole::Author.into(),
-                        form: ContributorForm::Long,
-                        rendering: Rendering::default(),
-                        ..Default::default()
-                    })]),
+                    template: Some(
+                        vec![TemplateComponent::Contributor(TemplateContributor {
+                            contributor: ContributorRole::Author.into(),
+                            form: ContributorForm::Long,
+                            rendering: Rendering::default(),
+                            ..Default::default()
+                        })]
+                        .into(),
+                    ),
                     ..Default::default()
                 })),
-                template: Some(vec![
-                    TemplateComponent::Contributor(TemplateContributor {
-                        contributor: ContributorRole::Author.into(),
-                        form: ContributorForm::Short,
-                        rendering: Rendering::default(),
-                        ..Default::default()
-                    }),
-                    TemplateComponent::Date(TemplateDate {
-                        date: TemplateDateVariable::Issued,
-                        form: DateForm::Year,
-                        rendering: Rendering {
-                            prefix: Some(", ".into()),
+                template: Some(
+                    vec![
+                        TemplateComponent::Contributor(TemplateContributor {
+                            contributor: ContributorRole::Author.into(),
+                            form: ContributorForm::Short,
+                            rendering: Rendering::default(),
                             ..Default::default()
-                        },
-                        ..Default::default()
-                    }),
-                ]),
+                        }),
+                        TemplateComponent::Date(TemplateDate {
+                            date: TemplateDateVariable::Issued,
+                            form: DateForm::Year,
+                            rendering: Rendering {
+                                prefix: Some(", ".into()),
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        }),
+                    ]
+                    .into(),
+                ),
                 wrap: Some(WrapPunctuation::Parentheses.into()),
                 ..Default::default()
             }),
@@ -1268,10 +1277,13 @@ mod tests {
     fn style_with_bibliography() -> Style {
         let mut s = style();
         s.bibliography = Some(BibliographySpec {
-            template: Some(vec![TemplateComponent::Title(TemplateTitle {
-                title: TitleType::Primary,
-                ..Default::default()
-            })]),
+            template: Some(
+                vec![TemplateComponent::Title(TemplateTitle {
+                    title: TitleType::Primary,
+                    ..Default::default()
+                })]
+                .into(),
+            ),
             ..Default::default()
         });
         s

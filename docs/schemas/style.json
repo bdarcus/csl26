@@ -6325,7 +6325,7 @@
           ]
         },
         "template-ref": {
-          "description": "Reference to an embedded template preset or external template.\n\nIf both `template-ref` and `template` are present, `template` takes precedence.",
+          "description": "Reference to an embedded template preset or external template.\n\nA complete `template` takes precedence. Pairing `template-ref` with a\ntemplate diff in the same section is invalid.",
           "anyOf": [
             {
               "$ref": "#/$defs/TemplateReference"
@@ -6336,14 +6336,15 @@
           ]
         },
         "template": {
-          "description": "Default template when no localized override is selected.",
-          "type": [
-            "array",
-            "null"
-          ],
-          "items": {
-            "$ref": "#/$defs/TemplateComponent"
-          }
+          "description": "Default template or inherited template diff when no localized override is selected.\nDiffs are materialized as complete templates during style resolution.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TemplateVariant"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "locales": {
           "description": "Locale-specific template overrides checked before the default template.",
@@ -6849,62 +6850,11 @@
         }
       ]
     },
-    "LocalizedTemplateSpec": {
-      "description": "Locale-scoped template override with optional fallback behavior.",
-      "type": "object",
-      "properties": {
-        "locale": {
-          "description": "Language tags that should select this template override.",
-          "type": [
-            "array",
-            "null"
-          ],
-          "items": {
-            "type": "string"
-          }
-        },
-        "default": {
-          "description": "Whether this override is the fallback when no locale matches.",
-          "type": [
-            "boolean",
-            "null"
-          ]
-        },
-        "template": {
-          "description": "Template used when this localized override is selected.",
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/TemplateComponent"
-          }
-        },
-        "type-variants": {
-          "description": "Locale-owned type-specific template replacements.\n\nThese take precedence over the section-level type variants when this locale matches.",
-          "type": [
-            "object",
-            "null"
-          ],
-          "propertyNames": {
-            "type": "string",
-            "pattern": "^\\s*(?:book|manual|report|thesis|webpage|map|post|interview|manuscript|personal-communication|document|chapter|entry|entry-dictionary|entry-encyclopedia|post-weblog|preprint|paper-conference|article-journal|article-magazine|article-newspaper|broadcast|collection|legal-case|statute|treaty|hearing|regulation|brief|classic|patent|dataset|standard|software|motion-picture|article|pamphlet|periodical|graphic|event|song|bill-proceeding|bill-record|default)(?:\\s*,\\s*(?:book|manual|report|thesis|webpage|map|post|interview|manuscript|personal-communication|document|chapter|entry|entry-dictionary|entry-encyclopedia|post-weblog|preprint|paper-conference|article-journal|article-magazine|article-newspaper|broadcast|collection|legal-case|statute|treaty|hearing|regulation|brief|classic|patent|dataset|standard|software|motion-picture|article|pamphlet|periodical|graphic|event|song|bill-proceeding|bill-record|default))*\\s*$"
-          },
-          "additionalProperties": {
-            "type": "array",
-            "items": {
-              "$ref": "#/$defs/TemplateComponent"
-            }
-          }
-        }
-      },
-      "required": [
-        "template"
-      ],
-      "unevaluatedProperties": false
-    },
     "TemplateVariant": {
-      "description": "Type-specific template override, either as a complete legacy template or a V3 diff.",
+      "description": "Template definition, either as a complete template or an inherited structural diff.",
       "anyOf": [
         {
-          "description": "Complete replacement template used by Template V1/V2 styles.",
+          "description": "Complete replacement template.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/TemplateComponent"
@@ -6917,11 +6867,11 @@
       ]
     },
     "TemplateVariantDiff": {
-      "description": "Structural diff that derives a type-specific template from a parent template.",
+      "description": "Structural diff that derives a template from an inherited or selected parent.",
       "type": "object",
       "properties": {
         "extends": {
-          "description": "Optional parent type variant selector within the same section.",
+          "description": "Optional parent type variant selector within the same section.\nFallback-template diffs reject this field during resolution.",
           "anyOf": [
             {
               "$ref": "#/$defs/TypeSelector"
@@ -7212,6 +7162,57 @@
         "component"
       ]
     },
+    "LocalizedTemplateSpec": {
+      "description": "Locale-scoped template override with optional fallback behavior.",
+      "type": "object",
+      "properties": {
+        "locale": {
+          "description": "Language tags that should select this template override.",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "default": {
+          "description": "Whether this override is the fallback when no locale matches.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "template": {
+          "description": "Template used when this localized override is selected.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/TemplateComponent"
+          }
+        },
+        "type-variants": {
+          "description": "Locale-owned type-specific template replacements.\n\nThese take precedence over the section-level type variants when this locale matches.",
+          "type": [
+            "object",
+            "null"
+          ],
+          "propertyNames": {
+            "type": "string",
+            "pattern": "^\\s*(?:book|manual|report|thesis|webpage|map|post|interview|manuscript|personal-communication|document|chapter|entry|entry-dictionary|entry-encyclopedia|post-weblog|preprint|paper-conference|article-journal|article-magazine|article-newspaper|broadcast|collection|legal-case|statute|treaty|hearing|regulation|brief|classic|patent|dataset|standard|software|motion-picture|article|pamphlet|periodical|graphic|event|song|bill-proceeding|bill-record|default)(?:\\s*,\\s*(?:book|manual|report|thesis|webpage|map|post|interview|manuscript|personal-communication|document|chapter|entry|entry-dictionary|entry-encyclopedia|post-weblog|preprint|paper-conference|article-journal|article-magazine|article-newspaper|broadcast|collection|legal-case|statute|treaty|hearing|regulation|brief|classic|patent|dataset|standard|software|motion-picture|article|pamphlet|periodical|graphic|event|song|bill-proceeding|bill-record|default))*\\s*$"
+          },
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/TemplateComponent"
+            }
+          }
+        }
+      },
+      "required": [
+        "template"
+      ],
+      "unevaluatedProperties": false
+    },
     "CitationCollapse": {
       "description": "Citation collapse behavior for multi-item citations.",
       "oneOf": [
@@ -7374,7 +7375,7 @@
           ]
         },
         "template-ref": {
-          "description": "Reference to an embedded template preset or external template.\n\nIf both `template-ref` and `template` are present, `template` takes precedence.",
+          "description": "Reference to an embedded template preset or external template.\n\nA complete `template` takes precedence. Pairing `template-ref` with a\ntemplate diff in the same section is invalid.",
           "anyOf": [
             {
               "$ref": "#/$defs/TemplateReference"
@@ -7385,14 +7386,15 @@
           ]
         },
         "template": {
-          "description": "Default template for entries when no localized override is selected.",
-          "type": [
-            "array",
-            "null"
-          ],
-          "items": {
-            "$ref": "#/$defs/TemplateComponent"
-          }
+          "description": "Default template or inherited template diff when no localized override is selected.\nDiffs are materialized as complete templates during style resolution.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TemplateVariant"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "locales": {
           "description": "Locale-specific template overrides checked before the default template.",

@@ -115,10 +115,13 @@ fn given_simple_author_date_document_when_rendered_as_html_then_a_bibliography_h
                 entry_suffix: Some(".".into()),
                 ..Default::default()
             }),
-            template: Some(vec![
-                citum_schema::tc_contributor!(Author, Long),
-                citum_schema::tc_date!(Issued, Year),
-            ]),
+            template: Some(
+                vec![
+                    citum_schema::tc_contributor!(Author, Long),
+                    citum_schema::tc_date!(Issued, Year),
+                ]
+                .into(),
+            ),
             ..Default::default()
         }),
         ..Default::default()
@@ -187,10 +190,13 @@ fn given_simple_author_date_document_when_rendered_as_djot_then_html_tags_are_no
                 entry_suffix: Some(".".into()),
                 ..Default::default()
             }),
-            template: Some(vec![
-                citum_schema::tc_contributor!(Author, Long),
-                citum_schema::tc_date!(Issued, Year),
-            ]),
+            template: Some(
+                vec![
+                    citum_schema::tc_contributor!(Author, Long),
+                    citum_schema::tc_date!(Issued, Year),
+                ]
+                .into(),
+            ),
             ..Default::default()
         }),
         ..Default::default()
@@ -1584,12 +1590,15 @@ fn djot_note_preserves_italic_markup_in_html_bibliography() {
             ..Default::default()
         },
         bibliography: Some(BibliographySpec {
-            template: Some(vec![citum_schema::template::TemplateComponent::Variable(
-                TemplateVariable {
-                    variable: SimpleVariable::Note,
-                    ..Default::default()
-                },
-            )]),
+            template: Some(
+                vec![citum_schema::template::TemplateComponent::Variable(
+                    TemplateVariable {
+                        variable: SimpleVariable::Note,
+                        ..Default::default()
+                    },
+                )]
+                .into(),
+            ),
             ..Default::default()
         }),
         ..Default::default()
@@ -1633,14 +1642,17 @@ fn djot_note_sentence_case_does_not_restart_across_markup_boundaries() {
             ..Default::default()
         },
         bibliography: Some(BibliographySpec {
-            template: Some(vec![TemplateComponent::Variable(TemplateVariable {
-                variable: SimpleVariable::Note,
-                rendering: Rendering {
-                    text_case: Some(TextCase::Sentence),
+            template: Some(
+                vec![TemplateComponent::Variable(TemplateVariable {
+                    variable: SimpleVariable::Note,
+                    rendering: Rendering {
+                        text_case: Some(TextCase::Sentence),
+                        ..Default::default()
+                    },
                     ..Default::default()
-                },
-                ..Default::default()
-            })]),
+                })]
+                .into(),
+            ),
             ..Default::default()
         }),
         ..Default::default()
@@ -1797,10 +1809,13 @@ fn given_a_large_library_and_a_small_cited_subset_when_rendering_a_flat_document
                 entry_suffix: Some(".".into()),
                 ..Default::default()
             }),
-            template: Some(vec![
-                citum_schema::tc_contributor!(Author, Long),
-                citum_schema::tc_title!(Primary, prefix = ". "),
-            ]),
+            template: Some(
+                vec![
+                    citum_schema::tc_contributor!(Author, Long),
+                    citum_schema::tc_title!(Primary, prefix = ". "),
+                ]
+                .into(),
+            ),
             ..Default::default()
         }),
         ..Default::default()
@@ -1879,10 +1894,13 @@ fn given_an_uncited_reference_between_two_same_author_cited_entries_when_renderi
                 subsequent_author_substitute: Some("———".to_string()),
                 ..Default::default()
             }),
-            template: Some(vec![
-                citum_schema::tc_contributor!(Author, Long),
-                citum_schema::tc_title!(Primary, prefix = ". "),
-            ]),
+            template: Some(
+                vec![
+                    citum_schema::tc_contributor!(Author, Long),
+                    citum_schema::tc_title!(Primary, prefix = ". "),
+                ]
+                .into(),
+            ),
             ..Default::default()
         }),
         ..Default::default()
@@ -1955,10 +1973,13 @@ fn given_sort_partitioned_sections_and_subsequent_author_substitution_when_rende
                 }),
                 ..Default::default()
             }),
-            template: Some(vec![
-                citum_schema::tc_contributor!(Author, Long),
-                citum_schema::tc_title!(Primary, prefix = ". "),
-            ]),
+            template: Some(
+                vec![
+                    citum_schema::tc_contributor!(Author, Long),
+                    citum_schema::tc_title!(Primary, prefix = ". "),
+                ]
+                .into(),
+            ),
             ..Default::default()
         }),
         ..Default::default()
@@ -2056,10 +2077,13 @@ fn given_groups_enabled_false_with_groups_still_configured_when_rendering_a_docu
                 template: None,
                 disambiguate: None,
             }]),
-            template: Some(vec![
-                citum_schema::tc_contributor!(Author, Long),
-                citum_schema::tc_title!(Primary, prefix = ". "),
-            ]),
+            template: Some(
+                vec![
+                    citum_schema::tc_contributor!(Author, Long),
+                    citum_schema::tc_title!(Primary, prefix = ". "),
+                ]
+                .into(),
+            ),
             ..Default::default()
         }),
         ..Default::default()

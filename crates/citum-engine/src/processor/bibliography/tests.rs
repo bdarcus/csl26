@@ -89,21 +89,24 @@ fn author_date_style() -> Style {
                 subsequent_author_substitute: Some("———".to_string()),
                 ..Default::default()
             }),
-            template: Some(vec![
-                TemplateComponent::Contributor(TemplateContributor {
-                    contributor: ContributorRole::Author.into(),
-                    form: ContributorForm::Long,
-                    ..Default::default()
-                }),
-                TemplateComponent::Title(TemplateTitle {
-                    title: TitleType::Primary,
-                    rendering: Rendering {
-                        prefix: Some(", ".into()),
+            template: Some(
+                vec![
+                    TemplateComponent::Contributor(TemplateContributor {
+                        contributor: ContributorRole::Author.into(),
+                        form: ContributorForm::Long,
                         ..Default::default()
-                    },
-                    ..Default::default()
-                }),
-            ]),
+                    }),
+                    TemplateComponent::Title(TemplateTitle {
+                        title: TitleType::Primary,
+                        rendering: Rendering {
+                            prefix: Some(", ".into()),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    }),
+                ]
+                .into(),
+            ),
             ..Default::default()
         }),
         ..Default::default()
@@ -124,21 +127,24 @@ fn numeric_style() -> Style {
     options.label_mode = Some(citum_schema::options::BibliographyLabelMode::Numeric);
     options.label_wrap = Some(citum_schema::options::BibliographyLabelWrap::Brackets);
     options.label_separator = Some(" ".to_string());
-    bibliography.template = Some(vec![
-        TemplateComponent::Contributor(TemplateContributor {
-            contributor: ContributorRole::Author.into(),
-            form: ContributorForm::Long,
-            ..Default::default()
-        }),
-        TemplateComponent::Title(TemplateTitle {
-            title: TitleType::Primary,
-            rendering: Rendering {
-                prefix: Some(", ".into()),
+    bibliography.template = Some(
+        vec![
+            TemplateComponent::Contributor(TemplateContributor {
+                contributor: ContributorRole::Author.into(),
+                form: ContributorForm::Long,
                 ..Default::default()
-            },
-            ..Default::default()
-        }),
-    ]);
+            }),
+            TemplateComponent::Title(TemplateTitle {
+                title: TitleType::Primary,
+                rendering: Rendering {
+                    prefix: Some(", ".into()),
+                    ..Default::default()
+                },
+                ..Default::default()
+            }),
+        ]
+        .into(),
+    );
     style
 }
 
