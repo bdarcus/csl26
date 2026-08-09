@@ -966,16 +966,19 @@ bibliography:
 fn template_v3_nested_citation_diff_can_use_outer_template() {
     let style = Style {
         citation: Some(CitationSpec {
-            template: Some(vec![
-                TemplateComponent::Contributor(template::TemplateContributor {
-                    contributor: template::ContributorRole::Author.into(),
-                    ..Default::default()
-                }),
-                TemplateComponent::Title(template::TemplateTitle {
-                    title: template::TitleType::Primary,
-                    ..Default::default()
-                }),
-            ]),
+            template: Some(
+                vec![
+                    TemplateComponent::Contributor(template::TemplateContributor {
+                        contributor: template::ContributorRole::Author.into(),
+                        ..Default::default()
+                    }),
+                    TemplateComponent::Title(template::TemplateTitle {
+                        title: template::TitleType::Primary,
+                        ..Default::default()
+                    }),
+                ]
+                .into(),
+            ),
             integral: Some(Box::new(CitationSpec {
                 type_variants: Some(indexmap::IndexMap::from([(
                     TypeSelector::Single("personal_communication".to_string()),
@@ -2044,6 +2047,7 @@ fn contributor_list_resource_validation_reports_authored_field_paths() {
             .bibliography
             .as_mut()
             .and_then(|bibliography| bibliography.template.as_mut())
+            .and_then(template::TemplateVariant::as_template_mut)
             .and_then(|template| template.first_mut())
             .expect("test style should contain a bibliography component");
         let template::TemplateComponent::Contributor(contributor) = component else {
@@ -2299,6 +2303,7 @@ bibliography:
         .bibliography
         .as_ref()
         .and_then(|bib| bib.template.as_ref())
+        .and_then(template::TemplateVariant::as_template)
         .expect("bibliography template should be present");
 
     assert_eq!(template.len(), 2);
@@ -2354,6 +2359,7 @@ bibliography:
         .bibliography
         .as_ref()
         .and_then(|bib| bib.template.as_ref())
+        .and_then(template::TemplateVariant::as_template)
         .expect("bibliography template should be present");
 
     // The marker is never a template component, so inheritance can only carry
@@ -2415,6 +2421,7 @@ bibliography:
         .bibliography
         .as_ref()
         .and_then(|bib| bib.template.as_ref())
+        .and_then(template::TemplateVariant::as_template)
         .expect("bibliography template should be present");
 
     assert_eq!(

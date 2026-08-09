@@ -121,11 +121,13 @@ pub(crate) fn synthesize_citation_rounds(
             style
                 .citation
                 .as_ref()
-                .and_then(|citation| citation.template.clone())
+                .and_then(|citation| citation.template.as_ref())
+                .and_then(citum_schema::TemplateVariant::as_template)
+                .map(<[_]>::to_vec)
         },
         &|style: &Style, template: Template| {
             let mut mutated = style.clone();
-            mutated.citation.as_mut()?.template = Some(template);
+            mutated.citation.as_mut()?.template = Some(template.into());
             Some(mutated)
         },
         &context,

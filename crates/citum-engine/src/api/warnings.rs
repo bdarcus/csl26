@@ -202,7 +202,7 @@ pub fn unknown_enum_warnings(processor: &Processor) -> Vec<Warning> {
     }
     if let Some(bib) = &processor.style.bibliography {
         if let Some(template) = &bib.template {
-            scan_template_for_unknowns(template, "bibliography layout", &mut warnings);
+            scan_template_variant_for_unknowns(template, "bibliography layout", &mut warnings);
         }
         if let Some(type_variants) = &bib.type_variants {
             for variant in type_variants.values() {
@@ -277,7 +277,7 @@ fn scan_citation_spec_for_unknowns(
     warnings: &mut Vec<Warning>,
 ) {
     if let Some(template) = &spec.template {
-        scan_template_for_unknowns(template, location, warnings);
+        scan_template_variant_for_unknowns(template, location, warnings);
     }
     if let Some(type_variants) = &spec.type_variants {
         for variant in type_variants.values() {
@@ -303,6 +303,27 @@ fn scan_citation_spec_for_unknowns(
     }
     if let Some(child) = &spec.ibid {
         scan_citation_spec_for_unknowns(child, &format!("{location} (ibid)"), warnings);
+    }
+}
+
+fn scan_template_variant_for_unknowns(
+    variant: &citum_schema::template::TemplateVariant,
+    location: &str,
+    warnings: &mut Vec<Warning>,
+) {
+    match variant {
+        citum_schema::template::TemplateVariant::Full(template) => {
+            scan_template_for_unknowns(template, location, warnings);
+        }
+        citum_schema::template::TemplateVariant::Diff(diff) => {
+            for add in &diff.add {
+                scan_template_for_unknowns(
+                    std::slice::from_ref(&add.component),
+                    location,
+                    warnings,
+                );
+            }
+        }
     }
 }
 

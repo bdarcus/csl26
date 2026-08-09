@@ -72,7 +72,7 @@ pub(crate) fn engine_validate_variants(
     // constraint — so try_into_resolved() only runs resolve_style_template_variants.
     let probe = Style {
         bibliography: Some(BibliographySpec {
-            template: Some(default_template.to_vec()),
+            template: Some(default_template.to_vec().into()),
             type_variants: Some(variants.clone()),
             ..Default::default()
         }),

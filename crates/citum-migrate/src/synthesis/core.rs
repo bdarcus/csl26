@@ -282,7 +282,7 @@ mod tests {
     fn style_with_citation_template(template: Template) -> Style {
         Style {
             citation: Some(citum_schema::CitationSpec {
-                template: Some(template),
+                template: Some(template.into()),
                 ..Default::default()
             }),
             ..Default::default()
@@ -293,12 +293,14 @@ mod tests {
         style
             .citation
             .as_ref()
-            .and_then(|citation| citation.template.clone())
+            .and_then(|citation| citation.template.as_ref())
+            .and_then(citum_schema::TemplateVariant::as_template)
+            .map(<[_]>::to_vec)
     }
 
     fn with_citation_template(style: &Style, template: Template) -> Option<Style> {
         let mut mutated = style.clone();
-        mutated.citation.as_mut()?.template = Some(template);
+        mutated.citation.as_mut()?.template = Some(template.into());
         Some(mutated)
     }
 

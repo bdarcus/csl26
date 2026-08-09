@@ -667,7 +667,8 @@ fn variants_may_have_list_primary(variants: &citum_schema::template::TemplateVar
 /// forms) declares a merged-list primary contributor component.
 pub(crate) fn citation_may_have_list_primary(spec: &citum_schema::CitationSpec) -> bool {
     spec.template
-        .as_deref()
+        .as_ref()
+        .and_then(citum_schema::template::TemplateVariant::as_template)
         .is_some_and(template_has_list_primary)
         || spec
             .template_ref
@@ -704,7 +705,8 @@ pub(crate) fn citation_may_have_list_primary(spec: &citum_schema::CitationSpec) 
 
 fn bibliography_may_have_list_primary(spec: &citum_schema::BibliographySpec) -> bool {
     spec.template
-        .as_deref()
+        .as_ref()
+        .and_then(citum_schema::template::TemplateVariant::as_template)
         .is_some_and(template_has_list_primary)
         || spec
             .template_ref

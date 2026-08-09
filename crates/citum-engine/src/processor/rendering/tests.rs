@@ -46,23 +46,26 @@ fn grouped_author_date_style() -> Style {
             ..Default::default()
         }),
         citation: Some(CitationSpec {
-            template: Some(vec![
-                TemplateComponent::Contributor(TemplateContributor {
-                    contributor: ContributorRole::Author.into(),
-                    form: ContributorForm::Short,
-                    rendering: Rendering::default(),
-                    ..Default::default()
-                }),
-                TemplateComponent::Date(TemplateDate {
-                    date: citum_schema::template::DateVariable::Issued,
-                    form: DateForm::Year,
-                    rendering: Rendering {
-                        prefix: Some(", ".into()),
+            template: Some(
+                vec![
+                    TemplateComponent::Contributor(TemplateContributor {
+                        contributor: ContributorRole::Author.into(),
+                        form: ContributorForm::Short,
+                        rendering: Rendering::default(),
                         ..Default::default()
-                    },
-                    ..Default::default()
-                }),
-            ]),
+                    }),
+                    TemplateComponent::Date(TemplateDate {
+                        date: citum_schema::template::DateVariable::Issued,
+                        form: DateForm::Year,
+                        rendering: Rendering {
+                            prefix: Some(", ".into()),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    }),
+                ]
+                .into(),
+            ),
             wrap: Some(WrapPunctuation::Parentheses.into()),
             ..Default::default()
         }),
@@ -83,36 +86,39 @@ fn explicit_author_year_group_style() -> Style {
             ..Default::default()
         }),
         citation: Some(CitationSpec {
-            template: Some(vec![
-                TemplateComponent::Group(TemplateGroup {
-                    group: vec![
-                        TemplateComponent::Contributor(TemplateContributor {
-                            contributor: ContributorRole::Author.into(),
-                            form: ContributorForm::Short,
-                            rendering: Rendering::default(),
+            template: Some(
+                vec![
+                    TemplateComponent::Group(TemplateGroup {
+                        group: vec![
+                            TemplateComponent::Contributor(TemplateContributor {
+                                contributor: ContributorRole::Author.into(),
+                                form: ContributorForm::Short,
+                                rendering: Rendering::default(),
+                                ..Default::default()
+                            }),
+                            TemplateComponent::Date(TemplateDate {
+                                date: citum_schema::template::DateVariable::Issued,
+                                form: DateForm::Year,
+                                rendering: Rendering::default(),
+                                ..Default::default()
+                            }),
+                        ],
+                        delimiter: Some(DelimiterPunctuation::Space),
+                        rendering: Rendering::default(),
+                        render_when: None,
+                        custom: None,
+                    }),
+                    TemplateComponent::Variable(TemplateVariable {
+                        variable: SimpleVariable::Locator,
+                        rendering: Rendering {
+                            prefix: Some(", ".into()),
                             ..Default::default()
-                        }),
-                        TemplateComponent::Date(TemplateDate {
-                            date: citum_schema::template::DateVariable::Issued,
-                            form: DateForm::Year,
-                            rendering: Rendering::default(),
-                            ..Default::default()
-                        }),
-                    ],
-                    delimiter: Some(DelimiterPunctuation::Space),
-                    rendering: Rendering::default(),
-                    render_when: None,
-                    custom: None,
-                }),
-                TemplateComponent::Variable(TemplateVariable {
-                    variable: SimpleVariable::Locator,
-                    rendering: Rendering {
-                        prefix: Some(", ".into()),
+                        },
                         ..Default::default()
-                    },
-                    ..Default::default()
-                }),
-            ]),
+                    }),
+                ]
+                .into(),
+            ),
             wrap: Some(WrapPunctuation::Parentheses.into()),
             delimiter: Some("".into()),
             ..Default::default()
@@ -133,33 +139,36 @@ fn explicit_author_year_group_with_locator_delimiter_style() -> Style {
             ..Default::default()
         }),
         citation: Some(CitationSpec {
-            template: Some(vec![
-                TemplateComponent::Group(TemplateGroup {
-                    group: vec![
-                        TemplateComponent::Contributor(TemplateContributor {
-                            contributor: ContributorRole::Author.into(),
-                            form: ContributorForm::Short,
-                            rendering: Rendering::default(),
-                            ..Default::default()
-                        }),
-                        TemplateComponent::Date(TemplateDate {
-                            date: citum_schema::template::DateVariable::Issued,
-                            form: DateForm::Year,
-                            rendering: Rendering::default(),
-                            ..Default::default()
-                        }),
-                    ],
-                    delimiter: Some(DelimiterPunctuation::Space),
-                    rendering: Rendering::default(),
-                    render_when: None,
-                    custom: None,
-                }),
-                TemplateComponent::Variable(TemplateVariable {
-                    variable: SimpleVariable::Locator,
-                    rendering: Rendering::default(),
-                    ..Default::default()
-                }),
-            ]),
+            template: Some(
+                vec![
+                    TemplateComponent::Group(TemplateGroup {
+                        group: vec![
+                            TemplateComponent::Contributor(TemplateContributor {
+                                contributor: ContributorRole::Author.into(),
+                                form: ContributorForm::Short,
+                                rendering: Rendering::default(),
+                                ..Default::default()
+                            }),
+                            TemplateComponent::Date(TemplateDate {
+                                date: citum_schema::template::DateVariable::Issued,
+                                form: DateForm::Year,
+                                rendering: Rendering::default(),
+                                ..Default::default()
+                            }),
+                        ],
+                        delimiter: Some(DelimiterPunctuation::Space),
+                        rendering: Rendering::default(),
+                        render_when: None,
+                        custom: None,
+                    }),
+                    TemplateComponent::Variable(TemplateVariable {
+                        variable: SimpleVariable::Locator,
+                        rendering: Rendering::default(),
+                        ..Default::default()
+                    }),
+                ]
+                .into(),
+            ),
             wrap: Some(WrapPunctuation::Parentheses.into()),
             delimiter: Some(", ".into()),
             ..Default::default()
@@ -187,31 +196,37 @@ fn integral_name_style() -> Style {
         }),
         citation: Some(CitationSpec {
             integral: Some(Box::new(CitationSpec {
-                template: Some(vec![TemplateComponent::Contributor(TemplateContributor {
-                    contributor: ContributorRole::Author.into(),
-                    form: ContributorForm::Long,
-                    rendering: Rendering::default(),
-                    ..Default::default()
-                })]),
+                template: Some(
+                    vec![TemplateComponent::Contributor(TemplateContributor {
+                        contributor: ContributorRole::Author.into(),
+                        form: ContributorForm::Long,
+                        rendering: Rendering::default(),
+                        ..Default::default()
+                    })]
+                    .into(),
+                ),
                 ..Default::default()
             })),
-            template: Some(vec![
-                TemplateComponent::Contributor(TemplateContributor {
-                    contributor: ContributorRole::Author.into(),
-                    form: ContributorForm::Short,
-                    rendering: Rendering::default(),
-                    ..Default::default()
-                }),
-                TemplateComponent::Date(TemplateDate {
-                    date: citum_schema::template::DateVariable::Issued,
-                    form: DateForm::Year,
-                    rendering: Rendering {
-                        wrap: Some(WrapPunctuation::Parentheses.into()),
+            template: Some(
+                vec![
+                    TemplateComponent::Contributor(TemplateContributor {
+                        contributor: ContributorRole::Author.into(),
+                        form: ContributorForm::Short,
+                        rendering: Rendering::default(),
                         ..Default::default()
-                    },
-                    ..Default::default()
-                }),
-            ]),
+                    }),
+                    TemplateComponent::Date(TemplateDate {
+                        date: citum_schema::template::DateVariable::Issued,
+                        form: DateForm::Year,
+                        rendering: Rendering {
+                            wrap: Some(WrapPunctuation::Parentheses.into()),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    }),
+                ]
+                .into(),
+            ),
             ..Default::default()
         }),
         ..Default::default()
@@ -230,23 +245,26 @@ fn legal_case_style() -> Style {
             ..Default::default()
         }),
         citation: Some(CitationSpec {
-            template: Some(vec![
-                TemplateComponent::Title(TemplateTitle {
-                    title: TitleType::Primary,
-                    form: None,
-                    rendering: Rendering::default(),
-                    ..Default::default()
-                }),
-                TemplateComponent::Date(TemplateDate {
-                    date: citum_schema::template::DateVariable::Issued,
-                    form: DateForm::Year,
-                    rendering: Rendering {
-                        prefix: Some(", ".into()),
+            template: Some(
+                vec![
+                    TemplateComponent::Title(TemplateTitle {
+                        title: TitleType::Primary,
+                        form: None,
+                        rendering: Rendering::default(),
                         ..Default::default()
-                    },
-                    ..Default::default()
-                }),
-            ]),
+                    }),
+                    TemplateComponent::Date(TemplateDate {
+                        date: citum_schema::template::DateVariable::Issued,
+                        form: DateForm::Year,
+                        rendering: Rendering {
+                            prefix: Some(", ".into()),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    }),
+                ]
+                .into(),
+            ),
             wrap: Some(WrapPunctuation::Parentheses.into()),
             multi_cite_delimiter: Some("; ".into()),
             ..Default::default()
@@ -848,12 +866,15 @@ fn test_type_specific_rendering() {
         }),
         citation: Some(CitationSpec {
             type_variants: Some(type_variants),
-            template: Some(vec![TemplateComponent::Variable(TemplateVariable {
-                variable: SimpleVariable::Locator,
-                rendering: Rendering::default(),
-                links: None,
-                custom: None,
-            })]),
+            template: Some(
+                vec![TemplateComponent::Variable(TemplateVariable {
+                    variable: SimpleVariable::Locator,
+                    rendering: Rendering::default(),
+                    links: None,
+                    custom: None,
+                })]
+                .into(),
+            ),
             wrap: Some(WrapPunctuation::Parentheses.into()),
             ..Default::default()
         }),
@@ -1031,7 +1052,7 @@ fn test_bibliography_type_specific_rendering() {
         },
         bibliography: Some(BibliographySpec {
             type_variants: Some(type_variants),
-            template: Some(vec![TemplateComponent::Title(TemplateTitle::default())]),
+            template: Some(vec![TemplateComponent::Title(TemplateTitle::default())].into()),
             ..Default::default()
         }),
         ..Default::default()
@@ -1105,7 +1126,7 @@ fn bibliography_style_with_template(template: Vec<TemplateComponent>) -> Style {
             ..Default::default()
         },
         bibliography: Some(citum_schema::BibliographySpec {
-            template: Some(template),
+            template: Some(template.into()),
             ..Default::default()
         }),
         ..Default::default()

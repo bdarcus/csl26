@@ -970,32 +970,38 @@ mod tests {
                 ..Default::default()
             },
             citation: Some(citum_schema::CitationSpec {
-                template: Some(vec![
-                    TemplateComponent::Contributor(TemplateContributor {
-                        contributor: ContributorRole::Author.into(),
-                        form: ContributorForm::Short,
-                        ..Default::default()
-                    }),
-                    TemplateComponent::Date(TemplateDate {
-                        date: DateVariable::Issued,
-                        form: DateForm::Year,
-                        ..Default::default()
-                    }),
-                ]),
+                template: Some(
+                    vec![
+                        TemplateComponent::Contributor(TemplateContributor {
+                            contributor: ContributorRole::Author.into(),
+                            form: ContributorForm::Short,
+                            ..Default::default()
+                        }),
+                        TemplateComponent::Date(TemplateDate {
+                            date: DateVariable::Issued,
+                            form: DateForm::Year,
+                            ..Default::default()
+                        }),
+                    ]
+                    .into(),
+                ),
                 ..Default::default()
             }),
             bibliography: Some(citum_schema::BibliographySpec {
-                template: Some(vec![
-                    TemplateComponent::Contributor(TemplateContributor {
-                        contributor: ContributorRole::Author.into(),
-                        form: ContributorForm::Long,
-                        ..Default::default()
-                    }),
-                    TemplateComponent::Variable(TemplateVariable {
-                        variable: SimpleVariable::Doi,
-                        ..Default::default()
-                    }),
-                ]),
+                template: Some(
+                    vec![
+                        TemplateComponent::Contributor(TemplateContributor {
+                            contributor: ContributorRole::Author.into(),
+                            form: ContributorForm::Long,
+                            ..Default::default()
+                        }),
+                        TemplateComponent::Variable(TemplateVariable {
+                            variable: SimpleVariable::Doi,
+                            ..Default::default()
+                        }),
+                    ]
+                    .into(),
+                ),
                 ..Default::default()
             }),
             ..Default::default()

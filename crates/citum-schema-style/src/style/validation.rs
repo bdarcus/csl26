@@ -459,7 +459,7 @@ impl TemplateResourceBudget {
             validate_substitute_candidates(substitute, &format!("{location}.options.substitute"))?;
         }
         if let Some(template) = &spec.template {
-            self.check_template(template, &format!("{location}.template"), depth)?;
+            self.check_variant(template, &format!("{location}.template"), depth)?;
         }
         if let Some(locales) = &spec.locales {
             self.check_locales(locales, &format!("{location}.locales"), depth)?;
@@ -495,7 +495,7 @@ impl TemplateResourceBudget {
             validate_substitute_candidates(substitute, &format!("{location}.options.substitute"))?;
         }
         if let Some(template) = &spec.template {
-            self.check_template(template, &format!("{location}.template"), depth)?;
+            self.check_variant(template, &format!("{location}.template"), depth)?;
         }
         if let Some(locales) = &spec.locales {
             self.check_locales(locales, &format!("{location}.locales"), depth)?;
@@ -537,7 +537,7 @@ mod security_resource_tests {
     fn validate_resource_limits_rejects_deeply_nested_templates() {
         let style = Style {
             bibliography: Some(BibliographySpec {
-                template: Some(vec![nested_group(MAX_TEMPLATE_NESTING_DEPTH + 1)]),
+                template: Some(vec![nested_group(MAX_TEMPLATE_NESTING_DEPTH + 1)].into()),
                 ..BibliographySpec::default()
             }),
             ..Style::default()
@@ -554,10 +554,9 @@ mod security_resource_tests {
     fn validate_resource_limits_rejects_too_many_components() {
         let style = Style {
             bibliography: Some(BibliographySpec {
-                template: Some(vec![
-                    TemplateComponent::default();
-                    MAX_TEMPLATE_COMPONENTS + 1
-                ]),
+                template: Some(
+                    vec![TemplateComponent::default(); MAX_TEMPLATE_COMPONENTS + 1].into(),
+                ),
                 ..BibliographySpec::default()
             }),
             ..Style::default()

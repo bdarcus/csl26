@@ -55,40 +55,46 @@ fn make_test_bib() -> Bibliography {
 fn make_author_date_style() -> Style {
     Style {
         citation: Some(CitationSpec {
-            template: Some(vec![
-                TemplateComponent::Contributor(TemplateContributor {
-                    contributor: ContributorRole::Author.into(),
-                    form: ContributorForm::Short,
-                    ..Default::default()
-                }),
-                TemplateComponent::Date(TemplateDate {
-                    date: DateVariable::Issued,
-                    form: DateForm::Year,
-                    rendering: Rendering::default(),
-                    ..Default::default()
-                }),
-            ]),
+            template: Some(
+                vec![
+                    TemplateComponent::Contributor(TemplateContributor {
+                        contributor: ContributorRole::Author.into(),
+                        form: ContributorForm::Short,
+                        ..Default::default()
+                    }),
+                    TemplateComponent::Date(TemplateDate {
+                        date: DateVariable::Issued,
+                        form: DateForm::Year,
+                        rendering: Rendering::default(),
+                        ..Default::default()
+                    }),
+                ]
+                .into(),
+            ),
             wrap: Some(WrapPunctuation::Parentheses.into()),
             ..Default::default()
         }),
         bibliography: Some(BibliographySpec {
-            template: Some(vec![
-                TemplateComponent::Contributor(TemplateContributor {
-                    contributor: ContributorRole::Author.into(),
-                    form: ContributorForm::Long,
-                    ..Default::default()
-                }),
-                TemplateComponent::Date(TemplateDate {
-                    date: DateVariable::Issued,
-                    form: DateForm::Year,
-                    rendering: Rendering {
-                        prefix: Some(" (".into()),
-                        suffix: Some(")".into()),
+            template: Some(
+                vec![
+                    TemplateComponent::Contributor(TemplateContributor {
+                        contributor: ContributorRole::Author.into(),
+                        form: ContributorForm::Long,
                         ..Default::default()
-                    },
-                    ..Default::default()
-                }),
-            ]),
+                    }),
+                    TemplateComponent::Date(TemplateDate {
+                        date: DateVariable::Issued,
+                        form: DateForm::Year,
+                        rendering: Rendering {
+                            prefix: Some(" (".into()),
+                            suffix: Some(")".into()),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    }),
+                ]
+                .into(),
+            ),
             ..Default::default()
         }),
         ..Default::default()
@@ -102,54 +108,66 @@ fn make_note_style() -> Style {
             ..Default::default()
         }),
         citation: Some(CitationSpec {
-            template: Some(vec![TemplateComponent::Title(TemplateTitle {
-                title: TitleType::Primary,
-                rendering: Rendering::default(),
-                ..Default::default()
-            })]),
+            template: Some(
+                vec![TemplateComponent::Title(TemplateTitle {
+                    title: TitleType::Primary,
+                    rendering: Rendering::default(),
+                    ..Default::default()
+                })]
+                .into(),
+            ),
             suffix: Some(".".into()),
             subsequent: Some(Box::new(CitationSpec {
-                template: Some(vec![TemplateComponent::Title(TemplateTitle {
-                    title: TitleType::Primary,
-                    rendering: Rendering {
-                        prefix: Some("sub: ".into()),
+                template: Some(
+                    vec![TemplateComponent::Title(TemplateTitle {
+                        title: TitleType::Primary,
+                        rendering: Rendering {
+                            prefix: Some("sub: ".into()),
+                            ..Default::default()
+                        },
                         ..Default::default()
-                    },
-                    ..Default::default()
-                })]),
+                    })]
+                    .into(),
+                ),
                 suffix: Some(".".into()),
                 ..Default::default()
             })),
             ibid: Some(Box::new(CitationSpec {
                 note_start_text_case: Some(NoteStartTextCase::CapitalizeFirst),
-                template: Some(vec![TemplateComponent::Term(TemplateTerm {
-                    term: citum_schema::locale::GeneralTerm::Ibid,
-                    form: None,
-                    gender: None,
-                    rendering: Rendering::default(),
-                    custom: None,
-                })]),
+                template: Some(
+                    vec![TemplateComponent::Term(TemplateTerm {
+                        term: citum_schema::locale::GeneralTerm::Ibid,
+                        form: None,
+                        gender: None,
+                        rendering: Rendering::default(),
+                        custom: None,
+                    })]
+                    .into(),
+                ),
                 suffix: Some(".".into()),
                 ..Default::default()
             })),
             ..Default::default()
         }),
         bibliography: Some(BibliographySpec {
-            template: Some(vec![
-                TemplateComponent::Contributor(TemplateContributor {
-                    contributor: ContributorRole::Author.into(),
-                    form: ContributorForm::Long,
-                    ..Default::default()
-                }),
-                TemplateComponent::Title(TemplateTitle {
-                    title: TitleType::Primary,
-                    rendering: Rendering {
-                        prefix: Some(". ".into()),
+            template: Some(
+                vec![
+                    TemplateComponent::Contributor(TemplateContributor {
+                        contributor: ContributorRole::Author.into(),
+                        form: ContributorForm::Long,
                         ..Default::default()
-                    },
-                    ..Default::default()
-                }),
-            ]),
+                    }),
+                    TemplateComponent::Title(TemplateTitle {
+                        title: TitleType::Primary,
+                        rendering: Rendering {
+                            prefix: Some(". ".into()),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    }),
+                ]
+                .into(),
+            ),
             ..Default::default()
         }),
         ..Default::default()
@@ -179,48 +197,57 @@ fn make_integral_name_style(scope: IntegralNameScope, contexts: IntegralNameCont
             ..Default::default()
         }),
         citation: Some(CitationSpec {
-            template: Some(vec![
-                TemplateComponent::Contributor(TemplateContributor {
-                    contributor: ContributorRole::Author.into(),
-                    form: ContributorForm::Short,
-                    ..Default::default()
-                }),
-                TemplateComponent::Date(TemplateDate {
-                    date: DateVariable::Issued,
-                    form: DateForm::Year,
-                    rendering: Rendering::default(),
-                    ..Default::default()
-                }),
-            ]),
+            template: Some(
+                vec![
+                    TemplateComponent::Contributor(TemplateContributor {
+                        contributor: ContributorRole::Author.into(),
+                        form: ContributorForm::Short,
+                        ..Default::default()
+                    }),
+                    TemplateComponent::Date(TemplateDate {
+                        date: DateVariable::Issued,
+                        form: DateForm::Year,
+                        rendering: Rendering::default(),
+                        ..Default::default()
+                    }),
+                ]
+                .into(),
+            ),
             integral: Some(Box::new(CitationSpec {
-                template: Some(vec![TemplateComponent::Contributor(TemplateContributor {
-                    contributor: ContributorRole::Author.into(),
-                    form: ContributorForm::Long,
-                    ..Default::default()
-                })]),
+                template: Some(
+                    vec![TemplateComponent::Contributor(TemplateContributor {
+                        contributor: ContributorRole::Author.into(),
+                        form: ContributorForm::Long,
+                        ..Default::default()
+                    })]
+                    .into(),
+                ),
                 ..Default::default()
             })),
             wrap: Some(WrapPunctuation::Parentheses.into()),
             ..Default::default()
         }),
         bibliography: Some(BibliographySpec {
-            template: Some(vec![
-                TemplateComponent::Contributor(TemplateContributor {
-                    contributor: ContributorRole::Author.into(),
-                    form: ContributorForm::Long,
-                    ..Default::default()
-                }),
-                TemplateComponent::Date(TemplateDate {
-                    date: DateVariable::Issued,
-                    form: DateForm::Year,
-                    rendering: Rendering {
-                        prefix: Some(" (".into()),
-                        suffix: Some(")".into()),
+            template: Some(
+                vec![
+                    TemplateComponent::Contributor(TemplateContributor {
+                        contributor: ContributorRole::Author.into(),
+                        form: ContributorForm::Long,
                         ..Default::default()
-                    },
-                    ..Default::default()
-                }),
-            ]),
+                    }),
+                    TemplateComponent::Date(TemplateDate {
+                        date: DateVariable::Issued,
+                        form: DateForm::Year,
+                        rendering: Rendering {
+                            prefix: Some(" (".into()),
+                            suffix: Some(")".into()),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    }),
+                ]
+                .into(),
+            ),
             ..Default::default()
         }),
         ..Default::default()
@@ -505,42 +532,48 @@ fn test_repro_djot_parsing() {
 fn test_repro_djot_rendering() {
     let style = Style {
         citation: Some(CitationSpec {
-            template: Some(vec![
-                TemplateComponent::Contributor(TemplateContributor {
-                    contributor: ContributorRole::Author.into(),
-                    form: ContributorForm::Short,
-                    ..Default::default()
-                }),
-                TemplateComponent::Date(TemplateDate {
-                    date: DateVariable::Issued,
-                    form: DateForm::Year,
-                    ..Default::default()
-                }),
-            ]),
-            delimiter: Some(", ".into()),
-            wrap: Some(WrapPunctuation::Parentheses.into()),
-            integral: Some(Box::new(citum_schema::CitationSpec {
-                template: Some(vec![
+            template: Some(
+                vec![
                     TemplateComponent::Contributor(TemplateContributor {
                         contributor: ContributorRole::Author.into(),
                         form: ContributorForm::Short,
                         ..Default::default()
                     }),
-                    TemplateComponent::Group(TemplateGroup {
-                        group: vec![TemplateComponent::Date(TemplateDate {
-                            date: DateVariable::Issued,
-                            form: DateForm::Year,
-                            ..Default::default()
-                        })],
-                        rendering: Rendering {
-                            wrap: Some(WrapPunctuation::Parentheses.into()),
-                            ..Default::default()
-                        },
-                        delimiter: None,
-                        render_when: None,
-                        custom: None,
+                    TemplateComponent::Date(TemplateDate {
+                        date: DateVariable::Issued,
+                        form: DateForm::Year,
+                        ..Default::default()
                     }),
-                ]),
+                ]
+                .into(),
+            ),
+            delimiter: Some(", ".into()),
+            wrap: Some(WrapPunctuation::Parentheses.into()),
+            integral: Some(Box::new(citum_schema::CitationSpec {
+                template: Some(
+                    vec![
+                        TemplateComponent::Contributor(TemplateContributor {
+                            contributor: ContributorRole::Author.into(),
+                            form: ContributorForm::Short,
+                            ..Default::default()
+                        }),
+                        TemplateComponent::Group(TemplateGroup {
+                            group: vec![TemplateComponent::Date(TemplateDate {
+                                date: DateVariable::Issued,
+                                form: DateForm::Year,
+                                ..Default::default()
+                            })],
+                            rendering: Rendering {
+                                wrap: Some(WrapPunctuation::Parentheses.into()),
+                                ..Default::default()
+                            },
+                            delimiter: None,
+                            render_when: None,
+                            custom: None,
+                        }),
+                    ]
+                    .into(),
+                ),
                 delimiter: Some(" ".into()),
                 ..Default::default()
             })),

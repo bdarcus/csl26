@@ -131,7 +131,7 @@ fn test_style(path: &Path) -> TestResult {
             template: if output.bibliography.is_empty() {
                 None
             } else {
-                Some(output.bibliography)
+                Some(output.bibliography.into())
             },
             ..Default::default()
         }),
@@ -139,7 +139,7 @@ fn test_style(path: &Path) -> TestResult {
             template: if output.citation.is_empty() {
                 None
             } else {
-                Some(output.citation)
+                Some(output.citation.into())
             },
             ..Default::default()
         }),

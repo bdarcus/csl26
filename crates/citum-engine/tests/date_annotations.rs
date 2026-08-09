@@ -143,19 +143,22 @@ fn style_with_duplicated_issued_date() -> Style {
                 }),
                 ..Default::default()
             }),
-            template: Some(vec![
-                TemplateComponent::Date(TemplateDate {
-                    date: DateVariable::Issued,
-                    form: DateForm::Year,
-                    ..Default::default()
-                }),
-                TemplateComponent::Date(TemplateDate {
-                    date: DateVariable::Issued,
-                    form: DateForm::Year,
-                    suppress_note: Some(true),
-                    ..Default::default()
-                }),
-            ]),
+            template: Some(
+                vec![
+                    TemplateComponent::Date(TemplateDate {
+                        date: DateVariable::Issued,
+                        form: DateForm::Year,
+                        ..Default::default()
+                    }),
+                    TemplateComponent::Date(TemplateDate {
+                        date: DateVariable::Issued,
+                        form: DateForm::Year,
+                        suppress_note: Some(true),
+                        ..Default::default()
+                    }),
+                ]
+                .into(),
+            ),
             ..Default::default()
         }),
         ..Default::default()

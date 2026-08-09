@@ -102,11 +102,11 @@ fn style_with_bibliography_term_locale_item() -> Style {
                 }),
                 ..Default::default()
             }),
-            template: Some(term_locale_probe_template()),
+            template: Some(term_locale_probe_template().into()),
             ..Default::default()
         }),
         citation: Some(CitationSpec {
-            template: Some(term_locale_probe_template()),
+            template: Some(term_locale_probe_template().into()),
             ..Default::default()
         }),
         ..Default::default()

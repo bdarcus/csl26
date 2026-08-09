@@ -1,6 +1,6 @@
 # Style Template Expressiveness and Parity Coverage Specification
 
-**Status:** Draft
+**Status:** Active
 **Version:** 1.0
 **Date:** 2026-08-09
 **Supersedes:** (none)
@@ -39,8 +39,7 @@ In scope:
 Out of scope:
 
 - adding a general macro or expression language;
-- implementing the fallback diff or coverage tooling in this documentation
-  change;
+- implementing the coverage tooling tracked by `csl26-02yg` in this change;
 - changing a style, converter, rendering engine, fixture, or workflow control
   surface;
 - committing the pilot packet or individual model review records;
@@ -326,7 +325,7 @@ manifest, trace, join, and parity-ratchet path.
       denominators are defined independently.
 - [x] The pilot findings are separated into facts and inferences without
       adopting the reported totals as a baseline.
-- [ ] `csl26-4xg9` implements fallback diffs and passes citation and
+- [x] `csl26-4xg9` implements fallback diffs and passes citation and
       bibliography conformance tests.
 - [ ] `csl26-02yg` implements the manifest, trace or conformance evidence,
       stable joins, complete output, and byte-regeneration gate.
@@ -335,6 +334,8 @@ manifest, trace, join, and parity-ratchet path.
 
 ## Changelog
 
+- 2026-08-09: Activated the fallback-template diff contract with schema,
+  resolver, and citation/bibliography conformance coverage.
 - 2026-08-09: Initial Draft. Adjudicated the shortened-notes pilot, narrowed
   the fallback design to the existing `template` field, and split coverage
   disposition from comparison eligibility.

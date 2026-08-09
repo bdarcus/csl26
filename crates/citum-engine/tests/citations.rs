@@ -83,10 +83,13 @@ fn build_title_year_citation_style(sort: Vec<GroupSortKey>) -> Style {
                 ..Default::default()
             }),
             sort: Some(GroupSortEntry::Explicit(GroupSort { template: sort })),
-            template: Some(vec![
-                citum_schema::tc_title!(Primary),
-                citum_schema::tc_date!(Issued, Year),
-            ]),
+            template: Some(
+                vec![
+                    citum_schema::tc_title!(Primary),
+                    citum_schema::tc_date!(Issued, Year),
+                ]
+                .into(),
+            ),
             delimiter: Some(" ".into()),
             multi_cite_delimiter: Some("; ".into()),
             ..Default::default()
@@ -114,17 +117,20 @@ fn build_integral_name_style() -> Style {
         }),
         citation: Some(CitationSpec {
             integral: Some(Box::new(CitationSpec {
-                template: Some(vec![citum_schema::tc_contributor!(Author, Long)]),
+                template: Some(vec![citum_schema::tc_contributor!(Author, Long)].into()),
                 ..Default::default()
             })),
-            template: Some(vec![
-                citum_schema::tc_contributor!(Author, Short),
-                citum_schema::tc_date!(
-                    Issued,
-                    Year,
-                    wrap = citum_schema::template::WrapPunctuation::Parentheses
-                ),
-            ]),
+            template: Some(
+                vec![
+                    citum_schema::tc_contributor!(Author, Short),
+                    citum_schema::tc_date!(
+                        Issued,
+                        Year,
+                        wrap = citum_schema::template::WrapPunctuation::Parentheses
+                    ),
+                ]
+                .into(),
+            ),
             ..Default::default()
         }),
         ..Default::default()
@@ -249,7 +255,7 @@ fn two_names_citation_never_uses_delimiter_even_when_always_is_declared() {
             ..Default::default()
         }),
         citation: Some(CitationSpec {
-            template: Some(vec![citum_schema::tc_contributor!(Author, Long)]),
+            template: Some(vec![citum_schema::tc_contributor!(Author, Long)].into()),
             ..Default::default()
         }),
         ..Default::default()
@@ -304,7 +310,7 @@ fn substitute_title_style(title_quote: Option<SubstituteTitleQuoteMode>) -> Styl
             ..Default::default()
         }),
         citation: Some(CitationSpec {
-            template: Some(vec![citum_schema::tc_contributor!(Author, Long)]),
+            template: Some(vec![citum_schema::tc_contributor!(Author, Long)].into()),
             ..Default::default()
         }),
         ..Default::default()
@@ -500,14 +506,17 @@ fn disambiguation_two_level_author_collisions_get_distinct_suffixes() {
             .citation
             .as_ref()
             .and_then(|spec| spec.sort.clone()),
-        template: Some(vec![
-            citum_schema::tc_contributor!(Author, Short),
-            citum_schema::tc_date!(
-                Issued,
-                Year,
-                wrap = citum_schema::template::WrapPunctuation::Parentheses
-            ),
-        ]),
+        template: Some(
+            vec![
+                citum_schema::tc_contributor!(Author, Short),
+                citum_schema::tc_date!(
+                    Issued,
+                    Year,
+                    wrap = citum_schema::template::WrapPunctuation::Parentheses
+                ),
+            ]
+            .into(),
+        ),
         delimiter: Some(" ".into()),
         multi_cite_delimiter: Some("; ".into()),
         ..Default::default()
@@ -1042,14 +1051,17 @@ fn subsequent_et_al_thresholds_shorten_the_repeat_citation() {
             ..Default::default()
         }),
         citation: Some(CitationSpec {
-            template: Some(vec![
-                citum_schema::tc_contributor!(Author, Short),
-                citum_schema::tc_date!(
-                    Issued,
-                    Year,
-                    wrap = citum_schema::template::WrapPunctuation::Parentheses
-                ),
-            ]),
+            template: Some(
+                vec![
+                    citum_schema::tc_contributor!(Author, Short),
+                    citum_schema::tc_date!(
+                        Issued,
+                        Year,
+                        wrap = citum_schema::template::WrapPunctuation::Parentheses
+                    ),
+                ]
+                .into(),
+            ),
             multi_cite_delimiter: Some("; ".into()),
             ..Default::default()
         }),
@@ -1172,7 +1184,7 @@ fn citation_scoped_contributor_shorten_applies_without_component_override() {
                 }),
                 ..Default::default()
             }),
-            template: Some(vec![citum_schema::tc_contributor!(Author, Long)]),
+            template: Some(vec![citum_schema::tc_contributor!(Author, Long)].into()),
             ..Default::default()
         }),
         ..Default::default()
@@ -1874,9 +1886,9 @@ fn note_styles_without_ibid_overrides_fall_back_to_subsequent() {
             ..Default::default()
         }),
         citation: Some(CitationSpec {
-            template: Some(vec![citum_schema::tc_contributor!(Author, Long)]),
+            template: Some(vec![citum_schema::tc_contributor!(Author, Long)].into()),
             subsequent: Some(Box::new(CitationSpec {
-                template: Some(vec![citum_schema::tc_contributor!(Author, Short)]),
+                template: Some(vec![citum_schema::tc_contributor!(Author, Short)].into()),
                 ..Default::default()
             })),
             ..Default::default()
@@ -2699,22 +2711,25 @@ fn test_personal_communication_citation_rendering_is_style_driven() {
             ..Default::default()
         },
         citation: Some(CitationSpec {
-            template: Some(vec![
-                citum_schema::template::TemplateComponent::Contributor(
-                    citum_schema::template::TemplateContributor {
-                        contributor: citum_schema::template::ContributorRole::Author.into(),
-                        form: citum_schema::template::ContributorForm::Long,
-                        name_order: Some(citum_schema::template::NameOrder::GivenFirst),
-                        rendering: citum_schema::template::Rendering {
-                            name_form: Some(NameForm::Initials),
+            template: Some(
+                vec![
+                    citum_schema::template::TemplateComponent::Contributor(
+                        citum_schema::template::TemplateContributor {
+                            contributor: citum_schema::template::ContributorRole::Author.into(),
+                            form: citum_schema::template::ContributorForm::Long,
+                            name_order: Some(citum_schema::template::NameOrder::GivenFirst),
+                            rendering: citum_schema::template::Rendering {
+                                name_form: Some(NameForm::Initials),
+                                ..Default::default()
+                            },
                             ..Default::default()
                         },
-                        ..Default::default()
-                    },
-                ),
-                citum_schema::tc_term!(PersonalCommunication),
-                citum_schema::tc_date!(Issued, Full),
-            ]),
+                    ),
+                    citum_schema::tc_term!(PersonalCommunication),
+                    citum_schema::tc_date!(Issued, Full),
+                ]
+                .into(),
+            ),
             delimiter: Some(", ".into()),
             wrap: Some(citum_schema::template::WrapPunctuation::Parentheses.into()),
             ..Default::default()
@@ -3044,7 +3059,7 @@ fn role_label_defaults_bundle_never_fires_in_citation_context() {
                 label_mode: Some(CitationLabelMode::None),
                 ..Default::default()
             }),
-            template: Some(vec![citum_schema::tc_contributor!(Editor, Long)]),
+            template: Some(vec![citum_schema::tc_contributor!(Editor, Long)].into()),
             ..Default::default()
         }),
         ..Default::default()
@@ -3093,7 +3108,7 @@ fn leading_non_author_contributor_renders_once_in_grouped_citation() {
             ..Default::default()
         },
         citation: Some(CitationSpec {
-            template: Some(vec![citum_schema::tc_contributor!(Translator, Long)]),
+            template: Some(vec![citum_schema::tc_contributor!(Translator, Long)].into()),
             ..Default::default()
         }),
         ..Default::default()
@@ -3187,19 +3202,22 @@ fn given_a_tied_bibliography_sort_when_citing_then_year_suffixes_follow_registra
             ..Default::default()
         }),
         citation: Some(CitationSpec {
-            template: Some(vec![
-                citum_schema::tc_contributor!(Author, Short),
-                citum_schema::tc_date!(
-                    Issued,
-                    Year,
-                    wrap = citum_schema::template::WrapPunctuation::Parentheses
-                ),
-            ]),
+            template: Some(
+                vec![
+                    citum_schema::tc_contributor!(Author, Short),
+                    citum_schema::tc_date!(
+                        Issued,
+                        Year,
+                        wrap = citum_schema::template::WrapPunctuation::Parentheses
+                    ),
+                ]
+                .into(),
+            ),
             ..Default::default()
         }),
         bibliography: Some(citum_schema::BibliographySpec {
             sort: Some(bibliography_sort),
-            template: Some(vec![citum_schema::tc_title!(Primary)]),
+            template: Some(vec![citum_schema::tc_title!(Primary)].into()),
             ..Default::default()
         }),
         ..Default::default()

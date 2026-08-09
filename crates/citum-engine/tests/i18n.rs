@@ -378,10 +378,13 @@ fn build_ml_style(name_mode: MultilingualMode, preferred_script: Option<String>)
             ..Default::default()
         }),
         citation: Some(CitationSpec {
-            template: Some(vec![
-                citum_schema::tc_contributor!(Author, Short),
-                citum_schema::tc_date!(Issued, Year),
-            ]),
+            template: Some(
+                vec![
+                    citum_schema::tc_contributor!(Author, Short),
+                    citum_schema::tc_date!(Issued, Year),
+                ]
+                .into(),
+            ),
             delimiter: Some(", ".into()),
             ..Default::default()
         }),
@@ -415,37 +418,40 @@ fn make_german_translator_role_style() -> Style {
             ..Default::default()
         }),
         bibliography: Some(BibliographySpec {
-            template: Some(vec![
-                citum_schema::template::TemplateComponent::Contributor(TemplateContributor {
-                    contributor: ContributorRole::Author.into(),
-                    form: ContributorForm::Long,
-                    ..Default::default()
-                }),
-                citum_schema::template::TemplateComponent::Date(TemplateDate {
-                    date: citum_schema::template::DateVariable::Issued,
-                    form: DateForm::Year,
-                    rendering: Rendering {
-                        suffix: Some(". ".into()),
+            template: Some(
+                vec![
+                    citum_schema::template::TemplateComponent::Contributor(TemplateContributor {
+                        contributor: ContributorRole::Author.into(),
+                        form: ContributorForm::Long,
                         ..Default::default()
-                    },
-                    ..Default::default()
-                }),
-                citum_schema::template::TemplateComponent::Title(TemplateTitle {
-                    title: TitleType::Primary,
-                    rendering: Rendering {
-                        emph: Some(true),
-                        suffix: Some(". ".into()),
+                    }),
+                    citum_schema::template::TemplateComponent::Date(TemplateDate {
+                        date: citum_schema::template::DateVariable::Issued,
+                        form: DateForm::Year,
+                        rendering: Rendering {
+                            suffix: Some(". ".into()),
+                            ..Default::default()
+                        },
                         ..Default::default()
-                    },
-                    ..Default::default()
-                }),
-                citum_schema::template::TemplateComponent::Contributor(TemplateContributor {
-                    contributor: ContributorRole::Translator.into(),
-                    form: ContributorForm::Long,
-                    name_order: Some(NameOrder::GivenFirst),
-                    ..Default::default()
-                }),
-            ]),
+                    }),
+                    citum_schema::template::TemplateComponent::Title(TemplateTitle {
+                        title: TitleType::Primary,
+                        rendering: Rendering {
+                            emph: Some(true),
+                            suffix: Some(". ".into()),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    }),
+                    citum_schema::template::TemplateComponent::Contributor(TemplateContributor {
+                        contributor: ContributorRole::Translator.into(),
+                        form: ContributorForm::Long,
+                        name_order: Some(NameOrder::GivenFirst),
+                        ..Default::default()
+                    }),
+                ]
+                .into(),
+            ),
             ..Default::default()
         }),
         ..Default::default()
@@ -975,7 +981,7 @@ fn given_translated_numeric_integral_citations_when_rendered_then_the_translated
     let mut style = build_ml_style(MultilingualMode::Translated, None);
     style.options.as_mut().unwrap().processing = Some(Processing::Numeric);
     style.citation.as_mut().unwrap().template =
-        Some(vec![citum_schema::tc_contributor!(Author, Short)]);
+        Some(vec![citum_schema::tc_contributor!(Author, Short)].into());
 
     let mut bib = indexmap::IndexMap::new();
     let mut translations = HashMap::new();
@@ -1095,7 +1101,7 @@ fn given_localized_citation_templates_when_the_item_language_matches_then_the_lo
             ..Default::default()
         },
         citation: Some(CitationSpec {
-            template: Some(vec![citum_schema::tc_variable!(Note)]),
+            template: Some(vec![citum_schema::tc_variable!(Note)].into()),
             locales: Some(vec![
                 LocalizedTemplateSpec {
                     locale: Some(vec!["de".to_string()]),
@@ -1218,7 +1224,7 @@ fn given_localized_bibliography_templates_when_only_the_multilingual_title_has_a
             ..Default::default()
         },
         bibliography: Some(BibliographySpec {
-            template: Some(vec![citum_schema::tc_variable!(Note)]),
+            template: Some(vec![citum_schema::tc_variable!(Note)].into()),
             locales: Some(vec![
                 LocalizedTemplateSpec {
                     locale: Some(vec!["ja".to_string()]),
@@ -1325,10 +1331,10 @@ fn given_mixed_language_titles_when_rendering_the_bibliography_then_field_langua
             ..Default::default()
         }),
         bibliography: Some(BibliographySpec {
-            template: Some(vec![
+            template: Some(citum_schema::TemplateVariant::Full(vec![
                 citum_schema::tc_title!(Primary),
                 citum_schema::tc_title!(ParentMonograph),
-            ]),
+            ])),
             ..Default::default()
         }),
         ..Default::default()
@@ -1409,20 +1415,23 @@ fn given_apa_multilingual_title_mode_when_rendering_a_japanese_article_then_titl
             ..Default::default()
         }),
         bibliography: Some(BibliographySpec {
-            template: Some(vec![
-                citum_schema::template::TemplateComponent::Title(TemplateTitle {
-                    title: TitleType::Primary,
-                    rendering: Rendering {
-                        suffix: Some(". ".into()),
+            template: Some(
+                vec![
+                    citum_schema::template::TemplateComponent::Title(TemplateTitle {
+                        title: TitleType::Primary,
+                        rendering: Rendering {
+                            suffix: Some(". ".into()),
+                            ..Default::default()
+                        },
                         ..Default::default()
-                    },
-                    ..Default::default()
-                }),
-                citum_schema::template::TemplateComponent::Title(TemplateTitle {
-                    title: TitleType::ParentSerial,
-                    ..Default::default()
-                }),
-            ]),
+                    }),
+                    citum_schema::template::TemplateComponent::Title(TemplateTitle {
+                        title: TitleType::ParentSerial,
+                        ..Default::default()
+                    }),
+                ]
+                .into(),
+            ),
             ..Default::default()
         }),
         ..Default::default()
@@ -1517,16 +1526,19 @@ fn chicago_pattern_renders_three_way_japanese_title() {
             ..Default::default()
         }),
         bibliography: Some(BibliographySpec {
-            template: Some(vec![citum_schema::template::TemplateComponent::Title(
-                TemplateTitle {
-                    title: TitleType::Primary,
-                    rendering: Rendering {
-                        suffix: Some(". ".into()),
+            template: Some(
+                vec![citum_schema::template::TemplateComponent::Title(
+                    TemplateTitle {
+                        title: TitleType::Primary,
+                        rendering: Rendering {
+                            suffix: Some(". ".into()),
+                            ..Default::default()
+                        },
                         ..Default::default()
                     },
-                    ..Default::default()
-                },
-            )]),
+                )]
+                .into(),
+            ),
             ..Default::default()
         }),
         ..Default::default()
@@ -1598,16 +1610,19 @@ fn mla_pattern_renders_original_and_translation_chinese_title() {
             ..Default::default()
         }),
         bibliography: Some(BibliographySpec {
-            template: Some(vec![citum_schema::template::TemplateComponent::Title(
-                TemplateTitle {
-                    title: TitleType::Primary,
-                    rendering: Rendering {
-                        suffix: Some(". ".into()),
+            template: Some(
+                vec![citum_schema::template::TemplateComponent::Title(
+                    TemplateTitle {
+                        title: TitleType::Primary,
+                        rendering: Rendering {
+                            suffix: Some(". ".into()),
+                            ..Default::default()
+                        },
                         ..Default::default()
                     },
-                    ..Default::default()
-                },
-            )]),
+                )]
+                .into(),
+            ),
             ..Default::default()
         }),
         ..Default::default()

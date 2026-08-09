@@ -237,8 +237,14 @@ fn load_hand_authored_sections(path: &Path) -> Option<HandAuthoredTemplates> {
     let style: citum_schema::Style = serde_yaml::from_str(&text).ok()?;
     Some(HandAuthoredTemplates {
         path: path.to_path_buf(),
-        bibliography: style.bibliography.and_then(|b| b.template),
-        citation: style.citation.and_then(|c| c.template),
+        bibliography: style
+            .bibliography
+            .and_then(|b| b.template)
+            .and_then(citum_schema::TemplateVariant::into_template),
+        citation: style
+            .citation
+            .and_then(|c| c.template)
+            .and_then(citum_schema::TemplateVariant::into_template),
     })
 }
 

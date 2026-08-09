@@ -52,7 +52,7 @@ fn build_name_form_test_style(
             ..Default::default()
         }),
         citation: Some(CitationSpec {
-            template: Some(vec![citum_schema::tc_contributor!(Author, Long)]),
+            template: Some(vec![citum_schema::tc_contributor!(Author, Long)].into()),
             ..Default::default()
         }),
         ..Default::default()

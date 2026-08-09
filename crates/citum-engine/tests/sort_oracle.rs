@@ -122,7 +122,7 @@ fn test_numeric_sort_by_citation_order() {
                     label_separator: Some(". ".to_string()),
                     ..Default::default()
                 }),
-                template: Some(vec![citum_schema::tc_contributor!(Author, Long)]),
+                template: Some(vec![citum_schema::tc_contributor!(Author, Long)].into()),
                 ..Default::default()
             }),
             ..Default::default()

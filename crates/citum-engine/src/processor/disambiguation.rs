@@ -1274,21 +1274,27 @@ mod tests {
             },
             options: Some(config),
             citation: Some(CitationSpec {
-                template: Some(vec![
-                    citum_schema::tc_contributor!(Author, Short),
-                    citum_schema::tc_date!(Issued, Year, prefix = ", "),
-                ]),
+                template: Some(
+                    vec![
+                        citum_schema::tc_contributor!(Author, Short),
+                        citum_schema::tc_date!(Issued, Year, prefix = ", "),
+                    ]
+                    .into(),
+                ),
                 wrap: Some(WrapPunctuation::Parentheses.into()),
                 ..Default::default()
             }),
             bibliography: Some(BibliographySpec {
                 sort: bibliography_sort.map(citum_schema::grouping::GroupSortEntry::Explicit),
-                template: Some(vec![TemplateComponent::Title(
-                    citum_schema::template::TemplateTitle {
-                        title: citum_schema::template::TitleType::Primary,
-                        ..Default::default()
-                    },
-                )]),
+                template: Some(
+                    vec![TemplateComponent::Title(
+                        citum_schema::template::TemplateTitle {
+                            title: citum_schema::template::TitleType::Primary,
+                            ..Default::default()
+                        },
+                    )]
+                    .into(),
+                ),
                 ..Default::default()
             }),
             ..Default::default()

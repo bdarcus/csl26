@@ -220,7 +220,7 @@ impl Processor {
         if let Some(group_template) = &group.template {
             let mut local_style = self.style.clone();
             if let Some(bibliography) = local_style.bibliography.as_mut() {
-                bibliography.template = Some(group_template.clone());
+                bibliography.template = Some(group_template.clone().into());
             }
             Cow::Owned(local_style)
         } else {

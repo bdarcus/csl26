@@ -44,57 +44,63 @@ fn make_style() -> Style {
         }),
         citation: Some(CitationSpec {
             options: None,
-            template: Some(vec![
-                TemplateComponent::Contributor(TemplateContributor {
-                    contributor: ContributorRole::Author.into(),
-                    form: ContributorForm::Short,
-                    name_order: None,
-                    delimiter: None,
-                    rendering: Rendering::default(),
-                    ..Default::default()
-                }),
-                TemplateComponent::Date(TemplateDate {
-                    date: TDateVar::Issued,
-                    form: DateForm::Year,
-                    rendering: Rendering::default(),
-                    ..Default::default()
-                }),
-            ]),
+            template: Some(
+                vec![
+                    TemplateComponent::Contributor(TemplateContributor {
+                        contributor: ContributorRole::Author.into(),
+                        form: ContributorForm::Short,
+                        name_order: None,
+                        delimiter: None,
+                        rendering: Rendering::default(),
+                        ..Default::default()
+                    }),
+                    TemplateComponent::Date(TemplateDate {
+                        date: TDateVar::Issued,
+                        form: DateForm::Year,
+                        rendering: Rendering::default(),
+                        ..Default::default()
+                    }),
+                ]
+                .into(),
+            ),
             wrap: Some(WrapPunctuation::Parentheses.into()),
             ..Default::default()
         }),
         bibliography: Some(BibliographySpec {
             options: None,
-            template: Some(vec![
-                TemplateComponent::Contributor(TemplateContributor {
-                    contributor: ContributorRole::Author.into(),
-                    form: ContributorForm::Long,
-                    name_order: None,
-                    delimiter: None,
-                    and: None,
-                    rendering: Default::default(),
-                    ..Default::default()
-                }),
-                TemplateComponent::Date(TemplateDate {
-                    date: TDateVar::Issued,
-                    form: DateForm::Year,
-                    rendering: Rendering {
-                        wrap: Some(WrapPunctuation::Parentheses.into()),
+            template: Some(
+                vec![
+                    TemplateComponent::Contributor(TemplateContributor {
+                        contributor: ContributorRole::Author.into(),
+                        form: ContributorForm::Long,
+                        name_order: None,
+                        delimiter: None,
+                        and: None,
+                        rendering: Default::default(),
                         ..Default::default()
-                    },
-                    ..Default::default()
-                }),
-                TemplateComponent::Title(TemplateTitle {
-                    title: TitleType::Primary,
-                    form: None,
-                    rendering: Rendering {
-                        prefix: Some(". ".into()),
-                        emph: Some(true),
+                    }),
+                    TemplateComponent::Date(TemplateDate {
+                        date: TDateVar::Issued,
+                        form: DateForm::Year,
+                        rendering: Rendering {
+                            wrap: Some(WrapPunctuation::Parentheses.into()),
+                            ..Default::default()
+                        },
                         ..Default::default()
-                    },
-                    ..Default::default()
-                }),
-            ]),
+                    }),
+                    TemplateComponent::Title(TemplateTitle {
+                        title: TitleType::Primary,
+                        form: None,
+                        rendering: Rendering {
+                            prefix: Some(". ".into()),
+                            emph: Some(true),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    }),
+                ]
+                .into(),
+            ),
             ..Default::default()
         }),
         templates: None,
@@ -193,7 +199,7 @@ fn render_consumption_template(template: Vec<TemplateComponent>) -> String {
             ..Default::default()
         },
         bibliography: Some(BibliographySpec {
-            template: Some(template),
+            template: Some(template.into()),
             ..Default::default()
         }),
         ..Default::default()
@@ -326,26 +332,29 @@ fn make_grouped_compound_selection_style() -> Style {
                 }),
                 ..Default::default()
             }),
-            template: Some(vec![
-                TemplateComponent::Contributor(TemplateContributor {
-                    contributor: ContributorRole::Author.into(),
-                    form: ContributorForm::Long,
-                    name_order: None,
-                    delimiter: None,
-                    and: None,
-                    rendering: Rendering::default(),
-                    ..Default::default()
-                }),
-                TemplateComponent::Title(TemplateTitle {
-                    title: TitleType::Primary,
-                    form: None,
-                    rendering: Rendering {
-                        prefix: Some(". ".into()),
+            template: Some(
+                vec![
+                    TemplateComponent::Contributor(TemplateContributor {
+                        contributor: ContributorRole::Author.into(),
+                        form: ContributorForm::Long,
+                        name_order: None,
+                        delimiter: None,
+                        and: None,
+                        rendering: Rendering::default(),
                         ..Default::default()
-                    },
-                    ..Default::default()
-                }),
-            ]),
+                    }),
+                    TemplateComponent::Title(TemplateTitle {
+                        title: TitleType::Primary,
+                        form: None,
+                        rendering: Rendering {
+                            prefix: Some(". ".into()),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    }),
+                ]
+                .into(),
+            ),
             groups: Some(vec![make_selected_bibliography_group()]),
             ..Default::default()
         }),
@@ -662,18 +671,21 @@ fn test_process_citations_batch_api() {
 fn test_process_citation_treats_trimmed_none_delimiter_as_empty() {
     let mut style = make_style();
     style.citation = Some(CitationSpec {
-        template: Some(vec![
-            TemplateComponent::Contributor(TemplateContributor {
-                contributor: ContributorRole::Author.into(),
-                form: ContributorForm::Short,
-                ..Default::default()
-            }),
-            TemplateComponent::Date(TemplateDate {
-                date: TDateVar::Issued,
-                form: DateForm::Year,
-                ..Default::default()
-            }),
-        ]),
+        template: Some(
+            vec![
+                TemplateComponent::Contributor(TemplateContributor {
+                    contributor: ContributorRole::Author.into(),
+                    form: ContributorForm::Short,
+                    ..Default::default()
+                }),
+                TemplateComponent::Date(TemplateDate {
+                    date: TDateVar::Issued,
+                    form: DateForm::Year,
+                    ..Default::default()
+                }),
+            ]
+            .into(),
+        ),
         wrap: Some(WrapPunctuation::Parentheses.into()),
         delimiter: Some(DelimiterPunctuation::from_csl_string(" none ")),
         ..Default::default()
@@ -702,24 +714,29 @@ fn test_process_citation_treats_trimmed_none_delimiter_as_empty() {
 fn test_citation_locator_label_renders_term() {
     let mut style = make_style();
     style.citation = Some(citum_schema::CitationSpec {
-        template: Some(vec![
-            citum_schema::TemplateComponent::Contributor(
-                citum_schema::template::TemplateContributor {
-                    contributor: ContributorRole::Author.into(),
-                    form: ContributorForm::Short,
+        template: Some(
+            vec![
+                citum_schema::TemplateComponent::Contributor(
+                    citum_schema::template::TemplateContributor {
+                        contributor: ContributorRole::Author.into(),
+                        form: ContributorForm::Short,
+                        ..Default::default()
+                    },
+                ),
+                citum_schema::TemplateComponent::Date(citum_schema::template::TemplateDate {
+                    date: TDateVar::Issued,
+                    form: DateForm::Year,
                     ..Default::default()
-                },
-            ),
-            citum_schema::TemplateComponent::Date(citum_schema::template::TemplateDate {
-                date: TDateVar::Issued,
-                form: DateForm::Year,
-                ..Default::default()
-            }),
-            citum_schema::TemplateComponent::Variable(citum_schema::template::TemplateVariable {
-                variable: citum_schema::template::SimpleVariable::Locator,
-                ..Default::default()
-            }),
-        ]),
+                }),
+                citum_schema::TemplateComponent::Variable(
+                    citum_schema::template::TemplateVariable {
+                        variable: citum_schema::template::SimpleVariable::Locator,
+                        ..Default::default()
+                    },
+                ),
+            ]
+            .into(),
+        ),
         wrap: Some(WrapPunctuation::Parentheses.into()),
         delimiter: Some(", ".into()),
         ..Default::default()
@@ -753,24 +770,29 @@ fn test_citation_locator_label_renders_term_with_loaded_locale() {
 
     let mut style = make_style();
     style.citation = Some(citum_schema::CitationSpec {
-        template: Some(vec![
-            citum_schema::TemplateComponent::Contributor(
-                citum_schema::template::TemplateContributor {
-                    contributor: ContributorRole::Author.into(),
-                    form: ContributorForm::Short,
+        template: Some(
+            vec![
+                citum_schema::TemplateComponent::Contributor(
+                    citum_schema::template::TemplateContributor {
+                        contributor: ContributorRole::Author.into(),
+                        form: ContributorForm::Short,
+                        ..Default::default()
+                    },
+                ),
+                citum_schema::TemplateComponent::Date(citum_schema::template::TemplateDate {
+                    date: TDateVar::Issued,
+                    form: DateForm::Year,
                     ..Default::default()
-                },
-            ),
-            citum_schema::TemplateComponent::Date(citum_schema::template::TemplateDate {
-                date: TDateVar::Issued,
-                form: DateForm::Year,
-                ..Default::default()
-            }),
-            citum_schema::TemplateComponent::Variable(citum_schema::template::TemplateVariable {
-                variable: citum_schema::template::SimpleVariable::Locator,
-                ..Default::default()
-            }),
-        ]),
+                }),
+                citum_schema::TemplateComponent::Variable(
+                    citum_schema::template::TemplateVariable {
+                        variable: citum_schema::template::SimpleVariable::Locator,
+                        ..Default::default()
+                    },
+                ),
+            ]
+            .into(),
+        ),
         wrap: Some(WrapPunctuation::Parentheses.into()),
         delimiter: Some(", ".into()),
         ..Default::default()
@@ -807,24 +829,29 @@ fn test_citation_locator_can_suppress_label() {
         });
     }
     style.citation = Some(citum_schema::CitationSpec {
-        template: Some(vec![
-            citum_schema::TemplateComponent::Contributor(
-                citum_schema::template::TemplateContributor {
-                    contributor: ContributorRole::Author.into(),
-                    form: ContributorForm::Short,
+        template: Some(
+            vec![
+                citum_schema::TemplateComponent::Contributor(
+                    citum_schema::template::TemplateContributor {
+                        contributor: ContributorRole::Author.into(),
+                        form: ContributorForm::Short,
+                        ..Default::default()
+                    },
+                ),
+                citum_schema::TemplateComponent::Date(citum_schema::template::TemplateDate {
+                    date: TDateVar::Issued,
+                    form: DateForm::Year,
                     ..Default::default()
-                },
-            ),
-            citum_schema::TemplateComponent::Date(citum_schema::template::TemplateDate {
-                date: TDateVar::Issued,
-                form: DateForm::Year,
-                ..Default::default()
-            }),
-            citum_schema::TemplateComponent::Variable(citum_schema::template::TemplateVariable {
-                variable: citum_schema::template::SimpleVariable::Locator,
-                ..Default::default()
-            }),
-        ]),
+                }),
+                citum_schema::TemplateComponent::Variable(
+                    citum_schema::template::TemplateVariable {
+                        variable: citum_schema::template::SimpleVariable::Locator,
+                        ..Default::default()
+                    },
+                ),
+            ]
+            .into(),
+        ),
         wrap: Some(WrapPunctuation::Parentheses.into()),
         delimiter: Some(", ".into()),
         ..Default::default()
@@ -868,24 +895,29 @@ fn test_citation_locator_can_strip_label_periods() {
         });
     }
     style.citation = Some(citum_schema::CitationSpec {
-        template: Some(vec![
-            citum_schema::TemplateComponent::Contributor(
-                citum_schema::template::TemplateContributor {
-                    contributor: ContributorRole::Author.into(),
-                    form: ContributorForm::Short,
+        template: Some(
+            vec![
+                citum_schema::TemplateComponent::Contributor(
+                    citum_schema::template::TemplateContributor {
+                        contributor: ContributorRole::Author.into(),
+                        form: ContributorForm::Short,
+                        ..Default::default()
+                    },
+                ),
+                citum_schema::TemplateComponent::Date(citum_schema::template::TemplateDate {
+                    date: TDateVar::Issued,
+                    form: DateForm::Year,
                     ..Default::default()
-                },
-            ),
-            citum_schema::TemplateComponent::Date(citum_schema::template::TemplateDate {
-                date: TDateVar::Issued,
-                form: DateForm::Year,
-                ..Default::default()
-            }),
-            citum_schema::TemplateComponent::Variable(citum_schema::template::TemplateVariable {
-                variable: citum_schema::template::SimpleVariable::Locator,
-                ..Default::default()
-            }),
-        ]),
+                }),
+                citum_schema::TemplateComponent::Variable(
+                    citum_schema::template::TemplateVariable {
+                        variable: citum_schema::template::SimpleVariable::Locator,
+                        ..Default::default()
+                    },
+                ),
+            ]
+            .into(),
+        ),
         wrap: Some(WrapPunctuation::Parentheses.into()),
         delimiter: Some(", ".into()),
         ..Default::default()
@@ -1644,7 +1676,7 @@ fn test_apa_titles_config() {
     let style = Style {
         options: Some(config),
         bibliography: Some(citum_schema::BibliographySpec {
-            template: Some(bib_template),
+            template: Some(bib_template.into()),
             ..Default::default()
         }),
         ..Default::default()
@@ -2248,10 +2280,13 @@ fn test_inline_title_link_takes_precedence_over_global_title_link_html() {
             ..Default::default()
         }),
         bibliography: Some(BibliographySpec {
-            template: Some(vec![TemplateComponent::Title(TemplateTitle {
-                title: TitleType::Primary,
-                ..Default::default()
-            })]),
+            template: Some(
+                vec![TemplateComponent::Title(TemplateTitle {
+                    title: TitleType::Primary,
+                    ..Default::default()
+                })]
+                .into(),
+            ),
             ..Default::default()
         }),
         ..Default::default()
@@ -2291,10 +2326,13 @@ fn test_chicago_title_preset_preserves_djot_markup_html() {
             ..Default::default()
         }),
         bibliography: Some(BibliographySpec {
-            template: Some(vec![TemplateComponent::Title(TemplateTitle {
-                title: TitleType::Primary,
-                ..Default::default()
-            })]),
+            template: Some(
+                vec![TemplateComponent::Title(TemplateTitle {
+                    title: TitleType::Primary,
+                    ..Default::default()
+                })]
+                .into(),
+            ),
             ..Default::default()
         }),
         ..Default::default()
@@ -2508,7 +2546,7 @@ fn test_declarative_numeric_citation_label_collapses_before_wrap() {
             label_wrap: Some(citum_schema::options::LabelWrap::Brackets),
             ..Default::default()
         }),
-        template: Some(Vec::new()),
+        template: Some(Vec::new().into()),
         multi_cite_delimiter: Some(",".into()),
         collapse: Some(citum_schema::CitationCollapse::CitationNumber),
         ..Default::default()
@@ -2580,16 +2618,19 @@ fn test_declarative_numeric_citation_label_with_locator() {
             label_wrap: Some(citum_schema::options::LabelWrap::Brackets),
             ..Default::default()
         }),
-        template: Some(vec![TemplateComponent::Variable(
-            citum_schema::template::TemplateVariable {
-                variable: citum_schema::template::SimpleVariable::Locator,
-                rendering: Rendering {
-                    prefix: Some(", ".into()),
+        template: Some(
+            vec![TemplateComponent::Variable(
+                citum_schema::template::TemplateVariable {
+                    variable: citum_schema::template::SimpleVariable::Locator,
+                    rendering: Rendering {
+                        prefix: Some(", ".into()),
+                        ..Default::default()
+                    },
                     ..Default::default()
                 },
-                ..Default::default()
-            },
-        )]),
+            )]
+            .into(),
+        ),
         delimiter: Some("".into()),
         ..Default::default()
     });
@@ -2645,16 +2686,19 @@ fn test_wrap_scope_decides_where_the_bracket_sits(
             item_wrap,
             ..Default::default()
         }),
-        template: Some(vec![TemplateComponent::Variable(
-            citum_schema::template::TemplateVariable {
-                variable: citum_schema::template::SimpleVariable::Locator,
-                rendering: Rendering {
-                    prefix: Some(", ".into()),
+        template: Some(
+            vec![TemplateComponent::Variable(
+                citum_schema::template::TemplateVariable {
+                    variable: citum_schema::template::SimpleVariable::Locator,
+                    rendering: Rendering {
+                        prefix: Some(", ".into()),
+                        ..Default::default()
+                    },
                     ..Default::default()
                 },
-                ..Default::default()
-            },
-        )]),
+            )]
+            .into(),
+        ),
         delimiter: Some("".into()),
         ..Default::default()
     });
@@ -2696,13 +2740,16 @@ fn test_declarative_numeric_integral_label_follows_authored_content() {
         }),
         integral: Some(Box::new(citum_schema::CitationSpec {
             delimiter: Some(" ".into()),
-            template: Some(vec![TemplateComponent::Contributor(
-                citum_schema::template::TemplateContributor {
-                    contributor: citum_schema::template::ContributorRole::Author.into(),
-                    form: citum_schema::template::ContributorForm::Short,
-                    ..Default::default()
-                },
-            )]),
+            template: Some(
+                vec![TemplateComponent::Contributor(
+                    citum_schema::template::TemplateContributor {
+                        contributor: citum_schema::template::ContributorRole::Author.into(),
+                        form: citum_schema::template::ContributorForm::Short,
+                        ..Default::default()
+                    },
+                )]
+                .into(),
+            ),
             ..Default::default()
         })),
         ..Default::default()
@@ -2989,14 +3036,17 @@ fn test_label_integral_citation_uses_author_text() {
     });
     // Citation template now includes both author and label
     style.citation = Some(citum_schema::CitationSpec {
-        template: Some(vec![TemplateComponent::Contributor(TemplateContributor {
-            contributor: ContributorRole::Author.into(),
-            form: ContributorForm::Short,
-            name_order: None,
-            delimiter: None,
-            rendering: Rendering::default(),
-            ..Default::default()
-        })]),
+        template: Some(
+            vec![TemplateComponent::Contributor(TemplateContributor {
+                contributor: ContributorRole::Author.into(),
+                form: ContributorForm::Short,
+                name_order: None,
+                delimiter: None,
+                rendering: Rendering::default(),
+                ..Default::default()
+            })]
+            .into(),
+        ),
         options: Some(citum_schema::CitationOptions {
             label_mode: Some(citum_schema::options::CitationLabelMode::Alphabetic),
             ..Default::default()
@@ -3121,28 +3171,31 @@ fn test_same_author_integral_multi_cite_collapses_to_grouped_years() {
     base_citation.multi_cite_delimiter = Some("; ".into());
     base_citation.integral = Some(Box::new(CitationSpec {
         delimiter: Some(" ".into()),
-        template: Some(vec![
-            TemplateComponent::Contributor(TemplateContributor {
-                contributor: ContributorRole::Author.into(),
-                form: ContributorForm::Short,
-                rendering: Rendering::default(),
-                ..Default::default()
-            }),
-            TemplateComponent::Group(TemplateGroup {
-                group: vec![TemplateComponent::Date(TemplateDate {
-                    date: TDateVar::Issued,
-                    form: DateForm::Year,
+        template: Some(
+            vec![
+                TemplateComponent::Contributor(TemplateContributor {
+                    contributor: ContributorRole::Author.into(),
+                    form: ContributorForm::Short,
                     rendering: Rendering::default(),
                     ..Default::default()
-                })],
-                rendering: Rendering {
-                    prefix: Some(", ".into()),
-                    wrap: Some(WrapPunctuation::Parentheses.into()),
+                }),
+                TemplateComponent::Group(TemplateGroup {
+                    group: vec![TemplateComponent::Date(TemplateDate {
+                        date: TDateVar::Issued,
+                        form: DateForm::Year,
+                        rendering: Rendering::default(),
+                        ..Default::default()
+                    })],
+                    rendering: Rendering {
+                        prefix: Some(", ".into()),
+                        wrap: Some(WrapPunctuation::Parentheses.into()),
+                        ..Default::default()
+                    },
                     ..Default::default()
-                },
-                ..Default::default()
-            }),
-        ]),
+                }),
+            ]
+            .into(),
+        ),
         ..Default::default()
     }));
     style.citation = Some(base_citation);
@@ -3193,23 +3246,26 @@ fn test_same_author_non_integral_multi_cite_collapses_to_grouped_years() {
     let mut style = make_style();
     // Flat non-integral template: [author, date] with cluster-level parentheses wrap.
     style.citation = Some(CitationSpec {
-        template: Some(vec![
-            TemplateComponent::Contributor(TemplateContributor {
-                contributor: ContributorRole::Author.into(),
-                form: ContributorForm::Short,
-                rendering: Rendering::default(),
-                ..Default::default()
-            }),
-            TemplateComponent::Date(TemplateDate {
-                date: TDateVar::Issued,
-                form: DateForm::Year,
-                rendering: Rendering {
-                    prefix: Some(", ".into()),
+        template: Some(
+            vec![
+                TemplateComponent::Contributor(TemplateContributor {
+                    contributor: ContributorRole::Author.into(),
+                    form: ContributorForm::Short,
+                    rendering: Rendering::default(),
                     ..Default::default()
-                },
-                ..Default::default()
-            }),
-        ]),
+                }),
+                TemplateComponent::Date(TemplateDate {
+                    date: TDateVar::Issued,
+                    form: DateForm::Year,
+                    rendering: Rendering {
+                        prefix: Some(", ".into()),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                }),
+            ]
+            .into(),
+        ),
         wrap: Some(WrapPunctuation::Parentheses.into()),
         multi_cite_delimiter: Some("; ".into()),
         ..Default::default()
@@ -3264,28 +3320,31 @@ fn test_same_author_integral_multi_cite_respects_bracket_wrap() {
     base_citation.multi_cite_delimiter = Some("; ".into());
     base_citation.integral = Some(Box::new(CitationSpec {
         delimiter: Some(" ".into()),
-        template: Some(vec![
-            TemplateComponent::Contributor(TemplateContributor {
-                contributor: ContributorRole::Author.into(),
-                form: ContributorForm::Short,
-                rendering: Rendering::default(),
-                ..Default::default()
-            }),
-            TemplateComponent::Group(TemplateGroup {
-                group: vec![TemplateComponent::Date(TemplateDate {
-                    date: TDateVar::Issued,
-                    form: DateForm::Year,
+        template: Some(
+            vec![
+                TemplateComponent::Contributor(TemplateContributor {
+                    contributor: ContributorRole::Author.into(),
+                    form: ContributorForm::Short,
                     rendering: Rendering::default(),
                     ..Default::default()
-                })],
-                rendering: Rendering {
-                    prefix: Some(", ".into()),
-                    wrap: Some(WrapPunctuation::Brackets.into()),
+                }),
+                TemplateComponent::Group(TemplateGroup {
+                    group: vec![TemplateComponent::Date(TemplateDate {
+                        date: TDateVar::Issued,
+                        form: DateForm::Year,
+                        rendering: Rendering::default(),
+                        ..Default::default()
+                    })],
+                    rendering: Rendering {
+                        prefix: Some(", ".into()),
+                        wrap: Some(WrapPunctuation::Brackets.into()),
+                        ..Default::default()
+                    },
                     ..Default::default()
-                },
-                ..Default::default()
-            }),
-        ]),
+                }),
+            ]
+            .into(),
+        ),
         ..Default::default()
     }));
     style.citation = Some(base_citation);
@@ -3333,31 +3392,34 @@ fn test_same_author_integral_multi_cite_respects_bracket_wrap() {
 fn test_integral_locator_does_not_duplicate_group_delimiter() {
     let mut style = make_style();
     style.citation = Some(CitationSpec {
-        template: Some(vec![
-            TemplateComponent::Contributor(TemplateContributor {
-                contributor: ContributorRole::Author.into(),
-                form: ContributorForm::Short,
-                rendering: Rendering::default(),
-                ..Default::default()
-            }),
-            TemplateComponent::Date(TemplateDate {
-                date: TDateVar::Issued,
-                form: DateForm::Year,
-                rendering: Rendering {
-                    prefix: Some(", ".into()),
+        template: Some(
+            vec![
+                TemplateComponent::Contributor(TemplateContributor {
+                    contributor: ContributorRole::Author.into(),
+                    form: ContributorForm::Short,
+                    rendering: Rendering::default(),
                     ..Default::default()
-                },
-                ..Default::default()
-            }),
-            TemplateComponent::Variable(TemplateVariable {
-                variable: SimpleVariable::Locator,
-                rendering: Rendering {
-                    prefix: Some(", ".into()),
+                }),
+                TemplateComponent::Date(TemplateDate {
+                    date: TDateVar::Issued,
+                    form: DateForm::Year,
+                    rendering: Rendering {
+                        prefix: Some(", ".into()),
+                        ..Default::default()
+                    },
                     ..Default::default()
-                },
-                ..Default::default()
-            }),
-        ]),
+                }),
+                TemplateComponent::Variable(TemplateVariable {
+                    variable: SimpleVariable::Locator,
+                    rendering: Rendering {
+                        prefix: Some(", ".into()),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                }),
+            ]
+            .into(),
+        ),
         wrap: Some(WrapPunctuation::Parentheses.into()),
         integral: Some(Box::new(CitationSpec {
             wrap: None,
@@ -3553,7 +3615,7 @@ fn test_grouped_numeric_bibliography_rerender_preserves_numbers_and_substitution
             subsequent_author_substitute: Some("———".to_string()),
             ..Default::default()
         }),
-        template: Some(group_template.clone()),
+        template: Some(group_template.clone().into()),
         groups: Some(vec![BibliographyGroup {
             id: "grouped".to_string(),
             heading: Some(GroupHeading::Literal {
@@ -5682,26 +5744,8 @@ fn test_grouped_integral_citation_renders_all_items() {
     let mut style = make_style();
     // Add an explicit integral template for author-date styles
     style.citation = Some(CitationSpec {
-        template: Some(vec![
-            TemplateComponent::Contributor(TemplateContributor {
-                contributor: ContributorRole::Author.into(),
-                form: ContributorForm::Short,
-                name_order: None,
-                delimiter: None,
-                rendering: Rendering::default(),
-                ..Default::default()
-            }),
-            TemplateComponent::Date(TemplateDate {
-                date: TDateVar::Issued,
-                form: DateForm::Year,
-                rendering: Rendering::default(),
-                ..Default::default()
-            }),
-        ]),
-        wrap: Some(WrapPunctuation::Parentheses.into()),
-        // Explicit integral template (should be used for grouped cites in integral mode)
-        integral: Some(Box::new(CitationSpec {
-            template: Some(vec![
+        template: Some(
+            vec![
                 TemplateComponent::Contributor(TemplateContributor {
                     contributor: ContributorRole::Author.into(),
                     form: ContributorForm::Short,
@@ -5716,7 +5760,31 @@ fn test_grouped_integral_citation_renders_all_items() {
                     rendering: Rendering::default(),
                     ..Default::default()
                 }),
-            ]),
+            ]
+            .into(),
+        ),
+        wrap: Some(WrapPunctuation::Parentheses.into()),
+        // Explicit integral template (should be used for grouped cites in integral mode)
+        integral: Some(Box::new(CitationSpec {
+            template: Some(
+                vec![
+                    TemplateComponent::Contributor(TemplateContributor {
+                        contributor: ContributorRole::Author.into(),
+                        form: ContributorForm::Short,
+                        name_order: None,
+                        delimiter: None,
+                        rendering: Rendering::default(),
+                        ..Default::default()
+                    }),
+                    TemplateComponent::Date(TemplateDate {
+                        date: TDateVar::Issued,
+                        form: DateForm::Year,
+                        rendering: Rendering::default(),
+                        ..Default::default()
+                    }),
+                ]
+                .into(),
+            ),
             ..Default::default()
         })),
         ..Default::default()
@@ -5768,24 +5836,8 @@ fn test_grouped_integral_citation_preserves_later_item_prefixes() {
 
     let mut style = make_style();
     style.citation = Some(CitationSpec {
-        template: Some(vec![
-            TemplateComponent::Contributor(TemplateContributor {
-                contributor: ContributorRole::Author.into(),
-                form: ContributorForm::Short,
-                name_order: None,
-                delimiter: None,
-                rendering: Rendering::default(),
-                ..Default::default()
-            }),
-            TemplateComponent::Date(TemplateDate {
-                date: TDateVar::Issued,
-                form: DateForm::Year,
-                rendering: Rendering::default(),
-                ..Default::default()
-            }),
-        ]),
-        integral: Some(Box::new(CitationSpec {
-            template: Some(vec![
+        template: Some(
+            vec![
                 TemplateComponent::Contributor(TemplateContributor {
                     contributor: ContributorRole::Author.into(),
                     form: ContributorForm::Short,
@@ -5800,7 +5852,29 @@ fn test_grouped_integral_citation_preserves_later_item_prefixes() {
                     rendering: Rendering::default(),
                     ..Default::default()
                 }),
-            ]),
+            ]
+            .into(),
+        ),
+        integral: Some(Box::new(CitationSpec {
+            template: Some(
+                vec![
+                    TemplateComponent::Contributor(TemplateContributor {
+                        contributor: ContributorRole::Author.into(),
+                        form: ContributorForm::Short,
+                        name_order: None,
+                        delimiter: None,
+                        rendering: Rendering::default(),
+                        ..Default::default()
+                    }),
+                    TemplateComponent::Date(TemplateDate {
+                        date: TDateVar::Issued,
+                        form: DateForm::Year,
+                        rendering: Rendering::default(),
+                        ..Default::default()
+                    }),
+                ]
+                .into(),
+            ),
             ..Default::default()
         })),
         ..Default::default()
@@ -5860,14 +5934,17 @@ fn test_label_integral_citation_includes_label() {
     });
     // Citation template with citation label
     style.citation = Some(CitationSpec {
-        template: Some(vec![TemplateComponent::Contributor(TemplateContributor {
-            contributor: ContributorRole::Author.into(),
-            form: ContributorForm::Short,
-            name_order: None,
-            delimiter: None,
-            rendering: Rendering::default(),
-            ..Default::default()
-        })]),
+        template: Some(
+            vec![TemplateComponent::Contributor(TemplateContributor {
+                contributor: ContributorRole::Author.into(),
+                form: ContributorForm::Short,
+                name_order: None,
+                delimiter: None,
+                rendering: Rendering::default(),
+                ..Default::default()
+            })]
+            .into(),
+        ),
         options: Some(citum_schema::CitationOptions {
             label_mode: Some(citum_schema::options::CitationLabelMode::Alphabetic),
             ..Default::default()

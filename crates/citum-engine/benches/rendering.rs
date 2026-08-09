@@ -709,15 +709,18 @@ fn build_type_variant_bench_style() -> Style {
                 }),
                 ..Default::default()
             }),
-            template: Some(vec![TemplateComponent::Title(TemplateTitle {
-                title: TitleType::Primary,
-                form: None,
-                rendering: Rendering {
-                    prefix: Some("DEFAULT ".into()),
+            template: Some(
+                vec![TemplateComponent::Title(TemplateTitle {
+                    title: TitleType::Primary,
+                    form: None,
+                    rendering: Rendering {
+                        prefix: Some("DEFAULT ".into()),
+                        ..Default::default()
+                    },
                     ..Default::default()
-                },
-                ..Default::default()
-            })]),
+                })]
+                .into(),
+            ),
             type_variants: Some(IndexMap::from([(
                 "article-journal"
                     .parse()
@@ -812,22 +815,25 @@ fn build_compound_bench_style() -> Style {
                 }),
                 ..Default::default()
             }),
-            template: Some(vec![
-                TemplateComponent::Contributor(TemplateContributor {
-                    contributor: ContributorRole::Author.into(),
-                    form: citum_schema::template::ContributorForm::Long,
-                    ..Default::default()
-                }),
-                TemplateComponent::Title(TemplateTitle {
-                    title: TitleType::Primary,
-                    form: None,
-                    rendering: Rendering {
-                        prefix: Some(". ".into()),
+            template: Some(
+                vec![
+                    TemplateComponent::Contributor(TemplateContributor {
+                        contributor: ContributorRole::Author.into(),
+                        form: citum_schema::template::ContributorForm::Long,
                         ..Default::default()
-                    },
-                    ..Default::default()
-                }),
-            ]),
+                    }),
+                    TemplateComponent::Title(TemplateTitle {
+                        title: TitleType::Primary,
+                        form: None,
+                        rendering: Rendering {
+                            prefix: Some(". ".into()),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    }),
+                ]
+                .into(),
+            ),
             ..Default::default()
         }),
         ..Default::default()

@@ -140,6 +140,14 @@ pub enum ResolutionError {
         /// Human-readable location hint.
         location: String,
     },
+    /// A fallback-template diff violates its inheritance contract.
+    #[error("invalid fallback-template diff in `{location}`: {reason}")]
+    InvalidFallbackTemplateDiff {
+        /// Style-aware location of the invalid fallback template.
+        location: String,
+        /// Reason the fallback diff cannot be resolved.
+        reason: String,
+    },
     /// The fetched parent style's content did not hash to the value declared
     /// in `extends-pin`.
     #[error("extends-pin integrity check failed for `{uri}`: expected {expected}, got {actual}")]

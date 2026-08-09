@@ -667,7 +667,8 @@ fn citation_style_contains_primary_title(style: &Style) -> bool {
 fn citation_spec_contains_primary_title(spec: &citum_schema::CitationSpec) -> bool {
     spec.template
         .as_ref()
-        .is_some_and(|template| template_contains_primary_title(template))
+        .and_then(TemplateVariant::as_template)
+        .is_some_and(template_contains_primary_title)
         || spec.type_variants.as_ref().is_some_and(|type_variants| {
             type_variants.values().any(|variant| {
                 variant
@@ -723,7 +724,11 @@ where
     F: Fn(&mut [TemplateComponent]) -> bool,
 {
     let mut changed = false;
-    if let Some(template) = spec.template.as_mut() {
+    if let Some(template) = spec
+        .template
+        .as_mut()
+        .and_then(TemplateVariant::as_template_mut)
+    {
         changed |= mutator(template);
     }
     if let Some(type_variants) = spec.type_variants.as_mut() {
@@ -1024,7 +1029,11 @@ where
     let mut style = style.clone();
     let bibliography = style.bibliography.as_mut()?;
     let mut changed = false;
-    if let Some(template) = bibliography.template.as_mut() {
+    if let Some(template) = bibliography
+        .template
+        .as_mut()
+        .and_then(TemplateVariant::as_template_mut)
+    {
         changed |= mutator(template);
     }
     if let Some(type_variants) = bibliography.type_variants.as_mut() {
@@ -1041,7 +1050,9 @@ fn apply_type_local_default(style: &Style, ref_type: &str) -> Option<Style> {
     let template = style
         .bibliography
         .as_ref()
-        .and_then(|bibliography| bibliography.template.clone())?;
+        .and_then(|bibliography| bibliography.template.as_ref())
+        .and_then(TemplateVariant::as_template)
+        .map(<[_]>::to_vec)?;
     let mut style = style.clone();
     let bibliography = style.bibliography.as_mut()?;
     bibliography
@@ -1116,7 +1127,11 @@ fn bibliography_template_for_type(style: &Style, ref_type: &str) -> Option<Vec<T
             }
         }
     }
-    bibliography.template.clone()
+    bibliography
+        .template
+        .as_ref()
+        .and_then(TemplateVariant::as_template)
+        .map(<[_]>::to_vec)
 }
 
 fn suppress_matching_components<F>(

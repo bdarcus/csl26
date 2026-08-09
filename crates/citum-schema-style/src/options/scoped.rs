@@ -224,7 +224,7 @@ fn apply_bibliography_options(bibliography: &mut BibliographySpec) {
 
     let needs_template = options.date_position.is_some() || options.title_terminator.is_some();
     if needs_template && bibliography.template.is_none() && bibliography.template_ref.is_some() {
-        bibliography.template = bibliography.resolve_template();
+        bibliography.template = bibliography.resolve_template().map(Into::into);
     }
 
     if let Some(position) = options.date_position {
@@ -239,7 +239,13 @@ fn apply_bibliography_options(bibliography: &mut BibliographySpec) {
 }
 
 fn apply_date_position(bibliography: &mut BibliographySpec, position: DatePosition) {
-    reposition_date(bibliography.template.as_mut(), position);
+    reposition_date(
+        bibliography
+            .template
+            .as_mut()
+            .and_then(crate::template::TemplateVariant::as_template_mut),
+        position,
+    );
     if let Some(variants) = bibliography.type_variants.as_mut() {
         for variant in variants.values_mut() {
             reposition_date(variant.as_template_mut(), position);
@@ -248,7 +254,13 @@ fn apply_date_position(bibliography: &mut BibliographySpec, position: DatePositi
 }
 
 fn apply_title_terminator(bibliography: &mut BibliographySpec, terminator: TitleTerminator) {
-    update_title_terminator(bibliography.template.as_mut(), terminator);
+    update_title_terminator(
+        bibliography
+            .template
+            .as_mut()
+            .and_then(crate::template::TemplateVariant::as_template_mut),
+        terminator,
+    );
     if let Some(variants) = bibliography.type_variants.as_mut() {
         for variant in variants.values_mut() {
             update_title_terminator(variant.as_template_mut(), terminator);

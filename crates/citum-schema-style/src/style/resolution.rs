@@ -181,14 +181,15 @@ impl Style {
         merge_style_overlay(&mut effective, &self);
         effective.scoped_raw_options =
             std::mem::take(&mut effective.scoped_raw_options).merged_with_child(&self);
+        crate::template::resolve_style_template_variants_with_overlay(
+            &mut effective,
+            inherited_variants.as_ref(),
+            &self,
+        )?;
         effective.version = self.version;
         effective.extends = self.extends;
         effective.extends_pin = self.extends_pin;
         effective.raw_yaml = self.raw_yaml;
-        crate::template::resolve_style_template_variants(
-            &mut effective,
-            inherited_variants.as_ref(),
-        )?;
         options::scoped::apply_scoped_style_options(&mut effective);
         if is_profile {
             effective.extends = None;

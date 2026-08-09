@@ -1048,11 +1048,14 @@ mod tests {
     fn test_lint_style_against_locale_warns_for_missing_general_term() {
         let style = Style {
             citation: Some(CitationSpec {
-                template: Some(vec![TemplateComponent::Term(TemplateTerm {
-                    term: GeneralTerm::NoDate,
-                    form: Some(TermForm::Short),
-                    ..Default::default()
-                })]),
+                template: Some(
+                    vec![TemplateComponent::Term(TemplateTerm {
+                        term: GeneralTerm::NoDate,
+                        form: Some(TermForm::Short),
+                        ..Default::default()
+                    })]
+                    .into(),
+                ),
                 ..Default::default()
             }),
             ..Default::default()
@@ -1073,10 +1076,13 @@ mod tests {
     fn test_lint_style_against_locale_errors_for_missing_message_id() {
         let style = Style {
             citation: Some(CitationSpec {
-                template: Some(vec![TemplateComponent::Message(TemplateMessage {
-                    message: "pattern.missing".into(),
-                    ..Default::default()
-                })]),
+                template: Some(
+                    vec![TemplateComponent::Message(TemplateMessage {
+                        message: "pattern.missing".into(),
+                        ..Default::default()
+                    })]
+                    .into(),
+                ),
                 ..Default::default()
             }),
             ..Default::default()
@@ -1097,11 +1103,14 @@ mod tests {
     fn test_lint_style_against_locale_accepts_term_backed_message_id() {
         let style = Style {
             citation: Some(CitationSpec {
-                template: Some(vec![TemplateComponent::Message(TemplateMessage {
-                    message: "term.edition".into(),
-                    form: Some(TermForm::Short),
-                    ..Default::default()
-                })]),
+                template: Some(
+                    vec![TemplateComponent::Message(TemplateMessage {
+                        message: "term.edition".into(),
+                        form: Some(TermForm::Short),
+                        ..Default::default()
+                    })]
+                    .into(),
+                ),
                 ..Default::default()
             }),
             ..Default::default()
@@ -1118,10 +1127,13 @@ mod tests {
     fn test_lint_style_against_locale_errors_for_missing_message_arg() {
         let style = Style {
             citation: Some(CitationSpec {
-                template: Some(vec![TemplateComponent::Message(TemplateMessage {
-                    message: "pattern.accessed-date".into(),
-                    ..Default::default()
-                })]),
+                template: Some(
+                    vec![TemplateComponent::Message(TemplateMessage {
+                        message: "pattern.accessed-date".into(),
+                        ..Default::default()
+                    })]
+                    .into(),
+                ),
                 ..Default::default()
             }),
             ..Default::default()
@@ -1145,11 +1157,14 @@ mod tests {
     fn test_lint_style_against_locale_warns_for_missing_role_term() {
         let style = Style {
             citation: Some(CitationSpec {
-                template: Some(vec![TemplateComponent::Contributor(TemplateContributor {
-                    contributor: ContributorRole::Editor.into(),
-                    form: ContributorForm::Verb,
-                    ..Default::default()
-                })]),
+                template: Some(
+                    vec![TemplateComponent::Contributor(TemplateContributor {
+                        contributor: ContributorRole::Editor.into(),
+                        form: ContributorForm::Verb,
+                        ..Default::default()
+                    })]
+                    .into(),
+                ),
                 ..Default::default()
             }),
             ..Default::default()
@@ -1170,11 +1185,14 @@ mod tests {
     fn test_lint_style_against_locale_accepts_custom_locator_when_locale_defines_it() {
         let style = Style {
             citation: Some(CitationSpec {
-                template: Some(vec![TemplateComponent::Number(TemplateNumber {
-                    number: NumberVariable::Custom("reel".to_string()),
-                    label_form: Some(TemplateLabelForm::Short),
-                    ..Default::default()
-                })]),
+                template: Some(
+                    vec![TemplateComponent::Number(TemplateNumber {
+                        number: NumberVariable::Custom("reel".to_string()),
+                        label_form: Some(TemplateLabelForm::Short),
+                        ..Default::default()
+                    })]
+                    .into(),
+                ),
                 ..Default::default()
             }),
             ..Default::default()
@@ -1204,11 +1222,14 @@ locators:
     fn test_lint_style_against_locale_warns_for_missing_custom_locator_term() {
         let style = Style {
             citation: Some(CitationSpec {
-                template: Some(vec![TemplateComponent::Number(TemplateNumber {
-                    number: NumberVariable::Custom("reel".to_string()),
-                    label_form: Some(TemplateLabelForm::Short),
-                    ..Default::default()
-                })]),
+                template: Some(
+                    vec![TemplateComponent::Number(TemplateNumber {
+                        number: NumberVariable::Custom("reel".to_string()),
+                        label_form: Some(TemplateLabelForm::Short),
+                        ..Default::default()
+                    })]
+                    .into(),
+                ),
                 ..Default::default()
             }),
             ..Default::default()

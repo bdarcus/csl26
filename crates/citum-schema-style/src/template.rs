@@ -49,7 +49,10 @@ pub(crate) use reference::matched_localized_template;
 pub use reference::{
     LocalizedTemplateSpec, ResolvedLocalizedTemplate, TemplatePreset, TemplateReference,
 };
-pub(crate) use resolution::{inherited_variant_context, resolve_style_template_variants};
+pub(crate) use resolution::{
+    inherited_variant_context, resolve_style_template_variants,
+    resolve_style_template_variants_with_overlay,
+};
 
 /// Resolve a style's local template variants in place without inherited
 /// context, materializing every diff variant as a full template.
@@ -646,12 +649,12 @@ impl TemplateComponent {
     }
 }
 
-/// Type-specific template override, either as a complete legacy template or a V3 diff.
+/// Template definition, either as a complete template or an inherited structural diff.
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(untagged)]
 pub enum TemplateVariant {
-    /// Complete replacement template used by Template V1/V2 styles.
+    /// Complete replacement template.
     Full(Vec<TemplateComponent>),
     /// Structural diff applied to a parent template during style resolution.
     Diff(TemplateVariantDiff),
@@ -691,12 +694,13 @@ impl From<Vec<TemplateComponent>> for TemplateVariant {
     }
 }
 
-/// Structural diff that derives a type-specific template from a parent template.
+/// Structural diff that derives a template from an inherited or selected parent.
 #[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case", deny_unknown_fields)]
 pub struct TemplateVariantDiff {
     /// Optional parent type variant selector within the same section.
+    /// Fallback-template diffs reject this field during resolution.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub extends: Option<TypeSelector>,
     /// Rendering-only modifications applied in authored order.

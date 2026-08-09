@@ -54,7 +54,7 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus and Citum contributors
 //!                 rendering: Rendering::default(),
 //!                 ..Default::default()
 //!             }),
-//!         ]),
+//!         ].into()),
 //!         wrap: Some(WrapPunctuation::Parentheses.into()),
 //!         ..Default::default()
 //!     }),
