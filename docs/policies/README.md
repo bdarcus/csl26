@@ -42,3 +42,4 @@ When the rule may be bypassed, and the approval process.
 | [`TYPE_ADDITION_POLICY.md`](./TYPE_ADDITION_POLICY.md) | How to add new reference types to the schema |
 | [`SQI_REFINEMENT_PLAN.md`](./SQI_REFINEMENT_PLAN.md) | Current SQI scoring refinement direction |
 | [`LOCALIZATION_INTEGRITY.md`](./LOCALIZATION_INTEGRITY.md) | Style templates must use locale role verbs/terms/messages instead of hardcoded prose where an equivalent exists |
+| [`TEXT_CASE_PROTECTION.md`](./TEXT_CASE_PROTECTION.md) | Case protection is declared in the data (`.nocase`, biblatex braces), never inferred from a word list; only internal capitalization is inferred |
