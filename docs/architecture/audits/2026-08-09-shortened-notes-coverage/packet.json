@@ -115,7 +115,7 @@
     ],
     "manifest": {
       "path": "docs/architecture/audits/2026-08-09-shortened-notes-coverage/manifest.yaml",
-      "sha256": "d3757019a0d1a94b1b64b7f4163d09fa82a7e6594e13eeb99babf72c5a6ea039"
+      "sha256": "9ec32fcad03c8ce9bfe24ffbec2576ea229c9f69d9d01ebba543f7b7f8bbf144"
     },
     "relevance": {
       "default": "relevant",
@@ -164,7 +164,7 @@
         {
           "id": "chicago-shortened-notes-bibliography-core",
           "path": "crates/citum-schema-style/embedded/styles/chicago-shortened-notes-bibliography-core.yaml",
-          "sha256": "42de0990c1d73b46884cebbadd73d81125b4a88e8f4bb7d8a9fd17c1748fd29a"
+          "sha256": "dfc023a5388f31483039ff348b9cf2741110894935ceea4212b3ed04c258dc62"
         },
         {
           "id": "chicago-notes-18th",
@@ -179,7 +179,7 @@
       ],
       "id": "chicago-shortened-notes-bibliography",
       "path": "crates/citum-schema-style/embedded/styles/chicago-shortened-notes-bibliography.yaml",
-      "resolvedSha256": "9b25e0a762013307fd411b6915699b50e0eb3336fad048f45109d356c635f498",
+      "resolvedSha256": "f2c806245bba015d826b344ef1c10a8e6dbf648465d198c66eea6e7580741448",
       "sha256": "5ee7afd5c74169d8882747d8ab6ede8b84aa12cd1760e1f0f3f544198cd1be94"
     },
     "surfaces": [
@@ -1101,10 +1101,10 @@
       "referenceType": "article-magazine",
       "relevance": "relevant",
       "relevanceRationale": null,
-      "renderDisposition": "fallback",
+      "renderDisposition": "rendered",
       "row": 51,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.template.template[0].contributor"
+      "templatePath": "resolved.bibliography.type-variants.article-magazine.template[0].contributor"
     },
     {
       "comparisonEligibility": "comparable",
@@ -1119,10 +1119,10 @@
       "referenceType": "article-magazine",
       "relevance": "relevant",
       "relevanceRationale": null,
-      "renderDisposition": "fallback",
+      "renderDisposition": "rendered",
       "row": 52,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.template.template[2].group[1].title"
+      "templatePath": "resolved.bibliography.type-variants.article-magazine.template[2].title"
     },
     {
       "comparisonEligibility": "comparable",
@@ -1137,10 +1137,10 @@
       "referenceType": "article-magazine",
       "relevance": "relevant",
       "relevanceRationale": null,
-      "renderDisposition": "uncovered",
+      "renderDisposition": "rendered",
       "row": 53,
       "surface": "bibliography",
-      "templatePath": null
+      "templatePath": "resolved.bibliography.type-variants.article-magazine.template[4].number"
     },
     {
       "comparisonEligibility": "comparable",
@@ -1155,10 +1155,10 @@
       "referenceType": "article-magazine",
       "relevance": "relevant",
       "relevanceRationale": null,
-      "renderDisposition": "fallback",
+      "renderDisposition": "rendered",
       "row": 54,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.template.template[6].date"
+      "templatePath": "resolved.bibliography.type-variants.article-magazine.template[5].date"
     },
     {
       "comparisonEligibility": "comparable",
@@ -1173,10 +1173,10 @@
       "referenceType": "article-magazine",
       "relevance": "relevant",
       "relevanceRationale": null,
-      "renderDisposition": "fallback",
+      "renderDisposition": "uncovered",
       "row": 55,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.template.template[7].number"
+      "templatePath": null
     },
     {
       "comparisonEligibility": "comparable",
@@ -1191,10 +1191,10 @@
       "referenceType": "article-magazine",
       "relevance": "relevant",
       "relevanceRationale": null,
-      "renderDisposition": "fallback",
+      "renderDisposition": "rendered",
       "row": 56,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.template.template[1].title"
+      "templatePath": "resolved.bibliography.type-variants.article-magazine.template[1].title"
     },
     {
       "comparisonEligibility": "comparable",
@@ -1209,10 +1209,10 @@
       "referenceType": "article-magazine",
       "relevance": "relevant",
       "relevanceRationale": null,
-      "renderDisposition": "fallback",
+      "renderDisposition": "rendered",
       "row": 57,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.template.template[4].number"
+      "templatePath": "resolved.bibliography.type-variants.article-magazine.template[3].number"
     },
     {
       "comparisonEligibility": "comparable",
@@ -1551,10 +1551,10 @@
       "referenceType": "legal-case",
       "relevance": "relevant",
       "relevanceRationale": null,
-      "renderDisposition": "uncovered",
+      "renderDisposition": "rendered",
       "row": 76,
       "surface": "bibliography",
-      "templatePath": null
+      "templatePath": "resolved.bibliography.type-variants.legal-case.template[3].group[0].variable"
     },
     {
       "comparisonEligibility": "comparable",
@@ -1569,10 +1569,10 @@
       "referenceType": "legal-case",
       "relevance": "relevant",
       "relevanceRationale": null,
-      "renderDisposition": "fallback",
+      "renderDisposition": "uncovered",
       "row": 77,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.template.template[2].group[1].title"
+      "templatePath": null
     },
     {
       "comparisonEligibility": "comparable",
@@ -1587,10 +1587,10 @@
       "referenceType": "legal-case",
       "relevance": "relevant",
       "relevanceRationale": null,
-      "renderDisposition": "fallback",
+      "renderDisposition": "rendered",
       "row": 78,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.template.template[6].date"
+      "templatePath": "resolved.bibliography.type-variants.legal-case.template[3].group[1].date"
     },
     {
       "comparisonEligibility": "comparable",
@@ -1605,10 +1605,10 @@
       "referenceType": "legal-case",
       "relevance": "relevant",
       "relevanceRationale": null,
-      "renderDisposition": "fallback",
+      "renderDisposition": "rendered",
       "row": 79,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.template.template[7].number"
+      "templatePath": "resolved.bibliography.type-variants.legal-case.template[2].group[2].number"
     },
     {
       "comparisonEligibility": "comparable",
@@ -1623,10 +1623,10 @@
       "referenceType": "legal-case",
       "relevance": "relevant",
       "relevanceRationale": null,
-      "renderDisposition": "fallback",
+      "renderDisposition": "rendered",
       "row": 80,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.template.template[1].title"
+      "templatePath": "resolved.bibliography.type-variants.legal-case.template[1].title"
     },
     {
       "comparisonEligibility": "comparable",
@@ -1641,10 +1641,10 @@
       "referenceType": "legal-case",
       "relevance": "relevant",
       "relevanceRationale": null,
-      "renderDisposition": "fallback",
+      "renderDisposition": "rendered",
       "row": 81,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.template.template[4].number"
+      "templatePath": "resolved.bibliography.type-variants.legal-case.template[2].group[0].number"
     },
     {
       "comparisonEligibility": "comparable",
@@ -10384,8 +10384,8 @@
     "populatedObservations": 565,
     "relevantObservations": 528,
     "renderDisposition": {
-      "fallback": 160,
-      "rendered": 157,
+      "fallback": 149,
+      "rendered": 168,
       "suppressed": 17,
       "uncovered": 194
     }

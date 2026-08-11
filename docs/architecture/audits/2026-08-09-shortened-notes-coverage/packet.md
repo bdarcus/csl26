@@ -12,8 +12,8 @@ Structural coverage identifies a resolved component path; it does not prove that
 
 | Render disposition | Relevant observations |
 |---|---:|
-| rendered | 157 |
-| fallback | 160 |
+| rendered | 168 |
+| fallback | 149 |
 | suppressed | 17 |
 | uncovered | 194 |
 
@@ -80,13 +80,13 @@ Structural coverage identifies a resolved component path; it does not prove that
 | 48 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-16/article-newspaper/issued/entry` | relevant | fallback | comparable | false |
 | 49 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-16/article-newspaper/section/entry` | relevant | uncovered | comparable | false |
 | 50 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-16/article-newspaper/title/entry` | relevant | fallback | comparable | false |
-| 51 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-17/article-magazine/author/entry` | relevant | fallback | comparable | false |
-| 52 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-17/article-magazine/container-title/entry` | relevant | fallback | comparable | false |
-| 53 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-17/article-magazine/issue/entry` | relevant | uncovered | comparable | false |
-| 54 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-17/article-magazine/issued/entry` | relevant | fallback | comparable | false |
-| 55 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-17/article-magazine/page/entry` | relevant | fallback | comparable | false |
-| 56 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-17/article-magazine/title/entry` | relevant | fallback | comparable | false |
-| 57 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-17/article-magazine/volume/entry` | relevant | fallback | comparable | false |
+| 51 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-17/article-magazine/author/entry` | relevant | rendered | comparable | false |
+| 52 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-17/article-magazine/container-title/entry` | relevant | rendered | comparable | false |
+| 53 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-17/article-magazine/issue/entry` | relevant | rendered | comparable | false |
+| 54 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-17/article-magazine/issued/entry` | relevant | rendered | comparable | false |
+| 55 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-17/article-magazine/page/entry` | relevant | uncovered | comparable | false |
+| 56 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-17/article-magazine/title/entry` | relevant | rendered | comparable | false |
+| 57 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-17/article-magazine/volume/entry` | relevant | rendered | comparable | false |
 | 58 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-18/entry-encyclopedia/author/entry` | relevant | fallback | comparable | false |
 | 59 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-18/entry-encyclopedia/container-title/entry` | relevant | fallback | comparable | false |
 | 60 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-18/entry-encyclopedia/issued/entry` | relevant | fallback | comparable | false |
@@ -105,12 +105,12 @@ Structural coverage identifies a resolved component path; it does not prove that
 | 73 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-2/book/publisher-place/entry` | relevant | suppressed | comparable | true |
 | 74 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-2/book/publisher/entry` | relevant | rendered | comparable | true |
 | 75 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-2/book/title/entry` | relevant | rendered | comparable | true |
-| 76 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-20/legal-case/authority/entry` | relevant | uncovered | comparable | false |
-| 77 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-20/legal-case/container-title/entry` | relevant | fallback | comparable | false |
-| 78 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-20/legal-case/issued/entry` | relevant | fallback | comparable | false |
-| 79 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-20/legal-case/page/entry` | relevant | fallback | comparable | false |
-| 80 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-20/legal-case/title/entry` | relevant | fallback | comparable | false |
-| 81 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-20/legal-case/volume/entry` | relevant | fallback | comparable | false |
+| 76 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-20/legal-case/authority/entry` | relevant | rendered | comparable | false |
+| 77 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-20/legal-case/container-title/entry` | relevant | uncovered | comparable | false |
+| 78 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-20/legal-case/issued/entry` | relevant | rendered | comparable | false |
+| 79 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-20/legal-case/page/entry` | relevant | rendered | comparable | false |
+| 80 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-20/legal-case/title/entry` | relevant | rendered | comparable | false |
+| 81 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-20/legal-case/volume/entry` | relevant | rendered | comparable | false |
 | 82 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-21/patent/author/entry` | relevant | rendered | comparable | false |
 | 83 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-21/patent/country/entry` | relevant | uncovered | comparable | false |
 | 84 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-21/patent/issued/entry` | relevant | rendered | comparable | false |

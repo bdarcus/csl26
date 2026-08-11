@@ -43,7 +43,7 @@ options:
       and-others: et-al
       delimiter-precedes-last: contextual
     demote-non-dropping-particle: display-and-sort
-  titles: humanities
+  titles: chicago
   page-range-format: chicago16
   punctuation-in-quote: true
 citation:
@@ -129,6 +129,27 @@ bibliography:
     - variable: doi
       prefix: https://doi.org/
     - variable: url
+    article-magazine:
+    - contributor: author
+      form: long
+      name-order: family-first-only
+      shorten:
+        min: 8
+        use-first: 3
+    - title: primary
+      text-case: title
+    - title: parent-serial
+      prefix: ", "
+    - number: volume
+      prefix: " "
+    - number: issue
+      label-form: short
+      prefix: ", "
+    - date: issued
+      form: year
+      prefix: ", "
+    - variable: url
+      prefix: ", "
     book:
     - contributor: author
       form: long
@@ -137,6 +158,7 @@ bibliography:
         min: 8
         use-first: 3
     - title: primary
+      text-case: title
     - contributor: translator
       form: verb
       prefix: ". "
@@ -152,6 +174,7 @@ bibliography:
         min: 8
         use-first: 3
     - title: primary
+      text-case: title
       prefix: ". "
       wrap:
         punctuation: quotes
@@ -183,6 +206,7 @@ bibliography:
         min: 8
         use-first: 3
     - title: primary
+      text-case: title
       prefix: ". "
       wrap:
         punctuation: quotes
@@ -199,6 +223,7 @@ bibliography:
     - title: parent-monograph
       text-case: title
     - title: primary
+      text-case: title
       prefix: ". "
       wrap:
         punctuation: quotes
@@ -216,6 +241,29 @@ bibliography:
       prefix: ". "
     - variable: url
       prefix: ". "
+    legal-case:
+    - contributor: author
+      form: long
+      name-order: family-first-only
+      shorten:
+        min: 8
+        use-first: 3
+    - title: primary
+      text-case: title
+    - group:
+      - number: volume
+      - variable: reporter
+      - number: pages
+      delimiter: " "
+      prefix: ", "
+    - group:
+      - variable: authority
+      - date: issued
+        form: year
+      delimiter: " "
+      wrap:
+        punctuation: parentheses
+      prefix: " "
     personal-communication: []
     patent:
     - contributor: author
