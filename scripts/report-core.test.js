@@ -1407,7 +1407,7 @@ test('generateReport exposes the registered coverage audit on its corresponding 
 
   const audit = report.styles[0].coverageAudit;
   assert.equal(audit.status, 'current');
-  assert.equal(audit.summary.renderDisposition.uncovered, 200);
+  assert.equal(audit.summary.renderDisposition.uncovered, 194);
   assert.equal(audit.summary.joinedExactParity.passed, 28);
   assert.equal(audit.outputGroups.length, 81);
   assert.equal(audit.outputGroups.some((group) => group.exactEvidence), true);

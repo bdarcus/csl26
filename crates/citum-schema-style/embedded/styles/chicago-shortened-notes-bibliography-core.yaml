@@ -100,19 +100,30 @@ bibliography:
         min: 8
         use-first: 3
     - title: primary
+      text-case: title
     - group:
       - contributor: editor
         form: verb
         name-order: given-first
       - title: parent-monograph
         emph: true
-    - title: parent-serial
-      emph: true
-    - number: volume
+    - group:
+      - title: parent-serial
+        emph: true
+      - group:
+        - number: volume
+        - number: issue
+          label-form: short
+          prefix: ", "
+        - date: issued
+          form: year
+          prefix: " "
+          wrap:
+            punctuation: parentheses
+        prefix: " "
+        delimiter: ""
+      delimiter: ""
     - variable: publisher
-    - date: issued
-      form: year
-      prefix: ", "
     - number: pages
       prefix: ": "
     - variable: doi

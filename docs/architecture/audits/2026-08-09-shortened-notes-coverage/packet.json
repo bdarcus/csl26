@@ -115,7 +115,7 @@
     ],
     "manifest": {
       "path": "docs/architecture/audits/2026-08-09-shortened-notes-coverage/manifest.yaml",
-      "sha256": "107d3479ff0a74c9ecf7f1a9156bcac62648e82036bc9691c345dd0dc4667110"
+      "sha256": "d3757019a0d1a94b1b64b7f4163d09fa82a7e6594e13eeb99babf72c5a6ea039"
     },
     "relevance": {
       "default": "relevant",
@@ -164,7 +164,7 @@
         {
           "id": "chicago-shortened-notes-bibliography-core",
           "path": "crates/citum-schema-style/embedded/styles/chicago-shortened-notes-bibliography-core.yaml",
-          "sha256": "b3c419a71c6169b977c837e5a733886edef532e5579f47b6789296bb44d1c961"
+          "sha256": "42de0990c1d73b46884cebbadd73d81125b4a88e8f4bb7d8a9fd17c1748fd29a"
         },
         {
           "id": "chicago-notes-18th",
@@ -179,7 +179,7 @@
       ],
       "id": "chicago-shortened-notes-bibliography",
       "path": "crates/citum-schema-style/embedded/styles/chicago-shortened-notes-bibliography.yaml",
-      "resolvedSha256": "928593d1c357552bc74d6b9d7086a12cd8a84653a6ca7d1bc79002e4d2b605c3",
+      "resolvedSha256": "9b25e0a762013307fd411b6915699b50e0eb3336fad048f45109d356c635f498",
       "sha256": "5ee7afd5c74169d8882747d8ab6ede8b84aa12cd1760e1f0f3f544198cd1be94"
     },
     "surfaces": [
@@ -240,7 +240,7 @@
       "renderDisposition": "rendered",
       "row": 3,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.type-variants.article-journal.template[8].variable"
+      "templatePath": "resolved.bibliography.type-variants.article-journal.template[6].variable"
     },
     {
       "comparisonEligibility": "comparable",
@@ -255,10 +255,10 @@
       "referenceType": "article-journal",
       "relevance": "relevant",
       "relevanceRationale": null,
-      "renderDisposition": "uncovered",
+      "renderDisposition": "rendered",
       "row": 4,
       "surface": "bibliography",
-      "templatePath": null
+      "templatePath": "resolved.bibliography.type-variants.article-journal.template[3].group[1].group[1].number"
     },
     {
       "comparisonEligibility": "comparable",
@@ -276,7 +276,7 @@
       "renderDisposition": "rendered",
       "row": 5,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.type-variants.article-journal.template[6].date"
+      "templatePath": "resolved.bibliography.type-variants.article-journal.template[3].group[1].group[2].date"
     },
     {
       "comparisonEligibility": "comparable",
@@ -312,7 +312,7 @@
       "renderDisposition": "rendered",
       "row": 7,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.type-variants.article-journal.template[5].variable"
+      "templatePath": "resolved.bibliography.type-variants.article-journal.template[4].variable"
     },
     {
       "comparisonEligibility": "comparable",
@@ -348,7 +348,7 @@
       "renderDisposition": "rendered",
       "row": 9,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.type-variants.article-journal.template[4].number"
+      "templatePath": "resolved.bibliography.type-variants.article-journal.template[3].group[1].group[0].number"
     },
     {
       "comparisonEligibility": "comparable",
@@ -402,7 +402,7 @@
       "renderDisposition": "rendered",
       "row": 12,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.type-variants.article-journal.template[8].variable"
+      "templatePath": "resolved.bibliography.type-variants.article-journal.template[6].variable"
     },
     {
       "comparisonEligibility": "comparable",
@@ -417,10 +417,10 @@
       "referenceType": "article-journal",
       "relevance": "relevant",
       "relevanceRationale": null,
-      "renderDisposition": "uncovered",
+      "renderDisposition": "rendered",
       "row": 13,
       "surface": "bibliography",
-      "templatePath": null
+      "templatePath": "resolved.bibliography.type-variants.article-journal.template[3].group[1].group[1].number"
     },
     {
       "comparisonEligibility": "comparable",
@@ -438,7 +438,7 @@
       "renderDisposition": "rendered",
       "row": 14,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.type-variants.article-journal.template[6].date"
+      "templatePath": "resolved.bibliography.type-variants.article-journal.template[3].group[1].group[2].date"
     },
     {
       "comparisonEligibility": "comparable",
@@ -456,7 +456,7 @@
       "renderDisposition": "rendered",
       "row": 15,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.type-variants.article-journal.template[7].number"
+      "templatePath": "resolved.bibliography.type-variants.article-journal.template[5].number"
     },
     {
       "comparisonEligibility": "comparable",
@@ -492,7 +492,7 @@
       "renderDisposition": "rendered",
       "row": 17,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.type-variants.article-journal.template[4].number"
+      "templatePath": "resolved.bibliography.type-variants.article-journal.template[3].group[1].group[0].number"
     },
     {
       "comparisonEligibility": "comparable",
@@ -903,10 +903,10 @@
       "referenceType": "article-journal",
       "relevance": "relevant",
       "relevanceRationale": null,
-      "renderDisposition": "uncovered",
+      "renderDisposition": "rendered",
       "row": 40,
       "surface": "bibliography",
-      "templatePath": null
+      "templatePath": "resolved.bibliography.type-variants.article-journal.template[3].group[1].group[1].number"
     },
     {
       "comparisonEligibility": "comparable",
@@ -924,7 +924,7 @@
       "renderDisposition": "rendered",
       "row": 41,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.type-variants.article-journal.template[6].date"
+      "templatePath": "resolved.bibliography.type-variants.article-journal.template[3].group[1].group[2].date"
     },
     {
       "comparisonEligibility": "comparable",
@@ -960,7 +960,7 @@
       "renderDisposition": "rendered",
       "row": 43,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.type-variants.article-journal.template[7].number"
+      "templatePath": "resolved.bibliography.type-variants.article-journal.template[5].number"
     },
     {
       "comparisonEligibility": "comparable",
@@ -996,7 +996,7 @@
       "renderDisposition": "rendered",
       "row": 45,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.type-variants.article-journal.template[4].number"
+      "templatePath": "resolved.bibliography.type-variants.article-journal.template[3].group[1].group[0].number"
     },
     {
       "comparisonEligibility": "comparable",
@@ -2562,7 +2562,7 @@
       "renderDisposition": "rendered",
       "row": 132,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.type-variants.article-journal.template[8].variable"
+      "templatePath": "resolved.bibliography.type-variants.article-journal.template[6].variable"
     },
     {
       "comparisonEligibility": "comparable",
@@ -2577,10 +2577,10 @@
       "referenceType": "article-journal",
       "relevance": "relevant",
       "relevanceRationale": null,
-      "renderDisposition": "uncovered",
+      "renderDisposition": "rendered",
       "row": 133,
       "surface": "bibliography",
-      "templatePath": null
+      "templatePath": "resolved.bibliography.type-variants.article-journal.template[3].group[1].group[1].number"
     },
     {
       "comparisonEligibility": "comparable",
@@ -2598,7 +2598,7 @@
       "renderDisposition": "rendered",
       "row": 134,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.type-variants.article-journal.template[6].date"
+      "templatePath": "resolved.bibliography.type-variants.article-journal.template[3].group[1].group[2].date"
     },
     {
       "comparisonEligibility": "comparable",
@@ -2616,7 +2616,7 @@
       "renderDisposition": "rendered",
       "row": 135,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.type-variants.article-journal.template[7].number"
+      "templatePath": "resolved.bibliography.type-variants.article-journal.template[5].number"
     },
     {
       "comparisonEligibility": "comparable",
@@ -2652,7 +2652,7 @@
       "renderDisposition": "rendered",
       "row": 137,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.type-variants.article-journal.template[4].number"
+      "templatePath": "resolved.bibliography.type-variants.article-journal.template[3].group[1].group[0].number"
     },
     {
       "comparisonEligibility": "comparable",
@@ -2706,7 +2706,7 @@
       "renderDisposition": "rendered",
       "row": 140,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.type-variants.article-journal.template[8].variable"
+      "templatePath": "resolved.bibliography.type-variants.article-journal.template[6].variable"
     },
     {
       "comparisonEligibility": "comparable",
@@ -2724,7 +2724,7 @@
       "renderDisposition": "rendered",
       "row": 141,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.type-variants.article-journal.template[6].date"
+      "templatePath": "resolved.bibliography.type-variants.article-journal.template[3].group[1].group[2].date"
     },
     {
       "comparisonEligibility": "comparable",
@@ -2742,7 +2742,7 @@
       "renderDisposition": "rendered",
       "row": 142,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.type-variants.article-journal.template[7].number"
+      "templatePath": "resolved.bibliography.type-variants.article-journal.template[5].number"
     },
     {
       "comparisonEligibility": "comparable",
@@ -2778,7 +2778,7 @@
       "renderDisposition": "rendered",
       "row": 144,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.type-variants.article-journal.template[4].number"
+      "templatePath": "resolved.bibliography.type-variants.article-journal.template[3].group[1].group[0].number"
     },
     {
       "comparisonEligibility": "comparable",
@@ -2832,7 +2832,7 @@
       "renderDisposition": "rendered",
       "row": 147,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.type-variants.article-journal.template[8].variable"
+      "templatePath": "resolved.bibliography.type-variants.article-journal.template[6].variable"
     },
     {
       "comparisonEligibility": "comparable",
@@ -2847,10 +2847,10 @@
       "referenceType": "article-journal",
       "relevance": "relevant",
       "relevanceRationale": null,
-      "renderDisposition": "uncovered",
+      "renderDisposition": "rendered",
       "row": 148,
       "surface": "bibliography",
-      "templatePath": null
+      "templatePath": "resolved.bibliography.type-variants.article-journal.template[3].group[1].group[1].number"
     },
     {
       "comparisonEligibility": "comparable",
@@ -2868,7 +2868,7 @@
       "renderDisposition": "rendered",
       "row": 149,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.type-variants.article-journal.template[6].date"
+      "templatePath": "resolved.bibliography.type-variants.article-journal.template[3].group[1].group[2].date"
     },
     {
       "comparisonEligibility": "comparable",
@@ -2886,7 +2886,7 @@
       "renderDisposition": "rendered",
       "row": 150,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.type-variants.article-journal.template[7].number"
+      "templatePath": "resolved.bibliography.type-variants.article-journal.template[5].number"
     },
     {
       "comparisonEligibility": "comparable",
@@ -2922,7 +2922,7 @@
       "renderDisposition": "rendered",
       "row": 152,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.type-variants.article-journal.template[4].number"
+      "templatePath": "resolved.bibliography.type-variants.article-journal.template[3].group[1].group[0].number"
     },
     {
       "comparisonEligibility": "comparable",
@@ -2976,7 +2976,7 @@
       "renderDisposition": "rendered",
       "row": 155,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.type-variants.article-journal.template[8].variable"
+      "templatePath": "resolved.bibliography.type-variants.article-journal.template[6].variable"
     },
     {
       "comparisonEligibility": "comparable",
@@ -2994,7 +2994,7 @@
       "renderDisposition": "rendered",
       "row": 156,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.type-variants.article-journal.template[6].date"
+      "templatePath": "resolved.bibliography.type-variants.article-journal.template[3].group[1].group[2].date"
     },
     {
       "comparisonEligibility": "comparable",
@@ -3012,7 +3012,7 @@
       "renderDisposition": "rendered",
       "row": 157,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.type-variants.article-journal.template[7].number"
+      "templatePath": "resolved.bibliography.type-variants.article-journal.template[5].number"
     },
     {
       "comparisonEligibility": "comparable",
@@ -3048,7 +3048,7 @@
       "renderDisposition": "rendered",
       "row": 159,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.type-variants.article-journal.template[4].number"
+      "templatePath": "resolved.bibliography.type-variants.article-journal.template[3].group[1].group[0].number"
     },
     {
       "comparisonEligibility": "comparable",
@@ -3102,7 +3102,7 @@
       "renderDisposition": "rendered",
       "row": 162,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.type-variants.article-journal.template[8].variable"
+      "templatePath": "resolved.bibliography.type-variants.article-journal.template[6].variable"
     },
     {
       "comparisonEligibility": "comparable",
@@ -3120,7 +3120,7 @@
       "renderDisposition": "rendered",
       "row": 163,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.type-variants.article-journal.template[6].date"
+      "templatePath": "resolved.bibliography.type-variants.article-journal.template[3].group[1].group[2].date"
     },
     {
       "comparisonEligibility": "comparable",
@@ -3138,7 +3138,7 @@
       "renderDisposition": "rendered",
       "row": 164,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.type-variants.article-journal.template[7].number"
+      "templatePath": "resolved.bibliography.type-variants.article-journal.template[5].number"
     },
     {
       "comparisonEligibility": "comparable",
@@ -3174,7 +3174,7 @@
       "renderDisposition": "rendered",
       "row": 166,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.type-variants.article-journal.template[4].number"
+      "templatePath": "resolved.bibliography.type-variants.article-journal.template[3].group[1].group[0].number"
     },
     {
       "comparisonEligibility": "comparable",
@@ -3408,7 +3408,7 @@
       "renderDisposition": "rendered",
       "row": 179,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.type-variants.article-journal.template[6].date"
+      "templatePath": "resolved.bibliography.type-variants.article-journal.template[3].group[1].group[2].date"
     },
     {
       "comparisonEligibility": "comparable",
@@ -3426,7 +3426,7 @@
       "renderDisposition": "rendered",
       "row": 180,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.type-variants.article-journal.template[7].number"
+      "templatePath": "resolved.bibliography.type-variants.article-journal.template[5].number"
     },
     {
       "comparisonEligibility": "comparable",
@@ -3462,7 +3462,7 @@
       "renderDisposition": "rendered",
       "row": 182,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.type-variants.article-journal.template[4].number"
+      "templatePath": "resolved.bibliography.type-variants.article-journal.template[3].group[1].group[0].number"
     },
     {
       "comparisonEligibility": "comparable",
@@ -3516,7 +3516,7 @@
       "renderDisposition": "rendered",
       "row": 185,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.type-variants.article-journal.template[6].date"
+      "templatePath": "resolved.bibliography.type-variants.article-journal.template[3].group[1].group[2].date"
     },
     {
       "comparisonEligibility": "comparable",
@@ -3534,7 +3534,7 @@
       "renderDisposition": "rendered",
       "row": 186,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.type-variants.article-journal.template[7].number"
+      "templatePath": "resolved.bibliography.type-variants.article-journal.template[5].number"
     },
     {
       "comparisonEligibility": "comparable",
@@ -3570,7 +3570,7 @@
       "renderDisposition": "rendered",
       "row": 188,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.type-variants.article-journal.template[4].number"
+      "templatePath": "resolved.bibliography.type-variants.article-journal.template[3].group[1].group[0].number"
     },
     {
       "comparisonEligibility": "comparable",
@@ -3624,7 +3624,7 @@
       "renderDisposition": "rendered",
       "row": 191,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.type-variants.article-journal.template[8].variable"
+      "templatePath": "resolved.bibliography.type-variants.article-journal.template[6].variable"
     },
     {
       "comparisonEligibility": "comparable",
@@ -3642,7 +3642,7 @@
       "renderDisposition": "rendered",
       "row": 192,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.type-variants.article-journal.template[6].date"
+      "templatePath": "resolved.bibliography.type-variants.article-journal.template[3].group[1].group[2].date"
     },
     {
       "comparisonEligibility": "comparable",
@@ -3660,7 +3660,7 @@
       "renderDisposition": "rendered",
       "row": 193,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.type-variants.article-journal.template[7].number"
+      "templatePath": "resolved.bibliography.type-variants.article-journal.template[5].number"
     },
     {
       "comparisonEligibility": "comparable",
@@ -3696,7 +3696,7 @@
       "renderDisposition": "rendered",
       "row": 195,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.type-variants.article-journal.template[4].number"
+      "templatePath": "resolved.bibliography.type-variants.article-journal.template[3].group[1].group[0].number"
     },
     {
       "comparisonEligibility": "comparable",
@@ -3750,7 +3750,7 @@
       "renderDisposition": "rendered",
       "row": 198,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.type-variants.article-journal.template[8].variable"
+      "templatePath": "resolved.bibliography.type-variants.article-journal.template[6].variable"
     },
     {
       "comparisonEligibility": "comparable",
@@ -3768,7 +3768,7 @@
       "renderDisposition": "rendered",
       "row": 199,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.type-variants.article-journal.template[6].date"
+      "templatePath": "resolved.bibliography.type-variants.article-journal.template[3].group[1].group[2].date"
     },
     {
       "comparisonEligibility": "comparable",
@@ -3786,7 +3786,7 @@
       "renderDisposition": "rendered",
       "row": 200,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.type-variants.article-journal.template[7].number"
+      "templatePath": "resolved.bibliography.type-variants.article-journal.template[5].number"
     },
     {
       "comparisonEligibility": "comparable",
@@ -3822,7 +3822,7 @@
       "renderDisposition": "rendered",
       "row": 202,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.type-variants.article-journal.template[4].number"
+      "templatePath": "resolved.bibliography.type-variants.article-journal.template[3].group[1].group[0].number"
     },
     {
       "comparisonEligibility": "comparable",
@@ -4200,7 +4200,7 @@
       "renderDisposition": "rendered",
       "row": 223,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.type-variants.article-journal.template[6].date"
+      "templatePath": "resolved.bibliography.type-variants.article-journal.template[3].group[1].group[2].date"
     },
     {
       "comparisonEligibility": "comparable",
@@ -4218,7 +4218,7 @@
       "renderDisposition": "rendered",
       "row": 224,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.type-variants.article-journal.template[7].number"
+      "templatePath": "resolved.bibliography.type-variants.article-journal.template[5].number"
     },
     {
       "comparisonEligibility": "comparable",
@@ -4254,7 +4254,7 @@
       "renderDisposition": "rendered",
       "row": 226,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.type-variants.article-journal.template[4].number"
+      "templatePath": "resolved.bibliography.type-variants.article-journal.template[3].group[1].group[0].number"
     },
     {
       "comparisonEligibility": "comparable",
@@ -4308,7 +4308,7 @@
       "renderDisposition": "rendered",
       "row": 229,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.type-variants.article-journal.template[8].variable"
+      "templatePath": "resolved.bibliography.type-variants.article-journal.template[6].variable"
     },
     {
       "comparisonEligibility": "comparable",
@@ -4323,10 +4323,10 @@
       "referenceType": "article-journal",
       "relevance": "relevant",
       "relevanceRationale": null,
-      "renderDisposition": "uncovered",
+      "renderDisposition": "rendered",
       "row": 230,
       "surface": "bibliography",
-      "templatePath": null
+      "templatePath": "resolved.bibliography.type-variants.article-journal.template[3].group[1].group[1].number"
     },
     {
       "comparisonEligibility": "comparable",
@@ -4344,7 +4344,7 @@
       "renderDisposition": "rendered",
       "row": 231,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.type-variants.article-journal.template[6].date"
+      "templatePath": "resolved.bibliography.type-variants.article-journal.template[3].group[1].group[2].date"
     },
     {
       "comparisonEligibility": "comparable",
@@ -4362,7 +4362,7 @@
       "renderDisposition": "rendered",
       "row": 232,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.type-variants.article-journal.template[7].number"
+      "templatePath": "resolved.bibliography.type-variants.article-journal.template[5].number"
     },
     {
       "comparisonEligibility": "comparable",
@@ -4398,7 +4398,7 @@
       "renderDisposition": "rendered",
       "row": 234,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.type-variants.article-journal.template[4].number"
+      "templatePath": "resolved.bibliography.type-variants.article-journal.template[3].group[1].group[0].number"
     },
     {
       "comparisonEligibility": "comparable",
@@ -4452,7 +4452,7 @@
       "renderDisposition": "rendered",
       "row": 237,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.type-variants.article-journal.template[8].variable"
+      "templatePath": "resolved.bibliography.type-variants.article-journal.template[6].variable"
     },
     {
       "comparisonEligibility": "comparable",
@@ -4470,7 +4470,7 @@
       "renderDisposition": "rendered",
       "row": 238,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.type-variants.article-journal.template[6].date"
+      "templatePath": "resolved.bibliography.type-variants.article-journal.template[3].group[1].group[2].date"
     },
     {
       "comparisonEligibility": "comparable",
@@ -4488,7 +4488,7 @@
       "renderDisposition": "rendered",
       "row": 239,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.type-variants.article-journal.template[7].number"
+      "templatePath": "resolved.bibliography.type-variants.article-journal.template[5].number"
     },
     {
       "comparisonEligibility": "comparable",
@@ -4524,7 +4524,7 @@
       "renderDisposition": "rendered",
       "row": 241,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.type-variants.article-journal.template[4].number"
+      "templatePath": "resolved.bibliography.type-variants.article-journal.template[3].group[1].group[0].number"
     },
     {
       "comparisonEligibility": "comparable",
@@ -10385,9 +10385,9 @@
     "relevantObservations": 528,
     "renderDisposition": {
       "fallback": 160,
-      "rendered": 151,
+      "rendered": 157,
       "suppressed": 17,
-      "uncovered": 200
+      "uncovered": 194
     }
   }
 }
