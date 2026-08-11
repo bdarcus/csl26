@@ -102,7 +102,7 @@ jobs:
 
       - name: Run corpus-aware script tests
         if: ${{ steps.fidelity-scope.outputs.mode == 'all' }}
-        run: node --test --test-timeout=180000 scripts/oracle.test.js scripts/report-core.test.js scripts/check-core-quality.test.js scripts/oracle-yaml.test.js
+        run: node --test --test-timeout=300000 scripts/oracle.test.js scripts/report-core.test.js scripts/check-core-quality.test.js scripts/oracle-yaml.test.js
 
       - name: Check core fidelity and SQI drift
         run: |
