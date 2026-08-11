@@ -17,6 +17,7 @@ use citum_schema::reference::{
 use citum_schema::template::DateVariable as TemplateDateVar;
 use citum_schema::template::*;
 use csl_legacy::csl_json::{DateVariable, Name, Reference as LegacyReference, StringOrNumber};
+use rstest::rstest;
 
 fn make_config() -> Config {
     Config {
@@ -5026,6 +5027,83 @@ fn test_text_case_leading_nocase_advances_state() {
         &config,
     );
     assert_eq!(result, "DNA replication in modern science");
+}
+
+/// Renders a monograph's primary title under `text-case: sentence-apa`,
+/// built natively (no `csl_legacy` round-trip) so markup-bearing and
+/// plain-text titles are exercised through identical construction.
+fn sentence_apa_monograph_title_value(title_str: &str) -> String {
+    let config = make_config_with_titles(citum_schema::options::TitlesConfig {
+        monograph: Some(citum_schema::options::titles::TitleRendering {
+            text_case: Some(citum_schema::options::titles::TextCase::SentenceApa),
+            ..Default::default()
+        }),
+        ..Default::default()
+    });
+    let locale = make_locale();
+    let options = RenderOptions {
+        config: Arc::new(config),
+        bibliography_config: None,
+        locale: &locale,
+        context: RenderContext::Bibliography,
+        mode: citum_schema::citation::CitationMode::NonIntegral,
+        suppress_author: false,
+        locator_raw: None,
+        ref_type: None,
+        show_semantics: true,
+        current_template_index: None,
+        abbreviation_map: None,
+    };
+    let hints = ProcHints::default();
+    let reference = InputReference::Monograph(Box::new(Monograph {
+        r#type: MonographType::Book,
+        title: Some(Title::Single(title_str.to_string())),
+        ..Default::default()
+    }));
+    let component = TemplateTitle {
+        title: TitleType::Primary,
+        ..Default::default()
+    };
+    component
+        .values::<PlainText>(&reference, &hints, &options)
+        .expect("title value should render")
+        .value
+}
+
+#[rstest]
+#[case::acronym_after_emphasis(
+    "_The Effect_ of NIPS on Cognition",
+    "_The effect_ of NIPS on cognition"
+)]
+#[case::acronym_inside_strong("Studies in *AI* and Law", "Studies in **AI** and law")]
+fn given_markup_bearing_title_with_acronym_when_sentence_case_then_acronym_preserved(
+    #[case] input: &str,
+    #[case] expected: &str,
+) {
+    assert_eq!(sentence_apa_monograph_title_value(input), expected);
+}
+
+#[test]
+fn test_text_case_punctuation_only_leaf_preserves_first_word_capital() {
+    // A markup boundary immediately around a punctuation character (e.g. an
+    // em dash inside its own span) splits it into its own Djot text leaf.
+    // That leaf carries no letters, so it must not consume the pending
+    // "capitalize the title's first word" request meant for the real first
+    // word that follows.
+    let result = sentence_apa_monograph_title_value("[—]{.emphasis-marker} Overview of Cognition");
+    assert_eq!(result, "— Overview of cognition");
+}
+
+#[test]
+fn test_text_case_plain_and_markup_paths_agree_on_acronym_preservation() {
+    // Same words, same casing decisions, whether or not the title happens to
+    // carry a Djot emphasis span (regression: markup-path sentence case used
+    // to flat-lowercase every non-first leaf, destroying NIPS/AI regardless
+    // of internal capitalization, while the plain-text path preserved them).
+    let plain = sentence_apa_monograph_title_value("The Effect of NIPS on Cognition");
+    let markup = sentence_apa_monograph_title_value("_The Effect_ of NIPS on Cognition");
+    assert_eq!(plain, "The effect of NIPS on cognition");
+    assert_eq!(markup, "_The effect_ of NIPS on cognition");
 }
 
 #[test]

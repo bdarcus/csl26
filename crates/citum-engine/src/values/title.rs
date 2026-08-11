@@ -160,30 +160,21 @@ fn make_case_transform(
     quote_depth: usize,
     language: Option<&str>,
 ) -> impl FnMut(&str) -> String {
-    let mut seen_alpha = false;
+    let mut capitalize_first_pending = true;
     let language = text_case::language_identifier_for_tag(language);
     move |text: &str| {
         let cased = match case {
             TextCase::Sentence | TextCase::SentenceApa | TextCase::SentenceNlm => {
-                let lowered = text_case::apply_text_case_with_language_id(
-                    text,
-                    TextCase::Lowercase,
-                    &language,
-                );
-                if seen_alpha {
-                    lowered
-                } else {
-                    // Capitalize the first alphabetic character we encounter
-                    let result = text_case::apply_text_case_with_language_id(
-                        &lowered,
-                        TextCase::CapitalizeFirst,
-                        &language,
-                    );
-                    if result.chars().any(|c: char| c.is_alphabetic()) {
-                        seen_alpha = true;
-                    }
-                    result
-                }
+                // Word-level sentence case, shared with the plain-text path so a
+                // title's casing does not depend on whether it happens to contain
+                // Djot markup: words carrying internal capitalization (acronyms,
+                // mixed-case names) are preserved verbatim rather than flattened,
+                // and the "capitalize the title's first word" state threads across
+                // text leaves split around markup (e.g. emphasis).
+                let (result, pending) =
+                    text_case::sentence_case_words(text, &language, capitalize_first_pending);
+                capitalize_first_pending = pending;
+                result
             }
             _ => text_case::apply_text_case_with_language_id(text, case, &language),
         };
