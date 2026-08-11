@@ -348,28 +348,17 @@ function resolveCitumBinary(explicitPath = null, allFeatures = false, dependenci
     }
   }
 
-  const managedCandidates = [
-    cargoTargetDir ? path.join(cargoTargetDir, 'debug', 'citum') : null,
-    cargoTargetDir ? path.join(cargoTargetDir, 'release', 'citum') : null,
-    path.join(PROJECT_ROOT, 'target', 'debug', 'citum'),
-    path.join(PROJECT_ROOT, 'target', 'release', 'citum'),
-  ].filter(Boolean);
-  if (!allFeatures) {
-    const existing = managedCandidates.find((candidate) => fileExists(candidate));
-    if (existing) return path.resolve(existing);
-  }
-
   const buildArgs = ['build', '-q', '--bin', 'citum'];
   if (allFeatures) {
     buildArgs.push('--all-features');
   }
 
-  // The canonical all-features path must ask Cargo to validate the managed
-  // binary. Merely reusing target/debug/citum can silently measure the wrong
-  // feature set; an up-to-date Cargo build is effectively a no-op. Default
-  // feature callers retain the cheap existing-binary path used by unit tests.
+  // Every managed path must ask Cargo to validate the binary before measuring.
+  // Merely reusing target/debug/citum can silently measure a stale source or
+  // feature set; an up-to-date Cargo build is effectively a no-op.
   runCargo('cargo', buildArgs, {
     cwd: PROJECT_ROOT,
+    env: { ...process.env, ...environment },
     encoding: 'utf8',
     stdio: ['pipe', 'pipe', 'pipe'],
   });
