@@ -1691,6 +1691,31 @@ test('resolveCitumBinary rebuilds a Cargo-managed binary for the requested featu
   }]);
 });
 
+test('resolveCitumBinary validates an existing managed binary for default features', () => {
+  const targetDir = path.join(os.tmpdir(), 'report-core-default-managed-target');
+  const builtBinary = path.join(targetDir, 'debug', 'citum');
+  const calls = [];
+  let cargoEnvironment;
+
+  const resolved = resolveCitumBinary(null, false, {
+    environment: { CARGO_TARGET_DIR: targetDir },
+    fileExists(candidate) {
+      return candidate === builtBinary;
+    },
+    runCargo(command, args, options) {
+      calls.push({ command, args });
+      cargoEnvironment = options.env;
+    },
+  });
+
+  assert.equal(resolved, builtBinary);
+  assert.deepEqual(calls, [{
+    command: 'cargo',
+    args: ['build', '-q', '--bin', 'citum'],
+  }]);
+  assert.equal(cargoEnvironment.CARGO_TARGET_DIR, targetDir);
+});
+
 test('resolveCitumBinary trusts an explicitly supplied binary without rebuilding', () => {
   const explicitBinary = path.join(os.tmpdir(), 'citum-explicit');
   let cargoCalls = 0;
