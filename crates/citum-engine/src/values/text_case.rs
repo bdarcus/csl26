@@ -218,30 +218,58 @@ fn to_sentence_case(text: &str) -> String {
 }
 
 fn to_sentence_case_with_language_id(text: &str, language: &LanguageIdentifier) -> String {
+    sentence_case_words(text, language, true).0
+}
+
+/// Sentence-case the whitespace-delimited words of `text`, preserving words
+/// that carry internal capitalization (see [`has_internal_uppercase`]).
+///
+/// `capitalize_first` requests that the next *eligible* word — one containing
+/// at least one letter or digit — receive the leading capital. A
+/// punctuation-only token (e.g. a standalone em dash split into its own Djot
+/// text leaf around markup) has no case to set and does not consume the
+/// request, so it doesn't block capitalization of the real first word that
+/// follows. The returned `bool` reports whether the request is still pending
+/// after processing `text` — `false` once some eligible word has consumed it
+/// (whether by being capitalized, or by carrying internal capitalization and
+/// being emitted verbatim), `true` if `text` contained no eligible words.
+/// This lets callers that stream multiple text segments (e.g. Djot text
+/// leaves split around markup) thread the "first word of the title" state
+/// across segments instead of restarting it at each leaf.
+pub(crate) fn sentence_case_words(
+    text: &str,
+    language: &LanguageIdentifier,
+    capitalize_first: bool,
+) -> (String, bool) {
     if text.is_empty() {
-        return String::new();
+        return (String::new(), capitalize_first);
     }
 
     let words: Vec<&str> = text.split_whitespace().collect();
     if words.is_empty() {
-        return text.to_string();
+        return (text.to_string(), capitalize_first);
     }
 
+    let mut pending = capitalize_first;
     let mut parts: Vec<String> = Vec::with_capacity(words.len());
-    for (i, word) in words.iter().enumerate() {
-        if has_internal_uppercase(word) {
+    for word in &words {
+        if !word.chars().any(char::is_alphanumeric) {
             parts.push((*word).to_string());
-        } else if i == 0 {
+        } else if has_internal_uppercase(word) {
+            parts.push((*word).to_string());
+            pending = false;
+        } else if pending {
             parts.push(capitalize_first_word_with_language_id(
                 &lowercase(word, language),
                 language,
             ));
+            pending = false;
         } else {
             parts.push(lowercase(word, language));
         }
     }
 
-    rebuild_with_original_whitespace(text, &parts)
+    (rebuild_with_original_whitespace(text, &parts), pending)
 }
 
 /// Capitalize the first alphabetic character of the string,
@@ -524,6 +552,7 @@ fn to_title_case_with_language_id(text: &str, language: &LanguageIdentifier) -> 
 )]
 mod tests {
     use super::*;
+    use rstest::rstest;
 
     // --- capitalize_first_word ---
 
@@ -756,6 +785,38 @@ mod tests {
             to_sentence_case("a study of McDonald"),
             "A study of McDonald"
         );
+    }
+
+    #[rstest]
+    #[case::acronym_mid_title("The Effect of NIPS on Cognition", "The effect of NIPS on cognition")]
+    #[case::acronym_first_word("NIPS Proceedings 2013", "NIPS proceedings 2013")]
+    #[case::two_letter_acronym("Studies in AI and Law", "Studies in AI and law")]
+    fn given_title_with_acronym_when_sentence_case_then_acronym_preserved(
+        #[case] input: &str,
+        #[case] expected: &str,
+    ) {
+        assert_eq!(to_sentence_case(input), expected);
+    }
+
+    #[test]
+    fn test_sentence_case_words_punctuation_only_segment_preserves_pending_capital() {
+        // A punctuation-only token (no letters or digits) must not consume a
+        // pending "capitalize first word" request — the real first word,
+        // arriving in a later segment, still needs it. This mirrors a Djot
+        // text leaf that consists solely of punctuation (e.g. an em dash
+        // isolated by a markup boundary).
+        let language = root_language_identifier();
+        let (first, pending_after_first) = sentence_case_words("—", &language, true);
+        assert_eq!(first, "—");
+        assert!(
+            pending_after_first,
+            "a punctuation-only segment must leave the capitalize-first request pending"
+        );
+
+        let (second, pending_after_second) =
+            sentence_case_words("overview of cognition", &language, pending_after_first);
+        assert_eq!(second, "Overview of cognition");
+        assert!(!pending_after_second);
     }
 
     // --- to_title_case ---
