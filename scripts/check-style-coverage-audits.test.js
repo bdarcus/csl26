@@ -177,6 +177,23 @@ test('coverage audit view groups fields by stable output identity with collapsed
   assert.equal(view.adjudicationRecord.href.endsWith('.json'), false);
 });
 
+test('coverage audit view measures current before/after output evidence separately from the packet', () => {
+  const { manifest, packet } = baselineFixture();
+  validateCoveragePacket(packet, registration(), manifest);
+  const report = readJson('report.json');
+  const view = buildCoverageAuditView(packet, registration(), report, report);
+  assert.equal(view.postChangeEvidence.status, 'measured');
+  assert.deepEqual(view.postChangeEvidence.beforeExactParity, view.postChangeEvidence.afterExactParity);
+  assert.equal(view.postChangeEvidence.changedOutputs.length, 0);
+  assert.equal(view.outputGroups.every((group) => group.postChangeEvidence), true);
+
+  const changedReport = structuredClone(report);
+  changedReport.styles[0].oracleDetail[0].exactCitum += ' changed';
+  const changedView = buildCoverageAuditView(packet, registration(), report, changedReport);
+  assert.equal(changedView.postChangeEvidence.changedOutputs.length, 1);
+  assert.equal(changedView.postChangeEvidence.changedOutputs[0].surface, 'bibliography');
+});
+
 test('status lookup reports unregistered styles without selecting arbitrary audit directories', () => {
   const provenance = { coverage_audits: [registration()] };
 

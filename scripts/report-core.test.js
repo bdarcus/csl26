@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
+const yaml = require('js-yaml');
 
 const {
   validateVerificationPolicy,
@@ -1275,9 +1276,20 @@ test('generateHtml groups families and exposes unadjudicated oracle text drift',
 
 test('generateHtml replaces registered diff tables with the accessible audit-first explorer', () => {
   const provenance = loadReportProvenance();
+  const auditManifest = yaml.load(fs.readFileSync(path.join(
+    projectRoot,
+    'docs/architecture/audits/2026-08-09-shortened-notes-coverage/manifest.yaml'
+  ), 'utf8'));
+  const authorityReport = JSON.parse(fs.readFileSync(path.join(
+    projectRoot,
+    auditManifest.authority.report.path
+  ), 'utf8'));
   const coverageAudit = loadCoverageAuditViews(
     provenance,
-    ['chicago-shortened-notes-bibliography']
+    ['chicago-shortened-notes-bibliography'],
+    new Map([
+      ['chicago-shortened-notes-bibliography', authorityReport],
+    ])
   ).get('chicago-shortened-notes-bibliography');
   const html = generateHtml({
     generated: '2026-08-09T00:00:00.000Z',
@@ -1367,6 +1379,8 @@ test('generateHtml replaces registered diff tables with the accessible audit-fir
   assert.match(html, /text-base sm:text-sm/);
   assert.match(html, /chicago-shortened-notes-bibliography\/bibliography\/references-expanded\/ITEM-1\/article-journal\/issue\/entry/);
   assert.match(html, /<details[^>]*>[\s\S]*Exact Oracle\/Citum difference/);
+  assert.match(html, /Measured post-change evidence/);
+  assert.match(html, /before exact/);
   assert.doesNotMatch(html, /<details[^>]*open/);
   assert.match(html, /Supplemental benchmark remains visible/);
   assert.match(html, /Read the maintainer adjudication/);
@@ -1411,6 +1425,9 @@ test('generateReport exposes the registered coverage audit on its corresponding 
   assert.equal(audit.summary.joinedExactParity.passed, 28);
   assert.equal(audit.outputGroups.length, 81);
   assert.equal(audit.outputGroups.some((group) => group.exactEvidence), true);
+  assert.equal(audit.postChangeEvidence.status, 'measured');
+  assert.equal(audit.postChangeEvidence.beforeExactParity.passed, 34);
+  assert.equal(audit.postChangeEvidence.afterExactParity.passed, 48);
 });
 
 test('generateReport supports multi-style selected reports', {
