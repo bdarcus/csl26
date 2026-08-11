@@ -221,13 +221,22 @@ function entryMap(entries, evidenceRunId, surface) {
   return result;
 }
 
-function buildCoverageAuditView(packet, registration, authorityReport) {
+function buildCoverageAuditView(packet, registration, authorityReport, currentReport = null) {
   const styleReport = selectAuthorityStyle(authorityReport, registration.style_id);
+  const currentStyleReport = currentReport
+    ? selectAuthorityStyle(currentReport, registration.style_id)
+    : null;
   const evidenceRunId = packet.auditManifest.authority.evidenceRunId;
   const evidence = {
     citation: entryMap(styleReport.citationEntries, evidenceRunId, 'citation'),
     bibliography: entryMap(styleReport.oracleDetail, evidenceRunId, 'bibliography'),
   };
+  const currentEvidence = currentStyleReport
+    ? {
+      citation: entryMap(currentStyleReport.citationEntries, evidenceRunId, 'citation'),
+      bibliography: entryMap(currentStyleReport.oracleDetail, evidenceRunId, 'bibliography'),
+    }
+    : null;
   const groups = new Map();
 
   for (const observation of packet.observations) {
@@ -260,6 +269,18 @@ function buildCoverageAuditView(packet, registration, authorityReport) {
           }
           : null,
       };
+      const currentEntry = currentEvidence?.[observation.surface].get(outputId) || null;
+      if (currentEntry && authorityEntry) {
+        const beforeText = authorityEntry.exactCitum ?? authorityEntry.citum ?? authorityEntry.actual ?? '';
+        const afterText = currentEntry.exactCitum ?? currentEntry.citum ?? currentEntry.actual ?? '';
+        group.postChangeEvidence = {
+          beforeExact: authorityEntry.exactMatch === true,
+          afterExact: currentEntry.exactMatch === true,
+          changed: beforeText !== afterText,
+          beforeCitum: beforeText,
+          afterCitum: afterText,
+        };
+      }
       groups.set(key, group);
     }
 
@@ -285,6 +306,14 @@ function buildCoverageAuditView(packet, registration, authorityReport) {
   const outputGroups = [...groups.values()].sort((left, right) => (
     left.surface.localeCompare(right.surface) || left.outputId.localeCompare(right.outputId)
   ));
+  const changedOutputs = outputGroups
+    .filter((group) => group.postChangeEvidence?.changed)
+    .map((group) => ({
+      surface: group.surface,
+      outputId: group.outputId,
+      beforeExact: group.postChangeEvidence.beforeExact,
+      afterExact: group.postChangeEvidence.afterExact,
+    }));
   return {
     schema: REPORT_AUDIT_SCHEMA,
     status: 'current',
@@ -297,6 +326,16 @@ function buildCoverageAuditView(packet, registration, authorityReport) {
       href: registration.adjudication_href,
     },
     summary: packet.summary,
+    postChangeEvidence: currentStyleReport
+      ? {
+        schema: 'citum.report-coverage-audit-post-change/v1',
+        status: 'measured',
+        beforeExactParity: styleReport.exactParity,
+        afterExactParity: currentStyleReport.exactParity,
+        changedOutputs,
+        unavailableOutputs: outputGroups.filter((group) => !group.postChangeEvidence).length,
+      }
+      : null,
     filters: {
       surfaces: ['bibliography', 'citation'],
       dispositions: ['rendered', 'fallback', 'suppressed', 'uncovered', 'excluded'],
@@ -306,7 +345,7 @@ function buildCoverageAuditView(packet, registration, authorityReport) {
   };
 }
 
-function loadCoverageAuditViews(provenanceConfig, selectedStyles = null) {
+function loadCoverageAuditViews(provenanceConfig, selectedStyles = null, currentReports = null) {
   const selected = selectedStyles ? new Set(selectedStyles) : null;
   const views = new Map();
   for (const registration of provenanceConfig.coverage_audits || []) {
@@ -316,7 +355,8 @@ function loadCoverageAuditViews(provenanceConfig, selectedStyles = null) {
     const packet = readData(resolveRepoPath(registration.packet));
     validateCoveragePacket(packet, registration, manifest);
     const authorityReport = readData(resolveRepoPath(manifest.authority.report.path));
-    views.set(registration.style_id, buildCoverageAuditView(packet, registration, authorityReport));
+    const currentReport = currentReports?.get(registration.style_id) || null;
+    views.set(registration.style_id, buildCoverageAuditView(packet, registration, authorityReport, currentReport));
   }
   return views;
 }

@@ -15,14 +15,19 @@ index; this note distinguishes observed facts from maintainer inference.
   more exact outputs among 393 comparable outputs and 16 not-comparable outputs.
 - The packet contains **565** populated field observations. Thirty-seven are
   excluded fixture metadata (`citation-key`, `license`, `language`, or `note`).
-  The 528 relevant observations partition into 151 rendered, 160 fallback, 17
-  suppressed, and 200 uncovered observations.
+  The 528 relevant observations partition into 157 rendered, 160 fallback, 17
+  suppressed, and 194 uncovered observations after the article-journal grammar
+  experiment.
 - The 17 suppressions are narrow authority-backed publication-place omissions.
   Bibliography `ITEM-1` remains uncovered because citeproc-js renders its
   `publisher-place` as `(Chicago)`.
 - Coverage is inferred from the Citum-resolved style. It does not prove runtime
-  field consumption, and the 200 uncovered observations are an investigation
-  queue rather than 200 confirmed style defects.
+  field consumption, and the 194 uncovered observations are an investigation
+  queue rather than 194 confirmed style defects.
+- The report-time post-change join measures the current source-built Citum
+  output against the authority run: exact parity moved from **34/473** to
+  **48/473**. This is output evidence, not proof that an uncovered field caused
+  any individual text mismatch.
 - A control run at the same source revision and with an empty report cache reused
   a stale managed binary and produced **20/473**. The full report hashes and both
   commands are recorded in `authority-report.json`.
