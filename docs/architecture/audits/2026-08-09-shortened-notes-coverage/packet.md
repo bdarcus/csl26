@@ -12,10 +12,10 @@ Structural coverage identifies a resolved component path; it does not prove that
 
 | Render disposition | Relevant observations |
 |---|---:|
-| rendered | 151 |
+| rendered | 157 |
 | fallback | 160 |
 | suppressed | 17 |
-| uncovered | 200 |
+| uncovered | 194 |
 
 - Populated observations: **565**
 - Relevant observations: **528**
@@ -33,7 +33,7 @@ Structural coverage identifies a resolved component path; it does not prove that
 | 1 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-1/article-journal/author/entry` | relevant | rendered | comparable | false |
 | 2 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-1/article-journal/container-title/entry` | relevant | rendered | comparable | false |
 | 3 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-1/article-journal/doi/entry` | relevant | rendered | comparable | false |
-| 4 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-1/article-journal/issue/entry` | relevant | uncovered | comparable | false |
+| 4 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-1/article-journal/issue/entry` | relevant | rendered | comparable | false |
 | 5 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-1/article-journal/issued/entry` | relevant | rendered | comparable | false |
 | 6 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-1/article-journal/publisher-place/entry` | relevant | uncovered | comparable | false |
 | 7 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-1/article-journal/publisher/entry` | relevant | rendered | comparable | false |
@@ -42,7 +42,7 @@ Structural coverage identifies a resolved component path; it does not prove that
 | 10 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-10/article-journal/author/entry` | relevant | rendered | comparable | false |
 | 11 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-10/article-journal/container-title/entry` | relevant | rendered | comparable | false |
 | 12 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-10/article-journal/doi/entry` | relevant | rendered | comparable | false |
-| 13 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-10/article-journal/issue/entry` | relevant | uncovered | comparable | false |
+| 13 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-10/article-journal/issue/entry` | relevant | rendered | comparable | false |
 | 14 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-10/article-journal/issued/entry` | relevant | rendered | comparable | false |
 | 15 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-10/article-journal/page/entry` | relevant | rendered | comparable | false |
 | 16 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-10/article-journal/title/entry` | relevant | rendered | comparable | false |
@@ -69,7 +69,7 @@ Structural coverage identifies a resolved component path; it does not prove that
 | 37 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-14/book/publisher/entry` | relevant | rendered | comparable | false |
 | 38 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-14/book/title/entry` | relevant | rendered | comparable | false |
 | 39 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-15/article-journal/container-title/entry` | relevant | rendered | comparable | false |
-| 40 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-15/article-journal/issue/entry` | relevant | uncovered | comparable | false |
+| 40 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-15/article-journal/issue/entry` | relevant | rendered | comparable | false |
 | 41 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-15/article-journal/issued/entry` | relevant | rendered | comparable | false |
 | 42 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-15/article-journal/note/entry` | excluded | — | comparable | false |
 | 43 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-15/article-journal/page/entry` | relevant | rendered | comparable | false |
@@ -162,7 +162,7 @@ Structural coverage identifies a resolved component path; it does not prove that
 | 130 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-29/article-journal/author/entry` | relevant | rendered | comparable | false |
 | 131 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-29/article-journal/container-title/entry` | relevant | rendered | comparable | false |
 | 132 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-29/article-journal/doi/entry` | relevant | rendered | comparable | false |
-| 133 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-29/article-journal/issue/entry` | relevant | uncovered | comparable | false |
+| 133 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-29/article-journal/issue/entry` | relevant | rendered | comparable | false |
 | 134 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-29/article-journal/issued/entry` | relevant | rendered | comparable | false |
 | 135 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-29/article-journal/page/entry` | relevant | rendered | comparable | false |
 | 136 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-29/article-journal/title/entry` | relevant | rendered | comparable | false |
@@ -177,7 +177,7 @@ Structural coverage identifies a resolved component path; it does not prove that
 | 145 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-30/article-journal/author/entry` | relevant | rendered | comparable | false |
 | 146 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-30/article-journal/container-title/entry` | relevant | rendered | comparable | false |
 | 147 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-30/article-journal/doi/entry` | relevant | rendered | comparable | false |
-| 148 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-30/article-journal/issue/entry` | relevant | uncovered | comparable | false |
+| 148 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-30/article-journal/issue/entry` | relevant | rendered | comparable | false |
 | 149 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-30/article-journal/issued/entry` | relevant | rendered | comparable | false |
 | 150 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-30/article-journal/page/entry` | relevant | rendered | comparable | false |
 | 151 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-30/article-journal/title/entry` | relevant | rendered | comparable | false |
@@ -259,7 +259,7 @@ Structural coverage identifies a resolved component path; it does not prove that
 | 227 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-8/article-journal/author/entry` | relevant | rendered | comparable | false |
 | 228 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-8/article-journal/container-title/entry` | relevant | rendered | comparable | false |
 | 229 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-8/article-journal/doi/entry` | relevant | rendered | comparable | false |
-| 230 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-8/article-journal/issue/entry` | relevant | uncovered | comparable | false |
+| 230 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-8/article-journal/issue/entry` | relevant | rendered | comparable | false |
 | 231 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-8/article-journal/issued/entry` | relevant | rendered | comparable | false |
 | 232 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-8/article-journal/page/entry` | relevant | rendered | comparable | false |
 | 233 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-8/article-journal/title/entry` | relevant | rendered | comparable | false |
