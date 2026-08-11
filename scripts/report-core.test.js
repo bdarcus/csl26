@@ -1427,7 +1427,7 @@ test('generateReport exposes the registered coverage audit on its corresponding 
   assert.equal(audit.outputGroups.some((group) => group.exactEvidence), true);
   assert.equal(audit.postChangeEvidence.status, 'measured');
   assert.equal(audit.postChangeEvidence.beforeExactParity.passed, 34);
-  assert.equal(audit.postChangeEvidence.afterExactParity.passed, 48);
+  assert.equal(audit.postChangeEvidence.afterExactParity.passed, 60);
 });
 
 test('generateReport supports multi-style selected reports', {
