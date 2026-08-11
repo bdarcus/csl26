@@ -11,20 +11,22 @@ options:
   # T&F Style F (tf_f.pdf) prescribes sentence-style capitalisation for titles
   # (only the first word capitalised) — a deliberate divergence from the CSL
   # reference, which renders title-case. Journal/serial names stay title-case.
-  # Applied to article (`component`) titles only for now: the engine's
-  # `text-case: sentence` has no proper-noun protection (it would lowercase
-  # `Cambridge` in a book title, or `La Ciotat` in a motion-picture title), so
-  # monograph/container titles stay title-case until the sentence-case
-  # proper-noun fix lands (tracked in csl26-4kt3). The parent's `type-mapping`
+  # Applied to article (`component`) titles only: `text-case: sentence` has no
+  # proper-noun protection by design (see docs/policies/TEXT_CASE_PROTECTION.md)
+  # — a single-capital word like `Cambridge` or `La Ciotat` is indistinguishable
+  # from title-case source data without a data-declared `.nocase` span, so
+  # monograph/container titles stay title-case rather than risk lowercasing
+  # proper nouns the source data hasn't marked. The parent's `type-mapping`
   # (chicago-author-date-18th) would otherwise route broadcast/collection/
   # manuscript/motion-picture/song/webpage into `component` too, so it is
   # explicitly cleared here rather than letting sentence-case reach those
   # categories through inheritance (see csl26-svfg / STYLE_INHERITANCE.md
   # rule 1 and 3).
   titles:
-    # Not a defect: documented workaround for the open proper-noun text-case
-    # bug csl26-4kt3 (see csl26-svfg's summary). Remove this null-clear once
-    # csl26-4kt3 lands; tracked in that bean's acceptance criteria.
+    # Not a defect: permanent style-content decision, not a workaround for an
+    # engine gap. See docs/policies/TEXT_CASE_PROTECTION.md and csl26-4kt3 for
+    # why proper-noun protection here would need `.nocase` in the source data,
+    # which this style cannot supply.
     type-mapping: ~
     component:
       text-case: sentence
