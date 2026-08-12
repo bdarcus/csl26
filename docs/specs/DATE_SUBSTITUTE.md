@@ -14,16 +14,17 @@ reference's identity date is missing. The policy removes repeated inline
 and guarantees that rendering and disambiguation resolve the same candidate
 source under the same effective citation or bibliography configuration.
 
-A survey of the 32 embedded style YAML files found 64 `fallback:` keys, all in
-three GB/T files. Fifty are date fallbacks: 25 in
+A pre-migration survey of the 32 embedded style YAML files found 64
+`fallback:` keys, all in three GB/T files. Fifty were date fallbacks: 25 in
 `gb-t-7714-2025-base.yaml`, 22 in `gb-t-7714-2025-author-date.yaml`, and 3 in
 `gb-t-7714-2025-note.yaml`. The other 14 are terminal author fallbacks in the
 author-date style: after its options-level author-substitute chain is
 exhausted, each `contributor: author` component renders `term.anonymous`.
 Those author fallbacks belong to the existing author-substitute contract, not
-this date-substitute contract. Among the date fallbacks, not all belong to the
-identity date slot, but their concentration still shows that the repeated
-behavior is a style-family policy rather than a generic template default.
+this date-substitute contract. Layer 4 moved the identity-date policy into the
+two GB/T presets; the author-date style retains eight inline fallbacks only on
+later display dates. The concentration showed that the repeated behavior was
+a style-family policy rather than a generic template default.
 
 ## Scope
 
@@ -356,15 +357,16 @@ identity content must not be split by unrendered raw precision.
 
 ### Layer 4 — GB/T style migration and fidelity
 
-- [ ] GB/T numeric and note-base styles use `gb-t-7714-2025`.
-- [ ] GB/T author-date uses `gb-t-7714-2025-author-date`.
-- [ ] Migrated identity slots remove redundant inline fallback while
+- [x] GB/T numeric and note-base styles use `gb-t-7714-2025`.
+- [x] GB/T author-date uses `gb-t-7714-2025-author-date`.
+- [x] Migrated identity slots remove redundant inline fallback while
       display-only date fallbacks remain inline.
-- [ ] GB/T oracle results meet or exceed the pre-migration baseline, and the
+- [x] GB/T oracle results meet or exceed the pre-migration baseline, and the
       exemplar/core-quality sweep reports no unrelated regression.
 
 ## Changelog
 
+- 2026-08-12: Migrated the GB/T family to the named presets in Layer 4.
 - 2026-08-12: Clarified candidate rendering, resource-budget, and selector-warning requirements after implementation review.
 - 2026-08-12: Activated with the Layer 3 schema and engine implementation.
 - 2026-08-12: Initial Draft for Layer 2 of the date-substitute stack.

@@ -1,7 +1,7 @@
 ---
 # csl26-qbmd
 title: Add a date-substitute options mechanism mirroring author-substitute
-status: in-progress
+status: completed
 type: feature
 priority: normal
 tags:
@@ -9,7 +9,7 @@ tags:
     - fidelity
     - gb-t-7714
 created_at: 2026-08-12T13:59:09Z
-updated_at: 2026-08-12T15:53:10Z
+updated_at: 2026-08-12T18:28:05Z
 parent: csl26-ccdt
 ---
 
@@ -32,7 +32,14 @@ Four-layer stacked PR:
 
 1. PR #1171 — candidate-neutral date-slot foundation.
 2. `docs/specs/DATE_SUBSTITUTE.md` — Draft specification.
-3. Schema and engine implementation; spec becomes Active.
-4. GB/T style migration to the two GB/T presets with fidelity validation.
+3. PR #1174 — schema, engine, generated schema, Active spec, and quality
+   reporter support for the preset.
+4. PR #1175 — GB/T migration to the two named presets with fidelity
+   validation.
 
 Related: `docs/specs/DISAMBIGUATION.md`, csl26-sea6.
+
+Validation: `just pre-commit` (2486/2486), schema validation, three targeted
+GB/T reports, the full 19-style embedded parity-floor sweep, and the core
+quality gate. Numeric and note metrics are unchanged; author-date exact parity
+rises from 36/61 to 37/62 and SQI rises from 91.1 to 92.3.
