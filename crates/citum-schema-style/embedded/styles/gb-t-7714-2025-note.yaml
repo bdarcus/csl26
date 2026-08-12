@@ -54,7 +54,6 @@ citation:
     strip-periods: true
   - date: issued
     form: year
-    fallback: []
   - date: accessed
     form: year
     wrap:
@@ -111,7 +110,6 @@ citation:
       strip-periods: true
     - date: issued
       form: year
-      fallback: []
       suppress: false
     - date: accessed
       form: year
@@ -176,7 +174,6 @@ citation:
       strip-periods: true
     - date: issued
       form: year
-      fallback: []
       suppress: false
     - date: accessed
       form: year

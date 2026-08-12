@@ -1,6 +1,6 @@
 {
-  "generated": "2026-08-11T17:17:23.482Z",
-  "commit": "a869fd95",
+  "generated": "2026-08-12T19:33:57.951Z",
+  "commit": "b7ca0a0b",
   "source": "scripts/report-core.js",
   "purpose": "Hard per-style exact-parity floor-gate baseline for the embedded tier, consumed by scripts/check-core-quality.js --parity-baseline (see docs/architecture/audits/2026-07-31_EXACT_PARITY_REFOCUS.md). It also records headline fidelity. Sub-1.0 fidelity ratchets are tracked separately per-style in scripts/report-data/verification-policy.yaml (min_pass_rate floors). Regenerate this file after each parity-tuning wave; the gate never goes backward on passed counts or total (fixture-drift guard).",
   "styles": {
@@ -151,7 +151,7 @@
     "gb-t-7714-2025-author-date": {
       "tier": "embedded",
       "fidelityScore": 0.851,
-      "qualityScore": 0.909,
+      "qualityScore": 0.923,
       "citations": {
         "passed": 19,
         "total": 20
@@ -161,9 +161,9 @@
         "total": 47
       },
       "exactParity": {
-        "passed": 36,
-        "total": 61,
-        "rate": 0.59
+        "passed": 37,
+        "total": 62,
+        "rate": 0.597
       }
     },
     "gb-t-7714-2025-note": {
