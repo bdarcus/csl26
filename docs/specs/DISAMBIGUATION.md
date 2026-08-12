@@ -44,7 +44,159 @@ abbreviated by the style's `shorten` config. This matches what the style will
 visually show, so disambiguation keys track rendered output without re-rendering.
 
 **Year key** (`build_group_key`): the `issued` year (`effective_issued_date()`),
-appended to the author key. **No other date field participates in the key.**
+appended to the author key, when that year is present and parses cleanly.
+When it is not — no `issued` value at all, or one that doesn't reduce to a
+clean numeric year (e.g. a literal like `"c1988"`) — the key falls through to
+the **date-slot discriminant** described below (`csl26-huuz`). No other date
+field ever substitutes for a *present* issued year in the key.
+
+#### Date-slot discriminant when the issued year is absent (csl26-huuz)
+
+Grouping by abstract variable equality alone is wrong once a style's date
+slot is type-conditional: two undated references can render *different* text
+for their date position (one style's `article-journal` branch renders
+nothing at all where every other type renders the locale's "no date" term,
+GB/T 7714 §7714.7.2), and two references *are* already visually
+distinguishable whenever their date slots render differently — grouping them
+for year-suffix purposes would be wrong on Citum's own terms, independent of
+what citeproc-js does. Conversely, references whose date slots render
+*identical* text must still collide, or the group won't get the shared
+suffix sequence a reader would expect.
+
+The fix keeps `build_group_key`'s existing shape (author key + a date
+discriminant) but computes the discriminant from the reference's **resolved
+template** — the first date component under the author not marked
+`suppress-disamb-suffix` — instead of assuming a uniform outcome:
+
+1. **The date variable resolves to a real, non-empty value** → the text it
+   would actually *render* is the discriminant: `form`-restricted formatting
+   plus uncertainty/approximation markers, the same pipeline
+   `TemplateDate::values` applies — not the raw stored value, whose `Display`
+   can carry more precision than `form` shows (a day-precision `copyright`
+   date under `form: year` renders as a bare year but its raw value still has
+   the day; reading the raw value could split a group whose members render
+   identically, flagged in PR review). For a fallback candidate specifically,
+   this also includes the candidate's own prefix/suffix/wrap and the
+   resolved value's `note` — the same extra text
+   `apply_fallback_component_rendering`/`append_note` add to the bare value
+   during real rendering (GB/T's `book,thesis,map` chain prefixes
+   `copyright` with `c` and suffixes `printing` with `印刷`; two references
+   resolving each can share a bare year while rendering visibly different
+   text, and must not collide).
+2. **The variable is empty, and the resolved fallback chain (explicit
+   `fallback:`, or the implicit no-`fallback:` branch) renders the locale's
+   no-date term** → a discriminant for that term, scoped by the reference's
+   effective language (mirrors the anonymous-fallback author key below — the
+   term itself varies by language, `无日期` vs `n.d.`). The implicit and an
+   explicit `fallback: [message: term.no-date]` render identical text, so
+   both compute the identical discriminant.
+3. **An access date (`DateVariable::Accessed`) is the only thing that would
+   resolve** — whether it's the slot's own primary variable or a fallback
+   candidate — **the discriminant is empty**, matching case 4, never the
+   access date's value. An access date is retrieval metadata, not part of a
+   work's identity; two references differing only in *when* they were
+   accessed must not be treated as distinguishable. This mirrors, but is not
+   derived from, citeproc-js's `just_looking`-time suppression of accessed
+   dates during its own ambiguity computation — the two independently land
+   on the same rule because it's the correct rule, not because one copies
+   the other.
+4. **Nothing resolves at all** (an explicit `fallback: []`, or no template
+   configured) → empty discriminant, the same value case 3 produces.
+   Expressing "this reference type's date logic has nothing else to show for
+   a missing date" as an empty `fallback:` list overloads an empty
+   collection as a semantic signal — flagged as a design concern, not fixed
+   here. A `date-substitute` options-level mechanism (mirroring
+   `author-substitute`/`Substitute` in `options/substitute.rs`) is planned as
+   a stacked follow-up that would express this declaratively instead —
+   `csl26-qbmd`, designed together with this discriminant rather than as an
+   independent fix, since it will own most of what this function reads.
+
+Case 3's "stop, don't fall through" behavior matters: once a candidate in the
+fallback chain *would* be selected (its underlying variable has a value,
+even if that value contributes no discriminant), the search stops there — it
+does not continue scanning for a later candidate. This mirrors the
+if/else-if/else shape the fallback chain represents: a present access date
+selects that branch, whose content is then suppressed for grouping purposes;
+it does not make the chain fall through to the no-date term as if the access
+branch had never matched.
+
+**Spec resolution order is bibliography-preferred, not citation-preferred**
+(`Disambiguator::date_slot_discriminant`, `first_date_component_for_bibliography`
+before `first_date_component_for_citation`, `sorting.rs`) — the opposite
+order from the author-key list-primary resolution in `build_reference_cache`.
+This was confirmed empirically, not assumed: a style's `citation:` template
+is commonly a simpler, non-type-differentiated form of the same date logic
+(`gb-t-7714-2025-author-date`'s `citation:` section has one flat
+`date: issued` component with no `type-variants:` at all, unlike its
+`bibliography:` section). Preferring `citation_spec` first — the initial
+design — let that undifferentiated template collapse every undated reference
+onto one discriminant regardless of type, silently defeating the
+type-conditional split this mechanism exists to make; verified against the
+GB/T oracle before landing the bibliography-first order.
+
+The selected slot carries its effective scope configuration with it:
+bibliography slots use the effective bibliography options, while the citation
+fallback slot uses the effective citation options. This keeps date markers and
+candidate-note behavior aligned with the scope whose template supplied the
+identity slot.
+
+**Why not compute citation and bibliography membership separately** (raised
+in PR review): a reference's year-suffix letter must be identical everywhere
+it's cited — a citation showing "2020a" and the bibliography showing "2020b"
+for the same reference is a worse, more visible defect than the asymmetry a
+per-scope split would fix. It's also not what the oracle does: this
+mechanism's design evidence was citeproc-js's own `registry.ambigcites` for
+this exact style, captured once for the whole style (无日期×23, n.d.×10,
+empty×3, empty×2) — one set of groups, used for both citation and
+bibliography rendering, because upstream's `date-intext` macro is literally
+the same macro referenced from both the `<citation>` and `<bibliography>`
+layouts in the CSL source. Bibliography-preferred is correct precisely
+*because* citum's bibliography template is the more complete mirror of that
+shared macro. The citation template's own lack of type-conditional structure
+is a separate, pre-existing migration gap, not something this mechanism can
+or should absorb by fragmenting the letter itself; tracked as a follow-up
+under `csl26-6eak`.
+
+Both `first_date_component_for_citation` and
+`first_date_component_for_bibliography` resolve their language via
+`crate::values::effective_item_language`, matching the real render path
+(`processor/rendering/mod.rs::locale_for_reference`) and this mechanism's
+own no-date-term discriminant scoping — not the bare `reference.language()`
+the pre-existing `primary_contributor_for_citation`/
+`primary_contributor_for_bibliography` use (a latent, unrelated
+inconsistency, out of scope here; flagged in PR review).
+
+No new schema surface: `TemplateDate.fallback: Option<Vec<TemplateComponent>>`
+already existed and the renderer already walked it in order
+(`values/date.rs`); the discriminant reads data styles already carry.
+
+**Risk containment:** when the issued year is present and parses, the key is
+byte-identical to before this change. The discriminant path only ever
+*splits* a group whose members' date slots resolve differently — it never
+merges references that previously formed separate groups.
+
+**Rendering fix required alongside grouping.** `values/date.rs`'s fallback
+render path previously only inlined a year-suffix letter for a `message:`
+fallback candidate (`csl26-6eak`), appending it *after* that candidate's own
+wrap/affixes were applied. Two more cases needed the same treatment once
+grouping could split on them:
+- A `date:` fallback candidate (e.g. an access-year fallback rendering
+  `Anon，[2020a]`) needs the letter inlined into the raw formatted text
+  *before* the candidate's own wrap is applied, so it lands inside the
+  brackets rather than after them.
+- An empty resolution (nothing in the fallback chain renders anything) still
+  needs the group's disamb suffix rendered standalone — upstream's bare
+  `<text variable="year-suffix"/>` after an empty date, oracle: `Anon，b.` —
+  otherwise an entry whose date slot is entirely empty silently loses its
+  disambiguator rather than getting the wrong one.
+
+**Scope: membership, not order.** This mechanism fixes collision-group
+*membership*. Within-group *letter order* still rides on §3's resolved-sort
+machinery (`csl26-m8la`) — a style with no real `bibliography.sort` of its
+own (like `gb-t-7714-2025-author-date`, which inherits `citation-number`
+registry order from its numeric base) will still assign letters in registry
+order, which can disagree with the oracle's actual bibliography-sort order
+for groups this mechanism newly separates out. That gap is `csl26-q67h`.
 
 #### Year-suffix when the original-publication date differs
 
@@ -363,6 +515,20 @@ added to the citation context.
   same-surname authors get initials, not a spurious year suffix (csl26-2zy6, row 114)
 - [x] MLA disables `year_suffix` and disambiguates same-author works via the
   `disambiguate-only` short title (csl26-2zy6, row 173)
+- [x] When the issued year is absent, collision-group membership follows a
+  date-slot discriminant computed from the resolved template rather than a
+  uniform "no date" assumption (csl26-huuz)
+- [x] An access date never contributes to the discriminant, whether primary
+  or fallback, present or absent (csl26-huuz)
+- [x] The implicit no-`fallback:` no-date-term path and an explicit
+  `fallback: [message: term.no-date]` compute the identical discriminant
+  (csl26-huuz)
+- [x] A resolving candidate's discriminant reflects `form`-restricted
+  rendered text, prefix/suffix/wrap, and `note` — not the raw stored date
+  value's precision (csl26-huuz)
+- [ ] A declarative, type-scoped mechanism (not an empty `fallback:` list)
+  expresses "nothing else to show for a missing date" (`csl26-qbmd`,
+  stacked follow-up)
 
 ## Related specs
 
@@ -374,6 +540,48 @@ added to the citation context.
 
 ## Changelog
 
+- 2026-08-12: Review follow-up on the date-slot discriminant (csl26-huuz).
+  A resolving candidate's discriminant now reflects `form`-restricted
+  rendered text plus prefix/suffix/wrap/`note` (`values/date.rs` gained
+  `fallback_candidate_discriminant`) instead of the raw stored date value,
+  which could over-collapse two candidates that render visibly different
+  text (a `c`-prefixed `copyright` year and a `印刷`-suffixed `printing`
+  year sharing a bare year, or a day-precision date under `form: year`).
+  `first_date_component_for_citation`/`_for_bibliography` now resolve
+  language via `effective_item_language`, matching the real render path,
+  instead of bare `reference.language()`. Investigated and declined a
+  fourth review finding (splitting citation and bibliography disambiguation
+  membership into separate hints) — see the bibliography-preferred
+  rationale above; a reference's letter must stay identical across both
+  scopes. A `TemplateDate.suppress-no-date-term` flag was tried and reverted
+  before landing — the empty-`fallback:`-list-as-signal concern it answered
+  is real, but a per-component flag would just be one more thing for a
+  planned `date-substitute` options mechanism (`csl26-qbmd`, mirroring
+  `author-substitute`) to deprecate; `gb-t-7714-2025-author-date.yaml`'s
+  `article-journal,article-magazine` stays on `fallback: []` until that
+  mechanism lands, designed together with this discriminant rather than
+  built independently.
+- 2026-08-11: Added the date-slot discriminant (csl26-huuz), closing the gap
+  §1's changelog entry below flagged as unfixed. `build_group_key`'s
+  no-issued-year fallthrough now reads the reference's resolved date
+  component instead of collapsing every undated reference onto one key.
+  Engine: `sorting.rs` gained `first_date_component_for_bibliography`/
+  `_for_citation` (mirroring the existing contributor-resolution helpers);
+  `disambiguation.rs` gained `date_slot_discriminant`/
+  `date_component_discriminant`; `values/date.rs`'s fallback render path
+  (`render_date_fallback_chain`) gained in-wrap suffix inlining for a
+  `date:` fallback candidate and a standalone-suffix case for an empty
+  resolution. Style: `gb-t-7714-2025-author-date.yaml`'s
+  `article-journal,article-magazine` type-variant lost its `term.no-date`
+  fallback (upstream's date-intext macro never reaches it for that branch);
+  its `webpage,post,post-weblog` type-variant gained an access-year fallback
+  ahead of the no-date term. `gb-t-7714-2025-author-date`'s diagnostic
+  upstream-corpus bibliography scope (`count_toward_fidelity: false`, so no
+  fidelity-gate impact) went 147/203 → 176/203; zero regressions across the
+  35-style exemplar corpus (`report-core.js --all-features`) or
+  `cargo nextest run`. The five entries whose date-slot grouping is now
+  correct but whose letters still depend on registry order remain tracked
+  in `csl26-q67h`, not closed here.
 - 2026-08-06: Fixed §3's resolved-`group_sort` case (csl26-m8la).
   `Disambiguator::sort_group_for_year_suffix` pre-sorted every collision group
   title-alphabetically before applying the resolved sort, regardless of whether

@@ -1239,3 +1239,174 @@ fn sentence_initial_group_still_capitalizes_leading_contributor_role_prose() {
 
     assert_eq!(result, "Edited by Ada Smith");
 }
+
+// csl26-huuz (piece 3): a year-suffix letter attached to a fallback date
+// candidate must land inside that candidate's own wrap, and a fallback
+// chain that renders no text at all must still carry the letter standalone.
+// `render_date_fallback_chain` (values/date.rs) is exercised only through
+// the GB/T oracle otherwise, which is diagnostic (`count_toward_fidelity:
+// false`) — these tests keep the two render paths covered in-repo.
+mod fallback_chain_disamb_suffix {
+    use super::*;
+    use citum_schema::reference::{
+        Contributor, DateValue, Monograph, MonographType, MultilingualString, StructuredName, Title,
+    };
+
+    fn make_monograph(id: &str, family: &str, issued: &str, accessed: Option<&str>) -> Reference {
+        Reference::Monograph(Box::new(Monograph {
+            id: Some(id.into()),
+            r#type: MonographType::Book,
+            title: Some(Title::Single(format!("Title {id}"))),
+            author: Some(Contributor::StructuredName(StructuredName {
+                family: MultilingualString::Simple(family.to_string()),
+                given: MultilingualString::Simple(String::new()),
+                suffix: None,
+                dropping_particle: None,
+                non_dropping_particle: None,
+            })),
+            issued: DateValue::new(issued),
+            accessed: accessed.map(DateValue::new),
+            ..Default::default()
+        }))
+    }
+
+    fn render_bibliography_entries(style: Style, references: Vec<Reference>) -> Vec<String> {
+        let mut bibliography = Bibliography::new();
+        for reference in references {
+            let id = reference
+                .id()
+                .map(|id| id.to_string())
+                .unwrap_or_else(|| format!("ref{}", bibliography.len() + 1));
+            bibliography.insert(id, reference);
+        }
+        Processor::new(style, bibliography)
+            .render_bibliography_with_format_standalone::<crate::render::plain::PlainText>()
+            .lines()
+            .map(str::to_string)
+            .collect()
+    }
+
+    fn author_then_date_style(date_component: TemplateDate) -> Style {
+        bibliography_style_with_template(vec![
+            TemplateComponent::Contributor(TemplateContributor {
+                contributor: ContributorRole::Author.into(),
+                form: ContributorForm::Long,
+                name_order: Some(NameOrder::FamilyFirst),
+                ..Default::default()
+            }),
+            TemplateComponent::Group(TemplateGroup {
+                group: vec![TemplateComponent::Date(date_component)],
+                ..Default::default()
+            }),
+            TemplateComponent::Title(TemplateTitle {
+                title: TitleType::Primary,
+                ..Default::default()
+            }),
+        ])
+    }
+
+    #[test]
+    fn accessed_fallback_letter_lands_inside_bracket_wrap() {
+        let style = author_then_date_style(TemplateDate {
+            date: DateVariable::Issued,
+            form: DateForm::Year,
+            fallback: Some(vec![TemplateComponent::Date(TemplateDate {
+                date: DateVariable::Accessed,
+                form: DateForm::Year,
+                rendering: Rendering {
+                    wrap: Some(WrapConfig {
+                        punctuation: WrapPunctuation::Brackets,
+                        inner_prefix: None,
+                        inner_suffix: None,
+                    }),
+                    ..Default::default()
+                },
+                ..Default::default()
+            })]),
+            ..Default::default()
+        });
+        let references = vec![
+            make_monograph("first", "Anon", "", Some("2020")),
+            make_monograph("second", "Anon", "", Some("2019")),
+        ];
+
+        let lines = render_bibliography_entries(style, references);
+
+        assert_eq!(
+            lines,
+            vec![
+                "Anon. [2020a]. Title first".to_string(),
+                String::new(),
+                "Anon. [2019b]. Title second".to_string(),
+            ],
+            "the disambiguating letter must sit inside the accessed date's own \
+             bracket wrap, not appended after it"
+        );
+    }
+
+    #[test]
+    fn empty_fallback_chain_still_renders_letter_standalone() {
+        let style = author_then_date_style(TemplateDate {
+            date: DateVariable::Issued,
+            form: DateForm::Year,
+            fallback: Some(vec![]),
+            ..Default::default()
+        });
+        let references = vec![
+            make_monograph("first", "Anon", "", None),
+            make_monograph("second", "Anon", "", None),
+        ];
+
+        let lines = render_bibliography_entries(style, references);
+
+        assert_eq!(
+            lines,
+            vec![
+                "Anon. a. Title first".to_string(),
+                String::new(),
+                "Anon. b. Title second".to_string(),
+            ],
+            "an explicit empty fallback list renders no date text, but the \
+             collision group's letter must still render standalone rather \
+             than being silently dropped"
+        );
+    }
+
+    /// Mirrors GB/T 7714's real `article-journal,article-magazine`
+    /// type-variant shape (`fallback: []`): an undated entry with no
+    /// collision partner renders no date text whatsoever — not even the
+    /// locale's no-date term — and an undated entry that *does* need
+    /// disambiguation still gets its letter, rendered standalone in the
+    /// same blank position. Answers the PR review question about this
+    /// YAML's behavioral implication.
+    #[test]
+    fn empty_fallback_list_leaves_the_date_position_blank_with_or_without_disambiguation() {
+        let style = author_then_date_style(TemplateDate {
+            date: DateVariable::Issued,
+            form: DateForm::Year,
+            fallback: Some(vec![]),
+            ..Default::default()
+        });
+        let references = vec![
+            make_monograph("solo", "Solo", "", None),
+            make_monograph("first", "Anon", "", None),
+            make_monograph("second", "Anon", "", None),
+        ];
+
+        let lines = render_bibliography_entries(style, references);
+
+        assert_eq!(
+            lines,
+            vec![
+                "Anon. a. Title first".to_string(),
+                String::new(),
+                "Anon. b. Title second".to_string(),
+                String::new(),
+                "Solo. Title solo".to_string(),
+            ],
+            "an undated entry with no collision partner renders no date \
+             position at all; an undated entry needing disambiguation still \
+             gets its letter, standalone, in that same blank position"
+        );
+    }
+}

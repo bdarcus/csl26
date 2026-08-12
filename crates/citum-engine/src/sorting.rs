@@ -744,6 +744,83 @@ fn primary_contributor_for_bibliography(
     first_contributor_component(&template)
 }
 
+fn first_date_component_ref(
+    template: &[citum_schema::template::TemplateComponent],
+) -> Option<&citum_schema::template::TemplateDate> {
+    for component in template {
+        match component {
+            citum_schema::template::TemplateComponent::Date(date)
+                if date.suppress_disamb_suffix != Some(true) =>
+            {
+                return Some(date);
+            }
+            citum_schema::template::TemplateComponent::Group(group) => {
+                if let Some(date) = first_date_component_ref(&group.group) {
+                    return Some(date);
+                }
+            }
+            _ => {}
+        }
+    }
+    None
+}
+
+fn first_date_component(
+    template: &[citum_schema::template::TemplateComponent],
+) -> Option<citum_schema::template::TemplateDate> {
+    first_date_component_ref(template).cloned()
+}
+
+/// Resolve the first non-suppressed date component from a reference's
+/// effective citation template — the identity-bearing date slot under the
+/// author, not a later display-only date marked `suppress-disamb-suffix`.
+/// Structurally mirrors `primary_contributor_for_citation`'s resolution
+/// path, but `Disambiguator` consults this only as a *fallback* to
+/// `first_date_component_for_bibliography`, the reverse of the author-slot
+/// preference order — see that function's doc comment. See `csl26-huuz`.
+pub(crate) fn first_date_component_for_citation(
+    spec: &citum_schema::CitationSpec,
+    reference: &Reference,
+) -> Option<citum_schema::template::TemplateDate> {
+    let language = crate::values::effective_item_language(reference);
+    let template = spec.resolve_template_for_type(&reference.ref_type(), language.as_deref())?;
+    first_date_component(&template)
+}
+
+/// Bibliography-spec counterpart of `first_date_component_for_citation`.
+///
+/// `Disambiguator::date_slot_discriminant` tries this **first**, falling
+/// back to `first_date_component_for_citation` only when no bibliography
+/// spec is configured or it resolves no date component — the opposite
+/// preference order from the author-slot list-primary resolution in
+/// `build_reference_cache`. A style's `citation:` template is commonly a
+/// simpler, non-type-differentiated form of the same date logic (e.g.
+/// `gb-t-7714-2025-author-date`'s `citation:` section has one flat
+/// `date: issued` with no `type-variants:` at all, unlike its
+/// `bibliography:` section); preferring it here would let that
+/// undifferentiated template collapse every undated reference onto the same
+/// discriminant regardless of type, defeating the type-conditional split
+/// this mechanism exists to make. Confirmed empirically against the GB/T
+/// oracle before landing this order — see `csl26-huuz` and
+/// `docs/specs/DISAMBIGUATION.md` §1.
+///
+/// Both this function and `first_date_component_for_citation` resolve their
+/// language via `effective_item_language`, matching the real render path
+/// (`processor/rendering/mod.rs::locale_for_reference`) and
+/// `Disambiguator::date_component_discriminant`'s own message-term
+/// scoping — not the bare `reference.language()` the pre-existing
+/// `primary_contributor_for_citation`/`primary_contributor_for_bibliography`
+/// use, a latent, unrelated inconsistency this function does not fix.
+/// Flagged in PR review for csl26-huuz.
+pub(crate) fn first_date_component_for_bibliography(
+    spec: &citum_schema::BibliographySpec,
+    reference: &Reference,
+) -> Option<citum_schema::template::TemplateDate> {
+    let language = crate::values::effective_item_language(reference);
+    let template = spec.resolve_template_for_type(&reference.ref_type(), language.as_deref())?;
+    first_date_component(&template)
+}
+
 #[cfg(test)]
 #[allow(
     clippy::unwrap_used,

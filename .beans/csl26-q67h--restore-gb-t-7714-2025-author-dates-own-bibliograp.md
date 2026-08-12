@@ -5,7 +5,7 @@ status: todo
 type: bug
 priority: normal
 created_at: 2026-08-06T13:30:40Z
-updated_at: 2026-08-06T13:30:58Z
+updated_at: 2026-08-12T00:48:44Z
 parent: csl26-ccdt
 ---
 
@@ -63,3 +63,7 @@ available-date/accessed), and (b) land the `sorting.rs` Author-key fix
 *separately*, verified against the full 157-style corpus on its own before
 being combined with this style's sort — not bundled together as one change
 the way this session tried.
+
+## Update (csl26-huuz, 2026-08-11 session)
+
+csl26-huuz landed and changed the baseline this bean measures against: collision-group *membership* for the undated anonymous bucket is now correct (147/203 → 176/203 on the diagnostic upstream corpus). Five entries (gbt7714.7.2.1:4, 7.2.1:7, 7.2.3:7, 8.11.2.2:1, 8.11.2.2:2) now have correct grouping and date text but still show the wrong year-suffix *letter* — exactly the gap this bean (restoring the style's own `bibliography.sort`) is meant to close. Re-measure against 176/203 (not the earlier 170/173 figures in this bean's original evidence), and expect those five specific entries to be the most direct signal of whether a restored sort actually fixes ordering.

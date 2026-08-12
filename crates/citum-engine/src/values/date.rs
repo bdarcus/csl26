@@ -16,7 +16,7 @@ use citum_schema::options::dates::{DateRangeFormat, TimeFormat};
 use citum_schema::reference::types::RefDate;
 use citum_schema::reference::{ClassExtension, WorkRelation};
 use citum_schema::template::{
-    DateForm, DateVariable as TemplateDateVar, TemplateComponent, TemplateDate,
+    DateForm, DateVariable as TemplateDateVar, Rendering, TemplateComponent, TemplateDate,
 };
 use std::collections::BTreeMap;
 
@@ -66,6 +66,81 @@ fn extract_month(
             None => String::new(),
         },
     }
+}
+
+/// Resolve the reference-level date value a `TemplateDateVar` addresses.
+///
+/// Shared by `TemplateDate::values` (rendering) and `Disambiguator`
+/// (collision-key discrimination, `csl26-huuz`) so both read the date
+/// variable → reference-field mapping from one place.
+pub(crate) fn resolve_date_variable(
+    variable: &TemplateDateVar,
+    reference: &Reference,
+) -> Option<DateValue> {
+    match variable {
+        TemplateDateVar::Issued => reference.effective_issued_date(),
+        TemplateDateVar::Accessed => reference.accessed(),
+        TemplateDateVar::OriginalPublished => reference.original_date(),
+        TemplateDateVar::EventDate => event_date(reference),
+        TemplateDateVar::Copyright => reference.copyright(),
+        TemplateDateVar::Printing => reference.printing(),
+        _ => None,
+    }
+}
+
+/// The same date-text formatting `TemplateDate::values` applies to a
+/// resolved date value — `form`-restricted range/single-date formatting plus
+/// uncertainty/approximation markers — before any year-suffix disambiguation
+/// is layered on. Exposed so the disambiguator's collision-key discriminant
+/// reads the text a reference will actually render, not the raw stored
+/// value (whose `Display` is the unformatted EDTF/literal string and can
+/// carry more precision than `form` shows, e.g. a day-precision `copyright`
+/// date under `form: year`). See csl26-huuz.
+pub(crate) fn formatted_date_text(
+    date: &DateValue,
+    form: &DateForm,
+    locale: &citum_schema::locale::Locale,
+    date_config: Option<&citum_schema::options::dates::DateConfig>,
+) -> Option<String> {
+    format_date_range(date, form, locale, date_config)
+        .map(|value| apply_date_markers(value, date, date_config))
+}
+
+/// Text uniquely identifying what a date component renders for a specific
+/// reference, for collision-key purposes: the `form`-restricted formatted
+/// value (`formatted_date_text`) plus the candidate's prefix/suffix/wrap
+/// and the resolved value's `note` — the same extra text
+/// `apply_fallback_component_rendering`/`append_note` add to the bare value
+/// during real rendering. Two candidates whose rendered text differs only in
+/// these respects (e.g. a `c`-prefixed `copyright` year and a
+/// `印刷`-suffixed `printing` year that happen to share the same bare year)
+/// must not discriminant to the same text.
+///
+/// This does not need to *look like* the rendered text — it only needs the
+/// invariant "same render inputs ⟺ same discriminant" — so it Debug-formats
+/// the affix/wrap config rather than running the full punctuation-
+/// realization pipeline, which would require threading a complete
+/// `RenderOptions` and `OutputFormat` into `Disambiguator` for no
+/// observable benefit. See csl26-huuz, flagged in PR review.
+pub(crate) fn fallback_candidate_discriminant(
+    date: &DateValue,
+    form: &DateForm,
+    rendering: &Rendering,
+    suppress_note: Option<bool>,
+    locale: &citum_schema::locale::Locale,
+    date_config: Option<&citum_schema::options::dates::DateConfig>,
+) -> Option<String> {
+    let formatted = formatted_date_text(date, form, locale, date_config)?;
+    let note = (suppress_note != Some(true)
+        && date_config.is_some_and(|config| config.note_wrap.is_some()))
+    .then_some(date.note.as_deref())
+    .flatten()
+    .filter(|note| !note.is_empty())
+    .unwrap_or_default();
+    Some(format!(
+        "{formatted}|{note}|{:?}|{:?}|{:?}",
+        rendering.prefix, rendering.suffix, rendering.wrap
+    ))
 }
 
 fn event_date(reference: &Reference) -> Option<DateValue> {
@@ -1055,6 +1130,108 @@ pub(crate) fn apply_fallback_component_rendering<
     output
 }
 
+/// Render a date component's fallback chain when its own date variable is
+/// missing or empty.
+///
+/// Tries each fallback candidate in order and returns the first that
+/// renders. A `message:` candidate (the terminal "no data available" case,
+/// e.g. GB/T 7714's `无日期`/`n.d.` term via `message: term.no-date`) and a
+/// `date:` candidate (e.g. GB/T's access-year fallback, rendering
+/// `Anon，[2020a]`) both need the same year-suffix-append convention the
+/// implicit (no explicit `fallback:`) no-date path uses, so every path
+/// disambiguates identically. Without this, a style whose date components
+/// always carry an explicit `fallback:` chain (as GB/T author-date's do)
+/// never reaches the implicit branch and never gets a suffix at all. See
+/// csl26-6eak, csl26-huuz.
+///
+/// For a `date:` candidate, the letter must land inside that candidate's own
+/// wrap (e.g. brackets) — so it is inlined into the raw formatted text
+/// *before* `apply_fallback_component_rendering` applies the wrap, not
+/// appended to the already-wrapped output the way the `message:` case is.
+/// A candidate that is itself `date: issued` cannot reach this function with
+/// a resolvable value: `disamb_eligible` above requires the *outer*
+/// component's own `.date == Issued`, and an `issued`-typed fallback
+/// candidate resolves the identical reference field — which, precisely
+/// because we're in the missing-date branch at all, is already known empty.
+/// `inline_disamb_suffix` no-ops whenever `year` is empty, so no double
+/// suffix can occur; investigated for PR review, no fix needed.
+///
+/// If nothing in the chain renders anything (an explicit `fallback: []`, or
+/// every candidate resolves empty), the date slot itself contributes no
+/// text, but the collision group this reference belongs to may still need
+/// its year-suffix letter rendered standalone (upstream's bare
+/// `<text variable="year-suffix"/>` after an empty date; oracle:
+/// "Anon，b."). Without this, an entry whose date slot is entirely empty
+/// silently loses its disambiguator rather than getting the wrong one.
+fn render_date_fallback_chain<F: crate::render::format::OutputFormat<Output = String>>(
+    date_component: &TemplateDate,
+    fallbacks: &[TemplateComponent],
+    reference: &Reference,
+    hints: &ProcHints,
+    options: &RenderOptions<'_>,
+    fmt: &F,
+) -> Option<ProcValues<F::Output>> {
+    let disamb_eligible = matches!(date_component.date, TemplateDateVar::Issued)
+        && date_component.suppress_disamb_suffix != Some(true);
+
+    for component in fallbacks {
+        let Some(values) = component.values::<F>(reference, hints, options) else {
+            continue;
+        };
+        let suffix_label = disamb_eligible
+            .then(|| compute_disamb_suffix_label(hints, options, fmt))
+            .flatten();
+
+        let (raw_value, inlined) = match (component, suffix_label.as_deref()) {
+            (TemplateComponent::Date(inner), Some(suffix)) => {
+                let year = resolve_date_variable(&inner.date, reference)
+                    .map(|d| d.year())
+                    .unwrap_or_default();
+                (
+                    inline_disamb_suffix(&values.value, &inner.form, &year, suffix),
+                    true,
+                )
+            }
+            _ => (values.value.clone(), false),
+        };
+
+        let mut output = apply_fallback_component_rendering(
+            fmt,
+            &raw_value,
+            values.pre_formatted,
+            component.rendering(),
+            reference,
+            options,
+        );
+        if !inlined
+            && matches!(component, TemplateComponent::Message(_))
+            && let Some(suffix) = suffix_label.as_deref()
+        {
+            append_no_date_disamb_suffix(&mut output, suffix, options);
+        }
+        return Some(ProcValues {
+            value: output,
+            prefix: None,
+            suffix: None,
+            url: values.url,
+            substituted_key: values.substituted_key,
+            pre_formatted: true,
+        });
+    }
+
+    disamb_eligible
+        .then(|| compute_disamb_suffix_label(hints, options, fmt))
+        .flatten()
+        .map(|suffix| ProcValues {
+            value: suffix,
+            prefix: None,
+            suffix: None,
+            url: None,
+            substituted_key: None,
+            pre_formatted: true,
+        })
+}
+
 impl ComponentValues for TemplateDate {
     fn values<F: crate::render::format::OutputFormat<Output = String>>(
         &self,
@@ -1063,59 +1240,14 @@ impl ComponentValues for TemplateDate {
         options: &RenderOptions<'_>,
     ) -> Option<ProcValues<F::Output>> {
         let fmt = F::default();
-        let date_opt: Option<DateValue> = match self.date {
-            TemplateDateVar::Issued => reference.effective_issued_date(),
-            TemplateDateVar::Accessed => reference.accessed(),
-            TemplateDateVar::OriginalPublished => reference.original_date(),
-            TemplateDateVar::EventDate => event_date(reference),
-            TemplateDateVar::Copyright => reference.copyright(),
-            TemplateDateVar::Printing => reference.printing(),
-            _ => None,
-        };
+        let date_opt: Option<DateValue> = resolve_date_variable(&self.date, reference);
 
         let Some(date) = date_opt.filter(|d| !d.is_empty()) else {
             // Handle fallback if date is missing
             if let Some(fallbacks) = &self.fallback {
-                for component in fallbacks {
-                    if let Some(values) = component.values::<F>(reference, hints, options) {
-                        let mut output = apply_fallback_component_rendering(
-                            &fmt,
-                            &values.value,
-                            values.pre_formatted,
-                            component.rendering(),
-                            reference,
-                            options,
-                        );
-                        // A `message:` fallback candidate is, by construction,
-                        // the terminal "no data available" case in a date's
-                        // fallback chain (e.g. GB/T 7714's `无日期`/`n.d.`
-                        // term via `message: term.no-date`) — apply the same
-                        // year-suffix-append convention the implicit (no
-                        // explicit `fallback:`) no-date path below already
-                        // uses, so explicit and implicit no-date fallbacks
-                        // disambiguate identically. Without this, a style
-                        // whose date components always carry an explicit
-                        // `fallback:` chain (as GB/T author-date's do) never
-                        // reaches the implicit branch and never gets a
-                        // suffix at all. See csl26-6eak.
-                        if matches!(self.date, TemplateDateVar::Issued)
-                            && self.suppress_disamb_suffix != Some(true)
-                            && matches!(component, TemplateComponent::Message(_))
-                            && let Some(suffix) = compute_disamb_suffix_label(hints, options, &fmt)
-                        {
-                            append_no_date_disamb_suffix(&mut output, &suffix, options);
-                        }
-                        return Some(ProcValues {
-                            value: output,
-                            prefix: None,
-                            suffix: None,
-                            url: values.url,
-                            substituted_key: values.substituted_key,
-                            pre_formatted: true,
-                        });
-                    }
-                }
-                return None;
+                return render_date_fallback_chain::<F>(
+                    self, fallbacks, reference, hints, options, &fmt,
+                );
             }
             // For issued dates, substitute the locale's "no-date" term (e.g. "n.d.")
             if matches!(self.date, TemplateDateVar::Issued)
@@ -1137,7 +1269,24 @@ impl ComponentValues for TemplateDate {
                     pre_formatted: false,
                 });
             }
-            return None;
+            // No fallback and no term to substitute (e.g. the locale defines
+            // no "no date" term at all) — the date position renders nothing,
+            // but this reference's collision group may still need its
+            // year-suffix letter rendered standalone rather than silently
+            // dropped.
+            let disamb_eligible = matches!(self.date, TemplateDateVar::Issued)
+                && self.suppress_disamb_suffix != Some(true);
+            return disamb_eligible
+                .then(|| compute_disamb_suffix_label(hints, options, &fmt))
+                .flatten()
+                .map(|suffix| ProcValues {
+                    value: suffix,
+                    prefix: None,
+                    suffix: None,
+                    url: None,
+                    substituted_key: None,
+                    pre_formatted: true,
+                });
         };
 
         let locale = options.locale;

@@ -387,9 +387,24 @@ bibliography:
     - date: issued
       form: year
       suffix: '. '
-      fallback:
-      - message: term.no-date
-        form: short
+      # An undated article-journal/article-magazine renders no date text at
+      # all here — not 无日期/n.d. like every other type-variant — and if
+      # disambiguation still requires a letter, it renders standalone, alone
+      # in the date position. This matches the shipped upstream CSL: its
+      # `date-intext` macro's `type="article-journal article-magazine"`
+      # branch is fully self-contained — none of its three inner sub-cases
+      # (volume/issue present, available-date present, plain else) ever
+      # falls through to the outer no-date-term branch, because CSL/CSL-M
+      # `<choose>` selects one top-level branch and never continues past it.
+      # Whether GB/T the *standard* (not just this one implementation)
+      # actually intends blank-vs-n.d. for undated articles isn't derivable
+      # from the macro alone — open question, see csl26-9qat. This is a
+      # style-data decision pinned to the current oracle, revisitable
+      # without any engine change if that bean's standard-derived gold
+      # strings later disagree. See csl26-huuz. `fallback: []` (rather than
+      # a dedicated flag) is provisional pending a `date-substitute`
+      # options-level mechanism — see the follow-up bean tracking that.
+      fallback: []
     - title: primary
     - message: gb-t-7714-type-code
       args:
@@ -885,7 +900,15 @@ bibliography:
       form: year
       suppress-note: true
       suffix: '. '
+      # Upstream's `date-intext` macro checks `accessed` before falling to
+      # the "no date" term (`<else-if variable="accessed">`), rendering the
+      # bracketed access year in the author-date position — distinct from
+      # the full access date the unconditional `date: accessed` component
+      # below always renders when present. See csl26-huuz.
       fallback:
+      - date: accessed
+        form: year
+        wrap: { punctuation: brackets }
       - message: term.no-date
         form: short
     - title: primary
