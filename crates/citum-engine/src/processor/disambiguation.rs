@@ -1094,7 +1094,13 @@ impl<'a> Disambiguator<'a> {
         let Some((component, config)) = component_and_config else {
             return String::new();
         };
-        Self::date_component_discriminant(&component, reference, self.locale, config.dates.as_ref())
+        Self::date_component_discriminant(
+            &component,
+            reference,
+            self.locale,
+            config,
+            &reference.ref_type(),
+        )
     }
 
     /// The literal locale message ID the implicit no-date branch in
@@ -1120,9 +1126,12 @@ impl<'a> Disambiguator<'a> {
         component: &citum_schema::template::TemplateDate,
         reference: &Reference,
         locale: &citum_schema::locale::Locale,
-        date_config: Option<&citum_schema::options::dates::DateConfig>,
+        config: &citum_schema::options::Config,
+        ref_type: &str,
     ) -> String {
         use citum_schema::template::{DateVariable, TemplateComponent};
+
+        let date_config = config.dates.as_ref();
 
         if matches!(component.date, DateVariable::Accessed) {
             if crate::values::date::resolve_date_variable(&component.date, reference)
@@ -1143,7 +1152,7 @@ impl<'a> Disambiguator<'a> {
             // this is terminal even when the value fails to format (e.g. a
             // literal date under a numeric `form`, which the renderer also
             // shows as nothing). Reuses the same fallback-candidate helper as
-            // the loop below: its prefix/suffix/wrap contribution is inert
+            // the loop below: its visible rendering configuration is inert
             // here (constant across every reference resolving this same
             // component, so it can never split two references from each
             // other), but `date.note` is per-reference *data*, not
@@ -1163,26 +1172,36 @@ impl<'a> Disambiguator<'a> {
             .unwrap_or_default();
         }
 
-        let Some(fallbacks) = component.fallback.as_ref() else {
+        let source =
+            crate::values::date::effective_date_candidate_source(component, config, ref_type);
+        let Some(fallbacks) = source.template_components() else {
             return if matches!(component.date, DateVariable::Issued) {
-                format!(
-                    "term:{}:{}",
-                    Self::IMPLICIT_NO_DATE_TERM,
-                    crate::values::effective_item_language(reference).unwrap_or_default()
+                crate::values::date::fallback_message_discriminant(
+                    &citum_schema::template::TemplateMessage {
+                        message: Self::IMPLICIT_NO_DATE_TERM.to_string(),
+                        form: Some(citum_schema::locale::TermForm::Short),
+                        ..Default::default()
+                    },
+                    locale,
+                    config,
                 )
+                .unwrap_or_default()
             } else {
                 String::new()
             };
         };
 
-        for candidate in fallbacks {
+        for candidate in fallbacks.iter() {
             match candidate {
                 TemplateComponent::Message(message) => {
-                    return format!(
-                        "term:{}:{}",
-                        message.message,
-                        crate::values::effective_item_language(reference).unwrap_or_default()
-                    );
+                    let Some(discriminant) =
+                        crate::values::date::fallback_message_discriminant(message, locale, config)
+                    else {
+                        // Rendering skips unresolved or suppressed messages and
+                        // continues to the next fallback candidate.
+                        continue;
+                    };
+                    return discriminant;
                 }
                 TemplateComponent::Date(inner) => {
                     let Some(value) =
@@ -2595,11 +2614,19 @@ mod tests {
     #[case::real_issued_value_wins_without_consulting_fallback(
         "2020",
         None,
-        "2020||None|None|None"
+        "2020||None|None|None|None|None|None|None|None"
     )]
     #[case::present_accessed_stops_the_chain_with_no_identity("", Some("2020"), "")]
-    #[case::absent_accessed_falls_through_to_the_no_date_term("", None, "term:term.no-date:")]
-    #[case::empty_string_accessed_is_treated_as_absent("", Some(""), "term:term.no-date:")]
+    #[case::absent_accessed_falls_through_to_the_no_date_term(
+        "",
+        None,
+        "no date|None|None|None|None|None|None|None|None"
+    )]
+    #[case::empty_string_accessed_is_treated_as_absent(
+        "",
+        Some(""),
+        "no date|None|None|None|None|None|None|None|None"
+    )]
     fn given_an_issued_with_accessed_fallback_when_computing_the_collision_discriminant_then_it_matches(
         #[case] issued: &str,
         #[case] accessed: Option<&str>,
@@ -2609,8 +2636,13 @@ mod tests {
         let component = issued_with_accessed_fallback();
 
         let locale = Locale::en_us();
-        let discriminant =
-            Disambiguator::date_component_discriminant(&component, &reference, &locale, None);
+        let discriminant = Disambiguator::date_component_discriminant(
+            &component,
+            &reference,
+            &locale,
+            &Config::default(),
+            &reference.ref_type(),
+        );
 
         assert_eq!(discriminant, expected);
     }
@@ -2618,6 +2650,7 @@ mod tests {
     #[rstest]
     #[case::explicit_message_fallback(Some(vec![TemplateComponent::Message(TemplateMessage {
         message: "term.no-date".to_string(),
+        form: Some(citum_schema::locale::TermForm::Short),
         ..Default::default()
     })]))]
     #[case::implicit_no_fallback_at_all(None)]
@@ -2633,8 +2666,13 @@ mod tests {
         };
 
         let locale = Locale::en_us();
-        let discriminant =
-            Disambiguator::date_component_discriminant(&component, &reference, &locale, None);
+        let discriminant = Disambiguator::date_component_discriminant(
+            &component,
+            &reference,
+            &locale,
+            &Config::default(),
+            &reference.ref_type(),
+        );
 
         // Both the implicit (no `fallback:` at all) and explicit
         // (`fallback: [message: term.no-date]`) paths render the identical
@@ -2642,7 +2680,41 @@ mod tests {
         // identical collision-key discriminant — otherwise a style that
         // mixes the two forms across type-variants would split undated
         // references that render identical text.
-        assert_eq!(discriminant, "term:term.no-date:");
+        assert_eq!(discriminant, "n.d.|None|None|None|None|None|None|None|None");
+    }
+
+    #[test]
+    fn unresolved_message_fallback_continues_to_the_next_candidate() {
+        let reference = make_dated_ref("d2", "Smith", "", None);
+        let component = TemplateDate {
+            date: DateVariable::Issued,
+            form: DateForm::Year,
+            fallback: Some(vec![
+                TemplateComponent::Message(TemplateMessage {
+                    message: "term.does-not-exist".to_string(),
+                    ..TemplateMessage::default()
+                }),
+                TemplateComponent::Message(TemplateMessage {
+                    message: "term.no-date".to_string(),
+                    ..TemplateMessage::default()
+                }),
+            ]),
+            ..TemplateDate::default()
+        };
+
+        let locale = Locale::en_us();
+        let discriminant = Disambiguator::date_component_discriminant(
+            &component,
+            &reference,
+            &locale,
+            &Config::default(),
+            &reference.ref_type(),
+        );
+
+        assert_eq!(
+            discriminant,
+            "no date|None|None|None|None|None|None|None|None"
+        );
     }
 
     #[test]
@@ -2656,8 +2728,13 @@ mod tests {
         };
 
         let locale = Locale::en_us();
-        let discriminant =
-            Disambiguator::date_component_discriminant(&component, &reference, &locale, None);
+        let discriminant = Disambiguator::date_component_discriminant(
+            &component,
+            &reference,
+            &locale,
+            &Config::default(),
+            &reference.ref_type(),
+        );
 
         assert_eq!(discriminant, "");
     }
@@ -2701,11 +2778,11 @@ mod tests {
 
         assert_eq!(
             visible.as_deref(),
-            Some("1947|民国36年|Some(Custom(\"c\"))|None|None")
+            Some("1947|民国36年|None|None|None|None|None|Some(Custom(\"c\"))|None|None")
         );
         assert_eq!(
             suppressed.as_deref(),
-            Some("1947||Some(Custom(\"c\"))|None|None")
+            Some("1947||None|None|None|None|None|Some(Custom(\"c\"))|None|None")
         );
     }
 
@@ -2761,11 +2838,11 @@ mod tests {
             .date_slot_discriminant(&reference);
 
         assert_eq!(
-            bibliography_owned, "1995|source calendar|None|None|None",
+            bibliography_owned, "1995|source calendar|None|None|None|None|None|None|None|None",
             "a bibliography-selected slot must use effective bibliography date options"
         );
         assert_eq!(
-            citation_owned, "1995|source calendar|None|None|None",
+            citation_owned, "1995|source calendar|None|None|None|None|None|None|None|None",
             "the citation fallback slot must use effective citation date options"
         );
     }
@@ -2819,10 +2896,18 @@ mod tests {
         let reference = make_ref_with_copyright("r1", "Smith", copyright);
         let locale = Locale::en_us();
 
-        let discriminant =
-            Disambiguator::date_component_discriminant(&component, &reference, &locale, None);
+        let discriminant = Disambiguator::date_component_discriminant(
+            &component,
+            &reference,
+            &locale,
+            &Config::default(),
+            &reference.ref_type(),
+        );
 
-        assert_eq!(discriminant, "1995||None|None|None");
+        assert_eq!(
+            discriminant,
+            "1995||None|None|None|None|None|None|None|None"
+        );
     }
 
     /// GB/T 7714's real `book,thesis,map` fallback chain: `copyright`
@@ -2891,10 +2976,20 @@ mod tests {
         }));
         let locale = Locale::en_us();
 
-        let copyright_discriminant =
-            Disambiguator::date_component_discriminant(&component, &copyright_ref, &locale, None);
-        let printing_discriminant =
-            Disambiguator::date_component_discriminant(&component, &printing_ref, &locale, None);
+        let copyright_discriminant = Disambiguator::date_component_discriminant(
+            &component,
+            &copyright_ref,
+            &locale,
+            &Config::default(),
+            &copyright_ref.ref_type(),
+        );
+        let printing_discriminant = Disambiguator::date_component_discriminant(
+            &component,
+            &printing_ref,
+            &locale,
+            &Config::default(),
+            &printing_ref.ref_type(),
+        );
 
         assert_ne!(
             copyright_discriminant, printing_discriminant,

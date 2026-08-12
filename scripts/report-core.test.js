@@ -493,6 +493,24 @@ test('computePresetUsageScore treats pure root wrappers as strong preset reuse',
   assert.match(score.note, /root extends/);
 });
 
+test('computePresetUsageScore counts date-substitute presets', () => {
+  const score = computePresetUsageScore({
+    options: {
+      processing: 'author-date',
+      substitute: 'standard',
+      'date-substitute': 'gb-t-7714-2025-author-date',
+    },
+  }, 100);
+
+  assert.equal(score.score, 90);
+  assert.equal(score.optionUses, 3);
+  assert.deepEqual(score.optionPresetFields, [
+    'processing',
+    'substitute',
+    'date-substitute',
+  ]);
+});
+
 test('selectQualityAuthorshipData keeps authored Template V3 diff scopes', () => {
   const authored = {
     bibliography: {

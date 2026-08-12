@@ -15,6 +15,48 @@ use citum_schema::locale::{MessageArgs, MessageEvaluator, Mf2MessageEvaluator};
 use citum_schema::template::{MessageArgSource, TemplateMessage};
 use std::collections::HashMap;
 
+/// Resolve a zero-argument template message through the active config and locale.
+///
+/// Shared with date-slot disambiguation so message candidates are skipped when
+/// unresolved and use the same form, strip-periods, and text-case semantics as
+/// rendering.
+pub(crate) fn resolve_template_message_value(
+    component: &TemplateMessage,
+    config: &citum_schema::options::Config,
+    locale: &citum_schema::locale::Locale,
+) -> Option<String> {
+    let args = MessageArgs::default();
+    let mut value = if let Some(pattern) = config.messages.get(&component.message) {
+        Mf2MessageEvaluator.evaluate(pattern, &args)?
+    } else {
+        locale.resolve_template_message(
+            &component.message,
+            &args,
+            component.form.as_ref(),
+            component.gender.clone(),
+        )?
+    };
+
+    if component
+        .rendering
+        .strip_periods
+        .or(config.strip_periods)
+        .unwrap_or(false)
+    {
+        value = crate::values::strip_trailing_periods(&value);
+    }
+
+    if let Some(text_case) = component.rendering.text_case {
+        value = crate::values::text_case::apply_text_case_with_language(
+            &value,
+            text_case,
+            Some(locale.locale.as_str()),
+        );
+    }
+
+    (!value.trim().is_empty()).then_some(value)
+}
+
 impl ComponentValues for TemplateMessage {
     fn values<F: crate::render::format::OutputFormat<Output = String>>(
         &self,
@@ -22,6 +64,17 @@ impl ComponentValues for TemplateMessage {
         hints: &ProcHints,
         options: &RenderOptions<'_>,
     ) -> Option<ProcValues<F::Output>> {
+        if self.args.is_empty() {
+            let value =
+                resolve_template_message_value(self, options.config.as_ref(), options.locale)?;
+            let term_backed = self.message.starts_with("term.");
+            return Some(ProcValues {
+                value,
+                pre_formatted: !term_backed,
+                ..Default::default()
+            });
+        }
+
         let mut named = HashMap::with_capacity(self.args.len());
 
         for (name, source) in &self.args {

@@ -1,6 +1,6 @@
 # Date Substitute Specification
 
-**Status:** Draft
+**Status:** Active
 **Version:** 1.0
 **Date:** 2026-08-12
 **Supersedes:** none
@@ -98,6 +98,12 @@ fields:
 
 The closed candidate type supports only these two variants. It does not accept
 arbitrary `TemplateComponent` values.
+
+Candidate rendering fields have the same semantics as on ordinary date and
+message components. Candidate values pass through the central component
+renderer; suppression, emphasis, quotes, strong, small caps, vertical
+alignment, wrapping, affixes, text case, and period stripping must not be
+silently ignored.
 
 `suppress-note` remains available on date candidates. Omitting it preserves
 the normal date-note behavior from the effective `dates.note-wrap` option;
@@ -310,6 +316,9 @@ identity content must not be split by unrendered raw precision.
   first-match rule.
 - Reuse the schema's existing `TypeSelector` parser, validation, and reference
   type normalization.
+- Include candidates from global, citation, and bibliography policies in the
+  shared hard template-component resource budget, and emit the existing
+  `UnknownTypeName` warning for unrecognized selectors at every scope.
 - The config representation can be an untagged enum of preset scalar and
   explicit map. Preset expansion should produce an owned explicit map at the
   cascade boundary.
@@ -330,18 +339,20 @@ identity content must not be split by unrendered raw precision.
 
 ### Layer 3 — Schema and engine implementation
 
-- [ ] The schema accepts the three preset names and flat ordered selector maps,
+- [x] The schema accepts the three preset names and flat ordered selector maps,
       and generated schemas are current.
-- [ ] `Config.date_substitute: None` preserves inline or implicit behavior;
+- [x] `Config.date_substitute: None` preserves inline or implicit behavior;
       no defaulting path injects `standard`.
-- [ ] Presets expand before inheritance and scope cascading; selector maps
+- [x] Presets expand before inheritance and scope cascading; selector maps
       merge per key and replace complete lists.
-- [ ] Tests cover first-match ordering, `default`, unmatched fallback,
+- [x] Tests cover first-match ordering, `default`, unmatched fallback,
       matched-empty blanking, preset expansion, and scope inheritance.
-- [ ] Rendering and disambiguation consume one resolved candidate source and
+- [x] Rendering and disambiguation consume one resolved candidate source and
       effective scope configuration, including `suppress-note` behavior.
-- [ ] Later and `suppress-disamb-suffix: true` dates retain inline fallback.
-- [ ] This spec changes from Draft to Active in the implementation commit.
+- [x] Options-level candidates participate in resource limits and selector
+      validation, and use ordinary component rendering semantics.
+- [x] Later and `suppress-disamb-suffix: true` dates retain inline fallback.
+- [x] This spec changes from Draft to Active in the implementation commit.
 
 ### Layer 4 — GB/T style migration and fidelity
 
@@ -354,4 +365,6 @@ identity content must not be split by unrendered raw precision.
 
 ## Changelog
 
+- 2026-08-12: Clarified candidate rendering, resource-budget, and selector-warning requirements after implementation review.
+- 2026-08-12: Activated with the Layer 3 schema and engine implementation.
 - 2026-08-12: Initial Draft for Layer 2 of the date-substitute stack.

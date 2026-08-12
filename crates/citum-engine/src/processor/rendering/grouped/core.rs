@@ -1038,6 +1038,11 @@ impl Renderer<'_> {
             first_reference_note_number,
         } = request;
         let ref_type = reference.ref_type();
+        let template = crate::values::date::materialize_identity_date_substitute(
+            template,
+            &self.config,
+            &ref_type,
+        );
         let locale = self.locale_for_reference(reference, context);
         let options = RenderOptions {
             config: self.config.clone(),
@@ -1056,7 +1061,7 @@ impl Renderer<'_> {
         // when the template actually renders it.  Suppressing a `disambiguate-only`
         // title without emitting the note number as a replacement identifier would
         // silently reintroduce ambiguity for colliding works.
-        let effective_first_ref_note = if template_uses_first_ref_note_number(template) {
+        let effective_first_ref_note = if template_uses_first_ref_note_number(&template) {
             first_reference_note_number
         } else {
             None
@@ -1071,7 +1076,7 @@ impl Renderer<'_> {
             first_reference_note_number: effective_first_ref_note,
         });
         let mut components =
-            self.render_template_components::<F>(reference, &ref_type, &options, &hint, template);
+            self.render_template_components::<F>(reference, &ref_type, &options, &hint, &template);
 
         self.apply_sentence_initial_context::<F>(&mut components, context, note_start_text_case);
 
@@ -1351,6 +1356,7 @@ impl Renderer<'_> {
             component,
             TemplateComponent::Date(citum_schema::template::TemplateDate {
                 date: citum_schema::template::DateVariable::Issued,
+                fallback: None,
                 ..
             })
         ) || reference.effective_issued_date().is_some()

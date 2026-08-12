@@ -556,6 +556,15 @@ impl std::str::FromStr for TypeSelector {
 }
 
 impl TypeSelector {
+    /// Return whether this is the exact selector-only `default` branch.
+    ///
+    /// `default` is a fallback branch, not a wildcard, and therefore must not
+    /// participate in an ordinary reference-type match.
+    #[must_use]
+    pub fn is_default(&self) -> bool {
+        matches!(self, Self::Single(value) if value == "default")
+    }
+
     /// Check whether this selector matches a reference type.
     ///
     /// The incoming `ref_type` is normalized from the CSL 1.0 underscore

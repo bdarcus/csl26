@@ -2142,7 +2142,14 @@ function countOptionsPresetUses(styleData) {
     styleData?.bibliography?.options,
   ].filter(Boolean);
 
-  const keys = ['processing', 'contributors', 'dates', 'titles', 'substitute'];
+  const keys = [
+    'processing',
+    'contributors',
+    'dates',
+    'titles',
+    'substitute',
+    'date-substitute',
+  ];
   let uses = 0;
   const fields = [];
 

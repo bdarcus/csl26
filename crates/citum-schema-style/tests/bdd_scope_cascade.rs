@@ -80,6 +80,37 @@ fn citation_scope_config(style: &Style) -> Config {
     citation_options.merged_with_raw(&base, style.scoped_raw_options.citation.as_ref())
 }
 
+#[test]
+fn given_scope_date_substitute_map_when_cascading_then_lists_merge_per_selector() {
+    let style = resolve(
+        Style::from_yaml_str(
+            r#"
+version: "0.44.0"
+info:
+  title: Scoped Date Substitute
+  id: scoped-date-substitute
+options:
+  date-substitute: standard
+bibliography:
+  options:
+    date-substitute:
+      book: []
+"#,
+        )
+        .expect("valid style"),
+        None,
+    );
+
+    let policy = bibliography_scope_config(&style)
+        .date_substitute
+        .expect("merged date-substitute policy");
+
+    assert!(policy.candidates_for("book").is_some_and(<[_]>::is_empty));
+    assert_eq!(policy.candidates_for("report").map(<[_]>::len), Some(1));
+    let selectors: Vec<String> = policy.entries().keys().map(ToString::to_string).collect();
+    assert_eq!(selectors, ["default", "book"]);
+}
+
 const ROOT_STYLE_BIBLIOGRAPHY_SCOPE: &str = r#"
 version: "0.44.0"
 info:

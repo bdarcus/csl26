@@ -63,6 +63,13 @@ impl Style {
         {
             validate_substitute_candidates(substitute, "options.substitute")?;
         }
+        if let Some(date_substitute) = self
+            .options
+            .as_ref()
+            .and_then(|options| options.date_substitute.as_ref())
+        {
+            budget.check_date_substitute(date_substitute, "options.date-substitute")?;
+        }
 
         if let Some(templates) = &self.templates {
             for (name, template) in templates {
@@ -107,6 +114,13 @@ impl Style {
                 });
             }
         }
+        if let Some(date_substitute) = self
+            .options
+            .as_ref()
+            .and_then(|options| options.date_substitute.as_ref())
+        {
+            collect_date_substitute_warnings(date_substitute, "options.date-substitute", warnings);
+        }
         if let Some(bib) = &self.bibliography
             && let Some(type_variants) = &bib.type_variants
         {
@@ -121,6 +135,18 @@ impl Style {
         }
         if let Some(cit) = &self.citation {
             collect_citation_spec_warnings(cit, "citation", warnings);
+        }
+        if let Some(bib) = &self.bibliography
+            && let Some(date_substitute) = bib
+                .options
+                .as_ref()
+                .and_then(|options| options.date_substitute.as_ref())
+        {
+            collect_date_substitute_warnings(
+                date_substitute,
+                "bibliography.options.date-substitute",
+                warnings,
+            );
         }
     }
 
@@ -248,6 +274,17 @@ fn collect_citation_spec_warnings(
     location: &str,
     warnings: &mut Vec<SchemaWarning>,
 ) {
+    if let Some(date_substitute) = spec
+        .options
+        .as_ref()
+        .and_then(|options| options.date_substitute.as_ref())
+    {
+        collect_date_substitute_warnings(
+            date_substitute,
+            &format!("{location}.options.date-substitute"),
+            warnings,
+        );
+    }
     if let Some(type_variants) = &spec.type_variants {
         for selector in type_variants.keys() {
             for name in selector.unknown_type_names() {
@@ -272,12 +309,44 @@ fn collect_citation_spec_warnings(
     }
 }
 
+fn collect_date_substitute_warnings(
+    date_substitute: &crate::options::DateSubstitute,
+    location: &str,
+    warnings: &mut Vec<SchemaWarning>,
+) {
+    for selector in date_substitute.entries().keys() {
+        for name in selector.unknown_type_names() {
+            warnings.push(SchemaWarning::UnknownTypeName {
+                name: name.to_string(),
+                location: location.to_string(),
+            });
+        }
+    }
+}
+
 #[derive(Default)]
 struct TemplateResourceBudget {
     component_count: usize,
 }
 
 impl TemplateResourceBudget {
+    fn check_date_substitute(
+        &mut self,
+        date_substitute: &crate::options::DateSubstitute,
+        location: &str,
+    ) -> Result<(), String> {
+        for (selector, candidates) in date_substitute.entries() {
+            for candidate in candidates {
+                self.check_component(
+                    &candidate.to_template_component(),
+                    &format!("{location}.{selector:?}"),
+                    0,
+                )?;
+            }
+        }
+        Ok(())
+    }
+
     fn check_template(
         &mut self,
         template: &[TemplateComponent],
@@ -458,6 +527,16 @@ impl TemplateResourceBudget {
         {
             validate_substitute_candidates(substitute, &format!("{location}.options.substitute"))?;
         }
+        if let Some(date_substitute) = spec
+            .options
+            .as_ref()
+            .and_then(|options| options.date_substitute.as_ref())
+        {
+            self.check_date_substitute(
+                date_substitute,
+                &format!("{location}.options.date-substitute"),
+            )?;
+        }
         if let Some(template) = &spec.template {
             self.check_variant(template, &format!("{location}.template"), depth)?;
         }
@@ -494,6 +573,16 @@ impl TemplateResourceBudget {
         {
             validate_substitute_candidates(substitute, &format!("{location}.options.substitute"))?;
         }
+        if let Some(date_substitute) = spec
+            .options
+            .as_ref()
+            .and_then(|options| options.date_substitute.as_ref())
+        {
+            self.check_date_substitute(
+                date_substitute,
+                &format!("{location}.options.date-substitute"),
+            )?;
+        }
         if let Some(template) = &spec.template {
             self.check_variant(template, &format!("{location}.template"), depth)?;
         }
@@ -521,6 +610,13 @@ impl TemplateResourceBudget {
 )]
 mod security_resource_tests {
     use super::*;
+    use crate::locale::TermForm;
+    use crate::options::{
+        BibliographyOptions, CitationOptions, Config, DateSubstitute, DateSubstituteCandidate,
+        DateSubstituteMessage,
+    };
+    use crate::template::{Rendering, TypeSelector};
+    use indexmap::IndexMap;
 
     fn nested_group(depth: usize) -> TemplateComponent {
         if depth == 0 {
@@ -531,6 +627,18 @@ mod security_resource_tests {
                 ..TemplateGroup::default()
             })
         }
+    }
+
+    fn date_substitute_with_candidates(count: usize) -> DateSubstitute {
+        let candidate = DateSubstituteCandidate::Message(DateSubstituteMessage {
+            message: "term.no-date".to_string(),
+            form: Some(TermForm::Short),
+            rendering: Rendering::default(),
+        });
+        DateSubstitute::new(IndexMap::from([(
+            TypeSelector::Single("default".to_string()),
+            vec![candidate; count],
+        )]))
     }
 
     #[test]
@@ -565,6 +673,40 @@ mod security_resource_tests {
         let err = style
             .validate_resource_limits()
             .expect_err("oversized template must be rejected");
+
+        assert!(err.contains("maximum template component count"));
+    }
+
+    #[test]
+    fn validate_resource_limits_counts_date_substitute_candidates_across_scopes() {
+        let global_count = MAX_TEMPLATE_COMPONENTS / 3;
+        let citation_count = MAX_TEMPLATE_COMPONENTS / 3;
+        let bibliography_count = MAX_TEMPLATE_COMPONENTS - global_count - citation_count + 1;
+        let style = Style {
+            options: Some(Config {
+                date_substitute: Some(date_substitute_with_candidates(global_count)),
+                ..Config::default()
+            }),
+            citation: Some(CitationSpec {
+                options: Some(CitationOptions {
+                    date_substitute: Some(date_substitute_with_candidates(citation_count)),
+                    ..CitationOptions::default()
+                }),
+                ..CitationSpec::default()
+            }),
+            bibliography: Some(BibliographySpec {
+                options: Some(BibliographyOptions {
+                    date_substitute: Some(date_substitute_with_candidates(bibliography_count)),
+                    ..BibliographyOptions::default()
+                }),
+                ..BibliographySpec::default()
+            }),
+            ..Style::default()
+        };
+
+        let err = style
+            .validate_resource_limits()
+            .expect_err("date-substitute candidates must share the template budget");
 
         assert!(err.contains("maximum template component count"));
     }

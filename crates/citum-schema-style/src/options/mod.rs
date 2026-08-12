@@ -8,6 +8,7 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus and Citum contributors
 pub mod bibliography;
 pub mod cascade;
 pub mod contributors;
+pub mod date_substitute;
 pub mod dates;
 pub mod integral_name_memory;
 pub mod localization;
@@ -31,6 +32,10 @@ pub use contributors::{
     ContributorSuppressionRule, DelimiterPrecedesLast, DemoteNonDroppingParticle, DisplayAsSort,
     NameForm, RoleLabelDefaults, RoleLabelPresentation, RoleLabelPreset, RoleOptions,
     RoleOptionsEntry, RoleRendering, ShortenListOptions,
+};
+pub use date_substitute::{
+    DateSubstitute, DateSubstituteCandidate, DateSubstituteDate, DateSubstituteEntry,
+    DateSubstituteMessage, DateSubstitutePreset,
 };
 pub use dates::{DateConfig, DateConfigEntry, DateRangeFormat, NoDateForm};
 pub use integral_name_memory::{
@@ -85,6 +90,15 @@ pub struct Config {
         default
     )]
     pub substitute: Option<SubstituteConfig>,
+    /// Identity-date substitution policy. Omission preserves inline or
+    /// implicit date fallback behavior; it does not inject `standard`.
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "deserialize_date_substitute",
+        default
+    )]
+    #[cfg_attr(feature = "schema", schemars(with = "Option<DateSubstituteEntry>"))]
+    pub date_substitute: Option<DateSubstitute>,
     /// Processing mode (author-date, numeric, etc.).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub processing: Option<Processing>,
@@ -212,6 +226,14 @@ pub struct CitationOptions {
         default
     )]
     pub substitute: Option<SubstituteConfig>,
+    /// Citation-local identity-date substitution policy.
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "deserialize_date_substitute",
+        default
+    )]
+    #[cfg_attr(feature = "schema", schemars(with = "Option<DateSubstituteEntry>"))]
+    pub date_substitute: Option<DateSubstitute>,
     /// Processing mode (author-date, numeric, etc.).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub processing: Option<Processing>,
@@ -332,6 +354,14 @@ pub struct BibliographyOptions {
         default
     )]
     pub substitute: Option<SubstituteConfig>,
+    /// Bibliography-local identity-date substitution policy.
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "deserialize_date_substitute",
+        default
+    )]
+    #[cfg_attr(feature = "schema", schemars(with = "Option<DateSubstituteEntry>"))]
+    pub date_substitute: Option<DateSubstitute>,
     /// Processing mode (author-date, numeric, etc.).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub processing: Option<Processing>,
@@ -603,6 +633,17 @@ pub use title_class::{
 };
 pub use titles::{TextCase, TitleRendering, TitlesConfig, TitlesConfigEntry};
 
+fn merge_date_substitute(base: &mut Option<DateSubstitute>, overlay: Option<&DateSubstitute>) {
+    let Some(overlay) = overlay else {
+        return;
+    };
+    if let Some(base) = base {
+        base.merge(overlay);
+    } else {
+        *base = Some(overlay.clone());
+    }
+}
+
 /// Structured link options.
 #[derive(Debug, Default, PartialEq, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
@@ -736,6 +777,8 @@ impl Config {
             }
         }
 
+        merge_date_substitute(&mut self.date_substitute, other.date_substitute.as_ref());
+
         if let Some(other_contributors) = &other.contributors {
             if let Some(this_contributors) = &mut self.contributors {
                 this_contributors.merge(other_contributors);
@@ -766,6 +809,7 @@ impl CitationOptions {
         Config {
             messages: HashMap::new(),
             substitute: self.substitute.clone(),
+            date_substitute: self.date_substitute.clone(),
             processing: self.processing.clone(),
             locale_override: None,
             localize: self.localize.clone(),
@@ -852,6 +896,8 @@ impl CitationOptions {
             }
         }
 
+        merge_date_substitute(&mut self.date_substitute, other.date_substitute.as_ref());
+
         if let Some(other_contributors) = &other.contributors {
             if let Some(this_contributors) = &mut self.contributors {
                 this_contributors.merge(other_contributors);
@@ -897,6 +943,7 @@ impl BibliographyOptions {
         Config {
             messages: HashMap::new(),
             substitute: self.substitute.clone(),
+            date_substitute: self.date_substitute.clone(),
             processing: self.processing.clone(),
             locale_override: None,
             localize: self.localize.clone(),
@@ -1008,6 +1055,8 @@ impl BibliographyOptions {
             }
         }
 
+        merge_date_substitute(&mut self.date_substitute, other.date_substitute.as_ref());
+
         if let Some(other_contributors) = &other.contributors {
             if let Some(this_contributors) = &mut self.contributors {
                 this_contributors.merge(other_contributors);
@@ -1052,6 +1101,15 @@ where
     D: serde::Deserializer<'de>,
 {
     let value: Option<DateConfigEntry> = Option::deserialize(deserializer)?;
+    Ok(value.map(|entry| entry.resolve()))
+}
+
+/// Deserialize and eagerly expand a named or explicit date-substitution policy.
+fn deserialize_date_substitute<'de, D>(deserializer: D) -> Result<Option<DateSubstitute>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let value: Option<DateSubstituteEntry> = Option::deserialize(deserializer)?;
     Ok(value.map(|entry| entry.resolve()))
 }
 
@@ -1129,6 +1187,12 @@ impl<'de> Deserialize<'de> for Config {
                 default
             )]
             substitute: Option<SubstituteConfig>,
+            #[serde(
+                skip_serializing_if = "Option::is_none",
+                deserialize_with = "deserialize_date_substitute",
+                default
+            )]
+            date_substitute: Option<DateSubstitute>,
             #[serde(skip_serializing_if = "Option::is_none")]
             processing: Option<Processing>,
             #[serde(skip_serializing_if = "Option::is_none")]
@@ -1205,6 +1269,7 @@ impl<'de> Deserialize<'de> for Config {
         Ok(Self {
             messages: wire.messages,
             substitute: wire.substitute,
+            date_substitute: wire.date_substitute,
             processing: wire.processing,
             locale_override: wire.locale_override,
             localize: wire.localize,
@@ -1245,6 +1310,59 @@ impl<'de> Deserialize<'de> for Config {
 mod tests {
     use super::*;
     use rstest::rstest;
+
+    #[test]
+    fn date_substitute_omission_is_not_resolved_to_standard() {
+        let config: Config = serde_yaml::from_str("{}").expect("empty config should parse");
+
+        assert!(config.date_substitute.is_none());
+    }
+
+    #[test]
+    fn date_substitute_preset_is_eagerly_expanded() {
+        let config: Config = serde_yaml::from_str("date-substitute: standard")
+            .expect("standard preset should parse");
+        let serialized = serde_yaml::to_value(&config).expect("config should serialize");
+
+        assert!(
+            config
+                .date_substitute
+                .as_ref()
+                .and_then(|policy| policy.candidates_for("report"))
+                .is_some_and(|candidates| matches!(
+                    candidates,
+                    [DateSubstituteCandidate::Message(_)]
+                ))
+        );
+        assert!(serialized["date-substitute"].is_mapping());
+    }
+
+    #[test]
+    fn explicit_date_substitute_map_preserves_authored_selector_order() {
+        let config: Config = serde_yaml::from_str(
+            r#"
+date-substitute:
+  book,thesis,map:
+  - date: copyright
+    form: year
+    prefix: c
+  default:
+  - message: term.no-date
+    form: short
+"#,
+        )
+        .expect("explicit selector map should parse");
+        let policy = config
+            .date_substitute
+            .expect("date substitute should be present");
+
+        let selectors: Vec<String> = policy.entries().keys().map(ToString::to_string).collect();
+        assert_eq!(selectors, ["book,thesis,map", "default"]);
+        assert!(matches!(
+            policy.candidates_for("book"),
+            Some([DateSubstituteCandidate::Date(_)])
+        ));
+    }
 
     #[test]
     fn test_config_default() {
