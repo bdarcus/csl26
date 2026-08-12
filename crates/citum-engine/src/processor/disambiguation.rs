@@ -55,10 +55,10 @@ use citum_schema::locale::Locale;
 pub struct Disambiguator<'a> {
     bibliography: &'a Bibliography,
     config: &'a Config,
-    /// Effective bibliography config governing multilingual/locale sort-key
-    /// policy (`sorting.multilingual`, `sorting.locale`, `sort-as`,
-    /// preferred transliterations). Year-suffix ordering must use this —
-    /// not `config` — so it agrees with the rendered bibliography order.
+    /// Effective bibliography config governing bibliography-owned date-slot
+    /// grouping and multilingual/locale sort-key policy. Year-suffix grouping
+    /// and ordering must use this — not `config` — when the bibliography
+    /// supplies the corresponding template or sort behavior.
     sort_config: &'a Config,
     locale: &'a Locale,
     group_sort: Option<&'a GroupSort>,
@@ -150,9 +150,9 @@ struct CachedReferenceData {
 impl<'a> Disambiguator<'a> {
     /// Creates a disambiguator that uses the default title-based fallback order.
     ///
-    /// `sort_config` is the effective bibliography config (multilingual/locale
-    /// sort-key policy); pass the same config used to sort the final
-    /// bibliography so year-suffix order agrees with the rendered order.
+    /// `sort_config` is the effective bibliography config; pass the same
+    /// config used to render and sort the final bibliography so bibliography-
+    /// owned date grouping and year-suffix order agree with its output.
     #[must_use]
     pub fn new(
         bibliography: &'a Bibliography,
@@ -175,9 +175,9 @@ impl<'a> Disambiguator<'a> {
 
     /// Creates a disambiguator with an explicit per-group sort specification.
     ///
-    /// `sort_config` is the effective bibliography config (multilingual/locale
-    /// sort-key policy); pass the same config used to sort the final
-    /// bibliography so year-suffix order agrees with the rendered order.
+    /// `sort_config` is the effective bibliography config; pass the same
+    /// config used to render and sort the final bibliography so bibliography-
+    /// owned date grouping and year-suffix order agree with its output.
     #[must_use]
     pub fn with_group_sort(
         bibliography: &'a Bibliography,
@@ -1018,14 +1018,215 @@ impl<'a> Disambiguator<'a> {
         let mut key = String::with_capacity(author_key.len() + 8);
         key.push_str(author_key);
         key.push(':');
-        let Some(year) = reference
+        if let Some(year) = reference
             .effective_issued_date()
             .and_then(|d| d.year().parse::<i32>().ok())
-        else {
+        {
+            let _ = write!(key, "{year}");
             return key;
-        };
-        let _ = write!(key, "{year}");
+        }
+
+        // No issued year. Collision grouping must reflect what the style's
+        // resolved date slot actually yields for this reference, not a
+        // uniform "no date" assumption — a type-conditional date macro (e.g.
+        // GB/T 7714's article-journal branch, which never reaches the
+        // no-date term) renders different text for different reference
+        // types, and those references are already visually distinguishable.
+        // See csl26-huuz.
+        key.push_str(&self.date_slot_discriminant(reference));
         key
+    }
+
+    /// Discriminant for the date half of the collision key when a reference
+    /// has no issued year. Reads the reference's effective resolved
+    /// template — the first non-suppressed date component under the author
+    /// (`crate::sorting::first_date_component_for_bibliography`, preferring
+    /// the bibliography spec when present, else the citation spec) — and
+    /// returns text identifying what it actually renders:
+    ///
+    /// - the date variable resolves to a real, non-empty value → the text
+    ///   it would actually render (`form`-restricted and marker-applied,
+    ///   the same formatting `TemplateDate::values` uses — not the raw
+    ///   stored value, which can carry more precision than `form` shows);
+    /// - the variable is empty and the resolved fallback chain (explicit or
+    ///   the implicit no-date-term branch) renders the locale's no-date
+    ///   term → a discriminant for that term, scoped by the reference's
+    ///   effective language (mirrors `build_author_slot_key`'s
+    ///   `ANONYMOUS_FALLBACK_KEY` scoping — the rendered term itself varies
+    ///   by language, "无日期" vs "n.d.");
+    ///
+    /// Access dates (`DateVariable::Accessed`), whether the slot's own
+    /// primary variable or a fallback candidate, are never used as a
+    /// discriminant even when present — an access date is retrieval
+    /// metadata, not part of a work's identity, so two otherwise identical
+    /// undated entries must not be distinguished by it.
+    ///
+    /// Bibliography-preferred, not citation-preferred: mirrors
+    /// `sort_group_for_year_suffix`'s existing precedent (`csl26-m8la`) for
+    /// the same reason — collision grouping is measured against the
+    /// bibliography oracle, and a style's citation template is commonly a
+    /// simpler, non-type-differentiated form of the same date logic (GB/T
+    /// author-date's `citation:` section has one flat `date: issued` with no
+    /// `type-variants:` at all, unlike its bibliography section). Preferring
+    /// citation_spec here would let that undifferentiated template collapse
+    /// every undated reference onto the same discriminant regardless of
+    /// type, defeating the type-conditional split this function exists to
+    /// make. Confirmed empirically: an in-tree literal `bibliography_spec`
+    /// vs `citation_spec` preference swap was compared against the GB/T
+    /// oracle before landing this order.
+    ///
+    /// Returns the empty string both when nothing resolves at all (an
+    /// explicit `fallback: []`) and when there is no template to resolve
+    /// (no citation or bibliography spec configured) — `build_group_key`'s
+    /// existing undiscriminated key for that case.
+    fn date_slot_discriminant(&self, reference: &Reference) -> String {
+        let component_and_config = self
+            .bibliography_spec
+            .and_then(|spec| crate::sorting::first_date_component_for_bibliography(spec, reference))
+            .map(|component| (component, self.sort_config))
+            .or_else(|| {
+                self.citation_spec
+                    .and_then(|spec| {
+                        crate::sorting::first_date_component_for_citation(spec, reference)
+                    })
+                    .map(|component| (component, self.config))
+            });
+        let Some((component, config)) = component_and_config else {
+            return String::new();
+        };
+        Self::date_component_discriminant(&component, reference, self.locale, config.dates.as_ref())
+    }
+
+    /// The literal locale message ID the implicit no-date branch in
+    /// `TemplateDate::values` (`values/date.rs`) evaluates, and the same ID
+    /// every GB/T-style explicit `message: term.no-date` fallback names.
+    /// Both render identical text, so both must produce the same
+    /// discriminant here.
+    const IMPLICIT_NO_DATE_TERM: &'static str = "term.no-date";
+
+    /// Classify what a resolved date component renders for a reference with
+    /// no issued year. See `date_slot_discriminant`'s doc comment for the
+    /// cases.
+    ///
+    /// A resolving candidate's *rendered* text is used, not the raw stored
+    /// date value — `DateValue`'s `Display` is the unformatted EDTF/literal
+    /// string, which can carry more precision than the component's `form`
+    /// shows (e.g. a day-precision `copyright` date under `form: year`
+    /// renders as a bare year, but its raw value still has the day). Reading
+    /// the raw value here could split a collision group whose members
+    /// render identical date-slot text, defeating the discriminant's whole
+    /// purpose. See csl26-huuz, flagged in PR review.
+    fn date_component_discriminant(
+        component: &citum_schema::template::TemplateDate,
+        reference: &Reference,
+        locale: &citum_schema::locale::Locale,
+        date_config: Option<&citum_schema::options::dates::DateConfig>,
+    ) -> String {
+        use citum_schema::template::{DateVariable, TemplateComponent};
+
+        if matches!(component.date, DateVariable::Accessed) {
+            if crate::values::date::resolve_date_variable(&component.date, reference)
+                .is_some_and(|value| !value.is_empty())
+            {
+                // An access date carries no identity even when present —
+                // this is the terminal case for this slot, not a signal to
+                // keep looking at a fallback chain.
+                return String::new();
+            }
+        } else if let Some(value) =
+            crate::values::date::resolve_date_variable(&component.date, reference)
+                .filter(|value| !value.is_empty())
+        {
+            // The primary variable is present, so — mirroring
+            // `TemplateDate::values`'s own normal-value branch, which never
+            // consults `self.fallback` once the primary date resolves —
+            // this is terminal even when the value fails to format (e.g. a
+            // literal date under a numeric `form`, which the renderer also
+            // shows as nothing). Reuses the same fallback-candidate helper as
+            // the loop below: its prefix/suffix/wrap contribution is inert
+            // here (constant across every reference resolving this same
+            // component, so it can never split two references from each
+            // other), but `date.note` is per-reference *data*, not
+            // per-component config, so including it is defensive even though
+            // a note-bearing value can't reach this branch under the current
+            // data model (a note-bearing date is structured and parseable,
+            // so `build_group_key`'s own year check already returns before
+            // this function ever runs).
+            return crate::values::date::fallback_candidate_discriminant(
+                &value,
+                &component.form,
+                &component.rendering,
+                component.suppress_note,
+                locale,
+                date_config,
+            )
+            .unwrap_or_default();
+        }
+
+        let Some(fallbacks) = component.fallback.as_ref() else {
+            return if matches!(component.date, DateVariable::Issued) {
+                format!(
+                    "term:{}:{}",
+                    Self::IMPLICIT_NO_DATE_TERM,
+                    crate::values::effective_item_language(reference).unwrap_or_default()
+                )
+            } else {
+                String::new()
+            };
+        };
+
+        for candidate in fallbacks {
+            match candidate {
+                TemplateComponent::Message(message) => {
+                    return format!(
+                        "term:{}:{}",
+                        message.message,
+                        crate::values::effective_item_language(reference).unwrap_or_default()
+                    );
+                }
+                TemplateComponent::Date(inner) => {
+                    let Some(value) =
+                        crate::values::date::resolve_date_variable(&inner.date, reference)
+                            .filter(|value| !value.is_empty())
+                    else {
+                        // This candidate doesn't resolve — not selected,
+                        // keep scanning the chain (e.g. GB/T's accessed
+                        // fallback when no accessed date exists at all).
+                        continue;
+                    };
+                    let Some(discriminant) = crate::values::date::fallback_candidate_discriminant(
+                        &value,
+                        &inner.form,
+                        &inner.rendering,
+                        inner.suppress_note,
+                        locale,
+                        date_config,
+                    ) else {
+                        // Present but renders nothing (e.g. a literal date
+                        // under a numeric form) — `render_date_fallback_chain`
+                        // treats an unrendering candidate the same as an
+                        // absent one and keeps scanning, so the discriminant
+                        // must too.
+                        continue;
+                    };
+                    // A resolving, rendering candidate is the terminal case
+                    // for this slot: citeproc-js's underlying if/else-if
+                    // branching (which this fallback chain mirrors) never
+                    // falls through to a later branch once one is selected —
+                    // even when, as with an access date, that branch's own
+                    // content carries no identity and this discriminant is
+                    // therefore empty rather than the date's text.
+                    return if matches!(inner.date, DateVariable::Accessed) {
+                        String::new()
+                    } else {
+                        discriminant
+                    };
+                }
+                _ => {}
+            }
+        }
+
+        String::new()
     }
 
     /// Appends a sequence of family names to the key buffer, lowercased.
@@ -1148,6 +1349,7 @@ mod tests {
     use crate::Processor;
     use citum_schema::citation::Citation;
     use citum_schema::grouping::{GroupSort, GroupSortKey, SortKey};
+    use citum_schema::options::dates::DateConfig;
     use citum_schema::options::{
         Config, ContributorConfig, DisplayAsSort, MultilingualConfig, NameForm, SortingConfig,
         SortingMultilingualMode,
@@ -1157,8 +1359,12 @@ mod tests {
         Contributor, DateValue, InputReference as Reference, Monograph, MonographType,
         MultilingualString, StructuredName, Title,
     };
-    use citum_schema::template::{TemplateComponent, WrapPunctuation};
+    use citum_schema::template::{
+        DateForm, DateVariable, Rendering, TemplateComponent, TemplateDate, TemplateMessage,
+        WrapConfig, WrapPunctuation,
+    };
     use citum_schema::{BibliographySpec, CitationSpec, Style, StyleInfo};
+    use rstest::rstest;
 
     fn make_ref(id: &str, family: &str, given: &str, year: i32) -> Reference {
         let title = format!("Title {id}");
@@ -2335,5 +2541,466 @@ mod tests {
             2,
             "group-local path: romanized sort-as order puts r-beta second"
         );
+    }
+
+    // csl26-huuz: collision grouping must reflect what the resolved date
+    // slot actually renders for an undated reference, not a uniform "no
+    // date" assumption.
+
+    /// A reference with an explicit issued/accessed pair and a real shared
+    /// author. `date_component_discriminant` never reads the author; the
+    /// integration test below shares one author across every case so only
+    /// the date half of the collision key varies.
+    fn make_dated_ref(id: &str, family: &str, issued: &str, accessed: Option<&str>) -> Reference {
+        Reference::Monograph(Box::new(Monograph {
+            id: Some(id.into()),
+            r#type: MonographType::Book,
+            title: Some(Title::Single(format!("Title {id}"))),
+            author: Some(Contributor::StructuredName(StructuredName {
+                family: MultilingualString::Simple(family.to_string()),
+                given: MultilingualString::Simple(String::new()),
+                suffix: None,
+                dropping_particle: None,
+                non_dropping_particle: None,
+            })),
+            issued: DateValue::new(issued),
+            accessed: accessed.map(DateValue::new),
+            ..Default::default()
+        }))
+    }
+
+    /// The GB/T-shaped date component under test: primary `issued`, falling
+    /// back to an access year (never a discriminant, per csl26-huuz) and
+    /// then to the locale's no-date term.
+    fn issued_with_accessed_fallback() -> TemplateDate {
+        TemplateDate {
+            date: DateVariable::Issued,
+            form: DateForm::Year,
+            fallback: Some(vec![
+                TemplateComponent::Date(TemplateDate {
+                    date: DateVariable::Accessed,
+                    form: DateForm::Year,
+                    ..Default::default()
+                }),
+                TemplateComponent::Message(TemplateMessage {
+                    message: "term.no-date".to_string(),
+                    ..Default::default()
+                }),
+            ]),
+            ..Default::default()
+        }
+    }
+
+    #[rstest]
+    #[case::real_issued_value_wins_without_consulting_fallback(
+        "2020",
+        None,
+        "2020||None|None|None"
+    )]
+    #[case::present_accessed_stops_the_chain_with_no_identity("", Some("2020"), "")]
+    #[case::absent_accessed_falls_through_to_the_no_date_term("", None, "term:term.no-date:")]
+    #[case::empty_string_accessed_is_treated_as_absent("", Some(""), "term:term.no-date:")]
+    fn given_an_issued_with_accessed_fallback_when_computing_the_collision_discriminant_then_it_matches(
+        #[case] issued: &str,
+        #[case] accessed: Option<&str>,
+        #[case] expected: &str,
+    ) {
+        let reference = make_dated_ref("d1", "Smith", issued, accessed);
+        let component = issued_with_accessed_fallback();
+
+        let locale = Locale::en_us();
+        let discriminant =
+            Disambiguator::date_component_discriminant(&component, &reference, &locale, None);
+
+        assert_eq!(discriminant, expected);
+    }
+
+    #[rstest]
+    #[case::explicit_message_fallback(Some(vec![TemplateComponent::Message(TemplateMessage {
+        message: "term.no-date".to_string(),
+        ..Default::default()
+    })]))]
+    #[case::implicit_no_fallback_at_all(None)]
+    fn given_an_undated_issued_slot_when_the_no_date_term_is_reached_then_the_discriminant_is_the_same_either_way(
+        #[case] fallback: Option<Vec<TemplateComponent>>,
+    ) {
+        let reference = make_dated_ref("d2", "Smith", "", None);
+        let component = TemplateDate {
+            date: DateVariable::Issued,
+            form: DateForm::Year,
+            fallback,
+            ..Default::default()
+        };
+
+        let locale = Locale::en_us();
+        let discriminant =
+            Disambiguator::date_component_discriminant(&component, &reference, &locale, None);
+
+        // Both the implicit (no `fallback:` at all) and explicit
+        // (`fallback: [message: term.no-date]`) paths render the identical
+        // locale term via TemplateDate::values, so they must produce the
+        // identical collision-key discriminant — otherwise a style that
+        // mixes the two forms across type-variants would split undated
+        // references that render identical text.
+        assert_eq!(discriminant, "term:term.no-date:");
+    }
+
+    #[test]
+    fn empty_explicit_fallback_list_yields_empty_discriminant() {
+        let reference = make_dated_ref("d3", "Smith", "", None);
+        let component = TemplateDate {
+            date: DateVariable::Issued,
+            form: DateForm::Year,
+            fallback: Some(Vec::new()),
+            ..Default::default()
+        };
+
+        let locale = Locale::en_us();
+        let discriminant =
+            Disambiguator::date_component_discriminant(&component, &reference, &locale, None);
+
+        assert_eq!(discriminant, "");
+    }
+
+    #[test]
+    fn fallback_candidate_note_obeys_the_candidate_suppress_note_flag() {
+        let date = DateValue {
+            value: "1947".to_string(),
+            note: Some("民国36年".to_string()),
+        };
+        let rendering = Rendering {
+            prefix: Some("c".into()),
+            ..Default::default()
+        };
+        let date_config = DateConfig {
+            note_wrap: Some(WrapConfig {
+                punctuation: WrapPunctuation::Parentheses,
+                inner_prefix: None,
+                inner_suffix: None,
+            }),
+            ..Default::default()
+        };
+        let locale = Locale::en_us();
+
+        let visible = crate::values::date::fallback_candidate_discriminant(
+            &date,
+            &DateForm::Year,
+            &rendering,
+            None,
+            &locale,
+            Some(&date_config),
+        );
+        let suppressed = crate::values::date::fallback_candidate_discriminant(
+            &date,
+            &DateForm::Year,
+            &rendering,
+            Some(true),
+            &locale,
+            Some(&date_config),
+        );
+
+        assert_eq!(
+            visible.as_deref(),
+            Some("1947|民国36年|Some(Custom(\"c\"))|None|None")
+        );
+        assert_eq!(
+            suppressed.as_deref(),
+            Some("1947||Some(Custom(\"c\"))|None|None")
+        );
+    }
+
+    #[test]
+    fn identity_date_slot_uses_the_configuration_from_its_effective_scope() {
+        let reference = Reference::Monograph(Box::new(Monograph {
+            id: Some("scope-date".into()),
+            r#type: MonographType::Book,
+            title: Some(Title::Single("Scoped date".to_string())),
+            issued: DateValue::new(""),
+            copyright: Some(DateValue {
+                value: "1995".to_string(),
+                note: Some("source calendar".to_string()),
+            }),
+            ..Default::default()
+        }));
+        let date_component = TemplateDate {
+            date: DateVariable::Copyright,
+            form: DateForm::Year,
+            ..Default::default()
+        };
+        let bibliography_spec = BibliographySpec {
+            template: Some(vec![TemplateComponent::Date(date_component.clone())].into()),
+            ..Default::default()
+        };
+        let citation_spec = CitationSpec {
+            template: Some(vec![TemplateComponent::Date(date_component)].into()),
+            ..Default::default()
+        };
+        let note_dates = DateConfig {
+            note_wrap: Some(WrapConfig {
+                punctuation: WrapPunctuation::Parentheses,
+                inner_prefix: None,
+                inner_suffix: None,
+            }),
+            ..Default::default()
+        };
+        let with_note = Config {
+            dates: Some(note_dates),
+            ..Default::default()
+        };
+        let without_note = Config::default();
+        let bibliography = Bibliography::new();
+        let locale = Locale::en_us();
+
+        let bibliography_owned =
+            Disambiguator::new(&bibliography, &without_note, &with_note, &locale)
+                .with_citation_spec(&citation_spec)
+                .with_bibliography_spec(&bibliography_spec)
+                .date_slot_discriminant(&reference);
+        let citation_owned = Disambiguator::new(&bibliography, &with_note, &without_note, &locale)
+            .with_citation_spec(&citation_spec)
+            .date_slot_discriminant(&reference);
+
+        assert_eq!(
+            bibliography_owned, "1995|source calendar|None|None|None",
+            "a bibliography-selected slot must use effective bibliography date options"
+        );
+        assert_eq!(
+            citation_owned, "1995|source calendar|None|None|None",
+            "the citation fallback slot must use effective citation date options"
+        );
+    }
+
+    /// A reference whose only date is a `copyright` fallback candidate with
+    /// day precision — mirrors GB/T 7714's `book,thesis,map` fallback chain
+    /// (`date: copyright, form: year`).
+    fn make_ref_with_copyright(id: &str, family: &str, copyright: &str) -> Reference {
+        Reference::Monograph(Box::new(Monograph {
+            id: Some(id.into()),
+            r#type: MonographType::Book,
+            title: Some(Title::Single(format!("Title {id}"))),
+            author: Some(Contributor::StructuredName(StructuredName {
+                family: MultilingualString::Simple(family.to_string()),
+                given: MultilingualString::Simple(String::new()),
+                suffix: None,
+                dropping_particle: None,
+                non_dropping_particle: None,
+            })),
+            issued: DateValue::new(""),
+            copyright: Some(DateValue::new(copyright)),
+            ..Default::default()
+        }))
+    }
+
+    fn issued_with_copyright_fallback() -> TemplateDate {
+        TemplateDate {
+            date: DateVariable::Issued,
+            form: DateForm::Year,
+            fallback: Some(vec![TemplateComponent::Date(TemplateDate {
+                date: DateVariable::Copyright,
+                form: DateForm::Year,
+                ..Default::default()
+            })]),
+            ..Default::default()
+        }
+    }
+
+    #[rstest]
+    #[case::day_precision_early_in_the_year("1995-03-01")]
+    #[case::day_precision_late_in_the_year("1995-11-20")]
+    fn given_a_copyright_fallback_date_with_day_precision_when_the_form_is_year_then_the_discriminant_is_the_bare_year(
+        #[case] copyright: &str,
+    ) {
+        // `DateValue`'s `Display` is the raw stored EDTF string. Reading it
+        // directly here would give "1995-03-01" and "1995-11-20" — two
+        // different discriminants for two references that both render as
+        // the bare year "1995" under `form: year`, wrongly treating them as
+        // already distinguishable. Flagged in PR review for csl26-huuz.
+        let component = issued_with_copyright_fallback();
+        let reference = make_ref_with_copyright("r1", "Smith", copyright);
+        let locale = Locale::en_us();
+
+        let discriminant =
+            Disambiguator::date_component_discriminant(&component, &reference, &locale, None);
+
+        assert_eq!(discriminant, "1995||None|None|None");
+    }
+
+    /// GB/T 7714's real `book,thesis,map` fallback chain: `copyright`
+    /// prefixed with `c`, `printing` suffixed with `印刷`. A reference
+    /// resolving one and a reference resolving the other can share a bare
+    /// formatted year (`"1995"`) while rendering visibly different text
+    /// (`c1995` vs `1995印刷`) — the discriminant must not collapse them.
+    /// Flagged in PR review for csl26-huuz.
+    #[test]
+    fn copyright_and_printing_fallbacks_with_the_same_year_do_not_collide() {
+        let component = TemplateDate {
+            date: DateVariable::Issued,
+            form: DateForm::Year,
+            fallback: Some(vec![
+                TemplateComponent::Date(TemplateDate {
+                    date: DateVariable::Copyright,
+                    form: DateForm::Year,
+                    rendering: Rendering {
+                        prefix: Some("c".into()),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                }),
+                TemplateComponent::Date(TemplateDate {
+                    date: DateVariable::Printing,
+                    form: DateForm::Year,
+                    rendering: Rendering {
+                        suffix: Some("印刷".into()),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                }),
+            ]),
+            ..Default::default()
+        };
+        let copyright_ref = Reference::Monograph(Box::new(Monograph {
+            id: Some("copyright-ref".into()),
+            r#type: MonographType::Book,
+            title: Some(Title::Single("Title copyright-ref".to_string())),
+            author: Some(Contributor::StructuredName(StructuredName {
+                family: MultilingualString::Simple("Smith".to_string()),
+                given: MultilingualString::Simple(String::new()),
+                suffix: None,
+                dropping_particle: None,
+                non_dropping_particle: None,
+            })),
+            issued: DateValue::new(""),
+            copyright: Some(DateValue::new("1995")),
+            ..Default::default()
+        }));
+        let printing_ref = Reference::Monograph(Box::new(Monograph {
+            id: Some("printing-ref".into()),
+            r#type: MonographType::Book,
+            title: Some(Title::Single("Title printing-ref".to_string())),
+            author: Some(Contributor::StructuredName(StructuredName {
+                family: MultilingualString::Simple("Smith".to_string()),
+                given: MultilingualString::Simple(String::new()),
+                suffix: None,
+                dropping_particle: None,
+                non_dropping_particle: None,
+            })),
+            issued: DateValue::new(""),
+            copyright: None,
+            printing: Some(DateValue::new("1995")),
+            ..Default::default()
+        }));
+        let locale = Locale::en_us();
+
+        let copyright_discriminant =
+            Disambiguator::date_component_discriminant(&component, &copyright_ref, &locale, None);
+        let printing_discriminant =
+            Disambiguator::date_component_discriminant(&component, &printing_ref, &locale, None);
+
+        assert_ne!(
+            copyright_discriminant, printing_discriminant,
+            "c1995 and 1995印刷 render visibly different text and must not collide"
+        );
+    }
+
+    #[test]
+    fn differing_access_dates_still_collide_via_shared_disambiguator() {
+        // Mirrors GB/T 7714's webpage type-variant: an access date never
+        // carries identity, so two references with *different* access years
+        // must still collide (form one suffixed group), while a reference
+        // with no access date at all — reaching the no-date term instead —
+        // must land in a *separate* group. Both groups share the same
+        // author, so only the date-slot discriminant can be responsible for
+        // the split. See csl26-huuz.
+        use citum_schema::options::{Disambiguation, Processing, ProcessingCustom};
+
+        let mut bib = Bibliography::new();
+        bib.insert(
+            "b1".to_string(),
+            make_dated_ref("b1", "Smith", "", Some("2020")),
+        );
+        bib.insert(
+            "b2".to_string(),
+            make_dated_ref("b2", "Smith", "", Some("2019")),
+        );
+        bib.insert("b3".to_string(), make_dated_ref("b3", "Smith", "", None));
+        bib.insert("b4".to_string(), make_dated_ref("b4", "Smith", "", None));
+
+        let locale = Locale::en_us();
+        let config = Config {
+            processing: Some(Processing::Custom(ProcessingCustom {
+                base: None,
+                disambiguate: Some(Disambiguation {
+                    names: false,
+                    add_givenname: false,
+                    givenname_rule: GivennameRule::default(),
+                    year_suffix: true,
+                }),
+                ..Default::default()
+            })),
+            ..Default::default()
+        };
+        let bibliography_spec = BibliographySpec {
+            template: Some(
+                vec![
+                    citum_schema::tc_contributor!(Author, Long),
+                    TemplateComponent::Date(issued_with_accessed_fallback()),
+                ]
+                .into(),
+            ),
+            ..Default::default()
+        };
+        let disambiguator = Disambiguator::new(&bib, &config, &config, &locale)
+            .with_bibliography_spec(&bibliography_spec);
+        let hints = disambiguator.calculate_hints();
+
+        let accessed_group_key = hints.get("b1").unwrap().group_key.clone();
+        let no_date_group_key = hints.get("b3").unwrap().group_key.clone();
+
+        assert_eq!(
+            hints.get("b2").unwrap().group_key,
+            accessed_group_key,
+            "different access years still share one group — the value never discriminates"
+        );
+        assert_eq!(
+            hints.get("b4").unwrap().group_key,
+            no_date_group_key,
+            "both no-access-date references share the other group"
+        );
+        assert_ne!(
+            accessed_group_key, no_date_group_key,
+            "an access-date group must not merge with the no-date-term group"
+        );
+
+        // `group_length` reports same-*author* count (documented on
+        // `author_group_lengths`), not collision-group size — all four
+        // share author "Smith", so it's 4 for every entry here regardless
+        // of which of the two date-discriminant groups they're actually in.
+        // `group_index` is the field that reflects actual collision-group
+        // membership: each 2-member group gets index 1 and 2.
+        let b1_index = hints.get("b1").unwrap().group_index;
+        let b2_index = hints.get("b2").unwrap().group_index;
+        let b3_index = hints.get("b3").unwrap().group_index;
+        let b4_index = hints.get("b4").unwrap().group_index;
+        assert_eq!(
+            [b1_index, b2_index]
+                .into_iter()
+                .collect::<std::collections::BTreeSet<_>>(),
+            [1, 2].into_iter().collect(),
+            "the access-date pair is indexed 1 and 2 within its own group"
+        );
+        assert_eq!(
+            [b3_index, b4_index]
+                .into_iter()
+                .collect::<std::collections::BTreeSet<_>>(),
+            [1, 2].into_iter().collect(),
+            "the no-date pair is indexed 1 and 2 within its own, separate group"
+        );
+
+        for id in ["b1", "b2", "b3", "b4"] {
+            assert!(
+                hints.get(id).unwrap().disamb_condition,
+                "{id}: both groups need a suffix"
+            );
+        }
     }
 }

@@ -1,15 +1,17 @@
 ---
 # csl26-huuz
 title: Disambiguation collision grouping is variable-based, not render-text-based
-status: todo
+status: completed
 type: bug
 priority: normal
 tags:
     - engine
     - fidelity
 created_at: 2026-08-06T12:43:05Z
-updated_at: 2026-08-06T12:44:42Z
+updated_at: 2026-08-12T00:48:29Z
 parent: csl26-ccdt
+blocking:
+    - csl26-q67h
 ---
 
 citeproc-js groups year-suffix disambiguation collisions by RENDERED TEXT
@@ -69,3 +71,58 @@ bibliography.sort") covers the still-missing explicit sort — this bean covers
 only the residual ~9-entry gap in the English anonymous-undated bucket that
 traces to the grouping/rendering mismatch described above, which is
 independent of whether that sort gets restored.
+
+## Summary of Changes
+
+Collision-group **membership** now reflects what a reference's resolved date
+slot actually renders, instead of assuming every undated reference renders
+uniform "no date" text.
+
+**Engine:**
+- `sorting.rs`: `first_date_component_for_bibliography`/`_for_citation`,
+  mirroring the existing contributor-resolution helpers.
+- `disambiguation.rs`: `build_group_key` falls through to a new
+  `date_slot_discriminant`/`date_component_discriminant` when there's no
+  parseable issued year. Prefers the bibliography spec (confirmed empirically
+  — GB/T's `citation:` template is undifferentiated by type, unlike its
+  `bibliography:` template; preferring it collapsed every undated reference
+  onto one discriminant). An access date never contributes identity, whether
+  primary or fallback, and the search stops (doesn't fall through) once an
+  access-date candidate would be selected — mirrors the if/else-if/else shape
+  the fallback chain represents.
+- `values/date.rs`: extracted `resolve_date_variable` (shared date-variable →
+  reference-field mapping) and `render_date_fallback_chain`. The fallback
+  render path now inlines a disamb suffix into a `date:` fallback candidate's
+  raw text *before* its wrap is applied (so the letter lands inside brackets:
+  `[2020a]`, not `[2020]a`), and renders a standalone suffix when nothing in
+  the fallback chain resolves at all (previously: silently no letter).
+
+**Style:** `gb-t-7714-2025-author-date.yaml` — `article-journal,article-magazine`
+lost its `term.no-date` fallback (upstream's date-intext macro never reaches
+it for that branch without volume/issue); `webpage,post,post-weblog` gained
+an access-year fallback ahead of the no-date term (upstream's
+`<else-if variable="accessed">` branch).
+
+**Spec:** `docs/specs/DISAMBIGUATION.md` §1 — new "Date-slot discriminant"
+subsection with the four-case rule, the bibliography-preference rationale,
+and the rendering-side fixes required alongside it.
+
+**Measured:** GB/T's diagnostic upstream-corpus bibliography scope
+(`count_toward_fidelity: false`, no fidelity-gate impact) went 147/203 →
+176/203 (+29), citations 8/8 unchanged. Zero regressions across the 35-style
+exemplar corpus (`report-core.js --all-features`, before/after diffed via a
+clean detached worktree) or `cargo nextest run` (2463/2463). 9 new unit tests
+in `disambiguation.rs` (BDD `given/when/then`, `#[rstest]`, `assert_eq!` on
+captured discriminants/group keys).
+
+**Scope note:** this bean closes group *membership*. Five entries whose
+membership is now correct still show the wrong *letter* because their
+ordering depends on `gb-t-7714-2025-author-date`'s own `bibliography.sort`,
+which is still missing (inherits `citation-number` registry order from its
+numeric base) — that gap is `csl26-q67h`, linked below, not closed here.
+
+Two unrelated defects surfaced while measuring were not filed as new beans —
+existing siblings already covered them and got the corpus evidence appended
+instead: `csl26-yyrs` (standards-body contributor promotion, now 5 entries
+not 3) and `csl26-c361` (NumberForm::Ordinal not implemented, new GB/T
+evidence: `5th editors` vs `5 editors`).

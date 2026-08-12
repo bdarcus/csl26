@@ -8,7 +8,7 @@ tags:
     - fidelity
     - style
 created_at: 2026-07-23T17:06:02Z
-updated_at: 2026-08-02T14:19:29Z
+updated_at: 2026-08-11T23:56:28Z
 parent: csl26-ccdt
 ---
 
@@ -23,3 +23,7 @@ GB/T 7714-2025 author-date's `standard` reference type: oracle promotes the issu
 Needs a `substitute.template` extension — either a new `SubstituteField` variant for publisher/issuing-org, or a `TemplateContributor`-shaped publisher-as-contributor path (crates/citum-schema-style/src/options/substitute.rs, crates/citum-schema-style/src/template.rs). Scope carefully: if this needs to generalize beyond GB/T's one type-variant, consider whether it should be a broader `substitute` schema feature rather than a GB/T-specific hack.
 
 Part of csl26-6eak (Tune gb-t-7714-2025-author-date to full fidelity).
+
+## Additional evidence (csl26-huuz, 2026-08-11 session)
+
+Full oracle bibliography scope for this style now shows 5 affected entries, not 3: gbt7714.8.9.2:1, :2, :3, :4, :5. All five are the same defect (org/committee promoted into author slot by the oracle, dropped to 佚名/Anon fallback by citum). Entries 4 and 5 (International Electrotechnical Commission (IEC); ISO) weren't in the original 3-entry evidence list.
