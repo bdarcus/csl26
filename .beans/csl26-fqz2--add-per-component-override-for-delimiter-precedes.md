@@ -1,13 +1,14 @@
 ---
 # csl26-fqz2
-title: Add per-component override for delimiter-precedes-last at N=2
-status: todo
+title: Add scoped two-name delimiter policy
+status: in-progress
 type: task
 priority: normal
 tags:
     - contributors
+    - schema
 created_at: 2026-07-06T14:03:06Z
-updated_at: 2026-07-06T14:03:13Z
+updated_at: 2026-08-12T23:17:30Z
 parent: csl26-8m2p
 ---
 
@@ -26,3 +27,7 @@ Add a way for a style to opt out of the N=2 suppression (or opt into literal `al
 - crates/citum-schema-style/src/options/contributors.rs (DelimiterPrecedesLast)
 - Audit finding 9, docs/architecture/audits/2026-07-04_CITUM_ENGINE_REVIEW_PART2.md
 - Bean csl26-mc0c (closed the audit finding without this deeper fix; PR #1017)
+
+## Revised Design (2026-08-12)
+
+Implement this as `ContributorConfig.two-name-delimiter-policy`, inherited through global, citation, and bibliography option scopes. Literal `delimiter-precedes-last` semantics become the default; APA declares the citation-or-given-first suppression explicitly. See `docs/specs/TWO_NAME_DELIMITER_POLICY.md`.
