@@ -13,11 +13,13 @@ use crate::values::{ComponentValues, ProcHints, ProcValues, RenderOptions};
 use citum_edtf::{Edtf, Timezone, UnspecifiedYear, Year};
 use citum_schema::locale::{GeneralTerm, SubYearCode, TermForm};
 use citum_schema::options::dates::{DateRangeFormat, TimeFormat};
+use citum_schema::options::{Config, DateSubstituteCandidate};
 use citum_schema::reference::types::RefDate;
 use citum_schema::reference::{ClassExtension, WorkRelation};
 use citum_schema::template::{
     DateForm, DateVariable as TemplateDateVar, Rendering, TemplateComponent, TemplateDate,
 };
+use std::borrow::Cow;
 use std::collections::BTreeMap;
 
 /// Zero-pad a rendered day when `zero_pad` is set, otherwise render it as-is.
@@ -88,6 +90,118 @@ pub(crate) fn resolve_date_variable(
     }
 }
 
+/// Effective source for the identity date's fallback candidates.
+///
+/// The variants preserve the semantic distinction between omitted options,
+/// an authored policy with no matching selector, and a matched selector whose
+/// candidate list may intentionally be empty.
+pub(crate) enum EffectiveDateCandidateSource<'a> {
+    /// `date-substitute` was omitted; preserve inline or implicit behavior.
+    Inline(Option<&'a [TemplateComponent]>),
+    /// A policy exists but no selector matched; preserve inline or implicit behavior.
+    Unmatched(Option<&'a [TemplateComponent]>),
+    /// A selector matched; its list replaces the inline chain as a whole.
+    Matched(&'a [DateSubstituteCandidate]),
+}
+
+impl<'a> EffectiveDateCandidateSource<'a> {
+    /// Materialize the effective source as ordinary template components.
+    pub(crate) fn template_components(&self) -> Option<Cow<'a, [TemplateComponent]>> {
+        match self {
+            Self::Inline(inline) | Self::Unmatched(inline) => inline.map(Cow::Borrowed),
+            Self::Matched(candidates) => Some(Cow::Owned(
+                candidates
+                    .iter()
+                    .map(DateSubstituteCandidate::to_template_component)
+                    .collect(),
+            )),
+        }
+    }
+}
+
+/// Resolve the effective candidate source for an identity date component.
+pub(crate) fn effective_date_candidate_source<'a>(
+    component: &'a TemplateDate,
+    config: &'a Config,
+    ref_type: &str,
+) -> EffectiveDateCandidateSource<'a> {
+    let inline = component.fallback.as_deref();
+    let Some(policy) = config.date_substitute.as_ref() else {
+        return EffectiveDateCandidateSource::Inline(inline);
+    };
+    policy.candidates_for(ref_type).map_or_else(
+        || EffectiveDateCandidateSource::Unmatched(inline),
+        EffectiveDateCandidateSource::Matched,
+    )
+}
+
+/// Materialize an options-level candidate chain on the first eligible date.
+///
+/// Traversal is recursive and authored-order preserving. Only the first date
+/// whose `suppress-disamb-suffix` is not true is the identity slot; later
+/// dates retain their inline fallbacks.
+pub(crate) fn materialize_identity_date_substitute<'a>(
+    template: &'a [TemplateComponent],
+    config: &Config,
+    ref_type: &str,
+) -> Cow<'a, [TemplateComponent]> {
+    let Some(identity_date) = first_identity_date(template) else {
+        return Cow::Borrowed(template);
+    };
+    let EffectiveDateCandidateSource::Matched(candidates) =
+        effective_date_candidate_source(identity_date, config, ref_type)
+    else {
+        return Cow::Borrowed(template);
+    };
+
+    let mut resolved = template.to_vec();
+    replace_first_identity_date(&mut resolved, candidates);
+    Cow::Owned(resolved)
+}
+
+fn first_identity_date(template: &[TemplateComponent]) -> Option<&TemplateDate> {
+    for component in template {
+        match component {
+            TemplateComponent::Date(date) if date.suppress_disamb_suffix != Some(true) => {
+                return Some(date);
+            }
+            TemplateComponent::Group(group) => {
+                if let Some(date) = first_identity_date(&group.group) {
+                    return Some(date);
+                }
+            }
+            _ => {}
+        }
+    }
+    None
+}
+
+fn replace_first_identity_date(
+    template: &mut [TemplateComponent],
+    candidates: &[DateSubstituteCandidate],
+) -> bool {
+    for component in template {
+        match component {
+            TemplateComponent::Date(date) if date.suppress_disamb_suffix != Some(true) => {
+                date.fallback = Some(
+                    candidates
+                        .iter()
+                        .map(DateSubstituteCandidate::to_template_component)
+                        .collect(),
+                );
+                return true;
+            }
+            TemplateComponent::Group(group) => {
+                if replace_first_identity_date(&mut group.group, candidates) {
+                    return true;
+                }
+            }
+            _ => {}
+        }
+    }
+    false
+}
+
 /// The same date-text formatting `TemplateDate::values` applies to a
 /// resolved date value — `form`-restricted range/single-date formatting plus
 /// uncertainty/approximation markers — before any year-suffix disambiguation
@@ -108,9 +222,9 @@ pub(crate) fn formatted_date_text(
 
 /// Text uniquely identifying what a date component renders for a specific
 /// reference, for collision-key purposes: the `form`-restricted formatted
-/// value (`formatted_date_text`) plus the candidate's prefix/suffix/wrap
-/// and the resolved value's `note` — the same extra text
-/// `apply_fallback_component_rendering`/`append_note` add to the bare value
+/// value (`formatted_date_text`) plus the candidate's visible rendering
+/// configuration and the resolved value's `note` — the same extra text
+/// `render_fallback_component`/`append_note` add to the bare value
 /// during real rendering. Two candidates whose rendered text differs only in
 /// these respects (e.g. a `c`-prefixed `copyright` year and a
 /// `印刷`-suffixed `printing` year that happen to share the same bare year)
@@ -118,7 +232,7 @@ pub(crate) fn formatted_date_text(
 ///
 /// This does not need to *look like* the rendered text — it only needs the
 /// invariant "same render inputs ⟺ same discriminant" — so it Debug-formats
-/// the affix/wrap config rather than running the full punctuation-
+/// the visible rendering config rather than running the full punctuation-
 /// realization pipeline, which would require threading a complete
 /// `RenderOptions` and `OutputFormat` into `Disambiguator` for no
 /// observable benefit. See csl26-huuz, flagged in PR review.
@@ -138,9 +252,39 @@ pub(crate) fn fallback_candidate_discriminant(
     .filter(|note| !note.is_empty())
     .unwrap_or_default();
     Some(format!(
-        "{formatted}|{note}|{:?}|{:?}|{:?}",
-        rendering.prefix, rendering.suffix, rendering.wrap
+        "{formatted}|{note}|{}",
+        visible_rendering_discriminant(rendering)
     ))
+}
+
+/// Resolve the visible collision-key text for a message fallback candidate.
+pub(crate) fn fallback_message_discriminant(
+    message: &citum_schema::template::TemplateMessage,
+    locale: &citum_schema::locale::Locale,
+    config: &Config,
+) -> Option<String> {
+    if message.rendering.suppress == Some(true) {
+        return None;
+    }
+    let value = crate::values::message::resolve_template_message_value(message, config, locale)?;
+    Some(format!(
+        "{value}|{}",
+        visible_rendering_discriminant(&message.rendering)
+    ))
+}
+
+fn visible_rendering_discriminant(rendering: &Rendering) -> String {
+    format!(
+        "{:?}|{:?}|{:?}|{:?}|{:?}|{:?}|{:?}|{:?}",
+        rendering.emph,
+        rendering.quote,
+        rendering.strong,
+        rendering.small_caps,
+        rendering.vertical_align,
+        rendering.prefix,
+        rendering.suffix,
+        rendering.wrap
+    )
 }
 
 fn event_date(reference: &Reference) -> Option<DateValue> {
@@ -1045,89 +1189,41 @@ fn format_single_date(
     }
 }
 
-/// Apply a fallback component's own `wrap`/`prefix`/`suffix` rendering.
+/// Render a resolved fallback component through the central component renderer.
 ///
 /// `component.values()` only resolves the raw fallback string — it does not
 /// go through the generic per-component dispatch that normally applies a
-/// component's own rendering (that happens one layer up, outside the
-/// recursive fallback call). This applies it directly so e.g. `wrap:
-/// brackets` on a fallback `accessed` date isn't silently dropped. Shared by
-/// [`TemplateDate::values`] and `TemplateContributor`'s author-slot
-/// fallback (`crate::values::contributor`) — both fallback shapes need the
-/// identical post-render treatment.
-pub(crate) fn apply_fallback_component_rendering<
-    F: crate::render::format::OutputFormat<Output = String>,
->(
+/// component's rendering. Routing the resolved value back through the central
+/// renderer preserves the ordinary component contract, including suppression,
+/// emphasis, quotes, strong, small caps, vertical alignment, wrapping, and
+/// affixes. Shared by date and terminal contributor fallback chains.
+pub(crate) fn render_fallback_component<F: crate::render::format::OutputFormat<Output = String>>(
     fmt: &F,
-    value: &str,
-    pre_formatted: bool,
-    rendering: &citum_schema::template::Rendering,
+    component: &TemplateComponent,
+    values: ProcValues<String>,
     reference: &Reference,
     options: &RenderOptions<'_>,
 ) -> F::Output {
-    let mut output = if pre_formatted {
-        fmt.join(vec![value.to_string()], "")
-    } else {
-        fmt.text(value)
+    let proc_item = crate::render::ProcTemplateComponent {
+        template_component: component.clone(),
+        template_index: options.current_template_index,
+        value: values.value,
+        prefix: values.prefix,
+        suffix: values.suffix,
+        url: values.url,
+        ref_type: Some(reference.ref_type()),
+        config: Some(options.config.clone()),
+        bibliography_config: options.bibliography_config.clone(),
+        item_language: crate::values::effective_component_language(reference, component),
+        quote_marks: crate::render::format::QuoteMarks::from(options.locale),
+        sentence_initial: false,
+        pre_formatted: values.pre_formatted,
     };
-    if let Some(wrap_config) = rendering.wrap.as_ref() {
-        let (script, realization) = crate::values::punctuation_realization_context(
-            crate::values::effective_item_language(reference).as_deref(),
-            options.config.multilingual.as_ref(),
-            options.locale.punctuation_realization.as_ref(),
-        );
-        output = fmt.wrap_punctuation(
-            &wrap_config.punctuation,
-            output,
-            &crate::render::format::QuoteMarks::default(),
-            script,
-            realization.as_deref(),
-        );
-    }
-    let (script, realization) = crate::values::punctuation_realization_context(
-        crate::values::effective_item_language(reference).as_deref(),
-        options.config.multilingual.as_ref(),
-        options.locale.punctuation_realization.as_ref(),
-    );
-    let prefix = rendering
-        .prefix
-        .as_ref()
-        .map(|punctuation| {
-            crate::render::format::realize_punctuation(
-                punctuation,
-                script,
-                realization.as_deref(),
-                crate::render::format::PunctuationPosition::Prefix,
-            )
-        })
-        .unwrap_or_default();
-    let suffix = rendering
-        .suffix
-        .as_ref()
-        .map(|punctuation| {
-            crate::render::format::realize_punctuation(
-                punctuation,
-                script,
-                realization.as_deref(),
-                crate::render::format::PunctuationPosition::Suffix,
-            )
-        })
-        .unwrap_or_default();
-    if !prefix.is_empty() || !suffix.is_empty() {
-        output = crate::render::format::apply_punctuation_affixes(
-            fmt,
-            rendering
-                .prefix
-                .as_ref()
-                .map(|punctuation| (punctuation, prefix.as_ref())),
-            output,
-            rendering
-                .suffix
-                .as_ref()
-                .map(|punctuation| (punctuation, suffix.as_ref())),
-        );
-    }
-    output
+    crate::render::render_component_with_format_and_renderer::<F>(
+        &proc_item,
+        fmt,
+        options.show_semantics,
+    )
 }
 
 /// Render a date component's fallback chain when its own date variable is
@@ -1146,7 +1242,7 @@ pub(crate) fn apply_fallback_component_rendering<
 ///
 /// For a `date:` candidate, the letter must land inside that candidate's own
 /// wrap (e.g. brackets) — so it is inlined into the raw formatted text
-/// *before* `apply_fallback_component_rendering` applies the wrap, not
+/// *before* `render_fallback_component` applies the wrap, not
 /// appended to the already-wrapped output the way the `message:` case is.
 /// A candidate that is itself `date: issued` cannot reach this function with
 /// a resolvable value: `disamb_eligible` above requires the *outer*
@@ -1175,34 +1271,29 @@ fn render_date_fallback_chain<F: crate::render::format::OutputFormat<Output = St
         && date_component.suppress_disamb_suffix != Some(true);
 
     for component in fallbacks {
-        let Some(values) = component.values::<F>(reference, hints, options) else {
+        let Some(mut values) = component.values::<F>(reference, hints, options) else {
             continue;
         };
+        let substituted_key = values.substituted_key.clone();
         let suffix_label = disamb_eligible
             .then(|| compute_disamb_suffix_label(hints, options, fmt))
             .flatten();
 
-        let (raw_value, inlined) = match (component, suffix_label.as_deref()) {
+        let inlined = match (component, suffix_label.as_deref()) {
             (TemplateComponent::Date(inner), Some(suffix)) => {
                 let year = resolve_date_variable(&inner.date, reference)
                     .map(|d| d.year())
                     .unwrap_or_default();
-                (
-                    inline_disamb_suffix(&values.value, &inner.form, &year, suffix),
-                    true,
-                )
+                values.value = inline_disamb_suffix(&values.value, &inner.form, &year, suffix);
+                true
             }
-            _ => (values.value.clone(), false),
+            _ => false,
         };
 
-        let mut output = apply_fallback_component_rendering(
-            fmt,
-            &raw_value,
-            values.pre_formatted,
-            component.rendering(),
-            reference,
-            options,
-        );
+        let mut output = render_fallback_component(fmt, component, values, reference, options);
+        if output.trim().is_empty() {
+            continue;
+        }
         if !inlined
             && matches!(component, TemplateComponent::Message(_))
             && let Some(suffix) = suffix_label.as_deref()
@@ -1213,8 +1304,8 @@ fn render_date_fallback_chain<F: crate::render::format::OutputFormat<Output = St
             value: output,
             prefix: None,
             suffix: None,
-            url: values.url,
-            substituted_key: values.substituted_key,
+            url: None,
+            substituted_key,
             pre_formatted: true,
         });
     }
@@ -1375,6 +1466,46 @@ pub fn int_to_letter(n: u32) -> Option<String> {
 )]
 mod tests {
     use super::*;
+
+    #[test]
+    fn unmatched_date_substitute_policy_keeps_the_template_borrowed() {
+        let config: Config = serde_yaml::from_str(
+            r#"
+date-substitute:
+  book: []
+"#,
+        )
+        .expect("date-substitute config should parse");
+        let template = vec![TemplateComponent::Date(TemplateDate {
+            date: TemplateDateVar::Issued,
+            form: DateForm::Year,
+            ..TemplateDate::default()
+        })];
+
+        let resolved = materialize_identity_date_substitute(&template, &config, "report");
+
+        assert!(matches!(resolved, Cow::Borrowed(_)));
+    }
+
+    #[test]
+    fn matched_date_substitute_policy_materializes_an_owned_template() {
+        let config: Config = serde_yaml::from_str(
+            r#"
+date-substitute:
+  book: []
+"#,
+        )
+        .expect("date-substitute config should parse");
+        let template = vec![TemplateComponent::Date(TemplateDate {
+            date: TemplateDateVar::Issued,
+            form: DateForm::Year,
+            ..TemplateDate::default()
+        })];
+
+        let resolved = materialize_identity_date_substitute(&template, &config, "book");
+
+        assert!(matches!(resolved, Cow::Owned(_)));
+    }
 
     #[test]
     fn test_int_to_letter() {

@@ -1410,3 +1410,262 @@ mod fallback_chain_disamb_suffix {
         );
     }
 }
+
+mod date_substitute_options {
+    use super::*;
+    use citum_schema::options::DateSubstitutePreset;
+    use citum_schema::reference::{
+        Contributor, DateValue, Monograph, MonographType, MultilingualString, StructuredName, Title,
+    };
+
+    fn undated_reference(id: &str, ref_type: &str, accessed_year: Option<i32>) -> Reference {
+        Reference::from(LegacyReference {
+            id: id.to_string(),
+            ref_type: ref_type.to_string(),
+            author: Some(vec![Name::new("Anon", "")]),
+            title: Some(format!("Title {id}")),
+            accessed: accessed_year.map(LegacyDateVariable::year),
+            ..Default::default()
+        })
+    }
+
+    fn issued_with_inline_empty() -> TemplateComponent {
+        TemplateComponent::Date(TemplateDate {
+            date: DateVariable::Issued,
+            form: DateForm::Year,
+            fallback: Some(vec![]),
+            ..Default::default()
+        })
+    }
+
+    fn style_with_policy(
+        preset: Option<DateSubstitutePreset>,
+        template: Vec<TemplateComponent>,
+    ) -> Style {
+        let mut style = bibliography_style_with_template(template);
+        style.options = Some(Config {
+            date_substitute: preset.map(DateSubstitutePreset::config),
+            ..Default::default()
+        });
+        style
+    }
+
+    #[test]
+    fn omitted_policy_preserves_inline_empty_while_standard_is_explicit() {
+        let reference = undated_reference("book", "book", None);
+        let omitted = render_single_bibliography_entry(
+            style_with_policy(None, vec![issued_with_inline_empty()]),
+            reference.clone(),
+        );
+        let standard = render_single_bibliography_entry(
+            style_with_policy(
+                Some(DateSubstitutePreset::Standard),
+                vec![issued_with_inline_empty()],
+            ),
+            reference,
+        );
+
+        assert_eq!(omitted, "");
+        assert_eq!(standard, "n.d.");
+    }
+
+    #[test]
+    fn matched_empty_identity_slot_does_not_replace_later_inline_fallback() {
+        let later_display_date = TemplateComponent::Date(TemplateDate {
+            date: DateVariable::Issued,
+            form: DateForm::Year,
+            fallback: Some(vec![TemplateComponent::Message(TemplateMessage {
+                message: "term.no-date".to_string(),
+                form: Some(citum_schema::locale::TermForm::Short),
+                ..Default::default()
+            })]),
+            suppress_disamb_suffix: Some(true),
+            ..Default::default()
+        });
+        let style = style_with_policy(
+            Some(DateSubstitutePreset::GbT7714_2025AuthorDate),
+            vec![issued_with_inline_empty(), later_display_date],
+        );
+
+        let rendered = render_single_bibliography_entry(
+            style,
+            undated_reference("journal", "article-journal", None),
+        );
+
+        assert_eq!(rendered, "n.d.");
+    }
+
+    #[test]
+    fn accessed_web_candidate_uses_the_authored_bracket_rendering() {
+        let style = style_with_policy(
+            Some(DateSubstitutePreset::GbT7714_2025AuthorDate),
+            vec![issued_with_inline_empty()],
+        );
+
+        let rendered = render_single_bibliography_entry(
+            style,
+            undated_reference("web", "webpage", Some(2020)),
+        );
+
+        assert_eq!(rendered, "[2020]");
+    }
+
+    #[test]
+    fn message_candidate_uses_central_component_rendering() {
+        let config: Config = serde_yaml::from_str(
+            r#"
+date-substitute:
+  default:
+  - message: term.no-date
+    form: short
+    small-caps: true
+    quote: true
+"#,
+        )
+        .expect("date-substitute config should parse");
+        let style = {
+            let mut style = bibliography_style_with_template(vec![issued_with_inline_empty()]);
+            style.options = Some(config);
+            style
+        };
+
+        let rendered =
+            render_single_bibliography_entry(style, undated_reference("book", "book", None));
+
+        assert_eq!(rendered, "“N.D.”");
+    }
+
+    #[test]
+    fn suppressed_candidate_continues_to_the_next_candidate() {
+        let config: Config = serde_yaml::from_str(
+            r#"
+date-substitute:
+  default:
+  - message: term.no-date
+    form: short
+    suppress: true
+  - date: accessed
+    form: year
+"#,
+        )
+        .expect("date-substitute config should parse");
+        let style = {
+            let mut style = bibliography_style_with_template(vec![issued_with_inline_empty()]);
+            style.options = Some(config);
+            style
+        };
+
+        let rendered = render_single_bibliography_entry(
+            style,
+            undated_reference("web", "webpage", Some(2020)),
+        );
+
+        assert_eq!(rendered, "2020");
+    }
+
+    #[test]
+    fn unmatched_selector_preserves_the_inline_candidate_source() {
+        let config: Config = serde_yaml::from_str(
+            r#"
+date-substitute:
+  book: []
+"#,
+        )
+        .expect("selector map should parse");
+        let inline_no_date = TemplateComponent::Date(TemplateDate {
+            date: DateVariable::Issued,
+            form: DateForm::Year,
+            fallback: Some(vec![TemplateComponent::Message(TemplateMessage {
+                message: "term.no-date".to_string(),
+                form: Some(citum_schema::locale::TermForm::Short),
+                ..Default::default()
+            })]),
+            ..Default::default()
+        });
+        let style = {
+            let mut style = bibliography_style_with_template(vec![inline_no_date]);
+            style.options = Some(config);
+            style
+        };
+
+        let rendered =
+            render_single_bibliography_entry(style, undated_reference("report", "report", None));
+
+        assert_eq!(rendered, "n.d.");
+    }
+
+    #[test]
+    fn matched_empty_source_is_shared_with_disambiguation() {
+        let template = vec![
+            TemplateComponent::Contributor(TemplateContributor {
+                contributor: ContributorRole::Author.into(),
+                form: ContributorForm::Long,
+                name_order: Some(NameOrder::FamilyFirst),
+                ..Default::default()
+            }),
+            issued_with_inline_empty(),
+            TemplateComponent::Title(TemplateTitle {
+                title: TitleType::Primary,
+                ..Default::default()
+            }),
+        ];
+        let style = style_with_policy(Some(DateSubstitutePreset::GbT7714_2025AuthorDate), template);
+        let mut bibliography = Bibliography::new();
+        bibliography.insert(
+            "first".to_string(),
+            undated_reference("first", "article-journal", None),
+        );
+        bibliography.insert(
+            "second".to_string(),
+            undated_reference("second", "article-journal", None),
+        );
+
+        let rendered = Processor::new(style, bibliography)
+            .render_bibliography_with_format_standalone::<crate::render::plain::PlainText>();
+
+        assert_eq!(rendered, "Anon. a. Title first\n\nAnon. b. Title second");
+    }
+
+    #[test]
+    fn options_date_candidate_obeys_its_suppress_note_flag() {
+        let config: Config = serde_yaml::from_str(
+            r#"
+dates:
+  note-wrap: parentheses
+date-substitute:
+  default:
+  - date: copyright
+    form: year
+    prefix: c
+    suppress-note: true
+"#,
+        )
+        .expect("date-substitute config should parse");
+        let style = {
+            let mut style = bibliography_style_with_template(vec![issued_with_inline_empty()]);
+            style.options = Some(config);
+            style
+        };
+        let reference = Reference::Monograph(Box::new(Monograph {
+            id: Some("annotated-copyright".into()),
+            r#type: MonographType::Book,
+            title: Some(Title::Single("Annotated copyright".to_string())),
+            author: Some(Contributor::StructuredName(StructuredName {
+                family: MultilingualString::Simple("Anon".to_string()),
+                given: MultilingualString::Simple(String::new()),
+                suffix: None,
+                dropping_particle: None,
+                non_dropping_particle: None,
+            })),
+            copyright: Some(DateValue {
+                value: "1947".to_string(),
+                note: Some("Minguo 36".to_string()),
+            }),
+            ..Default::default()
+        }));
+
+        let rendered = render_single_bibliography_entry(style, reference);
+
+        assert_eq!(rendered, "c1947");
+    }
+}

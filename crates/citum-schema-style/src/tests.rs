@@ -775,6 +775,46 @@ fn style_validate_emits_warning_for_unknown_type_in_bib_type_variants() {
 }
 
 #[test]
+fn style_validate_emits_warnings_for_unknown_date_substitute_types_at_every_scope() {
+    let style: Style = serde_yaml::from_str(
+        r#"
+info:
+  title: Date substitute selector warnings
+options:
+  date-substitute:
+    global-typo: []
+citation:
+  options:
+    date-substitute:
+      citation-typo: []
+bibliography:
+  options:
+    date-substitute:
+      bibliography-typo: []
+"#,
+    )
+    .unwrap();
+
+    assert_eq!(
+        style.validate(),
+        vec![
+            SchemaWarning::UnknownTypeName {
+                name: "global-typo".to_string(),
+                location: "options.date-substitute".to_string(),
+            },
+            SchemaWarning::UnknownTypeName {
+                name: "citation-typo".to_string(),
+                location: "citation.options.date-substitute".to_string(),
+            },
+            SchemaWarning::UnknownTypeName {
+                name: "bibliography-typo".to_string(),
+                location: "bibliography.options.date-substitute".to_string(),
+            },
+        ]
+    );
+}
+
+#[test]
 fn style_validate_emits_warning_for_unknown_title_mapping_type() {
     let style: Style = serde_yaml::from_str(
         r#"

@@ -299,20 +299,19 @@ fn resolve_author_fallback<F: crate::render::format::OutputFormat<Output = Strin
     let fallbacks = component.fallback.as_ref()?;
     for fallback in fallbacks {
         if let Some(values) = fallback.values::<F>(reference, hints, options) {
-            let output = crate::values::date::apply_fallback_component_rendering(
-                fmt,
-                &values.value,
-                values.pre_formatted,
-                fallback.rendering(),
-                reference,
-                options,
+            let substituted_key = values.substituted_key.clone();
+            let output = crate::values::date::render_fallback_component(
+                fmt, fallback, values, reference, options,
             );
+            if output.trim().is_empty() {
+                continue;
+            }
             return Some(ProcValues {
                 value: output,
                 prefix: None,
                 suffix: None,
-                url: values.url,
-                substituted_key: values.substituted_key,
+                url: None,
+                substituted_key,
                 pre_formatted: true,
             });
         }
