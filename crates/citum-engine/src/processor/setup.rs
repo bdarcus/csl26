@@ -47,8 +47,76 @@ impl Default for Processor {
 }
 
 impl Processor {
+    /// Whether the active locale's grammar options may supply style defaults.
+    ///
+    /// A locale substituted for one that could not be resolved (see
+    /// [`citum_schema::locale::Locale::resolved_by_fallback`]) carries another
+    /// language's conventions; applying its grammar options would silently
+    /// impose them on a style that asked for something else.
+    fn locale_grammar_is_authoritative(&self) -> bool {
+        !self.locale.resolved_by_fallback
+    }
+
+    /// Whether a raw YAML mapping has an authored `key` entry.
+    fn raw_mapping_has_key(value: &serde_yaml::Value, key: &str) -> bool {
+        value
+            .as_mapping()
+            .is_some_and(|m| m.get(serde_yaml::Value::String(key.to_string())).is_some())
+    }
+
+    /// Whether `punctuation-in-quote` was explicitly authored, as opposed to
+    /// arriving at its current resolved value purely through defaults.
+    ///
+    /// A plain `bool` can't distinguish an authored `false` from an unset
+    /// field defaulting to `false` (csl26-yxay), so the locale default below
+    /// must not apply when the style actually chose `false` on purpose.
+    /// Checks the two raw-YAML-aware sources of authored intent available at
+    /// this point: the leaf style's own captured document (top-level
+    /// `options.punctuation-in-quote`), and `scoped_raw` — the
+    /// extends-chain-merged raw `citation.options` / `bibliography.options`
+    /// mapping for the scope being resolved (unlike the top-level `options`
+    /// block, [`citum_schema::options::cascade::ScopedRawOptions`] survives
+    /// `extends` resolution, so this also catches an ancestor's scoped
+    /// authorship that no descendant repeats).
+    ///
+    /// Not caught: an ancestor's *global* `options.punctuation-in-quote`
+    /// that no descendant repeats anywhere (global `raw_yaml` is leaf-only;
+    /// see `Style::raw_yaml`). No embedded or exemplar style currently hits
+    /// this — none sets `punctuation-in-quote: false` at all — and closing
+    /// it fully needs csl26-yxay's `Option<bool>` migration.
+    fn punctuation_in_quote_explicitly_authored(
+        &self,
+        scoped_raw: Option<&serde_yaml::Value>,
+    ) -> bool {
+        let leaf_authored = self
+            .style
+            .raw_yaml
+            .as_ref()
+            .and_then(|doc| doc.get("options"))
+            .is_some_and(|options| Self::raw_mapping_has_key(options, "punctuation-in-quote"));
+
+        let scope_authored =
+            scoped_raw.is_some_and(|raw| Self::raw_mapping_has_key(raw, "punctuation-in-quote"));
+
+        leaf_authored || scope_authored
+    }
+
     /// Fill unset style punctuation options from the active locale.
-    fn resolve_punctuation_defaults(&self, config: &mut Config) {
+    fn resolve_punctuation_defaults(
+        &self,
+        config: &mut Config,
+        scoped_raw: Option<&serde_yaml::Value>,
+    ) {
+        if !self.locale_grammar_is_authoritative() {
+            return;
+        }
+
+        if !config.punctuation_in_quote
+            && !self.punctuation_in_quote_explicitly_authored(scoped_raw)
+        {
+            config.punctuation_in_quote = self.locale.grammar_options.punctuation_in_quote;
+        }
+
         let punctuation = config
             .punctuation
             .get_or_insert_with(PunctuationConfig::default);
@@ -66,7 +134,19 @@ impl Processor {
     }
 
     /// Return whether applying locale punctuation defaults would change `config`.
-    fn punctuation_defaults_require_resolution(&self, config: &Config) -> bool {
+    fn punctuation_defaults_require_resolution(
+        &self,
+        config: &Config,
+        scoped_raw: Option<&serde_yaml::Value>,
+    ) -> bool {
+        if !self.locale_grammar_is_authoritative() {
+            return false;
+        }
+
+        let punctuation_in_quote_is_unset = !config.punctuation_in_quote
+            && self.locale.grammar_options.punctuation_in_quote
+            && !self.punctuation_in_quote_explicitly_authored(scoped_raw);
+
         let punctuation = config.punctuation.as_ref();
         let policy_is_unset = punctuation
             .and_then(|options| options.strong_terminal_comma_policy)
@@ -75,9 +155,10 @@ impl Processor {
             .and_then(|options| options.delimiter_suppressing_terminal_marks.as_ref())
             .is_none();
 
-        (policy_is_unset
-            && self.locale.grammar_options.strong_terminal_comma_policy
-                != citum_schema::options::StrongTerminalCommaPolicy::default())
+        punctuation_in_quote_is_unset
+            || (policy_is_unset
+                && self.locale.grammar_options.strong_terminal_comma_policy
+                    != citum_schema::options::StrongTerminalCommaPolicy::default())
             || (marks_are_unset
                 && self
                     .locale
@@ -90,13 +171,14 @@ impl Processor {
     fn with_punctuation_defaults<'a>(
         &self,
         config: std::borrow::Cow<'a, Config>,
+        scoped_raw: Option<&serde_yaml::Value>,
     ) -> std::borrow::Cow<'a, Config> {
-        if !self.punctuation_defaults_require_resolution(&config) {
+        if !self.punctuation_defaults_require_resolution(&config, scoped_raw) {
             return config;
         }
 
         let mut config = config.into_owned();
-        self.resolve_punctuation_defaults(&mut config);
+        self.resolve_punctuation_defaults(&mut config, scoped_raw);
         std::borrow::Cow::Owned(config)
     }
 
@@ -518,7 +600,7 @@ impl Processor {
             ),
             None => std::borrow::Cow::Borrowed(base),
         };
-        self.with_punctuation_defaults(config)
+        self.with_punctuation_defaults(config, self.style.scoped_raw_options.citation.as_ref())
     }
 
     /// Return merged shared config for bibliography rendering.
@@ -539,7 +621,7 @@ impl Processor {
             ),
             None => std::borrow::Cow::Borrowed(base),
         };
-        self.with_punctuation_defaults(config)
+        self.with_punctuation_defaults(config, self.style.scoped_raw_options.bibliography.as_ref())
     }
 
     /// Return effective bibliography-only configuration.

@@ -2032,9 +2032,13 @@ fn oscola_position_overrides_control_ibid_and_subsequent_forms() {
         first_rendered,
         "John Smith, \u{201C}_A Great Book_\u{201D}(1995)."
     );
+    // oscola.yaml declares no `default-locale`, so it resolves to the
+    // caller's locale — en-US here, whose `punctuation-in-quote: true`
+    // grammar option now supplies the style default (csl26-8e75) and moves
+    // the trailing period inside the closing quote, matching citeproc-js.
     assert_eq!(
         subsequent_rendered,
-        "Smith, \u{201C}_A Great Book_\u{201D}."
+        "Smith, \u{201C}_A Great Book_.\u{201D}"
     );
     assert_eq!(ibid_rendered, "ibid.");
     assert_eq!(ibid_with_locator_rendered, "ibid p45.");

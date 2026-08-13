@@ -233,9 +233,12 @@ impl Locale {
     /// Loaders call this on every resolution outcome so downstream consumers
     /// can tell a locale that was actually found from one substituted for a
     /// request that could not be satisfied (see [`Locale::resolved_by_fallback`]).
+    /// Compares case-insensitively: BCP 47 language tags are case-insensitive
+    /// (`en-us` and `en-US` name the same locale), so a canonical-cased match
+    /// against a differently-cased request is not a fallback.
     #[must_use]
     pub fn resolved_for(mut self, requested: &str) -> Self {
-        self.resolved_by_fallback = self.locale != requested;
+        self.resolved_by_fallback = !self.locale.eq_ignore_ascii_case(requested);
         self
     }
 
@@ -525,6 +528,36 @@ terms:
         assert_eq!(locale.locale, "en-US");
         assert!(locale.resolved_by_fallback);
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn load_case_differing_request_is_not_flagged_as_fallback() {
+        // BCP 47 tags are case-insensitive: a lower-cased request that the
+        // prefix scan resolves to the canonically-cased file on disk is an
+        // exact match, not a substitution.
+        let dir = temp_locales_dir("case");
+        std::fs::write(dir.join("en-US.yaml"), "locale: en-US\n")
+            .expect("locale file should write");
+
+        let locale = Locale::load("en-us", &dir);
+
+        assert_eq!(locale.locale, "en-US");
+        assert!(!locale.resolved_by_fallback);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn resolved_for_is_case_insensitive() {
+        let locale = Locale {
+            locale: "en-US".to_string(),
+            ..Locale::default()
+        }
+        .resolved_for("en-us");
+
+        assert!(
+            !locale.resolved_by_fallback,
+            "en-US and en-us name the same BCP 47 locale"
+        );
     }
 
     #[test]

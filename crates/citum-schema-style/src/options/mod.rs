@@ -172,10 +172,13 @@ pub struct Config {
     pub links: Option<LinksConfig>,
     /// Whether to place periods/commas inside quotation marks.
     /// true = American style ("text."), false = British style ("text".)
-    /// Defaults to false; the style must opt in explicitly (embedded styles
-    /// that want American-style placement, including `en-US`-locale ones,
-    /// set this directly — the locale's own `punctuation-in-quote` grammar
-    /// option is not currently consulted by the engine).
+    /// Defaults to false; a style that sets it explicitly always wins. When
+    /// left unset, the engine fills it from the active locale's
+    /// `grammar-options.punctuation-in-quote` (`en-US` sets `true`; most
+    /// other bundled locales set `false`) — unless that locale was itself
+    /// substituted for one that could not be resolved, in which case no
+    /// locale default is applied. See
+    /// `Processor::resolve_punctuation_defaults`.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub punctuation_in_quote: bool,
     /// Locale-sensitive punctuation-collision overrides.

@@ -246,6 +246,41 @@ first implementation.
 
 ## Implementation Notes
 
+### Locale-supplied `punctuation-in-quote` default
+
+`punctuation-in-quote` is a *style* option (`Config.punctuation_in_quote`), but every
+bundled locale also declares `grammar-options.punctuation-in-quote` (`en-US: true`, all
+other bundled locales: `false`) — matching citeproc-js, which reads the option from the
+resolved locale rather than the style. `Processor::resolve_punctuation_defaults`
+(`crates/citum-engine/src/processor/setup.rs`) closes that gap: when a style leaves the
+option unset, the engine fills it from the active locale.
+
+Two rules govern this, both enforced in `resolve_punctuation_defaults` /
+`punctuation_defaults_require_resolution`:
+
+- **Style-explicit wins, where that can be told apart from unset.** The other two
+  grammar options are `Option<T>` on `Config`, so "unset" is a native, unambiguous
+  state. `punctuation_in_quote` is a plain `bool`
+  (`skip_serializing_if = "std::ops::Not::not"`), so an authored `false` and an unset
+  field defaulting to `false` are typed identically — the flattened `Config` alone can't
+  tell them apart. `Processor::punctuation_in_quote_explicitly_authored` closes most of
+  that gap by consulting the raw-YAML-aware sources still available at this point: the
+  style's own captured `raw_yaml` (top-level `options.punctuation-in-quote`), and the
+  extends-chain-merged `scoped_raw_options` for the citation/bibliography scope being
+  resolved. Not caught: an *ancestor* style's global `options.punctuation-in-quote` that
+  no descendant repeats anywhere (`raw_yaml` is leaf-only; unlike `scoped_raw_options`, it
+  is not chain-merged across `extends`). No embedded or exemplar style hits this today —
+  none sets `punctuation-in-quote: false` at all — and closing it fully needs
+  csl26-yxay's `Option<bool>` migration.
+- **A substituted locale is not authoritative.** `Locale::load` and
+  `citum_store::load_locale_or_default` silently fall back to `Locale::en_us()` (or a
+  language-prefix match) when the style's declared locale can't be resolved — e.g. a
+  style declaring `en-GB`, which isn't bundled. That fallback locale carries the
+  *substitute* language's conventions, not the one the style asked for, so none of its
+  grammar options — not just `punctuation-in-quote` — are applied as style defaults. The
+  fallback is recorded on `Locale::resolved_by_fallback`, set by the two loader sites via
+  `Locale::resolved_for(requested)`.
+
 ### Current bugs to watch for:
 1. **Quote character assumptions**: Any code that checks `ends_with('"')` must also check `ends_with('\u{201D}')`
 2. **Separator conflicts**: Default separator `. ` interacts with quote normalization
@@ -298,6 +333,16 @@ However, refactoring current ad-hoc code into a clean function would prevent bug
 
 ## Changelog
 
+- **2026-08-13**: `punctuation-in-quote` now resolves from the active locale's
+  `grammar-options` when a style leaves it unset, closing the last follow-up
+  from the 2026-08-03 entry below (`csl26-8e75`). A locale substituted for
+  one that couldn't be resolved (`Locale::resolved_by_fallback`) is never
+  treated as authoritative for this or the other two grammar-option
+  defaults. Style-authored `punctuation-in-quote` wins when it can be told
+  apart from unset — for YAML-authored styles, at both global and
+  citation/bibliography scope — with one narrow residual gap (an ancestor's
+  global-only authorship with no descendant repeat) left to csl26-yxay. See
+  "Locale-supplied `punctuation-in-quote` default" above.
 - **2026-08-03**: Punctuation-in-quote quote movement now applies in every
   output format, not just plain text. Two prior gaps, both raw-string
   assumptions: (1) the join sites that detect a component's own leading

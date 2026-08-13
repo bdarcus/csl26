@@ -176,9 +176,12 @@ fn term_locale_item_scoped_to_bibliography_does_not_affect_citation_rendering() 
     // (English) even though bibliography scope is item mode. The leading
     // "Berliner Mauer, " is the engine's author-substitute-title behavior
     // for a reference with no author, not part of what this test covers.
+    // Default processor locale is en-US, whose `punctuation-in-quote: true`
+    // grammar option now supplies the style default (csl26-8e75) and moves
+    // the trailing comma inside the closing quote, matching citeproc-js.
     assert_eq!(
         citation,
-        "Berliner Mauer, “Berliner Mauer”,  and,  January 15, 1990"
+        "Berliner Mauer, “Berliner Mauer,”  and,  January 15, 1990"
     );
 }
 
