@@ -21,7 +21,7 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus and Citum contributors
 
 use citum_schema_style::{
     Style,
-    options::{Config, MonthFormat},
+    options::{Config, MonthFormat, TwoNameDelimiterPolicy},
     template::{WrapConfig, WrapPunctuation},
 };
 use rstest::rstest;
@@ -140,6 +140,51 @@ citation:
     dates:
       note-wrap: parentheses
 "#;
+
+const TWO_NAME_DELIMITER_SCOPE_CASCADE: &str = r#"
+version: "0.44.0"
+info:
+  title: Two-name delimiter scope cascade
+  id: two-name-delimiter-scope-cascade
+options:
+  contributors:
+    delimiter-precedes-last: always
+    two-name-delimiter-policy: suppress-in-citation-or-given-first
+citation:
+  options:
+    contributors:
+      two-name-delimiter-policy: follow-rule
+bibliography:
+  options:
+    contributors:
+      and: text
+"#;
+
+#[rstest]
+#[case::citation_override(citation_scope_config, TwoNameDelimiterPolicy::FollowRule)]
+#[case::bibliography_inherits(
+    bibliography_scope_config,
+    TwoNameDelimiterPolicy::SuppressInCitationOrGivenFirst
+)]
+fn given_scoped_contributor_policy_when_cascading_then_authored_scope_overrides_or_inherits(
+    #[case] scope_config: fn(&Style) -> Config,
+    #[case] expected: TwoNameDelimiterPolicy,
+) {
+    let style = resolve(
+        Style::from_yaml_str(TWO_NAME_DELIMITER_SCOPE_CASCADE).expect("valid style"),
+        None,
+    );
+
+    let contributors = scope_config(&style)
+        .contributors
+        .expect("merged contributor options");
+
+    assert_eq!(contributors.two_name_delimiter_policy, Some(expected));
+    assert_eq!(
+        contributors.delimiter_precedes_last,
+        Some(citum_schema_style::options::DelimiterPrecedesLast::Always)
+    );
+}
 
 #[rstest]
 #[case::bibliography_scope(ROOT_STYLE_BIBLIOGRAPHY_SCOPE, bibliography_scope_config)]

@@ -1,6 +1,6 @@
 # Two-Name Delimiter Policy Specification
 
-**Status:** Draft
+**Status:** Active
 **Version:** 1.0
 **Date:** 2026-08-12
 **Supersedes:** None
@@ -58,14 +58,14 @@ in its global contributor options.
 
 ## Acceptance Criteria
 
-- [ ] Unset policy and `follow-rule` both honor `delimiter-precedes-last`
+- [x] Unset policy and `follow-rule` both honor `delimiter-precedes-last`
   literally for two names.
-- [ ] The suppression policy affects only two-name citations and given-first
+- [x] The suppression policy affects only two-name citations and given-first
   lists.
-- [ ] Global, citation, and bibliography contributor-option overrides resolve
+- [x] Global, citation, and bibliography contributor-option overrides resolve
   through the existing cascade.
-- [ ] APA 7th citation and bibliography fidelity do not regress.
-- [ ] Generated schemas expose the new option and enum values.
+- [x] APA 7th citation and bibliography fidelity do not regress.
+- [x] Generated schemas expose the new option and enum values.
 
 ## Changelog
 

@@ -5202,6 +5202,17 @@
             }
           ]
         },
+        "two-name-delimiter-policy": {
+          "description": "Policy for applying the final delimiter to exactly two contributors.\nUnset resolves to [`TwoNameDelimiterPolicy::FollowRule`].",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TwoNameDelimiterPolicy"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "delimiter-precedes-et-al": {
           "description": "When to include delimiter before \"et al.\".",
           "anyOf": [
@@ -5289,6 +5300,21 @@
         "all",
         "first",
         "none"
+      ]
+    },
+    "TwoNameDelimiterPolicy": {
+      "description": "Policy for applying `delimiter-precedes-last` to exactly two contributors.",
+      "oneOf": [
+        {
+          "description": "Apply the configured delimiter rule literally in every render context.",
+          "type": "string",
+          "const": "follow-rule"
+        },
+        {
+          "description": "Suppress the delimiter in citations or given-first name lists.",
+          "type": "string",
+          "const": "suppress-in-citation-or-given-first"
+        }
       ]
     },
     "RoleOptionsEntry": {

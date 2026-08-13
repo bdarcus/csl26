@@ -64,6 +64,7 @@ options:
       combine-same-person: true
     demote-non-dropping-particle: never
     delimiter-precedes-last: always
+    two-name-delimiter-policy: suppress-in-citation-or-given-first
     and: symbol
     shorten:
       min: 21

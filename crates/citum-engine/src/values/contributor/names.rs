@@ -9,9 +9,10 @@ use crate::values::{ProcHints, RenderOptions};
 use citum_schema::options::contributors::NameForm;
 use citum_schema::options::{
     AndOptions, AndOtherOptions, ContributorConfig, DemoteNonDroppingParticle, DisplayAsSort,
-    ShortenListOptions,
+    ShortenListOptions, TwoNameDelimiterPolicy,
 };
 use citum_schema::template::{ContributorForm, NameOrder};
+use std::borrow::Cow;
 use unicode_script::{Script, UnicodeScript};
 
 /// Configuration for formatting a single name.
@@ -170,91 +171,85 @@ fn partition_et_al<'a>(
     )
 }
 
-/// Join a list of formatted names with a conjunction and Oxford-comma rules.
+/// Resolve whether the configured rule places a delimiter before a conjunction.
+fn delimiter_precedes_conjunction(
+    rule: Option<&citum_schema::options::DelimiterPrecedesLast>,
+    displayed_name_count: usize,
+    display_as_sort: Option<DisplayAsSort>,
+) -> bool {
+    use citum_schema::options::DelimiterPrecedesLast;
+
+    match rule {
+        Some(DelimiterPrecedesLast::Always) => true,
+        Some(DelimiterPrecedesLast::Never) => false,
+        Some(DelimiterPrecedesLast::Contextual) | None => displayed_name_count >= 3,
+        Some(DelimiterPrecedesLast::AfterInvertedName) => display_as_sort.is_some_and(|display| {
+            matches!(display, DisplayAsSort::All)
+                || (matches!(display, DisplayAsSort::First) && displayed_name_count == 2)
+        }),
+    }
+}
+
+/// Return whether a style policy suppresses an otherwise configured delimiter.
+fn suppresses_two_name_delimiter(
+    policy: TwoNameDelimiterPolicy,
+    name_count: usize,
+    name_order: Option<&NameOrder>,
+    context: crate::values::RenderContext,
+) -> bool {
+    name_count == 2
+        && matches!(
+            policy,
+            TwoNameDelimiterPolicy::SuppressInCitationOrGivenFirst
+        )
+        && (context == crate::values::RenderContext::Citation
+            || matches!(name_order, Some(NameOrder::GivenFirst)))
+}
+
+/// Inputs used to resolve the delimiter before a name-list conjunction.
+struct ConjunctionDelimiterContext<'a> {
+    rule: Option<&'a citum_schema::options::DelimiterPrecedesLast>,
+    policy: TwoNameDelimiterPolicy,
+    contributor_count: usize,
+    display_as_sort: Option<DisplayAsSort>,
+    name_order: Option<&'a NameOrder>,
+    render_context: crate::values::RenderContext,
+}
+
+/// Join a list of formatted names with a conjunction and delimiter rules.
 fn join_names_with_conjunction(
     formatted_first: &[String],
     and_str: Option<&str>,
     delimiter: &str,
-    delimiter_precedes_last: Option<&citum_schema::options::DelimiterPrecedesLast>,
-    first_names_len: usize,
-    ctx: &NameFormatContext,
-    context: crate::values::RenderContext,
+    delimiter_context: &ConjunctionDelimiterContext<'_>,
 ) -> String {
-    use citum_schema::options::{DelimiterPrecedesLast, DisplayAsSort};
-
     match and_str {
         None => {
             // No conjunction - just join all with delimiter
             formatted_first.join(delimiter)
         }
-        Some(conjunction) if formatted_first.len() == 2 => {
-            // Two-name lists never use the delimiter before the conjunction
-            // in citation context, and never in a given-first bibliography
-            // name list (e.g. an editor/chair group rendered
-            // "F. A. Editor & S. Editor" rather than "..., & ..."), regardless
-            // of the declared delimiter-precedes-last value: there is no
-            // per-component override for this option today, and real styles
-            // (APA) rely on this suppression in both cases for correct
-            // output. See div-013.
-            let use_delimiter = if context == crate::values::RenderContext::Citation
-                || matches!(ctx.name_order, Some(NameOrder::GivenFirst))
-            {
-                false
-            } else {
-                // Bibliography, not given-first: honor delimiter-precedes-last,
-                // mirroring the 3+-name arm below except that `Contextual`/
-                // unset means "delimiter only for 3+ names", so it resolves
-                // to `false` here (previously hardcoded to `true`).
-                match delimiter_precedes_last {
-                    Some(DelimiterPrecedesLast::Always) => true,
-                    Some(DelimiterPrecedesLast::Never) => false,
-                    Some(DelimiterPrecedesLast::Contextual) | None => false,
-                    Some(DelimiterPrecedesLast::AfterInvertedName) => {
-                        ctx.display_as_sort.as_ref().is_some_and(|das| {
-                            matches!(das, DisplayAsSort::All)
-                                || (matches!(das, DisplayAsSort::First) && first_names_len == 1)
-                        })
-                    }
-                }
-            };
-
-            #[allow(clippy::indexing_slicing, reason = "length checked")]
-            if use_delimiter {
-                format!(
-                    "{}{}{} {}",
-                    formatted_first[0], delimiter, conjunction, formatted_first[1]
-                )
-            } else {
-                format!(
-                    "{} {} {}",
-                    formatted_first[0], conjunction, formatted_first[1]
-                )
-            }
-        }
         Some(conjunction) => {
             if let Some((last, rest)) = formatted_first.split_last() {
-                // Check if delimiter should precede "and" (Oxford comma)
-                let use_delimiter = match delimiter_precedes_last {
-                    Some(DelimiterPrecedesLast::Always) => true,
-                    Some(DelimiterPrecedesLast::Never) => false,
-                    Some(DelimiterPrecedesLast::Contextual) | None => true, // Default: comma for 3+ names
-                    Some(DelimiterPrecedesLast::AfterInvertedName) => {
-                        ctx.display_as_sort.as_ref().is_some_and(|das| {
-                            matches!(das, DisplayAsSort::All)
-                                || (matches!(das, DisplayAsSort::First) && first_names_len == 1)
-                        })
-                    }
+                let displayed_name_count = formatted_first.len();
+                let use_delimiter = delimiter_precedes_conjunction(
+                    delimiter_context.rule,
+                    displayed_name_count,
+                    delimiter_context.display_as_sort,
+                ) && !suppresses_two_name_delimiter(
+                    delimiter_context.policy,
+                    delimiter_context.contributor_count,
+                    delimiter_context.name_order,
+                    delimiter_context.render_context,
+                );
+                let leading = if let [only] = rest {
+                    Cow::Borrowed(only.as_str())
+                } else {
+                    Cow::Owned(rest.join(delimiter))
                 };
                 if use_delimiter {
-                    format!(
-                        "{}{}{} {}",
-                        rest.join(delimiter),
-                        delimiter,
-                        conjunction,
-                        last
-                    )
+                    format!("{leading}{delimiter}{conjunction} {last}")
                 } else {
-                    format!("{} {} {}", rest.join(delimiter), conjunction, last)
+                    format!("{leading} {conjunction} {last}")
                 }
             } else {
                 String::new()
@@ -471,6 +466,9 @@ pub(super) fn format_names_decorated(
 
     // Check if delimiter should precede last name (Oxford comma)
     let delimiter_precedes_last = config.and_then(|c| c.delimiter_precedes_last.as_ref());
+    let two_name_delimiter_policy = config
+        .and_then(|c| c.two_name_delimiter_policy)
+        .unwrap_or_default();
 
     let result = if formatted_first.len() == 1 {
         #[allow(clippy::unwrap_used, reason = "length checked")]
@@ -480,10 +478,14 @@ pub(super) fn format_names_decorated(
             &formatted_first,
             and_str,
             &delimiter,
-            delimiter_precedes_last,
-            first_names.len(),
-            &ctx,
-            options.context,
+            &ConjunctionDelimiterContext {
+                rule: delimiter_precedes_last,
+                policy: two_name_delimiter_policy,
+                contributor_count: names.len(),
+                display_as_sort: ctx.display_as_sort,
+                name_order: ctx.name_order,
+                render_context: options.context,
+            },
         )
     };
 
@@ -1103,4 +1105,116 @@ pub fn format_contributors_short(
         },
         &ProcHints::default(),
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::values::RenderContext;
+    use citum_schema::options::DelimiterPrecedesLast;
+
+    #[test]
+    fn configured_delimiter_rule_is_count_and_inversion_aware() {
+        let cases = [
+            (DelimiterPrecedesLast::Always, 2, None, true),
+            (DelimiterPrecedesLast::Always, 3, None, true),
+            (DelimiterPrecedesLast::Contextual, 2, None, false),
+            (DelimiterPrecedesLast::Contextual, 3, None, true),
+            (DelimiterPrecedesLast::Never, 2, None, false),
+            (DelimiterPrecedesLast::Never, 3, None, false),
+            (
+                DelimiterPrecedesLast::AfterInvertedName,
+                2,
+                Some(DisplayAsSort::All),
+                true,
+            ),
+            (
+                DelimiterPrecedesLast::AfterInvertedName,
+                2,
+                Some(DisplayAsSort::First),
+                true,
+            ),
+            (
+                DelimiterPrecedesLast::AfterInvertedName,
+                3,
+                Some(DisplayAsSort::First),
+                false,
+            ),
+        ];
+
+        for (rule, displayed_name_count, display_as_sort, expected) in cases {
+            assert_eq!(
+                delimiter_precedes_conjunction(Some(&rule), displayed_name_count, display_as_sort),
+                expected,
+                "failed for {rule:?}, displayed_name_count={displayed_name_count}, display_as_sort={display_as_sort:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn two_name_policy_uses_contributor_count_not_shortened_display_count() {
+        let formatted = ["First".to_string(), "Second".to_string()];
+        let delimiter_context = ConjunctionDelimiterContext {
+            rule: Some(&DelimiterPrecedesLast::Always),
+            policy: TwoNameDelimiterPolicy::SuppressInCitationOrGivenFirst,
+            contributor_count: 4,
+            display_as_sort: None,
+            name_order: None,
+            render_context: RenderContext::Citation,
+        };
+
+        assert_eq!(
+            join_names_with_conjunction(&formatted, Some("and"), ", ", &delimiter_context,),
+            "First, and Second"
+        );
+    }
+
+    #[test]
+    fn two_name_policy_only_suppresses_declared_contexts() {
+        let cases = [
+            (
+                TwoNameDelimiterPolicy::FollowRule,
+                2,
+                Some(NameOrder::GivenFirst),
+                RenderContext::Citation,
+                false,
+            ),
+            (
+                TwoNameDelimiterPolicy::SuppressInCitationOrGivenFirst,
+                2,
+                None,
+                RenderContext::Citation,
+                true,
+            ),
+            (
+                TwoNameDelimiterPolicy::SuppressInCitationOrGivenFirst,
+                2,
+                Some(NameOrder::GivenFirst),
+                RenderContext::Bibliography,
+                true,
+            ),
+            (
+                TwoNameDelimiterPolicy::SuppressInCitationOrGivenFirst,
+                2,
+                Some(NameOrder::FamilyFirst),
+                RenderContext::Bibliography,
+                false,
+            ),
+            (
+                TwoNameDelimiterPolicy::SuppressInCitationOrGivenFirst,
+                3,
+                Some(NameOrder::GivenFirst),
+                RenderContext::Citation,
+                false,
+            ),
+        ];
+
+        for (policy, name_count, name_order, context, expected) in cases {
+            assert_eq!(
+                suppresses_two_name_delimiter(policy, name_count, name_order.as_ref(), context),
+                expected,
+                "failed for {policy:?}, name_count={name_count}, name_order={name_order:?}, context={context:?}"
+            );
+        }
+    }
 }

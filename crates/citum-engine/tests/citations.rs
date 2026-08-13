@@ -37,6 +37,7 @@ use citum_schema::{
         IntegralNameMemoryConfig, IntegralNameScope, MultilingualConfig, MultilingualMode,
         NameForm, Processing, ProcessingCustom, ShortenListOptions, SubsequentNameForm, Substitute,
         SubstituteConfig, SubstituteTitleQuoteMode, TitleRendering, TitlesConfig,
+        TwoNameDelimiterPolicy,
     },
     reference::{DateValue, InputReference, Monograph, MonographType, Title},
 };
@@ -232,14 +233,16 @@ fn process_citation_ids(processor: &Processor, ids: &[&str]) -> String {
         .expect("citation should render")
 }
 
-#[test]
-fn two_names_citation_never_uses_delimiter_even_when_always_is_declared() {
-    // Two-name citation lists never use the delimiter before the
-    // conjunction, regardless of the declared delimiter-precedes-last value:
-    // real styles (APA) rely on this suppression for correct in-text
-    // citation formatting ("Irino & Tada, 2009", not "Irino, & Tada, 2009"),
-    // reserving the comma for 3+ names. See div-013 in
-    // docs/adjudication/DIVERGENCE_REGISTER.md.
+#[rstest]
+#[case::literal_default(None, "John Smith, and Jane Jones")]
+#[case::apa_suppression(
+    Some(TwoNameDelimiterPolicy::SuppressInCitationOrGivenFirst),
+    "John Smith and Jane Jones"
+)]
+fn given_two_names_when_rendering_a_citation_then_policy_controls_the_delimiter(
+    #[case] policy: Option<TwoNameDelimiterPolicy>,
+    #[case] expected: &str,
+) {
     let style = Style {
         info: StyleInfo {
             title: Some("Two Author Citation And Test".to_string()),
@@ -250,6 +253,7 @@ fn two_names_citation_never_uses_delimiter_even_when_always_is_declared() {
             contributors: Some(ContributorConfig {
                 and: Some(AndOptions::Text),
                 delimiter_precedes_last: Some(DelimiterPrecedesLast::Always),
+                two_name_delimiter_policy: policy,
                 ..Default::default()
             }),
             ..Default::default()
@@ -275,7 +279,7 @@ fn two_names_citation_never_uses_delimiter_even_when_always_is_declared() {
 
     let result = process_citation_ids(&processor, &["item1"]);
 
-    assert_eq!(result, "John Smith and Jane Jones");
+    assert_eq!(result, expected);
 }
 
 fn make_authorless_book(id: &str, title: &str) -> InputReference {

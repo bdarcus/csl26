@@ -31,7 +31,7 @@ pub use contributors::{
     AndOptions, AndOtherOptions, ContributorConfig, ContributorConfigEntry,
     ContributorSuppressionRule, DelimiterPrecedesLast, DemoteNonDroppingParticle, DisplayAsSort,
     NameForm, RoleLabelDefaults, RoleLabelPresentation, RoleLabelPreset, RoleOptions,
-    RoleOptionsEntry, RoleRendering, ShortenListOptions,
+    RoleOptionsEntry, RoleRendering, ShortenListOptions, TwoNameDelimiterPolicy,
 };
 pub use date_substitute::{
     DateSubstitute, DateSubstituteCandidate, DateSubstituteDate, DateSubstituteEntry,
