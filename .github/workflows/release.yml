@@ -198,6 +198,17 @@ jobs:
           cargo release --workspace --no-publish --no-push $TAG_FLAG --no-confirm --execute \
             "${{ steps.resolve.outputs.level }}"
 
+          npm ci --prefix scripts
+          cargo build --quiet --bin citum
+          node scripts/refresh-style-coverage-audits.js \
+            --citum-bin target/debug/citum
+          git add docs/architecture/audits
+          if ! git diff --cached --quiet; then
+            git commit \
+              -m "chore(report): refresh coverage audit packets" \
+              -m "Regenerate registered audit evidence for the release binary."
+          fi
+
           git push -f origin "$BRANCH"
 
           if [ "${{ steps.config.outputs.push_tags }}" = "true" ]; then
