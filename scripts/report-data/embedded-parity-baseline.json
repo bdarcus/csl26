@@ -1,6 +1,6 @@
 {
-  "generated": "2026-08-12T19:33:57.951Z",
-  "commit": "b7ca0a0b",
+  "generated": "2026-08-13T11:20:42.255Z",
+  "commit": "334d7041",
   "source": "scripts/report-core.js",
   "purpose": "Hard per-style exact-parity floor-gate baseline for the embedded tier, consumed by scripts/check-core-quality.js --parity-baseline (see docs/architecture/audits/2026-07-31_EXACT_PARITY_REFOCUS.md). It also records headline fidelity. Sub-1.0 fidelity ratchets are tracked separately per-style in scripts/report-data/verification-policy.yaml (min_pass_rate floors). Regenerate this file after each parity-tuning wave; the gate never goes backward on passed counts or total (fixture-drift guard).",
   "styles": {
@@ -258,20 +258,20 @@
     },
     "springer-basic-brackets": {
       "tier": "embedded",
-      "fidelityScore": 0.955,
+      "fidelityScore": 0.97,
       "qualityScore": 1,
       "citations": {
         "passed": 20,
         "total": 20
       },
       "bibliography": {
-        "passed": 44,
+        "passed": 45,
         "total": 47
       },
       "exactParity": {
-        "passed": 20,
+        "passed": 53,
         "total": 67,
-        "rate": 0.299
+        "rate": 0.791
       }
     },
     "springer-vancouver-brackets": {
@@ -287,9 +287,9 @@
         "total": 47
       },
       "exactParity": {
-        "passed": 11,
+        "passed": 40,
         "total": 67,
-        "rate": 0.164
+        "rate": 0.597
       }
     },
     "taylor-and-francis-chicago-author-date": {
@@ -330,20 +330,20 @@
     },
     "taylor-and-francis-national-library-of-medicine": {
       "tier": "embedded",
-      "fidelityScore": 0.836,
+      "fidelityScore": 0.97,
       "qualityScore": 1,
       "citations": {
         "passed": 20,
         "total": 20
       },
       "bibliography": {
-        "passed": 36,
+        "passed": 45,
         "total": 47
       },
       "exactParity": {
-        "passed": 0,
+        "passed": 13,
         "total": 67,
-        "rate": 0
+        "rate": 0.194
       }
     }
   }
