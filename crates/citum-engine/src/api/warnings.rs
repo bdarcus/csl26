@@ -70,6 +70,45 @@ pub fn term_locale_fallback_warnings(processor: &Processor) -> Vec<Warning> {
         .collect()
 }
 
+/// Warn when the bibliography config declares a numeric or alphabetic
+/// reference-marker mode with no `label-wrap` and no `label-separator`,
+/// which renders the marker flush against the entry body (`1Smith`, not
+/// `1. Smith` or `[1] Smith`).
+///
+/// `label-separator` defaults to empty by design, and several shipped
+/// styles depend on a genuinely flush marker — `royal-society-of-chemistry`
+/// documents `second-field-align="flush"` from its CSL source, and
+/// `gb-t-7714-2025-base` documents a bracketed-but-flush marker — so this is
+/// advisory, not an error: it surfaces a configuration shape that is easy to
+/// author unintentionally without asserting it is wrong. `author-date` mode
+/// is exempt: it never produces a bibliography marker (see `marker.rs`), so
+/// wrap and separator are inert for it. See `docs/specs/REFERENCE_MARKERS.md`.
+pub fn bibliography_label_missing_separator_warnings(processor: &Processor) -> Vec<Warning> {
+    let config = processor.get_bibliography_options();
+    let produces_marker = matches!(
+        config.label_mode,
+        Some(
+            citum_schema::options::BibliographyLabelMode::Numeric
+                | citum_schema::options::BibliographyLabelMode::Alphabetic
+        )
+    );
+    if !produces_marker || config.label_wrap.is_some() || config.label_separator.is_some() {
+        return Vec::new();
+    }
+
+    vec![Warning {
+        level: WarningLevel::Warning,
+        code: "bibliography_label_no_separator".to_string(),
+        citation_id: None,
+        ref_id: None,
+        message: "Bibliography configuration declares a numeric or alphabetic label-mode with \
+                  no label-wrap and no label-separator; the reference marker will render flush \
+                  against the entry body (e.g. '1Smith' rather than '1. Smith'). If this is \
+                  intentional (flush second-field-align), no action is needed."
+            .to_string(),
+    }]
+}
+
 /// Scan the bibliography for unknown reference classes and return compatibility warnings.
 pub fn unknown_reference_class_warnings(bibliography: &Bibliography) -> Vec<Warning> {
     bibliography
@@ -403,6 +442,80 @@ fn scan_template_for_unknowns(
 #[allow(clippy::unwrap_used, reason = "tests")]
 mod tests {
     use super::*;
+
+    #[test]
+    fn bibliography_label_missing_separator_warnings_reports_bare_numeric_label_mode() {
+        let yaml = "info:\n  title: Test\nbibliography:\n  options:\n    label-mode: numeric\n";
+        let style = citum_schema::Style::from_yaml_str(yaml).unwrap();
+        let processor = Processor::new(style, Bibliography::new());
+
+        let warnings = bibliography_label_missing_separator_warnings(&processor);
+        assert!(
+            warnings
+                .iter()
+                .any(|w| w.code == "bibliography_label_no_separator"),
+            "expected a warning for label-mode with no wrap and no separator, got: {warnings:?}"
+        );
+    }
+
+    #[test]
+    fn bibliography_label_missing_separator_warnings_silent_with_label_wrap() {
+        let yaml = "info:\n  title: Test\nbibliography:\n  options:\n    label-mode: numeric\n    label-wrap: period\n";
+        let style = citum_schema::Style::from_yaml_str(yaml).unwrap();
+        let processor = Processor::new(style, Bibliography::new());
+
+        let warnings = bibliography_label_missing_separator_warnings(&processor);
+        assert!(
+            !warnings
+                .iter()
+                .any(|w| w.code == "bibliography_label_no_separator"),
+            "did not expect a warning once label-wrap is declared, got: {warnings:?}"
+        );
+    }
+
+    #[test]
+    fn bibliography_label_missing_separator_warnings_silent_with_label_separator() {
+        let yaml = "info:\n  title: Test\nbibliography:\n  options:\n    label-mode: numeric\n    label-separator: ' '\n";
+        let style = citum_schema::Style::from_yaml_str(yaml).unwrap();
+        let processor = Processor::new(style, Bibliography::new());
+
+        let warnings = bibliography_label_missing_separator_warnings(&processor);
+        assert!(
+            !warnings
+                .iter()
+                .any(|w| w.code == "bibliography_label_no_separator"),
+            "did not expect a warning once label-separator is declared, got: {warnings:?}"
+        );
+    }
+
+    #[test]
+    fn bibliography_label_missing_separator_warnings_silent_for_author_date_mode() {
+        let yaml = "info:\n  title: Test\nbibliography:\n  options:\n    label-mode: author-date\n";
+        let style = citum_schema::Style::from_yaml_str(yaml).unwrap();
+        let processor = Processor::new(style, Bibliography::new());
+
+        let warnings = bibliography_label_missing_separator_warnings(&processor);
+        assert!(
+            !warnings
+                .iter()
+                .any(|w| w.code == "bibliography_label_no_separator"),
+            "author-date mode never produces a bibliography marker, so wrap/separator are \
+             inert; did not expect a warning, got: {warnings:?}"
+        );
+    }
+
+    #[test]
+    fn bibliography_label_missing_separator_warnings_silent_with_no_label_mode() {
+        let yaml = "info:\n  title: Test\n";
+        let style = citum_schema::Style::from_yaml_str(yaml).unwrap();
+        let processor = Processor::new(style, Bibliography::new());
+
+        let warnings = bibliography_label_missing_separator_warnings(&processor);
+        assert!(
+            warnings.is_empty(),
+            "did not expect a warning with no bibliography options at all, got: {warnings:?}"
+        );
+    }
 
     #[test]
     fn unknown_enum_warnings_reports_unknown_term_in_integral_sub_spec() {

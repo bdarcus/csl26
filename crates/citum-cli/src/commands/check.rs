@@ -160,6 +160,10 @@ fn check_style_input(style_input: &str, strict: bool) -> CheckItem {
             let enum_warnings = citum_engine::api::unknown_enum_warnings(&processor);
             warnings.extend(enum_warnings.into_iter().map(|w| w.message));
 
+            let label_warnings =
+                citum_engine::api::bibliography_label_missing_separator_warnings(&processor);
+            warnings.extend(label_warnings.into_iter().map(|w| w.message));
+
             // Forward-compat: report captured `unknown_fields` paths. In strict
             // mode every populated path becomes a hard error; otherwise they
             // surface as warnings alongside enum warnings.
