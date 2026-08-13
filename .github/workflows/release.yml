@@ -198,7 +198,7 @@ jobs:
           cargo release --workspace --no-publish --no-push $TAG_FLAG --no-confirm --execute \
             "${{ steps.resolve.outputs.level }}"
 
-          npm ci --prefix scripts
+          npm install --prefix scripts
           cargo build --quiet --bin citum
           node scripts/refresh-style-coverage-audits.js \
             --citum-bin target/debug/citum
