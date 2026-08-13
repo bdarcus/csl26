@@ -5,3 +5,5 @@ extends: springer-basic-brackets-core
 bibliography:
   options:
     label-mode: numeric
+    label-wrap: period
+    label-separator: " "

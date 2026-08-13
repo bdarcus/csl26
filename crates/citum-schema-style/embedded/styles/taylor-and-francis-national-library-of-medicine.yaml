@@ -10,3 +10,5 @@ citation:
 bibliography:
   options:
     label-mode: numeric
+    label-wrap: brackets
+    label-separator: " "
