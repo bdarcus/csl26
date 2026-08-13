@@ -86,13 +86,13 @@ pub fn load_locale_or_default(
     id: &str,
 ) -> Locale {
     match chain.resolve_locale(id) {
-        Ok(locale) => locale,
-        Err(ResolverError::LocaleNotFound(_)) => Locale::en_us(),
+        Ok(locale) => locale.resolved_for(id),
+        Err(ResolverError::LocaleNotFound(_)) => Locale::en_us().resolved_for(id),
         // For other errors (read/parse failure on a found file) we still
         // return the en-US baseline so a single bad file cannot brick the
         // render path. Callers needing stricter behavior should use the
         // chain directly.
-        Err(_) => Locale::en_us(),
+        Err(_) => Locale::en_us().resolved_for(id),
     }
 }
 
