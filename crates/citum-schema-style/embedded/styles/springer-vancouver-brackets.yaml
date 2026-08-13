@@ -8,3 +8,5 @@ citation:
 bibliography:
   options:
     label-mode: numeric
+    label-wrap: period
+    label-separator: " "
