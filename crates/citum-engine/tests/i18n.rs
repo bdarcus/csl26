@@ -1392,9 +1392,12 @@ fn given_mixed_language_titles_when_rendering_the_bibliography_then_field_langua
     let bibliography = indexmap::IndexMap::from([("chapter-1".to_string(), reference)]);
     let processor = Processor::new(style, bibliography);
 
+    // Default processor locale is en-US, whose `punctuation-in-quote: true`
+    // grammar option now supplies the style default (csl26-8e75) and moves
+    // the trailing period inside the closing quote, matching citeproc-js.
     assert_eq!(
         processor.render_bibliography(),
-        "“English Article”. _Deutscher Sammelband_"
+        "“English Article.” _Deutscher Sammelband_"
     );
 }
 

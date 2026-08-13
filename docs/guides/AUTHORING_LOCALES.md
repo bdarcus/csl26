@@ -88,6 +88,15 @@ Styles can override either punctuation field under `options.punctuation`.
 for structured-title delimiter suppression; title rendering consumes it in
 the separately tracked `csl26-zfqr` work.
 
+`grammar-options.punctuation-in-quote` feeds the style default the same way:
+a style that leaves `punctuation-in-quote` unset inherits this locale's
+value. A style that sets it explicitly is never overridden. This only
+applies when the locale is the one actually resolved for the style — a
+locale substituted after a failed lookup (e.g. an unbundled `en-GB` falling
+back to `en-US`) is not treated as authoritative and supplies none of these
+three defaults. See "Locale-supplied `punctuation-in-quote` default" in
+[PUNCTUATION_NORMALIZATION.md](../specs/PUNCTUATION_NORMALIZATION.md).
+
 Use [`en-US.yaml`](../../crates/citum-schema-style/embedded/locales/en-US.yaml),
 [`fr-FR.yaml`](../../crates/citum-schema-style/embedded/locales/fr-FR.yaml), or
 [`de-DE.yaml`](../../crates/citum-schema-style/embedded/locales/de-DE.yaml) as references for

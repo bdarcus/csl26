@@ -153,7 +153,16 @@ fn locale_punctuation_defaults_and_style_overrides_reach_render_configs() {
 
 #[test]
 fn schema_default_punctuation_keeps_render_configs_borrowed() {
-    let processor = Processor::with_locale(make_style(), Bibliography::default(), Locale::en_us());
+    // en-US's own strong-terminal-comma-policy and delimiter-suppressing-
+    // terminal-marks already match the `Config` schema defaults, but its
+    // punctuation-in-quote is `true` against a schema default of `false` — so
+    // it alone is overridden here to keep this test's claim (nothing to
+    // resolve → config stays borrowed) accurate under the wired locale
+    // default. See `punctuation_in_quote_resolves_from_locale_grammar_options`
+    // below for the punctuation-in-quote resolution itself.
+    let mut locale = Locale::en_us();
+    locale.grammar_options.punctuation_in_quote = false;
+    let processor = Processor::with_locale(make_style(), Bibliography::default(), locale);
 
     assert!(matches!(
         processor.get_citation_config(),
@@ -163,6 +172,102 @@ fn schema_default_punctuation_keeps_render_configs_borrowed() {
         processor.get_bibliography_config(),
         std::borrow::Cow::Borrowed(_)
     ));
+}
+
+#[test]
+fn punctuation_in_quote_resolves_from_locale_grammar_options() {
+    // en-US: style leaves the option unset, locale supplies `true`.
+    let processor = Processor::with_locale(make_style(), Bibliography::default(), Locale::en_us());
+    assert!(processor.get_citation_config().punctuation_in_quote);
+    assert!(processor.get_bibliography_config().punctuation_in_quote);
+
+    // A non-en-US locale (fr-FR) supplies `false`.
+    let fr_fr = Locale::from_yaml_str(include_str!("../../../../locales/fr-FR.yaml"))
+        .expect("fr-FR locale should parse");
+    assert!(
+        !fr_fr.resolved_by_fallback,
+        "a freshly parsed locale is not a fallback"
+    );
+    let processor = Processor::with_locale(make_style(), Bibliography::default(), fr_fr);
+    assert!(!processor.get_citation_config().punctuation_in_quote);
+    assert!(!processor.get_bibliography_config().punctuation_in_quote);
+
+    // A style that explicitly sets the option to `true` is never overridden
+    // by a locale that would resolve it to `false`.
+    let fr_locale = Locale {
+        locale: "fr-FR".to_string(),
+        ..Locale::default()
+    };
+    let mut style_on = make_style();
+    style_on.options.as_mut().unwrap().punctuation_in_quote = true;
+    let processor_on = Processor::with_locale(style_on, Bibliography::default(), fr_locale);
+    assert!(processor_on.get_citation_config().punctuation_in_quote);
+
+    // NOTE: `punctuation_in_quote` is a plain `bool`
+    // (`skip_serializing_if = "std::ops::Not::not"`), so an authored `false`
+    // is indistinguishable *at the typed-Config level* from "unset". A style
+    // built programmatically (like `make_style()`, a struct literal with no
+    // `raw_yaml`) can't be told apart from one that omits the field, so the
+    // converse case isn't tested here that way. Styles parsed from YAML do
+    // carry `raw_yaml` / `scoped_raw_options`, which the resolver consults
+    // instead — see
+    // `explicit_false_survives_locale_default_when_authored_via_yaml` below.
+    // Full disambiguation for programmatically-constructed styles still
+    // needs csl26-yxay's `Option<bool>` migration.
+
+    // A locale substituted for one that could not be resolved does not
+    // supply the default — the style stays at its own default (`false`).
+    let mut fallback_locale = Locale::en_us();
+    fallback_locale.resolved_by_fallback = true;
+    let processor_fallback =
+        Processor::with_locale(make_style(), Bibliography::default(), fallback_locale);
+    assert!(
+        !processor_fallback
+            .get_citation_config()
+            .punctuation_in_quote
+    );
+}
+
+#[test]
+fn explicit_false_survives_locale_default_when_authored_via_yaml() {
+    // Global scope: the style's own YAML explicitly opts out.
+    let global_false = Style::from_yaml_str(
+        r#"
+info:
+  title: Explicit Global False
+options:
+  punctuation-in-quote: false
+"#,
+    )
+    .expect("style should parse");
+    let processor = Processor::with_locale(global_false, Bibliography::default(), Locale::en_us());
+    assert!(
+        !processor.get_citation_config().punctuation_in_quote,
+        "an authored `false` in the style's own options must survive an \
+         authoritative en-US locale, not be silently replaced with `true`"
+    );
+    assert!(!processor.get_bibliography_config().punctuation_in_quote);
+
+    // Citation scope: authored only under `citation.options`, global left
+    // unset. `ScopedRawOptions` chain-merges scope-level raw authorship, so
+    // this is detected even though it never touches the top-level `options`
+    // block that `raw_yaml` alone would catch.
+    let citation_scoped_false = Style::from_yaml_str(
+        r#"
+info:
+  title: Explicit Citation-Scoped False
+citation:
+  options:
+    punctuation-in-quote: false
+"#,
+    )
+    .expect("style should parse");
+    let processor = Processor::with_locale(
+        citation_scoped_false,
+        Bibliography::default(),
+        Locale::en_us(),
+    );
+    assert!(!processor.get_citation_config().punctuation_in_quote);
 }
 
 fn make_note_style() -> Style {

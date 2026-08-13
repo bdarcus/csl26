@@ -3538,7 +3538,7 @@
           ]
         },
         "punctuation-in-quote": {
-          "description": "Whether to place periods/commas inside quotation marks.\ntrue = American style (\"text.\"), false = British style (\"text\".)\nDefaults to false; the style must opt in explicitly (embedded styles\nthat want American-style placement, including `en-US`-locale ones,\nset this directly — the locale's own `punctuation-in-quote` grammar\noption is not currently consulted by the engine).",
+          "description": "Whether to place periods/commas inside quotation marks.\ntrue = American style (\"text.\"), false = British style (\"text\".)\nDefaults to false; a style that sets it explicitly always wins. When\nleft unset, the engine fills it from the active locale's\n`grammar-options.punctuation-in-quote` (`en-US` sets `true`; most\nother bundled locales set `false`) — unless that locale was itself\nsubstituted for one that could not be resolved, in which case no\nlocale default is applied. See\n`Processor::resolve_punctuation_defaults`.",
           "type": "boolean"
         },
         "punctuation": {
