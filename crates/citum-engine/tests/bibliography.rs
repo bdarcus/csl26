@@ -33,7 +33,7 @@ use citum_schema::{
         BibliographySortPartitioning, Config, ContributorConfig, DelimiterPrecedesLast,
         DemoteNonDroppingParticle, DisplayAsSort, LinkAnchor, LinkTarget, LinksConfig,
         MultilingualConfig, MultilingualMode, Processing, ProcessingCustom, Sort, SortKey,
-        SortSpec, SortingConfig, SortingMultilingualMode,
+        SortSpec, SortingConfig, SortingMultilingualMode, TwoNameDelimiterPolicy,
     },
     reference::{
         Contributor, ContributorList, DateValue, InputReference, Monograph, MonographType,
@@ -2644,6 +2644,7 @@ fn hyphenated_non_dropping_particles_render_correctly_in_display_order() {
 
 fn make_two_author_and_style(
     delimiter_precedes_last: DelimiterPrecedesLast,
+    two_name_delimiter_policy: Option<TwoNameDelimiterPolicy>,
     name_order: Option<citum_schema::template::NameOrder>,
 ) -> Style {
     Style {
@@ -2656,6 +2657,7 @@ fn make_two_author_and_style(
             contributors: Some(ContributorConfig {
                 and: Some(AndOptions::Text),
                 delimiter_precedes_last: Some(delimiter_precedes_last),
+                two_name_delimiter_policy,
                 ..Default::default()
             }),
             ..Default::default()
@@ -2678,17 +2680,19 @@ fn make_two_author_and_style(
     }
 }
 
-#[test]
-fn two_names_bibliography_given_first_order_never_uses_delimiter() {
-    // Given-first bibliography name lists (e.g. an editor/chair group) never
-    // use the delimiter before the conjunction, regardless of the declared
-    // delimiter-precedes-last value -- there is no per-component override
-    // for this option today, and real styles (APA) rely on this suppression
-    // for correct given-first-name-list formatting (e.g. "F. A. Editor &
-    // S. Editor" rather than "F. A. Editor, & S. Editor"). See div-013 in
-    // docs/adjudication/DIVERGENCE_REGISTER.md.
+#[rstest]
+#[case::literal_default(None, "John Smith, and Jane Jones")]
+#[case::apa_suppression(
+    Some(TwoNameDelimiterPolicy::SuppressInCitationOrGivenFirst),
+    "John Smith and Jane Jones"
+)]
+fn given_two_given_first_names_when_rendering_a_bibliography_then_policy_controls_the_delimiter(
+    #[case] policy: Option<TwoNameDelimiterPolicy>,
+    #[case] expected: &str,
+) {
     let style = make_two_author_and_style(
         DelimiterPrecedesLast::Always,
+        policy,
         Some(citum_schema::template::NameOrder::GivenFirst),
     );
     let bib = citum_schema::bib_map![
@@ -2697,7 +2701,7 @@ fn two_names_bibliography_given_first_order_never_uses_delimiter() {
     let processor = Processor::new(style, bib);
     let result = processor.render_bibliography();
 
-    assert_eq!(result, "John Smith and Jane Jones");
+    assert_eq!(result, expected);
 }
 
 #[test]
@@ -2705,7 +2709,7 @@ fn two_names_bibliography_contextual_omits_delimiter_for_two_names() {
     // CSL's "contextual" delimiter-precedes-last means "delimiter only when
     // 3 or more names are joined"; for exactly two names no delimiter should
     // precede the conjunction. Previously this was hardcoded to `true`.
-    let style = make_two_author_and_style(DelimiterPrecedesLast::Contextual, None);
+    let style = make_two_author_and_style(DelimiterPrecedesLast::Contextual, None, None);
     let bib = citum_schema::bib_map![
         "ITEM-1" => make_book_multi_author("ITEM-1", vec![("Smith", "John"), ("Jones", "Jane")], 2020, "Title"),
     ];

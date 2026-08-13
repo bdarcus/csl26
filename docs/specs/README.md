@@ -195,7 +195,7 @@ note. The `—` marker in the Tests column means no targeted test exists yet.
 | [`CHICAGO_VARIANT_AXES.md`](./CHICAGO_VARIANT_AXES.md) — mapping `style-variant-builder`'s template-diff model onto Citum `extends:`/type-variant inheritance | Draft | `crates/citum-schema-style/tests/bdd_inheritance.rs` |
 | [`STYLE_TEMPLATE_EXPRESSIVENESS_AND_PARITY.md`](./STYLE_TEMPLATE_EXPRESSIVENESS_AND_PARITY.md) — bounded template reuse, inherited fallback diffs, and auditable field coverage | Active | `crates/citum-schema-style/tests/bdd_inheritance.rs` |
 | [`UNIFIED_SCOPED_OPTIONS.md`](./UNIFIED_SCOPED_OPTIONS.md) — typed scoped options replacing flat author-facing contracts | Active | `crates/citum-schema-style/tests/` |
-| [`TWO_NAME_DELIMITER_POLICY.md`](./TWO_NAME_DELIMITER_POLICY.md) — scoped contributor policy for two-name conjunction delimiters | Draft | `bibliography.rs`, `citations.rs` |
+| [`TWO_NAME_DELIMITER_POLICY.md`](./TWO_NAME_DELIMITER_POLICY.md) — scoped contributor policy for two-name conjunction delimiters | Active | `bibliography.rs`, `citations.rs` |
 | [`PER_DOCUMENT_CONFIG_OVERRIDES.md`](./PER_DOCUMENT_CONFIG_OVERRIDES.md) — eligible options and syntax for per-document configuration overrides | Draft | `bibliography.rs::local_overrides` |
 | [`SCHEMA_SPLIT_AND_CONVERT_NAMESPACE.md`](./SCHEMA_SPLIT_AND_CONVERT_NAMESPACE.md) — crate-level schema split and CLI conversion namespace | Active | `crates/citum-schema/tests/` |
 | [`PROFILE_DOCUMENTARY_VERIFICATION.md`](./PROFILE_DOCUMENTARY_VERIFICATION.md) — verification model for profile styles using external authority | Draft | — |

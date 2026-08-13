@@ -69,6 +69,10 @@ pub struct ContributorConfig {
     /// When to include delimiter before the last contributor.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub delimiter_precedes_last: Option<DelimiterPrecedesLast>,
+    /// Policy for applying the final delimiter to exactly two contributors.
+    /// Unset resolves to [`TwoNameDelimiterPolicy::FollowRule`].
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub two_name_delimiter_policy: Option<TwoNameDelimiterPolicy>,
     /// When to include delimiter before "et al.".
     #[serde(skip_serializing_if = "Option::is_none")]
     pub delimiter_precedes_et_al: Option<DelimiterPrecedesLast>,
@@ -138,6 +142,9 @@ impl ContributorConfig {
         }
         if other.delimiter_precedes_last.is_some() {
             self.delimiter_precedes_last = other.delimiter_precedes_last;
+        }
+        if other.two_name_delimiter_policy.is_some() {
+            self.two_name_delimiter_policy = other.two_name_delimiter_policy;
         }
         if other.delimiter_precedes_et_al.is_some() {
             self.delimiter_precedes_et_al = other.delimiter_precedes_et_al;
@@ -563,6 +570,18 @@ pub enum DelimiterPrecedesLast {
     Never,
     #[default]
     Contextual,
+}
+
+/// Policy for applying `delimiter-precedes-last` to exactly two contributors.
+#[derive(Debug, Default, Deserialize, Serialize, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+#[serde(rename_all = "kebab-case")]
+pub enum TwoNameDelimiterPolicy {
+    /// Apply the configured delimiter rule literally in every render context.
+    #[default]
+    FollowRule,
+    /// Suppress the delimiter in citations or given-first name lists.
+    SuppressInCitationOrGivenFirst,
 }
 
 /// Et al. / list shortening options.

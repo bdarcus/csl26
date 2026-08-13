@@ -1,14 +1,14 @@
 ---
 # csl26-fqz2
 title: Add scoped two-name delimiter policy
-status: in-progress
+status: completed
 type: task
 priority: normal
 tags:
     - contributors
     - schema
 created_at: 2026-07-06T14:03:06Z
-updated_at: 2026-08-12T23:17:30Z
+updated_at: 2026-08-13T00:32:20Z
 parent: csl26-8m2p
 ---
 
@@ -31,3 +31,10 @@ Add a way for a style to opt out of the N=2 suppression (or opt into literal `al
 ## Revised Design (2026-08-12)
 
 Implement this as `ContributorConfig.two-name-delimiter-policy`, inherited through global, citation, and bibliography option scopes. Literal `delimiter-precedes-last` semantics become the default; APA declares the citation-or-given-first suppression explicitly. See `docs/specs/TWO_NAME_DELIMITER_POLICY.md`.
+
+
+## Summary of Changes
+
+Added the scoped `ContributorConfig.two-name-delimiter-policy` option with literal `follow-rule` default semantics, centralized name-list delimiter evaluation, and removed the hidden APA-shaped engine exception. Configured APA globally and Chicago author-date bibliography scope where oracle output requires suppression. Added engine matrix, option-cascade, APA integration, and CSL migration non-inference coverage; activated the feature spec and resolved div-013. Regenerated the style schema.
+
+Verification: `just schema-validate`; embedded portfolio quality and exact-parity reports unchanged before/after; APA workflow remains 20/20 citation and 45/46 bibliography (the established ordering mismatch); review-smell audit clean; rendering benchmark at baseline; `just pre-commit` passed with 2500/2500 tests.

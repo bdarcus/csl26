@@ -178,9 +178,10 @@ bibliography:
       - title
     contributors:
       display-as-sort: first
-      # The Chicago bibliography uses a serial comma before the final
-      # conjunction, including two-contributor entries.
+      # Inverted Chicago bibliography names use a serial comma even at two
+      # contributors, while given-first secondary-role lists omit it.
       delimiter-precedes-last: always
+      two-name-delimiter-policy: suppress-in-citation-or-given-first
       shorten:
         min: 7
         use-first: 3
