@@ -46,7 +46,7 @@ impl Locale {
 
             if file_path.exists() {
                 match Self::from_file(&file_path) {
-                    Ok(locale) => return locale,
+                    Ok(locale) => return locale.resolved_for(locale_id),
                     Err(e) => {
                         eprintln!(
                             "Warning: Failed to load locale {}.{}: {}",
@@ -67,13 +67,13 @@ impl Locale {
                         && extensions.iter().any(|ext| name_str.ends_with(ext)))
                         && let Ok(locale) = Self::from_file(&entry.path())
                     {
-                        return locale;
+                        return locale.resolved_for(locale_id);
                     }
                 }
             }
         }
 
-        Self::en_us()
+        Self::en_us().resolved_for(locale_id)
     }
 
     /// Load locale from a file path directly (detects format).

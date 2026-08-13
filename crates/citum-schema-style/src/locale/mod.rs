@@ -115,6 +115,16 @@ pub struct Locale {
     #[serde(skip, default = "default_evaluator")]
     #[cfg_attr(feature = "schema", schemars(skip))]
     pub evaluator: Arc<dyn MessageEvaluator>,
+    /// True when this locale was substituted for one that could not be
+    /// resolved (e.g. a style declaring `en-GB` falling back to the embedded
+    /// `en-US` baseline). Runtime-only: never serialized, never part of the
+    /// locale schema. Consumers that treat locale data as authoritative for
+    /// deriving style defaults — grammar-option resolution in particular —
+    /// must not do so when this is set, since the data belongs to a
+    /// different language than the one that was asked for.
+    #[serde(skip)]
+    #[cfg_attr(feature = "schema", schemars(skip))]
+    pub resolved_by_fallback: bool,
 }
 
 /// Default message evaluator (MF2).
@@ -144,6 +154,7 @@ impl Default for Locale {
             vocab: VocabMap::default(),
             type_terms: HashMap::default(),
             evaluator: default_evaluator(),
+            resolved_by_fallback: false,
         }
     }
 }
@@ -170,6 +181,7 @@ impl fmt::Debug for Locale {
             .field("vocab", &self.vocab)
             .field("type_terms", &self.type_terms)
             .field("evaluator", &"<MessageEvaluator>")
+            .field("resolved_by_fallback", &self.resolved_by_fallback)
             .finish()
     }
 }
@@ -214,6 +226,17 @@ impl Locale {
                 Self::from_raw_with_base(raw, Locale::default())
             })
             .clone()
+    }
+
+    /// Record whether this locale is what `requested` asked for.
+    ///
+    /// Loaders call this on every resolution outcome so downstream consumers
+    /// can tell a locale that was actually found from one substituted for a
+    /// request that could not be satisfied (see [`Locale::resolved_by_fallback`]).
+    #[must_use]
+    pub fn resolved_for(mut self, requested: &str) -> Self {
+        self.resolved_by_fallback = self.locale != requested;
+        self
     }
 
     /// Create the Québec French locale by applying its regional typography to
@@ -264,6 +287,7 @@ impl Locale {
             // titles/archive names) and for term-casing tailoring; both
             // uses are out of scope for this switch (§4).
             locale: self.locale.clone(),
+            resolved_by_fallback: self.resolved_by_fallback,
             punctuation_in_quote: self.punctuation_in_quote,
             sort_articles: self.sort_articles.clone(),
             locale_schema_version: self.locale_schema_version.clone(),
@@ -450,6 +474,73 @@ terms:
             locale.dates.months.long[&SubYearCode::new(3).expect("valid month code")],
             "März"
         );
+    }
+
+    /// Build an isolated locales directory under the system temp dir.
+    fn temp_locales_dir(label: &str) -> std::path::PathBuf {
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("clock should be after epoch")
+            .as_nanos();
+        let dir = std::env::temp_dir().join(format!("citum-locale-load-{label}-{now}"));
+        std::fs::create_dir_all(&dir).expect("temp locales dir should be creatable");
+        dir
+    }
+
+    #[test]
+    fn load_exact_match_is_not_flagged_as_fallback() {
+        let dir = temp_locales_dir("exact");
+        std::fs::write(dir.join("de-DE.yaml"), "locale: de-DE\n")
+            .expect("locale file should write");
+
+        let locale = Locale::load("de-DE", &dir);
+
+        assert_eq!(locale.locale, "de-DE");
+        assert!(!locale.resolved_by_fallback);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn load_missing_locale_falls_back_to_en_us_and_is_flagged() {
+        let dir = temp_locales_dir("missing");
+
+        let locale = Locale::load("xx-XX", &dir);
+
+        assert_eq!(locale.locale, "en-US");
+        assert!(locale.resolved_by_fallback);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn load_prefix_substitution_is_flagged_as_fallback() {
+        // No `en-GB.yaml` on disk: the prefix scan should match the `en`-prefixed
+        // file it does find (`en-US.yaml`) rather than the terminal `en_us()`
+        // fallback, but the result is still not what was requested.
+        let dir = temp_locales_dir("prefix");
+        std::fs::write(dir.join("en-US.yaml"), "locale: en-US\n")
+            .expect("locale file should write");
+
+        let locale = Locale::load("en-GB", &dir);
+
+        assert_eq!(locale.locale, "en-US");
+        assert!(locale.resolved_by_fallback);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn apply_override_does_not_clear_the_fallback_flag() {
+        let dir = temp_locales_dir("override");
+        let mut locale = Locale::load("xx-XX", &dir);
+        assert!(locale.resolved_by_fallback);
+
+        let ov = LocaleOverride {
+            messages: [("term.page-label".into(), "pg.".into())].into(),
+            ..Default::default()
+        };
+        locale.apply_override(&ov);
+
+        assert!(locale.resolved_by_fallback);
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     /// v2 locale with grammar-options overrides punctuation_in_quote correctly.

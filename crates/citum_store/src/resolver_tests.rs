@@ -378,6 +378,10 @@ fn load_locale_or_default_returns_en_us_on_miss() {
 
     let locale = crate::load_locale_or_default(&chain, "missing-locale");
     assert_eq!(locale.locale, "en-US");
+    assert!(
+        locale.resolved_by_fallback,
+        "a locale substituted after a failed lookup must be flagged"
+    );
 }
 
 #[cfg(feature = "http")]
@@ -393,6 +397,10 @@ fn load_locale_or_default_uses_first_match() {
 
     let locale = crate::load_locale_or_default(&chain, "xx-XX");
     assert_eq!(locale.locale, "xx-XX");
+    assert!(
+        !locale.resolved_by_fallback,
+        "an exact locale match must not be flagged as a fallback"
+    );
 }
 
 // Regression tests for csl26-j3zy: a child style resolved through
