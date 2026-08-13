@@ -57,7 +57,9 @@ jobs:
             echo "styles=$(has '^(styles/|locales/|docs/schemas/)')"
             echo "beans=$(has '^(registry/|locales/|templates/|\.beans\.yml$|\.beans/)')"
             echo "infra=$(has '^(scripts/|crates/)')"
-            echo "coverage_audits=$(has '^(Cargo\.(toml|lock)$|crates/(citum-cli|citum-schema-style|citum-store)/|scripts/(check-style-coverage-audits(\.test)?\.js|style-coverage-review(\.test)?\.js|lib/(report-metadata|style-coverage-audits)\.js|report-data/(report-provenance\.yaml|style-coverage-(audit-manifest|packet)\.schema\.json))|docs/architecture/audits/2026-08-09-shortened-notes-coverage/|tests/fixtures/(references-expanded\.json|citations-note-expanded\.json|style-coverage/)|styles-legacy$)')"
+            # The freshness check builds the source Citum binary, so any Rust crate can change rendered audit output.
+            # Keep docs-only and metadata-only changes lightweight while covering every registered audit input.
+            echo "coverage_audits=$(has '^(Cargo\.(toml|lock)$|rust-toolchain\.toml$|crates/|styles/|locales/|docs/schemas/|tests/fixtures/|docs/architecture/audits/|styles-legacy$|scripts/package\.json$|scripts/(check-style-coverage-audits(\.test)?\.js|style-coverage-review(\.test)?\.js|lib/(report-metadata|style-coverage-audits)\.js|report-data/(report-provenance\.yaml|style-coverage-(audit-manifest|packet)\.schema\.json)))')"
             echo "semver=$(has '^crates/(csl-legacy|citum-schema-data|citum-schema-style|citum-schema|citum-migrate|citum-engine|citum-cli|citum-bindings)/')"
             echo "release=$(has '^(\.github/workflows/(ci|release)\.yml$|Cargo\.toml$|Cargo\.lock$|RELEASING\.md$|scripts/(build-jsr-package|install|publish-crates|release-binary)\.sh$|crates/)')"
           } >> "$GITHUB_OUTPUT"
