@@ -5,6 +5,169 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.80.0] - 2026-08-13
+
+### Bug Fixes
+
+**ci**
+
+- Run required checks on stacked-PR bases ([`6f7bb3c`](https://github.com/citum/citum-core/commit/6f7bb3c73d23afb3b234a19a220c710d67b049dd))
+
+- Widen fidelity timeout for cold builds ([`ca9ed7f`](https://github.com/citum/citum-core/commit/ca9ed7f662c56499d260f59b00550e384b439216))
+
+- Cover render-affecting audit changes ([`54384d1`](https://github.com/citum/citum-core/commit/54384d13b20ae7b570db9f78c7d88601845246b0))
+
+- Refresh audits during releases ([`9a98083`](https://github.com/citum/citum-core/commit/9a9808389ed920cf4494098e4a38cbd68fb5e429))
+
+
+**engine**
+
+- Punctuation-in-quote under markup ([`6e99c72`](https://github.com/citum/citum-core/commit/6e99c724a50d2c84610cef3715546a9f369391a6))
+
+- Keep comma after abbreviation period ([`05bfcf8`](https://github.com/citum/citum-core/commit/05bfcf8971edb7dc1feb02496cfcc8536f26bb9e))
+
+- Year-suffix follows render order ([`b3dec80`](https://github.com/citum/citum-core/commit/b3dec8049c7163279c49a98bff7588589ab90120))
+
+- Add missing Narrator ContributorRole ([`f5e75a2`](https://github.com/citum/citum-core/commit/f5e75a2f7fbfaf20aa53e2987ba5f5e90e3fe4ef))
+
+- Move citation suffix into quotes ([`6bdd0a5`](https://github.com/citum/citum-core/commit/6bdd0a511ba86b4e07fdb129d652653308ded80d))
+
+- Unify sentence case markup path ([`984187d`](https://github.com/citum/citum-core/commit/984187d2df8b37f962388687886a04dbb81c9d99))
+
+- Grouping follows resolved date slot ([`8d6a051`](https://github.com/citum/citum-core/commit/8d6a0511d442e4f77cbab1f40259b1ad215960cf))
+
+
+**release**
+
+- Use install without lockfile ([`eda453f`](https://github.com/citum/citum-core/commit/eda453f093d35379f08ffe16581539351f3bdb77))
+
+- Initialize audit submodules ([`89b75df`](https://github.com/citum/citum-core/commit/89b75dfc3f60797243ce422b4a488394ef933d1a))
+
+
+**report**
+
+- Validate managed renderer binaries ([`cb393a6`](https://github.com/citum/citum-core/commit/cb393a6d59280d4fce9c4e3e353d11825aef1c12))
+
+
+**schema**
+
+- Type title category mappings ([`b996fb6`](https://github.com/citum/citum-core/commit/b996fb69534ee316a4039ed8ab8a7935f9789137))
+
+- Remove all type-selector keyword ([`b460bc6`](https://github.com/citum/citum-core/commit/b460bc6f98d14820830d7b508ca8398623ee4ef5))
+
+
+**security**
+
+- Patch lru use-after-free ([`b322aa7`](https://github.com/citum/citum-core/commit/b322aa79f065045b489dc3588931cc6377a36a8a))
+
+
+**styles**
+
+- Localize chicago contributor roles ([`865c269`](https://github.com/citum/citum-core/commit/865c2693cce78b8073cbb42781052767091fb099))
+
+- Quote chicago newspaper/thesis titles ([`a98c891`](https://github.com/citum/citum-core/commit/a98c89156cfec393643a86c5c022f5d6c0346abc))
+
+- Chicago shortened bib separator ([`4efa2d0`](https://github.com/citum/citum-core/commit/4efa2d0ffb4be39193da15bf92e48ded1d225281))
+
+- Tune chicago journal issue grammar ([`ae3cd2f`](https://github.com/citum/citum-core/commit/ae3cd2f644570a19d12db056d69aea9cf2b52b2a))
+
+- Improve shortened notes parity ([`4689143`](https://github.com/citum/citum-core/commit/4689143c66f9a50540e2ac918fd20f091571c4b4))
+
+- Add numeric label-wrap/separator ([`3b0914c`](https://github.com/citum/citum-core/commit/3b0914c6b321efb238971521253f3eb0565d4238))
+
+- Springer-vancouver title case as-is ([`732aa8d`](https://github.com/citum/citum-core/commit/732aa8d3f00d31190b7e12fc10ff0f1ee906a3a8))
+
+
+
+### Documentation
+
+**report**
+
+- Audit shortened-notes coverage ([`5287d8c`](https://github.com/citum/citum-core/commit/5287d8c8554fa3426f4c3975ed9f91fd8c7166d5))
+
+
+**spec**
+
+- Specify EDTF-keyed locale date names ([`1e085f4`](https://github.com/citum/citum-core/commit/1e085f435f51b2088a01c8ce481c6bb5f86550a6))
+
+- Record punctuation-in-quote markup fix ([`22894b4`](https://github.com/citum/citum-core/commit/22894b4d80c2ae2800594c289ec05cfc9f35ebd9))
+
+- Specify processor-owned markers ([`678bb68`](https://github.com/citum/citum-core/commit/678bb68e17959a2df4b989ce25be6600a067d624))
+
+- Define typed title mappings ([`005f074`](https://github.com/citum/citum-core/commit/005f0741bfe7eddd1f985c06312de9297382aec6))
+
+- Remove all type-selector keyword ([`81555bb`](https://github.com/citum/citum-core/commit/81555bba89a1a3071aaf213450d1668f265c6074))
+
+- Year-suffix order under resolved sorts ([`bc72b51`](https://github.com/citum/citum-core/commit/bc72b51eadee4439834d46f14d46e63a3be5d635))
+
+- Chicago strategy, localization policy ([`c472d51`](https://github.com/citum/citum-core/commit/c472d51fc29ef956ed466ba7386593ea5a243c46))
+
+- Chicago variant axes mapping ([`36c2182`](https://github.com/citum/citum-core/commit/36c21827f0933c5c52583765c2496c1a53fa30d7))
+
+- Define template parity coverage ([`c84ca6b`](https://github.com/citum/citum-core/commit/c84ca6b5899e29e7e82145a39afea9988c2dfe70))
+
+- Define date substitution ([`7507ba7`](https://github.com/citum/citum-core/commit/7507ba76f896eb5c5484f21a26558fdcadc8a842))
+
+- Specify two-name policy ([`0bb3699`](https://github.com/citum/citum-core/commit/0bb36990bfb7f051d85bf41dd788fd9958976bcf))
+
+
+
+### Features
+
+**engine**
+
+- Add day-zero-pad date option ([`5dbe34d`](https://github.com/citum/citum-core/commit/5dbe34d752d4488b5fa6f98015828bdde04336f4))
+
+- Implement date substitution ([`05c4322`](https://github.com/citum/citum-core/commit/05c4322a82cf2f6974bd30b02c9ff2cb76114d0d))
+
+- Warn on bare bibliography markers ([`13508e8`](https://github.com/citum/citum-core/commit/13508e8196978eb85d4d53debff27e81bb7b525b))
+
+- Locale-derived punctuation-in-quote ([`464e732`](https://github.com/citum/citum-core/commit/464e73222cdeb8367113d7e487f79ff14d068d2e))
+
+
+**locale**
+
+- Mark fallback-substituted locales ([`46755d3`](https://github.com/citum/citum-core/commit/46755d37b3fc8d810f90c08c3b7350a508599beb))
+
+
+**report**
+
+- Add auditable coverage packets ([`a74481a`](https://github.com/citum/citum-core/commit/a74481a5cd353e7e26a79be502f21c50dd2be738))
+
+- Integrate coverage audits ([`306d422`](https://github.com/citum/citum-core/commit/306d4229d544c924bcdf0f3246c3829a0cb37645))
+
+- Add post-change audit evidence ([`a869fd9`](https://github.com/citum/citum-core/commit/a869fd9526d4a15c77c2b9f4c8248cc72339697e))
+
+
+**schema**
+
+- Key locale date names by EDTF code ([`c583483`](https://github.com/citum/citum-core/commit/c5834838838f263a0889eacc1219fa250e6ebf41))
+
+- Own markers in the processor ([`6595cf0`](https://github.com/citum/citum-core/commit/6595cf0b1b12ebf0e5f2409590354a620b4e0705))
+
+- Support fallback template diffs ([`54d735f`](https://github.com/citum/citum-core/commit/54d735f29b3edfcb952d751569b98d882582f852))
+
+- Add two-name policy ([`7ea608b`](https://github.com/citum/citum-core/commit/7ea608b99203e18db47ae44fb3578dfd24f5d5a6))
+
+
+**scripts**
+
+- Add STYLE010 localization lint rule ([`8f00c33`](https://github.com/citum/citum-core/commit/8f00c330d39643633966a358e2e86dc41169d4b4))
+
+
+
+### Refactor
+
+**styles**
+
+- Ieee titles via category config ([`613ffb9`](https://github.com/citum/citum-core/commit/613ffb94f73388b294aaf22913b2488d68e3d1fa))
+
+- Use date substitute presets ([`4afe520`](https://github.com/citum/citum-core/commit/4afe520651f08284ceb8022cc68eb945d1e7323e))
+
+
+
+### Testing
+
 ## [0.79.0] - 2026-08-02
 
 ### Bug Fixes
