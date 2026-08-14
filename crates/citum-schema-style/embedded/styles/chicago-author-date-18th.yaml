@@ -89,6 +89,9 @@ citation:
       - parent-serial
       - title
     contributors:
+      # when given names are expanded in citations, they are initialized
+      initialize-with: '. '
+      name-form: initials
       shorten:
         min: 3
         use-first: 1
@@ -126,9 +129,15 @@ citation:
         field-absent: title
       delimiter: ''
     - group:
+      # CMOS 18 14.111: an inaccessible personal communication has no
+      # bibliography entry, so the first in-text mention gives the full
+      # given name rather than the initials the citation-scope disambiguation
+      # config would otherwise apply (matches CSL's bare `<name and="text"/>`
+      # at `position="first"`, chicago-author-date.csl author-inline-and-recipient).
       - contributor: author
         form: long
         name-order: given-first
+        name-form: full
         shorten:
           min: 3
           use-first: 1
