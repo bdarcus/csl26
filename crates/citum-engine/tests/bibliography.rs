@@ -2179,6 +2179,57 @@ fn sorting_by_author_breaks_family_name_ties_with_given_name() {
     );
 }
 
+/// Regression for csl26-7u16's follow-up finding: the author sort key must
+/// compare every co-author in the list, not just the first. Two references
+/// share an identical first author (family *and* given), so the tie must
+/// break on the *second* author instead of leaving the two entries in
+/// whatever order they happened to be inserted (their only prior tiebreak).
+fn sorting_by_author_breaks_first_author_ties_with_second_author() {
+    let style = build_sorted_style(vec![SortSpec {
+        key: SortKey::Author,
+        ascending: true,
+    }]);
+
+    let mut bib = indexmap::IndexMap::new();
+    // Reference ids are deliberately the *reverse* of the expected sorted
+    // order ("aa-..." < "zz-..."): when every declared sort key ties, the
+    // engine's final tiebreak is the reference id itself
+    // (`sort_references_with_id_tiebreak`), which would place the
+    // "aa"-prefixed nguyen entry first. If the first-author-only bug were
+    // present, both Author keys would tie completely and this id tiebreak
+    // — not a real name comparison — would decide the order, giving the
+    // wrong result the assertion below rejects. Only a genuine
+    // second-author comparison ("Kumar" < "Nguyen") can override the id
+    // order and place kumar-second first.
+    bib.insert(
+        "aa-nguyen-second".to_string(),
+        make_book_multi_author(
+            "aa-nguyen-second",
+            vec![("Smith", "John"), ("Nguyen", "Bao")],
+            2021,
+            "Alpha Methods for Inland Regions",
+        ),
+    );
+    bib.insert(
+        "zz-kumar-second".to_string(),
+        make_book_multi_author(
+            "zz-kumar-second",
+            vec![("Smith", "John"), ("Kumar", "Priya")],
+            2021,
+            "Zeta Methods in Coastal Cities",
+        ),
+    );
+
+    let processor = Processor::new(style, bib);
+    let result = processor.render_bibliography();
+
+    assert!(
+        result.find("Kumar, Priya").unwrap() < result.find("Nguyen, Bao").unwrap(),
+        "expected the Kumar-second-author entry before the Nguyen-second-author entry \
+         on second-author tiebreak, not title: {result}"
+    );
+}
+
 fn sorting_by_year_places_earlier_years_first() {
     let style = build_sorted_style(vec![SortSpec {
         key: SortKey::Year,
@@ -2591,6 +2642,15 @@ fn subsequent_author_substitute_replaces_repeated_author_lines() {
 
 fn magic_subsequent_author_substitute_reuses_the_full_author_group() {
     // Upstream provenance: CSL fixture `magic_SubsequentAuthorSubstitute`.
+    //
+    // Expected order updated for csl26-7u16's follow-up fix (author sort key
+    // now compares every co-author, not just the first): item-3's single
+    // "Smith, John" author is a strict prefix of item-1/item-2's "Smith,
+    // John, Roe, Jane", so it sorts before them — verified against
+    // citeproc-js directly (a minimal author+year-sorted style renders the
+    // same single-author-first order for this exact shape). item-1 and
+    // item-2 remain adjacent, so the subsequent-author-substitute marker
+    // still fires between them.
     let style = Style {
         info: StyleInfo {
             title: Some("Magic Subsequent Author Substitute Test".to_string()),
@@ -2634,7 +2694,7 @@ fn magic_subsequent_author_substitute_reuses_the_full_author_group() {
     let result = processor.render_bibliography();
     assert_eq!(
         result,
-        "John Smith and Jane Roe, Book A (2000)\n\n———, Book B (2001)\n\nJohn Smith, Book C (2002)"
+        "John Smith, Book C (2002)\n\nJohn Smith and Jane Roe, Book A (2000)\n\n———, Book B (2001)"
     );
 }
 
@@ -3978,6 +4038,14 @@ mod sorting {
             "When two entries share a family name, author sorting should break the tie by given name rather than falling through to title order.",
         );
         super::sorting_by_author_breaks_family_name_ties_with_given_name();
+    }
+
+    #[test]
+    fn author_sorting_breaks_first_author_ties_with_second_author() {
+        announce_behavior(
+            "When two entries share an identical first author, author sorting should break the tie by the second author rather than falling through to title order.",
+        );
+        super::sorting_by_author_breaks_first_author_ties_with_second_author();
     }
 
     #[test]

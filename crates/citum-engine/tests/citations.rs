@@ -909,7 +909,15 @@ fn disambiguation_et_al_conflicts_expand_names_when_that_resolves_them() {
         ),
     ];
     let citation_items = vec![vec!["ITEM-1", "ITEM-2"]];
-    let expected = "Smith, Brown, et al., (1980); Smith, Beefheart, et al., (1980)";
+    // Expected order updated for csl26-7u16's follow-up fix (author sort key
+    // now compares every co-author, not just the first): the style's
+    // explicit citation <sort> by author ties ITEM-1/ITEM-2 on their shared
+    // first author, so it now correctly breaks on the second ("Beefheart" <
+    // "Brown"), placing ITEM-2 first — verified directly against
+    // `CSL.Engine` for this exact shape (same style structure: an explicit
+    // author+issued citation sort, et-al-min 3, et-al-use-first 1,
+    // disambiguate-add-names).
+    let expected = "Smith, Beefheart, et al., (1980); Smith, Brown, et al., (1980)";
 
     run_test_case_native_with_options(common::TestCaseOptions {
         input: &input,
