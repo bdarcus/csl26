@@ -5029,20 +5029,24 @@ fn test_text_case_leading_nocase_advances_state() {
     assert_eq!(result, "DNA replication in modern science");
 }
 
-/// Renders the `author` contributor role for an author-less monograph under
-/// `text-case: sentence-apa`, forcing the default `editor -> title ->
-/// translator` substitute chain to promote the title into the author slot
-/// (csl26-d3kj). Built natively (no `csl_legacy` round-trip) so this
-/// exercises the same construction as [`sentence_apa_monograph_title_value`],
-/// isolating the substitute path's Djot handling from the direct title path.
-fn substitute_title_value(title_str: &str, context: RenderContext) -> String {
-    let config = make_config_with_titles(citum_schema::options::TitlesConfig {
-        monograph: Some(citum_schema::options::titles::TitleRendering {
-            text_case: Some(citum_schema::options::titles::TextCase::SentenceApa),
-            ..Default::default()
-        }),
+/// As [`substitute_title_value`], but lets the caller supply the monograph
+/// title-category rendering and the style's `substitute.title-quote` mode
+/// directly, so tests can exercise category `emph`/`strong`/`small-caps`
+/// (csl26-0dca) together with the div-011 `by-category` quoting mode.
+fn substitute_title_value_with_rendering(
+    title_str: &str,
+    context: RenderContext,
+    monograph_rendering: citum_schema::options::titles::TitleRendering,
+    title_quote: Option<citum_schema::options::SubstituteTitleQuoteMode>,
+) -> String {
+    let mut config = make_config_with_titles(citum_schema::options::TitlesConfig {
+        monograph: Some(monograph_rendering),
         ..Default::default()
     });
+    config.substitute = Some(SubstituteConfig::Explicit(Substitute {
+        title_quote,
+        ..Default::default()
+    }));
     let locale = make_locale();
     let options = RenderOptions {
         config: Arc::new(config),
@@ -5072,6 +5076,24 @@ fn substitute_title_value(title_str: &str, context: RenderContext) -> String {
         .values::<PlainText>(&reference, &hints, &options)
         .expect("author-substitute title should render")
         .value
+}
+
+/// Renders the `author` contributor role for an author-less monograph under
+/// `text-case: sentence-apa`, forcing the default `editor -> title ->
+/// translator` substitute chain to promote the title into the author slot
+/// (csl26-d3kj). Built natively (no `csl_legacy` round-trip) so this
+/// exercises the same construction as [`sentence_apa_monograph_title_value`],
+/// isolating the substitute path's Djot handling from the direct title path.
+fn substitute_title_value(title_str: &str, context: RenderContext) -> String {
+    substitute_title_value_with_rendering(
+        title_str,
+        context,
+        citum_schema::options::titles::TitleRendering {
+            text_case: Some(citum_schema::options::titles::TextCase::SentenceApa),
+            ..Default::default()
+        },
+        None,
+    )
 }
 
 #[rstest]
@@ -5108,6 +5130,110 @@ fn given_author_less_reference_in_citation_context_when_title_substituted_then_q
  {
     let result = substitute_title_value("[Library of Congress]{.nocase}", RenderContext::Citation);
     assert_eq!(result, "“Library of Congress”");
+}
+
+// ── Substituted-title category emphasis tests (csl26-0dca) ────────────────
+//
+// A title promoted into the author slot by the substitute chain renders
+// through this contributor component, not `TemplateTitle`, so it never
+// reached `render_component_detailed_with_format_and_renderer`'s
+// `titles:`-category emph/strong/small-caps application. See div-011 for
+// the either/or contract with quoting that these tests pin down.
+
+#[rstest]
+#[case::emph(
+    citum_schema::options::titles::TitleRendering {
+        emph: Some(true),
+        ..Default::default()
+    },
+    "_Some Book Title_"
+)]
+#[case::strong(
+    citum_schema::options::titles::TitleRendering {
+        strong: Some(true),
+        ..Default::default()
+    },
+    "**Some Book Title**"
+)]
+#[case::small_caps(
+    citum_schema::options::titles::TitleRendering {
+        small_caps: Some(true),
+        ..Default::default()
+    },
+    "SOME BOOK TITLE"
+)]
+fn given_category_emphasis_when_title_substituted_in_bibliography_then_title_is_emphasized(
+    #[case] rendering: citum_schema::options::titles::TitleRendering,
+    #[case] expected: &str,
+) {
+    // csl26-0dca: bibliography context never quotes a substituted title, so
+    // category emphasis always applies there (matching the non-substitute
+    // `title:` component path).
+    assert_eq!(
+        substitute_title_value_with_rendering(
+            "Some Book Title",
+            RenderContext::Bibliography,
+            rendering,
+            None,
+        ),
+        expected
+    );
+}
+
+#[test]
+fn given_category_emphasis_when_title_substituted_in_citation_then_default_quoting_wins_without_emphasis()
+ {
+    // csl26-0dca / div-011: the historical default (`title-quote` unset,
+    // i.e. `Always`) must stay byte-identical — quoting and category
+    // emphasis are either/or, and the default keeps the quote.
+    let result = substitute_title_value_with_rendering(
+        "Some Book Title",
+        RenderContext::Citation,
+        citum_schema::options::titles::TitleRendering {
+            emph: Some(true),
+            ..Default::default()
+        },
+        None,
+    );
+    assert_eq!(result, "“Some Book Title”");
+}
+
+#[test]
+fn given_by_category_title_quote_when_title_substituted_in_citation_then_title_is_emphasized_not_quoted()
+ {
+    // div-011's `by-category` mode defers quoting to the `titles:` category
+    // rendering; with no `quote: true` on that category, the substituted
+    // title is unquoted and — per csl26-0dca — now picks up the category's
+    // `emph`, completing the "italicize instead of quoting" contract the
+    // divergence register documents.
+    let result = substitute_title_value_with_rendering(
+        "Some Book Title",
+        RenderContext::Citation,
+        citum_schema::options::titles::TitleRendering {
+            emph: Some(true),
+            ..Default::default()
+        },
+        Some(citum_schema::options::SubstituteTitleQuoteMode::ByCategory),
+    );
+    assert_eq!(result, "_Some Book Title_");
+}
+
+#[test]
+fn given_djot_markup_and_category_emphasis_when_title_substituted_then_case_and_emphasis_compose() {
+    // csl26-0dca composes with csl26-d3kj: Djot nocase-protection, text-case,
+    // and category emphasis must all apply together, in that order (Djot
+    // rendering happens first, category emphasis wraps the result).
+    let result = substitute_title_value_with_rendering(
+        "The Role of [mRNA]{.nocase} in Modern Science",
+        RenderContext::Bibliography,
+        citum_schema::options::titles::TitleRendering {
+            text_case: Some(citum_schema::options::titles::TextCase::SentenceApa),
+            emph: Some(true),
+            ..Default::default()
+        },
+        None,
+    );
+    assert_eq!(result, "_The role of mRNA in modern science_");
 }
 
 /// Renders a monograph's primary title under `text-case: sentence-apa`,

@@ -621,6 +621,26 @@ fn resolve_title_substitute<F: OutputFormat<Output = String>>(
     } else {
         fmt.text(&rendered)
     };
+    // Category-level `titles:` emphasis (emph/strong/small-caps) that a normal
+    // `title:` component would pick up from `get_effective_rendering` — the
+    // substitute chain renders through a contributor component, so it never
+    // reaches that path and must apply it here. Order mirrors
+    // `render_component_detailed_with_format_and_renderer`. Skipped when
+    // quoting: per div-011, quote and category emphasis are either/or for a
+    // substituted title, so the default unconditional-quote path stays
+    // byte-identical.
+    let rendered = if quoted {
+        rendered
+    } else {
+        apply_substitute_title_emphasis(
+            rendered,
+            title_type,
+            reference,
+            language.as_deref(),
+            options,
+            fmt,
+        )
+    };
     let value = if quoted {
         let marks = crate::render::format::QuoteMarks::from(&options.locale.grammar_options);
         fmt.quote(rendered, &marks)
@@ -643,6 +663,42 @@ fn resolve_title_substitute<F: OutputFormat<Output = String>>(
         substituted_key: Some(substituted_key.to_string()),
         pre_formatted: true,
     }
+}
+
+/// Apply the reference's title-category `emph` / `strong` / `small-caps` to a
+/// substituted title, mirroring the order
+/// `render_component_detailed_with_format_and_renderer` applies them for a
+/// normal (non-substitute) title component. Called only when the title is not
+/// being quoted — see the div-011 either/or note at the call site.
+fn apply_substitute_title_emphasis<F: OutputFormat<Output = String>>(
+    rendered: F::Output,
+    title_type: &TitleType,
+    reference: &Reference,
+    language: Option<&str>,
+    options: &RenderOptions<'_>,
+    fmt: &F,
+) -> F::Output {
+    let ref_type = reference.ref_type();
+    let Some(rendering) = crate::render::component::get_title_category_title_rendering(
+        title_type,
+        Some(&ref_type),
+        language,
+        &options.config,
+    ) else {
+        return rendered;
+    };
+
+    let mut output = rendered;
+    if rendering.emph == Some(true) {
+        output = fmt.emph(output);
+    }
+    if rendering.strong == Some(true) {
+        output = fmt.strong(output);
+    }
+    if rendering.small_caps == Some(true) {
+        output = fmt.small_caps(output);
+    }
+    output
 }
 
 /// Resolve whether a substituted title should be quoted per the reference's
