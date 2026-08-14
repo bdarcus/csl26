@@ -1392,9 +1392,12 @@ mod tests {
             Title::Single("War and Peace".to_string()),
         );
 
+        // Family + given (the original, un-transliterated given name "Лев") —
+        // the uniform path ignores `sort_as`/transliterations but still needs
+        // the given name to break family-name ties.
         assert_eq!(
             sorter.extract_author_sort_key(&reference, NameSortOrder::FamilyGiven),
-            "Толстой"
+            "Толстой\u{0}Лев"
         );
     }
 
@@ -1411,9 +1414,12 @@ mod tests {
             Title::Single("War and Peace".to_string()),
         );
 
+        // Family + given (matching the transliteration's own given name "Lev"),
+        // not family alone — the sort key must break given-name ties the same
+        // way the non-romanized path does.
         assert_eq!(
             sorter.extract_author_sort_key(&reference, NameSortOrder::FamilyGiven),
-            "Tolstoĭ"
+            "Tolstoĭ\u{0}Lev"
         );
     }
 

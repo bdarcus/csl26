@@ -970,8 +970,11 @@ fn disambiguation_initials_are_used_when_short_form_family_names_collide() {
         vec!["ITEM-2", "ITEM-3"],
         vec!["ITEM-4", "ITEM-5"],
     ];
+    // Within the Doe collision group, output order follows the author sort
+    // key (family, then given), not citation-item registration order: with
+    // the family name tied, "Aloysius" sorts before "John".
     let expected = "Roe, (2000)
-J Doe, (2000); A Doe, (2000)
+A Doe, (2000); J Doe, (2000)
 T Smith, (2000); T Smith, (2000)";
 
     run_test_case_native_with_options(common::TestCaseOptions {
@@ -1485,11 +1488,14 @@ fn disambiguation_multilingual_contributors_collide_on_original_family_name() {
     let citation_items = vec![vec!["ml-a", "ml-b"]];
 
     // The collision key uses the original Korean family name "김"; both entries
-    // form one group and receive year suffixes.
+    // form one group and receive year suffixes. Suffix assignment follows the
+    // bibliography sort order of the group (family, then given): "영희"
+    // (ml-b) sorts before "철수" (ml-a), so ml-b receives "a" and ml-a
+    // receives "b" even though ml-a is cited first.
     run_test_case_native(
         &input,
         &citation_items,
-        "김, (2020a); 김, (2020b)",
+        "김, (2020b); 김, (2020a)",
         "citation",
     );
 }

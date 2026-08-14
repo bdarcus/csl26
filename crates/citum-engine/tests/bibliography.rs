@@ -2137,6 +2137,48 @@ fn sorting_by_author_orders_entries_alphabetically() {
     assert!(result.find("Adam").unwrap() < result.find("Zoe").unwrap());
 }
 
+/// Regression for the given-name-blind author sort key: two references
+/// sharing the same family name must break the tie by given name, not fall
+/// through to an unrelated key like title.
+fn sorting_by_author_breaks_family_name_ties_with_given_name() {
+    let style = build_sorted_style(vec![SortSpec {
+        key: SortKey::Author,
+        ascending: true,
+    }]);
+
+    let mut bib = indexmap::IndexMap::new();
+    // Registered and titled so that a family-only sort key would (wrongly)
+    // place Brian first via the title fallback ("Qualitative" < "Quantitative").
+    bib.insert(
+        "brian".to_string(),
+        make_book(
+            "brian",
+            "Johnson",
+            "Brian",
+            2020,
+            "Qualitative Methods in Sociology",
+        ),
+    );
+    bib.insert(
+        "alice".to_string(),
+        make_book(
+            "alice",
+            "Johnson",
+            "Alice",
+            2020,
+            "Quantitative Methods in Sociology",
+        ),
+    );
+
+    let processor = Processor::new(style, bib);
+    let result = processor.render_bibliography();
+
+    assert!(
+        result.find("Johnson, Alice").unwrap() < result.find("Johnson, Brian").unwrap(),
+        "expected Alice before Brian on given-name tiebreak: {result}"
+    );
+}
+
 fn sorting_by_year_places_earlier_years_first() {
     let style = build_sorted_style(vec![SortSpec {
         key: SortKey::Year,
@@ -3928,6 +3970,14 @@ mod sorting {
             "A bibliography sorted by author should place entries in alphabetical family-name order.",
         );
         super::sorting_by_author_orders_entries_alphabetically();
+    }
+
+    #[test]
+    fn author_sorting_breaks_family_name_ties_with_given_name() {
+        announce_behavior(
+            "When two entries share a family name, author sorting should break the tie by given name rather than falling through to title order.",
+        );
+        super::sorting_by_author_breaks_family_name_ties_with_given_name();
     }
 
     #[test]

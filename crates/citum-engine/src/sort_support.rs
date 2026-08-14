@@ -274,16 +274,30 @@ fn structured_name_sort_text(
     name_order: NameSortOrder,
     options: &SortKeyOptions,
 ) -> String {
-    match name_order {
-        NameSortOrder::FamilyGiven | NameSortOrder::GivenFamily => {
-            multilingual_string_sort_text(&name.family, options)
-        }
-    }
+    let family = multilingual_string_sort_text(&name.family, options);
+    let given = multilingual_string_sort_text(&name.given, options);
+    compose_family_given_key(&family, &given, name_order)
 }
 
 fn structured_name_original_text(name: &StructuredName, name_order: NameSortOrder) -> String {
+    let family = name.family.to_string();
+    let given = name.given.to_string();
+    compose_family_given_key(&family, &given, name_order)
+}
+
+/// Combine a family and given name into a single composite sort key so a tie
+/// on one part is broken by the other, matching [`flat_names_sort_key`].
+///
+/// An empty result (both parts blank) is preserved as an empty string rather
+/// than a bare separator — callers rely on emptiness to fall back to another
+/// sort key (e.g. title) for anonymous entries.
+fn compose_family_given_key(family: &str, given: &str, name_order: NameSortOrder) -> String {
+    if family.trim().is_empty() && given.trim().is_empty() {
+        return String::new();
+    }
     match name_order {
-        NameSortOrder::FamilyGiven | NameSortOrder::GivenFamily => name.family.to_string(),
+        NameSortOrder::FamilyGiven => format!("{family}\u{0}{given}"),
+        NameSortOrder::GivenFamily => format!("{given}\u{0}{family}"),
     }
 }
 
@@ -485,5 +499,55 @@ mod tests {
         // at primary/secondary levels, so names with and without apostrophes/hyphens compare equal.
         assert_eq!(collator.compare("O'Brien", "Obrien"), Ordering::Equal);
         assert_eq!(collator.compare("al-Rashid", "alRashid"), Ordering::Equal);
+    }
+
+    /// `compose_family_given_key` must break family-name ties with the given
+    /// name (in the order `NameSortOrder` requests), and must not fabricate
+    /// a non-empty key from a bare separator when both parts are blank —
+    /// callers depend on emptiness to fall back to another sort key.
+    #[rstest::rstest]
+    #[case::family_given_order("Johnson", "Alice", NameSortOrder::FamilyGiven, "Johnson\u{0}Alice")]
+    #[case::given_family_order("Johnson", "Alice", NameSortOrder::GivenFamily, "Alice\u{0}Johnson")]
+    #[case::blank_given_still_keys_on_family(
+        "Johnson",
+        "",
+        NameSortOrder::FamilyGiven,
+        "Johnson\u{0}"
+    )]
+    fn given_family_and_given_names_when_composing_sort_key_then_order_matches_name_order(
+        #[case] family: &str,
+        #[case] given: &str,
+        #[case] name_order: NameSortOrder,
+        #[case] expected: &str,
+    ) {
+        assert_eq!(
+            compose_family_given_key(family, given, name_order),
+            expected
+        );
+    }
+
+    #[test]
+    fn given_no_family_or_given_name_when_composing_sort_key_then_result_is_empty() {
+        // then: an empty result (not a bare "\0" separator) so callers can
+        // fall back to another sort key (e.g. title) for anonymous entries.
+        assert_eq!(
+            compose_family_given_key("", "", NameSortOrder::FamilyGiven),
+            ""
+        );
+        assert_eq!(
+            compose_family_given_key("  ", "\t", NameSortOrder::FamilyGiven),
+            ""
+        );
+    }
+
+    /// Same family name, different given names: the composite key must order
+    /// the pair by given name so a same-surname collision (e.g. two Johnson
+    /// works) breaks the tie by given name rather than falling through to an
+    /// unrelated key like title.
+    #[test]
+    fn given_two_names_sharing_a_family_when_composing_sort_keys_then_given_name_breaks_the_tie() {
+        let alice = compose_family_given_key("Johnson", "Alice", NameSortOrder::FamilyGiven);
+        let brian = compose_family_given_key("Johnson", "Brian", NameSortOrder::FamilyGiven);
+        assert!(alice < brian, "expected {alice:?} < {brian:?}");
     }
 }
