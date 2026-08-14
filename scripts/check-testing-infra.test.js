@@ -48,6 +48,7 @@ function baseManifest() {
         fixture: 'tests/fixtures/citations-note-expanded.json',
         domain: 'note',
         kind: 'citations',
+        'pairs-with': 'tests/fixtures/references-expanded.json',
         reference_types: ['book'],
         citation_scenarios: ['single item'],
         rendering_risks: ['note rendering'],
@@ -70,6 +71,7 @@ function baseManifest() {
         fixture: 'tests/fixtures/citations-note-positions.json',
         domain: 'note',
         kind: 'citations',
+        'pairs-with': 'tests/fixtures/references-note-positions.json',
         reference_types: ['article-journal'],
         citation_scenarios: ['first', 'ibid', 'subsequent'],
         rendering_risks: ['repeated-note rendering'],
@@ -228,6 +230,46 @@ test('coverage manifest fails when a used_by path is missing', () => {
   writeJson(manifestPath, manifest);
 
   assert.throws(() => validateCoverageManifest(root), /Referenced owner path does not exist/);
+});
+
+test('coverage manifest fails when a citations fixture is missing pairs-with', () => {
+  const root = makeTempProject();
+  seedProject(root);
+  const manifestPath = path.join(root, 'tests/fixtures/coverage-manifest.json');
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  const citationsEntry = manifest.fixtures.find((entry) => entry.kind === 'citations');
+  delete citationsEntry['pairs-with'];
+  writeJson(manifestPath, manifest);
+
+  assert.throws(() => validateCoverageManifest(root), /must set pairs-with/);
+});
+
+test('coverage manifest fails when pairs-with points at a non-references fixture', () => {
+  const root = makeTempProject();
+  seedProject(root);
+  const manifestPath = path.join(root, 'tests/fixtures/coverage-manifest.json');
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  const citationsEntry = manifest.fixtures.find(
+    (entry) => entry.fixture === 'tests/fixtures/citations-note-expanded.json',
+  );
+  citationsEntry['pairs-with'] = 'tests/fixtures/citations-note-positions.json';
+  writeJson(manifestPath, manifest);
+
+  assert.throws(() => validateCoverageManifest(root), /must be a references fixture/);
+});
+
+test('coverage manifest fails when pairs-with targets an unknown fixture', () => {
+  const root = makeTempProject();
+  seedProject(root);
+  const manifestPath = path.join(root, 'tests/fixtures/coverage-manifest.json');
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  const citationsEntry = manifest.fixtures.find(
+    (entry) => entry.fixture === 'tests/fixtures/citations-note-expanded.json',
+  );
+  citationsEntry['pairs-with'] = 'tests/fixtures/references-unknown.json';
+  writeJson(manifestPath, manifest);
+
+  assert.throws(() => validateCoverageManifest(root), /pairs-with target does not exist/);
 });
 
 test('baseline validation fails when metadata fields are missing', () => {
