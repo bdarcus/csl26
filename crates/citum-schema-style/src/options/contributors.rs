@@ -46,8 +46,15 @@ pub struct ContributorConfig {
     /// When to display a contributor's name in sort order.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub display_as_sort: Option<DisplayAsSort>,
-    /// String to append after initialized given names (e.g., ". " for "J. Smith").
-    /// If None, full given names are used (e.g., "John Smith").
+    /// Separator appended between initials when given names are initialized
+    /// (e.g., ". " for "J. Smith").
+    ///
+    /// This only controls the separator string — it does **not** activate
+    /// initials on its own. Set [`Self::name_form`] to
+    /// [`NameForm::Initials`] to actually render initials; otherwise this
+    /// field is inert and full given names are rendered regardless of its
+    /// value. Defaults to ". " when `name_form: initials` is active and this
+    /// is unset.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub initialize_with: Option<String>,
     /// Whether to include a hyphen when initializing names (e.g., "J.-P. Sartre").

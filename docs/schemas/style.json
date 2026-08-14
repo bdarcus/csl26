@@ -5145,7 +5145,7 @@
           ]
         },
         "initialize-with": {
-          "description": "String to append after initialized given names (e.g., \". \" for \"J. Smith\").\nIf None, full given names are used (e.g., \"John Smith\").",
+          "description": "Separator appended between initials when given names are initialized\n(e.g., \". \" for \"J. Smith\").\n\nThis only controls the separator string — it does **not** activate\ninitials on its own. Set [`Self::name_form`] to\n[`NameForm::Initials`] to actually render initials; otherwise this\nfield is inert and full given names are rendered regardless of its\nvalue. Defaults to \". \" when `name_form: initials` is active and this\nis unset.",
           "type": [
             "string",
             "null"
