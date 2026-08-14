@@ -11,8 +11,7 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus and Citum contributors
 use crate::processor::rendering::get_variable_key;
 use crate::reference::Reference;
 use crate::render::format::OutputFormat;
-use crate::values::text_case::apply_text_case_with_language;
-use crate::values::title::resolve_substitute_text_case;
+use crate::values::title::{render_substitute_title_text, resolve_substitute_text_case};
 use crate::values::{ProcHints, ProcValues, RenderContext, RenderOptions};
 use citum_schema::options::{
     RoleLabelPreset, SubstituteField, SubstituteKey, SubstituteTitleQuoteMode,
@@ -608,18 +607,25 @@ fn resolve_title_substitute<F: OutputFormat<Output = String>>(
     // `text-case:` override, so only the style's category-level `titles:`
     // config (keyed by reference type) applies here — see
     // `resolve_substitute_text_case`.
-    let title_str = match resolve_substitute_text_case(title_type, reference, options) {
-        Some(case) => {
-            let language = crate::values::title::effective_title_language(title_type, reference);
-            apply_text_case_with_language(&title_str, case, language.as_deref())
-        }
-        None => title_str,
-    };
-    let value = if options.context == RenderContext::Citation && quote_in_citation {
-        let marks = crate::render::format::QuoteMarks::from(&options.locale.grammar_options);
-        fmt.quote(fmt.text(&title_str), &marks)
+    let case = resolve_substitute_text_case(title_type, reference, options);
+    let language = crate::values::title::effective_title_language(title_type, reference);
+    let quoted = options.context == RenderContext::Citation && quote_in_citation;
+    let quote_depth = usize::from(quoted);
+    // Route through the same Djot-aware pipeline as `TemplateTitle::values`
+    // so markup (e.g. `[...]{.nocase}`) and case-protection are honoured
+    // here too, rather than leaking the raw title string verbatim.
+    let (rendered, has_explicit_link, is_djot) =
+        render_substitute_title_text(&title_str, fmt, case, quote_depth, language.as_deref());
+    let rendered = if is_djot {
+        rendered
     } else {
-        fmt.text(&title_str)
+        fmt.text(&rendered)
+    };
+    let value = if quoted {
+        let marks = crate::render::format::QuoteMarks::from(&options.locale.grammar_options);
+        fmt.quote(rendered, &marks)
+    } else {
+        rendered
     };
 
     let url = crate::values::resolve_effective_url(
@@ -633,7 +639,7 @@ fn resolve_title_substitute<F: OutputFormat<Output = String>>(
         value,
         prefix: None,
         suffix: None,
-        url,
+        url: if has_explicit_link { None } else { url },
         substituted_key: Some(substituted_key.to_string()),
         pre_formatted: true,
     }

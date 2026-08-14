@@ -321,6 +321,30 @@ pub(crate) fn resolve_substitute_text_case(
     Some(apply_language_fallback(tc, language.as_deref()))
 }
 
+/// Render a substituted title string through the same Djot-aware pipeline as
+/// [`TemplateTitle::values`] (case transform with `.nocase` protection, smart
+/// quotes), for use by the author-substitute chain which has no
+/// `TemplateTitle` component to route the string through directly.
+///
+/// Returns `(rendered_value, has_explicit_link, is_djot)` — `is_djot` tells
+/// the caller whether `rendered_value` is already format-rendered (Djot path)
+/// or still needs `fmt.text(...)` escaping (plain path), matching how
+/// [`render_title_variant`] reports `pre_formatted`.
+pub(crate) fn render_substitute_title_text<
+    F: crate::render::format::OutputFormat<Output = String>,
+>(
+    value: &str,
+    fmt: &F,
+    case: Option<TextCase>,
+    quote_depth: usize,
+    language: Option<&str>,
+) -> (String, bool, bool) {
+    let is_djot = looks_like_djot_markup(value);
+    let (rendered, has_explicit_link) =
+        render_part_with_case(value, fmt, case, quote_depth, language);
+    (rendered, has_explicit_link, is_djot)
+}
+
 fn resolve_effective_title_rendering(
     template: &TemplateTitle,
     reference: &Reference,
