@@ -5029,6 +5029,87 @@ fn test_text_case_leading_nocase_advances_state() {
     assert_eq!(result, "DNA replication in modern science");
 }
 
+/// Renders the `author` contributor role for an author-less monograph under
+/// `text-case: sentence-apa`, forcing the default `editor -> title ->
+/// translator` substitute chain to promote the title into the author slot
+/// (csl26-d3kj). Built natively (no `csl_legacy` round-trip) so this
+/// exercises the same construction as [`sentence_apa_monograph_title_value`],
+/// isolating the substitute path's Djot handling from the direct title path.
+fn substitute_title_value(title_str: &str, context: RenderContext) -> String {
+    let config = make_config_with_titles(citum_schema::options::TitlesConfig {
+        monograph: Some(citum_schema::options::titles::TitleRendering {
+            text_case: Some(citum_schema::options::titles::TextCase::SentenceApa),
+            ..Default::default()
+        }),
+        ..Default::default()
+    });
+    let locale = make_locale();
+    let options = RenderOptions {
+        config: Arc::new(config),
+        bibliography_config: None,
+        locale: &locale,
+        context,
+        mode: citum_schema::citation::CitationMode::NonIntegral,
+        suppress_author: false,
+        locator_raw: None,
+        ref_type: None,
+        show_semantics: true,
+        current_template_index: None,
+        abbreviation_map: None,
+    };
+    let hints = ProcHints::default();
+    let reference = InputReference::Monograph(Box::new(Monograph {
+        r#type: MonographType::Book,
+        title: Some(Title::Single(title_str.to_string())),
+        ..Default::default()
+    }));
+    let component = TemplateContributor {
+        contributor: ContributorRole::Author.into(),
+        form: ContributorForm::Long,
+        ..Default::default()
+    };
+    component
+        .values::<PlainText>(&reference, &hints, &options)
+        .expect("author-substitute title should render")
+        .value
+}
+
+#[rstest]
+#[case::nocase_span_markup_stripped_and_case_protected(
+    "The Role of [mRNA]{.nocase} in Modern Science",
+    "The role of mRNA in modern science"
+)]
+#[case::emphasis_markup_rendered_not_leaked_verbatim(
+    "_Homo Sapiens_ and [DNA]{.nocase} Replication",
+    "_Homo sapiens_ and DNA replication"
+)]
+#[case::plain_text_without_markup_still_case_transformed(
+    "The Role of DNA in Modern Science",
+    "The role of DNA in modern science"
+)]
+fn given_author_less_reference_with_djot_title_when_author_substituted_then_matches_direct_title_path(
+    #[case] input: &str,
+    #[case] expected: &str,
+) {
+    // csl26-d3kj: previously the substitute path applied case to the raw
+    // string and skipped Djot rendering entirely, leaking `[...]{.nocase}`
+    // verbatim. These expectations are identical to what
+    // `TemplateTitle::values` produces for the same string outside the
+    // substitute chain (see `test_text_case_nocase_protection_in_djot` and
+    // `test_text_case_nocase_nested_in_emphasis`).
+    assert_eq!(
+        substitute_title_value(input, RenderContext::Bibliography),
+        expected
+    );
+}
+
+#[test]
+fn given_author_less_reference_in_citation_context_when_title_substituted_then_quoted_without_markup_leak()
+ {
+    let result = substitute_title_value("[Library of Congress]{.nocase}", RenderContext::Citation);
+    assert_eq!(result, "“Library of Congress”");
+}
+
 /// Renders a monograph's primary title under `text-case: sentence-apa`,
 /// built natively (no `csl_legacy` round-trip) so markup-bearing and
 /// plain-text titles are exercised through identical construction.
