@@ -38,6 +38,7 @@ const {
   loadStyleYaml,
   mapWithConcurrency,
   mergeBenchmarkRunIntoOracle,
+  mergeBibliographyOrderSignals,
   mergeDivergenceSummaries,
   mergeOracleResults,
   parseArgs,
@@ -52,6 +53,7 @@ const {
   toPublishedBenchmarkRunRecord,
   determineBenchmarkStatus,
   summarizeBibliographyPairing,
+  summarizeBibliographyOrderMismatch,
   summarizeExactParity,
 } = require('./report-core');
 
@@ -937,6 +939,57 @@ test('mergeOracleResults combines bibliography-only oracle sections', () => {
     idProvenOracleOnly: 1,
     idProvenCitumOnly: 0,
     totalObservations: 2,
+  });
+});
+
+test('mergeBibliographyOrderSignals prefers an unexplained mismatch over an explained one', () => {
+  const explained = { oracleOrderIds: ['A'], citumOrderIds: ['A'], explained: true, appliedDivergence: 'div-004' };
+  const unexplained = { oracleOrderIds: ['B'], citumOrderIds: ['B'], explained: false, appliedDivergence: null };
+
+  assert.equal(mergeBibliographyOrderSignals(explained, unexplained), unexplained);
+  assert.equal(mergeBibliographyOrderSignals(unexplained, explained), unexplained);
+});
+
+test('mergeBibliographyOrderSignals surfaces an explained mismatch found only in the extra run', () => {
+  const explained = { oracleOrderIds: ['A'], citumOrderIds: ['A'], explained: true, appliedDivergence: 'div-004' };
+
+  assert.equal(mergeBibliographyOrderSignals(null, explained), explained);
+  assert.equal(mergeBibliographyOrderSignals(explained, null), explained);
+});
+
+test('mergeBibliographyOrderSignals returns null when neither run has a mismatch', () => {
+  assert.equal(mergeBibliographyOrderSignals(null, null), null);
+});
+
+test('mergeOracleResults does not hide an unexplained bibliographyOrder mismatch found only in the extra fixture run', () => {
+  // Regression for a Copilot review finding: bibliographyOrder was cloned
+  // but never combined by mergeOracleResults, so an unexplained mismatch
+  // discovered only in a merged-in family-fixture-set or benchmark run was
+  // silently discarded, and summarizeBibliographyOrderMismatch reported
+  // "mismatch: false" for a style that actually had one.
+  const main = buildEmptyOracleResult({
+    bibliographyOrder: { oracleOrderIds: ['A'], citumOrderIds: ['A'], explained: true, appliedDivergence: 'div-004' },
+    adjusted: {
+      citations: { passed: 0, total: 0, entries: [] },
+      bibliography: { passed: 0, total: 0, entries: [] },
+      divergenceSummary: {},
+    },
+  });
+  const extra = buildEmptyOracleResult({
+    bibliographyOrder: { oracleOrderIds: ['B'], citumOrderIds: ['C'], explained: false, appliedDivergence: null },
+    adjusted: {
+      citations: { passed: 0, total: 0, entries: [] },
+      bibliography: { passed: 0, total: 0, entries: [] },
+      divergenceSummary: {},
+    },
+  });
+
+  mergeOracleResults(main, extra);
+
+  assert.deepEqual(summarizeBibliographyOrderMismatch(main), {
+    mismatch: true,
+    explained: false,
+    explainedBy: null,
   });
 });
 

@@ -315,6 +315,22 @@ function run() {
     );
   }
 
+  // Positional bibliography-order check (csl26-7u16): a diagnostic warning,
+  // not a hard gate, until a corpus sweep establishes the real scale. An
+  // *explained* mismatch (a registered divergence such as div-004 accounts
+  // for it) is not reported here — only unexplained ones, which indicate a
+  // real, uninvestigated citum/citeproc-js ordering disagreement.
+  const unexplainedOrderMismatches = styles.filter(
+    (style) => style.bibliographyOrderMismatch?.mismatch && !style.bibliographyOrderMismatch?.explained
+  );
+  for (const style of unexplainedOrderMismatches) {
+    warningCount += 1;
+    annotateWarning(
+      `Unexplained bibliography order mismatch in ${style.name}: Citum and citeproc-js render the same ` +
+        `bibliography entries in a different sequence, with no registered divergence explaining it`
+    );
+  }
+
   if (baseline && baseline.styles && typeof baseline.styles === 'object') {
       for (const [name, baselineMetrics] of Object.entries(baseline.styles)) {
         const style = styleMap.get(name);
