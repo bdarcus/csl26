@@ -201,3 +201,52 @@ test('adjudication ledger rejects a null entries map', () => {
   assert.equal(result.status, 2);
   assert.match(result.stderr, /Invalid parity adjudication ledger/);
 });
+
+// csl26-7u16: the positional bibliography-order check is a diagnostic
+// warning here, not a hard gate, until a corpus sweep establishes scale.
+test('an unexplained bibliography order mismatch warns but does not fail the gate', () => {
+  const report = writeTmpJson('report.json', {
+    styles: [
+      baseStyle({
+        bibliographyOrderMismatch: { mismatch: true, explained: false, explainedBy: null },
+      }),
+    ],
+  });
+
+  const result = runGate(['--report', report]);
+
+  assert.equal(result.status, 0);
+  assert.match(result.stderr, /Unexplained bibliography order mismatch in apa-7th/);
+  assert.match(result.stdout, /Core quality gate passed/);
+});
+
+test('a bibliography order mismatch explained by a registered divergence does not warn', () => {
+  const report = writeTmpJson('report.json', {
+    styles: [
+      baseStyle({
+        bibliographyOrderMismatch: { mismatch: true, explained: true, explainedBy: 'div-004' },
+      }),
+    ],
+  });
+
+  const result = runGate(['--report', report]);
+
+  assert.equal(result.status, 0);
+  assert.doesNotMatch(result.stderr, /bibliography order mismatch/);
+});
+
+test('--strict-warnings escalates an unexplained bibliography order mismatch to a failure', () => {
+  const report = writeTmpJson('report.json', {
+    styles: [
+      baseStyle({
+        bibliographyOrderMismatch: { mismatch: true, explained: false, explainedBy: null },
+      }),
+    ],
+  });
+
+  const result = runGate(['--report', report, '--strict-warnings']);
+
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /Unexplained bibliography order mismatch in apa-7th/);
+  assert.match(result.stderr, /Quality warnings elevated to failure \(1\)/);
+});

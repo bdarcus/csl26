@@ -21,6 +21,8 @@ const {
 const { compareText, parseComponents } = require('./oracle-utils');
 const {
   attachRegisteredDivergenceAdjustments,
+  canonicalizeAffectedIdsToOracleOrder,
+  compareBibliographyOrder,
   detectDiv004OrderDifference,
   detectDiv008OrderDifference,
   explainCitationMismatchFromDiv005,
@@ -694,6 +696,252 @@ test('registered divergence adjustments skip order inspection without failures',
   assert.equal(adjusted.bibliographyOrder, null);
   assert.equal(adjusted.adjusted.citations.passed, 1);
   assert.deepEqual(adjusted.adjusted.divergenceSummary, {});
+});
+
+test('compareBibliographyOrder reports a match for identical positional id sequences', () => {
+  const result = compareBibliographyOrder(['ITEM-A', 'ITEM-B', 'ITEM-C'], ['ITEM-A', 'ITEM-B', 'ITEM-C']);
+
+  assert.deepEqual(result, {
+    comparable: true,
+    matches: true,
+    firstDivergentIndex: null,
+    oracleOrderIds: ['ITEM-A', 'ITEM-B', 'ITEM-C'],
+    citumOrderIds: ['ITEM-A', 'ITEM-B', 'ITEM-C'],
+  });
+});
+
+test('compareBibliographyOrder locates the first divergent position when the sequences swap', () => {
+  const result = compareBibliographyOrder(
+    ['ITEM-A', 'ITEM-B', 'ITEM-C'],
+    ['ITEM-A', 'ITEM-C', 'ITEM-B']
+  );
+
+  assert.equal(result.comparable, true);
+  assert.equal(result.matches, false);
+  assert.equal(result.firstDivergentIndex, 1);
+});
+
+test('compareBibliographyOrder treats a length mismatch as not comparable rather than a false flag', () => {
+  const result = compareBibliographyOrder(['ITEM-A', 'ITEM-B'], ['ITEM-A']);
+
+  assert.equal(result.comparable, false);
+  assert.equal(result.matches, null);
+});
+
+test('compareBibliographyOrder treats duplicate ids as not comparable rather than a false flag', () => {
+  const result = compareBibliographyOrder(['ITEM-A', 'ITEM-A'], ['ITEM-A', 'ITEM-B']);
+
+  assert.equal(result.comparable, false);
+  assert.equal(result.matches, null);
+});
+
+test('compareBibliographyOrder treats an empty sequence as not comparable', () => {
+  const result = compareBibliographyOrder([], []);
+
+  assert.equal(result.comparable, false);
+  assert.equal(result.matches, null);
+});
+
+test('registered divergence adjustments detect a positional bibliography-order mismatch with zero entry failures', () => {
+  // Reproduces the csl26-7u16 shape: two entries swap position between
+  // oracle and Citum while every entry's rendered text still matches its own
+  // id-paired counterpart exactly, so citations/bibliography report 0
+  // failures. Only the positional id sequence — the 6th argument — can
+  // catch this. Different author families and no anonymous items rule out
+  // div-004/div-008 explaining it, so this must surface as unexplained.
+  const rawResults = {
+    citations: { total: 0, passed: 0, failed: 0, entries: [] },
+    bibliography: {
+      total: 2,
+      passed: 2,
+      failed: 0,
+      entries: [
+        { id: 'able-anna', oracle: 'Able, Anna.', citum: 'Able, Anna.', match: true },
+        { id: 'zephyr-zoe', oracle: 'Zephyr, Zoe.', citum: 'Zephyr, Zoe.', match: true },
+      ],
+    },
+  };
+  const testItems = {
+    'able-anna': { id: 'able-anna', type: 'book', title: 'Alpha', author: [{ family: 'Able', given: 'Anna' }] },
+    'zephyr-zoe': { id: 'zephyr-zoe', type: 'book', title: 'Zeta', author: [{ family: 'Zephyr', given: 'Zoe' }] },
+  };
+
+  const adjusted = attachRegisteredDivergenceAdjustments(
+    rawResults,
+    ['Able, Anna.', 'Zephyr, Zoe.'],
+    ['zephyr-zoe', 'able-anna'],
+    testItems,
+    [],
+    ['able-anna', 'zephyr-zoe']
+  );
+
+  assert.ok(adjusted.bibliographyOrder, 'a positional mismatch must be reported despite zero entry failures');
+  assert.equal(adjusted.bibliographyOrder.firstDivergentIndex, 0);
+  assert.deepEqual(adjusted.bibliographyOrder.oracleOrderIds, ['able-anna', 'zephyr-zoe']);
+  assert.deepEqual(adjusted.bibliographyOrder.citumOrderIds, ['zephyr-zoe', 'able-anna']);
+  assert.equal(adjusted.bibliographyOrder.explained, false);
+  assert.equal(adjusted.bibliographyOrder.appliedDivergence, null);
+});
+
+test('registered divergence adjustments mark a positional mismatch explained when div-004 accounts for it', () => {
+  const policy = loadVerificationPolicy();
+  const divergenceRule = resolveRegisteredDivergence(policy, 'div-004');
+  const rawResults = {
+    citations: { total: 0, passed: 0, failed: 0, entries: [] },
+    bibliography: {
+      total: 2,
+      passed: 2,
+      failed: 0,
+      entries: [
+        { id: 'ITEM-1', oracle: 'Kuhn, Thomas S. The Structure of Scientific Revolutions. 1962.', citum: 'Kuhn, Thomas S. The Structure of Scientific Revolutions. 1962.', match: true },
+        { id: 'ITEM-20', oracle: 'Brown v. Board of Education.', citum: 'Brown v. Board of Education.', match: true },
+      ],
+    },
+  };
+  const testItems = {
+    'ITEM-1': {
+      id: 'ITEM-1',
+      type: 'book',
+      title: 'The Structure of Scientific Revolutions',
+      author: [{ family: 'Kuhn', given: 'Thomas S.' }],
+    },
+    'ITEM-20': { id: 'ITEM-20', type: 'legal_case', title: 'Brown v. Board of Education' },
+  };
+
+  const adjusted = attachRegisteredDivergenceAdjustments(
+    rawResults,
+    [
+      'Kuhn, Thomas S. The Structure of Scientific Revolutions. 1962.',
+      'Brown v. Board of Education.',
+    ],
+    ['ITEM-20', 'ITEM-1'],
+    testItems,
+    [],
+    ['ITEM-1', 'ITEM-20']
+  );
+
+  assert.ok(adjusted.bibliographyOrder);
+  assert.equal(adjusted.bibliographyOrder.explained, true);
+  assert.equal(adjusted.bibliographyOrder.appliedDivergence, 'div-004');
+  assert.ok(divergenceRule, 'div-004 must be registered in verification policy for this test to be meaningful');
+});
+
+test('canonicalizeAffectedIdsToOracleOrder reorders affected ids in place without moving unaffected ids', () => {
+  const canonical = canonicalizeAffectedIdsToOracleOrder(
+    ['Jones', 'Smith-B', 'Smith-A'],
+    ['Smith-A', 'Smith-B', 'Jones'],
+    new Set(['Smith-A', 'Smith-B'])
+  );
+
+  assert.deepEqual(canonical, ['Jones', 'Smith-A', 'Smith-B']);
+});
+
+test('canonicalizeAffectedIdsToOracleOrder returns the input unchanged for an empty affected set', () => {
+  const citumOrderIds = ['A', 'B', 'C'];
+  const canonical = canonicalizeAffectedIdsToOracleOrder(citumOrderIds, ['C', 'B', 'A'], new Set());
+
+  assert.equal(canonical, citumOrderIds);
+});
+
+test('canonicalizeAffectedIdsToOracleOrder leaves the sequence unchanged when affected-id counts disagree between sides', () => {
+  // 'B' is claimed as affected but absent from citumOrderIds -- cannot be
+  // safely relocated, so the function must not silently produce a
+  // different-length or malformed result.
+  const citumOrderIds = ['A', 'C'];
+  const canonical = canonicalizeAffectedIdsToOracleOrder(
+    citumOrderIds,
+    ['A', 'B', 'C'],
+    new Set(['A', 'B'])
+  );
+
+  assert.equal(canonical, citumOrderIds);
+});
+
+test('registered divergence adjustments do not call a mismatch explained when an id outside the div-008 cluster also moved', () => {
+  // Regression for a Copilot review finding: deleting div-008's affected ids
+  // from both sequences before comparing residuals can make two genuinely
+  // different sequences look equal, because it discards the affected
+  // cluster's position relative to everything else. Here "Jones" moves from
+  // last (oracle) to first (citum) in addition to the Smith-A/Smith-B swap
+  // div-008 explains -- the mismatch must stay unexplained.
+  const policy = loadVerificationPolicy();
+  const div008Rule = resolveRegisteredDivergence(policy, 'div-008');
+  const rawResults = {
+    citations: { total: 0, passed: 0, failed: 0, entries: [] },
+    bibliography: {
+      total: 3,
+      passed: 3,
+      failed: 0,
+      entries: [
+        { id: 'smith-a', oracle: 'Smith, Alice. Paper A.', citum: 'Smith, Alice. Paper A.', match: true },
+        { id: 'smith-b', oracle: 'Smith, Bob. Paper B.', citum: 'Smith, Bob. Paper B.', match: true },
+        { id: 'jones', oracle: 'Jones, Carol. Paper C.', citum: 'Jones, Carol. Paper C.', match: true },
+      ],
+    },
+  };
+  const testItems = {
+    'smith-a': { id: 'smith-a', type: 'book', title: 'Paper A', author: [{ family: 'Smith', given: 'Alice' }] },
+    'smith-b': { id: 'smith-b', type: 'book', title: 'Paper B', author: [{ family: 'Smith', given: 'Bob' }] },
+    jones: { id: 'jones', type: 'book', title: 'Paper C', author: [{ family: 'Jones', given: 'Carol' }] },
+  };
+
+  const adjusted = attachRegisteredDivergenceAdjustments(
+    rawResults,
+    ['Smith, Alice. Paper A.', 'Smith, Bob. Paper B.', 'Jones, Carol. Paper C.'],
+    ['jones', 'smith-b', 'smith-a'],
+    testItems,
+    [],
+    ['smith-a', 'smith-b', 'jones']
+  );
+
+  assert.ok(div008Rule, 'div-008 must be registered in verification policy for this test to be meaningful');
+  assert.ok(adjusted.bibliographyOrder);
+  assert.equal(
+    adjusted.bibliographyOrder.explained,
+    false,
+    'div-008 explains the Smith-A/Smith-B swap but not Jones moving to the front'
+  );
+});
+
+test('registered divergence adjustments call a mismatch explained when div-008 fully accounts for it', () => {
+  const policy = loadVerificationPolicy();
+  const div008Rule = resolveRegisteredDivergence(policy, 'div-008');
+  const rawResults = {
+    citations: { total: 0, passed: 0, failed: 0, entries: [] },
+    bibliography: {
+      total: 3,
+      passed: 3,
+      failed: 0,
+      entries: [
+        { id: 'smith-a', oracle: 'Smith, Alice. Paper A.', citum: 'Smith, Alice. Paper A.', match: true },
+        { id: 'smith-b', oracle: 'Smith, Bob. Paper B.', citum: 'Smith, Bob. Paper B.', match: true },
+        { id: 'jones', oracle: 'Jones, Carol. Paper C.', citum: 'Jones, Carol. Paper C.', match: true },
+      ],
+    },
+  };
+  const testItems = {
+    'smith-a': { id: 'smith-a', type: 'book', title: 'Paper A', author: [{ family: 'Smith', given: 'Alice' }] },
+    'smith-b': { id: 'smith-b', type: 'book', title: 'Paper B', author: [{ family: 'Smith', given: 'Bob' }] },
+    jones: { id: 'jones', type: 'book', title: 'Paper C', author: [{ family: 'Jones', given: 'Carol' }] },
+  };
+
+  const adjusted = attachRegisteredDivergenceAdjustments(
+    rawResults,
+    ['Smith, Alice. Paper A.', 'Smith, Bob. Paper B.', 'Jones, Carol. Paper C.'],
+    ['jones', 'smith-b', 'smith-a'],
+    testItems,
+    [],
+    ['jones', 'smith-a', 'smith-b']
+  );
+
+  assert.ok(div008Rule, 'div-008 must be registered in verification policy for this test to be meaningful');
+  assert.ok(adjusted.bibliographyOrder);
+  assert.equal(
+    adjusted.bibliographyOrder.explained,
+    true,
+    'div-008 fully accounts for the Smith-A/Smith-B swap when Jones stays in place'
+  );
+  assert.equal(adjusted.bibliographyOrder.appliedDivergence, 'div-008');
 });
 
 test('div-008 detection identifies same-family named items reversed in citum output', () => {

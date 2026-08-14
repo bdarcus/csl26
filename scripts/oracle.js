@@ -166,6 +166,14 @@ function buildOracleSummary(results, scope) {
     citations: summarizeSection(results.citations),
     bibliography: summarizeSection(results.bibliography),
     orderingIssues: results.orderingIssues || 0,
+    // Positional bibliography-entry-sequence mismatch (csl26-7u16) — distinct
+    // from orderingIssues above, which only measures component order within
+    // one already-mismatched entry. bibliographyOrderMismatch can be true
+    // even when every entry's text matches and orderingIssues is 0.
+    bibliographyOrderMismatch: Boolean(results.bibliographyOrder),
+    bibliographyOrderExplainedBy: results.bibliographyOrder?.explained
+      ? results.bibliographyOrder.appliedDivergence
+      : null,
     componentSummary: { ...(results.componentSummary || {}) },
   };
 }
@@ -1044,7 +1052,8 @@ function runOracle(cliOptions = parseArgs()) {
     oracle.bibliography,
     citum.bibliographyOrderIds || [],
     testItems,
-    testCitations
+    testCitations,
+    cliOptions.scope === 'citation' ? null : oracle.bibliographyIds || null
   );
   results.summary = buildOracleSummary(results, cliOptions.scope);
 
@@ -1074,6 +1083,18 @@ function runOracle(cliOptions = parseArgs()) {
 
     if (results.orderingIssues > 0) {
       console.log(`\n--- ORDERING ISSUES: ${results.orderingIssues} entries ---`);
+    }
+
+    if (results.bibliographyOrder) {
+      const explainedNote = results.bibliographyOrder.explained
+        ? ` (explained by ${JSON.stringify(results.bibliographyOrder.appliedDivergence)})`
+        : ' (unexplained)';
+      console.log(`\n--- BIBLIOGRAPHY ORDER MISMATCH${explainedNote} ---`);
+      if (results.bibliographyOrder.firstDivergentIndex !== null) {
+        console.log(`  First divergent position: ${results.bibliographyOrder.firstDivergentIndex}`);
+      }
+      console.log(`  Order Oracle: ${results.bibliographyOrder.oracleOrderIds.join(' → ')}`);
+      console.log(`  Order Citum:  ${results.bibliographyOrder.citumOrderIds.join(' → ')}`);
     }
 
     if (verbose) {

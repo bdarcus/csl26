@@ -414,7 +414,8 @@ function run() {
     snapshot.bibliography,
     citum.bibliographyOrderIds || [],
     testItems,
-    testCitations
+    testCitations,
+    snapshot.bibliography_ids || null
   );
 
   // 5. Output

@@ -115,6 +115,108 @@ function arraysEqual(left, right) {
   return left.every((value, index) => value === right[index]);
 }
 
+/**
+ * Correct div-008's specific same-family transposition without discarding
+ * position information for the rest of the sequence.
+ *
+ * Deleting affected ids from both sequences and comparing residuals (the
+ * approach div-004 uses, since an anonymous item's whole point is that it
+ * can land at a different absolute position) is unsound for div-008: div-008
+ * only claims a *specific* same-family cluster's internal order differs, not
+ * that the cluster can move anywhere. Deleting it from both sides can make
+ * two sequences that actually disagree elsewhere (e.g. an unrelated id
+ * shifting across the cluster) look equal once the cluster is gone.
+ *
+ * Instead, this keeps every affected id in the exact citum slot it already
+ * occupies, but reassigns those slots citum's own relative order among the
+ * affected ids for oracle's relative order among the same ids. Everything
+ * else in the sequence — including where the affected cluster sits relative
+ * to unaffected ids — is left untouched, so a subsequent full-sequence
+ * comparison can still catch a divergence outside the cluster.
+ */
+function canonicalizeAffectedIdsToOracleOrder(citumOrderIds, oracleOrderIds, affectedIds) {
+  if (!affectedIds || affectedIds.size === 0) {
+    return citumOrderIds;
+  }
+
+  const oracleRelativeOrder = oracleOrderIds.filter((id) => affectedIds.has(id));
+  const citumSlots = [];
+  citumOrderIds.forEach((id, index) => {
+    if (affectedIds.has(id)) citumSlots.push(index);
+  });
+
+  if (citumSlots.length !== oracleRelativeOrder.length) {
+    // Can't safely canonicalize (e.g. an affected id from one side is
+    // missing on the other) — leave the sequence as-is so the caller's
+    // equality check reports the mismatch rather than silently coercing it.
+    return citumOrderIds;
+  }
+
+  const canonical = [...citumOrderIds];
+  citumSlots.forEach((slot, index) => {
+    canonical[slot] = oracleRelativeOrder[index];
+  });
+  return canonical;
+}
+
+/**
+ * Whether an id array is a complete, duplicate-free positional sequence —
+ * the shape required to trust it as ground truth rather than a partial or
+ * fuzzy-matched list.
+ */
+function isCompleteIdSequence(ids) {
+  return (
+    Array.isArray(ids) &&
+    ids.length > 0 &&
+    ids.every((id) => id !== null && id !== undefined && id !== '') &&
+    new Set(ids).size === ids.length
+  );
+}
+
+/**
+ * Positionally compare the oracle and Citum bibliography entry sequences by
+ * their authoritative reference ids (not by rendered text or fuzzy
+ * similarity matching). This is the check that closes csl26-7u16: two
+ * bibliographies can match entry-for-entry on rendered text while still
+ * disagreeing on the order those entries appear in, and that divergence was
+ * previously invisible because every downstream check paired entries by id
+ * before comparing.
+ */
+function compareBibliographyOrder(oracleOrderIds, citumOrderIds) {
+  const notComparable = {
+    comparable: false,
+    matches: null,
+    firstDivergentIndex: null,
+    oracleOrderIds: Array.isArray(oracleOrderIds) ? oracleOrderIds : [],
+    citumOrderIds: Array.isArray(citumOrderIds) ? citumOrderIds : [],
+  };
+
+  if (!isCompleteIdSequence(oracleOrderIds) || !isCompleteIdSequence(citumOrderIds)) {
+    return notComparable;
+  }
+  if (oracleOrderIds.length !== citumOrderIds.length) {
+    return notComparable;
+  }
+
+  const oracleSet = new Set(oracleOrderIds);
+  const citumSet = new Set(citumOrderIds);
+  if (oracleSet.size !== citumSet.size) {
+    return notComparable;
+  }
+  for (const id of oracleSet) {
+    if (!citumSet.has(id)) {
+      return notComparable;
+    }
+  }
+
+  const matches = arraysEqual(oracleOrderIds, citumOrderIds);
+  const firstDivergentIndex = matches
+    ? null
+    : oracleOrderIds.findIndex((id, index) => id !== citumOrderIds[index]);
+
+  return { comparable: true, matches, firstDivergentIndex, oracleOrderIds, citumOrderIds };
+}
+
 function buildReferenceOrderIds(entries, testItems) {
   return entries
     .map((entry) => findRefMatchForEntry(entry, testItems)?.id || null)
@@ -645,10 +747,17 @@ function buildAdjustedOracleResult(rawResults, testCitations, testItems, diverge
   };
 }
 
-function attachRegisteredDivergenceAdjustments(rawResults, oracleBibliography, citumOrderIds, testItems, testCitations) {
+function attachRegisteredDivergenceAdjustments(
+  rawResults,
+  oracleBibliography,
+  citumOrderIds,
+  testItems,
+  testCitations,
+  oracleOrderIds = null
+) {
   const hasCitationFailures = (rawResults?.citations?.failed || 0) > 0;
   const hasBibliographyFailures = (rawResults?.bibliography?.failed || 0) > 0;
-  const shouldInspectOrderDifference = (
+  const legacyGateOpen = (
     hasCitationFailures || hasBibliographyFailures
   ) && Array.isArray(citumOrderIds) && citumOrderIds.length > 0;
 
@@ -658,48 +767,83 @@ function attachRegisteredDivergenceAdjustments(rawResults, oracleBibliography, c
   const div010Rule = resolveRegisteredDivergence(policy, DIV_010_ID);
   const div011Rule = resolveRegisteredDivergence(policy, DIV_011_ID);
 
-  if (!shouldInspectOrderDifference) {
-    return {
-      ...rawResults,
-      bibliographyOrder: null,
-      adjusted: buildAdjustedOracleResult(
-        rawResults, testCitations, testItems, null, div005Rule, null, div009Rule, div010Rule, div011Rule
-      ),
-    };
+  // Positional comparison by authoritative reference ids runs unconditionally,
+  // independent of whether any individual entry failed. A reordered
+  // bibliography where every entry still matches its per-id text counterpart
+  // (no citation or bibliography failures) is exactly the case that let a
+  // real sort bug through undetected — see csl26-7u16.
+  const orderComparison = compareBibliographyOrder(oracleOrderIds, citumOrderIds);
+  const orderDiffers = orderComparison.comparable && orderComparison.matches === false;
+
+  let divergenceInfo = null;
+  let div008Info = null;
+  if (legacyGateOpen || orderDiffers) {
+    const div004Rule = resolveRegisteredDivergence(policy, DIV_004_ID);
+    const div008Rule = resolveRegisteredDivergence(policy, DIV_008_ID);
+    divergenceInfo = detectDiv004OrderDifference(oracleBibliography, citumOrderIds, testItems, div004Rule);
+    div008Info = detectDiv008OrderDifference(oracleBibliography, citumOrderIds, testItems, div008Rule);
   }
-
-  const div004Rule = resolveRegisteredDivergence(policy, DIV_004_ID);
-  const div008Rule = resolveRegisteredDivergence(policy, DIV_008_ID);
-
-  const divergenceInfo = detectDiv004OrderDifference(
-    oracleBibliography,
-    citumOrderIds,
-    testItems,
-    div004Rule
-  );
-  const div008Info = detectDiv008OrderDifference(
-    oracleBibliography,
-    citumOrderIds,
-    testItems,
-    div008Rule
-  );
 
   const appliedDivergences = [
     divergenceInfo?.divergenceId,
     div008Info?.divergenceId,
   ].filter(Boolean);
+  const appliedDivergence = appliedDivergences.length === 0
+    ? null
+    : appliedDivergences.length === 1
+      ? appliedDivergences[0]
+      : appliedDivergences;
+
+  let bibliographyOrder = null;
+  if (orderDiffers) {
+    // A registered divergence firing is not sufficient to call the mismatch
+    // explained. The two registered divergences make different claims and
+    // need different corrections:
+    //  - div-008 claims a *specific* same-family cluster's internal order
+    //    differs, not that the cluster can move — so it's canonicalized in
+    //    place (see canonicalizeAffectedIdsToOracleOrder), preserving its
+    //    position relative to everything else.
+    //  - div-004 claims anonymous items can land at a *different absolute
+    //    position* entirely — so they're set aside from both sequences
+    //    rather than repositioned, and only the named-item residual must
+    //    still match.
+    // "Explained" requires that after both corrections, the sequences agree
+    // — otherwise a registered divergence would mask a real, separate
+    // reorder elsewhere in the same bibliography.
+    const div008Canonicalized = canonicalizeAffectedIdsToOracleOrder(
+      orderComparison.citumOrderIds,
+      orderComparison.oracleOrderIds,
+      new Set(div008Info?.affectedIds || [])
+    );
+    const anonymousIds = new Set(divergenceInfo?.anonymousIds || []);
+    const residualOracle = orderComparison.oracleOrderIds.filter((id) => !anonymousIds.has(id));
+    const residualCitum = div008Canonicalized.filter((id) => !anonymousIds.has(id));
+    const explained = appliedDivergences.length > 0 && arraysEqual(residualOracle, residualCitum);
+
+    bibliographyOrder = {
+      oracleOrderIds: orderComparison.oracleOrderIds,
+      citumOrderIds: orderComparison.citumOrderIds,
+      firstDivergentIndex: orderComparison.firstDivergentIndex,
+      appliedDivergence,
+      explained,
+    };
+  } else if (!orderComparison.comparable && (divergenceInfo || div008Info)) {
+    // No authoritative id sequence was comparable, but the legacy
+    // fuzzy-matched detectors still found a divergence — keep reporting it
+    // so existing failure-driven callers retain their diagnostic detail.
+    const fuzzySource = divergenceInfo || div008Info;
+    bibliographyOrder = {
+      oracleOrderIds: fuzzySource.oracleOrderIds,
+      citumOrderIds: fuzzySource.citumOrderIds,
+      firstDivergentIndex: null,
+      appliedDivergence,
+      explained: true,
+    };
+  }
 
   return {
     ...rawResults,
-    bibliographyOrder: (divergenceInfo || div008Info)
-      ? {
-          oracleOrderIds: (divergenceInfo || div008Info).oracleOrderIds,
-          citumOrderIds: (divergenceInfo || div008Info).citumOrderIds,
-          appliedDivergence: appliedDivergences.length === 1
-            ? appliedDivergences[0]
-            : appliedDivergences,
-        }
-      : null,
+    bibliographyOrder,
     adjusted: buildAdjustedOracleResult(
       rawResults, testCitations, testItems, divergenceInfo, div005Rule, div008Info, div009Rule, div010Rule, div011Rule
     ),
@@ -717,6 +861,8 @@ module.exports = {
   buildAdjustedOracleResult,
   buildNumericLabelMap,
   buildReferenceOrderIds,
+  canonicalizeAffectedIdsToOracleOrder,
+  compareBibliographyOrder,
   detectDiv004OrderDifference,
   detectDiv008OrderDifference,
   explainCitationMismatchFromDiv004,

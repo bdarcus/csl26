@@ -764,6 +764,7 @@ function cloneOracleResult(oracleResult = {}) {
     componentSummary: { ...(oracleResult.componentSummary || {}) },
     oracleSource: oracleResult.oracleSource || null,
     error: oracleResult.error || null,
+    bibliographyOrder: oracleResult.bibliographyOrder || null,
   };
 }
 
@@ -778,6 +779,42 @@ function getEffectiveOracleSection(oracleResult, sectionName) {
     }
   }
   return oracleResult?.[sectionName] || { passed: 0, total: 0, entries: [] };
+}
+
+/**
+ * Surface the positional bibliography-entry-order check (csl26-7u16) for a
+ * style record. Distinct from adjustedDivergences' entry-level detail: this
+ * flags whether the two bibliographies came out in the same *sequence*,
+ * which per-id text comparison can miss entirely when every entry still
+ * matches.
+ */
+function summarizeBibliographyOrderMismatch(oracleResult) {
+  const order = oracleResult?.bibliographyOrder;
+  if (!order) {
+    return { mismatch: false, explained: false, explainedBy: null };
+  }
+  return {
+    mismatch: true,
+    explained: Boolean(order.explained),
+    explainedBy: order.explained ? order.appliedDivergence : null,
+  };
+}
+
+/**
+ * Combine bibliographyOrder signals from two oracle runs (a style's main
+ * fixture and a merged-in family-fixture-set or benchmark run) so the
+ * combined result — consumed by summarizeBibliographyOrderMismatch — never
+ * hides an unexplained mismatch found only in the extra run behind the main
+ * run's explained (or absent) result.
+ *
+ * The two runs describe different reference id sets (different fixtures),
+ * so their oracleOrderIds/citumOrderIds sequences can't be concatenated —
+ * this picks the more severe single signal rather than merging the arrays.
+ */
+function mergeBibliographyOrderSignals(main, extra) {
+  if (main && !main.explained) return main;
+  if (extra && !extra.explained) return extra;
+  return main || extra || null;
 }
 
 function countCaseMismatches(section) {
@@ -1556,6 +1593,7 @@ function mergeOracleResults(main, extra) {
       extra.adjusted?.divergenceSummary
     ),
   };
+  main.bibliographyOrder = mergeBibliographyOrderSignals(main.bibliographyOrder, extra.bibliographyOrder);
 
   return main;
 }
@@ -1774,6 +1812,7 @@ function composeScopedOracleResult(citationResult, bibliographyResult) {
     componentSummary: bibliographyResult?.componentSummary || {},
     oracleSource: bibliographyResult?.oracleSource || citationResult?.oracleSource || 'citeproc-js',
     error: combinedError || null,
+    bibliographyOrder: bibliographyResult?.bibliographyOrder || null,
   };
 }
 
@@ -2698,6 +2737,7 @@ async function processStyleReport(runtime, styleSpec, context) {
         rawBibliography,
         knownDivergences: divergences[styleSpec.name] || [],
         adjustedDivergences: oracleResult.adjusted?.divergenceSummary || {},
+        bibliographyOrderMismatch: summarizeBibliographyOrderMismatch(oracleResult),
         caseMismatches,
         exactParity,
         pairingSummary,
@@ -2855,6 +2895,7 @@ async function processStyleReport(runtime, styleSpec, context) {
     rawBibliography,
     knownDivergences: divergences[styleSpec.name] || [],
     adjustedDivergences: oracleResult.adjusted?.divergenceSummary || {},
+    bibliographyOrderMismatch: summarizeBibliographyOrderMismatch(oracleResult),
     caseMismatches,
     exactParity,
     pairingSummary,
@@ -4841,7 +4882,9 @@ module.exports = {
   selectPrimaryComparator,
   serializeTimingSummary,
   summarizeBibliographyPairing,
+  summarizeBibliographyOrderMismatch,
   summarizeExactParity,
   textSimilarity,
+  mergeBibliographyOrderSignals,
   mergeDivergenceSummaries,
 };
