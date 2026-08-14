@@ -66,6 +66,33 @@ function validateManifestEntry(entry, seenFixtures, seenDomains, projectRoot) {
     const resolved = path.resolve(projectRoot, scriptPath);
     assert(fs.existsSync(resolved), `Referenced owner path does not exist for ${entry.fixture}: ${scriptPath}`);
   }
+
+  // Every citations fixture must record which references fixture it renders
+  // against, so contributors can navigate the fixture directory without
+  // reverse-engineering the pairing from scripts. See
+  // docs/guides/RENDERING_WORKFLOW.md.
+  if (entry.kind === 'citations') {
+    assert(isNonEmptyString(entry['pairs-with']), `Fixture ${entry.fixture} is a citations fixture and must set pairs-with`);
+    const pairedPath = path.resolve(projectRoot, entry['pairs-with']);
+    assert(fs.existsSync(pairedPath), `pairs-with target does not exist for ${entry.fixture}: ${entry['pairs-with']}`);
+  }
+}
+
+// Cross-check `pairs-with` targets once every entry is known: the target
+// must itself be a manifest entry of kind `references`. Run as a second
+// pass over the full fixture list so pairing order in the manifest doesn't
+// matter.
+function validatePairsWithTargets(fixtures) {
+  const byPath = new Map(fixtures.map((entry) => [entry.fixture, entry]));
+  for (const entry of fixtures) {
+    if (entry.kind !== 'citations') continue;
+    const target = byPath.get(entry['pairs-with']);
+    assert(target, `pairs-with target for ${entry.fixture} is not a manifest entry: ${entry['pairs-with']}`);
+    assert(
+      target.kind === 'references',
+      `pairs-with target for ${entry.fixture} must be a references fixture, got kind=${target.kind}: ${entry['pairs-with']}`,
+    );
+  }
 }
 
 function validateCoverageManifest(projectRoot = PROJECT_ROOT) {
@@ -83,6 +110,8 @@ function validateCoverageManifest(projectRoot = PROJECT_ROOT) {
   for (const entry of manifest.fixtures) {
     validateManifestEntry(entry, seenFixtures, seenDomains, projectRoot);
   }
+
+  validatePairsWithTargets(manifest.fixtures);
 
   for (const domain of REQUIRED_DOMAINS) {
     assert(seenDomains.has(domain), `coverage-manifest.json is missing required domain: ${domain}`);

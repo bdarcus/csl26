@@ -110,6 +110,7 @@
       "fixture": "tests/fixtures/citations-expanded.json",
       "domain": "core",
       "kind": "citations",
+      "pairs-with": "tests/fixtures/references-expanded.json",
       "reference_types": [
         "article-journal",
         "book",
@@ -152,6 +153,7 @@
       "fixture": "tests/fixtures/citations-note-expanded.json",
       "domain": "note",
       "kind": "citations",
+      "pairs-with": "tests/fixtures/references-expanded.json",
       "reference_types": [
         "all core references paired with note citation scenarios"
       ],
@@ -196,6 +198,7 @@
       "fixture": "tests/fixtures/citations-note-positions.json",
       "domain": "note",
       "kind": "citations",
+      "pairs-with": "tests/fixtures/references-note-positions.json",
       "reference_types": [
         "article-journal"
       ],
@@ -295,6 +298,7 @@
       "fixture": "tests/fixtures/citations-compound-numeric.json",
       "domain": "core",
       "kind": "citations",
+      "pairs-with": "tests/fixtures/references-compound-numeric-family.json",
       "reference_types": [
         "article-journal",
         "book",
@@ -352,6 +356,7 @@
       "fixture": "tests/fixtures/citations-secondary-roles.json",
       "domain": "core",
       "kind": "citations",
+      "pairs-with": "tests/fixtures/references-secondary-roles.json",
       "reference_types": [
         "book",
         "chapter",
@@ -408,6 +413,7 @@
       "fixture": "tests/fixtures/citations-author-date.json",
       "domain": "core",
       "kind": "citations",
+      "pairs-with": "tests/fixtures/references-author-date.json",
       "reference_types": [
         "article-journal",
         "book",
@@ -551,6 +557,7 @@
       "fixture": "tests/fixtures/citations-physics-numeric.json",
       "domain": "core",
       "kind": "citations",
+      "pairs-with": "tests/fixtures/references-physics-numeric.json",
       "reference_types": [
         "article-journal",
         "book",
@@ -608,6 +615,7 @@
       "fixture": "tests/fixtures/citations-humanities-note.json",
       "domain": "note",
       "kind": "citations",
+      "pairs-with": "tests/fixtures/references-humanities-note.json",
       "reference_types": [
         "article-journal",
         "book",
@@ -660,6 +668,7 @@
       "fixture": "tests/fixtures/citations-legal.json",
       "domain": "legal",
       "kind": "citations",
+      "pairs-with": "tests/fixtures/references-legal.json",
       "reference_types": [
         "bill",
         "hearing",
@@ -711,6 +720,7 @@
       "fixture": "tests/fixtures/citations-csl-m-adapted.json",
       "domain": "legal",
       "kind": "citations",
+      "pairs-with": "tests/fixtures/references-csl-m-adapted.json",
       "reference_types": [
         "legal_case",
         "legislation",

@@ -48,6 +48,42 @@ node ../scripts/check-testing-infra.js
 RIS continuation lines are appended to the previous field value, and CSL `issued` conversion preserves
 non-year values via `literal` when a four-digit year is not parseable.
 
+## Picking a Fixture Pair
+
+`tests/fixtures/` holds many `references-*.json` and `citations-*.json` files, and a citations
+fixture only renders correctly against the specific references fixture it was written for — the
+IDs in a `citations-*.json` file must exist in its paired `references-*.json`. File-name
+similarity is not reliable: `citations-compound-numeric.json` pairs with
+`references-compound-numeric-family.json`, not `compound-numeric-refs.json`, and
+`citations-note-expanded.json` pairs with `references-expanded.json`, not `references-heldout.json`.
+
+Two tools remove the guesswork:
+
+1. **Find the right pair.** `tests/fixtures/coverage-manifest.json` records a `pairs-with` field
+   on every `kind: "citations"` entry, naming the references fixture it must be run against.
+   `scripts/check-testing-infra.js` enforces that every citations entry has one and that it
+   points at a real `kind: "references"` entry, so the manifest can't drift out of sync with the
+   files on disk.
+
+   ```bash
+   # Which references fixture does citations-expanded.json pair with?
+   node -e "
+     const m = require('./tests/fixtures/coverage-manifest.json');
+     const e = m.fixtures.find(f => f.fixture === 'tests/fixtures/citations-expanded.json');
+     console.log(e['pairs-with']);
+   "
+   ```
+
+2. **Find which scenario a rendered line came from.** `citum render refs --show-keys` labels
+   every citation with its scenario id (e.g. `[disambiguate-givenname]`) and every bibliography
+   entry with its reference id, so you don't have to count lines:
+
+   ```bash
+   citum render refs -s styles/embedded/chicago-author-date-18th.yaml \
+     -b tests/fixtures/references-expanded.json \
+     -c tests/fixtures/citations-expanded.json --show-keys
+   ```
+
 ## Style Catalog Scope
 
 Use production styles from `styles/*.yaml` for routine validation and
