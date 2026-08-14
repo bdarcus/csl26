@@ -189,20 +189,38 @@ pub(crate) fn author_sort_key_opt_with_options(
         .filter(|key| !key.is_empty())
 }
 
-/// Build a sort key from the first name in an already-resolved merged list.
+/// Build a sort key from an already-resolved merged list of names.
+///
+/// Every name in the list is compared, not just the first — including a
+/// literal (organizational) name — so a tie on the first name breaks on the
+/// next co-author instead of falling straight through to an unrelated key
+/// like title, matching citeproc-js's full name-list sort semantics. A
+/// mixed list (e.g. an institutional first author followed by personal
+/// co-authors) is compared name-by-name the same way a list of only
+/// personal names is.
 #[must_use]
 pub(crate) fn flat_names_sort_key(names: &[FlatName], name_order: NameSortOrder) -> Option<String> {
-    let name = names.first()?;
-    if let Some(literal) = non_empty_str(name.literal.as_deref()) {
-        return non_empty_normalized(literal);
+    names.first()?;
+
+    let mut composite = String::new();
+    for (index, name) in names.iter().enumerate() {
+        if index > 0 {
+            // Separates names in the list; \u{0} already separates
+            // family/given within one name (see compose_family_given_key).
+            composite.push('\u{1}');
+        }
+        if let Some(literal) = non_empty_str(name.literal.as_deref()) {
+            composite.push_str(literal);
+            continue;
+        }
+        let family = non_empty_str(name.family.as_deref()).unwrap_or_default();
+        let given = non_empty_str(name.given.as_deref()).unwrap_or_default();
+        match name_order {
+            NameSortOrder::FamilyGiven => composite.push_str(&format!("{family}\u{0}{given}")),
+            NameSortOrder::GivenFamily => composite.push_str(&format!("{given}\u{0}{family}")),
+        }
     }
-    let family = non_empty_str(name.family.as_deref()).unwrap_or_default();
-    let given = non_empty_str(name.given.as_deref()).unwrap_or_default();
-    let value = match name_order {
-        NameSortOrder::FamilyGiven => format!("{family}\u{0}{given}"),
-        NameSortOrder::GivenFamily => format!("{given}\u{0}{family}"),
-    };
-    non_empty_normalized(&value)
+    non_empty_normalized(&composite)
 }
 
 /// Build the normalized title sort key with configured multilingual behavior.
@@ -231,6 +249,12 @@ pub(crate) fn normalize_sort_text(text: &str) -> String {
 }
 
 /// Build a configured sort key directly from a resolved contributor payload.
+///
+/// A `ContributorList` walks every contributor in the list, not just the
+/// first — a tie on the first contributor breaks on the next one instead of
+/// falling straight through to an unrelated key like title, matching
+/// citeproc-js's full name-list sort semantics (see [`flat_names_sort_key`],
+/// which applies the same rule to the already-flattened name model).
 pub(crate) fn contributor_sort_key(
     contributor: &Contributor,
     name_order: NameSortOrder,
@@ -240,10 +264,19 @@ pub(crate) fn contributor_sort_key(
         Contributor::SimpleName(name) => multilingual_string_sort_text(&name.name, options),
         Contributor::StructuredName(name) => structured_name_sort_text(name, name_order, options),
         Contributor::Multilingual(name) => multilingual_name_sort_text(name, name_order, options),
-        Contributor::ContributorList(list) => list
-            .0
-            .first()
-            .and_then(|contributor| contributor_sort_key(contributor, name_order, options))?,
+        Contributor::ContributorList(list) => {
+            let mut composite = String::new();
+            for member in &list.0 {
+                let Some(part) = contributor_sort_key(member, name_order, options) else {
+                    continue;
+                };
+                if !composite.is_empty() {
+                    composite.push('\u{1}');
+                }
+                composite.push_str(&part);
+            }
+            composite
+        }
     };
 
     non_empty_normalized(key.as_str())
@@ -422,6 +455,7 @@ fn default_icu_locale() -> IcuLocale {
 )]
 mod tests {
     use super::*;
+    use citum_schema::reference::contributor::ContributorList;
 
     #[test]
     #[cfg(feature = "icu")]
@@ -549,5 +583,169 @@ mod tests {
         let alice = compose_family_given_key("Johnson", "Alice", NameSortOrder::FamilyGiven);
         let brian = compose_family_given_key("Johnson", "Brian", NameSortOrder::FamilyGiven);
         assert!(alice < brian, "expected {alice:?} < {brian:?}");
+    }
+
+    fn flat_name(family: &str, given: &str) -> FlatName {
+        FlatName {
+            family: Some(family.to_string()),
+            given: Some(given.to_string()),
+            ..Default::default()
+        }
+    }
+
+    /// A single-name list must key identically to `compose_family_given_key`
+    /// — `flat_names_sort_key`'s multi-name walk must not change the
+    /// already-correct single-author case.
+    #[test]
+    fn given_a_single_name_list_when_building_flat_names_sort_key_then_it_matches_compose_family_given_key()
+     {
+        let names = [flat_name("Johnson", "Alice")];
+        let composed = compose_family_given_key("Johnson", "Alice", NameSortOrder::FamilyGiven);
+
+        assert_eq!(
+            flat_names_sort_key(&names, NameSortOrder::FamilyGiven),
+            Some(composed)
+        );
+    }
+
+    /// Regression for csl26-7u16's follow-up finding: `flat_names_sort_key`
+    /// used to read only `names.first()`, so two lists with an identical
+    /// first author (family *and* given) produced the same key and fell
+    /// through to title on ties — even though citeproc-js compares every
+    /// name in the list before falling back. The tie must now break on the
+    /// second author.
+    #[test]
+    fn given_two_name_lists_sharing_an_identical_first_author_when_building_flat_names_sort_key_then_second_author_breaks_the_tie()
+     {
+        let kumar_second = [flat_name("Smith", "John"), flat_name("Kumar", "Priya")];
+        let nguyen_second = [flat_name("Smith", "John"), flat_name("Nguyen", "Bao")];
+
+        let kumar_key = flat_names_sort_key(&kumar_second, NameSortOrder::FamilyGiven).unwrap();
+        let nguyen_key = flat_names_sort_key(&nguyen_second, NameSortOrder::FamilyGiven).unwrap();
+
+        assert!(
+            kumar_key < nguyen_key,
+            "expected {kumar_key:?} < {nguyen_key:?} (Kumar before Nguyen on second author)"
+        );
+    }
+
+    fn flat_literal(literal: &str) -> FlatName {
+        FlatName {
+            literal: Some(literal.to_string()),
+            ..Default::default()
+        }
+    }
+
+    /// A mixed list — an institutional (literal) first author followed by
+    /// personal co-authors — is compared name-by-name the same way a
+    /// personal-only list is. Two references sharing the same institutional
+    /// first author must break the tie on their second, personal co-author
+    /// instead of tying completely and falling through to title (the same
+    /// bug this fix closes for personal-only lists).
+    #[test]
+    fn given_two_name_lists_sharing_an_identical_literal_first_name_when_building_flat_names_sort_key_then_second_name_breaks_the_tie()
+     {
+        let kumar_second = [
+            flat_literal("World Health Organization"),
+            flat_name("Kumar", "Priya"),
+        ];
+        let nguyen_second = [
+            flat_literal("World Health Organization"),
+            flat_name("Nguyen", "Bao"),
+        ];
+
+        let kumar_key = flat_names_sort_key(&kumar_second, NameSortOrder::FamilyGiven).unwrap();
+        let nguyen_key = flat_names_sort_key(&nguyen_second, NameSortOrder::FamilyGiven).unwrap();
+
+        assert!(
+            kumar_key < nguyen_key,
+            "expected {kumar_key:?} < {nguyen_key:?} (Kumar before Nguyen on second name)"
+        );
+    }
+
+    /// A single-element list whose only name is literal still keys on just
+    /// that literal — unchanged from before this fix.
+    #[test]
+    fn given_a_single_literal_name_when_building_flat_names_sort_key_then_it_matches_the_literal() {
+        let names = [flat_literal("World Health Organization")];
+
+        assert_eq!(
+            flat_names_sort_key(&names, NameSortOrder::FamilyGiven),
+            Some("World Health Organization".to_string())
+        );
+    }
+
+    #[test]
+    fn given_an_empty_name_list_when_building_flat_names_sort_key_then_result_is_none() {
+        assert_eq!(flat_names_sort_key(&[], NameSortOrder::FamilyGiven), None);
+    }
+
+    fn structured_contributor(family: &str, given: &str) -> Contributor {
+        Contributor::StructuredName(StructuredName {
+            family: MultilingualString::Simple(family.to_string()),
+            given: MultilingualString::Simple(given.to_string()),
+            suffix: None,
+            dropping_particle: None,
+            non_dropping_particle: None,
+        })
+    }
+
+    /// `contributor_sort_key`'s `ContributorList` branch has the same
+    /// first-only bug `flat_names_sort_key` had (csl26-7u16 follow-up) —
+    /// it is a separate code path (schema `Contributor` values, not the
+    /// already-flattened `FlatName` model) reached via
+    /// `extract_author_sort_key_opt`'s substitute-resolution branch. A tie
+    /// on the first contributor must break on the second.
+    #[test]
+    fn given_two_contributor_lists_sharing_an_identical_first_contributor_when_building_contributor_sort_key_then_second_contributor_breaks_the_tie()
+     {
+        let kumar_second = Contributor::ContributorList(ContributorList(vec![
+            structured_contributor("Smith", "John"),
+            structured_contributor("Kumar", "Priya"),
+        ]));
+        let nguyen_second = Contributor::ContributorList(ContributorList(vec![
+            structured_contributor("Smith", "John"),
+            structured_contributor("Nguyen", "Bao"),
+        ]));
+        let options = SortKeyOptions::uniform();
+
+        let kumar_key =
+            contributor_sort_key(&kumar_second, NameSortOrder::FamilyGiven, &options).unwrap();
+        let nguyen_key =
+            contributor_sort_key(&nguyen_second, NameSortOrder::FamilyGiven, &options).unwrap();
+
+        assert!(
+            kumar_key < nguyen_key,
+            "expected {kumar_key:?} < {nguyen_key:?} (Kumar before Nguyen on second contributor)"
+        );
+    }
+
+    /// A single-contributor list sharing its only member's family+given with
+    /// the *first* member of a longer list is a strict prefix of that
+    /// list's key and must sort before it — matching citeproc-js, which
+    /// renders a single-author entry before a multi-author entry beginning
+    /// with the same author (verified directly against `CSL.Engine` for
+    /// this exact shape; see crates/citum-engine/tests/bibliography.rs's
+    /// `magic_subsequent_author_substitute_reuses_the_full_author_group`).
+    #[test]
+    fn given_a_contributor_list_that_is_a_strict_prefix_of_another_when_building_contributor_sort_key_then_the_shorter_list_sorts_first()
+     {
+        let single = Contributor::ContributorList(ContributorList(vec![structured_contributor(
+            "Smith", "John",
+        )]));
+        let multi = Contributor::ContributorList(ContributorList(vec![
+            structured_contributor("Smith", "John"),
+            structured_contributor("Roe", "Jane"),
+        ]));
+        let options = SortKeyOptions::uniform();
+
+        let single_key =
+            contributor_sort_key(&single, NameSortOrder::FamilyGiven, &options).unwrap();
+        let multi_key = contributor_sort_key(&multi, NameSortOrder::FamilyGiven, &options).unwrap();
+
+        assert!(
+            single_key < multi_key,
+            "expected {single_key:?} < {multi_key:?} (single-author entry sorts before the multi-author entry it prefixes)"
+        );
     }
 }
