@@ -47,6 +47,20 @@ options:
   punctuation-in-quote: true
 citation:
   options:
+    # citation-scoped per SUBSTITUTED_VALUE_FORMATTING.md's resolved decision.
+    # Real taylor-and-francis-council-of-science-editors-author-date.csl's
+    # `author`/`author-short` macros both render a substituted title with a
+    # bare `<text variable="title" form="short"/>` -- no font-style or quotes
+    # attribute, no type branching, in either citation or bibliography
+    # context. Unlike apa-7th/elsevier-harvard, there is no italic bucket to
+    # configure: every reference type genuinely renders plain, oracle-verified
+    # (dead-sea-scrolls, plus book/report/article-journal fixtures) -- so no
+    # `titles:` block is needed here. Absent `titles:`, category resolution
+    # returns nothing and the title renders exactly as unset, matching the
+    # real rule; this is the correct, complete config for this style, not an
+    # oversight.
+    substitute:
+      title-quote: by-category
     contributors:
       shorten:
         min: 3

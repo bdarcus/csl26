@@ -451,6 +451,58 @@ fn given_elsevier_harvard_shaped_by_category_config_when_type_varies_then_quotin
     assert_eq!(result, expected);
 }
 
+/// Mirrors taylor-and-francis-council-of-science-editors-author-date-core.yaml's
+/// citation-scoped `by-category` config (SUBSTITUTED_VALUE_FORMATTING.md):
+/// `title-quote: by-category` with no `titles:` block at all. Unlike
+/// elsevier-harvard, this style's real `author`/`author-short` macros are
+/// unconditionally plain (bare `<text variable="title" form="short"/>`, no
+/// type branching) -- so the absence of a `titles:` config is the correct,
+/// complete fix, not a coverage gap: no category ever resolves, so nothing
+/// is ever quoted or emphasized, matching the oracle-verified real rule.
+fn cse_style_substitute_title_style() -> Style {
+    Style {
+        info: StyleInfo {
+            title: Some("T&F CSE Substitute Title Quote Test".to_string()),
+            id: Some("cse-substitute-title-quote-test".into()),
+            ..Default::default()
+        },
+        options: Some(Config {
+            substitute: Some(SubstituteConfig::Explicit(Substitute {
+                template: vec![citum_schema::options::SubstituteKey::Title],
+                title_quote: Some(SubstituteTitleQuoteMode::ByCategory),
+                ..Default::default()
+            })),
+            ..Default::default()
+        }),
+        citation: Some(CitationSpec {
+            template: Some(vec![citum_schema::tc_contributor!(Author, Long)].into()),
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+#[rstest]
+#[case::book(MonographType::Book)]
+#[case::report(MonographType::Report)]
+#[case::post(MonographType::Post)]
+#[case::interview(MonographType::Interview)]
+fn given_cse_shaped_by_category_config_with_no_titles_block_when_type_varies_then_title_always_renders_plain(
+    #[case] kind: MonographType,
+) {
+    let style = cse_style_substitute_title_style();
+    let mut bibliography = indexmap::IndexMap::new();
+    bibliography.insert(
+        "item1".to_string(),
+        make_authorless_monograph("item1", "Title", kind),
+    );
+    let processor = Processor::new(style, bibliography);
+
+    let result = process_citation_ids(&processor, &["item1"]);
+
+    assert_eq!(result, "Title");
+}
+
 fn integral_name_state_overrides_processor_memory() {
     let mut bibliography = indexmap::IndexMap::new();
     bibliography.insert(
