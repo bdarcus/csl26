@@ -300,6 +300,135 @@ Every component can be modified with rendering options that control punctuation,
 | `wrap` | `parentheses`, `brackets`, `quotes` | Automatically wrap value |
 | `emph` | `true`, `false` | Render in italics |
 | `strong` | `true`, `false` | Render in bold |
+| `quote` | `true`, `false` | Wrap in the locale's quotation marks (title components only) |
+
+These apply to one template component at a time. Titles usually need the
+same rendering repeated across many components and reference types — see
+[Title Categories](#title-categories) below for the type-driven alternative.
+
+## [format_quote] Title Categories
+
+Instead of setting `emph`/`quote`/`text-case` on every `title:` component
+individually, group titles into a small vocabulary of rendering categories
+and configure each category once under `titles:`. This is how most real
+styles work: a journal article title renders one way everywhere it appears
+in the document, a book title another way, regardless of which template
+component happens to be rendering it.
+
+```yaml
+options:
+  titles:
+    type-mapping:
+      thesis: monograph
+      graphic: monograph
+    component:
+      quote: true
+    monograph:
+      emph: true
+```
+
+**Categories** (a closed vocabulary — anything else is a schema error):
+
+| Category | Typical reference types | Meaning |
+|---|---|---|
+| `monograph` | book, thesis, report | a standalone title |
+| `component` | article, chapter, entry | a title contained in something larger |
+| `container-monograph` | (the book a chapter is in) | the container's own title |
+| `periodical` | journal, magazine, newspaper | a periodical's name |
+| `serial` | a series | a series name |
+| `default` | everything else | fallback when no other category applies |
+
+Every reference type already has a **built-in default category**
+(`article-journal` and similar → `component`; `book`/`thesis`/`report` →
+`monograph`; anything else → `default`), so most styles never need
+`type-mapping` at all — only add an entry to override that default for a
+specific type. `elsevier-harvard`, for example, maps `graphic`/
+`motion-picture`/`song` to `monograph` because that style's source rule
+italicizes those types too, and maps `thesis` to `default` because it
+specifically does *not* want the built-in book/thesis/report grouping.
+
+Each category accepts the same fields as a title component's rendering
+options (`emph`, `strong`, `quote`, `text-case`), plus `locale-overrides`
+for per-language variants. See the
+[style schema](https://citum.github.io/citum-core/schemas/style.json) for
+the full field list, and
+[`TYPED_TITLE_MAPPING.md`](../specs/TYPED_TITLE_MAPPING.md) for the
+underlying rules.
+
+> [!WARNING]
+> **An unconfigured category renders plain, not an error.**
+> If a reference type resolves to a category you never configured (or one
+> you configured with no `emph`/`quote`), Citum renders that title as plain
+> text — no italics, no quotes, no warning. That's intentional (some styles
+> genuinely want plain titles for some types), but it means a typo or an
+> unmapped type fails silently. Give every category your style can reach an
+> explicit rendering — even "nothing" — rather than leaving it to omission.
+> This matters even more once contributor substitution is involved; see
+> the warning under Author-less References below.
+
+## [swap_horiz] Author-less References (Substitution)
+
+When a reference has no author, `substitute:` tells Citum what to promote
+into the author position instead — an editor, a translator, or, as a last
+resort, the reference's own title:
+
+```yaml
+options:
+  substitute:
+    template:
+      - editor
+      - translator
+      - title
+```
+
+Citum tries each candidate in order and stops at the first one the
+reference actually has. `title` is special: a title is being promoted into
+a *name* slot, so Citum has to decide how to format it, and that's
+controlled by `title-quote`:
+
+| `title-quote` | Behavior | When to use |
+|---|---|---|
+| `always` (default, or omitted) | Quote the title, regardless of type | matches legacy/historical behavior; the safe default |
+| `by-category` | Defer to the title's own [category rendering](#title-categories) — italicize a book, quote an article, exactly as if it had rendered normally | most real-world citation styles do this |
+
+```yaml
+citation:
+  options:
+    substitute:
+      template: [editor, translator, title]
+      title-quote: by-category
+    titles:
+      type-mapping:
+        book: monograph
+        report: monograph
+      monograph:
+        emph: true
+      component:
+        quote: true
+      default:
+        quote: true
+```
+
+> [!TIP]
+> **Scope `title-quote: by-category` to `citation.options`**
+> A style's bibliography never quotes a substituted title — it always
+> applies category emphasis instead, unconditionally. Only citation-context
+> rendering needs `title-quote` at all, so put the supporting `titles:`
+> config under `citation.options.titles` too, unless you specifically want
+> it to also change how titles render outside the substitute path.
+
+> [!WARNING]
+> **Cover every type your substitute chain can reach, not just the common ones**
+> `by-category` makes *quoting itself* — not just emphasis — depend on
+> category coverage. A reference type that falls through to an unconfigured
+> category renders **plain, un-quoted and un-italicized** — worse than the
+> `always` default for that type. Before setting `title-quote:
+> by-category`, list every reference type an author-less reference in your
+> style could plausibly have, and confirm each one resolves to a category
+> with an explicit `quote` or `emph`. See
+> [`SUBSTITUTED_VALUE_FORMATTING.md`](../specs/SUBSTITUTED_VALUE_FORMATTING.md)
+> for the corpus evidence behind this default and a worked example
+> (`elsevier-harvard`).
 
 ## [auto_awesome] Style Inheritance
 
