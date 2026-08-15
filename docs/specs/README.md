@@ -157,6 +157,7 @@ note. The `—` marker in the Tests column means no targeted test exists yet.
 | [`DJOT_RICH_TEXT.md`](./DJOT_RICH_TEXT.md) — Djot as the rich-text markup substrate for note/abstract fields | Active | `document.rs::djot_adapter` |
 | [`SHORT_NAME.md`](./SHORT_NAME.md) — short-name rendering for abbreviated contributor identifiers | Active | `bibliography.rs::title_short_resolution` |
 | [`ABBREVIATION_MAP.md`](./ABBREVIATION_MAP.md) — abbreviation lookup map for journal and publisher names | Active | `bibliography.rs` |
+| [`SUBSTITUTED_VALUE_FORMATTING.md`](./SUBSTITUTED_VALUE_FORMATTING.md) — whether a value promoted into the author slot (`<substitute>`) keeps its own formatting or takes the slot's, per substituted-value kind | Draft | `crates/citum-engine/src/values/tests.rs` (div-011 block) |
 
 ### Document & Input
 

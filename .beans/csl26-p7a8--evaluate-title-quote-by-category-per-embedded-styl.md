@@ -1,7 +1,7 @@
 ---
 # csl26-p7a8
 title: 'Evaluate title-quote: by-category per embedded style'
-status: todo
+status: in-progress
 type: task
 priority: normal
 tags:
@@ -10,7 +10,7 @@ tags:
     - rendering
     - styles
 created_at: 2026-08-14T20:04:49Z
-updated_at: 2026-08-14T20:04:59Z
+updated_at: 2026-08-15T11:57:43Z
 ---
 
 csl26-0dca (fix/substituted-title-emphasis) completed the engine-side
@@ -38,3 +38,7 @@ identified during csl26-0dca's investigation:
 Each style flip is its own style-behavior change with its own parity
 surface -- verify with report-core.js before/after per style, not a
 blanket change. See docs/adjudication/DIVERGENCE_REGISTER.md div-011.
+
+## Scope clarification (2026-08-15)
+
+Bruce: this is not title-only. Substituted contributors (editor/translator/etc.) and `parent-serial` sit on the same slot-formatting-vs-source-formatting axis and must be analysed alongside title. Delivered as a two-stage PR: (1) analysis/spec doc with recommendation + open questions, (2) implementation, stacked via `gh stack` + `jj`.
