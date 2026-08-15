@@ -56,6 +56,45 @@ citation:
       - editor
       - translator
       - title
+      title-quote: by-category
+    # citation-scoped per SUBSTITUTED_VALUE_FORMATTING.md's resolved decision
+    # (supporting title config for a by-category substitute flip is
+    # citation-scoped by default). Real elsevier-harvard.csl's citation-context
+    # substitute macro (author-short) is type-conditional, not the unconditional
+    # italic an earlier spec draft wrongly assumed: bill/book/graphic/legal_case/
+    # legislation/motion_picture/report/song italicize, everything else quotes.
+    # legal-case is excluded here -- it never reaches this substitute tier under
+    # this style; its citation.type-variants.legal-case entry above already
+    # handles it via a dedicated title-first template. bill is CSL-polymorphic
+    # (converts to document/hearing/bill-proceeding/bill-record depending on
+    # data shape -- see CSL_TYPE_CONVERSION_CONTRACT.md) and is deliberately not
+    # mapped here; it falls through to the quoted default below, a documented
+    # divergence from citeproc-js rather than a silent gap.
+    titles:
+      type-mapping:
+        book: monograph
+        report: monograph
+        graphic: monograph
+        motion-picture: monograph
+        song: monograph
+        statute: monograph
+        # thesis defaults to monograph under the engine's hardcoded type-class
+        # table, but elsevier-harvard.csl quotes it (not in the italic list) --
+        # override explicitly so it doesn't silently inherit an italic it
+        # shouldn't have.
+        thesis: default
+      monograph:
+        emph: true
+      # component covers article-journal/chapter/entry/entry-dictionary/
+      # entry-encyclopedia/paper-conference/post/post-weblog under the engine's
+      # hardcoded type-class table; default covers everything else
+      # (manuscript, interview, webpage, document, hearing, ...). Both need an
+      # explicit quote so those types don't silently render plain under
+      # by-category -- see the titles.default coverage gap in the spec.
+      component:
+        quote: true
+      default:
+        quote: true
     contributors:
       shorten:
         min: 3

@@ -35,9 +35,9 @@ use citum_schema::{
         AndOptions, CitationLabelMode, Config, ContributorConfig, DateConfig,
         DelimiterPrecedesLast, DisplayAsSort, GivennameRule, IntegralNameContexts,
         IntegralNameMemoryConfig, IntegralNameScope, MultilingualConfig, MultilingualMode,
-        NameForm, Processing, ProcessingCustom, ShortenListOptions, SubsequentNameForm, Substitute,
-        SubstituteConfig, SubstituteTitleQuoteMode, TitleRendering, TitlesConfig,
-        TwoNameDelimiterPolicy,
+        NameForm, Processing, ProcessingCustom, ReferenceTypeName, ShortenListOptions,
+        SubsequentNameForm, Substitute, SubstituteConfig, SubstituteTitleQuoteMode, TitleCategory,
+        TitleRendering, TitlesConfig, TwoNameDelimiterPolicy,
     },
     reference::{DateValue, InputReference, Monograph, MonographType, Title},
 };
@@ -351,6 +351,104 @@ fn authorless_book_cited_by_title_in_citation_defaults_to_unconditional_quoting(
     let result = process_citation_ids(&processor, &["item1"]);
 
     assert_eq!(result, "\u{201c}Title\u{201d}");
+}
+
+fn make_authorless_monograph(id: &str, title: &str, kind: MonographType) -> InputReference {
+    InputReference::Monograph(Box::new(Monograph {
+        id: Some(id.into()),
+        r#type: kind,
+        title: Some(Title::Single(title.to_string())),
+        ..Default::default()
+    }))
+}
+
+/// Mirrors elsevier-harvard-core.yaml's citation-scoped `by-category` config
+/// (SUBSTITUTED_VALUE_FORMATTING.md): book/report/graphic/motion-picture/song/
+/// statute map to `monograph` (emph); `thesis` is explicitly overridden away
+/// from the engine's hardcoded book/thesis/report default so it stays
+/// quoted, matching elsevier-harvard.csl's real `author-short` rule; the
+/// `component` and `default` categories both declare `quote: true` so no
+/// reachable type silently falls through to plain text.
+fn elsevier_harvard_style_substitute_title_style() -> Style {
+    let mut type_mapping = std::collections::HashMap::new();
+    type_mapping.insert(ReferenceTypeName::new("book"), TitleCategory::Monograph);
+    type_mapping.insert(ReferenceTypeName::new("report"), TitleCategory::Monograph);
+    type_mapping.insert(ReferenceTypeName::new("thesis"), TitleCategory::Default);
+
+    Style {
+        info: StyleInfo {
+            title: Some("Elsevier Harvard Substitute Title Quote Test".to_string()),
+            id: Some("elsevier-harvard-substitute-title-quote-test".into()),
+            ..Default::default()
+        },
+        options: Some(Config {
+            substitute: Some(SubstituteConfig::Explicit(Substitute {
+                template: vec![citum_schema::options::SubstituteKey::Title],
+                title_quote: Some(SubstituteTitleQuoteMode::ByCategory),
+                ..Default::default()
+            })),
+            titles: Some(TitlesConfig {
+                type_mapping: Some(type_mapping),
+                monograph: Some(TitleRendering {
+                    emph: Some(true),
+                    ..Default::default()
+                }),
+                component: Some(TitleRendering {
+                    quote: Some(true),
+                    ..Default::default()
+                }),
+                default: Some(TitleRendering {
+                    quote: Some(true),
+                    ..Default::default()
+                }),
+                ..Default::default()
+            }),
+            ..Default::default()
+        }),
+        citation: Some(CitationSpec {
+            template: Some(vec![citum_schema::tc_contributor!(Author, Long)].into()),
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+#[rstest]
+#[case::book_maps_to_monograph_and_italicizes(MonographType::Book, "_Title_")]
+#[case::report_maps_to_monograph_and_italicizes(MonographType::Report, "_Title_")]
+#[case::thesis_overridden_away_from_monograph_stays_quoted(
+    MonographType::Thesis,
+    "\u{201c}Title\u{201d}"
+)]
+#[case::post_falls_to_component_bucket_and_quotes(MonographType::Post, "\u{201c}Title\u{201d}")]
+#[case::interview_falls_to_default_bucket_and_quotes(
+    MonographType::Interview,
+    "\u{201c}Title\u{201d}"
+)]
+fn given_elsevier_harvard_shaped_by_category_config_when_type_varies_then_quoting_matches_the_type_mapping(
+    #[case] kind: MonographType,
+    #[case] expected: &str,
+) {
+    // Regression coverage for the elsevier-harvard flip in
+    // SUBSTITUTED_VALUE_FORMATTING.md stage 2: `book`/`report` (explicit
+    // `type-mapping` to `monograph`) italicize; `thesis` (explicitly
+    // overridden to `default`, since the engine's hardcoded type-class
+    // table would otherwise route it to `monograph` too) and `post` (the
+    // engine's hardcoded `component` bucket) and `interview` (falls to
+    // `default`, in neither hardcoded bucket) all stay quoted -- matching
+    // real elsevier-harvard.csl's `author-short` macro, oracle-verified
+    // against citeproc-js in the spec.
+    let style = elsevier_harvard_style_substitute_title_style();
+    let mut bibliography = indexmap::IndexMap::new();
+    bibliography.insert(
+        "item1".to_string(),
+        make_authorless_monograph("item1", "Title", kind),
+    );
+    let processor = Processor::new(style, bibliography);
+
+    let result = process_citation_ids(&processor, &["item1"]);
+
+    assert_eq!(result, expected);
 }
 
 fn integral_name_state_overrides_processor_memory() {
