@@ -26,8 +26,12 @@ options:
     group:
       template: [author, year]
     disambiguate:
-      names: false
-      add-givenname: false
+      # Migration bug (found while investigating unrelated exactParity
+      # divergences on this style): real CSL sets
+      # disambiguate-add-names="true" disambiguate-add-givenname="true" --
+      # both were wrongly migrated as false.
+      names: true
+      add-givenname: true
       year-suffix: true
   substitute: editor-translator-title-long
   contributors:
