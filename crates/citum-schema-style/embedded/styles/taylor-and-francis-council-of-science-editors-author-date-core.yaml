@@ -80,8 +80,17 @@ citation:
         and-others: et-al
         delimiter-precedes-last: contextual
       and: text
+    # Real CSL's `year-date` macro (used identically by <citation> and
+    # <bibliography>) is a bare <date variable="issued"><date-part
+    # name="year"/></date> with no fallback branch, so citeproc-js renders
+    # nothing for a missing `issued` (e.g. "(Forthcoming)", not
+    # "(Forthcoming n.d.)"). This style predates citum-migrate's automatic
+    # `fallback: []` emission (added 63fdb104, 2026-07-16); all five
+    # `date: issued` sites below opt out of the engine's implicit no-date
+    # term explicitly to match. See csl26-7z59.
     - date: issued
       form: year
+      fallback: []
   - variable: locator
   wrap:
     punctuation: parentheses
@@ -110,6 +119,7 @@ bibliography:
       name-order: family-first
     - date: issued
       form: year
+      fallback: []
     - title: primary
     - title: parent-serial
     - delimiter: ""
@@ -129,6 +139,7 @@ bibliography:
       name-order: family-first
     - date: issued
       form: year
+      fallback: []
     - title: primary
     - message: pattern.in-container-colon
       args:
@@ -154,6 +165,7 @@ bibliography:
       name-order: family-first
     - date: issued
       form: year
+      fallback: []
     - title: primary
     - title: parent-monograph
     - number: pages
@@ -165,6 +177,7 @@ bibliography:
     name-order: family-first
   - date: issued
     form: year
+    fallback: []
   - title: primary
   - delimiter: ": "
     group:
