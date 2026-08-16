@@ -293,7 +293,7 @@ sub-groups that are still ambiguous, given-name expansion and/or year suffix are
 applied to those sub-groups independently.
 
 Implemented in `apply_group_hints` →
-`try_apply_name_partitions` / `try_apply_givenname_resolution` /
+`apply_name_partitions` / `select_givenname_resolution` /
 `apply_year_suffix`.
 
 ### 2.1 `givenname-disambiguation-rule`
@@ -302,9 +302,21 @@ Specifies which author positions receive given-name expansion. The field lives o
 `Disambiguation` in `citum-schema-style/src/options/processing.rs` as
 `givenname_rule: GivennameRule`. Default: `by-cite`.
 
+**Invariant, all rules:** the ambiguity universe is always every reference in the
+document, never a subset. A collision group is computed once, globally, in
+`Processor::calculate_hints` (`processor/setup.rs`), and that is the only
+computation that runs — no rule recomputes or narrows it. This mirrors
+citeproc-js, whose ambiguity pool (`CSL.Registry.prototype.ambigcites`) is a
+property of the registry, populated over every registered item, with no
+per-cite scoping at any point in `getAmbiguousCite`. Two different authors
+named "Smith" cannot be told apart by looking at one citation in isolation —
+telling them apart requires comparing every "Smith" in the bibliography, which
+is what "disambiguation" means. See §2.1.1 for what actually varies between
+rules.
+
 | CSL value | Engine scope | Notes |
 |---|---|---|
-| `by-cite` *(default)* | citation-local expansion overlay | see §2.1.1 |
+| `by-cite` *(default)* | global collision detection, per-cite expansion ceiling | see §2.1.1 |
 | `all-names` | global expansion | all affected citations use the expanded form consistently |
 | `all-names-with-initials` | expand all positions | initials vs full controlled by contributor config `initialize-with` |
 | `primary-name` | expand **first author only** | required by Chicago author-date |
@@ -314,26 +326,60 @@ Specifies which author positions receive given-name expansion. The field lives o
 config's `initialize-with` / `name-form` settings, not by this rule. The rule
 controls only *which positions* are eligible for expansion.
 
-#### 2.1.1 `by-cite` citation-local expansion (csl26-lvib)
+#### 2.1.1 `by-cite` (csl26-lvib, corrected 2026-08-16)
 
-`by-cite` is applied at citation render time, not by mutating the processor's
-global disambiguation hints. The renderer clones the global hint map for the
-current citation, clears global given-name expansion for the references in that
-citation, then overlays the name-expansion fields computed from only the current
-citation's references. Year suffixes, group order, citation numbers, note
-position, and bibliography rendering continue to use the global hints.
+`by-cite` is a **given-name** rule (cascade strategy 2, §2). It has no authority
+over strategy 1 (et-al expansion via `disambiguate-add-names`) or strategy 3
+(year suffix); both remain global under every `givenname_rule` value, including
+`by-cite`.
 
-`all-names` and `all-names-with-initials` deliberately keep the global hint map:
-if a name is expanded for disambiguation anywhere in the document, all rendered
-uses of that affected reference receive the expanded form. This makes `by-cite`
-and `all-names` observably different on fixtures where a reference belongs to a
-global collision group but appears alone, or outside the citation that needs
-expansion.
+citeproc-js is explicit that `by-cite` does not change *which references are
+compared*: internal to `CSL.Disambiguation`, a `by-cite` rule is rewritten to
+`all-names` for the purpose of selecting eligible positions
+(`if (gdropt === "by-cite") { gdropt = "all-names"; }`), and the ambiguity pool
+those positions are checked against is the same registry-wide pool every other
+rule uses. What `by-cite` actually changes is narrower: it caps how far a
+*given* rendered cite is allowed to escalate (`givensMax`), so a cite showing
+two authors is not forced to add given names for a third author hidden behind
+`et al.` in that same cite. It does not, and cannot, shrink the set of
+references consulted to decide *whether* a collision exists — doing so would
+make disambiguation depend on which references happen to be cited together,
+which defeats disambiguation's purpose (§2.1's invariant above).
 
-The current hint model still expresses given-name expansion as all eligible
-rendered positions or primary-name-only; it does not store an arbitrary mask of
-individual name positions. The `by-cite` implementation therefore scopes the
-decision to the current citation and preserves the existing position model.
+**2026-06-02–2026-08-16 implementation (csl26-lvib) was wrong.** It approximated
+`by-cite`'s per-cite escalation cap by *narrowing the comparison set* instead:
+`citation_scoped_by_cite_hints` cleared the global hints for every reference in
+a citation and recomputed them from a bibliography containing only that
+citation's items, short-circuiting to "no collision" for any citation naming
+fewer than two references. This silently under-disambiguated any reference
+cited alone that belonged to a global collision group — including via strategy
+1 (et-al depth), which `by-cite` has no claim on at all — and made `by-cite`
+observably *narrower* than `all-names` rather than narrower-in-a-different-axis,
+inverting the relationship citeproc-js implements. Found via csl26-8nrt: a
+`disambiguate-add-names` collision (two Smith/Lee/2021 papers diverging at the
+third author) rendered the correct three-name expansion only when both
+colliding references were cited together, and silently collapsed to one name
+whenever either was cited alone.
+
+**Current state:** the citation-scoped overlay has been removed. `by-cite`
+behaves identically to `all-names` — both use the single global hint
+computation, and neither implements a real per-position given-name mask.
+Distinguishing them (a true `givensMax`-style escalation cap, so a solo cite
+does not gratuitously add given names beyond what its own visible names need)
+requires storing an explicit per-position expansion mask in `ProcHints`, which
+the current hint model does not have. That is real, tracked, un-implemented
+scope — not a design decision — filed as `csl26-5753`.
+
+**Rejected alternative:** keep the citation-scoped overlay but carve out
+`min_names_to_show` from the clear whenever the global hint's
+`expand_given_names` is `false` (i.e. the collision was resolved by pure
+et-al expansion, strategy 1, with no given-name involvement). This is a
+minimal, test-preserving patch — every existing `by-cite` test keeps its
+current expected output — but it was rejected: it only patches the strategy-1
+leak this bean found, leaves the deeper error (comparing against a
+citation-scoped subset at all) in place for strategy 2, and requires
+inventing an unwritten rule ("et-al depth is global only when given names
+weren't also involved") with no counterpart in citeproc-js to justify it.
 
 ### 3. Year-suffix assignment ordering
 
@@ -419,12 +465,14 @@ same year*. Mapping to engine flags:
 | MLA 9 | true | true | `by-cite` | **false** | custom block (author-*page*: no suffix; falls through to the `disambiguate-only` short title, §6) |
 | IEEE / AMA | — | — | — | — | numeric; no author-date disambiguation |
 
-**`by-cite` is citation-local in Citum** (§2.1.1): it compares only references that
-appear together in one citation. Same-surname authors usually appear in *separate*
-citations, so a guide that wants initials in every cite (APA §8.20) needs **global**
-detection — the `primary-name` rule, not `by-cite`. Initials vs. full given name is
-then driven by each style's contributor config (`initialize-with` / `name-form`), per
-the §2.1 invariant — so one rule serves APA (initials) and Chicago (full given name).
+APA still needs `primary-name` rather than `by-cite`, but for the reason §2.1's table
+actually gives: `primary-name` restricts expansion to the **first author only** — the
+correct rendering under APA §8.20, which shows initials on the first author of each
+colliding surname, not on every author. `by-cite` carries no such restriction and, per
+§2.1.1, is document-wide like every other rule; it would expand every colliding
+position rather than only the first. Initials vs. full given name is then driven by
+each style's contributor config (`initialize-with` / `name-form`), per the §2.1
+invariant — so one rule serves APA (initials) and Chicago (full given name).
 
 The **`author-date-full` preset** encodes exactly this guide profile —
 names + add-givenname + **`primary-name`** + year-suffix — and APA and Chicago use it
@@ -520,10 +568,15 @@ added to the citation context.
   `primary-name-with-initials` restrict expansion to the first author only (csl26-4ada)
 - [x] `primary-name` falls back to year-suffix when primary-author expansion cannot resolve
   the collision (identical primary authors); et-al expansion retained alongside suffix (csl26-wu1l)
-- [x] `by-cite` given-name expansion is citation-local and distinguishable from
-  `all-names` global expansion (csl26-lvib)
+- [x] Name disambiguation (et-al expansion and given-name expansion alike) always
+  compares against every reference in the document; no `givenname-disambiguation-rule`
+  value narrows the comparison set (§2.1.1, csl26-8nrt — corrects the 2026-06-02
+  citation-scoped `by-cite` implementation)
+- [ ] `by-cite` implements a true per-position given-name expansion ceiling
+  (distinguishable from `all-names`); tracked as `csl26-5753`, §2.1.1
 - [x] Upstream CSL disambiguation fixtures that distinguish `by-cite` and
-  `all-names` are tracked in the disambiguation fixture generator
+  `all-names` are tracked in the disambiguation fixture generator (fixtures now
+  exercise the document-wide behavior both rules share pending the follow-up above)
 - [x] Year-suffix order follows the article-stripped/locale-collated bibliography
   sort, not a raw lowercased title (csl26-2zy6, audit row 138)
 - [x] APA-7th carries `add-givenname` + `primary-name-with-initials` (global) so
@@ -555,6 +608,26 @@ added to the citation context.
 
 ## Changelog
 
+- 2026-08-16: Corrected §2.1.1: `by-cite` is document-wide, not citation-local
+  (csl26-8nrt). The 2026-06-02 `by-cite` implementation (csl26-lvib) approximated
+  a per-cite given-name expansion ceiling by narrowing the comparison set to the
+  current citation's references instead — this cleared `min_names_to_show` for
+  every citation-scoped hint, silently discarding et-al-expansion results
+  (strategy 1) that `by-cite`, a given-name rule (strategy 2), has no authority
+  over. Found via a `disambiguate-add-names` collision (two same-year references
+  diverging only at the third author) that expanded correctly only when both
+  colliding references were cited together, collapsing to one name whenever
+  either was cited alone. citeproc-js confirms the correction: its ambiguity
+  pool (`CSL.Registry.ambigcites`) is populated over the whole registry with no
+  per-cite scoping, and `by-cite` is internally rewritten to `all-names` for
+  position selection — the rule only caps escalation depth, never the
+  comparison set. Engine: removed `citation_scoped_by_cite_hints` and
+  `uses_by_cite_givenname` from `processor/citation.rs`; citations render
+  directly from the global hint map like every other rule. `by-cite` and
+  `all-names` are now behaviorally identical pending a real per-position
+  expansion mask (tracked as `csl26-5753`). Rejected a narrower patch that
+  would have carved out `min_names_to_show` from the clear without removing the
+  citation-scoped comparison itself — see §2.1.1 for why.
 - 2026-08-16: Centralized author and issued-date fallback policy in options.
   Anonymous messages and first-issued date resolution now share the exact
   rendering policy; template fallback chains no longer exist.

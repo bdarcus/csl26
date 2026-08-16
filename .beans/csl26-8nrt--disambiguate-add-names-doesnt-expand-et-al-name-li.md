@@ -1,7 +1,7 @@
 ---
 # csl26-8nrt
 title: Disambiguate-add-names doesn't expand et-al name-list depth
-status: todo
+status: in-progress
 type: bug
 priority: normal
 tags:
@@ -10,7 +10,7 @@ tags:
     - engine
     - citation
 created_at: 2026-08-16T00:16:01Z
-updated_at: 2026-08-16T00:16:01Z
+updated_at: 2026-08-16T18:26:40Z
 ---
 
 Found while validating csl26-p7a8's title-quote flip for
