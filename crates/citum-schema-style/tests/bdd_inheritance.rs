@@ -1159,7 +1159,7 @@ options:
   contributors:
     demote-non-dropping-particle: never
   substitute:
-    template:
+    candidates:
       - editor
     role-substitute:
       container-author:
@@ -1210,8 +1210,8 @@ options:
          chain must survive"
     );
     assert_eq!(
-        substitute.template,
-        vec![
+        substitute.candidates(),
+        &[
             citum_schema_style::options::SubstituteKey::Editor,
             citum_schema_style::options::SubstituteKey::Title,
             citum_schema_style::options::SubstituteKey::Translator,

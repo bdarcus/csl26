@@ -173,7 +173,7 @@ fn validate_substitute_candidates(
     validate_candidate_list(&resolved.template, &format!("{location}.template"))?;
     for (reference_type, candidates) in &resolved.overrides {
         validate_candidate_list(
-            candidates,
+            candidates.as_slice(),
             &format!("{location}.overrides.{reference_type}"),
         )?;
     }

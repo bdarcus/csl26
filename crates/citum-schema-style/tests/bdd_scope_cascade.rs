@@ -81,20 +81,21 @@ fn citation_scope_config(style: &Style) -> Config {
 }
 
 #[test]
-fn given_scope_date_substitute_map_when_cascading_then_lists_merge_per_selector() {
+fn given_scope_date_fallback_map_when_cascading_then_rules_merge_per_selector() {
     let style = resolve(
         Style::from_yaml_str(
             r#"
 version: "0.44.0"
 info:
-  title: Scoped Date Substitute
-  id: scoped-date-substitute
+  title: Scoped Date Fallback
+  id: scoped-date-fallback
 options:
-  date-substitute: standard
+  date-fallback: standard
 bibliography:
   options:
-    date-substitute:
-      book: []
+    date-fallback:
+      first-issued:
+        book: none
 "#,
         )
         .expect("valid style"),
@@ -102,12 +103,29 @@ bibliography:
     );
 
     let policy = bibliography_scope_config(&style)
-        .date_substitute
-        .expect("merged date-substitute policy");
+        .date_fallback
+        .expect("merged date-fallback policy");
 
-    assert!(policy.candidates_for("book").is_some_and(<[_]>::is_empty));
-    assert_eq!(policy.candidates_for("report").map(<[_]>::len), Some(1));
-    let selectors: Vec<String> = policy.entries().keys().map(ToString::to_string).collect();
+    assert!(matches!(
+        policy.rule_for(true, "book"),
+        Some(citum_schema_style::options::DateFallbackRule::Preset(
+            citum_schema_style::options::DateFallbackRulePreset::None
+        ))
+    ));
+    assert!(policy.rule_for(true, "report").is_some());
+    let citum_schema_style::options::DateFallbackConfig::Policy(policy) = policy else {
+        panic!("policy should be enabled")
+    };
+    let Some(citum_schema_style::options::DateFallbackLane::Selectors(selectors)) =
+        policy.first_issued
+    else {
+        panic!("first-issued lane should be enabled")
+    };
+    let selectors: Vec<String> = selectors
+        .entries()
+        .keys()
+        .map(ToString::to_string)
+        .collect();
     assert_eq!(selectors, ["default", "book"]);
 }
 
