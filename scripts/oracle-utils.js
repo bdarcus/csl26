@@ -439,6 +439,183 @@ function findContributorComponent(normalizedEntry, names, occupiedPositions = []
   return null;
 }
 
+/**
+ * Find a cite item's own primary-name occurrence for segment-anchoring
+ * purposes -- family name only, deliberately not expanded to a nearby
+ * given-name/initial the way `findContributorComponent` does.
+ *
+ * `findContributorComponent`'s given-name expansion scans a 50-character
+ * window around the family name, which is safe within a single
+ * bibliography entry (one person's name, one nearby initial) but not
+ * within a multi-item citation cluster: a short cluster like
+ * "(Smith 2020; Jones 2021)" puts a *different* person's initial ("J")
+ * well within 50 characters of "Smith", so the expansion would sweep
+ * "Jones" into "Smith"'s anchor. Segmentation only needs a stable
+ * boundary, not the full name span, so this intentionally skips that
+ * expansion; `parseComponents`/`compareComponents` still does full
+ * given-name-aware component comparison afterward, once each item's text
+ * has already been sliced down to its own segment.
+ */
+function findFamilyNameAnchor(normalizedEntry, names, occupiedPositions = []) {
+  if (!Array.isArray(names) || names.length === 0) return null;
+
+  const family = names[0].family || names[0].literal || '';
+  if (!family) return null;
+
+  const entryLower = normalizedEntry.toLowerCase();
+  const familyLower = family.toLowerCase();
+  let idx = entryLower.indexOf(familyLower);
+  while (idx !== -1) {
+    const pos = { start: idx, end: idx + family.length };
+    if (!occupiedPositions.some((occupied) => positionsOverlap(occupied, pos))) {
+      return { found: true, value: sliceMatchedValue(normalizedEntry, pos), pos };
+    }
+    idx = entryLower.indexOf(familyLower, idx + 1);
+  }
+  return null;
+}
+
+/**
+ * Find a reference's issued year within a rendered citation, with an
+ * optional trailing single-letter disambiguation suffix (e.g. "2019a").
+ * Used as the fallback anchor for `splitCitationIntoItemSegments` when a
+ * cite item's own author name has already been consumed by an earlier
+ * item in the same cluster (the same-author-collapsed case, e.g. a
+ * rendered "Garcia 2019a, 2019b" where "Garcia" occurs only once).
+ */
+function findYearComponent(normalizedEntry, refData, occupiedPositions = []) {
+  const year = refData?.issued?.['date-parts']?.[0]?.[0];
+  if (year == null) return null;
+
+  const entryLower = normalizedEntry.toLowerCase();
+  const regex = new RegExp(`(?<![0-9])${escapeRegex(String(year))}[a-z]?`, 'gi');
+  let match = regex.exec(entryLower);
+  while (match !== null) {
+    const pos = { start: match.index, end: match.index + match[0].length };
+    if (!occupiedPositions.some((occupied) => positionsOverlap(occupied, pos))) {
+      return { found: true, value: sliceMatchedValue(normalizedEntry, pos), pos };
+    }
+    match = regex.exec(entryLower);
+  }
+  return null;
+}
+
+/**
+ * Locate the boundary of each cited item's own text within a rendered
+ * multi-item citation cluster (e.g. "(Garcia, 2019a; Garcia, 2019b)"),
+ * anchored on each item's own primary-name occurrence, falling back to
+ * its year (with disambiguation suffix) when the name has already been
+ * claimed by an earlier item in the cluster.
+ *
+ * Returns `items.length` segments in cite order, or `null` if any item's
+ * anchor can't be distinctly located, or if the located anchors don't
+ * come out in cite order (a same-author collapse with unpredictable
+ * suffix placement, for example). Callers must treat `null` as "not
+ * segmentable" -- guessing at a boundary risks attributing one item's
+ * rendered text to a different item's reference data, which would
+ * silently corrupt the component comparison rather than just skip it.
+ *
+ * @param {string} citationText - one side's rendered citation cluster (oracle or Citum)
+ * @param {Array<{id: string}>} items - cite.items, in cite order
+ * @param {Object} testItems - id -> reference data lookup
+ * @returns {Array<{start: number, end: number, refData: Object}>|null}
+ */
+function splitCitationIntoItemSegments(citationText, items, testItems) {
+  const normalized = normalizeText(citationText);
+  const anchors = [];
+  const occupiedPositions = [];
+
+  for (const item of items) {
+    const refData = testItems[item.id];
+    if (!refData) return null;
+
+    const names = refData.author && refData.author.length > 0 ? refData.author : refData.editor;
+    const nameAnchor = Array.isArray(names) && names.length > 0
+      ? findFamilyNameAnchor(normalized, names, occupiedPositions)
+      : null;
+
+    // Always also try to claim this item's own year, even when the name is
+    // what determines the segment boundary -- otherwise a later item that
+    // must fall back to year-anchoring (the same-author-collapsed case,
+    // e.g. "Garcia 2019a, 2019b") could mistake an earlier item's own
+    // unclaimed year for its own, since only the name would be occupied.
+    const yearAnchor = findYearComponent(normalized, refData, occupiedPositions);
+
+    const anchor = nameAnchor || yearAnchor;
+    if (!anchor) return null;
+
+    anchors.push(anchor.pos);
+    occupiedPositions.push(anchor.pos);
+    if (yearAnchor && yearAnchor.pos !== anchor.pos) {
+      occupiedPositions.push(yearAnchor.pos);
+    }
+  }
+
+  // Cite order is assumed to match render order -- true for every style
+  // this repo ships (items within a cluster aren't independently
+  // reordered). Verify defensively rather than assume: if the anchors
+  // didn't come out left-to-right in cite order, bail rather than guess.
+  for (let i = 1; i < anchors.length; i++) {
+    if (anchors[i].start < anchors[i - 1].start) return null;
+  }
+
+  return anchors.map((anchor, i) => {
+    const end = i + 1 < anchors.length ? anchors[i + 1].start : normalized.length;
+    return { start: anchor.start, end, refData: testItems[items[i].id] };
+  });
+}
+
+/**
+ * Compare a rendered citation cluster against the oracle, component by
+ * component, per cite item. Single-item clusters compare directly (the
+ * same 1:1 shape as a bibliography entry); multi-item clusters are
+ * segmented first via `splitCitationIntoItemSegments`.
+ *
+ * Returns `{ segmented: false }` -- not zeroed-out matches/differences --
+ * when either side can't be segmented, so callers can exclude these
+ * citations from an aggregate rate instead of miscounting them as
+ * complete mismatches.
+ *
+ * @param {string} oracleText
+ * @param {string} citumText
+ * @param {Array<{id: string}>} items - cite.items, in cite order
+ * @param {Object} testItems - id -> reference data lookup
+ */
+function compareCitationComponents(oracleText, citumText, items, testItems) {
+  if (!Array.isArray(items) || items.length === 0) return { segmented: false };
+
+  if (items.length === 1) {
+    const refData = testItems[items[0].id];
+    if (!refData) return { segmented: false };
+    const oracleComp = parseComponents(oracleText, refData);
+    const citumComp = parseComponents(citumText, refData);
+    const { matches, differences } = compareComponents(oracleComp, citumComp, refData);
+    return { segmented: true, matches, differences };
+  }
+
+  const oracleSegments = splitCitationIntoItemSegments(oracleText, items, testItems);
+  const citumSegments = splitCitationIntoItemSegments(citumText, items, testItems);
+  if (!oracleSegments || !citumSegments) return { segmented: false };
+
+  const normalizedOracle = normalizeText(oracleText);
+  const normalizedCitum = normalizeText(citumText);
+  const allMatches = [];
+  const allDifferences = [];
+
+  for (let i = 0; i < items.length; i++) {
+    const refData = testItems[items[i].id];
+    const oracleSlice = sliceMatchedValue(normalizedOracle, oracleSegments[i]) ?? '';
+    const citumSlice = sliceMatchedValue(normalizedCitum, citumSegments[i]) ?? '';
+    const oracleComp = parseComponents(oracleSlice, refData);
+    const citumComp = parseComponents(citumSlice, refData);
+    const { matches, differences } = compareComponents(oracleComp, citumComp, refData);
+    allMatches.push(...matches);
+    allDifferences.push(...differences);
+  }
+
+  return { segmented: true, matches: allMatches, differences: allDifferences };
+}
+
 // -- Component parsing --
 
 /**
@@ -705,6 +882,9 @@ module.exports = {
   isCaseOnlyMismatch,
   parseComponents,
   compareComponents,
+  findYearComponent,
+  splitCitationIntoItemSegments,
+  compareCitationComponents,
   analyzeOrdering,
   findRefMatchForEntry,
   hasPrimaryNames,

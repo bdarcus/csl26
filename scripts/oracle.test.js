@@ -18,7 +18,12 @@ const {
   collapseClusteredCitumCitations,
   resolveAuthoredStylePath,
 } = require('./oracle');
-const { compareText, parseComponents } = require('./oracle-utils');
+const {
+  compareText,
+  parseComponents,
+  splitCitationIntoItemSegments,
+  compareCitationComponents,
+} = require('./oracle-utils');
 const {
   attachRegisteredDivergenceAdjustments,
   canonicalizeAffectedIdsToOracleOrder,
@@ -1507,4 +1512,109 @@ test('compareComponents reports differing component values as mismatches', () =>
     found: 'Beta',
     detail: 'Value differs between oracle and Citum',
   }]);
+});
+
+test('splitCitationIntoItemSegments anchors distinct-author items by name', () => {
+  const testItems = {
+    smith2020: { id: 'smith2020', author: [{ family: 'Smith', given: 'Jane' }], issued: { 'date-parts': [[2020]] } },
+    jones2021: { id: 'jones2021', author: [{ family: 'Jones', given: 'Tom' }], issued: { 'date-parts': [[2021]] } },
+  };
+  const items = [{ id: 'smith2020' }, { id: 'jones2021' }];
+
+  const segments = splitCitationIntoItemSegments('(Smith 2020; Jones 2021)', items, testItems);
+
+  assert.equal(segments.length, 2);
+  assert.equal('(Smith 2020; Jones 2021)'.slice(segments[0].start, segments[0].end), 'Smith 2020; ');
+  assert.equal('(Smith 2020; Jones 2021)'.slice(segments[1].start, segments[1].end), 'Jones 2021)');
+});
+
+test('splitCitationIntoItemSegments falls back to year anchors for a same-author collapsed citation', () => {
+  const testItems = {
+    garcia2019a: { id: 'garcia2019a', author: [{ family: 'Garcia', given: 'Maria' }], issued: { 'date-parts': [[2019]] } },
+    garcia2019b: { id: 'garcia2019b', author: [{ family: 'Garcia', given: 'Maria' }], issued: { 'date-parts': [[2019]] } },
+  };
+  const items = [{ id: 'garcia2019a' }, { id: 'garcia2019b' }];
+
+  // Citum collapses same-author consecutive cites (csl26-dpep); the real
+  // author name appears only once, so item 2 has no distinct name
+  // occurrence and must anchor on its own year+suffix instead.
+  const segments = splitCitationIntoItemSegments('(Garcia 2019a, 2019b)', items, testItems);
+
+  assert.equal(segments.length, 2);
+  assert.equal('(Garcia 2019a, 2019b)'.slice(segments[0].start, segments[0].end), 'Garcia 2019a, ');
+  assert.equal('(Garcia 2019a, 2019b)'.slice(segments[1].start, segments[1].end), '2019b)');
+});
+
+test('splitCitationIntoItemSegments returns null when an item has no locatable anchor', () => {
+  const testItems = {
+    smith2020: { id: 'smith2020', author: [{ family: 'Smith', given: 'Jane' }], issued: { 'date-parts': [[2020]] } },
+    jones2021: { id: 'jones2021', author: [{ family: 'Jones', given: 'Tom' }], issued: { 'date-parts': [[2021]] } },
+  };
+  const items = [{ id: 'smith2020' }, { id: 'jones2021' }];
+
+  // Neither author nor either year appears anywhere in this text.
+  const segments = splitCitationIntoItemSegments('(n.d.)', items, testItems);
+
+  assert.equal(segments, null);
+});
+
+test('compareCitationComponents isolates the collapsed item\'s missing author instead of failing the whole citation', () => {
+  const testItems = {
+    garcia2019a: {
+      id: 'garcia2019a',
+      author: [{ family: 'Garcia', given: 'Maria' }],
+      issued: { 'date-parts': [[2019]] },
+    },
+    garcia2019b: {
+      id: 'garcia2019b',
+      author: [{ family: 'Garcia', given: 'Maria' }],
+      issued: { 'date-parts': [[2019]] },
+    },
+  };
+  const items = [{ id: 'garcia2019a' }, { id: 'garcia2019b' }];
+
+  const result = compareCitationComponents(
+    '(Garcia 2019a; Garcia 2019b)',
+    '(Garcia 2019a, 2019b)',
+    items,
+    testItems
+  );
+
+  assert.equal(result.segmented, true);
+  // Both years and item 1's contributor match; only item 2's elided
+  // "Garcia" registers as a real, isolated difference -- not a total
+  // mismatch for the whole citation.
+  assert.equal(result.matches.length, 3);
+  assert.deepEqual(result.differences, [{
+    component: 'contributors',
+    issue: 'missing',
+    expected: 'Garcia',
+    detail: 'Missing in Citum output',
+  }]);
+});
+
+test('compareCitationComponents reports segmented:false when neither side has a locatable anchor', () => {
+  const testItems = {
+    smith2020: { id: 'smith2020', author: [{ family: 'Smith', given: 'Jane' }], issued: { 'date-parts': [[2020]] } },
+    jones2021: { id: 'jones2021', author: [{ family: 'Jones', given: 'Tom' }], issued: { 'date-parts': [[2021]] } },
+  };
+  const items = [{ id: 'smith2020' }, { id: 'jones2021' }];
+
+  const result = compareCitationComponents('(n.d.)', '(n.d.)', items, testItems);
+
+  assert.deepEqual(result, { segmented: false });
+});
+
+test('compareCitationComponents compares single-item citations directly, matching bibliography\'s 1:1 shape', () => {
+  const testItems = {
+    smith2020: { id: 'smith2020', author: [{ family: 'Smith', given: 'Jane' }], issued: { 'date-parts': [[2020]] } },
+  };
+  const items = [{ id: 'smith2020' }];
+
+  const result = compareCitationComponents('(Smith 2020)', '(Smith, 2020)', items, testItems);
+
+  assert.equal(result.segmented, true);
+  assert.equal(result.differences.length, 0);
+  assert.ok(result.matches.some((m) => m.component === 'contributors'));
+  assert.ok(result.matches.some((m) => m.component === 'year'));
 });

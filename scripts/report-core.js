@@ -1884,6 +1884,47 @@ function computeComponentMatchRate(oracleResult) {
   return totalComponents > 0 ? parseFloat((totalMatches / totalComponents).toFixed(3)) : null;
 }
 
+/**
+ * Compute citation-side component match rate from oracle result.
+ *
+ * Unlike `computeComponentMatchRate` (bibliography), there is no "passing
+ * entry = 11/11" shortcut here: `oracle.js` always runs real component
+ * detection for citations (matching text or not), so `totalMatches`/
+ * `totalComponents` already reflect exactly what's present. Citations
+ * whose text couldn't be segmented into per-item spans
+ * (`componentsSegmented === false` -- typically a same-author-collapsed
+ * multi-item citation where neither side's rendering carries enough of a
+ * distinguishing anchor per item) are excluded from the rate entirely
+ * rather than counted as complete mismatches; `unresolvedSegmentation`
+ * reports how many were excluded so a low rate isn't silently inflated by
+ * coverage gaps in the segmenter itself.
+ */
+function computeCitationComponentMatchRate(oracleResult) {
+  if (oracleResult.error || !oracleResult.citations) return { rate: null, unresolvedSegmentation: 0 };
+
+  let totalMatches = 0;
+  let totalComponents = 0;
+  let unresolvedSegmentation = 0;
+
+  for (const entry of oracleResult.citations.entries || []) {
+    if (entry.componentsSegmented === false) {
+      unresolvedSegmentation++;
+      continue;
+    }
+    if (entry.components) {
+      const matches = (entry.components.matches || []).length;
+      const diffs = (entry.components.differences || []).length;
+      totalMatches += matches;
+      totalComponents += matches + diffs;
+    }
+  }
+
+  return {
+    rate: totalComponents > 0 ? parseFloat((totalMatches / totalComponents).toFixed(3)) : null,
+    unresolvedSegmentation,
+  };
+}
+
 function clamp(min, max, value) {
   return Math.max(min, Math.min(max, value));
 }
@@ -2744,6 +2785,8 @@ async function processStyleReport(runtime, styleSpec, context) {
         citationsByType: oracleResult.citationsByType || {},
         error: oracleResult.error || null,
         componentMatchRate: null,
+        citationComponentMatchRate: null,
+        citationComponentUnresolvedSegmentation: 0,
         statusTier,
         componentSummary: {},
         citationEntries: null,
@@ -2863,6 +2906,7 @@ async function processStyleReport(runtime, styleSpec, context) {
   const rawCitations = oracleResult.citations || { passed: 0, total: 0 };
   const rawBibliography = oracleResult.bibliography || { passed: 0, total: 0 };
   const componentMatchRate = computeComponentMatchRate(oracleResult);
+  const citationComponentMatchRate = computeCitationComponentMatchRate(oracleResult);
   const qualityMetrics = computeQualityMetrics(styleSpec, oracleResult, styleYamlPath);
   const qualityScore = qualityMetrics.score / 100;
 
@@ -2902,6 +2946,8 @@ async function processStyleReport(runtime, styleSpec, context) {
     citationsByType: oracleResult.citationsByType || {},
     error: combinedStyleError,
     componentMatchRate,
+    citationComponentMatchRate: citationComponentMatchRate.rate,
+    citationComponentUnresolvedSegmentation: citationComponentMatchRate.unresolvedSegmentation,
     statusTier,
     componentSummary: oracleResult.componentSummary || {},
     citationEntries: oracleResult.citations ? oracleResult.citations.entries : null,
@@ -3569,6 +3615,22 @@ function generateHtmlTable(report) {
       componentRateHtml = `<span class="inline-flex items-center px-3 py-1 rounded text-xs font-medium ${componentBadgeClass}">${pct}%</span>`;
     }
 
+    let citationComponentRateHtml = '';
+    if (style.citationComponentMatchRate !== null && style.citationComponentMatchRate !== undefined) {
+      const citationRate2 = style.citationComponentMatchRate;
+      const citationPct = (citationRate2 * 100).toFixed(0);
+      let citationComponentBadgeClass = 'bg-red-100 text-red-700';
+      if (citationRate2 >= 0.9) {
+        citationComponentBadgeClass = 'bg-emerald-100 text-emerald-700';
+      } else if (citationRate2 >= 0.7) {
+        citationComponentBadgeClass = 'bg-amber-100 text-amber-700';
+      }
+      const unresolvedNote = style.citationComponentUnresolvedSegmentation > 0
+        ? ` <span class="text-slate-400">(${style.citationComponentUnresolvedSegmentation} unsegmented)</span>`
+        : '';
+      citationComponentRateHtml = `<div class="mt-1 text-[10px]"><span class="inline-flex items-center px-2 py-0.5 rounded font-medium ${citationComponentBadgeClass}">cite ${citationPct}%</span>${unresolvedNote}</div>`;
+    }
+
     const toggleId = `toggle-${style.name}`;
     const contentId = `content-${style.name}`;
     tableRows += `
@@ -3611,6 +3673,7 @@ function generateHtmlTable(report) {
                     </td>
                     <td class="hidden md:table-cell px-6 py-4">
                         ${componentRateHtml}
+                        ${citationComponentRateHtml}
                     </td>
                     <td class="px-6 py-4">
                         <span class="inline-flex items-center px-3 py-1 rounded text-xs font-medium ${exactParityBadge}">
