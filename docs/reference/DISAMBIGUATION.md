@@ -25,8 +25,9 @@ not applied. The normative cascade and per-guide application live in the
 > **Same surname ≠ year suffix.** Different authors who share a surname (e.g.
 > "A. Johnson" vs "B. Johnson") are disambiguated by *given names/initials*, never
 > by a year suffix — year suffixes apply only to the *same author, same year*. APA
-> needs a **global** given-name rule (`primary-name-with-initials`) for this, since
-> the `by-cite` default only compares authors cited together.
+> needs `primary-name-with-initials` for this — not because `by-cite` compares fewer
+> references (it doesn't; see below), but because APA §8.20 shows initials on the
+> *first* author only, which `primary-name` restricts to.
 >
 > **MLA disambiguates by short title, not suffix.** MLA is author-*page*: it sets
 > `year-suffix: false` and resolves same-author works with a `disambiguate-only`
@@ -110,30 +111,33 @@ citation:
 
 ### Rules
 
-- **by-cite**: Apply given names only within each citation
-- **all-names**: Apply to all uses of the name (ensures consistency
+All rules detect collisions the same way: against every reference in the document,
+never a subset. What differs is *which name positions* are eligible to expand:
+
+- **by-cite**: currently identical to `all-names` in Citum (see note below) —
+  in real CSL it additionally caps how far one cite is forced to escalate, so a
+  cite already showing enough names to disambiguate doesn't gratuitously add
+  given names for a name hidden behind `et al.`
+- **all-names**: apply to all uses of the name (ensures consistency
   across document)
-- **primary-name**: Apply given names only to the first author position
+- **primary-name**: apply given names only to the first author position
 
 ### Example
 
-Multiple "Smith, J." authors:
+Multiple "Smith, J." authors, disambiguated document-wide:
 
 ```
-By-cite:
-Smith, J. (1980)
-Smith, J. (1985)
-
-All-names (after disambiguation):
 Smith, John (1980)
 Smith, Jane (1985)
-Smith, Jane (1985)
 ```
 
-In Citum, `by-cite` is implemented as a citation-local hint overlay. A reference
-that belongs to a global collision group can render unexpanded when it appears in
-a citation that does not need given-name expansion. `all-names` keeps global
-expansion for every affected reference.
+**Current limitation:** Citum's hint model does not yet support a per-cite
+escalation cap, so `by-cite` and `all-names` produce identical output — both
+expand every colliding reference's name(s) document-wide. See
+[the spec](../specs/DISAMBIGUATION.md), §2.1.1, for the citeproc-js behavior a
+future `by-cite` implementation should match, and `csl26-5753` for the tracked
+gap. A reference is never left unexpanded merely because it was cited alone —
+that was a defect (csl26-8nrt), not `by-cite` semantics.
 
 ## Group-Aware Disambiguation
 
@@ -171,10 +175,11 @@ them in order, stopping at the first successful disambiguation.
 
 ### Example: APA 7th Edition
 
-APA uses all three strategies with a **global** given-name rule (`primary-name`) so
-same-surname authors get first-author initials in every in-text citation (APA §8.20)
-— `by-cite` would only compare authors cited together. This is the major author-date
-guide profile, bundled by the **`author-date-full` preset** (names + add-givenname +
+APA uses all three strategies with the `primary-name` given-name rule so
+same-surname authors get initials on the *first* author only in every in-text
+citation (APA §8.20) — `by-cite` would expand every colliding position instead
+of just the first. This is the major author-date guide profile, bundled by the
+**`author-date-full` preset** (names + add-givenname +
 `primary-name` + year-suffix), which APA and Chicago AD share
 (see [`apa-7th.yaml`](../../crates/citum-schema-style/embedded/styles/apa-7th.yaml)):
 
