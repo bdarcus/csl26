@@ -46,22 +46,22 @@ citation:
   assert.equal(violations[0].ruleId, 'STYLE001');
 });
 
-test('STYLE002 flags inert substitute overrides when template is explicitly empty', () => {
+test('STYLE002 flags empty substitute candidates that should use none', () => {
   const content = `version: ""
 options:
   substitute:
-    template: []
+    candidates: []
     overrides:
       legal_case:
-        template: [title]
+        - title
 `;
   const data = {
     version: '',
     options: {
       substitute: {
-        template: [],
+        candidates: [],
         overrides: {
-          legal_case: { template: ['title'] },
+          legal_case: ['title'],
         },
       },
     },
@@ -192,14 +192,14 @@ bibliography:
   assert.equal(violations.some((violation) => violation.ruleId === 'STYLE004'), false);
 });
 
-test('applyFixes removes inert substitute overrides, hoists shorten config, and drops duplicate variants', () => {
+test('applyFixes replaces empty substitute candidates, hoists shorten config, and drops duplicate variants', () => {
   const style = {
     version: '',
     options: {
       substitute: {
-        template: [],
+        candidates: [],
         overrides: {
-          legal_case: { template: ['title'] },
+          'legal-case': ['title'],
         },
       },
     },
@@ -220,7 +220,10 @@ test('applyFixes removes inert substitute overrides, hoists shorten config, and 
   const changed = applyFixes(style);
 
   assert.equal(changed, true);
-  assert.deepEqual(style.options.substitute, { template: [] });
+  assert.deepEqual(style.options.substitute, {
+    candidates: 'none',
+    overrides: { 'legal-case': ['title'] },
+  });
   assert.deepEqual(style.citation.options.contributors.shorten, { min: 4, 'use-first': 1 });
   assert.equal(style.citation.template.every((component) => component.shorten === undefined), true);
   assert.equal(style.citation['type-variants'], undefined);

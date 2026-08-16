@@ -12,8 +12,9 @@ info:
 
 options:
   processing: author-date
+  date-fallback: standard
   substitute:
-    template:
+    candidates:
     - editor
     - translator
     - title
@@ -53,8 +54,6 @@ citation:
         form: short
       - date: issued
         form: year
-        fallback:
-        - message: term.no-date
     - variable: locator
   integral:
     delimiter: " "
@@ -67,8 +66,6 @@ citation:
       group:
       - date: issued
         form: year
-        fallback:
-        - message: term.no-date
       - variable: locator
 bibliography:
   options:
@@ -89,9 +86,6 @@ bibliography:
     - date: issued
       form: year
       suffix: "."
-      fallback: &id001
-      - message: term.no-date
-        suffix: "."
     - title: primary
       suffix: "."
       wrap:
@@ -135,7 +129,6 @@ bibliography:
     - date: issued
       form: year
       suffix: "."
-      fallback: *id001
     - title: primary
       suffix: "."
       wrap:
@@ -171,7 +164,6 @@ bibliography:
   - date: issued
     form: year
     suffix: "."
-    fallback: *id001
   - title: primary
     suffix: "."
   - delimiter: " "

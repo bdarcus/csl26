@@ -32,6 +32,7 @@ info:
   short-name: "Chicago Author-Date"
   edition: "18th edition"
 options:
+  date-fallback: standard
   # multilingual, page-range-format, dates, punctuation-in-quote, and
   # contributors.demote-non-dropping-particle are inherited from chicago-18-base.
   locators: note
@@ -83,7 +84,7 @@ options:
 citation:
   options:
     substitute:
-      template:
+      candidates:
       - editor
       - translator
       - parent-serial
@@ -180,7 +181,7 @@ bibliography:
       # role label follows a comma ("Lattimore, eds.") rather than sitting
       # in parentheses ("Lattimore (eds.)").
       contributor-role-form: short-comma
-      template:
+      candidates:
       - editor
       - translator
       - collection-editor

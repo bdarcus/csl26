@@ -21,7 +21,7 @@ info:
 options:
   substitute:
     contributor-role-form: short
-    template:
+    candidates:
     - editor
   contributors:
     name-form: initials

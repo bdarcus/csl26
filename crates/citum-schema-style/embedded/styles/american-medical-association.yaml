@@ -25,7 +25,7 @@ options:
     strip-label-periods: true
   substitute:
     contributor-role-form: short-comma
-    template: [editor]
+    candidates: [editor]
   processing: numeric
   contributors:
     name-form: initials

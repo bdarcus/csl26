@@ -495,12 +495,12 @@ test('computePresetUsageScore treats pure root wrappers as strong preset reuse',
   assert.match(score.note, /root extends/);
 });
 
-test('computePresetUsageScore counts date-substitute presets', () => {
+test('computePresetUsageScore counts date-fallback presets', () => {
   const score = computePresetUsageScore({
     options: {
       processing: 'author-date',
       substitute: 'standard',
-      'date-substitute': 'gb-t-7714-2025-author-date',
+      'date-fallback': 'gb-t-7714-2025-author-date',
     },
   }, 100);
 
@@ -509,7 +509,7 @@ test('computePresetUsageScore counts date-substitute presets', () => {
   assert.deepEqual(score.optionPresetFields, [
     'processing',
     'substitute',
-    'date-substitute',
+    'date-fallback',
   ]);
 });
 

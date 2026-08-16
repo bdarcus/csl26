@@ -10,7 +10,7 @@ info:
   default-locale: zh-CN
 options:
   processing: numeric
-  date-substitute: gb-t-7714-2025
+  date-fallback: gb-t-7714-2025
   multilingual:
     punctuation-width: mixed
   messages:
@@ -81,7 +81,7 @@ options:
   # without a primary creator, but never the title: an authorless entry keeps
   # its title in the title position (source CSL-M author macro substitute).
   substitute:
-    template:
+    candidates:
       - editor
     role-substitute:
       container-author:
@@ -549,7 +549,6 @@ bibliography:
             # cites the full publication date instead of a bare year.
             - date: issued
               form: year-month-day
-              fallback: []
             render-when:
               field-absent: volume-or-issue
           - number: volume
@@ -779,7 +778,7 @@ bibliography:
           # `book`/`thesis`/`map` route through this imprint position even
           # without a publisher (unlike `software`, which has no matching
           # branch at all and falls to the generic online-resource shape
-          # below instead) — the options-level GB/T date-substitute preset
+          # below instead) — the options-level GB/T date-fallback preset
           # supplies §7.5.4.3's publication-year substitutes (copyright,
           # then printing year), and finally the ACCESSED YEAR ONLY (not a
           # full date), matching the pinned CSL-M source's shared `date`

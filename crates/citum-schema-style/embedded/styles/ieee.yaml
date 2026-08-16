@@ -21,7 +21,7 @@ options:
   substitute:
     contributor-role-form: short-comma
     contributor-role-case: capitalize-first
-    template: [editor, translator]
+    candidates: [editor, translator]
   processing: numeric
   contributors:
     name-form: initials

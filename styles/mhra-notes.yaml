@@ -5,13 +5,14 @@ info:
   short-name: "MHRA"
   edition: "4th edition"
 options:
+  date-fallback: standard
   locators:
     default-label-form: short
     range-format: expanded
     fallback-delimiter: ", "
   substitute:
     contributor-role-form: short
-    template: []
+    candidates: none
   processing: note
   contributors:
     and: text

@@ -1154,14 +1154,14 @@ fn test_harvard_cite_them_right_grouped_citations_render_cleanly() {
         .expect("no-date-single citation should exist");
     assert_eq!(
         processor.process_citation(&no_date).unwrap(),
-        "(Forthcoming)"
+        "(Forthcoming, no date)"
     );
 }
 
 /// Given an explicit date-fallback message, a missing issued date renders the
 /// requested term form; without a policy, the date position remains blank.
 #[rstest]
-#[case::style_level_long_form_override("harvard-cite-them-right", "(Forthcoming)")]
+#[case::style_level_long_form_override("harvard-cite-them-right", "(Forthcoming, no date)")]
 #[case::omitted_policy_is_blank("springer-basic-author-date", "(Forthcoming)")]
 #[case::source_bare_date_is_blank(
     "taylor-and-francis-council-of-science-editors-author-date",

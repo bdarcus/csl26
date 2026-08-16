@@ -18,6 +18,7 @@ info:
       rel: documentation
   short-name: "Elsevier Harvard"
 options:
+  date-fallback: standard
   multilingual: romanized-translated
   processing:
     sort:
@@ -32,7 +33,7 @@ options:
       year-suffix: true
   substitute:
     contributor-role-form: short
-    template:
+    candidates:
     - translator
     - title
   contributors:
@@ -52,7 +53,7 @@ options:
 citation:
   options:
     substitute:
-      template:
+      candidates:
       - editor
       - translator
       - title
@@ -159,7 +160,7 @@ citation:
 bibliography:
   options:
     substitute:
-      template:
+      candidates:
       - translator
     hanging-indent: true
     separator: ". "

@@ -23,7 +23,7 @@ info:
 options:
   multilingual: romanized-translated
   substitute:
-    template:
+    candidates:
     - editor
     - translator
   processing: numeric

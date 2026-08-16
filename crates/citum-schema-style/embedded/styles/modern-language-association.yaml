@@ -34,7 +34,7 @@ options:
       year-suffix: false
   substitute:
     contributor-role-form: long
-    template: [editor, title, translator]
+    candidates: [editor, title, translator]
   integral-name-memory:
     contexts: body-only
     subsequent-form: short

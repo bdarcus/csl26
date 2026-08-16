@@ -23,7 +23,7 @@ for (const s of needsUpgrade) {
 
     // 1. Substitute preset: standard
     if (options.substitute && typeof options.substitute === "object") {
-        const t = options.substitute.template;
+        const t = options.substitute.candidates;
         if (t && t.length === 3 && t[0] === "editor" && t[1] === "title" && t[2] === "translator" && !options.substitute["contributor-role-form"]) {
             options.substitute = "standard";
             modified = true;
@@ -63,7 +63,7 @@ for (const s of needsUpgrade) {
     // Apply safe text replacements rather than re-emitting the full YAML structure.
     if (modified) {
         if (options.substitute === "standard") {
-            content = content.replace(/substitute:\n\s+template:\n\s+- editor\n\s+- title\n\s+- translator/g, 'substitute: standard');
+            content = content.replace(/substitute:\n\s+candidates:\n\s+- editor\n\s+- title\n\s+- translator/g, 'substitute: standard');
         }
         if (options.dates === "long") {
             content = content.replace(/dates:\n\s+month: long/g, 'dates: long');
