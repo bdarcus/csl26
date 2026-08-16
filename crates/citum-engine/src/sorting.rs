@@ -514,8 +514,7 @@ impl<'a> ReferenceSorter<'a> {
             // the substitute chain the render path uses
             // (`merged.rs::resolve_empty_list`) and land on, say, an editor.
         }
-        let substitute =
-            citum_schema::options::SubstituteConfig::resolve_or_default(config.substitute.as_ref());
+        let substitute = config.effective_substitute();
         let primary_key = match crate::values::contributor::substitute::effective_primary(
             reference,
             substitute.as_ref(),
@@ -744,18 +743,27 @@ fn primary_contributor_for_bibliography(
     first_contributor_component(&template)
 }
 
-fn first_date_component_ref(
-    template: &[citum_schema::template::TemplateComponent],
-) -> Option<&citum_schema::template::TemplateDate> {
+fn first_date_component_ref<'a>(
+    template: &'a [citum_schema::template::TemplateComponent],
+    reference: &Reference,
+    issued_only: bool,
+) -> Option<&'a citum_schema::template::TemplateDate> {
     for component in template {
         match component {
             citum_schema::template::TemplateComponent::Date(date)
-                if date.suppress_disamb_suffix != Some(true) =>
+                if (!issued_only
+                    || matches!(date.date, citum_schema::template::DateVariable::Issued))
+                    && date.suppress_disamb_suffix != Some(true) =>
             {
                 return Some(date);
             }
-            citum_schema::template::TemplateComponent::Group(group) => {
-                if let Some(date) = first_date_component_ref(&group.group) {
+            citum_schema::template::TemplateComponent::Group(group)
+                if group.rendering.suppress != Some(true)
+                    && group.render_when.as_ref().is_none_or(|condition| {
+                        crate::values::group_condition_matches(reference, condition)
+                    }) =>
+            {
+                if let Some(date) = first_date_component_ref(&group.group, reference, issued_only) {
                     return Some(date);
                 }
             }
@@ -767,24 +775,26 @@ fn first_date_component_ref(
 
 fn first_date_component(
     template: &[citum_schema::template::TemplateComponent],
+    reference: &Reference,
 ) -> Option<citum_schema::template::TemplateDate> {
-    first_date_component_ref(template).cloned()
+    first_date_component_ref(template, reference, true)
+        .or_else(|| first_date_component_ref(template, reference, false))
+        .cloned()
 }
 
-/// Resolve the first non-suppressed date component from a reference's
-/// effective citation template — the identity-bearing date slot under the
-/// author, not a later display-only date marked `suppress-disamb-suffix`.
-/// Structurally mirrors `primary_contributor_for_citation`'s resolution
-/// path, but `Disambiguator` consults this only as a *fallback* to
-/// `first_date_component_for_bibliography`, the reverse of the author-slot
-/// preference order — see that function's doc comment. See `csl26-huuz`.
+/// Resolve the first effective, non-suppressed `issued` component from a
+/// reference's citation template, falling back to its first effective date
+/// component when the template has no issued slot. Conditional groups that
+/// would not render for the reference are skipped, matching renderer traversal.
+/// `Disambiguator` consults this only as a fallback to
+/// `first_date_component_for_bibliography`. See `csl26-huuz`.
 pub(crate) fn first_date_component_for_citation(
     spec: &citum_schema::CitationSpec,
     reference: &Reference,
 ) -> Option<citum_schema::template::TemplateDate> {
     let language = crate::values::effective_item_language(reference);
     let template = spec.resolve_template_for_type(&reference.ref_type(), language.as_deref())?;
-    first_date_component(&template)
+    first_date_component(&template, reference)
 }
 
 /// Bibliography-spec counterpart of `first_date_component_for_citation`.
@@ -818,7 +828,7 @@ pub(crate) fn first_date_component_for_bibliography(
 ) -> Option<citum_schema::template::TemplateDate> {
     let language = crate::values::effective_item_language(reference);
     let template = spec.resolve_template_for_type(&reference.ref_type(), language.as_deref())?;
-    first_date_component(&template)
+    first_date_component(&template, reference)
 }
 
 #[cfg(test)]

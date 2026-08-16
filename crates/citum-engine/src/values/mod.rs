@@ -68,6 +68,56 @@ thread_local! {
 pub use contributor::format_contributors_short;
 pub use date::int_to_letter;
 
+/// Return whether a template group's field-presence condition matches a
+/// reference. Rendering and semantic consumers share this predicate so they
+/// traverse the same effective template branches.
+pub(crate) fn group_condition_matches(
+    reference: &Reference,
+    condition: &citum_schema::template::TemplateGroupCondition,
+) -> bool {
+    condition
+        .field_present
+        .as_ref()
+        .is_none_or(|field| condition_field_present(reference, field))
+        && condition
+            .field_absent
+            .as_ref()
+            .is_none_or(|field| !condition_field_present(reference, field))
+}
+
+fn condition_field_present(
+    reference: &Reference,
+    field: &citum_schema::template::TemplateConditionField,
+) -> bool {
+    use citum_schema::template::TemplateConditionField;
+
+    match field {
+        TemplateConditionField::Author => reference.author().is_some(),
+        TemplateConditionField::Editor => reference.editor().is_some(),
+        TemplateConditionField::Recipient => reference
+            .contributor(citum_schema::reference::ContributorRole::Recipient)
+            .is_some(),
+        TemplateConditionField::Translator => reference.translator().is_some(),
+        TemplateConditionField::Title => reference.title().is_some(),
+        TemplateConditionField::CollectionTitle => reference.collection_title().is_some(),
+        TemplateConditionField::Issued => reference.effective_issued_date().is_some(),
+        TemplateConditionField::OriginalPublished => reference.original_date().is_some(),
+        TemplateConditionField::Publisher => reference.publisher_str().is_some(),
+        TemplateConditionField::OriginalPublisher => reference.original_publisher_str().is_some(),
+        TemplateConditionField::OriginalPublisherPlace => {
+            reference.original_publisher_place().is_some()
+        }
+        TemplateConditionField::OriginalTitle => reference.original_title().is_some(),
+        TemplateConditionField::Doi => reference.doi().is_some(),
+        TemplateConditionField::Genre => reference.genre().is_some(),
+        TemplateConditionField::Archive => reference.archive().is_some(),
+        TemplateConditionField::ArchiveLocation => reference.archive_location().is_some(),
+        TemplateConditionField::VolumeOrIssue => {
+            reference.volume().is_some() || reference.issue().is_some()
+        }
+    }
+}
+
 /// Resolve the preferred variant from a map keyed by BCP 47 tag or script code.
 ///
 /// Applies priority-based matching:
@@ -834,6 +884,9 @@ pub struct ProcHints {
     /// Set when `first_reference_note_number` is present — the note number
     /// already identifies the work; the disambiguating short title is redundant.
     pub suppress_disambiguation_title: bool,
+    /// Whether the current issued-date component is the first recursively
+    /// encountered issued occurrence in the effective template.
+    pub date_fallback_first_issued: Option<bool>,
 }
 
 /// Context for rendering (citation vs bibliography).

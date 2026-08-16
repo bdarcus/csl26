@@ -32,12 +32,13 @@ use citum_schema::{
     citation::{Citation, CitationItem, CitationMode, IntegralNameState},
     grouping::{GroupSort, GroupSortEntry, GroupSortKey, SortKey as GroupSortKeyType},
     options::{
-        AndOptions, CitationLabelMode, Config, ContributorConfig, DateConfig,
-        DelimiterPrecedesLast, DisplayAsSort, GivennameRule, IntegralNameContexts,
-        IntegralNameMemoryConfig, IntegralNameScope, MultilingualConfig, MultilingualMode,
-        NameForm, Processing, ProcessingCustom, ReferenceTypeName, ShortenListOptions,
-        SubsequentNameForm, Substitute, SubstituteConfig, SubstituteTitleQuoteMode, TitleCategory,
-        TitleRendering, TitlesConfig, TwoNameDelimiterPolicy,
+        AndOptions, CitationLabelMode, Config, ContributorConfig, DateConfig, DateFallbackConfig,
+        DateFallbackPreset, DelimiterPrecedesLast, DisplayAsSort, GivennameRule,
+        IntegralNameContexts, IntegralNameMemoryConfig, IntegralNameScope, MultilingualConfig,
+        MultilingualMode, NameForm, Processing, ProcessingCustom, ReferenceTypeName,
+        ShortenListOptions, SubsequentNameForm, Substitute, SubstituteConfig,
+        SubstituteTitleQuoteMode, TitleCategory, TitleRendering, TitlesConfig,
+        TwoNameDelimiterPolicy,
     },
     reference::{DateValue, InputReference, Monograph, MonographType, Title},
 };
@@ -76,6 +77,9 @@ fn build_title_year_citation_style(sort: Vec<GroupSortKey>) -> Style {
         },
         options: Some(Config {
             processing: Some(Processing::Numeric),
+            date_fallback: Some(DateFallbackConfig::Policy(
+                DateFallbackPreset::Standard.config(),
+            )),
             ..Default::default()
         }),
         citation: Some(CitationSpec {
@@ -300,7 +304,9 @@ fn substitute_title_style(title_quote: Option<SubstituteTitleQuoteMode>) -> Styl
         },
         options: Some(Config {
             substitute: Some(SubstituteConfig::Explicit(Substitute {
-                template: vec![citum_schema::options::SubstituteKey::Title],
+                candidates: Some(citum_schema::options::SubstituteCandidates::Candidates(
+                    vec![citum_schema::options::SubstituteKey::Title],
+                )),
                 title_quote,
                 ..Default::default()
             })),
@@ -383,7 +389,9 @@ fn elsevier_harvard_style_substitute_title_style() -> Style {
         },
         options: Some(Config {
             substitute: Some(SubstituteConfig::Explicit(Substitute {
-                template: vec![citum_schema::options::SubstituteKey::Title],
+                candidates: Some(citum_schema::options::SubstituteCandidates::Candidates(
+                    vec![citum_schema::options::SubstituteKey::Title],
+                )),
                 title_quote: Some(SubstituteTitleQuoteMode::ByCategory),
                 ..Default::default()
             })),
@@ -468,7 +476,9 @@ fn cse_style_substitute_title_style() -> Style {
         },
         options: Some(Config {
             substitute: Some(SubstituteConfig::Explicit(Substitute {
-                template: vec![citum_schema::options::SubstituteKey::Title],
+                candidates: Some(citum_schema::options::SubstituteCandidates::Candidates(
+                    vec![citum_schema::options::SubstituteKey::Title],
+                )),
                 title_quote: Some(SubstituteTitleQuoteMode::ByCategory),
                 ..Default::default()
             })),

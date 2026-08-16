@@ -7,6 +7,7 @@ use crate::reference::{Bibliography, Reference};
 use crate::values::ProcHints;
 use citum_schema::options::{Config, GivennameRule};
 use citum_schema::reference::Title;
+use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
 use std::fmt::Write as _;
 
@@ -326,12 +327,11 @@ impl<'a> Disambiguator<'a> {
         // bibliography renders the same constant text for every such
         // reference, so those references would each form a singleton group
         // instead of colliding on year like a real shared author.
-        let substitute = citum_schema::options::SubstituteConfig::resolve_or_default(
-            self.sort_config.substitute.as_ref(),
-        );
+        let substitute = self.sort_config.effective_substitute();
         refs.iter()
             .enumerate()
             .map(|(index, reference)| {
+                let locale = self.effective_locale_for_reference(reference);
                 let names = if self.citation_primary_may_be_list {
                     self.citation_spec
                         .and_then(|spec| {
@@ -344,7 +344,7 @@ impl<'a> Disambiguator<'a> {
                                     reference,
                                     substitute.as_ref(),
                                     self.config,
-                                    self.locale,
+                                    locale.as_ref(),
                                 )
                             },
                             |component| {
@@ -352,7 +352,7 @@ impl<'a> Disambiguator<'a> {
                                     &component,
                                     reference,
                                     self.config,
-                                    self.locale,
+                                    locale.as_ref(),
                                 )
                             },
                         )
@@ -361,10 +361,15 @@ impl<'a> Disambiguator<'a> {
                         reference,
                         substitute.as_ref(),
                         self.config,
-                        self.locale,
+                        locale.as_ref(),
                     )
                 };
-                let author_key = self.build_author_slot_key(reference, &names, substitute.as_ref());
+                let author_key = self.build_author_slot_key(
+                    reference,
+                    &names,
+                    substitute.as_ref(),
+                    locale.as_ref(),
+                );
                 let group_key = self.build_group_key(index, reference, &author_key);
                 // Year-suffix letters (a, b, c…) must follow the effective bibliography
                 // sort order. Reuse the bibliography title sort key (leading-article
@@ -399,6 +404,7 @@ impl<'a> Disambiguator<'a> {
         reference: &Reference,
         author_names: &[crate::reference::FlatName],
         substitute: &citum_schema::options::Substitute,
+        locale: &Locale,
     ) -> String {
         let author_key = self.build_author_key(author_names);
         if !author_key.is_empty() {
@@ -408,43 +414,46 @@ impl<'a> Disambiguator<'a> {
         match crate::values::contributor::substitute::effective_primary(
             reference,
             substitute,
-            self.config,
-            self.locale,
+            self.sort_config,
+            locale,
         ) {
             Some(crate::values::contributor::substitute::EffectivePrimary::Title {
                 title, ..
             }) => Self::title_substitute_key(title),
-            // The substitute chain is exhausted with no contributor or title
-            // to promote. Unlike a substituted title (which already varies
-            // per reference and so needs no further disambiguation), a
-            // component-level `TemplateContributor.fallback` (e.g. GB/T
-            // 7714's `佚名`/`Anon` anonymous-author term, csl26-6eak) renders
-            // the *same* constant text for every such reference sharing a
-            // language — so, like a real shared author name, these entries
-            // must collide on year for suffix assignment rather than each
-            // forming its own singleton group. Scoped by the reference's own
-            // effective language (the same driver the bibliography renderer
-            // uses to pick a `locales:` branch, `core.rs`'s
-            // `effective_item_language`) because the rendered term itself
-            // varies by language (`佚名` vs `Anon`) — a Chinese and an
-            // English anonymous item must not share one year-suffix letter
-            // sequence when their rendered author text actually differs.
-            None => format!(
-                "{}{}",
-                Self::ANONYMOUS_FALLBACK_KEY,
-                crate::values::effective_item_language(reference).unwrap_or_default()
-            ),
+            // A terminal message is a shared rendered author identity, so
+            // anonymous works collide consistently for year-suffix handling.
+            None => substitute
+                .otherwise_message()
+                .and_then(|message| {
+                    crate::values::date::fallback_message_discriminant(
+                        &message.to_template_message(),
+                        locale,
+                        self.sort_config,
+                    )
+                })
+                .unwrap_or_default(),
             Some(_) => String::new(),
         }
     }
 
-    /// Sentinel author-slot key for references with no contributor, no
-    /// substitute title, and no substitute contributor — see
-    /// [`Self::build_author_slot_key`]. Not derived from any rendered text
-    /// (the caller doesn't know the active template's `fallback:` content),
-    /// just a stable, non-empty grouping key shared by every reference in
-    /// this state.
-    const ANONYMOUS_FALLBACK_KEY: &'static str = "\u{0}anonymous-fallback";
+    fn effective_locale_for_reference(&self, reference: &Reference) -> Cow<'a, Locale> {
+        let language = crate::values::effective_item_language(reference);
+        let localized_locale = if let Some(spec) = self.bibliography_spec {
+            spec.resolve_localized_template(language.as_deref())
+                .and_then(|resolved| resolved.locale)
+        } else {
+            self.citation_spec
+                .and_then(|spec| spec.resolve_localized_template(language.as_deref()))
+                .and_then(|resolved| resolved.locale)
+        };
+
+        crate::processor::rendering::effective_locale_for_reference(
+            reference,
+            localized_locale.as_deref(),
+            self.sort_config,
+            self.locale,
+        )
+    }
 
     /// Calculates how many references in `refs` share the same `author_key`.
     /// The returned map is keyed only by `author_key` and is later used when
@@ -1039,7 +1048,8 @@ impl<'a> Disambiguator<'a> {
 
     /// Discriminant for the date half of the collision key when a reference
     /// has no issued year. Reads the reference's effective resolved
-    /// template — the first non-suppressed date component under the author
+    /// template — the first effective, non-suppressed issued component under the author,
+    /// or the first effective date when the template has no issued slot
     /// (`crate::sorting::first_date_component_for_bibliography`, preferring
     /// the bibliography spec when present, else the citation spec) — and
     /// returns text identifying what it actually renders:
@@ -1075,10 +1085,9 @@ impl<'a> Disambiguator<'a> {
     /// vs `citation_spec` preference swap was compared against the GB/T
     /// oracle before landing this order.
     ///
-    /// Returns the empty string both when nothing resolves at all (an
-    /// explicit `fallback: []`) and when there is no template to resolve
-    /// (no citation or bibliography spec configured) — `build_group_key`'s
-    /// existing undiscriminated key for that case.
+    /// Returns the empty string both when the effective date-fallback policy
+    /// resolves blank and when there is no template to resolve —
+    /// `build_group_key`'s existing undiscriminated key for that case.
     fn date_slot_discriminant(&self, reference: &Reference) -> String {
         let component_and_config = self
             .bibliography_spec
@@ -1094,10 +1103,11 @@ impl<'a> Disambiguator<'a> {
         let Some((component, config)) = component_and_config else {
             return String::new();
         };
+        let locale = self.effective_locale_for_reference(reference);
         Self::date_component_discriminant(
             &component,
             reference,
-            self.locale,
+            locale.as_ref(),
             config,
             &reference.ref_type(),
         )
@@ -1108,8 +1118,6 @@ impl<'a> Disambiguator<'a> {
     /// every GB/T-style explicit `message: term.no-date` fallback names.
     /// Both render identical text, so both must produce the same
     /// discriminant here.
-    const IMPLICIT_NO_DATE_TERM: &'static str = "term.no-date";
-
     /// Classify what a resolved date component renders for a reference with
     /// no issued year. See `date_slot_discriminant`'s doc comment for the
     /// cases.
@@ -1172,31 +1180,21 @@ impl<'a> Disambiguator<'a> {
             .unwrap_or_default();
         }
 
-        let source =
-            crate::values::date::effective_date_candidate_source(component, config, ref_type);
-        let Some(fallbacks) = source.template_components() else {
-            return if matches!(component.date, DateVariable::Issued) {
-                crate::values::date::fallback_message_discriminant(
-                    &citum_schema::template::TemplateMessage {
-                        message: Self::IMPLICIT_NO_DATE_TERM.to_string(),
-                        form: Some(citum_schema::locale::TermForm::Short),
-                        ..Default::default()
-                    },
-                    locale,
-                    config,
-                )
-                .unwrap_or_default()
-            } else {
-                String::new()
-            };
+        if !matches!(component.date, DateVariable::Issued) {
+            return String::new();
+        }
+        let Some(fallbacks) =
+            crate::values::date::effective_date_fallback_candidates(config, true, ref_type)
+        else {
+            return String::new();
         };
 
         for candidate in fallbacks.iter() {
-            match candidate {
+            match candidate.to_template_component() {
                 TemplateComponent::Message(message) => {
-                    let Some(discriminant) =
-                        crate::values::date::fallback_message_discriminant(message, locale, config)
-                    else {
+                    let Some(discriminant) = crate::values::date::fallback_message_discriminant(
+                        &message, locale, config,
+                    ) else {
                         // Rendering skips unresolved or suppressed messages and
                         // continues to the next fallback candidate.
                         continue;
@@ -1379,8 +1377,8 @@ mod tests {
         MultilingualString, StructuredName, Title,
     };
     use citum_schema::template::{
-        DateForm, DateVariable, Rendering, TemplateComponent, TemplateDate, TemplateMessage,
-        WrapConfig, WrapPunctuation,
+        DateForm, DateVariable, Rendering, TemplateComponent, TemplateDate, WrapConfig,
+        WrapPunctuation,
     };
     use citum_schema::{BibliographySpec, CitationSpec, Style, StyleInfo};
     use rstest::rstest;
@@ -2162,6 +2160,57 @@ mod tests {
     }
 
     #[test]
+    fn terminal_author_messages_use_each_references_effective_locale() {
+        fn anonymous_ref(id: &str, language: &str) -> Reference {
+            Reference::Monograph(Box::new(Monograph {
+                id: Some(id.into()),
+                r#type: MonographType::Book,
+                title: Some(Title::Single(format!("Title {id}"))),
+                language: Some(language.parse().expect("valid language tag")),
+                issued: DateValue::new("2020"),
+                ..Default::default()
+            }))
+        }
+
+        let mut bibliography = Bibliography::new();
+        bibliography.insert("english".to_string(), anonymous_ref("english", "en-US"));
+        bibliography.insert("chinese".to_string(), anonymous_ref("chinese", "zh-CN"));
+        let config: Config = serde_yaml::from_str(
+            r#"
+multilingual:
+  term-locale: item
+substitute:
+  candidates: none
+  otherwise:
+    message: term.anonymous
+    form: short
+"#,
+        )
+        .expect("localized terminal substitute should parse");
+        let locale = citum_schema::embedded::get_locale("zh-CN").expect("embedded zh-CN locale");
+        let refs: Vec<&Reference> = bibliography.values().collect();
+
+        let cache = Disambiguator::new(&bibliography, &config, &config, &locale)
+            .build_reference_cache(&refs, false);
+        let english_key = &cache
+            .iter()
+            .find(|reference| reference.key == ReferenceCacheKey::Id("english".to_string()))
+            .expect("English cache entry")
+            .data
+            .author_key;
+        let chinese_key = &cache
+            .iter()
+            .find(|reference| reference.key == ReferenceCacheKey::Id("chinese".to_string()))
+            .expect("Chinese cache entry")
+            .data
+            .author_key;
+
+        assert_eq!(english_key, "Anon|None|None|None|None|None|None|None|None");
+        assert_eq!(chinese_key, "佚名|None|None|None|None|None|None|None|None");
+        assert_ne!(english_key, chinese_key);
+    }
+
+    #[test]
     fn test_push_lowercased_matches_str_lowercase_for_non_ascii() {
         let mut key = String::new();
         let value = "ΟΣ";
@@ -2591,23 +2640,54 @@ mod tests {
     /// The GB/T-shaped date component under test: primary `issued`, falling
     /// back to an access year (never a discriminant, per csl26-huuz) and
     /// then to the locale's no-date term.
-    fn issued_with_accessed_fallback() -> TemplateDate {
+    fn issued_date_component() -> TemplateDate {
         TemplateDate {
             date: DateVariable::Issued,
             form: DateForm::Year,
-            fallback: Some(vec![
-                TemplateComponent::Date(TemplateDate {
-                    date: DateVariable::Accessed,
-                    form: DateForm::Year,
-                    ..Default::default()
-                }),
-                TemplateComponent::Message(TemplateMessage {
-                    message: "term.no-date".to_string(),
-                    ..Default::default()
-                }),
-            ]),
             ..Default::default()
         }
+    }
+
+    #[test]
+    fn date_slot_uses_the_first_effective_issued_component() {
+        use citum_schema::template::{
+            TemplateConditionField, TemplateGroup, TemplateGroupCondition,
+        };
+
+        let reference = make_dated_ref("issued-slot", "Smith", "", None);
+        let mut bibliography = Bibliography::new();
+        bibliography.insert("issued-slot".to_string(), reference);
+        let config: Config =
+            serde_yaml::from_str("date-fallback: standard").expect("standard policy should parse");
+        let locale = Locale::en_us();
+        let bibliography_spec = BibliographySpec {
+            template: Some(
+                vec![
+                    TemplateComponent::Group(TemplateGroup {
+                        group: vec![TemplateComponent::Date(TemplateDate {
+                            date: DateVariable::OriginalPublished,
+                            form: DateForm::Year,
+                            ..Default::default()
+                        })],
+                        render_when: Some(TemplateGroupCondition {
+                            field_present: Some(TemplateConditionField::OriginalPublished),
+                            field_absent: None,
+                        }),
+                        ..Default::default()
+                    }),
+                    TemplateComponent::Date(issued_date_component()),
+                ]
+                .into(),
+            ),
+            ..Default::default()
+        };
+        let reference = bibliography.get("issued-slot").expect("reference");
+
+        let discriminant = Disambiguator::new(&bibliography, &config, &config, &locale)
+            .with_bibliography_spec(&bibliography_spec)
+            .date_slot_discriminant(reference);
+
+        assert_eq!(discriminant, "n.d.|None|None|None|None|None|None|None|None");
     }
 
     #[rstest]
@@ -2633,81 +2713,87 @@ mod tests {
         #[case] expected: &str,
     ) {
         let reference = make_dated_ref("d1", "Smith", issued, accessed);
-        let component = issued_with_accessed_fallback();
+        let component = issued_date_component();
+        let config: Config = serde_yaml::from_str(
+            r#"
+date-fallback:
+  first-issued:
+    default:
+    - date: accessed
+      form: year
+    - message: term.no-date
+"#,
+        )
+        .expect("date fallback should parse");
 
         let locale = Locale::en_us();
         let discriminant = Disambiguator::date_component_discriminant(
             &component,
             &reference,
             &locale,
-            &Config::default(),
+            &config,
             &reference.ref_type(),
         );
 
         assert_eq!(discriminant, expected);
     }
 
-    #[rstest]
-    #[case::explicit_message_fallback(Some(vec![TemplateComponent::Message(TemplateMessage {
-        message: "term.no-date".to_string(),
-        form: Some(citum_schema::locale::TermForm::Short),
-        ..Default::default()
-    })]))]
-    #[case::implicit_no_fallback_at_all(None)]
-    fn given_an_undated_issued_slot_when_the_no_date_term_is_reached_then_the_discriminant_is_the_same_either_way(
-        #[case] fallback: Option<Vec<TemplateComponent>>,
-    ) {
+    #[test]
+    fn standard_and_explicit_short_no_date_rules_share_the_same_discriminant() {
         let reference = make_dated_ref("d2", "Smith", "", None);
-        let component = TemplateDate {
-            date: DateVariable::Issued,
-            form: DateForm::Year,
-            fallback,
-            ..Default::default()
-        };
+        let component = issued_date_component();
+        let standard: Config =
+            serde_yaml::from_str("date-fallback: standard").expect("preset should parse");
+        let explicit: Config = serde_yaml::from_str(
+            r#"
+date-fallback:
+  first-issued:
+    default:
+    - message: term.no-date
+      form: short
+"#,
+        )
+        .expect("explicit policy should parse");
 
         let locale = Locale::en_us();
-        let discriminant = Disambiguator::date_component_discriminant(
-            &component,
-            &reference,
-            &locale,
-            &Config::default(),
-            &reference.ref_type(),
-        );
+        let discriminants = [&standard, &explicit].map(|config| {
+            Disambiguator::date_component_discriminant(
+                &component,
+                &reference,
+                &locale,
+                config,
+                &reference.ref_type(),
+            )
+        });
 
-        // Both the implicit (no `fallback:` at all) and explicit
-        // (`fallback: [message: term.no-date]`) paths render the identical
-        // locale term via TemplateDate::values, so they must produce the
-        // identical collision-key discriminant — otherwise a style that
-        // mixes the two forms across type-variants would split undated
-        // references that render identical text.
-        assert_eq!(discriminant, "n.d.|None|None|None|None|None|None|None|None");
+        assert_eq!(discriminants[0], discriminants[1]);
+        assert_eq!(
+            discriminants[0],
+            "n.d.|None|None|None|None|None|None|None|None"
+        );
     }
 
     #[test]
     fn unresolved_message_fallback_continues_to_the_next_candidate() {
         let reference = make_dated_ref("d2", "Smith", "", None);
-        let component = TemplateDate {
-            date: DateVariable::Issued,
-            form: DateForm::Year,
-            fallback: Some(vec![
-                TemplateComponent::Message(TemplateMessage {
-                    message: "term.does-not-exist".to_string(),
-                    ..TemplateMessage::default()
-                }),
-                TemplateComponent::Message(TemplateMessage {
-                    message: "term.no-date".to_string(),
-                    ..TemplateMessage::default()
-                }),
-            ]),
-            ..TemplateDate::default()
-        };
+        let component = issued_date_component();
+        let config: Config = serde_yaml::from_str(
+            r#"
+date-fallback:
+  first-issued:
+    default:
+    - message: term.does-not-exist
+    - message: term.no-date
+"#,
+        )
+        .expect("date fallback should parse");
 
         let locale = Locale::en_us();
         let discriminant = Disambiguator::date_component_discriminant(
             &component,
             &reference,
             &locale,
-            &Config::default(),
+            &config,
             &reference.ref_type(),
         );
 
@@ -2718,21 +2804,19 @@ mod tests {
     }
 
     #[test]
-    fn empty_explicit_fallback_list_yields_empty_discriminant() {
+    fn explicit_none_rule_yields_empty_discriminant() {
         let reference = make_dated_ref("d3", "Smith", "", None);
-        let component = TemplateDate {
-            date: DateVariable::Issued,
-            form: DateForm::Year,
-            fallback: Some(Vec::new()),
-            ..Default::default()
-        };
+        let component = issued_date_component();
+        let config: Config =
+            serde_yaml::from_str("date-fallback:\n  first-issued:\n    default: none")
+                .expect("none rule should parse");
 
         let locale = Locale::en_us();
         let discriminant = Disambiguator::date_component_discriminant(
             &component,
             &reference,
             &locale,
-            &Config::default(),
+            &config,
             &reference.ref_type(),
         );
 
@@ -2868,19 +2952,6 @@ mod tests {
         }))
     }
 
-    fn issued_with_copyright_fallback() -> TemplateDate {
-        TemplateDate {
-            date: DateVariable::Issued,
-            form: DateForm::Year,
-            fallback: Some(vec![TemplateComponent::Date(TemplateDate {
-                date: DateVariable::Copyright,
-                form: DateForm::Year,
-                ..Default::default()
-            })]),
-            ..Default::default()
-        }
-    }
-
     #[rstest]
     #[case::day_precision_early_in_the_year("1995-03-01")]
     #[case::day_precision_late_in_the_year("1995-11-20")]
@@ -2892,7 +2963,17 @@ mod tests {
         // different discriminants for two references that both render as
         // the bare year "1995" under `form: year`, wrongly treating them as
         // already distinguishable. Flagged in PR review for csl26-huuz.
-        let component = issued_with_copyright_fallback();
+        let component = issued_date_component();
+        let config: Config = serde_yaml::from_str(
+            r#"
+date-fallback:
+  first-issued:
+    default:
+    - date: copyright
+      form: year
+"#,
+        )
+        .expect("copyright fallback should parse");
         let reference = make_ref_with_copyright("r1", "Smith", copyright);
         let locale = Locale::en_us();
 
@@ -2900,7 +2981,7 @@ mod tests {
             &component,
             &reference,
             &locale,
-            &Config::default(),
+            &config,
             &reference.ref_type(),
         );
 
@@ -2918,31 +2999,21 @@ mod tests {
     /// Flagged in PR review for csl26-huuz.
     #[test]
     fn copyright_and_printing_fallbacks_with_the_same_year_do_not_collide() {
-        let component = TemplateDate {
-            date: DateVariable::Issued,
-            form: DateForm::Year,
-            fallback: Some(vec![
-                TemplateComponent::Date(TemplateDate {
-                    date: DateVariable::Copyright,
-                    form: DateForm::Year,
-                    rendering: Rendering {
-                        prefix: Some("c".into()),
-                        ..Default::default()
-                    },
-                    ..Default::default()
-                }),
-                TemplateComponent::Date(TemplateDate {
-                    date: DateVariable::Printing,
-                    form: DateForm::Year,
-                    rendering: Rendering {
-                        suffix: Some("印刷".into()),
-                        ..Default::default()
-                    },
-                    ..Default::default()
-                }),
-            ]),
-            ..Default::default()
-        };
+        let component = issued_date_component();
+        let config: Config = serde_yaml::from_str(
+            r#"
+date-fallback:
+  first-issued:
+    default:
+    - date: copyright
+      form: year
+      prefix: c
+    - date: printing
+      form: year
+      suffix: 印刷
+"#,
+        )
+        .expect("publication fallback should parse");
         let copyright_ref = Reference::Monograph(Box::new(Monograph {
             id: Some("copyright-ref".into()),
             r#type: MonographType::Book,
@@ -2980,14 +3051,14 @@ mod tests {
             &component,
             &copyright_ref,
             &locale,
-            &Config::default(),
+            &config,
             &copyright_ref.ref_type(),
         );
         let printing_discriminant = Disambiguator::date_component_discriminant(
             &component,
             &printing_ref,
             &locale,
-            &Config::default(),
+            &config,
             &printing_ref.ref_type(),
         );
 
@@ -3021,7 +3092,7 @@ mod tests {
         bib.insert("b4".to_string(), make_dated_ref("b4", "Smith", "", None));
 
         let locale = Locale::en_us();
-        let config = Config {
+        let mut config = Config {
             processing: Some(Processing::Custom(ProcessingCustom {
                 base: None,
                 disambiguate: Some(Disambiguation {
@@ -3034,11 +3105,24 @@ mod tests {
             })),
             ..Default::default()
         };
+        config.date_fallback = Some(
+            serde_yaml::from_str::<citum_schema::options::DateFallbackEntry>(
+                r#"
+first-issued:
+  default:
+  - date: accessed
+    form: year
+  - message: term.no-date
+"#,
+            )
+            .expect("date fallback should parse")
+            .resolve(),
+        );
         let bibliography_spec = BibliographySpec {
             template: Some(
                 vec![
                     citum_schema::tc_contributor!(Author, Long),
-                    TemplateComponent::Date(issued_with_accessed_fallback()),
+                    TemplateComponent::Date(issued_date_component()),
                 ]
                 .into(),
             ),

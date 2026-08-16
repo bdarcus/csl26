@@ -729,7 +729,7 @@ fn native_override_precedes_legacy_alias_and_uses_available_merged_roles() {
 info: {id: primary-override-test, title: Primary override test}
 options:
   substitute:
-    template: [editor, title, translator]
+    candidates: [editor, title, translator]
     overrides:
       episode:
         - contributor: [writer, director]
@@ -1175,7 +1175,7 @@ fn empty_editor_list_falls_through_to_title_substitute() {
 info: {id: empty-editor-substitute-test, title: Empty editor substitute test}
 options:
   substitute:
-    template: [editor, title]
+    candidates: [editor, title]
   contributors:
     name-form: initials
     initialize-with: ". "
@@ -1205,7 +1205,7 @@ fn merged_sort_key_falls_through_to_effective_primary_when_merged_component_is_e
 info: {id: merged-sort-fallback-test, title: Merged sort fallback test}
 options:
   substitute:
-    template: [editor, title]
+    candidates: [editor, title]
   contributors:
     name-form: initials
     initialize-with: ". "

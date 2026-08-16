@@ -451,7 +451,6 @@ fn test_contributor_values() {
     let hints = ProcHints::default();
 
     let component = TemplateContributor {
-        fallback: None,
         contributor: ContributorRole::Author.into(),
         form: ContributorForm::Short,
         label: None,
@@ -465,6 +464,7 @@ fn test_contributor_values() {
         rendering: Default::default(),
         links: None,
         gender: None,
+        fallback: None,
         custom: None,
     };
 
@@ -1012,11 +1012,11 @@ fn test_date_values() {
     let component = TemplateDate {
         date: TemplateDateVar::Issued,
         form: DateForm::Year,
-        fallback: None,
         suppress_note: None,
         suppress_disamb_suffix: None,
         rendering: Default::default(),
         links: None,
+        fallback: None,
         custom: None,
     };
 
@@ -1061,11 +1061,11 @@ fn test_message_component_renders_accessed_date_argument() {
             MessageArgSource::Date(TemplateDate {
                 date: TemplateDateVar::Issued,
                 form: DateForm::Year,
-                fallback: None,
                 suppress_note: None,
                 suppress_disamb_suffix: None,
                 rendering: Default::default(),
                 links: None,
+                fallback: None,
                 custom: None,
             }),
         )]
@@ -1303,11 +1303,11 @@ fn test_message_component_reorders_locale_phrase_arguments() {
     let date_arg = MessageArgSource::Date(TemplateDate {
         date: TemplateDateVar::Issued,
         form: DateForm::Year,
-        fallback: None,
         suppress_note: None,
         suppress_disamb_suffix: None,
         rendering: Default::default(),
         links: None,
+        fallback: None,
         custom: None,
     });
     let url_arg = MessageArgSource::Variable(TemplateVariable {
@@ -1630,11 +1630,11 @@ fn test_year_month_day_dates_inline_disambiguation_suffix_on_year() {
     let component = TemplateDate {
         date: TemplateDateVar::Issued,
         form: DateForm::YearMonthDay,
-        fallback: None,
         suppress_note: None,
         suppress_disamb_suffix: None,
         rendering: Default::default(),
         links: None,
+        fallback: None,
         custom: None,
     };
 
@@ -1677,7 +1677,6 @@ fn test_et_al() {
     });
 
     let component = TemplateContributor {
-        fallback: None,
         contributor: ContributorRole::Author.into(),
         form: ContributorForm::Short,
         label: None,
@@ -1691,6 +1690,7 @@ fn test_et_al() {
         rendering: Default::default(),
         links: None,
         gender: None,
+        fallback: None,
         custom: None,
     };
 
@@ -1739,7 +1739,6 @@ fn test_et_al_delimiter_never() {
     });
 
     let component = TemplateContributor {
-        fallback: None,
         contributor: ContributorRole::Author.into(),
         form: ContributorForm::Short,
         label: None,
@@ -1753,6 +1752,7 @@ fn test_et_al_delimiter_never() {
         rendering: Default::default(),
         links: None,
         gender: None,
+        fallback: None,
         custom: None,
     };
 
@@ -1913,7 +1913,6 @@ fn test_et_al_delimiter_always() {
     });
 
     let component = TemplateContributor {
-        fallback: None,
         contributor: ContributorRole::Author.into(),
         form: ContributorForm::Short,
         label: None,
@@ -1927,6 +1926,7 @@ fn test_et_al_delimiter_always() {
         rendering: Default::default(),
         links: None,
         gender: None,
+        fallback: None,
         custom: None,
     };
 
@@ -3598,8 +3598,10 @@ fn test_translator_substitute_uses_locale_aware_role_label() {
     config.substitute = Some(SubstituteConfig::Explicit(Substitute {
         contributor_role_form: Some("long".to_string()),
         contributor_role_case: None,
-        candidates: None,
-        template: vec![SubstituteKey::Translator],
+        template: Vec::new(),
+        candidates: Some(SubstituteCandidates::Candidates(vec![
+            SubstituteKey::Translator,
+        ])),
         overrides: std::collections::HashMap::new(),
         role_substitute: std::collections::HashMap::new(),
         title_quote: None,
@@ -3809,8 +3811,10 @@ fn test_role_specific_name_order_applies_in_substitute_path() {
     config.substitute = Some(SubstituteConfig::Explicit(Substitute {
         contributor_role_form: Some("short".to_string()),
         contributor_role_case: None,
-        candidates: None,
-        template: vec![SubstituteKey::Translator],
+        template: Vec::new(),
+        candidates: Some(SubstituteCandidates::Candidates(vec![
+            SubstituteKey::Translator,
+        ])),
         overrides: std::collections::HashMap::new(),
         role_substitute: std::collections::HashMap::new(),
         title_quote: None,
@@ -3955,7 +3959,10 @@ fn test_template_list_term_suppression() {
 /// Tests the behavior of `test_date_fallback`.
 #[test]
 fn test_date_fallback() {
-    let config = make_config();
+    let mut config = make_config();
+    config.date_fallback = Some(DateFallbackConfig::Policy(
+        DateFallbackPreset::Standard.config(),
+    ));
     let locale = make_locale();
     let options = RenderOptions {
         config: Arc::new(config),
@@ -3978,16 +3985,14 @@ fn test_date_fallback() {
         title: Some("Poetics".to_string()),
         ..Default::default()
     });
-    let hints = ProcHints::default();
+    let hints = ProcHints {
+        date_fallback_first_issued: Some(true),
+        ..ProcHints::default()
+    };
 
     let component = TemplateDate {
         date: TemplateDateVar::Issued,
         form: DateForm::Year,
-        fallback: Some(vec![TemplateComponent::Term(TemplateTerm {
-            term: GeneralTerm::NoDate,
-            form: Some(TermForm::Short),
-            ..Default::default()
-        })]),
         ..Default::default()
     };
 
@@ -3997,10 +4002,9 @@ fn test_date_fallback() {
     assert_eq!(values.value, "n.d.");
 }
 
-/// Given an explicit empty fallback, a missing issued date is omitted instead of
-/// using the implicit locale no-date term.
+/// Without an explicit policy, a missing issued date is omitted.
 #[test]
-fn given_empty_date_fallback_when_issued_missing_then_date_is_omitted() {
+fn given_omitted_date_fallback_when_issued_missing_then_date_is_omitted() {
     let config = make_config();
     let locale = make_locale();
     let options = RenderOptions {
@@ -4025,7 +4029,6 @@ fn given_empty_date_fallback_when_issued_missing_then_date_is_omitted() {
     let component = TemplateDate {
         date: TemplateDateVar::Issued,
         form: DateForm::Year,
-        fallback: Some(Vec::new()),
         ..Default::default()
     };
 
@@ -4034,11 +4037,17 @@ fn given_empty_date_fallback_when_issued_missing_then_date_is_omitted() {
     assert!(values.is_none());
 }
 
-/// Given an explicit fallback whose components are also missing, a missing issued
-/// date is omitted instead of continuing to the implicit locale no-date term.
+/// An exhausted alternative-date policy leaves the issued slot blank.
 #[test]
 fn given_exhausted_date_fallback_when_issued_missing_then_date_is_omitted() {
-    let config = make_config();
+    let mut config = make_config();
+    config.date_fallback = Some(
+        serde_yaml::from_str::<DateFallbackEntry>(
+            "first-issued:\n  default:\n  - date: accessed\n    form: year",
+        )
+        .expect("fallback policy should parse")
+        .resolve(),
+    );
     let locale = make_locale();
     let options = RenderOptions {
         config: Arc::new(config),
@@ -4062,24 +4071,23 @@ fn given_exhausted_date_fallback_when_issued_missing_then_date_is_omitted() {
     let component = TemplateDate {
         date: TemplateDateVar::Issued,
         form: DateForm::Year,
-        fallback: Some(vec![TemplateComponent::Variable(TemplateVariable {
-            variable: SimpleVariable::Doi,
-            ..Default::default()
-        })]),
         ..Default::default()
     };
 
-    let values = component.values::<PlainText>(&reference, &ProcHints::default(), &options);
+    let hints = ProcHints {
+        date_fallback_first_issued: Some(true),
+        ..ProcHints::default()
+    };
+    let values = component.values::<PlainText>(&reference, &hints, &options);
 
     assert!(values.is_none());
 }
 
 #[test]
-fn test_author_fallback_renders_anonymous_term_when_substitute_chain_is_empty() {
+fn test_author_otherwise_renders_anonymous_term_when_substitute_chain_is_empty() {
     // csl26-6eak: GB/T 7714's `佚名` (anonymous-author) placeholder. The
     // reference has no author, no editor/title/translator for the default
-    // substitute chain to promote, so `TemplateContributor.fallback`
-    // (mirroring `TemplateDate.fallback`) is consulted as the last resort.
+    // substitute chain to promote, so `substitute.otherwise` is the last resort.
     let reference = InputReference::Monograph(Box::new(Monograph {
         id: Some("no-author-1947".into()),
         r#type: MonographType::Book,
@@ -4092,17 +4100,16 @@ fn test_author_fallback_renders_anonymous_term_when_substitute_chain_is_empty() 
     let component = TemplateContributor {
         contributor: ContributorRole::Author.into(),
         form: ContributorForm::Long,
-        fallback: Some(vec![TemplateComponent::Message(TemplateMessage {
-            message: "term.anonymous".to_string(),
-            form: Some(TermForm::Short),
-            ..Default::default()
-        })]),
         ..Default::default()
     };
     let config = Config {
         substitute: Some(citum_schema::options::SubstituteConfig::Explicit(
             citum_schema::options::Substitute {
-                template: Vec::new(),
+                otherwise: Some(SubstituteOtherwise::Message(SubstituteMessage {
+                    message: "term.anonymous".to_string(),
+                    form: Some(TermForm::Short),
+                    rendering: Rendering::default(),
+                })),
                 ..Default::default()
             },
         )),
@@ -5899,11 +5906,11 @@ fn make_issued_year_component() -> TemplateDate {
     TemplateDate {
         date: TemplateDateVar::Issued,
         form: DateForm::Year,
-        fallback: None,
         suppress_note: None,
         suppress_disamb_suffix: None,
         rendering: Default::default(),
         links: None,
+        fallback: None,
         custom: None,
     }
 }
@@ -6192,11 +6199,11 @@ fn test_date_note_wraps_after_a_closed_interval() {
     let component = TemplateDate {
         date: TemplateDateVar::Issued,
         form: DateForm::Year,
-        fallback: None,
         suppress_note: None,
         suppress_disamb_suffix: None,
         rendering: Default::default(),
         links: None,
+        fallback: None,
         custom: None,
     };
 

@@ -28,11 +28,13 @@ use common::*;
 use citum_engine::Processor;
 use citum_schema::{
     CitationOptions, CitationSpec, Style, StyleInfo,
-    locale::{GeneralTerm, TermForm},
-    options::{CitationLabelMode, Config, ContributorConfig, Processing, ShortenListOptions},
+    options::{
+        CitationLabelMode, Config, ContributorConfig, DateFallbackConfig, DateFallbackPreset,
+        Processing, ShortenListOptions,
+    },
     template::{
         ContributorForm, ContributorRole, DateForm, DateVariable as TDateVar, TemplateComponent,
-        TemplateContributor, TemplateDate, TemplateTerm,
+        TemplateContributor, TemplateDate,
     },
 };
 
@@ -81,6 +83,9 @@ fn build_date_style(form: DateForm) -> Style {
         },
         options: Some(Config {
             processing: Some(Processing::Numeric),
+            date_fallback: Some(DateFallbackConfig::Policy(
+                DateFallbackPreset::Standard.config(),
+            )),
             ..Default::default()
         }),
         citation: Some(CitationSpec {
@@ -92,11 +97,6 @@ fn build_date_style(form: DateForm) -> Style {
                 vec![TemplateComponent::Date(TemplateDate {
                     date: TDateVar::Issued,
                     form,
-                    fallback: Some(vec![TemplateComponent::Term(TemplateTerm {
-                        term: GeneralTerm::NoDate,
-                        form: Some(TermForm::Short),
-                        ..Default::default()
-                    })]),
                     ..Default::default()
                 })]
                 .into(),

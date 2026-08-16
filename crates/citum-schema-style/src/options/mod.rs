@@ -1188,9 +1188,7 @@ where
 }
 
 /// Deserialize and eagerly expand the transitional date-substitution policy.
-fn deserialize_date_substitute<'de, D>(
-    deserializer: D,
-) -> Result<Option<DateSubstitute>, D::Error>
+fn deserialize_date_substitute<'de, D>(deserializer: D) -> Result<Option<DateSubstitute>, D::Error>
 where
     D: serde::Deserializer<'de>,
 {

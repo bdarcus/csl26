@@ -72,7 +72,6 @@ fn term_locale_probe_template() -> Vec<TemplateComponent> {
         TemplateComponent::Date(TemplateDate {
             date: DateVariable::Issued,
             form: DateForm::Full,
-            fallback: None,
             suppress_note: None,
             suppress_disamb_suffix: None,
             rendering: Rendering {
@@ -80,6 +79,7 @@ fn term_locale_probe_template() -> Vec<TemplateComponent> {
                 ..Default::default()
             },
             links: None,
+            fallback: None,
             custom: None,
         }),
     ]

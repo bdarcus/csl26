@@ -286,10 +286,10 @@ fn test_date_key_is_always_none() {
         date: citum_schema::template::DateVariable::Issued,
         form: DateForm::Year,
         rendering: Rendering::default(),
-        fallback: None,
         suppress_note: None,
         suppress_disamb_suffix: None,
         links: None,
+        fallback: None,
         custom: None,
     });
 
@@ -300,10 +300,10 @@ fn test_date_key_is_always_none() {
         date: citum_schema::template::DateVariable::Issued,
         form: DateForm::Year,
         rendering: Rendering::default(),
-        fallback: None,
         suppress_note: None,
         suppress_disamb_suffix: None,
         links: None,
+        fallback: None,
         custom: None,
     });
 
@@ -313,10 +313,10 @@ fn test_date_key_is_always_none() {
         date: citum_schema::template::DateVariable::Issued,
         form: DateForm::YearMonthDay,
         rendering: Rendering::default(),
-        fallback: None,
         suppress_note: None,
         suppress_disamb_suffix: None,
         links: None,
+        fallback: None,
         custom: None,
     });
 
@@ -376,7 +376,6 @@ fn test_strip_author_component_nested_list() {
     let nested = TemplateComponent::Group(TemplateGroup {
         group: vec![
             TemplateComponent::Contributor(TemplateContributor {
-                fallback: None,
                 contributor: ContributorRole::Author.into(),
                 form: ContributorForm::Short,
                 and: None,
@@ -390,16 +389,17 @@ fn test_strip_author_component_nested_list() {
                 links: None,
                 gender: None,
                 rendering: Rendering::default(),
+                fallback: None,
                 custom: None,
             }),
             TemplateComponent::Date(TemplateDate {
                 date: citum_schema::template::DateVariable::Issued,
                 form: DateForm::Year,
                 rendering: Rendering::default(),
-                fallback: None,
                 suppress_note: None,
                 suppress_disamb_suffix: None,
                 links: None,
+                fallback: None,
                 custom: None,
             }),
         ],
@@ -1143,7 +1143,7 @@ fn sentence_initial_date_group_preserves_no_date_term_case() {
         publisher: Some("University Press".to_string()),
         ..Default::default()
     });
-    let style = bibliography_style_with_template(vec![
+    let mut style = bibliography_style_with_template(vec![
         TemplateComponent::Contributor(TemplateContributor {
             contributor: ContributorRole::Author.into(),
             form: ContributorForm::Long,
@@ -1167,6 +1167,12 @@ fn sentence_initial_date_group_preserves_no_date_term_case() {
             ..Default::default()
         }),
     ]);
+    style.options = Some(Config {
+        date_fallback: Some(citum_schema::options::DateFallbackConfig::Policy(
+            citum_schema::options::DateFallbackPreset::Standard.config(),
+        )),
+        ..Default::default()
+    });
 
     let result = render_single_bibliography_entry(style, reference);
 
@@ -1307,24 +1313,24 @@ mod fallback_chain_disamb_suffix {
 
     #[test]
     fn accessed_fallback_letter_lands_inside_bracket_wrap() {
-        let style = author_then_date_style(TemplateDate {
+        let mut style = author_then_date_style(TemplateDate {
             date: DateVariable::Issued,
             form: DateForm::Year,
-            fallback: Some(vec![TemplateComponent::Date(TemplateDate {
-                date: DateVariable::Accessed,
-                form: DateForm::Year,
-                rendering: Rendering {
-                    wrap: Some(WrapConfig {
-                        punctuation: WrapPunctuation::Brackets,
-                        inner_prefix: None,
-                        inner_suffix: None,
-                    }),
-                    ..Default::default()
-                },
-                ..Default::default()
-            })]),
             ..Default::default()
         });
+        style.options = Some(
+            serde_yaml::from_str(
+                r#"
+date-fallback:
+  first-issued:
+    default:
+    - date: accessed
+      form: year
+      wrap: brackets
+"#,
+            )
+            .expect("date fallback should parse"),
+        );
         let references = vec![
             make_monograph("first", "Anon", "", Some("2020")),
             make_monograph("second", "Anon", "", Some("2019")),
@@ -1349,7 +1355,6 @@ mod fallback_chain_disamb_suffix {
         let style = author_then_date_style(TemplateDate {
             date: DateVariable::Issued,
             form: DateForm::Year,
-            fallback: Some(vec![]),
             ..Default::default()
         });
         let references = vec![
@@ -1366,25 +1371,24 @@ mod fallback_chain_disamb_suffix {
                 String::new(),
                 "Anon. b. Title second".to_string(),
             ],
-            "an explicit empty fallback list renders no date text, but the \
+            "an explicit blank date-fallback rule renders no date text, but the \
              collision group's letter must still render standalone rather \
              than being silently dropped"
         );
     }
 
     /// Mirrors GB/T 7714's real `article-journal,article-magazine`
-    /// type-variant shape (`fallback: []`): an undated entry with no
+    /// type-variant policy (`date-fallback: ... none`): an undated entry with no
     /// collision partner renders no date text whatsoever — not even the
     /// locale's no-date term — and an undated entry that *does* need
     /// disambiguation still gets its letter, rendered standalone in the
     /// same blank position. Answers the PR review question about this
     /// YAML's behavioral implication.
     #[test]
-    fn empty_fallback_list_leaves_the_date_position_blank_with_or_without_disambiguation() {
+    fn blank_fallback_rule_leaves_the_date_position_blank_with_or_without_disambiguation() {
         let style = author_then_date_style(TemplateDate {
             date: DateVariable::Issued,
             form: DateForm::Year,
-            fallback: Some(vec![]),
             ..Default::default()
         });
         let references = vec![
@@ -1411,9 +1415,9 @@ mod fallback_chain_disamb_suffix {
     }
 }
 
-mod date_substitute_options {
+mod date_fallback_options {
     use super::*;
-    use citum_schema::options::DateSubstitutePreset;
+    use citum_schema::options::{DateFallbackConfig, DateFallbackPreset};
     use citum_schema::reference::{
         Contributor, DateValue, Monograph, MonographType, MultilingualString, StructuredName, Title,
     };
@@ -1429,39 +1433,35 @@ mod date_substitute_options {
         })
     }
 
-    fn issued_with_inline_empty() -> TemplateComponent {
+    fn issued_date() -> TemplateComponent {
         TemplateComponent::Date(TemplateDate {
             date: DateVariable::Issued,
             form: DateForm::Year,
-            fallback: Some(vec![]),
             ..Default::default()
         })
     }
 
     fn style_with_policy(
-        preset: Option<DateSubstitutePreset>,
+        preset: Option<DateFallbackPreset>,
         template: Vec<TemplateComponent>,
     ) -> Style {
         let mut style = bibliography_style_with_template(template);
         style.options = Some(Config {
-            date_substitute: preset.map(DateSubstitutePreset::config),
+            date_fallback: preset.map(|preset| DateFallbackConfig::Policy(preset.config())),
             ..Default::default()
         });
         style
     }
 
     #[test]
-    fn omitted_policy_preserves_inline_empty_while_standard_is_explicit() {
+    fn omitted_policy_is_blank_while_standard_is_explicit() {
         let reference = undated_reference("book", "book", None);
         let omitted = render_single_bibliography_entry(
-            style_with_policy(None, vec![issued_with_inline_empty()]),
+            style_with_policy(None, vec![issued_date()]),
             reference.clone(),
         );
         let standard = render_single_bibliography_entry(
-            style_with_policy(
-                Some(DateSubstitutePreset::Standard),
-                vec![issued_with_inline_empty()],
-            ),
+            style_with_policy(Some(DateFallbackPreset::Standard), vec![issued_date()]),
             reference,
         );
 
@@ -1470,27 +1470,53 @@ mod date_substitute_options {
     }
 
     #[test]
-    fn matched_empty_identity_slot_does_not_replace_later_inline_fallback() {
+    fn first_and_later_issued_lanes_resolve_independently() {
         let later_display_date = TemplateComponent::Date(TemplateDate {
             date: DateVariable::Issued,
             form: DateForm::Year,
-            fallback: Some(vec![TemplateComponent::Message(TemplateMessage {
-                message: "term.no-date".to_string(),
-                form: Some(citum_schema::locale::TermForm::Short),
-                ..Default::default()
-            })]),
             suppress_disamb_suffix: Some(true),
             ..Default::default()
         });
         let style = style_with_policy(
-            Some(DateSubstitutePreset::GbT7714_2025AuthorDate),
-            vec![issued_with_inline_empty(), later_display_date],
+            Some(DateFallbackPreset::GbT7714_2025AuthorDate),
+            vec![issued_date(), later_display_date],
         );
 
         let rendered = render_single_bibliography_entry(
             style,
-            undated_reference("journal", "article-journal", None),
+            undated_reference("manuscript", "manuscript", None),
         );
+
+        assert_eq!(rendered, "n.d.");
+    }
+
+    #[test]
+    fn blank_nested_first_issued_still_advances_the_later_lane() {
+        let mut style = bibliography_style_with_template(vec![
+            TemplateComponent::Group(TemplateGroup {
+                group: vec![TemplateComponent::Group(TemplateGroup {
+                    group: vec![issued_date()],
+                    ..Default::default()
+                })],
+                ..Default::default()
+            }),
+            issued_date(),
+        ]);
+        style.options = Some(
+            serde_yaml::from_str(
+                r#"
+date-fallback:
+  first-issued:
+    default: none
+  later-issued:
+    default: standard
+"#,
+            )
+            .expect("lane policy should parse"),
+        );
+
+        let rendered =
+            render_single_bibliography_entry(style, undated_reference("nested", "book", None));
 
         assert_eq!(rendered, "n.d.");
     }
@@ -1498,8 +1524,8 @@ mod date_substitute_options {
     #[test]
     fn accessed_web_candidate_uses_the_authored_bracket_rendering() {
         let style = style_with_policy(
-            Some(DateSubstitutePreset::GbT7714_2025AuthorDate),
-            vec![issued_with_inline_empty()],
+            Some(DateFallbackPreset::GbT7714_2025AuthorDate),
+            vec![issued_date()],
         );
 
         let rendered = render_single_bibliography_entry(
@@ -1514,17 +1540,18 @@ mod date_substitute_options {
     fn message_candidate_uses_central_component_rendering() {
         let config: Config = serde_yaml::from_str(
             r#"
-date-substitute:
-  default:
-  - message: term.no-date
-    form: short
-    small-caps: true
-    quote: true
+date-fallback:
+  first-issued:
+    default:
+    - message: term.no-date
+      form: short
+      small-caps: true
+      quote: true
 "#,
         )
-        .expect("date-substitute config should parse");
+        .expect("date-fallback config should parse");
         let style = {
-            let mut style = bibliography_style_with_template(vec![issued_with_inline_empty()]);
+            let mut style = bibliography_style_with_template(vec![issued_date()]);
             style.options = Some(config);
             style
         };
@@ -1539,18 +1566,19 @@ date-substitute:
     fn suppressed_candidate_continues_to_the_next_candidate() {
         let config: Config = serde_yaml::from_str(
             r#"
-date-substitute:
-  default:
-  - message: term.no-date
-    form: short
-    suppress: true
-  - date: accessed
-    form: year
+date-fallback:
+  first-issued:
+    default:
+    - message: term.no-date
+      form: short
+      suppress: true
+    - date: accessed
+      form: year
 "#,
         )
-        .expect("date-substitute config should parse");
+        .expect("date-fallback config should parse");
         let style = {
-            let mut style = bibliography_style_with_template(vec![issued_with_inline_empty()]);
+            let mut style = bibliography_style_with_template(vec![issued_date()]);
             style.options = Some(config);
             style
         };
@@ -1564,26 +1592,43 @@ date-substitute:
     }
 
     #[test]
-    fn unmatched_selector_preserves_the_inline_candidate_source() {
+    fn issued_candidate_is_defensively_skipped_before_the_next_fallback() {
         let config: Config = serde_yaml::from_str(
             r#"
-date-substitute:
-  book: []
+date-fallback:
+  first-issued:
+    default:
+    - date: issued
+      form: year
+    - message: term.no-date
+      form: short
+"#,
+        )
+        .expect("unvalidated config still deserializes");
+        let style = {
+            let mut style = bibliography_style_with_template(vec![issued_date()]);
+            style.options = Some(config);
+            style
+        };
+
+        let rendered =
+            render_single_bibliography_entry(style, undated_reference("book", "book", None));
+
+        assert_eq!(rendered, "n.d.");
+    }
+
+    #[test]
+    fn unmatched_selector_leaves_the_date_blank() {
+        let config: Config = serde_yaml::from_str(
+            r#"
+date-fallback:
+  first-issued:
+    book: standard
 "#,
         )
         .expect("selector map should parse");
-        let inline_no_date = TemplateComponent::Date(TemplateDate {
-            date: DateVariable::Issued,
-            form: DateForm::Year,
-            fallback: Some(vec![TemplateComponent::Message(TemplateMessage {
-                message: "term.no-date".to_string(),
-                form: Some(citum_schema::locale::TermForm::Short),
-                ..Default::default()
-            })]),
-            ..Default::default()
-        });
         let style = {
-            let mut style = bibliography_style_with_template(vec![inline_no_date]);
+            let mut style = bibliography_style_with_template(vec![issued_date()]);
             style.options = Some(config);
             style
         };
@@ -1591,7 +1636,7 @@ date-substitute:
         let rendered =
             render_single_bibliography_entry(style, undated_reference("report", "report", None));
 
-        assert_eq!(rendered, "n.d.");
+        assert_eq!(rendered, "");
     }
 
     #[test]
@@ -1603,13 +1648,13 @@ date-substitute:
                 name_order: Some(NameOrder::FamilyFirst),
                 ..Default::default()
             }),
-            issued_with_inline_empty(),
+            issued_date(),
             TemplateComponent::Title(TemplateTitle {
                 title: TitleType::Primary,
                 ..Default::default()
             }),
         ];
-        let style = style_with_policy(Some(DateSubstitutePreset::GbT7714_2025AuthorDate), template);
+        let style = style_with_policy(Some(DateFallbackPreset::GbT7714_2025AuthorDate), template);
         let mut bibliography = Bibliography::new();
         bibliography.insert(
             "first".to_string(),
@@ -1632,17 +1677,18 @@ date-substitute:
             r#"
 dates:
   note-wrap: parentheses
-date-substitute:
-  default:
-  - date: copyright
-    form: year
-    prefix: c
-    suppress-note: true
+date-fallback:
+  first-issued:
+    default:
+    - date: copyright
+      form: year
+      prefix: c
+      suppress-note: true
 "#,
         )
-        .expect("date-substitute config should parse");
+        .expect("date-fallback config should parse");
         let style = {
-            let mut style = bibliography_style_with_template(vec![issued_with_inline_empty()]);
+            let mut style = bibliography_style_with_template(vec![issued_date()]);
             style.options = Some(config);
             style
         };

@@ -60,6 +60,32 @@ pub(crate) fn lookup_embedded_locale(locale_id: &str) -> Option<&'static Locale>
     })
 }
 
+/// Resolve the rendering locale for one reference after localized-template
+/// selection has identified an optional authoritative locale branch.
+pub(crate) fn effective_locale_for_reference<'a>(
+    reference: &Reference,
+    localized_locale_id: Option<&str>,
+    config: &Config,
+    base_locale: &'a Locale,
+) -> Cow<'a, Locale> {
+    if let Some(locale_id) = localized_locale_id {
+        return Cow::Borrowed(lookup_embedded_locale(locale_id).unwrap_or(base_locale));
+    }
+
+    let language = crate::values::effective_item_language(reference);
+    let term_locale_is_item = config.multilingual.as_ref().is_some_and(|multilingual| {
+        multilingual.term_locale == citum_schema::options::TermLocale::Item
+    });
+
+    if term_locale_is_item
+        && let Some(item_locale) = language.as_deref().and_then(lookup_embedded_locale)
+    {
+        return Cow::Owned(base_locale.with_term_surfaces_from(item_locale));
+    }
+
+    Cow::Borrowed(base_locale)
+}
+
 /// The renderer for citation and bibliography templates.
 ///
 /// The `Renderer` is responsible for taking compiled templates and applying them
@@ -208,6 +234,7 @@ struct UngroupedItemRenderParams<'a> {
 struct TemplateComponentTracker {
     rendered_vars: HashSet<String>,
     substituted_bases: HashSet<String>,
+    issued_occurrences: usize,
 }
 
 impl TemplateComponentTracker {
@@ -230,9 +257,16 @@ impl TemplateComponentTracker {
         }
     }
 
+    fn next_issued_is_first(&mut self) -> bool {
+        let is_first = self.issued_occurrences == 0;
+        self.issued_occurrences = self.issued_occurrences.saturating_add(1);
+        is_first
+    }
+
     fn merge_from(&mut self, other: Self) {
         self.rendered_vars.extend(other.rendered_vars);
         self.substituted_bases.extend(other.substituted_bases);
+        self.issued_occurrences = self.issued_occurrences.max(other.issued_occurrences);
     }
 }
 
@@ -316,23 +350,14 @@ impl<'a> Renderer<'a> {
                 .and_then(|spec| spec.resolve_localized_template(language.as_deref())),
         };
 
-        if let Some(locale_id) = selected.and_then(|resolved| resolved.locale) {
-            return Cow::Borrowed(lookup_embedded_locale(&locale_id).unwrap_or(self.locale));
-        }
-
-        let term_locale_is_item = self
-            .config
-            .multilingual
-            .as_ref()
-            .is_some_and(|ml| ml.term_locale == citum_schema::options::TermLocale::Item);
-
-        if term_locale_is_item
-            && let Some(item_locale) = language.as_deref().and_then(lookup_embedded_locale)
-        {
-            return Cow::Owned(self.locale.with_term_surfaces_from(item_locale));
-        }
-
-        Cow::Borrowed(self.locale)
+        effective_locale_for_reference(
+            reference,
+            selected
+                .as_ref()
+                .and_then(|resolved| resolved.locale.as_deref()),
+            self.config.as_ref(),
+            self.locale,
+        )
     }
 
     /// Resolve multilingual contributor names using the style's config.
