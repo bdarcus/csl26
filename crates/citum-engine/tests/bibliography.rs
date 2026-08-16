@@ -3822,7 +3822,9 @@ fn editor_author_substitute_renders_comma_short_capitalized_label() {
         citum_schema::options::Substitute {
             contributor_role_form: Some("short-comma".to_string()),
             contributor_role_case: Some(citum_schema::options::titles::TextCase::CapitalizeFirst),
-            template: vec![citum_schema::options::SubstituteKey::Editor],
+            candidates: Some(citum_schema::options::SubstituteCandidates::Candidates(
+                vec![citum_schema::options::SubstituteKey::Editor],
+            )),
             ..Default::default()
         },
     ));

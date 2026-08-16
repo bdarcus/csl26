@@ -39,9 +39,7 @@ pub(super) fn values<F: OutputFormat<Output = String>>(
     let roles = component.contributor.as_slice();
     let primary_role = roles.first()?;
     let merge = effective_merge(component, &options.config);
-    let substitute = citum_schema::options::SubstituteConfig::resolve_or_default(
-        options.config.substitute.as_ref(),
-    );
+    let substitute = options.config.effective_substitute();
     let mut suppressed_roles = suppressed_roles(reference, roles, &options.config);
     suppressed_roles.extend(substitute_suppressed_roles(
         reference,
@@ -354,8 +352,7 @@ pub(crate) fn semantic_names(
         return Vec::new();
     }
     let merge = effective_merge(component, config);
-    let substitute =
-        citum_schema::options::SubstituteConfig::resolve_or_default(config.substitute.as_ref());
+    let substitute = config.effective_substitute();
     let mut suppressed = suppressed_roles(reference, roles, config);
     suppressed.extend(substitute_suppressed_roles(
         reference,
@@ -782,9 +779,7 @@ fn resolve_empty_list<F: OutputFormat<Output = String>>(
     effective_rendering: &Rendering,
     fmt: &F,
 ) -> Option<ProcValues<F::Output>> {
-    let substitute = citum_schema::options::SubstituteConfig::resolve_or_default(
-        options.config.substitute.as_ref(),
-    );
+    let substitute = options.config.effective_substitute();
     let mut scalar = component.clone();
     scalar.contributor = primary_role.clone().into();
     scalar.merge = None;

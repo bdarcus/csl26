@@ -17,9 +17,7 @@ use crate::error::ProcessorError;
 use crate::reference::Reference;
 use crate::render::{ProcTemplate, ProcTemplateComponent};
 use crate::values::{ComponentValues, ProcHints, RenderContext, RenderOptions};
-use citum_schema::template::{
-    TemplateComponent, TemplateConditionField, TemplateGroupCondition, WrapConfig, WrapPunctuation,
-};
+use citum_schema::template::{TemplateComponent, WrapConfig, WrapPunctuation};
 use std::borrow::Cow;
 
 struct GroupRenderState<'a> {
@@ -68,45 +66,6 @@ struct HintInputs<'a> {
     integral_name_state: Option<citum_schema::citation::IntegralNameState>,
     org_abbreviation_state: Option<citum_schema::citation::IntegralNameState>,
     first_reference_note_number: Option<u32>,
-}
-
-fn group_condition_matches(reference: &Reference, condition: &TemplateGroupCondition) -> bool {
-    condition
-        .field_present
-        .as_ref()
-        .is_none_or(|field| condition_field_present(reference, field))
-        && condition
-            .field_absent
-            .as_ref()
-            .is_none_or(|field| !condition_field_present(reference, field))
-}
-
-fn condition_field_present(reference: &Reference, field: &TemplateConditionField) -> bool {
-    match field {
-        TemplateConditionField::Author => reference.author().is_some(),
-        TemplateConditionField::Editor => reference.editor().is_some(),
-        TemplateConditionField::Recipient => reference
-            .contributor(citum_schema::reference::ContributorRole::Recipient)
-            .is_some(),
-        TemplateConditionField::Translator => reference.translator().is_some(),
-        TemplateConditionField::Title => reference.title().is_some(),
-        TemplateConditionField::CollectionTitle => reference.collection_title().is_some(),
-        TemplateConditionField::Issued => reference.effective_issued_date().is_some(),
-        TemplateConditionField::OriginalPublished => reference.original_date().is_some(),
-        TemplateConditionField::Publisher => reference.publisher_str().is_some(),
-        TemplateConditionField::OriginalPublisher => reference.original_publisher_str().is_some(),
-        TemplateConditionField::OriginalPublisherPlace => {
-            reference.original_publisher_place().is_some()
-        }
-        TemplateConditionField::OriginalTitle => reference.original_title().is_some(),
-        TemplateConditionField::Doi => reference.doi().is_some(),
-        TemplateConditionField::Genre => reference.genre().is_some(),
-        TemplateConditionField::Archive => reference.archive().is_some(),
-        TemplateConditionField::ArchiveLocation => reference.archive_location().is_some(),
-        TemplateConditionField::VolumeOrIssue => {
-            reference.volume().is_some() || reference.issue().is_some()
-        }
-    }
 }
 
 impl Renderer<'_> {
@@ -1038,11 +997,6 @@ impl Renderer<'_> {
             first_reference_note_number,
         } = request;
         let ref_type = reference.ref_type();
-        let template = crate::values::date::materialize_identity_date_substitute(
-            template,
-            &self.config,
-            &ref_type,
-        );
         let locale = self.locale_for_reference(reference, context);
         let options = RenderOptions {
             config: self.config.clone(),
@@ -1061,7 +1015,7 @@ impl Renderer<'_> {
         // when the template actually renders it.  Suppressing a `disambiguate-only`
         // title without emitting the note number as a replacement identifier would
         // silently reintroduce ambiguity for colliding works.
-        let effective_first_ref_note = if template_uses_first_ref_note_number(&template) {
+        let effective_first_ref_note = if template_uses_first_ref_note_number(template) {
             first_reference_note_number
         } else {
             None
@@ -1076,7 +1030,7 @@ impl Renderer<'_> {
             first_reference_note_number: effective_first_ref_note,
         });
         let mut components =
-            self.render_template_components::<F>(reference, &ref_type, &options, &hint, &template);
+            self.render_template_components::<F>(reference, &ref_type, &options, &hint, template);
 
         self.apply_sentence_initial_context::<F>(&mut components, context, note_start_text_case);
 
@@ -1172,6 +1126,16 @@ impl Renderer<'_> {
         }
 
         let resolved_component = component;
+        let mut component_hint = ctx.hint.clone();
+        if matches!(
+            resolved_component,
+            TemplateComponent::Date(citum_schema::template::TemplateDate {
+                date: citum_schema::template::DateVariable::Issued,
+                ..
+            })
+        ) {
+            component_hint.date_fallback_first_issued = Some(tracker.next_issued_is_first());
+        }
         if resolved_component.rendering().suppress == Some(true) {
             return None;
         }
@@ -1181,19 +1145,14 @@ impl Renderer<'_> {
             return None;
         }
 
-        let mut values = resolved_component.values::<F>(ctx.reference, ctx.hint, ctx.options)?;
+        let mut values =
+            resolved_component.values::<F>(ctx.reference, &component_hint, ctx.options)?;
         // Suppress affixes when a component resolves to no meaningful content.
         // A whitespace-only value carries no data, so its prefix/suffix must
         // not leak into output (e.g. a ". In " prefix on an empty editor list).
         if values.value.trim().is_empty() {
             return None;
         }
-        self.apply_issued_no_date_fallback(
-            ctx.reference,
-            ctx.options,
-            resolved_component,
-            &mut values,
-        );
         self.apply_entry_link_fallback(ctx.reference, ctx.options, &mut values);
 
         let item_language =
@@ -1229,17 +1188,17 @@ impl Renderer<'_> {
         if group.rendering.suppress == Some(true) {
             return None;
         }
-        if group
-            .render_when
-            .as_ref()
-            .is_some_and(|condition| !group_condition_matches(ctx.reference, condition))
-        {
+        if group.render_when.as_ref().is_some_and(|condition| {
+            !crate::values::group_condition_matches(ctx.reference, condition)
+        }) {
             return None;
         }
 
         let fmt = F::default();
         let mut group_tracker = tracker.clone();
-        let values = self.render_group_child_values(&fmt, ctx, group, &mut group_tracker)?;
+        let values = self.render_group_child_values(&fmt, ctx, group, &mut group_tracker);
+        tracker.merge_from(group_tracker);
+        let values = values?;
         let default_delimiter = citum_schema::template::DelimiterPunctuation::Comma;
         let punctuation = group.delimiter.as_ref().unwrap_or(&default_delimiter);
         let (script, realization) = crate::values::punctuation_realization_context(
@@ -1272,7 +1231,6 @@ impl Renderer<'_> {
             ctx.options.config.punctuation_in_quote,
             &close_quote,
         );
-        tracker.merge_from(group_tracker);
         let group_component = TemplateComponent::Group(group.clone());
         Some(ProcTemplateComponent {
             template_component: group_component.clone(),
@@ -1345,35 +1303,6 @@ impl Renderer<'_> {
         Some(values)
     }
 
-    fn apply_issued_no_date_fallback(
-        &self,
-        reference: &Reference,
-        options: &RenderOptions<'_>,
-        component: &TemplateComponent,
-        values: &mut crate::values::ProcValues<String>,
-    ) {
-        if !matches!(
-            component,
-            TemplateComponent::Date(citum_schema::template::TemplateDate {
-                date: citum_schema::template::DateVariable::Issued,
-                fallback: None,
-                ..
-            })
-        ) || reference.effective_issued_date().is_some()
-            || self.preferred_no_date_term_form() != citum_schema::locale::TermForm::Long
-        {
-            return;
-        }
-
-        if let Some(long) = options.locale.resolved_general_term(
-            &citum_schema::locale::GeneralTerm::NoDate,
-            &citum_schema::locale::TermForm::Long,
-            None,
-        ) {
-            values.value = long;
-        }
-    }
-
     fn apply_entry_link_fallback(
         &self,
         reference: &Reference,
@@ -1414,22 +1343,6 @@ impl Renderer<'_> {
         {
             let fmt = F::default();
             component.value = fmt.text(substitute);
-        }
-    }
-
-    /// Term form used for the "no date" fallback, from `options.dates.no-date-form`
-    /// (default `short`).
-    fn preferred_no_date_term_form(&self) -> citum_schema::locale::TermForm {
-        match self
-            .config
-            .dates
-            .as_ref()
-            .and_then(|dates| dates.no_date_form)
-        {
-            Some(citum_schema::options::NoDateForm::Long) => citum_schema::locale::TermForm::Long,
-            Some(citum_schema::options::NoDateForm::Short) | None => {
-                citum_schema::locale::TermForm::Short
-            }
         }
     }
 

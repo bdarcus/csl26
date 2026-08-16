@@ -908,7 +908,7 @@ fn resolve_effective_primary(
     }
 
     substitute
-        .template
+        .candidates()
         .iter()
         .find_map(|candidate| resolve_candidate(candidate, reference, config, locale))
 }

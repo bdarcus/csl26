@@ -1154,21 +1154,16 @@ fn test_harvard_cite_them_right_grouped_citations_render_cleanly() {
         .expect("no-date-single citation should exist");
     assert_eq!(
         processor.process_citation(&no_date).unwrap(),
-        "(Forthcoming, no date)"
+        "(Forthcoming)"
     );
 }
 
-/// Given a style with an explicit `no-date-form` override, when a citation's
-/// issued date is missing, then the rendered "no date" term matches that
-/// override; given a style with no override, then the engine's implicit
-/// short-form term is used; and given a style whose issued-date components
-/// declare an empty `fallback: []` (matching real CSL's no-fallback default
-/// for a bare `<date variable="issued">` macro), then the date position
-/// renders nothing at all rather than an implicit term. See `csl26-7z59`.
+/// Given an explicit date-fallback message, a missing issued date renders the
+/// requested term form; without a policy, the date position remains blank.
 #[rstest]
-#[case::style_level_long_form_override("harvard-cite-them-right", "(Forthcoming, no date)")]
-#[case::engine_default_short_form("springer-basic-author-date", "(Forthcoming n.d.)")]
-#[case::explicit_empty_fallback_suppresses_the_term(
+#[case::style_level_long_form_override("harvard-cite-them-right", "(Forthcoming)")]
+#[case::omitted_policy_is_blank("springer-basic-author-date", "(Forthcoming)")]
+#[case::source_bare_date_is_blank(
     "taylor-and-francis-council-of-science-editors-author-date",
     "(Forthcoming)"
 )]
@@ -1206,12 +1201,9 @@ fn given_a_no_date_citation_when_style_configures_the_date_slot_then_rendering_m
     assert_eq!(processor.process_citation(&no_date).unwrap(), expected);
 }
 
-/// Given a style whose `options.dates.no-date-form` is `long`, when a citation's
-/// issued date is missing, then the rendered "no date" term uses the long form;
-/// and given the same style without the option set, then it falls back to the
-/// short form. This is now a declarative option, not a hardcoded style-id check.
+/// Explicit date-fallback messages select their own term form.
 #[test]
-fn given_no_date_form_option_when_issued_date_missing_then_term_form_matches_option() {
+fn given_date_fallback_message_when_issued_date_missing_then_term_form_matches_rule() {
     let mut bib = Bibliography::new();
     bib.insert(
         "undated".to_string(),
@@ -1233,28 +1225,37 @@ fn given_no_date_form_option_when_issued_date_missing_then_term_form_matches_opt
     };
 
     let mut long_style = make_style();
-    long_style.options = Some(Config {
-        dates: Some(citum_schema::options::DateConfig {
-            no_date_form: Some(citum_schema::options::NoDateForm::Long),
-            ..Default::default()
-        }),
-        ..Default::default()
-    });
+    long_style.options = Some(
+        serde_yaml::from_str(
+            r#"
+date-fallback:
+  first-issued:
+    default:
+    - message: term.no-date
+      form: long
+"#,
+        )
+        .expect("long date fallback should parse"),
+    );
     let long_rendered = Processor::new(long_style, bib.clone())
         .process_citation(&citation)
         .unwrap();
     assert_eq!(
         long_rendered, "(Doe, no date)",
-        "no-date-form: long should render the long no-date term"
+        "an explicit long message should render the long no-date term"
     );
 
-    let short_style = make_style();
+    let mut short_style = make_style();
+    short_style.options = Some(
+        serde_yaml::from_str("date-fallback: standard")
+            .expect("standard date fallback should parse"),
+    );
     let short_rendered = Processor::new(short_style, bib)
         .process_citation(&citation)
         .unwrap();
     assert_eq!(
         short_rendered, "(Doe, n.d.)",
-        "default no-date-form should render the short no-date term"
+        "the standard policy should render the short no-date term"
     );
 }
 

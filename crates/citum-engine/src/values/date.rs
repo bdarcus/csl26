@@ -11,9 +11,9 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus and Citum contributors
 use crate::reference::{DateValue, Reference};
 use crate::values::{ComponentValues, ProcHints, ProcValues, RenderOptions};
 use citum_edtf::{Edtf, Timezone, UnspecifiedYear, Year};
-use citum_schema::locale::{GeneralTerm, SubYearCode, TermForm};
+use citum_schema::locale::SubYearCode;
 use citum_schema::options::dates::{DateRangeFormat, TimeFormat};
-use citum_schema::options::{Config, DateSubstituteCandidate};
+use citum_schema::options::{Config, DateFallbackCandidate};
 use citum_schema::reference::types::RefDate;
 use citum_schema::reference::{ClassExtension, WorkRelation};
 use citum_schema::template::{
@@ -90,116 +90,17 @@ pub(crate) fn resolve_date_variable(
     }
 }
 
-/// Effective source for the identity date's fallback candidates.
-///
-/// The variants preserve the semantic distinction between omitted options,
-/// an authored policy with no matching selector, and a matched selector whose
-/// candidate list may intentionally be empty.
-pub(crate) enum EffectiveDateCandidateSource<'a> {
-    /// `date-substitute` was omitted; preserve inline or implicit behavior.
-    Inline(Option<&'a [TemplateComponent]>),
-    /// A policy exists but no selector matched; preserve inline or implicit behavior.
-    Unmatched(Option<&'a [TemplateComponent]>),
-    /// A selector matched; its list replaces the inline chain as a whole.
-    Matched(&'a [DateSubstituteCandidate]),
-}
-
-impl<'a> EffectiveDateCandidateSource<'a> {
-    /// Materialize the effective source as ordinary template components.
-    pub(crate) fn template_components(&self) -> Option<Cow<'a, [TemplateComponent]>> {
-        match self {
-            Self::Inline(inline) | Self::Unmatched(inline) => inline.map(Cow::Borrowed),
-            Self::Matched(candidates) => Some(Cow::Owned(
-                candidates
-                    .iter()
-                    .map(DateSubstituteCandidate::to_template_component)
-                    .collect(),
-            )),
-        }
-    }
-}
-
-/// Resolve the effective candidate source for an identity date component.
-pub(crate) fn effective_date_candidate_source<'a>(
-    component: &'a TemplateDate,
+/// Resolve the effective options-level candidates for one issued occurrence.
+pub(crate) fn effective_date_fallback_candidates<'a>(
     config: &'a Config,
+    first_issued: bool,
     ref_type: &str,
-) -> EffectiveDateCandidateSource<'a> {
-    let inline = component.fallback.as_deref();
-    let Some(policy) = config.date_substitute.as_ref() else {
-        return EffectiveDateCandidateSource::Inline(inline);
-    };
-    policy.candidates_for(ref_type).map_or_else(
-        || EffectiveDateCandidateSource::Unmatched(inline),
-        EffectiveDateCandidateSource::Matched,
-    )
-}
-
-/// Materialize an options-level candidate chain on the first eligible date.
-///
-/// Traversal is recursive and authored-order preserving. Only the first date
-/// whose `suppress-disamb-suffix` is not true is the identity slot; later
-/// dates retain their inline fallbacks.
-pub(crate) fn materialize_identity_date_substitute<'a>(
-    template: &'a [TemplateComponent],
-    config: &Config,
-    ref_type: &str,
-) -> Cow<'a, [TemplateComponent]> {
-    let Some(identity_date) = first_identity_date(template) else {
-        return Cow::Borrowed(template);
-    };
-    let EffectiveDateCandidateSource::Matched(candidates) =
-        effective_date_candidate_source(identity_date, config, ref_type)
-    else {
-        return Cow::Borrowed(template);
-    };
-
-    let mut resolved = template.to_vec();
-    replace_first_identity_date(&mut resolved, candidates);
-    Cow::Owned(resolved)
-}
-
-fn first_identity_date(template: &[TemplateComponent]) -> Option<&TemplateDate> {
-    for component in template {
-        match component {
-            TemplateComponent::Date(date) if date.suppress_disamb_suffix != Some(true) => {
-                return Some(date);
-            }
-            TemplateComponent::Group(group) => {
-                if let Some(date) = first_identity_date(&group.group) {
-                    return Some(date);
-                }
-            }
-            _ => {}
-        }
-    }
-    None
-}
-
-fn replace_first_identity_date(
-    template: &mut [TemplateComponent],
-    candidates: &[DateSubstituteCandidate],
-) -> bool {
-    for component in template {
-        match component {
-            TemplateComponent::Date(date) if date.suppress_disamb_suffix != Some(true) => {
-                date.fallback = Some(
-                    candidates
-                        .iter()
-                        .map(DateSubstituteCandidate::to_template_component)
-                        .collect(),
-                );
-                return true;
-            }
-            TemplateComponent::Group(group) => {
-                if replace_first_identity_date(&mut group.group, candidates) {
-                    return true;
-                }
-            }
-            _ => {}
-        }
-    }
-    false
+) -> Option<Cow<'a, [DateFallbackCandidate]>> {
+    config
+        .date_fallback
+        .as_ref()?
+        .rule_for(first_issued, ref_type)?
+        .candidates()
 }
 
 /// The same date-text formatting `TemplateDate::values` applies to a
@@ -1226,34 +1127,25 @@ pub(crate) fn render_fallback_component<F: crate::render::format::OutputFormat<O
     )
 }
 
-/// Render a date component's fallback chain when its own date variable is
-/// missing or empty.
+/// Render an options-level date fallback chain when an issued date is missing.
 ///
 /// Tries each fallback candidate in order and returns the first that
 /// renders. A `message:` candidate (the terminal "no data available" case,
 /// e.g. GB/T 7714's `无日期`/`n.d.` term via `message: term.no-date`) and a
 /// `date:` candidate (e.g. GB/T's access-year fallback, rendering
 /// `Anon，[2020a]`) both need the same year-suffix-append convention the
-/// implicit (no explicit `fallback:`) no-date path uses, so every path
-/// disambiguates identically. Without this, a style whose date components
-/// always carry an explicit `fallback:` chain (as GB/T author-date's do)
-/// never reaches the implicit branch and never gets a suffix at all. See
-/// csl26-6eak, csl26-huuz.
+/// first-issued disambiguation path uses, so every policy candidate
+/// disambiguates identically. See csl26-6eak, csl26-huuz.
 ///
 /// For a `date:` candidate, the letter must land inside that candidate's own
 /// wrap (e.g. brackets) — so it is inlined into the raw formatted text
 /// *before* `render_fallback_component` applies the wrap, not
 /// appended to the already-wrapped output the way the `message:` case is.
-/// A candidate that is itself `date: issued` cannot reach this function with
-/// a resolvable value: `disamb_eligible` above requires the *outer*
-/// component's own `.date == Issued`, and an `issued`-typed fallback
-/// candidate resolves the identical reference field — which, precisely
-/// because we're in the missing-date branch at all, is already known empty.
-/// `inline_disamb_suffix` no-ops whenever `year` is empty, so no double
-/// suffix can occur; investigated for PR review, no fix needed.
+/// Validation rejects a candidate that is itself `date: issued`. The loop also
+/// skips one defensively so programmatically constructed, unvalidated styles
+/// cannot recursively re-enter this fallback chain.
 ///
-/// If nothing in the chain renders anything (an explicit `fallback: []`, or
-/// every candidate resolves empty), the date slot itself contributes no
+/// If nothing in the chain renders anything, the date slot itself contributes no
 /// text, but the collision group this reference belongs to may still need
 /// its year-suffix letter rendered standalone (upstream's bare
 /// `<text variable="year-suffix"/>` after an empty date; oracle:
@@ -1261,7 +1153,7 @@ pub(crate) fn render_fallback_component<F: crate::render::format::OutputFormat<O
 /// silently loses its disambiguator rather than getting the wrong one.
 fn render_date_fallback_chain<F: crate::render::format::OutputFormat<Output = String>>(
     date_component: &TemplateDate,
-    fallbacks: &[TemplateComponent],
+    fallbacks: &[DateFallbackCandidate],
     reference: &Reference,
     hints: &ProcHints,
     options: &RenderOptions<'_>,
@@ -1270,7 +1162,15 @@ fn render_date_fallback_chain<F: crate::render::format::OutputFormat<Output = St
     let disamb_eligible = matches!(date_component.date, TemplateDateVar::Issued)
         && date_component.suppress_disamb_suffix != Some(true);
 
-    for component in fallbacks {
+    for candidate in fallbacks {
+        if matches!(
+            candidate,
+            DateFallbackCandidate::Date(candidate)
+                if matches!(candidate.date, TemplateDateVar::Issued)
+        ) {
+            continue;
+        }
+        let component = candidate.to_template_component();
         let Some(mut values) = component.values::<F>(reference, hints, options) else {
             continue;
         };
@@ -1279,7 +1179,7 @@ fn render_date_fallback_chain<F: crate::render::format::OutputFormat<Output = St
             .then(|| compute_disamb_suffix_label(hints, options, fmt))
             .flatten();
 
-        let inlined = match (component, suffix_label.as_deref()) {
+        let inlined = match (&component, suffix_label.as_deref()) {
             (TemplateComponent::Date(inner), Some(suffix)) => {
                 let year = resolve_date_variable(&inner.date, reference)
                     .map(|d| d.year())
@@ -1290,7 +1190,7 @@ fn render_date_fallback_chain<F: crate::render::format::OutputFormat<Output = St
             _ => false,
         };
 
-        let mut output = render_fallback_component(fmt, component, values, reference, options);
+        let mut output = render_fallback_component(fmt, &component, values, reference, options);
         if output.trim().is_empty() {
             continue;
         }
@@ -1334,37 +1234,24 @@ impl ComponentValues for TemplateDate {
         let date_opt: Option<DateValue> = resolve_date_variable(&self.date, reference);
 
         let Some(date) = date_opt.filter(|d| !d.is_empty()) else {
-            // Handle fallback if date is missing
-            if let Some(fallbacks) = &self.fallback {
-                return render_date_fallback_chain::<F>(
-                    self, fallbacks, reference, hints, options, &fmt,
-                );
-            }
-            // For issued dates, substitute the locale's "no-date" term (e.g. "n.d.")
             if matches!(self.date, TemplateDateVar::Issued)
-                && let Some(mut nd) = options.locale.resolved_general_term(
-                    &GeneralTerm::NoDate,
-                    &TermForm::Short,
-                    None,
+                && let Some(first_issued) = hints.date_fallback_first_issued
+                && let Some(fallbacks) = effective_date_fallback_candidates(
+                    options.config.as_ref(),
+                    first_issued,
+                    &reference.ref_type(),
                 )
             {
-                if let Some(suffix) = compute_disamb_suffix_label(hints, options, &fmt) {
-                    append_no_date_disamb_suffix(&mut nd, &suffix, options);
-                }
-                return Some(ProcValues {
-                    value: nd,
-                    prefix: None,
-                    suffix: None,
-                    url: None,
-                    substituted_key: None,
-                    pre_formatted: false,
-                });
+                return render_date_fallback_chain::<F>(
+                    self,
+                    fallbacks.as_ref(),
+                    reference,
+                    hints,
+                    options,
+                    &fmt,
+                );
             }
-            // No fallback and no term to substitute (e.g. the locale defines
-            // no "no date" term at all) — the date position renders nothing,
-            // but this reference's collision group may still need its
-            // year-suffix letter rendered standalone rather than silently
-            // dropped.
+            // A blank issued slot may still carry a year-suffix disambiguator.
             let disamb_eligible = matches!(self.date, TemplateDateVar::Issued)
                 && self.suppress_disamb_suffix != Some(true);
             return disamb_eligible
@@ -1468,43 +1355,37 @@ mod tests {
     use super::*;
 
     #[test]
-    fn unmatched_date_substitute_policy_keeps_the_template_borrowed() {
+    fn unmatched_date_fallback_policy_resolves_no_candidates() {
         let config: Config = serde_yaml::from_str(
             r#"
-date-substitute:
-  book: []
+date-fallback:
+  first-issued:
+    book: standard
 "#,
         )
-        .expect("date-substitute config should parse");
-        let template = vec![TemplateComponent::Date(TemplateDate {
-            date: TemplateDateVar::Issued,
-            form: DateForm::Year,
-            ..TemplateDate::default()
-        })];
+        .expect("date-fallback config should parse");
 
-        let resolved = materialize_identity_date_substitute(&template, &config, "report");
-
-        assert!(matches!(resolved, Cow::Borrowed(_)));
+        assert!(effective_date_fallback_candidates(&config, true, "report").is_none());
     }
 
     #[test]
-    fn matched_date_substitute_policy_materializes_an_owned_template() {
+    fn standard_date_fallback_policy_expands_to_a_message_candidate() {
         let config: Config = serde_yaml::from_str(
             r#"
-date-substitute:
-  book: []
+date-fallback:
+  first-issued:
+    book: standard
 "#,
         )
-        .expect("date-substitute config should parse");
-        let template = vec![TemplateComponent::Date(TemplateDate {
-            date: TemplateDateVar::Issued,
-            form: DateForm::Year,
-            ..TemplateDate::default()
-        })];
-
-        let resolved = materialize_identity_date_substitute(&template, &config, "book");
+        .expect("date-fallback config should parse");
+        let resolved = effective_date_fallback_candidates(&config, true, "book")
+            .expect("matched standard rule should resolve candidates");
 
         assert!(matches!(resolved, Cow::Owned(_)));
+        assert!(matches!(
+            resolved.first(),
+            Some(DateFallbackCandidate::Message(_))
+        ));
     }
 
     #[test]

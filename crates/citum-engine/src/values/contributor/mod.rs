@@ -16,7 +16,9 @@ pub(crate) mod substitute;
 use crate::reference::Reference;
 use crate::values::{ComponentValues, ProcHints, ProcValues, RenderContext, RenderOptions};
 use citum_schema::options::SubsequentNameForm;
-use citum_schema::template::{ContributorForm, ContributorRole, TemplateContributor};
+use citum_schema::template::{
+    ContributorForm, ContributorRole, TemplateComponent, TemplateContributor,
+};
 
 #[cfg(test)]
 pub(crate) use names::{NameFormatContext, format_single_name};
@@ -283,40 +285,28 @@ fn format_contributor_names(
     names::format_names(names_vec, &component.form, options, &name_overrides, hints)
 }
 
-/// Render `component.fallback` when the author slot has no contributor and
-/// the entire `substitute.template` chain (editor, title, translator, ...)
-/// is exhausted — e.g. a `message: term.anonymous` component for GB/T
-/// 7714's `佚名` placeholder. Tries each fallback component in order,
-/// returning the first that renders; `None` if `fallback` is unset or every
-/// entry is itself empty (mirrors `TemplateDate`'s fallback semantics).
+/// Render the options-level terminal message after author candidates are exhausted.
 fn resolve_author_fallback<F: crate::render::format::OutputFormat<Output = String>>(
-    component: &TemplateContributor,
     reference: &Reference,
     hints: &ProcHints,
     options: &RenderOptions<'_>,
     fmt: &F,
+    substitute: &citum_schema::options::Substitute,
 ) -> Option<ProcValues<F::Output>> {
-    let fallbacks = component.fallback.as_ref()?;
-    for fallback in fallbacks {
-        if let Some(values) = fallback.values::<F>(reference, hints, options) {
-            let substituted_key = values.substituted_key.clone();
-            let output = crate::values::date::render_fallback_component(
-                fmt, fallback, values, reference, options,
-            );
-            if output.trim().is_empty() {
-                continue;
-            }
-            return Some(ProcValues {
-                value: output,
-                prefix: None,
-                suffix: None,
-                url: None,
-                substituted_key,
-                pre_formatted: true,
-            });
-        }
-    }
-    None
+    let message = substitute.otherwise_message()?;
+    let fallback = TemplateComponent::Message(message.to_template_message());
+    let values = fallback.values::<F>(reference, hints, options)?;
+    let substituted_key = values.substituted_key.clone();
+    let output =
+        crate::values::date::render_fallback_component(fmt, &fallback, values, reference, options);
+    (!output.trim().is_empty()).then_some(ProcValues {
+        value: output,
+        prefix: None,
+        suffix: None,
+        url: None,
+        substituted_key,
+        pre_formatted: true,
+    })
 }
 
 impl ComponentValues for TemplateContributor {
@@ -359,9 +349,7 @@ impl ComponentValues for TemplateContributor {
         }
 
         // Resolve substitute config once for all substitute/suppression checks below.
-        let substitute = citum_schema::options::SubstituteConfig::resolve_or_default(
-            options.config.substitute.as_ref(),
-        );
+        let substitute = options.config.effective_substitute();
 
         // The author slot is resolved as one effective-primary value so
         // rendering, sorting, and disambiguation share type overrides and
@@ -381,7 +369,13 @@ impl ComponentValues for TemplateContributor {
             ) {
                 return Some(values);
             }
-            return resolve_author_fallback::<F>(&component, reference, hints, options, &fmt);
+            return resolve_author_fallback::<F>(
+                reference,
+                hints,
+                options,
+                &fmt,
+                substitute.as_ref(),
+            );
         }
 
         let contributor = contributor_for_role(reference, &role);

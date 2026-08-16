@@ -325,7 +325,8 @@ pub fn build_author_date_style(
     et_al_use_first: Option<u8>,
 ) -> Style {
     use citum_schema::options::{
-        Config, ContributorConfig, Disambiguation, Processing, ProcessingCustom, ShortenListOptions,
+        Config, ContributorConfig, DateFallbackConfig, DateFallbackPreset, Disambiguation,
+        Processing, ProcessingCustom, ShortenListOptions,
     };
     use citum_schema::template::WrapPunctuation;
 
@@ -376,6 +377,9 @@ pub fn build_author_date_style(
                 ..Default::default()
             })),
             contributors,
+            date_fallback: Some(DateFallbackConfig::Policy(
+                DateFallbackPreset::Standard.config(),
+            )),
             ..Default::default()
         }),
         citation: Some(CitationSpec {
