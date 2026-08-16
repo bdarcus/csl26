@@ -1,12 +1,13 @@
 # Primary Contributor Substitution Specification
 
 **Status:** Active
-**Version:** 1.0
-**Date:** 2026-07-14
+**Version:** 2.0
+**Date:** 2026-08-16
 **Supersedes:** None
 **Related:** PR #1052,
 [`CROSS_ROLE_CONTRIBUTOR_LISTS.md`](./CROSS_ROLE_CONTRIBUTOR_LISTS.md),
-[`ROLE_SUBSTITUTE_FALLBACK.md`](./ROLE_SUBSTITUTE_FALLBACK.md)
+[`ROLE_SUBSTITUTE_FALLBACK.md`](./ROLE_SUBSTITUTE_FALLBACK.md),
+[`DATE_FALLBACK.md`](./DATE_FALLBACK.md)
 
 ## Purpose
 
@@ -28,28 +29,33 @@ taxonomy values, and media distinctions the reference schema cannot represent.
 
 ### Schema
 
-`options.substitute.template` and `options.substitute.overrides` use the same
+`options.substitute.candidates` and `options.substitute.overrides` use the same
 ordered candidate type. Existing scalar keys remain valid; contributor objects
 add arbitrary scalar or ordered multi-role candidates:
 
 ```yaml
 options:
   substitute:
-    template: [editor, title, translator]
+    candidates: [editor, title, translator]
     overrides:
       episode:
         - contributor: [writer, director]
       film:
         - contributor: director
+    otherwise:
+      message: term.anonymous
+      form: short
 
   contributors:
     role:
       defaults: apa
 ```
 
-The default `template` remains `editor`, `title`, then `translator`. It does not
+The author-date processing family supplies `editor`, `title`, then `translator`.
+Numeric, note, and label processing supply no candidates. The chain does not
 contain `author`: author resolution is the operation being supplemented, not a
-substitution candidate.
+substitution candidate. `otherwise` is a single closed locale-message value,
+not an arbitrary template.
 
 ### Resolution
 
@@ -59,13 +65,18 @@ For a primary contributor component, resolve in this order:
 2. If the override is absent or empty, resolve the established semantic author,
    including an explicit native `author` and existing compatibility fallbacks.
 3. If no semantic author resolves, select the first non-empty candidate from
-   `template`.
+   `candidates`.
+4. If the chain is exhausted, render `otherwise` when configured.
 
 An override therefore expresses the style guide's authoritative primary credit
 for that type. A merged candidate is non-empty when at least one declared role
 has data; missing roles are omitted without invalidating the candidate. Exact
 native reference discriminators are tested before legacy aliases. Candidate
 lists are ordered and the first non-empty result wins.
+
+`substitute: none` disables the complete inherited and processing-derived
+policy. Field-level `none` clears inherited `candidates`, `otherwise`, or one
+type override. Empty candidate lists are invalid.
 
 Contributor candidates reuse the normal scalar or merged name pipeline,
 including multilingual resolution, role suppression, same-person combination,
@@ -91,7 +102,7 @@ They must not independently inspect templates or repeat type-selection logic.
 
 ## Implementation Notes
 
-- Keep legacy scalar `SubstituteKey` YAML source-compatible through an untagged
+- Keep scalar `SubstituteKey` YAML source-compatible through an untagged
   candidate representation.
 - Validate contributor role lists with the same distinct-role rules as merged
   template components.
@@ -100,15 +111,19 @@ They must not independently inspect templates or repeat type-selection logic.
 
 ## Acceptance Criteria
 
-- [x] Legacy scalar `template` and `overrides` values round-trip unchanged.
+- [x] Scalar `candidates` and `overrides` values round-trip unchanged.
 - [x] Scalar and merged contributor candidates round-trip and appear in the
       generated style schema.
 - [x] Exact-type overrides win when non-empty; semantic author and the default
-      template remain ordered fallbacks.
+      candidate chain remain ordered fallbacks.
 - [x] Partially populated merged candidates render only available roles.
 - [x] Rendering, sorting, and disambiguation share effective-primary names.
 - [x] Invalid candidates fail style loading and CLI rendering before output.
+- [x] Processing defaults, terminal messages, and explicit clear markers are
+      resolved once for every semantic consumer.
 
 ## Changelog
 
 - v1.0 (2026-07-14): Defined type-aware primary contributor substitution.
+- v2.0 (2026-08-16): Renamed `template` to `candidates`, added processing
+  defaults, terminal `otherwise`, and explicit `none` clears.

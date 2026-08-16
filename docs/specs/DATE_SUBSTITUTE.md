@@ -1,12 +1,17 @@
 # Date Substitute Specification
 
-**Status:** Active
+**Status:** Superseded
 **Version:** 1.0
 **Date:** 2026-08-12
-**Supersedes:** none
+**Superseded by:** [`DATE_FALLBACK.md`](./DATE_FALLBACK.md)
 **Related:** csl26-qbmd, PR #1171, [`DISAMBIGUATION.md`](./DISAMBIGUATION.md), [`PRIMARY_CONTRIBUTOR_SUBSTITUTION.md`](./PRIMARY_CONTRIBUTOR_SUBSTITUTION.md)
 
 ## Purpose
+
+> This v1 contract is retained as a historical record. The active v2 contract
+> is [`DATE_FALLBACK.md`](./DATE_FALLBACK.md); it removes template fallbacks,
+> adds first/later issued lanes and explicit `none` semantics, and renames the
+> option to `date-fallback`.
 
 Define an options-level policy for the fallback candidates used when a
 reference's identity date is missing. The policy removes repeated inline

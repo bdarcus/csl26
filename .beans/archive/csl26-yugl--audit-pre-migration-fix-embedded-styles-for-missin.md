@@ -1,7 +1,7 @@
 ---
 # csl26-yugl
 title: 'Audit pre-migration-fix embedded styles for missing no-date fallback: []'
-status: todo
+status: scrapped
 type: task
 priority: normal
 tags:
@@ -10,7 +10,7 @@ tags:
     - dates
     - migrate
 created_at: 2026-08-16T10:48:13Z
-updated_at: 2026-08-16T10:48:22Z
+updated_at: 2026-08-16T14:27:17Z
 ---
 
 Every embedded style migrated before commit 63fdb104 (2026-07-16, when citum-migrate began auto-emitting fallback: [] on issued-date components) is a candidate for the same latent divergence fixed in csl26-7z59 for taylor-and-francis-council-of-science-editors-author-date: an undated reference renders an implicit n.d./no date term where real citeproc-js renders nothing, because the style's date: issued components predate the migrate fix and carry no fallback: key.
@@ -26,3 +26,5 @@ This is NOT a blanket find-and-replace: each candidate style's real .csl source 
 - [ ] Re-run report-core.js per affected style before/after to confirm exactParity improvement with no fidelity-gate regression.
 
 See div-016 in docs/adjudication/DIVERGENCE_REGISTER.md and bean csl26-7z59 for the mechanism and the T&F CSE precedent.
+
+Superseded by csl26-62kp: the fallback-policy implementation audited every tracked style against its source CSL and replaced implicit no-date behavior with explicit options policies.

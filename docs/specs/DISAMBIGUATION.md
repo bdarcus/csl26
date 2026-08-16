@@ -5,6 +5,7 @@
 **Related:** [`docs/reference/DISAMBIGUATION.md`](../reference/DISAMBIGUATION.md),
 [`docs/specs/MULTILINGUAL.md`](./MULTILINGUAL.md),
 [`docs/specs/MULTILINGUAL_BIBLIOGRAPHY_PARTITIONING.md`](./MULTILINGUAL_BIBLIOGRAPHY_PARTITIONING.md),
+[`docs/specs/DATE_FALLBACK.md`](./DATE_FALLBACK.md),
 [CSL styles#7667](https://github.com/citation-style-language/styles/issues/7667),
 [CSL schema#452](https://github.com/citation-style-language/schema/issues/452)
 
@@ -51,6 +52,29 @@ the **date-slot discriminant** described below (`csl26-huuz`). No other date
 field ever substitutes for a *present* issued year in the key.
 
 #### Date-slot discriminant when the issued year is absent (csl26-huuz)
+
+The first recursively encountered `date: issued` component is the identity
+slot. Disambiguation resolves that slot with the same effective
+`options.date-fallback.first-issued` rule used by rendering; it does not inspect
+or clone template fallback components.
+
+- A real issued value contributes its rendered year identity.
+- A date fallback contributes its rendered value, affixes, wrapping, and note,
+  except that `accessed` remains retrieval metadata and contributes no work
+  identity.
+- A message fallback contributes its locale-resolved text, so anonymous
+  no-date works that look alike collide consistently.
+- Omitted policy, an unmatched selector, or `none` contributes an empty
+  discriminant. Existing standalone year-suffix rendering remains available
+  for a colliding blank slot.
+
+The effective bibliography policy is preferred for the one style-wide suffix
+assignment, with citation policy used when no bibliography slot exists. See
+[`DATE_FALLBACK.md`](./DATE_FALLBACK.md) for lane, selector, scope, and clear
+semantics.
+
+<details>
+<summary>Historical v1 implementation notes (superseded)</summary>
 
 Grouping by abstract variable equality alone is wrong once a style's date
 slot is type-conditional: two undated references can render *different* text
@@ -198,6 +222,8 @@ registry order from its numeric base) will still assign letters in registry
 order, which can disagree with the oracle's actual bibliography-sort order
 for groups this mechanism newly separates out. That gap is `csl26-q67h`.
 
+</details>
+
 #### Year-suffix when the original-publication date differs
 
 Our working assumption is that in author–date styles, year-suffix disambiguation
@@ -239,25 +265,14 @@ formatted text the suffix is spliced into.
 
 #### Anonymous-fallback author key
 
-`build_author_slot_key` (`processor/disambiguation.rs`) previously gave
-every reference with no contributor and no matched `substitute` field a
-*unique* singleton key — correct when the substitute promotes a per-reference
-*title* (already distinguishing), wrong when a component-level
-`TemplateContributor.fallback` renders a *constant* term (e.g. GB/T's `佚名`
-anonymous-author placeholder). Such references now share a stable sentinel
-key (`Disambiguator::ANONYMOUS_FALLBACK_KEY`) so they collide by year like a
-real shared author, instead of each silently forming its own group.
-
-**Known gap:** the `Disambiguator` that computes *bibliography* hints is
-currently constructed with the **citation**-scoped `Substitute` config
-(`processor/setup.rs::calculate_hints`), not the bibliography-scoped one —
-a pre-existing scoping inconsistency, invisible until a style's bibliography
-and citation `substitute.template` chains actually differ (as
-`gb-t-7714-2025-author-date`'s now do). The sentinel key above is inert in
-practice until that scoping bug is fixed; tracked in `csl26-6eak`'s residual
-findings, not resolved here — the fix touches a shared code path used by
-every style's disambiguation and needs cross-corpus verification before it
-lands.
+`build_author_slot_key` resolves the same effective `substitute` policy used by
+the selected citation or bibliography scope. A promoted title remains a
+per-reference identity. When the chain instead reaches a constant
+`substitute.otherwise` locale message (for example, GB/T's `佚名` anonymous
+placeholder), its rendered message becomes the shared author discriminant.
+Works that display the same anonymous label therefore collide by year like
+works with the same named author. There is no template fallback or separate
+disambiguation-only substitute chain.
 
 ### 2. Strategy cascade
 
@@ -540,6 +555,9 @@ added to the citation context.
 
 ## Changelog
 
+- 2026-08-16: Centralized author and issued-date fallback policy in options.
+  Anonymous messages and first-issued date resolution now share the exact
+  rendering policy; template fallback chains no longer exist.
 - 2026-08-12: Review follow-up on the date-slot discriminant (csl26-huuz).
   A resolving candidate's discriminant now reflects `form`-restricted
   rendered text plus prefix/suffix/wrap/`note` (`values/date.rs` gained
@@ -634,12 +652,9 @@ added to the citation context.
   attempt that lands them independently and verifies each against the full
   corpus on its own.
 - 2026-07-23: Added `TemplateDate.suppress_disamb_suffix` (rendering-level
-  opt-out for a redundant `issued` occurrence) and a stable sentinel author
-  key for references falling through to a component-level
-  `TemplateContributor.fallback` term, surfaced by `csl26-6eak`'s GB/T
-  author-date work. Documented the known citation-vs-bibliography
-  `Substitute`-config scoping gap that currently makes the sentinel key
-  inert in the real style; not fixed in this change.
+  opt-out for a redundant `issued` occurrence) and the initial anonymous
+  sentinel key. The 2026-08-16 fallback-policy change replaced the associated
+  component fallback and scoped-config gap with shared options resolution.
 - 2026-06-21: Promoted the major author-date guide disambiguation profile to the
   `author-date-full` preset (csl26-2zy6 follow-on). `Processing::AuthorDateFull` now
   carries the global `primary-name` rule (names + add-givenname + primary-name +

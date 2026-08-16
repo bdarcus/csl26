@@ -1,7 +1,7 @@
 ---
 # csl26-62kp
 title: Centralize style fallback policies
-status: in-progress
+status: completed
 type: feature
 priority: high
 tags:
@@ -10,7 +10,7 @@ tags:
     - migrate
     - styles
 created_at: 2026-08-16T12:23:45Z
-updated_at: 2026-08-16T12:23:45Z
+updated_at: 2026-08-16T14:27:17Z
 ---
 
 Centralize missing-author and missing-date policy in style options so rendering templates remain presentational.
@@ -26,3 +26,5 @@ Specification: docs/specs/DATE_FALLBACK.md
 - [ ] Update the style author guide and generated schema.
 - [ ] Pass schema, production-style, quality, and Rust gates.
 - [ ] Submit the two-PR stack and verify CI.
+
+Implementation complete in the fallback-policy PR stack. Local schema, style, quality, workflow, and pre-commit gates passed.

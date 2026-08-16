@@ -92,28 +92,27 @@ options:
 
 #### 2.2 Date Configuration
 Templates SHOULD reference logical date roles (e.g., `date: issued`) while
-`options.dates` centralizes their formatting policy. A date component MAY use
-`fallback` to define its missing-value behavior. An absent fallback preserves
-the engine default (`issued` uses the locale no-date term); an explicit fallback
-list is authoritative. If every fallback component is empty, including when the
-list itself is empty, the date is omitted.
+`options.dates` centralizes formatting policy and `options.date-fallback`
+centralizes missing-issued-date policy. Template date components do not contain
+fallback chains. Missing dates render blank unless the effective policy matches
+an explicit rule.
 
 ```yaml
 - date: issued
   form: year
-  fallback: [] # Omit when issued is unavailable.
 ```
 
 CSL and CSL-M date elements render nothing when their variable is unavailable.
-Migration therefore emits an explicit empty fallback for `issued` dates unless
-the source style supplies another fallback, such as a localized no-date term.
+Migration therefore emits no policy for a bare issued date. If the source style
+supplies a supported no-date branch, migration emits an options rule instead:
 
 ```yaml
-- date: issued
-  form: year
-  fallback:
-- message: term.no-date
+options:
+  date-fallback: standard
 ```
+
+The complete lane, selector, candidate, and inheritance contract is defined in
+[`DATE_FALLBACK.md`](./DATE_FALLBACK.md).
 
 ### §2.3 Declarative Reference Markers
 
@@ -373,6 +372,8 @@ its section template only by contributor initialization that the style's own
 
 ## Changelog
 
+- v0.8 (2026-08-16): Remove contributor and date fallback chains from
+  templates; missing-value policy now resolves from style options.
 - v0.7 (2026-08-05): Remove the `all` selector keyword; the section template is
   the only wildcard. Retain `default`.
 - v0.6 (2026-08-05): State the boundary between structural templates and
