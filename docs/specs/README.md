@@ -70,6 +70,7 @@ note. The `—` marker in the Tests column means no targeted test exists yet.
 |------|--------|-------|
 | [`DISAMBIGUATION.md`](./DISAMBIGUATION.md) — collision-key model, strategy cascade, multilingual/group disambiguation, APA §8.15 reprint keying | Active | `citations.rs::disambiguation` |
 | [`DATE_SUBSTITUTE.md`](./DATE_SUBSTITUTE.md) — preset or type-scoped fallback policy for the identity date slot | Active | `citum-engine::processor::rendering::tests::date_substitute_options`, `citum-schema-style::bdd_scope_cascade` |
+| [`DATE_FALLBACK.md`](./DATE_FALLBACK.md) - options-only author and issued-date fallback policies | Draft | bean `csl26-62kp` |
 | [`CITE_SITE_COMPOUND_GROUPING.md`](./CITE_SITE_COMPOUND_GROUPING.md) — cite-site compound grouping and position-aware overrides | Active | `citations.rs::sorting_and_grouping` |
 | [`INTEGRAL_NAME_MEMORY.md`](./INTEGRAL_NAME_MEMORY.md) — durable author-display state across citation clusters | Active | `citations.rs::integral_name_memory` |
 | [`PERSONAL_COMMUNICATION_CITATION.md`](./PERSONAL_COMMUNICATION_CITATION.md) — rendering of personal communications across style families | Active | `citations.rs::contributor_scoping` |
