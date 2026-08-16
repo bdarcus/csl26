@@ -1194,6 +1194,95 @@ fn given_a_by_cite_style_with_an_et_al_collision_when_a_colliding_reference_is_c
     });
 }
 
+/// Regression for csl26-h9jy, mirroring the official CSL test suite's
+/// `disambiguate_ByCiteMinimalGivennameExpandMinimalNames.txt` fixture
+/// exactly (same names, same style shape: et-al-min 3, et-al-use-first 1,
+/// by-cite, initials baseline). Two references share their first and third
+/// authors verbatim (Albert Asthma; Charles/Curtis Cold differs only at
+/// position 3, never shown); only the second author (Brandon vs Biff
+/// Bronchitis) differs at a shown position, and both reduce to the same
+/// initial ("B."), so initials alone don't resolve it — full-name escalation
+/// is required.
+///
+/// **Known, intentional divergence from the oracle:** citeproc-js escalates
+/// only the one position that needs it —
+/// `"A. Asthma, Brandon Bronchitis, et al."` — because it tracks expansion
+/// per name position. Citum's `ProcHints.expand_given_names_full` is a
+/// per-reference flag, so it escalates every shown position uniformly,
+/// including position 1 (which gains nothing from it — both entries share
+/// the same person there). The citations still correctly differ overall,
+/// so this is verbose relative to the oracle, not a misdisambiguation.
+/// Per-position minimality is tracked separately as csl26-5753.
+fn disambiguation_givenname_escalation_reveals_every_shown_position_not_just_the_minimal_one() {
+    let input = vec![
+        make_book_multi_author(
+            "ambigs-16",
+            vec![
+                ("Asthma", "Albert"),
+                ("Bronchitis", "Brandon"),
+                ("Cold", "Charles"),
+            ],
+            1990,
+            "Book M",
+        ),
+        make_book_multi_author(
+            "ambigs-17",
+            vec![
+                ("Asthma", "Albert"),
+                ("Bronchitis", "Biff"),
+                ("Cold", "Curtis"),
+            ],
+            1990,
+            "Book M",
+        ),
+    ];
+    let citation_items = vec![vec!["ambigs-16", "ambigs-17"]];
+    let expected = "Albert Asthma, Biff Bronchitis, et al., (1990); Albert Asthma, Brandon Bronchitis, et al., (1990)";
+
+    run_test_case_native_with_options(common::TestCaseOptions {
+        input: &input,
+        citation_items: &citation_items,
+        expected,
+        mode: "citation",
+        disambiguate_year_suffix: false,
+        disambiguate_names: true,
+        disambiguate_givenname: true,
+        et_al_min: Some(3),
+        et_al_use_first: Some(1),
+    });
+}
+
+/// Regression for csl26-h9jy: `all-names-with-initials` and
+/// `primary-name-with-initials` must cap given-name escalation at initials —
+/// unlike the default `by-cite`/`all-names`/`primary-name` rules, they may
+/// never escalate to the full given name to resolve a same-initial collision
+/// (only these two `GivennameRule` variants say "(initials form)" in their
+/// doc comments). A same-initial collision under the cap must fall through
+/// to year-suffix instead.
+fn disambiguation_with_initials_rule_caps_escalation_at_initials() {
+    let input = vec![
+        make_book("smith-thomas", "Smith", "Thomas", 2000, "Book A"),
+        make_book("smith-ted", "Smith", "Ted", 2000, "Book B"),
+    ];
+    let mut bibliography = indexmap::IndexMap::new();
+    for reference in input {
+        let id = reference.id().expect("fixture id").to_string();
+        bibliography.insert(id, reference);
+    }
+    let processor = Processor::new(
+        build_author_date_style_with_givenname_rule(GivennameRule::AllNamesWithInitials),
+        bibliography,
+    );
+
+    let result = process_citation_ids(&processor, &["smith-thomas", "smith-ted"]);
+
+    // Suffix order follows the resolved bibliography sort (§3 of
+    // DISAMBIGUATION.md), not citation order — not this test's concern; the
+    // behavior under test is that no given name (not even an initial) is
+    // retained once the collision falls through to year-suffix.
+    assert_eq!(result, "Smith, (2000b); Smith, (2000a)");
+}
+
 /// Test given name expansion with initial form (`initialize_with`).
 fn disambiguation_initials_are_used_when_short_form_family_names_collide() {
     let input = vec![
@@ -1211,9 +1300,15 @@ fn disambiguation_initials_are_used_when_short_form_family_names_collide() {
     // Within the Doe collision group, output order follows the author sort
     // key (family, then given), not citation-item registration order: with
     // the family name tied, "Aloysius" sorts before "John".
+    //
+    // Thomas/Ted Smith share an initial ("T."), so initials alone don't
+    // resolve the collision — the escalation ladder continues to the full
+    // given name (csl26-h9jy), matching the official CSL test suite's
+    // disambiguate_ByCiteGivennameShortFormInitializeWith fixture exactly
+    // ("Thomas Smith; Ted Smith").
     let expected = "Roe, (2000)
 A Doe, (2000); J Doe, (2000)
-T Smith, (2000); T Smith, (2000)";
+Ted Smith, (2000); Thomas Smith, (2000)";
 
     run_test_case_native_with_options(common::TestCaseOptions {
         input: &input,
@@ -2660,9 +2755,25 @@ mod disambiguation {
     }
 
     #[test]
+    fn givenname_escalation_reveals_every_shown_position_not_just_the_minimal_one() {
+        announce_behavior(
+            "A same-initial collision escalates to the full given name at every shown position, not just the one position that needs it — verbose relative to citeproc-js's per-position minimality (csl26-5753), but not a misdisambiguation.",
+        );
+        super::disambiguation_givenname_escalation_reveals_every_shown_position_not_just_the_minimal_one();
+    }
+
+    #[test]
+    fn with_initials_rule_caps_escalation_at_initials() {
+        announce_behavior(
+            "all-names-with-initials and primary-name-with-initials must never escalate a same-initial collision to the full given name — they fall back to year-suffix instead.",
+        );
+        super::disambiguation_with_initials_rule_caps_escalation_at_initials();
+    }
+
+    #[test]
     fn initials_are_used_when_short_form_family_names_collide() {
         announce_behavior(
-            "Short-form family-name collisions should expand to initials when that is the configured fallback.",
+            "Short-form family-name collisions should expand to initials when that is the configured fallback, escalating to the full given name when initials alone still collide.",
         );
         super::disambiguation_initials_are_used_when_short_form_family_names_collide();
     }

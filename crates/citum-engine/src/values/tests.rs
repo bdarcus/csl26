@@ -372,6 +372,7 @@ fn given_literal_short_name_when_first_integral_mention_then_parenthetical_form_
         0,
         &ctx,
         false,
+        false,
     );
 
     assert_eq!(result, "World Health Organization (WHO)");
@@ -388,6 +389,7 @@ fn given_literal_short_name_when_subsequent_integral_mention_then_short_form_ren
         &ContributorForm::Long,
         0,
         &ctx,
+        false,
         false,
     );
 
@@ -406,6 +408,7 @@ fn given_short_then_bracketed_option_when_first_integral_mention_then_bracketed_
         0,
         &ctx,
         false,
+        false,
     );
 
     assert_eq!(result, "WHO [World Health Organization]");
@@ -423,6 +426,7 @@ fn given_non_integral_context_when_integral_name_state_is_set_then_literal_short
         &ContributorForm::Long,
         0,
         &ctx,
+        false,
         false,
     );
 
@@ -1953,7 +1957,8 @@ fn test_demote_non_dropping_particle() {
         Some(&DemoteNonDroppingParticle::Never),
         None,
     );
-    let res_never = contributor::format_single_name(&name, &ContributorForm::Long, 0, &ctx, false);
+    let res_never =
+        contributor::format_single_name(&name, &ContributorForm::Long, 0, &ctx, false, false);
     assert_eq!(res_never, "van Beethoven, Ludwig");
 
     // Case 2: Display-and-sort (demote)
@@ -1967,7 +1972,8 @@ fn test_demote_non_dropping_particle() {
         Some(&DemoteNonDroppingParticle::DisplayAndSort),
         None,
     );
-    let res_demote = contributor::format_single_name(&name, &ContributorForm::Long, 0, &ctx, false);
+    let res_demote =
+        contributor::format_single_name(&name, &ContributorForm::Long, 0, &ctx, false, false);
     assert_eq!(res_demote, "Beethoven, Ludwig van");
 
     // Case 3: Sort-only (same as Never for display)
@@ -1982,7 +1988,7 @@ fn test_demote_non_dropping_particle() {
         None,
     );
     let res_sort_only =
-        contributor::format_single_name(&name, &ContributorForm::Long, 0, &ctx, false);
+        contributor::format_single_name(&name, &ContributorForm::Long, 0, &ctx, false, false);
     assert_eq!(res_sort_only, "van Beethoven, Ludwig");
 
     // Case 4: Not inverted (should be same for all)
@@ -1997,7 +2003,7 @@ fn test_demote_non_dropping_particle() {
         None,
     );
     let res_straight =
-        contributor::format_single_name(&name, &ContributorForm::Long, 0, &ctx, false);
+        contributor::format_single_name(&name, &ContributorForm::Long, 0, &ctx, false, false);
     assert_eq!(res_straight, "Ludwig van Beethoven");
 }
 
@@ -2020,7 +2026,8 @@ fn test_initialize_with_variants_for_multi_part_given_names() {
         None,
         None,
     );
-    let compact = contributor::format_single_name(&name, &ContributorForm::Long, 0, &ctx, false);
+    let compact =
+        contributor::format_single_name(&name, &ContributorForm::Long, 0, &ctx, false, false);
     assert_eq!(compact, "Kuhn, TS");
 
     let init_space = " ".to_string();
@@ -2033,7 +2040,8 @@ fn test_initialize_with_variants_for_multi_part_given_names() {
         None,
         None,
     );
-    let space = contributor::format_single_name(&name, &ContributorForm::Long, 0, &ctx, false);
+    let space =
+        contributor::format_single_name(&name, &ContributorForm::Long, 0, &ctx, false, false);
     assert_eq!(space, "Kuhn, T S");
 
     let init_dot = ".".to_string();
@@ -2046,7 +2054,7 @@ fn test_initialize_with_variants_for_multi_part_given_names() {
         None,
         None,
     );
-    let dot = contributor::format_single_name(&name, &ContributorForm::Long, 0, &ctx, false);
+    let dot = contributor::format_single_name(&name, &ContributorForm::Long, 0, &ctx, false, false);
     assert_eq!(dot, "Kuhn, T.S.");
 
     let init_dot_space = ". ".to_string();
@@ -2059,7 +2067,8 @@ fn test_initialize_with_variants_for_multi_part_given_names() {
         None,
         None,
     );
-    let dot_space = contributor::format_single_name(&name, &ContributorForm::Long, 0, &ctx, false);
+    let dot_space =
+        contributor::format_single_name(&name, &ContributorForm::Long, 0, &ctx, false, false);
     assert_eq!(dot_space, "Kuhn, T. S.");
 }
 
@@ -2083,7 +2092,7 @@ fn test_initialize_with_hyphen_guard() {
         None,
     );
     let hyphen_default =
-        contributor::format_single_name(&name, &ContributorForm::Long, 0, &ctx, false);
+        contributor::format_single_name(&name, &ContributorForm::Long, 0, &ctx, false, false);
     assert_eq!(hyphen_default, "Kuhn, J.-P.");
 
     let ctx = make_name_format_context(
@@ -2096,7 +2105,7 @@ fn test_initialize_with_hyphen_guard() {
         None,
     );
     let hyphen_disabled =
-        contributor::format_single_name(&name, &ContributorForm::Long, 0, &ctx, false);
+        contributor::format_single_name(&name, &ContributorForm::Long, 0, &ctx, false, false);
     assert_eq!(hyphen_disabled, "Kuhn, J.");
 }
 
@@ -2113,7 +2122,8 @@ fn test_name_form_variants() {
 
     // Full: render complete given names
     let ctx = make_name_format_context(None, None, None, None, Some(NameForm::Full), None, None);
-    let full = contributor::format_single_name(&name, &ContributorForm::Long, 0, &ctx, false);
+    let full =
+        contributor::format_single_name(&name, &ContributorForm::Long, 0, &ctx, false, false);
     assert_eq!(full, "John David Smith");
 
     // FamilyOnly: suppress given names entirely
@@ -2127,7 +2137,7 @@ fn test_name_form_variants() {
         None,
     );
     let family_only =
-        contributor::format_single_name(&name, &ContributorForm::Long, 0, &ctx, false);
+        contributor::format_single_name(&name, &ContributorForm::Long, 0, &ctx, false, false);
     assert_eq!(family_only, "Smith");
 
     // Initials with explicit initialize_with
@@ -2141,14 +2151,15 @@ fn test_name_form_variants() {
         None,
         None,
     );
-    let initials = contributor::format_single_name(&name, &ContributorForm::Long, 0, &ctx, false);
+    let initials =
+        contributor::format_single_name(&name, &ContributorForm::Long, 0, &ctx, false, false);
     assert_eq!(initials, "J. D. Smith");
 
     // Initials with defaulted initialize_with (None → ". ")
     let ctx =
         make_name_format_context(None, None, None, None, Some(NameForm::Initials), None, None);
     let initials_default =
-        contributor::format_single_name(&name, &ContributorForm::Long, 0, &ctx, false);
+        contributor::format_single_name(&name, &ContributorForm::Long, 0, &ctx, false, false);
     assert_eq!(initials_default, "J. D. Smith");
 
     // Semantic split: name_form=None + initialize_with=Some → Full (not Initials).
@@ -2156,7 +2167,7 @@ fn test_name_form_variants() {
     // The migrator is responsible for co-emitting name_form: Initials with initialize_with.
     let ctx = make_name_format_context(None, None, Some(&init_str), None, None, None, None);
     let semantic_split =
-        contributor::format_single_name(&name, &ContributorForm::Long, 0, &ctx, false);
+        contributor::format_single_name(&name, &ContributorForm::Long, 0, &ctx, false, false);
     assert_eq!(semantic_split, "John David Smith");
 }
 
@@ -2174,7 +2185,8 @@ fn test_name_form_initials_hyphen_default_separator() {
     // Default separator ". " should produce "J.-P." not "J. -P."
     let ctx =
         make_name_format_context(None, None, None, None, Some(NameForm::Initials), None, None);
-    let result = contributor::format_single_name(&name, &ContributorForm::Long, 0, &ctx, false);
+    let result =
+        contributor::format_single_name(&name, &ContributorForm::Long, 0, &ctx, false, false);
     assert_eq!(result, "J.-P. Sartre");
 }
 
@@ -4358,7 +4370,7 @@ fn test_sort_separator_space() {
         Some(&sep_space),
     );
     let result_space =
-        contributor::format_single_name(&name, &ContributorForm::Long, 0, &ctx, false);
+        contributor::format_single_name(&name, &ContributorForm::Long, 0, &ctx, false, false);
     assert_eq!(result_space, "Smith J");
 
     // Test with default (no sort_separator set): should produce "Smith, J" (with comma)
@@ -4372,7 +4384,7 @@ fn test_sort_separator_space() {
         None,
     );
     let result_default =
-        contributor::format_single_name(&name, &ContributorForm::Long, 0, &ctx, false);
+        contributor::format_single_name(&name, &ContributorForm::Long, 0, &ctx, false, false);
     assert_eq!(result_default, "Smith, J");
 }
 
@@ -4391,7 +4403,8 @@ fn test_suffix_uses_sort_separator_not_space() {
 
     let ctx =
         make_name_format_context(Some(DisplayAsSort::All), None, None, None, None, None, None);
-    let result = contributor::format_single_name(&name, &ContributorForm::Long, 0, &ctx, false);
+    let result =
+        contributor::format_single_name(&name, &ContributorForm::Long, 0, &ctx, false, false);
     assert_eq!(result, "Smith, J., Jr.");
 }
 
@@ -4413,7 +4426,8 @@ fn katakana_names_use_script_delimiter_in_original_order() {
         make_name_format_context(None, None, None, None, Some(NameForm::Full), None, None);
     ctx.script_configs = Some(&scripts);
 
-    let result = contributor::format_single_name(&name, &ContributorForm::Long, 0, &ctx, false);
+    let result =
+        contributor::format_single_name(&name, &ContributorForm::Long, 0, &ctx, false, false);
 
     assert_eq!(result, "マイケル・ジャクソン");
 }
@@ -4444,7 +4458,8 @@ fn katakana_names_use_script_sort_separator_when_inverted() {
     );
     ctx.script_configs = Some(&scripts);
 
-    let result = contributor::format_single_name(&name, &ContributorForm::Long, 0, &ctx, false);
+    let result =
+        contributor::format_single_name(&name, &ContributorForm::Long, 0, &ctx, false, false);
 
     assert_eq!(result, "ジャクソン、マイケル");
 }
@@ -4472,8 +4487,14 @@ fn katakana_name_renders_correctly_in_both_orders() {
     let mut ctx_original =
         make_name_format_context(None, None, None, None, Some(NameForm::Full), None, None);
     ctx_original.script_configs = Some(&scripts);
-    let original =
-        contributor::format_single_name(&name, &ContributorForm::Long, 0, &ctx_original, false);
+    let original = contributor::format_single_name(
+        &name,
+        &ContributorForm::Long,
+        0,
+        &ctx_original,
+        false,
+        false,
+    );
 
     let mut ctx_inverted = make_name_format_context(
         Some(DisplayAsSort::All),
@@ -4485,8 +4506,14 @@ fn katakana_name_renders_correctly_in_both_orders() {
         None,
     );
     ctx_inverted.script_configs = Some(&scripts);
-    let inverted =
-        contributor::format_single_name(&name, &ContributorForm::Long, 0, &ctx_inverted, false);
+    let inverted = contributor::format_single_name(
+        &name,
+        &ContributorForm::Long,
+        0,
+        &ctx_inverted,
+        false,
+        false,
+    );
 
     assert_eq!(original, "マイケル・ジャクソン");
     assert_eq!(inverted, "ジャクソン、マイケル");
@@ -4511,7 +4538,8 @@ fn native_cjk_names_use_native_ordering_without_space() {
         make_name_format_context(None, None, None, None, Some(NameForm::Full), None, None);
     ctx.script_configs = Some(&scripts);
 
-    let result = contributor::format_single_name(&name, &ContributorForm::Long, 0, &ctx, false);
+    let result =
+        contributor::format_single_name(&name, &ContributorForm::Long, 0, &ctx, false, false);
 
     assert_eq!(result, "北川善太郎");
 }
@@ -4535,7 +4563,8 @@ fn latin_names_ignore_unmatched_script_separators() {
         make_name_format_context(None, None, None, None, Some(NameForm::Full), None, None);
     ctx.script_configs = Some(&scripts);
 
-    let result = contributor::format_single_name(&name, &ContributorForm::Long, 0, &ctx, false);
+    let result =
+        contributor::format_single_name(&name, &ContributorForm::Long, 0, &ctx, false, false);
 
     assert_eq!(result, "Michael Jackson");
 }
@@ -4567,7 +4596,8 @@ fn component_sort_separator_overrides_script_sort_separator() {
     ctx.script_configs = Some(&scripts);
     ctx.component_sort_separator = Some(&component_separator);
 
-    let result = contributor::format_single_name(&name, &ContributorForm::Long, 0, &ctx, false);
+    let result =
+        contributor::format_single_name(&name, &ContributorForm::Long, 0, &ctx, false, false);
 
     assert_eq!(result, "ジャクソン / マイケル");
 }
@@ -4591,7 +4621,8 @@ fn mixed_kana_names_match_kana_config() {
         make_name_format_context(None, None, None, None, Some(NameForm::Full), None, None);
     ctx.script_configs = Some(&scripts);
 
-    let result = contributor::format_single_name(&name, &ContributorForm::Long, 0, &ctx, false);
+    let result =
+        contributor::format_single_name(&name, &ContributorForm::Long, 0, &ctx, false, false);
 
     assert_eq!(result, "タロウ・やまだ");
 }
@@ -4623,7 +4654,8 @@ fn explicit_name_order_overrides_use_native_ordering() {
     );
     ctx.script_configs = Some(&scripts);
 
-    let result = contributor::format_single_name(&name, &ContributorForm::Long, 0, &ctx, false);
+    let result =
+        contributor::format_single_name(&name, &ContributorForm::Long, 0, &ctx, false, false);
 
     // Explicit given-first order wins over script use-native-ordering.
     assert_eq!(result, "善太郎北川");
@@ -4659,7 +4691,8 @@ fn native_ordering_applies_when_display_as_sort_is_set() {
     ctx.script_configs = Some(&scripts);
 
     // Index 1 — not inverted by display-as-sort:first; native ordering must apply.
-    let result = contributor::format_single_name(&name, &ContributorForm::Long, 1, &ctx, false);
+    let result =
+        contributor::format_single_name(&name, &ContributorForm::Long, 1, &ctx, false, false);
 
     assert_eq!(result, "北川善太郎");
 }
