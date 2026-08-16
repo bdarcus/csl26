@@ -770,7 +770,7 @@ fn exact_type_candidates<'a>(
     substitute
         .overrides
         .get(&reference.ref_type())
-        .map(Vec::as_slice)
+        .map(citum_schema::options::SubstituteCandidates::as_slice)
 }
 
 fn contributor_for_candidate(reference: &Reference, role: &ContributorRole) -> Option<Contributor> {

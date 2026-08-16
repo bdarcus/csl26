@@ -207,6 +207,18 @@ pub enum ProcessingBase {
 }
 
 impl ProcessingBase {
+    /// Return whether this base belongs to the author-date family.
+    #[must_use]
+    pub fn supplies_author_substitution(self) -> bool {
+        matches!(
+            self,
+            Self::AuthorDate
+                | Self::AuthorDateGivenname
+                | Self::AuthorDateNames
+                | Self::AuthorDateFull
+        )
+    }
+
     /// The named `Processing` variant this base stands for.
     ///
     /// `Label` maps to `Processing::Label(LabelConfig::default())`; all other
@@ -320,6 +332,21 @@ fn author_date_config(
 }
 
 impl Processing {
+    /// Return whether this processing regime supplies the standard author chain.
+    #[must_use]
+    pub fn supplies_author_substitution(&self) -> bool {
+        match self {
+            Self::AuthorDate
+            | Self::AuthorDateGivenname
+            | Self::AuthorDateNames
+            | Self::AuthorDateFull => true,
+            Self::Custom(config) => config
+                .base
+                .is_some_and(ProcessingBase::supplies_author_substitution),
+            Self::Numeric | Self::Note | Self::Label(_) => false,
+        }
+    }
+
     /// Default bibliography sort for the processing family, if any.
     ///
     /// Returns the standard bibliography sort order for the processing mode:

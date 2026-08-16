@@ -699,6 +699,8 @@ impl SortPreset {
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
 pub enum SubstitutePreset {
+    /// Disable author substitution.
+    None,
     /// Standard substitution order: Editor → Title → Translator.
     /// Used by most citation styles (APA, Chicago, etc.).
     Standard,
@@ -733,15 +735,16 @@ impl SubstitutePreset {
         let title = SubstituteKey::Title;
         let translator = SubstituteKey::Translator;
 
-        // Build a substitute from an optional role-label form and a template
+        // Build a substitute from an optional role-label form and candidate
         // order; all presets share empty overrides/role-substitute/unknowns.
-        let build = |form: Option<&str>, template: Vec<SubstituteKey>| Substitute {
+        let build = |form: Option<&str>, candidates: Vec<SubstituteKey>| Substitute {
             contributor_role_form: form.map(str::to_string),
-            template,
+            candidates: Some(crate::options::SubstituteCandidates::Candidates(candidates)),
             ..Substitute::default()
         };
 
         match self {
+            SubstitutePreset::None => Substitute::default(),
             SubstitutePreset::Standard => build(None, vec![editor, title, translator]),
             SubstitutePreset::EditorFirst => build(None, vec![editor, translator, title]),
             SubstitutePreset::TitleFirst => build(None, vec![title, editor, translator]),
@@ -1222,7 +1225,7 @@ mod tests {
     fn test_substitute_preset_standard() {
         let config = SubstitutePreset::Standard.config();
         assert_eq!(
-            config.template,
+            config.candidates(),
             vec![
                 SubstituteKey::Editor,
                 SubstituteKey::Title,
@@ -1234,6 +1237,6 @@ mod tests {
     #[test]
     fn test_substitute_preset_title_first() {
         let config = SubstitutePreset::TitleFirst.config();
-        assert_eq!(config.template[0], SubstituteKey::Title);
+        assert_eq!(config.candidates()[0], SubstituteKey::Title);
     }
 }

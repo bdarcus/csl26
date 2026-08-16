@@ -8,6 +8,7 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus and Citum contributors
 pub mod bibliography;
 pub mod cascade;
 pub mod contributors;
+pub mod date_fallback;
 pub mod date_substitute;
 pub mod dates;
 pub mod integral_name_memory;
@@ -32,6 +33,11 @@ pub use contributors::{
     ContributorSuppressionRule, DelimiterPrecedesLast, DemoteNonDroppingParticle, DisplayAsSort,
     NameForm, RoleLabelDefaults, RoleLabelPresentation, RoleLabelPreset, RoleOptions,
     RoleOptionsEntry, RoleRendering, ShortenListOptions, TwoNameDelimiterPolicy,
+};
+pub use date_fallback::{
+    DateFallback, DateFallbackCandidate, DateFallbackConfig, DateFallbackDate,
+    DateFallbackDisabled, DateFallbackEntry, DateFallbackLane, DateFallbackMessage,
+    DateFallbackPreset, DateFallbackRule, DateFallbackRulePreset, DateFallbackSelectorMap,
 };
 pub use date_substitute::{
     DateSubstitute, DateSubstituteCandidate, DateSubstituteDate, DateSubstituteEntry,
@@ -64,7 +70,8 @@ pub use scoped::{
 };
 pub use sorting::{SortingConfig, SortingLocale, SortingMultilingualMode};
 pub use substitute::{
-    Substitute, SubstituteConfig, SubstituteContributor, SubstituteField, SubstituteKey,
+    Substitute, SubstituteCandidates, SubstituteConfig, SubstituteContributor, SubstituteDisabled,
+    SubstituteField, SubstituteKey, SubstituteMessage, SubstituteOtherwise,
     SubstituteTitleQuoteMode,
 };
 
@@ -72,6 +79,7 @@ use crate::template::DelimiterPunctuation;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use std::borrow::Cow;
 use std::collections::HashMap;
 
 /// Top-level style configuration.
@@ -90,8 +98,15 @@ pub struct Config {
         default
     )]
     pub substitute: Option<SubstituteConfig>,
-    /// Identity-date substitution policy. Omission preserves inline or
-    /// implicit date fallback behavior; it does not inject `standard`.
+    /// Issued-date fallback policy. Omission renders missing dates blank.
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "deserialize_date_fallback",
+        default
+    )]
+    #[cfg_attr(feature = "schema", schemars(with = "Option<DateFallbackEntry>"))]
+    pub date_fallback: Option<DateFallbackConfig>,
+    /// Transitional legacy date-substitution policy retained until all consumers migrate.
     #[serde(
         skip_serializing_if = "Option::is_none",
         deserialize_with = "deserialize_date_substitute",
@@ -229,7 +244,15 @@ pub struct CitationOptions {
         default
     )]
     pub substitute: Option<SubstituteConfig>,
-    /// Citation-local identity-date substitution policy.
+    /// Citation-local issued-date fallback policy.
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "deserialize_date_fallback",
+        default
+    )]
+    #[cfg_attr(feature = "schema", schemars(with = "Option<DateFallbackEntry>"))]
+    pub date_fallback: Option<DateFallbackConfig>,
+    /// Transitional citation-local legacy date-substitution policy.
     #[serde(
         skip_serializing_if = "Option::is_none",
         deserialize_with = "deserialize_date_substitute",
@@ -357,7 +380,15 @@ pub struct BibliographyOptions {
         default
     )]
     pub substitute: Option<SubstituteConfig>,
-    /// Bibliography-local identity-date substitution policy.
+    /// Bibliography-local issued-date fallback policy.
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "deserialize_date_fallback",
+        default
+    )]
+    #[cfg_attr(feature = "schema", schemars(with = "Option<DateFallbackEntry>"))]
+    pub date_fallback: Option<DateFallbackConfig>,
+    /// Transitional bibliography-local legacy date-substitution policy.
     #[serde(
         skip_serializing_if = "Option::is_none",
         deserialize_with = "deserialize_date_substitute",
@@ -636,6 +667,20 @@ pub use title_class::{
 };
 pub use titles::{TextCase, TitleRendering, TitlesConfig, TitlesConfigEntry};
 
+fn merge_date_fallback(
+    base: &mut Option<DateFallbackConfig>,
+    overlay: Option<&DateFallbackConfig>,
+) {
+    let Some(overlay) = overlay else {
+        return;
+    };
+    if let Some(base) = base {
+        *base = DateFallbackConfig::merged(base, overlay);
+    } else {
+        *base = Some(overlay.clone());
+    }
+}
+
 fn merge_date_substitute(base: &mut Option<DateSubstitute>, overlay: Option<&DateSubstitute>) {
     let Some(overlay) = overlay else {
         return;
@@ -734,6 +779,25 @@ impl Config {
         self.processing.clone().unwrap_or_default()
     }
 
+    /// Resolve the primary-contributor substitution policy for this scope.
+    ///
+    /// Author-date processing supplies the standard editor, title, translator
+    /// chain. Explicit fields overlay that processing default, while a whole
+    /// policy `none` disables it.
+    #[must_use]
+    pub fn effective_substitute(&self) -> Cow<'_, Substitute> {
+        let derived = if self.effective_processing().supplies_author_substitution() {
+            Substitute::standard()
+        } else {
+            Substitute::default()
+        };
+        match &self.substitute {
+            Some(config) if config.is_disabled() => Cow::Owned(Substitute::default()),
+            Some(config) => Cow::Owned(Substitute::merged(&derived, &config.resolve())),
+            None => Cow::Owned(derived),
+        }
+    }
+
     /// Merge another config into this one, with `other` taking precedence.
     ///
     /// Used for combining global options with context-specific (citation/bibliography) options.
@@ -780,6 +844,7 @@ impl Config {
             }
         }
 
+        merge_date_fallback(&mut self.date_fallback, other.date_fallback.as_ref());
         merge_date_substitute(&mut self.date_substitute, other.date_substitute.as_ref());
 
         if let Some(other_contributors) = &other.contributors {
@@ -812,6 +877,7 @@ impl CitationOptions {
         Config {
             messages: HashMap::new(),
             substitute: self.substitute.clone(),
+            date_fallback: self.date_fallback.clone(),
             date_substitute: self.date_substitute.clone(),
             processing: self.processing.clone(),
             locale_override: None,
@@ -899,6 +965,7 @@ impl CitationOptions {
             }
         }
 
+        merge_date_fallback(&mut self.date_fallback, other.date_fallback.as_ref());
         merge_date_substitute(&mut self.date_substitute, other.date_substitute.as_ref());
 
         if let Some(other_contributors) = &other.contributors {
@@ -946,6 +1013,7 @@ impl BibliographyOptions {
         Config {
             messages: HashMap::new(),
             substitute: self.substitute.clone(),
+            date_fallback: self.date_fallback.clone(),
             date_substitute: self.date_substitute.clone(),
             processing: self.processing.clone(),
             locale_override: None,
@@ -1058,6 +1126,7 @@ impl BibliographyOptions {
             }
         }
 
+        merge_date_fallback(&mut self.date_fallback, other.date_fallback.as_ref());
         merge_date_substitute(&mut self.date_substitute, other.date_substitute.as_ref());
 
         if let Some(other_contributors) = &other.contributors {
@@ -1107,8 +1176,21 @@ where
     Ok(value.map(|entry| entry.resolve()))
 }
 
-/// Deserialize and eagerly expand a named or explicit date-substitution policy.
-fn deserialize_date_substitute<'de, D>(deserializer: D) -> Result<Option<DateSubstitute>, D::Error>
+/// Deserialize and expand a named or explicit date-fallback policy.
+fn deserialize_date_fallback<'de, D>(
+    deserializer: D,
+) -> Result<Option<DateFallbackConfig>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let value: Option<DateFallbackEntry> = Option::deserialize(deserializer)?;
+    Ok(value.map(|entry| entry.resolve()))
+}
+
+/// Deserialize and eagerly expand the transitional date-substitution policy.
+fn deserialize_date_substitute<'de, D>(
+    deserializer: D,
+) -> Result<Option<DateSubstitute>, D::Error>
 where
     D: serde::Deserializer<'de>,
 {
@@ -1137,25 +1219,18 @@ where
     Ok(value.map(|entry| entry.resolve()))
 }
 
-/// Deserialize substitute config from either a preset name or explicit config.
-///
-/// Eagerly resolves a `Preset` variant to its `Explicit` form (mirroring
-/// `deserialize_contributor_config`/`deserialize_date_config`/etc.), so the
-/// typed value always serializes as a mapping. Without this, the `extends`
-/// overlay's raw-YAML deep merge (`style/overlay.rs`) sees a preset-name
-/// scalar for an authored `substitute: <preset>` override and whole-replaces
-/// the inherited `Substitute` block instead of field-merging it, silently
-/// dropping fields the preset doesn't set (e.g. `role-substitute`).
+/// Deserialize substitute config while preserving whole-policy clear markers.
 fn deserialize_substitute_config<'de, D>(
     deserializer: D,
 ) -> Result<Option<SubstituteConfig>, D::Error>
 where
     D: serde::Deserializer<'de>,
 {
-    let value: Option<SubstituteConfig> = Option::deserialize(deserializer)?;
-    Ok(value.map(|config| match config {
+    let config = Option::<SubstituteConfig>::deserialize(deserializer)?;
+    Ok(config.map(|config| match config {
+        SubstituteConfig::Preset(crate::presets::SubstitutePreset::None) => config,
         SubstituteConfig::Preset(preset) => SubstituteConfig::Explicit(preset.config()),
-        explicit @ SubstituteConfig::Explicit(_) => explicit,
+        SubstituteConfig::Explicit(_) => config,
     }))
 }
 
@@ -1190,6 +1265,12 @@ impl<'de> Deserialize<'de> for Config {
                 default
             )]
             substitute: Option<SubstituteConfig>,
+            #[serde(
+                skip_serializing_if = "Option::is_none",
+                deserialize_with = "deserialize_date_fallback",
+                default
+            )]
+            date_fallback: Option<DateFallbackConfig>,
             #[serde(
                 skip_serializing_if = "Option::is_none",
                 deserialize_with = "deserialize_date_substitute",
@@ -1268,10 +1349,10 @@ impl<'de> Deserialize<'de> for Config {
                 "`options.profile` was removed; use `options.contributors`, `citation.options.label-wrap`, `citation.options.group-delimiter`, `bibliography.options.label-mode`, `bibliography.options.label-wrap`, `bibliography.options.date-position`, `bibliography.options.title-terminator`, `bibliography.options.repeated-author-rendering`, or `bibliography.options.volume-pages-delimiter`",
             ));
         }
-
         Ok(Self {
             messages: wire.messages,
             substitute: wire.substitute,
+            date_fallback: wire.date_fallback,
             date_substitute: wire.date_substitute,
             processing: wire.processing,
             locale_override: wire.locale_override,
@@ -1315,55 +1396,59 @@ mod tests {
     use rstest::rstest;
 
     #[test]
-    fn date_substitute_omission_is_not_resolved_to_standard() {
+    fn date_fallback_omission_remains_blank() {
         let config: Config = serde_yaml::from_str("{}").expect("empty config should parse");
-
-        assert!(config.date_substitute.is_none());
+        assert!(config.date_fallback.is_none());
     }
 
     #[test]
-    fn date_substitute_preset_is_eagerly_expanded() {
-        let config: Config = serde_yaml::from_str("date-substitute: standard")
-            .expect("standard preset should parse");
+    fn date_fallback_preset_is_eagerly_expanded() {
+        let config: Config =
+            serde_yaml::from_str("date-fallback: standard").expect("standard preset should parse");
         let serialized = serde_yaml::to_value(&config).expect("config should serialize");
 
-        assert!(
+        assert!(matches!(
             config
-                .date_substitute
+                .date_fallback
                 .as_ref()
-                .and_then(|policy| policy.candidates_for("report"))
-                .is_some_and(|candidates| matches!(
-                    candidates,
-                    [DateSubstituteCandidate::Message(_)]
-                ))
-        );
-        assert!(serialized["date-substitute"].is_mapping());
+                .and_then(|policy| policy.rule_for(true, "report")),
+            Some(DateFallbackRule::Preset(DateFallbackRulePreset::Standard))
+        ));
+        assert!(serialized["date-fallback"].is_mapping());
     }
 
     #[test]
-    fn explicit_date_substitute_map_preserves_authored_selector_order() {
+    fn explicit_date_fallback_map_preserves_authored_selector_order() {
         let config: Config = serde_yaml::from_str(
             r#"
-date-substitute:
-  book,thesis,map:
-  - date: copyright
-    form: year
-    prefix: c
-  default:
-  - message: term.no-date
-    form: short
+date-fallback:
+  first-issued:
+    book,thesis,map:
+    - date: copyright
+      form: year
+      prefix: c
+    default: standard
 "#,
         )
         .expect("explicit selector map should parse");
-        let policy = config
-            .date_substitute
-            .expect("date substitute should be present");
-
-        let selectors: Vec<String> = policy.entries().keys().map(ToString::to_string).collect();
+        let DateFallbackConfig::Policy(policy) = config
+            .date_fallback
+            .expect("date fallback should be present")
+        else {
+            panic!("explicit policy should be enabled");
+        };
+        let Some(DateFallbackLane::Selectors(selectors)) = policy.first_issued.as_ref() else {
+            panic!("first-issued selectors should be present");
+        };
+        let selectors: Vec<String> = selectors
+            .entries()
+            .keys()
+            .map(ToString::to_string)
+            .collect();
         assert_eq!(selectors, ["book,thesis,map", "default"]);
         assert!(matches!(
-            policy.candidates_for("book"),
-            Some([DateSubstituteCandidate::Date(_)])
+            policy.rule_for(true, "book"),
+            Some(DateFallbackRule::Candidates(_))
         ));
     }
 
@@ -1372,6 +1457,52 @@ date-substitute:
         let config = Config::default();
         assert!(config.substitute.is_none());
         assert!(config.processing.is_none());
+    }
+
+    #[rstest]
+    #[case("{}")]
+    #[case("processing: author-date")]
+    #[case("processing: author-date-givenname")]
+    #[case("processing: author-date-names")]
+    #[case("processing: author-date-full")]
+    #[case("processing:\n  base: author-date")]
+    fn author_date_processing_supplies_standard_substitute_candidates(#[case] yaml: &str) {
+        let config: Config = serde_yaml::from_str(yaml).expect("processing config should parse");
+        assert_eq!(
+            config.effective_substitute().candidates(),
+            &[
+                SubstituteKey::Editor,
+                SubstituteKey::Title,
+                SubstituteKey::Translator,
+            ]
+        );
+    }
+
+    #[rstest]
+    #[case("processing: numeric")]
+    #[case("processing: note")]
+    #[case("processing: label")]
+    fn non_author_date_processing_supplies_no_substitute_candidates(#[case] yaml: &str) {
+        let config: Config = serde_yaml::from_str(yaml).expect("processing config should parse");
+        assert!(config.effective_substitute().candidates().is_empty());
+    }
+
+    #[test]
+    fn explicit_substitute_fields_overlay_processing_defaults_and_none_disables_them() {
+        let overlay: Config = serde_yaml::from_str(
+            "substitute:\n  title-quote: by-category\n  overrides:\n    episode: none",
+        )
+        .expect("partial substitute config should parse");
+        let effective = overlay.effective_substitute();
+        assert_eq!(effective.candidates().len(), 3);
+        assert!(matches!(
+            effective.overrides.get("episode"),
+            Some(SubstituteCandidates::Disabled(SubstituteDisabled::None))
+        ));
+
+        let disabled: Config =
+            serde_yaml::from_str("substitute: none").expect("whole-policy clear should parse");
+        assert!(disabled.effective_substitute().candidates().is_empty());
     }
 
     #[test]
@@ -1422,7 +1553,7 @@ date-substitute:
     #[test]
     fn test_substitute_default() {
         let sub = Substitute::default();
-        assert_eq!(sub.template.len(), 3);
+        assert!(sub.candidates().is_empty());
     }
 
     #[test]
@@ -1430,7 +1561,7 @@ date-substitute:
         let yaml = r#"
 substitute:
   contributor-role-form: short
-  template:
+  candidates:
     - editor
     - title
 processing: author-date
@@ -1609,8 +1740,8 @@ contributors:
         let config: Config = serde_yaml::from_str(yaml).unwrap();
         assert!(config.substitute.is_some());
         let resolved = config.substitute.unwrap().resolve();
-        assert_eq!(resolved.template.len(), 3);
-        assert_eq!(resolved.template[0], SubstituteKey::Editor);
+        assert_eq!(resolved.candidates().len(), 3);
+        assert_eq!(resolved.candidates()[0], SubstituteKey::Editor);
     }
 
     #[test]
@@ -1618,14 +1749,14 @@ contributors:
         // Test that explicit config still works
         let yaml = r#"
 substitute:
-  template:
+  candidates:
     - title
     - editor
 "#;
         let config: Config = serde_yaml::from_str(yaml).unwrap();
         let resolved = config.substitute.unwrap().resolve();
-        assert_eq!(resolved.template[0], SubstituteKey::Title);
-        assert_eq!(resolved.template[1], SubstituteKey::Editor);
+        assert_eq!(resolved.candidates()[0], SubstituteKey::Title);
+        assert_eq!(resolved.candidates()[1], SubstituteKey::Editor);
     }
 
     #[test]

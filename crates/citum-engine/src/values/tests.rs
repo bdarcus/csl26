@@ -3598,10 +3598,12 @@ fn test_translator_substitute_uses_locale_aware_role_label() {
     config.substitute = Some(SubstituteConfig::Explicit(Substitute {
         contributor_role_form: Some("long".to_string()),
         contributor_role_case: None,
+        candidates: None,
         template: vec![SubstituteKey::Translator],
         overrides: std::collections::HashMap::new(),
         role_substitute: std::collections::HashMap::new(),
         title_quote: None,
+        otherwise: None,
         unknown_fields: Default::default(),
     }));
 
@@ -3807,10 +3809,12 @@ fn test_role_specific_name_order_applies_in_substitute_path() {
     config.substitute = Some(SubstituteConfig::Explicit(Substitute {
         contributor_role_form: Some("short".to_string()),
         contributor_role_case: None,
+        candidates: None,
         template: vec![SubstituteKey::Translator],
         overrides: std::collections::HashMap::new(),
         role_substitute: std::collections::HashMap::new(),
         title_quote: None,
+        otherwise: None,
         unknown_fields: Default::default(),
     }));
 
