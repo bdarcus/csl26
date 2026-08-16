@@ -430,11 +430,11 @@ impl Processing {
             }
             Processing::AuthorDateNames => author_date_config(true, false, GivennameRule::ByCite),
             // `author-date-full` is the major author-date *guide* profile (APA §8.20,
-            // Chicago AD): it adds names + given names + year suffix, and uses the
-            // global `primary-name` rule so same-surname authors gain first-author
-            // initials in *every* in-text cite. (Citum's `by-cite` default is
-            // citation-local and would miss authors cited separately.) Initials vs full
-            // form follow each style's `initialize-with`/`name-form` contributor config.
+            // Chicago AD): it adds names + given names + year suffix, and uses
+            // `primary-name` so same-surname authors gain initials on the *first*
+            // author only, not on every colliding position (`by-cite`'s scope).
+            // Initials vs full form follow each style's `initialize-with`/`name-form`
+            // contributor config.
             Processing::AuthorDateFull => {
                 author_date_config(true, true, GivennameRule::PrimaryName)
             }
