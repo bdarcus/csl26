@@ -539,8 +539,9 @@ fn format_selected_names(
         .map(|(index, name)| {
             let expand =
                 hints.expand_given_names && !(hints.expand_given_names_primary_only && index > 0);
+            let expand_full = expand && hints.expand_given_names_full;
             decorate_name(
-                format_single_name(name, form, index, context, expand),
+                format_single_name(name, form, index, context, expand, expand_full),
                 index,
                 decorations,
             )
@@ -553,8 +554,9 @@ fn format_selected_names(
             let original_index = names.len() - last_names.len() + index;
             let expand = hints.expand_given_names
                 && !(hints.expand_given_names_primary_only && original_index > 0);
+            let expand_full = expand && hints.expand_given_names_full;
             decorate_name(
-                format_single_name(name, form, original_index, context, expand),
+                format_single_name(name, form, original_index, context, expand, expand_full),
                 original_index,
                 decorations,
             )
@@ -576,7 +578,7 @@ fn decorate_name(value: String, index: usize, decorations: &[NameDecoration]) ->
 ///
 /// Splits the given name on word separators (space, hyphen, non-breaking space),
 /// and converts each part to its first character followed by the initialize suffix.
-fn initialize_given_name(
+pub(crate) fn initialize_given_name(
     given: &str,
     initialize_with: Option<&String>,
     initialize_with_hyphen: Option<bool>,
@@ -944,6 +946,52 @@ fn effective_suffix(raw_suffix: &str, strip_periods: bool) -> String {
     }
 }
 
+/// Determine how to render the given name based on `NameForm` and any
+/// disambiguation escalation.
+///
+/// `initialize-with` only controls the separator between initials, not
+/// whether to use initials at all; `name-form` controls the form.
+///
+/// Given-name disambiguation escalation (`expand_given_names`) bypasses the
+/// style's configured form entirely (including `FamilyOnly`) once it
+/// applies: the configured form is what already collided, so this position
+/// must show at least the escalated level to carry disambiguating weight.
+/// Mirrors the same ladder `append_givenname_resolution_key` uses to decide
+/// resolution, so key and render agree (csl26-h9jy). Not escalated at all
+/// (`expand_given_names: false`) renders exactly as before that fix.
+fn resolve_given_part(
+    given: &str,
+    ctx: &NameFormatContext,
+    expand_given_names: bool,
+    expand_given_names_full: bool,
+) -> String {
+    let baseline_name_form = ctx.name_form.unwrap_or(NameForm::Full);
+
+    // Escalation only ever raises the form (FamilyOnly < Initials < Full),
+    // never lowers it. Disambiguation hints are computed once against the
+    // citation-scope contributor config and shared with bibliography
+    // rendering (which commonly configures a different, often *more*
+    // revealing, baseline — e.g. Chicago's citation-scope `initials` vs its
+    // bibliography-scope default `full`). Without this floor, escalating to
+    // "Initials" here would wrongly downgrade a bibliography entry that was
+    // already rendering the full given name (csl26-h9jy).
+    let effective_name_form = if !expand_given_names {
+        baseline_name_form
+    } else if expand_given_names_full || baseline_name_form == NameForm::Full {
+        NameForm::Full
+    } else {
+        NameForm::Initials
+    };
+
+    match effective_name_form {
+        NameForm::FamilyOnly => String::new(),
+        NameForm::Initials => {
+            initialize_given_name(given, ctx.initialize_with, ctx.initialize_with_hyphen)
+        }
+        NameForm::Full => given.to_string(),
+    }
+}
+
 /// Format a single name.
 pub(crate) fn format_single_name(
     name: &crate::reference::FlatName,
@@ -951,6 +999,7 @@ pub(crate) fn format_single_name(
     index: usize,
     ctx: &NameFormatContext,
     expand_given_names: bool,
+    expand_given_names_full: bool,
 ) -> String {
     fn join_particle_family(particle: &str, family: &str) -> String {
         if particle.ends_with('-') {
@@ -1036,21 +1085,8 @@ pub(crate) fn format_single_name(
                 family.to_string()
             };
 
-            // Determine how to render the given name based on NameForm.
-            // initialize-with only controls the separator between initials, not whether
-            // to use initials at all. name-form controls the form.
-            let effective_name_form = match ctx.name_form {
-                Some(f) => f,
-                None => NameForm::Full,
-            };
-
-            let given_part = match effective_name_form {
-                NameForm::FamilyOnly => String::new(),
-                NameForm::Initials => {
-                    initialize_given_name(given, ctx.initialize_with, ctx.initialize_with_hyphen)
-                }
-                NameForm::Full => given.to_string(),
-            };
+            let given_part =
+                resolve_given_part(given, ctx, expand_given_names, expand_given_names_full);
 
             // Construct particle part (dropping + demoted non-dropping)
             let mut particle_part = String::new();

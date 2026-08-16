@@ -865,6 +865,12 @@ pub struct ProcHints {
     pub expand_given_names: bool,
     /// Whether to expand given names for primary author only.
     pub expand_given_names_primary_only: bool,
+    /// When `expand_given_names` is set, whether the expansion must escalate
+    /// past the style's configured given-name form (e.g. initials) to the
+    /// full given name to actually resolve the collision. Set when the
+    /// initials-level representation still collides (e.g. "Brandon" and
+    /// "Biff" both reduce to "B."). See csl26-h9jy.
+    pub expand_given_names_full: bool,
     /// Minimum number of names to show to resolve ambiguity (overrides et-al-use-first).
     pub min_names_to_show: Option<usize>,
     /// Citation number for numeric citation styles (1-based).

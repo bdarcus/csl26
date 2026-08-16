@@ -81,6 +81,24 @@ struct DisambiguationFlags {
     year_suffix: bool,
     is_label_mode: bool,
     primary_givenname_only: bool,
+    /// Whether given-name expansion may escalate all the way to the full
+    /// given name. `false` for `all-names-with-initials` /
+    /// `primary-name-with-initials`, which must stop at the initials level
+    /// even when initials alone don't resolve a collision (csl26-h9jy).
+    givenname_full_allowed: bool,
+}
+
+/// How far given-name expansion escalated past the style's configured
+/// baseline form to resolve a collision. See csl26-h9jy: the baseline
+/// (e.g. initials) can itself collide (Brandon/Biff both "B."), so
+/// resolution may require revealing the full given name.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum GivennameLevel {
+    /// Style-configured initials (only reachable when `initialize-with` is
+    /// configured, mirroring real CSL's `initialize-with`-presence gate).
+    Initials,
+    /// Full given name, bypassing the configured form.
+    Full,
 }
 
 struct GroupDisambiguationContext<'a> {
@@ -94,6 +112,7 @@ struct GroupDisambiguationContext<'a> {
 struct HintPlan<'a> {
     key: &'a str,
     expand_given_names: bool,
+    expand_given_names_full: bool,
     expand_given_names_primary_only: bool,
     min_names_to_show: Option<usize>,
     disamb_condition: bool,
@@ -112,9 +131,10 @@ enum GroupHintAction<'a> {
         min_names_to_show: usize,
         partitions: HashMap<String, Vec<&'a CachedReference<'a>>>,
     },
-    GivennameResolution,
+    GivennameResolution(GivennameLevel),
     CombinedResolution {
         min_names_to_show: usize,
+        level: GivennameLevel,
         primary_only_requires_suffix: bool,
     },
     FallbackYearSuffix,
@@ -307,7 +327,36 @@ impl<'a> Disambiguator<'a> {
                     GivennameRule::PrimaryName | GivennameRule::PrimaryNameWithInitials
                 )
             }),
+            givenname_full_allowed: disamb_config.as_ref().is_none_or(|d| {
+                !matches!(
+                    d.givenname_rule,
+                    GivennameRule::AllNamesWithInitials | GivennameRule::PrimaryNameWithInitials
+                )
+            }),
         }
+    }
+
+    /// The `initialize-with` separator configured for this scope, if any.
+    fn initialize_with(&self) -> Option<&String> {
+        self.config
+            .contributors
+            .as_ref()
+            .and_then(|c| c.initialize_with.as_ref())
+    }
+
+    /// Whether the initials-level rung is reachable in the given-name escalation
+    /// ladder. Mirrors real CSL's `initialize-with`-presence gate: available
+    /// either because a separator is explicitly configured, or because the
+    /// style's baseline form is already `name-form: initials` (which Citum
+    /// defaults to a "." separator for when unset).
+    fn initials_available(&self) -> bool {
+        self.initialize_with().is_some()
+            || self
+                .config
+                .contributors
+                .as_ref()
+                .and_then(|c| c.name_form)
+                .is_some_and(|form| matches!(form, citum_schema::options::NameForm::Initials))
     }
 
     /// Builds an internal cache of reference data (author keys, group keys, titles)
@@ -487,17 +536,25 @@ impl<'a> Disambiguator<'a> {
                 );
             }
             GroupHintAction::LabelYearSuffix => {
-                self.apply_year_suffix(hints, &context, false, None);
+                self.apply_year_suffix(hints, &context, false, false, None);
             }
             GroupHintAction::NamePartitions {
                 min_names_to_show,
                 partitions,
             } => self.apply_name_partitions(hints, &context, min_names_to_show, &partitions),
-            GroupHintAction::GivennameResolution => {
-                self.apply_resolution(hints, context.group, &context, true, None);
+            GroupHintAction::GivennameResolution(level) => {
+                self.apply_resolution(
+                    hints,
+                    context.group,
+                    &context,
+                    true,
+                    level == GivennameLevel::Full,
+                    None,
+                );
             }
             GroupHintAction::CombinedResolution {
                 min_names_to_show,
+                level,
                 primary_only_requires_suffix,
             } => {
                 if primary_only_requires_suffix {
@@ -506,6 +563,7 @@ impl<'a> Disambiguator<'a> {
                         context.group,
                         &context,
                         true,
+                        level == GivennameLevel::Full,
                         Some(min_names_to_show),
                     );
                 } else {
@@ -514,12 +572,13 @@ impl<'a> Disambiguator<'a> {
                         context.group,
                         &context,
                         true,
+                        level == GivennameLevel::Full,
                         Some(min_names_to_show),
                     );
                 }
             }
             GroupHintAction::FallbackYearSuffix => {
-                self.apply_year_suffix(hints, &context, false, None);
+                self.apply_year_suffix(hints, &context, false, false, None);
             }
         }
     }
@@ -544,15 +603,16 @@ impl<'a> Disambiguator<'a> {
             };
         }
 
-        if self.select_givenname_resolution(context) {
-            return GroupHintAction::GivennameResolution;
+        if let Some(level) = self.select_givenname_resolution(context) {
+            return GroupHintAction::GivennameResolution(level);
         }
 
-        if let Some((min_names_to_show, primary_only_requires_suffix)) =
+        if let Some((min_names_to_show, level, primary_only_requires_suffix)) =
             self.select_combined_resolution(context)
         {
             return GroupHintAction::CombinedResolution {
                 min_names_to_show,
+                level,
                 primary_only_requires_suffix,
             };
         }
@@ -591,32 +651,46 @@ impl<'a> Disambiguator<'a> {
     }
 
     /// Selects collision resolution by adding given names or initials.
-    fn select_givenname_resolution(&self, context: &GroupDisambiguationContext<'_>) -> bool {
-        // Use full-expansion keys to determine whether givenname expansion can help at all.
-        // (With n=1, the full and primary-only keys are equivalent — both inspect only the
-        // primary author — so no separate primary-only check is needed here.)
-        context.flags.add_givenname && self.check_givenname_resolution(context.group, None, false)
+    ///
+    /// Tries the given-name escalation ladder (initials, then full — see
+    /// `resolve_givenname_level`) and returns the level that resolves the
+    /// collision, if any. (With n=1, the full and primary-only keys are
+    /// equivalent — both inspect only the primary author — so no separate
+    /// primary-only check is needed here.)
+    fn select_givenname_resolution(
+        &self,
+        context: &GroupDisambiguationContext<'_>,
+    ) -> Option<GivennameLevel> {
+        if !context.flags.add_givenname {
+            return None;
+        }
+        self.resolve_givenname_level(context.group, None, false, context.flags)
     }
 
     /// Selects collision resolution by using both more names AND given name expansion.
     ///
     /// When `primary_givenname_only` is active, the renderer only shows given names for
-    /// the first author. `find_combined_resolution` uses full-expansion keys to find the
-    /// minimum name count that would work in theory; this function then verifies whether
+    /// the first author. `find_combined_resolution` finds the minimum name count and
+    /// escalation level that would work in theory; this function then verifies whether
     /// that resolution also holds under the restricted primary-only rendering.
     fn select_combined_resolution(
         &self,
         context: &GroupDisambiguationContext<'_>,
-    ) -> Option<(usize, bool)> {
+    ) -> Option<(usize, GivennameLevel, bool)> {
         if !context.flags.add_names || !context.flags.add_givenname {
             return None;
         }
 
-        let min_names_to_show = self.find_combined_resolution(context.group)?;
+        let (min_names_to_show, level) = self.find_combined_resolution(context)?;
         let primary_only_requires_suffix = context.flags.primary_givenname_only
-            && !self.check_givenname_resolution(context.group, Some(min_names_to_show), true);
+            && !self.check_givenname_resolution(
+                context.group,
+                Some(min_names_to_show),
+                true,
+                level,
+            );
 
-        Some((min_names_to_show, primary_only_requires_suffix))
+        Some((min_names_to_show, level, primary_only_requires_suffix))
     }
 
     /// Applies a name-expansion partition plan, suffixing any unresolved subgroups.
@@ -629,28 +703,60 @@ impl<'a> Disambiguator<'a> {
     ) {
         for subgroup in partitions.values() {
             if subgroup.len() == 1 {
-                self.apply_resolution(hints, subgroup, context, false, Some(min_names_to_show));
+                self.apply_resolution(
+                    hints,
+                    subgroup,
+                    context,
+                    false,
+                    false,
+                    Some(min_names_to_show),
+                );
                 continue;
             }
 
-            if context.flags.add_givenname
-                && self.check_givenname_resolution(subgroup, Some(min_names_to_show), false)
-            {
+            let resolution = context
+                .flags
+                .add_givenname
+                .then(|| {
+                    self.resolve_givenname_level(
+                        subgroup,
+                        Some(min_names_to_show),
+                        false,
+                        context.flags,
+                    )
+                })
+                .flatten();
+
+            if let Some(level) = resolution {
+                let expand_full = level == GivennameLevel::Full;
                 // Under primary-name rules, secondary given names are not rendered.
                 // If the full-expansion check passes but primary-only does not, the
                 // subgroup must fall back to year-suffix (with expansion retained).
                 if context.flags.primary_givenname_only
-                    && !self.check_givenname_resolution(subgroup, Some(min_names_to_show), true)
+                    && !self.check_givenname_resolution(
+                        subgroup,
+                        Some(min_names_to_show),
+                        true,
+                        level,
+                    )
                 {
                     self.apply_year_suffix_for_group(
                         hints,
                         subgroup,
                         context,
                         true,
+                        expand_full,
                         Some(min_names_to_show),
                     );
                 } else {
-                    self.apply_resolution(hints, subgroup, context, true, Some(min_names_to_show));
+                    self.apply_resolution(
+                        hints,
+                        subgroup,
+                        context,
+                        true,
+                        expand_full,
+                        Some(min_names_to_show),
+                    );
                 }
                 continue;
             }
@@ -660,24 +766,66 @@ impl<'a> Disambiguator<'a> {
                 subgroup,
                 context,
                 false,
+                false,
                 Some(min_names_to_show),
             );
         }
     }
 
     /// Searches for the minimum number of names that, when combined with given name expansion,
-    /// resolves the collision group.
-    fn find_combined_resolution(&self, group: &[&CachedReference<'_>]) -> Option<usize> {
+    /// resolves the collision group. Returns the name count together with the escalation
+    /// level (initials or full) that resolves it, preferring the least-disruptive level at
+    /// each candidate count.
+    fn find_combined_resolution(
+        &self,
+        context: &GroupDisambiguationContext<'_>,
+    ) -> Option<(usize, GivennameLevel)> {
+        let group = context.group;
         let max_authors = group
             .iter()
             .map(|reference| reference.data.names.len())
             .max()
             .unwrap_or(0);
 
-        // Use full-expansion keys (primary_only: false) to find the minimum name count.
         // The caller is responsible for verifying the result under primary-only rendering
         // when primary_givenname_only is active.
-        (2..=max_authors).find(|&n| self.check_givenname_resolution(group, Some(n), false))
+        (2..=max_authors).find_map(|n| {
+            self.resolve_givenname_level(group, Some(n), false, context.flags)
+                .map(|level| (n, level))
+        })
+    }
+
+    /// Tries the given-name escalation ladder (initials, then full given name) and returns
+    /// the least-disruptive level that resolves the collision, if any.
+    ///
+    /// Initials are only tried when `initials_available` — mirroring real CSL's
+    /// `initialize-with`-presence gate. Full-name escalation is only tried when
+    /// `flags.givenname_full_allowed` — `all-names-with-initials` and
+    /// `primary-name-with-initials` must stop at initials even if that doesn't
+    /// resolve the collision (csl26-h9jy).
+    fn resolve_givenname_level(
+        &self,
+        group: &[&CachedReference<'_>],
+        min_names: Option<usize>,
+        primary_only: bool,
+        flags: DisambiguationFlags,
+    ) -> Option<GivennameLevel> {
+        if self.initials_available()
+            && self.check_givenname_resolution(
+                group,
+                min_names,
+                primary_only,
+                GivennameLevel::Initials,
+            )
+        {
+            return Some(GivennameLevel::Initials);
+        }
+        if flags.givenname_full_allowed
+            && self.check_givenname_resolution(group, min_names, primary_only, GivennameLevel::Full)
+        {
+            return Some(GivennameLevel::Full);
+        }
+        None
     }
 
     /// Finalizes a successful disambiguation strategy by inserting the calculated hints into the map.
@@ -687,6 +835,7 @@ impl<'a> Disambiguator<'a> {
         group: &[&CachedReference<'_>],
         context: &GroupDisambiguationContext<'_>,
         expand_given_names: bool,
+        expand_given_names_full: bool,
         min_names_to_show: Option<usize>,
     ) {
         self.insert_group_hints(
@@ -696,6 +845,7 @@ impl<'a> Disambiguator<'a> {
             HintPlan {
                 key: context.key,
                 expand_given_names,
+                expand_given_names_full,
                 expand_given_names_primary_only: context.flags.primary_givenname_only,
                 min_names_to_show,
                 disamb_condition: false,
@@ -737,6 +887,7 @@ impl<'a> Disambiguator<'a> {
         hints: &mut HashMap<String, ProcHints>,
         context: &GroupDisambiguationContext<'_>,
         expand_given_names: bool,
+        expand_given_names_full: bool,
         min_names_to_show: Option<usize>,
     ) {
         self.apply_year_suffix_for_group(
@@ -744,6 +895,7 @@ impl<'a> Disambiguator<'a> {
             context.group,
             context,
             expand_given_names,
+            expand_given_names_full,
             min_names_to_show,
         );
     }
@@ -755,6 +907,7 @@ impl<'a> Disambiguator<'a> {
         group: &[&CachedReference<'_>],
         context: &GroupDisambiguationContext<'_>,
         expand_given_names: bool,
+        expand_given_names_full: bool,
         min_names_to_show: Option<usize>,
     ) {
         self.insert_group_hints(
@@ -764,6 +917,7 @@ impl<'a> Disambiguator<'a> {
             HintPlan {
                 key: context.key,
                 expand_given_names,
+                expand_given_names_full,
                 expand_given_names_primary_only: context.flags.primary_givenname_only,
                 min_names_to_show,
                 disamb_condition: true,
@@ -813,6 +967,7 @@ impl<'a> Disambiguator<'a> {
                 group_index,
                 group_key: plan.key.to_string(),
                 expand_given_names: plan.expand_given_names,
+                expand_given_names_full: plan.expand_given_names_full,
                 expand_given_names_primary_only: plan.expand_given_names_primary_only,
                 min_names_to_show: plan.min_names_to_show,
                 ..Default::default()
@@ -926,7 +1081,8 @@ impl<'a> Disambiguator<'a> {
         None
     }
 
-    /// Check if expanding to full names resolves ambiguity in the group.
+    /// Check if expanding given names at the given escalation `level` resolves
+    /// ambiguity in the group.
     ///
     /// If `min_names` is `Some(n)`, it checks resolution when showing `n` names.
     ///
@@ -939,6 +1095,7 @@ impl<'a> Disambiguator<'a> {
         group: &[&CachedReference<'_>],
         min_names: Option<usize>,
         primary_only: bool,
+        level: GivennameLevel,
     ) -> bool {
         let mut seen = HashSet::new();
         let mut buf = String::new();
@@ -946,7 +1103,7 @@ impl<'a> Disambiguator<'a> {
         for reference in group {
             let names = &reference.data.names;
             buf.clear();
-            self.append_givenname_resolution_key(&mut buf, names, n, primary_only);
+            self.append_givenname_resolution_key(&mut buf, names, n, primary_only, level);
             if !seen.insert(buf.clone()) {
                 return false;
             }
@@ -1290,7 +1447,13 @@ impl<'a> Disambiguator<'a> {
         names: &[crate::reference::FlatName],
         n: usize,
         primary_only: bool,
+        level: GivennameLevel,
     ) {
+        let initialize_with_hyphen = self
+            .config
+            .contributors
+            .as_ref()
+            .and_then(|c| c.initialize_with_hyphen);
         for (idx, name) in names.iter().take(n).enumerate() {
             if idx > 0 {
                 key.push_str("||");
@@ -1301,7 +1464,21 @@ impl<'a> Disambiguator<'a> {
                 continue;
             }
             key.push('|');
-            Self::append_optional_part(key, name.given.as_deref());
+            match level {
+                GivennameLevel::Full => {
+                    Self::append_optional_part(key, name.given.as_deref());
+                }
+                GivennameLevel::Initials => {
+                    let initials = name.given.as_deref().map(|given| {
+                        crate::values::contributor::names::initialize_given_name(
+                            given,
+                            self.initialize_with(),
+                            initialize_with_hyphen,
+                        )
+                    });
+                    Self::append_optional_part(key, initials.as_deref());
+                }
+            }
             key.push('|');
             Self::append_optional_part(key, name.non_dropping_particle.as_deref());
             key.push('|');
