@@ -34,6 +34,7 @@ info:
   short-name: "Chicago Notes"
   edition: "18th edition"
 options:
+  date-fallback: standard
   # multilingual, page-range-format, dates, punctuation-in-quote, and
   # contributors.demote-non-dropping-particle are inherited from chicago-18-base.
   processing: note

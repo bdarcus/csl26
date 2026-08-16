@@ -2228,7 +2228,7 @@ function countOptionsPresetUses(styleData) {
     'dates',
     'titles',
     'substitute',
-    'date-substitute',
+    'date-fallback',
   ];
   let uses = 0;
   const fields = [];

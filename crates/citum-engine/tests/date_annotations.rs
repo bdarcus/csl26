@@ -216,7 +216,7 @@ fn given_gb_t_author_date_style_when_rendering_bibliography_then_calendar_note_i
     let processor = Processor::with_locale(style, bibliography, zh_cn_locale());
     let rendered = processor.render_bibliography();
 
-    assert_eq!(rendered, "戰後臺灣史，1947（民国三十六年）. [M].");
+    assert_eq!(rendered, "佚名，1947（民国三十六年）. 戰後臺灣史[M].");
 }
 
 #[test]
@@ -289,12 +289,12 @@ fn given_two_refs_same_author_year_different_note_when_disambiguating_then_still
 #[case::gb_t_7714_2025_author_date_minguo(
     "gb-t-7714-2025-author-date",
     "gbt7714.7.5.4.1:1",
-    "1947（民国三十六年）. [M]."
+    "佚名，1947（民国三十六年）. [M]."
 )]
 #[case::gb_t_7714_2025_author_date_kangxi(
     "gb-t-7714-2025-author-date",
     "gbt7714.7.5.4.1:2",
-    "1705（康熙四十四年）. [M]."
+    "佚名，1705（康熙四十四年）. [M]."
 )]
 #[case::gb_t_7714_2025_numeric_minguo(
     "gb-t-7714-2025-numeric",
@@ -329,7 +329,7 @@ fn given_two_refs_same_author_year_different_note_when_disambiguating_then_still
 #[case::gb_t_7714_2025_author_date_republic_era(
     "gb-t-7714-2025-author-date",
     "gbt7714.8.12.3:3",
-    "中国人民解放军武汉市军事管制委员会接管国立武汉大学的文告，1949. [A/OL]. 武汉：武汉大学档案馆，1949（中华民国三十八年八月）. https://archive.whu.edu.cn/index/forwardView/20/51."
+    "佚名，1949. 中国人民解放军武汉市军事管制委员会接管国立武汉大学的文告[A/OL]. 武汉：武汉大学档案馆，1949（中华民国三十八年八月）. https://archive.whu.edu.cn/index/forwardView/20/51."
 )]
 fn given_pinned_gbt_record_when_rendering_bibliography_then_note_is_wrapped(
     #[case] style_name: &str,

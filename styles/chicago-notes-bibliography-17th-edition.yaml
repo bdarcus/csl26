@@ -31,6 +31,7 @@ info:
   short-name: "Chicago Notes"
   edition: "17th edition"
 options:
+  date-fallback: standard
   processing: note
   contributors:
     shorten:

@@ -20,7 +20,7 @@ info:
 options:
   substitute:
     contributor-role-form: short
-    template:
+    candidates:
     - editor
   processing: numeric
   contributors:

@@ -16,10 +16,11 @@ info:
       rel: documentation
   short-name: "Vancouver"
 options:
+  date-fallback: standard
   multilingual: romanized-translated
   substitute:
     contributor-role-form: long
-    template:
+    candidates:
     - translator
   processing: numeric
   contributors:

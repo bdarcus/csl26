@@ -16,9 +16,10 @@ info:
     - href: https://www.elsevier.com/journals/clinical-neurophysiology/1388-2457/guide-for-authors#68000
       rel: documentation
 options:
+  date-fallback: standard
   substitute:
     contributor-role-form: long
-    template:
+    candidates:
     - editor
     - translator
     - title

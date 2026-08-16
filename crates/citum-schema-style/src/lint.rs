@@ -270,6 +270,7 @@ fn lint_locator_term(
 fn collect_style_locale_requirements(style: &Style) -> Vec<LocaleRequirement> {
     let mut requirements = Vec::new();
     let base_config = style.options.clone().unwrap_or_default();
+    collect_option_locale_requirements(&base_config, "options", &mut requirements);
 
     if let Some(template) = &style.templates {
         for (name, components) in template {
@@ -308,6 +309,7 @@ fn collect_citation_spec_requirements(
         || base_config.clone(),
         |options| options.merged_with(base_config),
     );
+    collect_option_locale_requirements(&effective_config, &format!("{path}.options"), requirements);
 
     if let Some(template) = spec.resolve_template() {
         collect_template_requirements(
@@ -371,6 +373,7 @@ fn collect_bibliography_spec_requirements(
         || base_config.clone(),
         |options| options.merged_with(base_config),
     );
+    collect_option_locale_requirements(&effective_config, &format!("{path}.options"), requirements);
 
     if let Some(template) = spec.resolve_template() {
         collect_template_requirements(
@@ -487,25 +490,7 @@ fn collect_template_requirements(
                     });
                 }
             }
-            TemplateComponent::Date(date) => {
-                if matches!(date.date, crate::template::DateVariable::Issued) {
-                    requirements.push(LocaleRequirement {
-                        path: component_path.clone(),
-                        kind: LocaleRequirementKind::General {
-                            term: GeneralTerm::NoDate,
-                            form: TermForm::Short,
-                        },
-                    });
-                }
-                if let Some(fallback) = &date.fallback {
-                    collect_template_requirements(
-                        fallback,
-                        &format!("{component_path}.fallback"),
-                        config,
-                        requirements,
-                    );
-                }
-            }
+            TemplateComponent::Date(_) => {}
             TemplateComponent::Group(list) => {
                 collect_template_requirements(
                     &list.group,
@@ -515,6 +500,54 @@ fn collect_template_requirements(
                 );
             }
             _ => {}
+        }
+    }
+}
+
+fn collect_option_locale_requirements(
+    config: &Config,
+    path: &str,
+    requirements: &mut Vec<LocaleRequirement>,
+) {
+    if let Some(message) = config.effective_substitute().otherwise_message() {
+        collect_message_requirements(
+            &message.to_template_message(),
+            &format!("{path}.substitute.otherwise"),
+            config,
+            requirements,
+        );
+    }
+
+    let Some(crate::options::DateFallbackConfig::Policy(policy)) = &config.date_fallback else {
+        return;
+    };
+    for (lane_name, lane) in [
+        ("first-issued", policy.first_issued.as_ref()),
+        ("later-issued", policy.later_issued.as_ref()),
+    ] {
+        let Some(crate::options::DateFallbackLane::Selectors(selectors)) = lane else {
+            continue;
+        };
+        for (selector, rule) in selectors.entries() {
+            let Some(candidates) = rule.candidates() else {
+                continue;
+            };
+            for (index, candidate) in candidates.iter().enumerate() {
+                let crate::options::DateFallbackCandidate::Message(message) = candidate else {
+                    continue;
+                };
+                collect_message_requirements(
+                    &TemplateMessage {
+                        message: message.message.clone(),
+                        form: message.form.clone(),
+                        rendering: message.rendering.clone(),
+                        ..TemplateMessage::default()
+                    },
+                    &format!("{path}.date-fallback.{lane_name}.{selector}[{index}]"),
+                    config,
+                    requirements,
+                );
+            }
         }
     }
 }
@@ -1096,6 +1129,38 @@ mod tests {
             finding.severity == LintSeverity::Error
                 && finding.path == "citation.template[0]"
                 && finding.message.contains("pattern.missing")
+        }));
+    }
+
+    #[test]
+    fn test_lint_style_checks_messages_referenced_by_fallback_options() {
+        let options: Config = serde_yaml::from_str(
+            r#"
+substitute:
+  otherwise:
+    message: pattern.missing-author
+date-fallback:
+  first-issued:
+    default:
+    - message: pattern.missing-date
+"#,
+        )
+        .expect("fallback options should parse");
+        let style = Style {
+            options: Some(options),
+            ..Default::default()
+        };
+
+        let report = lint_style_against_locale(&style, &Locale::en_us());
+
+        assert!(report.has_errors());
+        assert!(report.findings.iter().any(|finding| {
+            finding.path == "options.substitute.otherwise"
+                && finding.message.contains("pattern.missing-author")
+        }));
+        assert!(report.findings.iter().any(|finding| {
+            finding.path == "options.date-fallback.first-issued.default[0]"
+                && finding.message.contains("pattern.missing-date")
         }));
     }
 

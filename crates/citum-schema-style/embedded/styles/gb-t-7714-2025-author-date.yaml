@@ -20,15 +20,18 @@ info:
     - href: https://std.samr.gov.cn/gb/search/gbDetailed?id=4507EFE13D37CB6AE06397BE0A0A601F
       rel: documentation
 options:
-  date-substitute: gb-t-7714-2025-author-date
-  # GB/T 7714's anonymous-author placeholder (`佚名`/`Anon`), used by
-  # `contributor: author`'s `fallback:` on every bibliography type-variant
-  # below, is sourced from each locale file's `messages.term.anonymous`
+  date-fallback: gb-t-7714-2025-author-date
+  # GB/T 7714's anonymous-author placeholder (`佚名`/`Anon`) is sourced
+  # from each locale file's `messages.term.anonymous`
   # (zh-CN.yaml/en-US.yaml) — not a style-owned override — so the same
   # `bibliography: locales:` per-item branch selection that already picks
   # `term.no-date`'s locale (`n.d.` vs `无日期`) also picks the correct
   # anonymous term. csl26-6eak.
-  substitute: standard
+  substitute:
+    candidates: [editor, title, translator]
+    otherwise:
+      message: term.anonymous
+      form: short
   processing: author-date-givenname
   contributors:
     initialize-with: ' '
@@ -93,18 +96,16 @@ bibliography:
     label-mode: author-date
     # GB/T 7714 author-date has no title-as-author substitution convention:
     # an item with no author (and no editor/translator to promote) renders
-    # the locale's 佚名 (anonymous-author) term via `contributor: author`'s
-    # `fallback:` on each type-variant (csl26-6eak), not a promoted title.
+    # the locale's 佚名 (anonymous-author) term via `substitute.otherwise`
+    # (csl26-6eak), not a promoted title.
     # The inherited global `options.substitute: standard` preset (editor →
     # title → translator) would otherwise win via `title` first — nearly
-    # every reference has *some* title, so the per-component fallback would
-    # never be reached. Drops `title` from the chain, keeping `editor`/
-    # `translator` promotion available (a non-empty override — an empty
-    # `template: []` is a merge no-op per `Substitute::merge`, not a clear).
+    # every reference has *some* title, so `otherwise` would never be reached.
+    # This scope drops `title` while retaining editor/translator promotion.
     # Scoped to bibliography only; citations keep the inherited preset
     # unchanged (not re-verified against this bean's corpus work).
     substitute:
-      template:
+      candidates:
       - editor
       - translator
     contributors:
@@ -337,9 +338,6 @@ bibliography:
       delimiter: { mark: comma }
       sort-separator: ' '
       suffix: { mark: comma }
-      fallback:
-      - message: term.anonymous
-        form: short
     - date: issued
       form: year
       suppress-note: true
@@ -360,7 +358,6 @@ bibliography:
     - date: issued
       form: year-month-day
       suppress-disamb-suffix: true
-      fallback: []
       wrap: parentheses
     - date: accessed
       form: year-month-day
@@ -379,9 +376,6 @@ bibliography:
       delimiter: { mark: comma }
       sort-separator: ' '
       suffix: { mark: comma }
-      fallback:
-      - message: term.anonymous
-        form: short
     - date: issued
       form: year
       suffix: '. '
@@ -444,9 +438,6 @@ bibliography:
       delimiter: { mark: comma }
       sort-separator: ' '
       suffix: { mark: comma }
-      fallback:
-      - message: term.anonymous
-        form: short
     - date: issued
       form: year
       suppress-note: true
@@ -476,7 +467,6 @@ bibliography:
     - date: issued
       form: year-month-day
       suppress-disamb-suffix: true
-      fallback: []
     - number: pages
       wrap: parentheses
     - variable: url
@@ -492,9 +482,6 @@ bibliography:
       delimiter: { mark: comma }
       sort-separator: ' '
       suffix: { mark: comma }
-      fallback:
-      - message: term.anonymous
-        form: short
     - date: issued
       form: year
       suffix: '. '
@@ -557,9 +544,6 @@ bibliography:
       delimiter: { mark: comma }
       sort-separator: ' '
       suffix: { mark: comma }
-      fallback:
-      - message: term.anonymous
-        form: short
     - date: issued
       form: year
       suffix: '. '
@@ -590,9 +574,6 @@ bibliography:
       delimiter: { mark: comma }
       sort-separator: ' '
       suffix: { mark: comma }
-      fallback:
-      - message: term.anonymous
-        form: short
     - date: issued
       form: year
       suppress-note: true
@@ -616,11 +597,6 @@ bibliography:
       - date: issued
         form: year-month-day
         suppress-disamb-suffix: true
-        fallback:
-        - date: accessed
-          form: year-month-day
-          wrap:
-            punctuation: brackets
       delimiter: { mark: comma }
     - variable: url
       prefix: '. '
@@ -635,9 +611,6 @@ bibliography:
       delimiter: { mark: comma }
       sort-separator: ' '
       suffix: { mark: comma }
-      fallback:
-      - message: term.anonymous
-        form: short
     - date: issued
       form: year
       suffix: '. '
@@ -695,9 +668,6 @@ bibliography:
       delimiter: { mark: comma }
       sort-separator: ' '
       suffix: { mark: comma }
-      fallback:
-      - message: term.anonymous
-        form: short
     - date: issued
       form: year
       suppress-note: true
@@ -713,7 +683,6 @@ bibliography:
     - date: issued
       form: year-month-day
       suppress-disamb-suffix: true
-      fallback: []
       wrap: parentheses
     - date: accessed
       form: year-month-day
@@ -732,9 +701,6 @@ bibliography:
       delimiter: { mark: comma }
       sort-separator: ' '
       suffix: { mark: comma }
-      fallback:
-      - message: term.anonymous
-        form: short
     - date: issued
       form: year
       suffix: '. '
@@ -777,9 +743,6 @@ bibliography:
       delimiter: { mark: comma }
       sort-separator: ' '
       suffix: { mark: comma }
-      fallback:
-      - message: term.anonymous
-        form: short
     - date: issued
       form: year
       suppress-note: true
@@ -797,7 +760,6 @@ bibliography:
     - date: issued
       form: year-month-day
       suppress-disamb-suffix: true
-      fallback: []
     - number: pages
       prefix: { mark: colon }
     - variable: url
@@ -813,9 +775,6 @@ bibliography:
       delimiter: { mark: comma }
       sort-separator: ' '
       suffix: { mark: comma }
-      fallback:
-      - message: term.anonymous
-        form: short
     - date: issued
       form: year
       suppress-note: true
@@ -831,7 +790,6 @@ bibliography:
     - date: issued
       form: year-month-day
       suppress-disamb-suffix: true
-      fallback: []
       wrap: parentheses
     - date: accessed
       form: year-month-day
@@ -850,9 +808,6 @@ bibliography:
       delimiter: { mark: comma }
       sort-separator: ' '
       suffix: { mark: comma }
-      fallback:
-      - message: term.anonymous
-        form: short
     - date: issued
       form: year
       suppress-note: true
@@ -872,7 +827,6 @@ bibliography:
     - date: issued
       form: year-month-day
       suppress-disamb-suffix: true
-      fallback: []
       wrap: parentheses
     - date: accessed
       form: year-month-day
@@ -891,9 +845,6 @@ bibliography:
       delimiter: { mark: comma }
       sort-separator: ' '
       suffix: { mark: comma }
-      fallback:
-      - message: term.anonymous
-        form: short
     - date: issued
       form: year
       suppress-note: true
@@ -916,7 +867,6 @@ bibliography:
       - date: issued
         form: year-month-day
         suppress-disamb-suffix: true
-        fallback: []
       delimiter: { mark: comma }
     - number: pages
       prefix: { mark: colon }
@@ -933,9 +883,6 @@ bibliography:
       delimiter: { mark: comma }
       sort-separator: ' '
       suffix: { mark: comma }
-      fallback:
-      - message: term.anonymous
-        form: short
     - date: issued
       form: year
       suffix: '. '

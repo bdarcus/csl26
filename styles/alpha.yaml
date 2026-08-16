@@ -20,7 +20,7 @@ options:
       preset: alpha
   substitute:
     contributor-role-form: short
-    template:
+    candidates:
     - editor
     - translator
   contributors:

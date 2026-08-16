@@ -27,6 +27,7 @@ info:
   short-name: "APA"
   edition: "7th"
 options:
+  date-fallback: standard
   # APA 7 disambiguation profile: add names + global first-author given-name
   # (initials via the contributor config) + year suffix (matches apa.csl). The
   # `author-date-full` preset bundles exactly this — names + add-givenname +
@@ -35,7 +36,7 @@ options:
   # bibliography sort.
   processing: author-date-full
   substitute:
-    template:
+    candidates:
       - editor
       - title
       - translator

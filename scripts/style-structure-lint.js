@@ -13,7 +13,7 @@ const REFERENCE_LOCALE_PATH = path.join(
 
 const RULES = {
   STYLE001: 'Anonymous generated YAML anchors are not allowed in committed styles.',
-  STYLE002: 'Inert substitute overrides should be removed when substitute.template is explicitly empty.',
+  STYLE002: 'Empty substitute candidate lists must use the explicit `none` clear.',
   STYLE003: 'Duplicate component-level shorten config should be hoisted to the narrowest safe option scope.',
   STYLE004: 'Type variants identical to the base template should be removed.',
   STYLE005: 'Legacy items blocks should be authored as group blocks.',
@@ -399,8 +399,7 @@ function collectSubstituteViolations(filePath, content, data) {
     const options = getPathValue(data, scope.path);
     const substitute = options?.substitute;
     if (!substitute || typeof substitute !== 'object' || Array.isArray(substitute)) continue;
-    if (!Array.isArray(substitute.template) || substitute.template.length !== 0) continue;
-    if (!Object.prototype.hasOwnProperty.call(substitute, 'overrides')) continue;
+    if (!Array.isArray(substitute.candidates) || substitute.candidates.length !== 0) continue;
 
     const line = lineNumberForPattern(content, new RegExp(`^\\s*${escapeRegExp(scope.label.split('.').slice(-1)[0])}:`, 'm'))
       || lineNumberForPattern(content, /^\s*substitute:\s*$/m);
@@ -408,7 +407,7 @@ function collectSubstituteViolations(filePath, content, data) {
       ruleId: 'STYLE002',
       file: repoRelative(filePath),
       line,
-      message: `${RULES.STYLE002} Remove substitute.overrides from ${scope.label}.`,
+      message: `${RULES.STYLE002} Set ${scope.label}.substitute.candidates to none.`,
       fixable: true,
       scopePath: scope.path,
     });
@@ -721,7 +720,7 @@ function removeEmptyVersion(data) {
   return true;
 }
 
-function removeInertSubstituteOverrides(data) {
+function replaceEmptySubstituteCandidates(data) {
   let changed = false;
   const scopes = [
     ['options'],
@@ -733,10 +732,9 @@ function removeInertSubstituteOverrides(data) {
     const options = getPathValue(data, scopePath);
     const substitute = options?.substitute;
     if (!substitute || typeof substitute !== 'object' || Array.isArray(substitute)) continue;
-    if (!Array.isArray(substitute.template) || substitute.template.length !== 0) continue;
-    if (!Object.prototype.hasOwnProperty.call(substitute, 'overrides')) continue;
+    if (!Array.isArray(substitute.candidates) || substitute.candidates.length !== 0) continue;
 
-    delete substitute.overrides;
+    substitute.candidates = 'none';
     changed = true;
   }
 
@@ -819,7 +817,7 @@ function removeDuplicateTypeVariants(data) {
 function applyFixes(data) {
   let changed = false;
   changed = removeEmptyVersion(data) || changed;
-  changed = removeInertSubstituteOverrides(data) || changed;
+  changed = replaceEmptySubstituteCandidates(data) || changed;
   changed = hoistDuplicateShorten(data) || changed;
   changed = removeDuplicateTypeVariants(data) || changed;
   pruneEmptyObjects(data);

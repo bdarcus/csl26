@@ -24,7 +24,7 @@ options:
     strip-label-periods: true
   substitute:
     contributor-role-form: short
-    template:
+    candidates:
     - editor
     - translator
   processing: note
