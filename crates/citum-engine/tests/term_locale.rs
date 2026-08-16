@@ -79,7 +79,6 @@ fn term_locale_probe_template() -> Vec<TemplateComponent> {
                 ..Default::default()
             },
             links: None,
-            fallback: None,
             custom: None,
         }),
     ]

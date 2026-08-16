@@ -58,18 +58,6 @@ pub enum DateRangeFormat {
     Chicago,
 }
 
-/// Term form for the "no date" fallback when `issued` is empty.
-#[derive(Debug, PartialEq, Eq, Clone, Copy, Default, Serialize, Deserialize)]
-#[cfg_attr(feature = "schema", derive(JsonSchema))]
-#[serde(rename_all = "kebab-case")]
-pub enum NoDateForm {
-    /// Render the locale's short term (e.g. "n.d.").
-    #[default]
-    Short,
-    /// Render the locale's long term (e.g. "no date").
-    Long,
-}
-
 /// Date config: either a preset name or explicit configuration.
 ///
 /// Allows styles to write `dates: long` as shorthand, or provide
@@ -138,11 +126,6 @@ pub struct DateConfig {
     /// Marker for open-ended ranges (e.g., "–present"). None uses locale default.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub open_range_marker: Option<String>,
-    /// Locale term form used for the "no date" fallback when a template's
-    /// `issued` date is empty: `short` renders "n.d.", `long` renders
-    /// "no date". Defaults to short.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub no_date_form: Option<NoDateForm>,
     /// Delimiter inserted between the no-date term and a year-suffix disambiguator.
     #[serde(default = "default_no_date_year_suffix_delimiter")]
     pub no_date_year_suffix_delimiter: String,
@@ -211,7 +194,6 @@ impl Default for DateConfig {
             range_delimiter: default_range_delimiter(),
             range_format: DateRangeFormat::default(),
             open_range_marker: None,
-            no_date_form: None,
             no_date_year_suffix_delimiter: default_no_date_year_suffix_delimiter(),
             custom: None,
             time_format: None,

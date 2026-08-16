@@ -425,16 +425,6 @@
           "description": "How to display the contributor (long names, short, with label, etc.).",
           "$ref": "#/$defs/ContributorForm"
         },
-        "fallback": {
-          "description": "Components rendered when the author slot has no contributor, no\ntitle/editor/translator substitute matched, and `substitute.template`\nis exhausted — e.g. `message: term.anonymous` for GB/T 7714's `佚名`\nplaceholder. Only consulted for `contributor: author`; other roles\n(editor, translator, ...) are unaffected. Mirrors\n`TemplateDate.fallback` in shape and in the \"tried in order, first\nnon-empty wins\" semantics. See `csl26-6eak`.",
-          "type": [
-            "array",
-            "null"
-          ],
-          "items": {
-            "$ref": "#/$defs/TemplateComponent"
-          }
-        },
         "label": {
           "description": "Optional role label configuration (e.g., \"eds.\" for editors).",
           "anyOf": [
@@ -1336,16 +1326,6 @@
         },
         "form": {
           "$ref": "#/$defs/DateForm"
-        },
-        "fallback": {
-          "description": "Authoritative fallback components used when the primary date is missing.\n\nWhen every component is empty, including for an empty list, the date is omitted.",
-          "type": [
-            "array",
-            "null"
-          ],
-          "items": {
-            "$ref": "#/$defs/TemplateComponent"
-          }
         },
         "suppress-note": {
           "description": "When true, never wrap this component's opaque calendar-date `note`\n(e.g. a Minguo/era annotation), regardless of the section's\n`note-wrap` setting. Use on the redundant occurrence when a style\nlegitimately renders the same date variable more than once per item\n(e.g. a short front-matter year plus a full-precision date later in\nthe body) so the annotation appears exactly once rather than on every\noccurrence. See `docs/specs/CALENDAR_DATE_ANNOTATIONS.md` and\n`csl26-gl0n`.",
@@ -3413,17 +3393,6 @@
             }
           ]
         },
-        "date-substitute": {
-          "description": "Transitional legacy date-substitution policy retained until all consumers migrate.",
-          "anyOf": [
-            {
-              "$ref": "#/$defs/DateSubstituteEntry"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
         "processing": {
           "description": "Processing mode (author-date, numeric, etc.).",
           "anyOf": [
@@ -3735,13 +3704,6 @@
               "type": "null"
             }
           ]
-        },
-        "template": {
-          "description": "Transitional legacy candidate list retained until engine and styles migrate.",
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/SubstituteKey"
-          }
         },
         "overrides": {
           "description": "Type-specific primary-contributor candidate overrides.",
@@ -4326,349 +4288,6 @@
     },
     "DateFallbackMessage": {
       "description": "A locale-message candidate in an options-level fallback rule.",
-      "type": "object",
-      "properties": {
-        "message": {
-          "description": "Locale message ID to render.",
-          "type": "string"
-        },
-        "form": {
-          "description": "Optional term form for a term-backed message.",
-          "anyOf": [
-            {
-              "$ref": "#/$defs/TermForm"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "text-case": {
-          "description": "Text-case transform to apply to the rendered value.",
-          "anyOf": [
-            {
-              "$ref": "#/$defs/TextCase"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "emph": {
-          "description": "Render in italics/emphasis.",
-          "type": [
-            "boolean",
-            "null"
-          ]
-        },
-        "quote": {
-          "description": "Render in quotes.",
-          "type": [
-            "boolean",
-            "null"
-          ]
-        },
-        "strong": {
-          "description": "Render in bold/strong.",
-          "type": [
-            "boolean",
-            "null"
-          ]
-        },
-        "small-caps": {
-          "description": "Render in small caps.",
-          "type": [
-            "boolean",
-            "null"
-          ]
-        },
-        "vertical-align": {
-          "description": "Vertical alignment to apply to rendered output.",
-          "anyOf": [
-            {
-              "$ref": "#/$defs/VerticalAlign"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "prefix": {
-          "description": "Text or a semantic punctuation mark to prepend to the rendered value\n(outside any wrap).",
-          "anyOf": [
-            {
-              "$ref": "#/$defs/DelimiterPunctuation"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "suffix": {
-          "description": "Text or a semantic punctuation mark to append to the rendered value\n(outside any wrap).",
-          "anyOf": [
-            {
-              "$ref": "#/$defs/DelimiterPunctuation"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "wrap": {
-          "description": "Wrapping punctuation and optional inner affixes (text inside the wrap).",
-          "anyOf": [
-            {
-              "$ref": "#/$defs/WrapConfig"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "suppress": {
-          "description": "If true, suppress this component entirely (render as empty string).\nUseful for type-specific overrides like suppressing publisher for journals.",
-          "type": [
-            "boolean",
-            "null"
-          ]
-        },
-        "initialize-with": {
-          "description": "Override name initialization (e.g., \". \" or \"\").",
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "name-form": {
-          "description": "Override name form (e.g., initials, full, family-only).",
-          "anyOf": [
-            {
-              "$ref": "#/$defs/NameForm"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "strip-periods": {
-          "description": "Strip trailing periods from rendered value.",
-          "type": [
-            "boolean",
-            "null"
-          ]
-        }
-      },
-      "additionalProperties": false,
-      "required": [
-        "message"
-      ]
-    },
-    "DateSubstituteEntry": {
-      "description": "A named or explicit date-substitution policy.",
-      "anyOf": [
-        {
-          "description": "A named built-in policy.",
-          "$ref": "#/$defs/DateSubstitutePreset"
-        },
-        {
-          "description": "An explicit flat selector map.",
-          "$ref": "#/$defs/DateSubstitute"
-        }
-      ]
-    },
-    "DateSubstitutePreset": {
-      "description": "Built-in identity-date substitution policies.",
-      "oneOf": [
-        {
-          "description": "Generic no-date baseline.",
-          "type": "string",
-          "const": "standard"
-        },
-        {
-          "description": "Shared numeric and note-base policy for GB/T 7714-2025.",
-          "type": "string",
-          "const": "gb-t-7714-2025"
-        },
-        {
-          "description": "Author-date policy for GB/T 7714-2025.",
-          "type": "string",
-          "const": "gb-t-7714-2025-author-date"
-        }
-      ]
-    },
-    "DateSubstitute": {
-      "type": [
-        "object",
-        "null"
-      ],
-      "propertyNames": {
-        "type": "string",
-        "pattern": "^\\s*(?:book|manual|report|thesis|webpage|map|post|interview|manuscript|personal-communication|document|chapter|entry|entry-dictionary|entry-encyclopedia|post-weblog|preprint|paper-conference|article-journal|article-magazine|article-newspaper|broadcast|collection|legal-case|statute|treaty|hearing|regulation|brief|classic|patent|dataset|standard|software|motion-picture|article|pamphlet|periodical|graphic|event|song|bill-proceeding|bill-record|default)(?:\\s*,\\s*(?:book|manual|report|thesis|webpage|map|post|interview|manuscript|personal-communication|document|chapter|entry|entry-dictionary|entry-encyclopedia|post-weblog|preprint|paper-conference|article-journal|article-magazine|article-newspaper|broadcast|collection|legal-case|statute|treaty|hearing|regulation|brief|classic|patent|dataset|standard|software|motion-picture|article|pamphlet|periodical|graphic|event|song|bill-proceeding|bill-record|default))*\\s*$"
-      },
-      "additionalProperties": {
-        "type": "array",
-        "items": {
-          "$ref": "#/$defs/DateSubstituteCandidate"
-        }
-      }
-    },
-    "DateSubstituteCandidate": {
-      "description": "An options-level date fallback candidate.\n\nThe closed candidate set deliberately permits only dates and locale messages.",
-      "anyOf": [
-        {
-          "description": "Render another date variable.",
-          "$ref": "#/$defs/DateSubstituteDate"
-        },
-        {
-          "description": "Render a locale message, normally `term.no-date`.",
-          "$ref": "#/$defs/DateSubstituteMessage"
-        }
-      ]
-    },
-    "DateSubstituteDate": {
-      "description": "A date candidate in an options-level substitution policy.",
-      "type": "object",
-      "properties": {
-        "date": {
-          "description": "Date variable to try.",
-          "$ref": "#/$defs/DateVariable"
-        },
-        "form": {
-          "description": "Rendering form for the candidate date.",
-          "$ref": "#/$defs/DateForm"
-        },
-        "suppress-note": {
-          "description": "Suppress an opaque calendar annotation for this candidate.",
-          "type": [
-            "boolean",
-            "null"
-          ]
-        },
-        "text-case": {
-          "description": "Text-case transform to apply to the rendered value.",
-          "anyOf": [
-            {
-              "$ref": "#/$defs/TextCase"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "emph": {
-          "description": "Render in italics/emphasis.",
-          "type": [
-            "boolean",
-            "null"
-          ]
-        },
-        "quote": {
-          "description": "Render in quotes.",
-          "type": [
-            "boolean",
-            "null"
-          ]
-        },
-        "strong": {
-          "description": "Render in bold/strong.",
-          "type": [
-            "boolean",
-            "null"
-          ]
-        },
-        "small-caps": {
-          "description": "Render in small caps.",
-          "type": [
-            "boolean",
-            "null"
-          ]
-        },
-        "vertical-align": {
-          "description": "Vertical alignment to apply to rendered output.",
-          "anyOf": [
-            {
-              "$ref": "#/$defs/VerticalAlign"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "prefix": {
-          "description": "Text or a semantic punctuation mark to prepend to the rendered value\n(outside any wrap).",
-          "anyOf": [
-            {
-              "$ref": "#/$defs/DelimiterPunctuation"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "suffix": {
-          "description": "Text or a semantic punctuation mark to append to the rendered value\n(outside any wrap).",
-          "anyOf": [
-            {
-              "$ref": "#/$defs/DelimiterPunctuation"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "wrap": {
-          "description": "Wrapping punctuation and optional inner affixes (text inside the wrap).",
-          "anyOf": [
-            {
-              "$ref": "#/$defs/WrapConfig"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "suppress": {
-          "description": "If true, suppress this component entirely (render as empty string).\nUseful for type-specific overrides like suppressing publisher for journals.",
-          "type": [
-            "boolean",
-            "null"
-          ]
-        },
-        "initialize-with": {
-          "description": "Override name initialization (e.g., \". \" or \"\").",
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "name-form": {
-          "description": "Override name form (e.g., initials, full, family-only).",
-          "anyOf": [
-            {
-              "$ref": "#/$defs/NameForm"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "strip-periods": {
-          "description": "Strip trailing periods from rendered value.",
-          "type": [
-            "boolean",
-            "null"
-          ]
-        }
-      },
-      "additionalProperties": false,
-      "required": [
-        "date",
-        "form"
-      ]
-    },
-    "DateSubstituteMessage": {
-      "description": "A locale-message candidate in an options-level substitution policy.",
       "type": "object",
       "properties": {
         "message": {
@@ -6333,17 +5952,6 @@
             "null"
           ]
         },
-        "no-date-form": {
-          "description": "Locale term form used for the \"no date\" fallback when a template's\n`issued` date is empty: `short` renders \"n.d.\", `long` renders\n\"no date\". Defaults to short.",
-          "anyOf": [
-            {
-              "$ref": "#/$defs/NoDateForm"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
         "no-date-year-suffix-delimiter": {
           "description": "Delimiter inserted between the no-date term and a year-suffix disambiguator.",
           "type": "string",
@@ -6428,21 +6036,6 @@
           "description": "Apply Chicago inclusive-number condensation (for example, `2021–26`).",
           "type": "string",
           "const": "chicago"
-        }
-      ]
-    },
-    "NoDateForm": {
-      "description": "Term form for the \"no date\" fallback when `issued` is empty.",
-      "oneOf": [
-        {
-          "description": "Render the locale's short term (e.g. \"n.d.\").",
-          "type": "string",
-          "const": "short"
-        },
-        {
-          "description": "Render the locale's long term (e.g. \"no date\").",
-          "type": "string",
-          "const": "long"
         }
       ]
     },
@@ -7560,17 +7153,6 @@
             }
           ]
         },
-        "date-substitute": {
-          "description": "Transitional citation-local legacy date-substitution policy.",
-          "anyOf": [
-            {
-              "$ref": "#/$defs/DateSubstituteEntry"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
         "processing": {
           "description": "Processing mode (author-date, numeric, etc.).",
           "anyOf": [
@@ -8520,17 +8102,6 @@
           "anyOf": [
             {
               "$ref": "#/$defs/DateFallbackEntry"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "date-substitute": {
-          "description": "Transitional bibliography-local legacy date-substitution policy.",
-          "anyOf": [
-            {
-              "$ref": "#/$defs/DateSubstituteEntry"
             },
             {
               "type": "null"

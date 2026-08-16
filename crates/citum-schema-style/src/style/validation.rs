@@ -63,12 +63,12 @@ impl Style {
         {
             validate_substitute_candidates(substitute, "options.substitute")?;
         }
-        if let Some(date_substitute) = self
+        if let Some(date_fallback) = self
             .options
             .as_ref()
-            .and_then(|options| options.date_substitute.as_ref())
+            .and_then(|options| options.date_fallback.as_ref())
         {
-            budget.check_date_substitute(date_substitute, "options.date-substitute")?;
+            budget.check_date_fallback(date_fallback, "options.date-fallback")?;
         }
 
         if let Some(templates) = &self.templates {
@@ -114,12 +114,12 @@ impl Style {
                 });
             }
         }
-        if let Some(date_substitute) = self
+        if let Some(date_fallback) = self
             .options
             .as_ref()
-            .and_then(|options| options.date_substitute.as_ref())
+            .and_then(|options| options.date_fallback.as_ref())
         {
-            collect_date_substitute_warnings(date_substitute, "options.date-substitute", warnings);
+            collect_date_fallback_warnings(date_fallback, "options.date-fallback", warnings);
         }
         if let Some(bib) = &self.bibliography
             && let Some(type_variants) = &bib.type_variants
@@ -137,14 +137,14 @@ impl Style {
             collect_citation_spec_warnings(cit, "citation", warnings);
         }
         if let Some(bib) = &self.bibliography
-            && let Some(date_substitute) = bib
+            && let Some(date_fallback) = bib
                 .options
                 .as_ref()
-                .and_then(|options| options.date_substitute.as_ref())
+                .and_then(|options| options.date_fallback.as_ref())
         {
-            collect_date_substitute_warnings(
-                date_substitute,
-                "bibliography.options.date-substitute",
+            collect_date_fallback_warnings(
+                date_fallback,
+                "bibliography.options.date-fallback",
                 warnings,
             );
         }
@@ -170,7 +170,7 @@ fn validate_substitute_candidates(
     location: &str,
 ) -> Result<(), String> {
     let resolved = config.resolve();
-    validate_candidate_list(&resolved.template, &format!("{location}.template"))?;
+    validate_candidate_list(resolved.candidates(), &format!("{location}.candidates"))?;
     for (reference_type, candidates) in &resolved.overrides {
         validate_candidate_list(
             candidates.as_slice(),
@@ -274,14 +274,14 @@ fn collect_citation_spec_warnings(
     location: &str,
     warnings: &mut Vec<SchemaWarning>,
 ) {
-    if let Some(date_substitute) = spec
+    if let Some(date_fallback) = spec
         .options
         .as_ref()
-        .and_then(|options| options.date_substitute.as_ref())
+        .and_then(|options| options.date_fallback.as_ref())
     {
-        collect_date_substitute_warnings(
-            date_substitute,
-            &format!("{location}.options.date-substitute"),
+        collect_date_fallback_warnings(
+            date_fallback,
+            &format!("{location}.options.date-fallback"),
             warnings,
         );
     }
@@ -309,17 +309,28 @@ fn collect_citation_spec_warnings(
     }
 }
 
-fn collect_date_substitute_warnings(
-    date_substitute: &crate::options::DateSubstitute,
+fn collect_date_fallback_warnings(
+    date_fallback: &crate::options::DateFallbackConfig,
     location: &str,
     warnings: &mut Vec<SchemaWarning>,
 ) {
-    for selector in date_substitute.entries().keys() {
-        for name in selector.unknown_type_names() {
-            warnings.push(SchemaWarning::UnknownTypeName {
-                name: name.to_string(),
-                location: location.to_string(),
-            });
+    let crate::options::DateFallbackConfig::Policy(policy) = date_fallback else {
+        return;
+    };
+    for (lane_name, lane) in [
+        ("first-issued", policy.first_issued.as_ref()),
+        ("later-issued", policy.later_issued.as_ref()),
+    ] {
+        let Some(crate::options::DateFallbackLane::Selectors(selectors)) = lane else {
+            continue;
+        };
+        for selector in selectors.entries().keys() {
+            for name in selector.unknown_type_names() {
+                warnings.push(SchemaWarning::UnknownTypeName {
+                    name: name.to_string(),
+                    location: format!("{location}.{lane_name}"),
+                });
+            }
         }
     }
 }
@@ -330,18 +341,41 @@ struct TemplateResourceBudget {
 }
 
 impl TemplateResourceBudget {
-    fn check_date_substitute(
+    fn check_date_fallback(
         &mut self,
-        date_substitute: &crate::options::DateSubstitute,
+        date_fallback: &crate::options::DateFallbackConfig,
         location: &str,
     ) -> Result<(), String> {
-        for (selector, candidates) in date_substitute.entries() {
-            for candidate in candidates {
-                self.check_component(
-                    &candidate.to_template_component(),
-                    &format!("{location}.{selector:?}"),
-                    0,
-                )?;
+        let crate::options::DateFallbackConfig::Policy(policy) = date_fallback else {
+            return Ok(());
+        };
+        for (lane_name, lane) in [
+            ("first-issued", policy.first_issued.as_ref()),
+            ("later-issued", policy.later_issued.as_ref()),
+        ] {
+            let Some(crate::options::DateFallbackLane::Selectors(selectors)) = lane else {
+                continue;
+            };
+            for (selector, rule) in selectors.entries() {
+                let Some(candidates) = rule.candidates() else {
+                    continue;
+                };
+                for candidate in candidates.iter() {
+                    if matches!(
+                        candidate,
+                        crate::options::DateFallbackCandidate::Date(candidate)
+                            if matches!(candidate.date, crate::template::DateVariable::Issued)
+                    ) {
+                        return Err(format!(
+                            "{location}.{lane_name}.{selector:?}: date-fallback candidates must not reference `issued`"
+                        ));
+                    }
+                    self.check_component(
+                        &candidate.to_template_component(),
+                        &format!("{location}.{lane_name}.{selector:?}"),
+                        0,
+                    )?;
+                }
             }
         }
         Ok(())
@@ -378,11 +412,6 @@ impl TemplateResourceBudget {
         }
 
         match component {
-            TemplateComponent::Date(date) => {
-                if let Some(fallback) = &date.fallback {
-                    self.check_template(fallback, &format!("{location}.date.fallback"), depth + 1)?;
-                }
-            }
             TemplateComponent::Group(group) => {
                 if let Some(cond) = &group.render_when {
                     match (&cond.field_present, &cond.field_absent) {
@@ -445,7 +474,8 @@ impl TemplateResourceBudget {
                     }
                 }
             },
-            TemplateComponent::Title(_)
+            TemplateComponent::Date(_)
+            | TemplateComponent::Title(_)
             | TemplateComponent::Number(_)
             | TemplateComponent::Identifier(_)
             | TemplateComponent::Variable(_)
@@ -527,15 +557,12 @@ impl TemplateResourceBudget {
         {
             validate_substitute_candidates(substitute, &format!("{location}.options.substitute"))?;
         }
-        if let Some(date_substitute) = spec
+        if let Some(date_fallback) = spec
             .options
             .as_ref()
-            .and_then(|options| options.date_substitute.as_ref())
+            .and_then(|options| options.date_fallback.as_ref())
         {
-            self.check_date_substitute(
-                date_substitute,
-                &format!("{location}.options.date-substitute"),
-            )?;
+            self.check_date_fallback(date_fallback, &format!("{location}.options.date-fallback"))?;
         }
         if let Some(template) = &spec.template {
             self.check_variant(template, &format!("{location}.template"), depth)?;
@@ -573,15 +600,12 @@ impl TemplateResourceBudget {
         {
             validate_substitute_candidates(substitute, &format!("{location}.options.substitute"))?;
         }
-        if let Some(date_substitute) = spec
+        if let Some(date_fallback) = spec
             .options
             .as_ref()
-            .and_then(|options| options.date_substitute.as_ref())
+            .and_then(|options| options.date_fallback.as_ref())
         {
-            self.check_date_substitute(
-                date_substitute,
-                &format!("{location}.options.date-substitute"),
-            )?;
+            self.check_date_fallback(date_fallback, &format!("{location}.options.date-fallback"))?;
         }
         if let Some(template) = &spec.template {
             self.check_variant(template, &format!("{location}.template"), depth)?;
@@ -612,10 +636,11 @@ mod security_resource_tests {
     use super::*;
     use crate::locale::TermForm;
     use crate::options::{
-        BibliographyOptions, CitationOptions, Config, DateSubstitute, DateSubstituteCandidate,
-        DateSubstituteMessage,
+        BibliographyOptions, CitationOptions, Config, DateFallback, DateFallbackCandidate,
+        DateFallbackConfig, DateFallbackDate, DateFallbackLane, DateFallbackMessage,
+        DateFallbackRule, DateFallbackSelectorMap,
     };
-    use crate::template::{Rendering, TypeSelector};
+    use crate::template::{DateForm, DateVariable, Rendering, TypeSelector};
     use indexmap::IndexMap;
 
     fn nested_group(depth: usize) -> TemplateComponent {
@@ -629,16 +654,21 @@ mod security_resource_tests {
         }
     }
 
-    fn date_substitute_with_candidates(count: usize) -> DateSubstitute {
-        let candidate = DateSubstituteCandidate::Message(DateSubstituteMessage {
+    fn date_fallback_with_candidates(count: usize) -> DateFallbackConfig {
+        let candidate = DateFallbackCandidate::Message(DateFallbackMessage {
             message: "term.no-date".to_string(),
             form: Some(TermForm::Short),
             rendering: Rendering::default(),
         });
-        DateSubstitute::new(IndexMap::from([(
-            TypeSelector::Single("default".to_string()),
-            vec![candidate; count],
-        )]))
+        DateFallbackConfig::Policy(DateFallback {
+            first_issued: Some(DateFallbackLane::Selectors(DateFallbackSelectorMap::new(
+                IndexMap::from([(
+                    TypeSelector::Single("default".to_string()),
+                    DateFallbackRule::Candidates(vec![candidate; count]),
+                )]),
+            ))),
+            later_issued: None,
+        })
     }
 
     #[test]
@@ -678,25 +708,25 @@ mod security_resource_tests {
     }
 
     #[test]
-    fn validate_resource_limits_counts_date_substitute_candidates_across_scopes() {
+    fn validate_resource_limits_counts_date_fallback_candidates_across_scopes() {
         let global_count = MAX_TEMPLATE_COMPONENTS / 3;
         let citation_count = MAX_TEMPLATE_COMPONENTS / 3;
         let bibliography_count = MAX_TEMPLATE_COMPONENTS - global_count - citation_count + 1;
         let style = Style {
             options: Some(Config {
-                date_substitute: Some(date_substitute_with_candidates(global_count)),
+                date_fallback: Some(date_fallback_with_candidates(global_count)),
                 ..Config::default()
             }),
             citation: Some(CitationSpec {
                 options: Some(CitationOptions {
-                    date_substitute: Some(date_substitute_with_candidates(citation_count)),
+                    date_fallback: Some(date_fallback_with_candidates(citation_count)),
                     ..CitationOptions::default()
                 }),
                 ..CitationSpec::default()
             }),
             bibliography: Some(BibliographySpec {
                 options: Some(BibliographyOptions {
-                    date_substitute: Some(date_substitute_with_candidates(bibliography_count)),
+                    date_fallback: Some(date_fallback_with_candidates(bibliography_count)),
                     ..BibliographyOptions::default()
                 }),
                 ..BibliographySpec::default()
@@ -706,8 +736,42 @@ mod security_resource_tests {
 
         let err = style
             .validate_resource_limits()
-            .expect_err("date-substitute candidates must share the template budget");
+            .expect_err("date-fallback candidates must share the template budget");
 
         assert!(err.contains("maximum template component count"));
+    }
+
+    #[test]
+    fn validate_resource_limits_rejects_issued_date_fallback_candidates() {
+        let candidate = DateFallbackCandidate::Date(DateFallbackDate {
+            date: DateVariable::Issued,
+            form: DateForm::Year,
+            suppress_note: None,
+            rendering: Rendering::default(),
+        });
+        let style = Style {
+            options: Some(Config {
+                date_fallback: Some(DateFallbackConfig::Policy(DateFallback {
+                    first_issued: Some(DateFallbackLane::Selectors(DateFallbackSelectorMap::new(
+                        IndexMap::from([(
+                            TypeSelector::Single("default".to_string()),
+                            DateFallbackRule::Candidates(vec![candidate]),
+                        )]),
+                    ))),
+                    later_issued: None,
+                })),
+                ..Config::default()
+            }),
+            ..Style::default()
+        };
+
+        let error = style
+            .validate_resource_limits()
+            .expect_err("issued must not recursively fall back to itself");
+
+        assert_eq!(
+            error,
+            "options.date-fallback.first-issued.Single(\"default\"): date-fallback candidates must not reference `issued`"
+        );
     }
 }

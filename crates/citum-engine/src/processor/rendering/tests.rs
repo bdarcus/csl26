@@ -289,7 +289,6 @@ fn test_date_key_is_always_none() {
         suppress_note: None,
         suppress_disamb_suffix: None,
         links: None,
-        fallback: None,
         custom: None,
     });
 
@@ -303,7 +302,6 @@ fn test_date_key_is_always_none() {
         suppress_note: None,
         suppress_disamb_suffix: None,
         links: None,
-        fallback: None,
         custom: None,
     });
 
@@ -316,7 +314,6 @@ fn test_date_key_is_always_none() {
         suppress_note: None,
         suppress_disamb_suffix: None,
         links: None,
-        fallback: None,
         custom: None,
     });
 
@@ -389,7 +386,6 @@ fn test_strip_author_component_nested_list() {
                 links: None,
                 gender: None,
                 rendering: Rendering::default(),
-                fallback: None,
                 custom: None,
             }),
             TemplateComponent::Date(TemplateDate {
@@ -399,7 +395,6 @@ fn test_strip_author_component_nested_list() {
                 suppress_note: None,
                 suppress_disamb_suffix: None,
                 links: None,
-                fallback: None,
                 custom: None,
             }),
         ],

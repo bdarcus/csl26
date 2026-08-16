@@ -160,15 +160,6 @@ impl SubstituteConfig {
         }
     }
 
-    /// Resolve an optional transitional config for legacy engine consumers.
-    #[must_use]
-    pub fn resolve_or_default(config: Option<&Self>) -> Cow<'_, Substitute> {
-        config.map_or_else(
-            || Cow::Owned(Substitute::default()),
-            SubstituteConfig::resolve_ref,
-        )
-    }
-
     /// Return whether this config explicitly disables the whole policy.
     #[must_use]
     pub fn is_disabled(&self) -> bool {
@@ -189,7 +180,7 @@ impl SubstituteConfig {
 }
 
 /// Explicit substitution configuration.
-#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Clone, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 pub struct Substitute {
@@ -202,15 +193,8 @@ pub struct Substitute {
     /// Ordered values tried after the semantic author is unavailable.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub candidates: Option<SubstituteCandidates>,
-    /// Transitional legacy candidate list retained until engine and styles migrate.
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub template: Vec<SubstituteKey>,
     /// Type-specific primary-contributor candidate overrides.
-    #[serde(
-        default,
-        deserialize_with = "deserialize_transitional_overrides",
-        skip_serializing_if = "HashMap::is_empty"
-    )]
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
     pub overrides: HashMap<String, SubstituteCandidates>,
     /// Per-role fallback chains for non-author contributor substitution.
     #[serde(default, skip_serializing_if = "HashMap::is_empty")]
@@ -229,57 +213,6 @@ pub struct Substitute {
     )]
     #[cfg_attr(feature = "schema", schemars(skip))]
     pub unknown_fields: std::collections::BTreeMap<String, serde_yaml::Value>,
-}
-
-/// Deserialize overrides while legacy styles still use an empty list as a clear.
-fn deserialize_transitional_overrides<'de, D>(
-    deserializer: D,
-) -> Result<HashMap<String, SubstituteCandidates>, D::Error>
-where
-    D: serde::Deserializer<'de>,
-{
-    #[derive(Deserialize)]
-    #[serde(untagged)]
-    enum Wire {
-        Disabled(SubstituteDisabled),
-        Candidates(Vec<SubstituteKey>),
-    }
-
-    HashMap::<String, Wire>::deserialize(deserializer).map(|overrides| {
-        overrides
-            .into_iter()
-            .map(|(selector, candidates)| {
-                let candidates = match candidates {
-                    Wire::Disabled(disabled) => SubstituteCandidates::Disabled(disabled),
-                    Wire::Candidates(candidates) if candidates.is_empty() => {
-                        SubstituteCandidates::Disabled(SubstituteDisabled::None)
-                    }
-                    Wire::Candidates(candidates) => SubstituteCandidates::Candidates(candidates),
-                };
-                (selector, candidates)
-            })
-            .collect()
-    })
-}
-
-impl Default for Substitute {
-    fn default() -> Self {
-        Self {
-            contributor_role_form: None,
-            contributor_role_case: None,
-            candidates: None,
-            template: vec![
-                SubstituteKey::Field(SubstituteField::Editor),
-                SubstituteKey::Field(SubstituteField::Title),
-                SubstituteKey::Field(SubstituteField::Translator),
-            ],
-            overrides: HashMap::new(),
-            role_substitute: HashMap::new(),
-            title_quote: None,
-            otherwise: None,
-            unknown_fields: std::collections::BTreeMap::new(),
-        }
-    }
 }
 
 impl Substitute {
@@ -333,9 +266,6 @@ impl Substitute {
         }
         if other.candidates.is_some() {
             self.candidates = other.candidates.clone();
-        }
-        if !other.template.is_empty() {
-            self.template = other.template.clone();
         }
         for (key, candidates) in &other.overrides {
             self.overrides.insert(key.clone(), candidates.clone());
