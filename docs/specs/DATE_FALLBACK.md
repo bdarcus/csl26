@@ -1,9 +1,9 @@
 # Style fallback policy specification
 
-**Status:** Draft
+**Status:** Active
 **Version:** 2.0
 **Date:** 2026-08-16
-**Supersedes:** [`DATE_SUBSTITUTE.md`](./DATE_SUBSTITUTE.md) when activated
+**Supersedes:** [`DATE_SUBSTITUTE.md`](./DATE_SUBSTITUTE.md)
 **Related:** bean `csl26-62kp`, [`PRIMARY_CONTRIBUTOR_SUBSTITUTION.md`](./PRIMARY_CONTRIBUTOR_SUBSTITUTION.md), [`DISAMBIGUATION.md`](./DISAMBIGUATION.md)
 
 ## Purpose
@@ -157,16 +157,18 @@ Schema generation must include the new unions and exclude every removed key.
 
 ## Acceptance criteria
 
-- [ ] Templates contain no contributor or date fallback fields.
-- [ ] Processing-derived substitution and every `none` clear path are covered by schema and cascade tests.
-- [ ] Missing dates are blank unless an effective date-fallback rule matches.
-- [ ] First and later issued occurrences resolve independently without template mutation.
-- [ ] Rendering, sorting, and disambiguation consume the same effective author policy.
-- [ ] Rendering and disambiguation consume the same first-issued date policy.
-- [ ] The migrator emits supported author/date policies and rejects unsupported shapes explicitly.
-- [ ] Every tracked Citum style validates under the new schema with source-authoritative behavior.
-- [ ] The style author guide documents defaults, clears, scopes, and semantic consequences.
+- [x] Templates contain no contributor or date fallback fields.
+- [x] Processing-derived substitution and every `none` clear path are covered by schema and cascade tests.
+- [x] Missing dates are blank unless an effective date-fallback rule matches.
+- [x] First and later issued occurrences resolve independently without template mutation.
+- [x] Rendering, sorting, and disambiguation consume the same effective author policy.
+- [x] Rendering and disambiguation consume the same first-issued date policy.
+- [x] The migrator emits supported author/date policies and rejects unsupported shapes explicitly.
+- [x] Every tracked Citum style validates under the new schema with source-authoritative behavior.
+- [x] The style author guide documents defaults, clears, scopes, and semantic consequences.
 
 ## Changelog
 
-- v2.0 (2026-08-16): Drafted the options-only author substitution and date fallback contract.
+- v2.0 (2026-08-16): Defined and activated the options-only author
+  substitution and date fallback contract with schema, engine, migrator,
+  tracked-style migration, and authoring guidance.

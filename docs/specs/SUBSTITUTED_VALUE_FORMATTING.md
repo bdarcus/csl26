@@ -53,7 +53,7 @@ category-driven formatting because the style never wrote a rule that says
 otherwise.
 
 Citum approximates this per-slot rather than per-element, because its
-`<substitute>` equivalent (`contributors.substitute.template`) is a list of
+`<substitute>` equivalent (`options.substitute.candidates`) is a list of
 *keys*, not a list of styled elements. The approximation lands on opposite
 sides of the corpus for the two value kinds it covers:
 

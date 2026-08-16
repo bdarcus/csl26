@@ -368,23 +368,50 @@ underlying rules.
 
 ## [swap_horiz] Author-less References (Substitution)
 
-When a reference has no author, `substitute:` tells Citum what to promote
-into the author position instead — an editor, a translator, or, as a last
-resort, the reference's own title:
+Author-date processing automatically tries `editor`, `title`, then `translator`
+when a reference has no author. This includes every author-date variant, custom
+processing based on an author-date variant, and styles that omit `processing`
+(which defaults to author-date). Numeric, note, and label processing do not add
+an author substitution chain.
+
+Use `substitute.candidates` when a style needs a different order, type-specific
+credits, or a terminal anonymous label:
 
 ```yaml
 options:
   substitute:
-    template:
-      - editor
-      - translator
-      - title
+    candidates: [editor, translator]
+    overrides:
+      episode:
+      - contributor: [writer, director]
+    otherwise:
+      message: term.anonymous
+      form: short
 ```
 
 Citum tries each candidate in order and stops at the first one the
-reference actually has. `title` is special: a title is being promoted into
-a *name* slot, so Citum has to decide how to format it, and that's
-controlled by `title-quote`:
+reference actually has. A type override takes precedence for that type. If no
+author or candidate resolves, `otherwise` renders its locale message. The
+terminal value is deliberately message-only; arbitrary template components do
+not belong in substitution policy.
+
+Use `substitute: none` to disable all inherited or processing-derived
+substitution. Within a `substitute` map, use `none` to clear inherited
+`candidates`, `otherwise`, or one override. Empty lists are rejected because
+they are easy to confuse with omission:
+
+```yaml
+bibliography:
+  options:
+    substitute:
+      candidates: none
+      overrides:
+        episode: none
+      otherwise: none
+```
+
+`title` is special: a title is being promoted into a *name* slot, so Citum has
+to decide how to format it. That is controlled by `title-quote`:
 
 | `title-quote` | Behavior | When to use |
 |---|---|---|
@@ -395,7 +422,7 @@ controlled by `title-quote`:
 citation:
   options:
     substitute:
-      template: [editor, translator, title]
+      candidates: [editor, translator, title]
       title-quote: by-category
     titles:
       type-mapping:
@@ -429,6 +456,62 @@ citation:
 > [`SUBSTITUTED_VALUE_FORMATTING.md`](../specs/SUBSTITUTED_VALUE_FORMATTING.md)
 > for the corpus evidence behind this default and a worked example
 > (`elsevier-harvard`).
+
+Substitution is semantic, not just visual. Rendering, sorting, and
+disambiguation all use the same resolved policy. Anonymous works that render an
+`otherwise` message therefore group consistently, while bibliography author
+sorting still uses the title key when no primary contributor resolves.
+
+## [event_busy] Missing Dates (Fallback)
+
+A missing date renders blank by default. Templates only say which date to
+render; they do not contain fallback chains. Add `date-fallback: standard` when
+the style explicitly calls for the locale's short no-date term:
+
+```yaml
+options:
+  date-fallback: standard  # term.no-date, short form
+```
+
+For alternative dates or type-specific behavior, configure the first and later
+`date: issued` occurrences separately:
+
+```yaml
+options:
+  date-fallback:
+    first-issued:
+      default: standard
+      article-journal: none
+      book:
+      - date: copyright
+        form: year
+      - message: term.no-date
+        form: long
+    later-issued:
+      default: none
+      manuscript:
+      - date: accessed
+        form: year-month-day
+```
+
+`first-issued` applies to the first `date: issued` encountered recursively in
+the effective template. Every later issued component uses `later-issued`.
+Missing non-issued date variables remain blank. Within a lane, Citum uses the
+first matching type selector and then `default`; an omitted policy, omitted
+lane, unmatched selector, or matched `none` is blank.
+
+The whole policy may also be `standard`, `gb-t-7714-2025`,
+`gb-t-7714-2025-author-date`, or `none`. Use whole-policy `none` to clear both
+inherited lanes, lane-level `none` to clear one lane, and selector-level `none`
+to stop that type from falling through to `default`. Candidate lists must be
+non-empty.
+
+Date fallback is scoped like other options: resolve global `options` first,
+then overlay `citation.options` or `bibliography.options`. Selector rules merge
+by selector, so a scoped rule can replace one type without restating the whole
+map. Visible rendering and disambiguation share the first-issued resolution;
+an accessed-date candidate can render but remains retrieval metadata rather
+than work identity.
 
 ## [auto_awesome] Style Inheritance
 
