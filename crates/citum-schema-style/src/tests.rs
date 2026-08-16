@@ -272,7 +272,7 @@ info:
 citation:
   options:
     substitute:
-      template:
+      candidates:
       - editor
       - parent-serial
       - title
@@ -296,8 +296,8 @@ citation:
         .resolve();
 
     assert_eq!(
-        substitute.template,
-        vec![
+        substitute.candidates(),
+        &[
             options::SubstituteKey::Editor,
             options::SubstituteKey::ParentSerial,
             options::SubstituteKey::Title,
@@ -775,22 +775,25 @@ fn style_validate_emits_warning_for_unknown_type_in_bib_type_variants() {
 }
 
 #[test]
-fn style_validate_emits_warnings_for_unknown_date_substitute_types_at_every_scope() {
+fn style_validate_emits_warnings_for_unknown_date_fallback_types_at_every_scope() {
     let style: Style = serde_yaml::from_str(
         r#"
 info:
-  title: Date substitute selector warnings
+  title: Date fallback selector warnings
 options:
-  date-substitute:
-    global-typo: []
+  date-fallback:
+    first-issued:
+      global-typo: none
 citation:
   options:
-    date-substitute:
-      citation-typo: []
+    date-fallback:
+      first-issued:
+        citation-typo: none
 bibliography:
   options:
-    date-substitute:
-      bibliography-typo: []
+    date-fallback:
+      first-issued:
+        bibliography-typo: none
 "#,
     )
     .unwrap();
@@ -800,15 +803,15 @@ bibliography:
         vec![
             SchemaWarning::UnknownTypeName {
                 name: "global-typo".to_string(),
-                location: "options.date-substitute".to_string(),
+                location: "options.date-fallback.first-issued".to_string(),
             },
             SchemaWarning::UnknownTypeName {
                 name: "citation-typo".to_string(),
-                location: "citation.options.date-substitute".to_string(),
+                location: "citation.options.date-fallback.first-issued".to_string(),
             },
             SchemaWarning::UnknownTypeName {
                 name: "bibliography-typo".to_string(),
-                location: "bibliography.options.date-substitute".to_string(),
+                location: "bibliography.options.date-fallback.first-issued".to_string(),
             },
         ]
     );
@@ -1907,6 +1910,8 @@ fn style_loader_accepts_valid_recursive_template_surfaces() {
 templates:
   fallback-title:
   - title: primary
+options:
+  date-fallback: standard
 citation:
   template:
   - group:
@@ -1914,8 +1919,6 @@ citation:
       form: short
     - date: issued
       form: year
-      fallback:
-      - variable: doi
   locales:
   - locale: [en-US]
     template:
@@ -1942,6 +1945,38 @@ bibliography:
     - variable: doi
 "#;
     Style::from_yaml_str(yaml).expect("valid recursive template surfaces should parse");
+}
+
+#[rstest::rstest]
+#[case(
+    "options:\n  date-substitute: standard",
+    "`date-substitute` was removed; use `date-fallback`"
+)]
+#[case(
+    "options:\n  substitute:\n    template: [editor]",
+    "`substitute.template` was removed; use `substitute.candidates`"
+)]
+#[case(
+    "options:\n  dates:\n    no-date-form: long",
+    "`dates.no-date-form` was removed"
+)]
+#[case(
+    "citation:\n  template:\n  - contributor: author\n    fallback:\n    - title: primary",
+    "template `contributor.fallback` was removed; use `options.substitute.otherwise`"
+)]
+#[case(
+    "citation:\n  template:\n  - date: issued\n    fallback:\n    - message: term.no-date",
+    "template `date.fallback` was removed; use `options.date-fallback`"
+)]
+fn removed_fallback_spellings_report_migration_guidance(
+    #[case] yaml: &str,
+    #[case] expected: &str,
+) {
+    let error = Style::from_yaml_str(yaml).expect_err("removed spelling should fail");
+    assert!(
+        error.to_string().contains(expected),
+        "expected {expected:?} in {error}"
+    );
 }
 
 #[test]

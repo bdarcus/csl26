@@ -62,6 +62,9 @@ pub(super) fn validate_raw_style(raw: &Value) -> Result<(), String> {
         return Ok(());
     };
 
+    if let Some(options) = child(root, "options") {
+        validate_options(options, "options")?;
+    }
     if let Some(templates) = child(root, "templates") {
         validate_templates_map(templates, "templates")?;
     }
@@ -93,6 +96,9 @@ fn validate_citation_spec(value: &Value, path: &str) -> Result<(), String> {
         return Ok(());
     };
 
+    if let Some(options) = child(map, "options") {
+        validate_options(options, &format!("{path}.options"))?;
+    }
     validate_common_section_templates(map, path)?;
 
     for mode in ["integral", "non-integral", "subsequent", "ibid"] {
@@ -109,6 +115,9 @@ fn validate_bibliography_spec(value: &Value, path: &str) -> Result<(), String> {
         return Ok(());
     };
 
+    if let Some(options) = child(map, "options") {
+        validate_options(options, &format!("{path}.options"))?;
+    }
     validate_common_section_templates(map, path)?;
 
     if let Some(groups) = child(map, "groups")
@@ -124,6 +133,32 @@ fn validate_bibliography_spec(value: &Value, path: &str) -> Result<(), String> {
         }
     }
 
+    Ok(())
+}
+
+fn validate_options(value: &Value, path: &str) -> Result<(), String> {
+    let Some(map) = value.as_mapping() else {
+        return Ok(());
+    };
+    if child(map, "date-substitute").is_some() {
+        return Err(format!(
+            "{path}.date-substitute: `date-substitute` was removed; use `date-fallback`"
+        ));
+    }
+    if let Some(substitute) = child(map, "substitute").and_then(Value::as_mapping)
+        && child(substitute, "template").is_some()
+    {
+        return Err(format!(
+            "{path}.substitute.template: `substitute.template` was removed; use `substitute.candidates`"
+        ));
+    }
+    if let Some(dates) = child(map, "dates").and_then(Value::as_mapping)
+        && child(dates, "no-date-form").is_some()
+    {
+        return Err(format!(
+            "{path}.dates.no-date-form: `dates.no-date-form` was removed; use an explicit `date-fallback` message candidate with `form`"
+        ));
+    }
     Ok(())
 }
 
@@ -280,6 +315,16 @@ fn validate_component(value: &Value, path: &str) -> Result<(), String> {
             ))
         }
         [kind] => {
+            if child(map, "fallback").is_some() {
+                let replacement = match *kind {
+                    "contributor" => "`options.substitute.otherwise`",
+                    "date" => "`options.date-fallback`",
+                    _ => "an options-level policy",
+                };
+                return Err(format!(
+                    "{path}.fallback: template `{kind}.fallback` was removed; use {replacement}"
+                ));
+            }
             validate_component_fields(map, path, kind)?;
             validate_nested_component_templates(map, path, kind)
         }
@@ -311,18 +356,10 @@ fn validate_nested_component_templates(
     path: &str,
     kind: &str,
 ) -> Result<(), String> {
-    match kind {
-        "date" | "contributor" => {
-            if let Some(fallback) = child(map, "fallback") {
-                validate_template(fallback, &format!("{path}.fallback"))?;
-            }
-        }
-        "group" => {
-            if let Some(group) = child(map, "group") {
-                validate_template(group, &format!("{path}.group"))?;
-            }
-        }
-        _ => {}
+    if kind == "group"
+        && let Some(group) = child(map, "group")
+    {
+        validate_template(group, &format!("{path}.group"))?;
     }
     Ok(())
 }
@@ -349,7 +386,6 @@ fn component_allowed_fields(kind: &str) -> &'static [&'static str] {
         "contributor" => &[
             "contributor",
             "form",
-            "fallback",
             "label",
             "merge",
             "name-order",
@@ -365,7 +401,6 @@ fn component_allowed_fields(kind: &str) -> &'static [&'static str] {
         "date" => &[
             "date",
             "form",
-            "fallback",
             "suppress-note",
             "suppress-disamb-suffix",
             "links",

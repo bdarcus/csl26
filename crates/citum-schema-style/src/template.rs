@@ -1026,15 +1026,6 @@ pub struct TemplateContributor {
     pub contributor: ContributorRoles,
     /// How to display the contributor (long names, short, with label, etc.).
     pub form: ContributorForm,
-    /// Components rendered when the author slot has no contributor, no
-    /// title/editor/translator substitute matched, and `substitute.template`
-    /// is exhausted — e.g. `message: term.anonymous` for GB/T 7714's `佚名`
-    /// placeholder. Only consulted for `contributor: author`; other roles
-    /// (editor, translator, ...) are unaffected. Mirrors
-    /// `TemplateDate.fallback` in shape and in the "tried in order, first
-    /// non-empty wins" semantics. See `csl26-6eak`.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub fallback: Option<Vec<TemplateComponent>>,
     /// Optional role label configuration (e.g., "eds." for editors).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub label: Option<RoleLabel>,
@@ -1155,11 +1146,6 @@ crate::str_enum! {
 pub struct TemplateDate {
     pub date: DateVariable,
     pub form: DateForm,
-    /// Authoritative fallback components used when the primary date is missing.
-    ///
-    /// When every component is empty, including for an empty list, the date is omitted.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub fallback: Option<Vec<TemplateComponent>>,
     /// When true, never wrap this component's opaque calendar-date `note`
     /// (e.g. a Minguo/era annotation), regardless of the section's
     /// `note-wrap` setting. Use on the redundant occurrence when a style

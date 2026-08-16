@@ -464,7 +464,6 @@ fn test_contributor_values() {
         rendering: Default::default(),
         links: None,
         gender: None,
-        fallback: None,
         custom: None,
     };
 
@@ -1016,7 +1015,6 @@ fn test_date_values() {
         suppress_disamb_suffix: None,
         rendering: Default::default(),
         links: None,
-        fallback: None,
         custom: None,
     };
 
@@ -1065,7 +1063,6 @@ fn test_message_component_renders_accessed_date_argument() {
                 suppress_disamb_suffix: None,
                 rendering: Default::default(),
                 links: None,
-                fallback: None,
                 custom: None,
             }),
         )]
@@ -1307,7 +1304,6 @@ fn test_message_component_reorders_locale_phrase_arguments() {
         suppress_disamb_suffix: None,
         rendering: Default::default(),
         links: None,
-        fallback: None,
         custom: None,
     });
     let url_arg = MessageArgSource::Variable(TemplateVariable {
@@ -1634,7 +1630,6 @@ fn test_year_month_day_dates_inline_disambiguation_suffix_on_year() {
         suppress_disamb_suffix: None,
         rendering: Default::default(),
         links: None,
-        fallback: None,
         custom: None,
     };
 
@@ -1690,7 +1685,6 @@ fn test_et_al() {
         rendering: Default::default(),
         links: None,
         gender: None,
-        fallback: None,
         custom: None,
     };
 
@@ -1752,7 +1746,6 @@ fn test_et_al_delimiter_never() {
         rendering: Default::default(),
         links: None,
         gender: None,
-        fallback: None,
         custom: None,
     };
 
@@ -1926,7 +1919,6 @@ fn test_et_al_delimiter_always() {
         rendering: Default::default(),
         links: None,
         gender: None,
-        fallback: None,
         custom: None,
     };
 
@@ -3598,7 +3590,6 @@ fn test_translator_substitute_uses_locale_aware_role_label() {
     config.substitute = Some(SubstituteConfig::Explicit(Substitute {
         contributor_role_form: Some("long".to_string()),
         contributor_role_case: None,
-        template: Vec::new(),
         candidates: Some(SubstituteCandidates::Candidates(vec![
             SubstituteKey::Translator,
         ])),
@@ -3811,7 +3802,6 @@ fn test_role_specific_name_order_applies_in_substitute_path() {
     config.substitute = Some(SubstituteConfig::Explicit(Substitute {
         contributor_role_form: Some("short".to_string()),
         contributor_role_case: None,
-        template: Vec::new(),
         candidates: Some(SubstituteCandidates::Candidates(vec![
             SubstituteKey::Translator,
         ])),
@@ -5910,7 +5900,6 @@ fn make_issued_year_component() -> TemplateDate {
         suppress_disamb_suffix: None,
         rendering: Default::default(),
         links: None,
-        fallback: None,
         custom: None,
     }
 }
@@ -6203,7 +6192,6 @@ fn test_date_note_wraps_after_a_closed_interval() {
         suppress_disamb_suffix: None,
         rendering: Default::default(),
         links: None,
-        fallback: None,
         custom: None,
     };
 

@@ -9,7 +9,6 @@ pub mod bibliography;
 pub mod cascade;
 pub mod contributors;
 pub mod date_fallback;
-pub mod date_substitute;
 pub mod dates;
 pub mod integral_name_memory;
 pub mod localization;
@@ -39,11 +38,7 @@ pub use date_fallback::{
     DateFallbackDisabled, DateFallbackEntry, DateFallbackLane, DateFallbackMessage,
     DateFallbackPreset, DateFallbackRule, DateFallbackRulePreset, DateFallbackSelectorMap,
 };
-pub use date_substitute::{
-    DateSubstitute, DateSubstituteCandidate, DateSubstituteDate, DateSubstituteEntry,
-    DateSubstituteMessage, DateSubstitutePreset,
-};
-pub use dates::{DateConfig, DateConfigEntry, DateRangeFormat, NoDateForm};
+pub use dates::{DateConfig, DateConfigEntry, DateRangeFormat};
 pub use integral_name_memory::{
     IntegralNameContexts, IntegralNameMemoryConfig, IntegralNameScope, OrgAbbreviationMemoryConfig,
     ResolvedIntegralNameMemoryConfig, ResolvedOrgAbbreviationMemoryConfig, ShortNameDisplay,
@@ -106,14 +101,6 @@ pub struct Config {
     )]
     #[cfg_attr(feature = "schema", schemars(with = "Option<DateFallbackEntry>"))]
     pub date_fallback: Option<DateFallbackConfig>,
-    /// Transitional legacy date-substitution policy retained until all consumers migrate.
-    #[serde(
-        skip_serializing_if = "Option::is_none",
-        deserialize_with = "deserialize_date_substitute",
-        default
-    )]
-    #[cfg_attr(feature = "schema", schemars(with = "Option<DateSubstituteEntry>"))]
-    pub date_substitute: Option<DateSubstitute>,
     /// Processing mode (author-date, numeric, etc.).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub processing: Option<Processing>,
@@ -252,14 +239,6 @@ pub struct CitationOptions {
     )]
     #[cfg_attr(feature = "schema", schemars(with = "Option<DateFallbackEntry>"))]
     pub date_fallback: Option<DateFallbackConfig>,
-    /// Transitional citation-local legacy date-substitution policy.
-    #[serde(
-        skip_serializing_if = "Option::is_none",
-        deserialize_with = "deserialize_date_substitute",
-        default
-    )]
-    #[cfg_attr(feature = "schema", schemars(with = "Option<DateSubstituteEntry>"))]
-    pub date_substitute: Option<DateSubstitute>,
     /// Processing mode (author-date, numeric, etc.).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub processing: Option<Processing>,
@@ -388,14 +367,6 @@ pub struct BibliographyOptions {
     )]
     #[cfg_attr(feature = "schema", schemars(with = "Option<DateFallbackEntry>"))]
     pub date_fallback: Option<DateFallbackConfig>,
-    /// Transitional bibliography-local legacy date-substitution policy.
-    #[serde(
-        skip_serializing_if = "Option::is_none",
-        deserialize_with = "deserialize_date_substitute",
-        default
-    )]
-    #[cfg_attr(feature = "schema", schemars(with = "Option<DateSubstituteEntry>"))]
-    pub date_substitute: Option<DateSubstitute>,
     /// Processing mode (author-date, numeric, etc.).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub processing: Option<Processing>,
@@ -681,17 +652,6 @@ fn merge_date_fallback(
     }
 }
 
-fn merge_date_substitute(base: &mut Option<DateSubstitute>, overlay: Option<&DateSubstitute>) {
-    let Some(overlay) = overlay else {
-        return;
-    };
-    if let Some(base) = base {
-        base.merge(overlay);
-    } else {
-        *base = Some(overlay.clone());
-    }
-}
-
 /// Structured link options.
 #[derive(Debug, Default, PartialEq, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
@@ -845,7 +805,6 @@ impl Config {
         }
 
         merge_date_fallback(&mut self.date_fallback, other.date_fallback.as_ref());
-        merge_date_substitute(&mut self.date_substitute, other.date_substitute.as_ref());
 
         if let Some(other_contributors) = &other.contributors {
             if let Some(this_contributors) = &mut self.contributors {
@@ -878,7 +837,6 @@ impl CitationOptions {
             messages: HashMap::new(),
             substitute: self.substitute.clone(),
             date_fallback: self.date_fallback.clone(),
-            date_substitute: self.date_substitute.clone(),
             processing: self.processing.clone(),
             locale_override: None,
             localize: self.localize.clone(),
@@ -966,7 +924,6 @@ impl CitationOptions {
         }
 
         merge_date_fallback(&mut self.date_fallback, other.date_fallback.as_ref());
-        merge_date_substitute(&mut self.date_substitute, other.date_substitute.as_ref());
 
         if let Some(other_contributors) = &other.contributors {
             if let Some(this_contributors) = &mut self.contributors {
@@ -1014,7 +971,6 @@ impl BibliographyOptions {
             messages: HashMap::new(),
             substitute: self.substitute.clone(),
             date_fallback: self.date_fallback.clone(),
-            date_substitute: self.date_substitute.clone(),
             processing: self.processing.clone(),
             locale_override: None,
             localize: self.localize.clone(),
@@ -1127,7 +1083,6 @@ impl BibliographyOptions {
         }
 
         merge_date_fallback(&mut self.date_fallback, other.date_fallback.as_ref());
-        merge_date_substitute(&mut self.date_substitute, other.date_substitute.as_ref());
 
         if let Some(other_contributors) = &other.contributors {
             if let Some(this_contributors) = &mut self.contributors {
@@ -1184,15 +1139,6 @@ where
     D: serde::Deserializer<'de>,
 {
     let value: Option<DateFallbackEntry> = Option::deserialize(deserializer)?;
-    Ok(value.map(|entry| entry.resolve()))
-}
-
-/// Deserialize and eagerly expand the transitional date-substitution policy.
-fn deserialize_date_substitute<'de, D>(deserializer: D) -> Result<Option<DateSubstitute>, D::Error>
-where
-    D: serde::Deserializer<'de>,
-{
-    let value: Option<DateSubstituteEntry> = Option::deserialize(deserializer)?;
     Ok(value.map(|entry| entry.resolve()))
 }
 
@@ -1269,12 +1215,8 @@ impl<'de> Deserialize<'de> for Config {
                 default
             )]
             date_fallback: Option<DateFallbackConfig>,
-            #[serde(
-                skip_serializing_if = "Option::is_none",
-                deserialize_with = "deserialize_date_substitute",
-                default
-            )]
-            date_substitute: Option<DateSubstitute>,
+            #[serde(default, rename = "date-substitute")]
+            legacy_date_substitute: Option<serde_yaml::Value>,
             #[serde(skip_serializing_if = "Option::is_none")]
             processing: Option<Processing>,
             #[serde(skip_serializing_if = "Option::is_none")]
@@ -1347,11 +1289,16 @@ impl<'de> Deserialize<'de> for Config {
                 "`options.profile` was removed; use `options.contributors`, `citation.options.label-wrap`, `citation.options.group-delimiter`, `bibliography.options.label-mode`, `bibliography.options.label-wrap`, `bibliography.options.date-position`, `bibliography.options.title-terminator`, `bibliography.options.repeated-author-rendering`, or `bibliography.options.volume-pages-delimiter`",
             ));
         }
+        if wire.legacy_date_substitute.is_some() {
+            return Err(serde::de::Error::custom(
+                "`date-substitute` was removed; use `date-fallback`",
+            ));
+        }
+
         Ok(Self {
             messages: wire.messages,
             substitute: wire.substitute,
             date_fallback: wire.date_fallback,
-            date_substitute: wire.date_substitute,
             processing: wire.processing,
             locale_override: wire.locale_override,
             localize: wire.localize,
@@ -1448,6 +1395,13 @@ date-fallback:
             policy.rule_for(true, "book"),
             Some(DateFallbackRule::Candidates(_))
         ));
+    }
+
+    #[test]
+    fn removed_date_substitute_key_reports_the_replacement() {
+        let error = serde_yaml::from_str::<Config>("date-substitute: standard")
+            .expect_err("removed key must fail");
+        assert!(error.to_string().contains("use `date-fallback`"));
     }
 
     #[test]
