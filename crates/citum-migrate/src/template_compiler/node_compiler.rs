@@ -236,12 +236,9 @@ impl TemplateCompiler {
                 None => DateForm::Year,
             },
         };
-        let fallback = matches!(&date_var, DateVariable::Issued).then(Vec::new);
-
         Some(TemplateComponent::Date(TemplateDate {
             date: date_var,
             form,
-            fallback,
             rendering: convert_formatting(&date.formatting),
             ..Default::default()
         }))
@@ -418,7 +415,7 @@ mod tests {
     use crate::ir::{DateBlock, DateOptions, FormattingOptions};
 
     #[test]
-    fn issued_dates_use_an_authoritative_empty_fallback() {
+    fn issued_dates_compile_without_template_fallback_policy() {
         let component = TemplateCompiler.compile_date(&DateBlock {
             variable: Variable::Issued,
             options: DateOptions::default(),
@@ -430,13 +427,10 @@ mod tests {
             matches!(&component, Some(TemplateComponent::Date(_))),
             "issued date compilation must produce a date template component"
         );
-        if let Some(TemplateComponent::Date(date)) = component {
-            assert_eq!(date.fallback, Some(Vec::new()));
-        }
     }
 
     #[test]
-    fn non_issued_dates_keep_their_normal_missing_value_behavior() {
+    fn non_issued_dates_compile_without_template_fallback_policy() {
         let component = TemplateCompiler.compile_date(&DateBlock {
             variable: Variable::Accessed,
             options: DateOptions::default(),
@@ -448,8 +442,5 @@ mod tests {
             matches!(&component, Some(TemplateComponent::Date(_))),
             "accessed date compilation must produce a date template component"
         );
-        if let Some(TemplateComponent::Date(date)) = component {
-            assert_eq!(date.fallback, None);
-        }
     }
 }

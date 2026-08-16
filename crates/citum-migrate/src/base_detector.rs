@@ -326,7 +326,8 @@ pub fn detect_substitute_preset(config: &Substitute) -> Option<SubstitutePreset>
 mod tests {
     use super::*;
     use citum_schema::options::{
-        DelimiterPrecedesLast, ShortenListOptions, SubstituteKey, TitleRendering,
+        DelimiterPrecedesLast, ShortenListOptions, SubstituteCandidates, SubstituteKey,
+        TitleRendering,
     };
     use std::collections::HashMap;
 
@@ -558,7 +559,10 @@ mod tests {
     #[test]
     fn does_not_fold_non_preset_substitute_ordering() {
         let config = Substitute {
-            template: vec![SubstituteKey::Editor, SubstituteKey::Translator],
+            candidates: Some(SubstituteCandidates::Candidates(vec![
+                SubstituteKey::Editor,
+                SubstituteKey::Translator,
+            ])),
             ..Default::default()
         };
 
