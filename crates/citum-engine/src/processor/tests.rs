@@ -1158,9 +1158,24 @@ fn test_harvard_cite_them_right_grouped_citations_render_cleanly() {
     );
 }
 
-/// Tests style-specific no-date overrides without regressing n.d.-based styles.
-#[test]
-fn test_parsed_style_no_date_terms_match_expected_variants() {
+/// Given a style with an explicit `no-date-form` override, when a citation's
+/// issued date is missing, then the rendered "no date" term matches that
+/// override; given a style with no override, then the engine's implicit
+/// short-form term is used; and given a style whose issued-date components
+/// declare an empty `fallback: []` (matching real CSL's no-fallback default
+/// for a bare `<date variable="issued">` macro), then the date position
+/// renders nothing at all rather than an implicit term. See `csl26-7z59`.
+#[rstest]
+#[case::style_level_long_form_override("harvard-cite-them-right", "(Forthcoming, no date)")]
+#[case::engine_default_short_form("springer-basic-author-date", "(Forthcoming n.d.)")]
+#[case::explicit_empty_fallback_suppresses_the_term(
+    "taylor-and-francis-council-of-science-editors-author-date",
+    "(Forthcoming)"
+)]
+fn given_a_no_date_citation_when_style_configures_the_date_slot_then_rendering_matches(
+    #[case] style_name: &str,
+    #[case] expected: &str,
+) {
     use std::{fs, path::Path};
 
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
@@ -1174,29 +1189,21 @@ fn test_parsed_style_no_date_terms_match_expected_variants() {
         .cloned()
         .expect("no-date-single citation should exist");
 
-    let load_style = |name: &str| -> Style {
-        let style_path = [
-            root.join("styles").join(format!("{name}.yaml")),
-            root.join("styles/embedded").join(format!("{name}.yaml")),
-        ]
-        .into_iter()
-        .find(|path| path.exists())
-        .expect("style fixture should exist");
-        let style_yaml = fs::read_to_string(&style_path).expect("style should read");
-        Style::from_yaml_str(&style_yaml)
-            .expect("style should parse")
-            .into_resolved()
-    };
+    let style_path = [
+        root.join("styles").join(format!("{style_name}.yaml")),
+        root.join("styles/embedded")
+            .join(format!("{style_name}.yaml")),
+    ]
+    .into_iter()
+    .find(|path| path.exists())
+    .expect("style fixture should exist");
+    let style_yaml = fs::read_to_string(&style_path).expect("style should read");
+    let style = Style::from_yaml_str(&style_yaml)
+        .expect("style should parse")
+        .into_resolved();
 
-    let harvard = Processor::new(load_style("harvard-cite-them-right"), bibliography.clone());
-    assert_eq!(
-        harvard.process_citation(&no_date).unwrap(),
-        "(Forthcoming, no date)"
-    );
-
-    let springer = Processor::new(load_style("springer-basic-author-date"), bibliography);
-    let springer_rendered = springer.process_citation(&no_date).unwrap();
-    assert_eq!(springer_rendered, "(Forthcoming n.d.)");
+    let processor = Processor::new(style, bibliography);
+    assert_eq!(processor.process_citation(&no_date).unwrap(), expected);
 }
 
 /// Given a style whose `options.dates.no-date-form` is `long`, when a citation's
