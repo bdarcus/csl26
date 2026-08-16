@@ -20,15 +20,12 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus and Citum contributors
 //! See `docs/specs/EXPLICIT_RENDER_RUN_STATE.md`.
 
 use super::Processor;
-use super::disambiguation::Disambiguator;
 use super::rendering::{CompoundRenderData, GroupRenderParams, Renderer, RendererResources};
 use super::run_state::RunState;
 use crate::error::ProcessorError;
 use crate::reference::Citation;
-use crate::values::ProcHints;
 use citum_schema::NoteStartTextCase;
 use citum_schema::locale::{GeneralTerm, Locale, TermForm};
-use citum_schema::options::{Config, GivennameRule};
 use indexmap::IndexMap;
 use std::borrow::Cow;
 use std::collections::HashMap;
@@ -293,73 +290,6 @@ impl Processor {
             .insert(head_id.clone(), all_members);
     }
 
-    /// Build a citation-local hint overlay for CSL `givenname-disambiguation-rule: by-cite`.
-    ///
-    /// Global hints remain authoritative for bibliography rendering, year-suffix ordering,
-    /// numeric state, and note-position state. This overlay only recalculates name expansion
-    /// fields for the references rendered by the current citation.
-    fn citation_scoped_by_cite_hints(
-        &self,
-        items: &[crate::reference::CitationItem],
-        config: &Config,
-    ) -> Option<HashMap<String, ProcHints>> {
-        if !Self::uses_by_cite_givenname(config) {
-            return None;
-        }
-
-        let mut scoped_hints = HashMap::new();
-        let mut scoped_bibliography = IndexMap::new();
-
-        for item in items {
-            let mut hint = self.hints.get(&item.id).cloned().unwrap_or_default();
-            hint.expand_given_names = false;
-            hint.expand_given_names_primary_only = false;
-            hint.min_names_to_show = None;
-            scoped_hints.insert(item.id.clone(), hint);
-
-            if let Some(reference) = self.bibliography.get(&item.id) {
-                scoped_bibliography.insert(item.id.clone(), reference.clone());
-            }
-        }
-
-        if scoped_bibliography.len() < 2 {
-            return Some(scoped_hints);
-        }
-
-        let bibliography_config = self.get_bibliography_config();
-        let mut disambiguator = Disambiguator::new(
-            &scoped_bibliography,
-            config,
-            &bibliography_config,
-            &self.locale,
-        );
-        if let Some(spec) = self.style.citation.as_ref() {
-            disambiguator = disambiguator.with_citation_spec(spec);
-        }
-        let local_hints = disambiguator.calculate_hints();
-
-        for item in items {
-            let Some(local) = local_hints.get(&item.id) else {
-                continue;
-            };
-            let target = scoped_hints.entry(item.id.clone()).or_default();
-            target.expand_given_names = local.expand_given_names;
-            target.expand_given_names_primary_only = local.expand_given_names_primary_only;
-            target.min_names_to_show = local.min_names_to_show;
-        }
-
-        Some(scoped_hints)
-    }
-
-    /// Return true when the active citation config requests CSL by-cite given-name expansion.
-    fn uses_by_cite_givenname(config: &Config) -> bool {
-        let disambiguate = config.effective_processing().config().disambiguate;
-
-        disambiguate
-            .as_ref()
-            .is_some_and(|d| d.add_givenname && matches!(d.givenname_rule, GivennameRule::ByCite))
-    }
-
     /// Build the merged static + dynamic compound lookup maps for the renderer.
     ///
     /// When no dynamic groups exist (the common case) the static maps are returned
@@ -439,8 +369,6 @@ impl Processor {
             }
             None => citation_config,
         };
-        let scoped_hints = self.citation_scoped_by_cite_hints(&sorted_items, &citation_config);
-        let renderer_hints = scoped_hints.as_ref().unwrap_or(&self.hints);
         let punctuation_in_quote = citation_config.punctuation_in_quote;
         let citation_config = Arc::new(citation_config.into_owned());
         let renderer = Renderer::new(
@@ -452,7 +380,7 @@ impl Processor {
                 bibliography_config: Some(Arc::new(self.get_bibliography_options().into_owned())),
                 first_note_by_id: Some(&run.first_note_by_id),
             },
-            renderer_hints,
+            &self.hints,
             &run.citation_numbers,
             CompoundRenderData {
                 set_by_ref: effective_set_by_ref,
@@ -882,6 +810,7 @@ mod tests {
     use super::*;
     use crate::render::plain::PlainText;
     use citum_schema::Style;
+    use citum_schema::options::Config;
     use citum_schema::template::DelimiterPunctuation;
 
     fn apply_period_suffix(punctuation_in_quote: bool) -> String {

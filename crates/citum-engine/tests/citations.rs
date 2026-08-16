@@ -956,17 +956,20 @@ fn disambiguation_primary_name_initials_expand_globally_across_citations() {
     );
 }
 
-fn disambiguation_by_cite_givenname_expansion_is_citation_local() {
+fn disambiguation_by_cite_givenname_expansion_is_document_wide() {
     let processor = processor_for_givenname_rule(GivennameRule::ByCite);
 
     let asthma = process_citation_ids(&processor, &["ASTHMA-A", "ASTHMA-B"]);
+    // DROPSY-A collides with DROPSY-B (csl26-8nrt fixture) in the full bibliography,
+    // even though DROPSY-B is never cited in this test — collision detection is
+    // document-wide, not scoped to what a citation names.
     let dropsy = process_citation_ids(&processor, &["DROPSY-A"]);
 
     assert_eq!(
         asthma,
         "A Asthma, B Bronchitis, et al., (1990); A Asthma, E Bronchitis, et al., (1990)"
     );
-    assert_eq!(dropsy, "Dropsy et al., (2000)");
+    assert_eq!(dropsy, "D Dropsy, E Enteritis, et al., (2000)");
 }
 
 fn disambiguation_all_names_givenname_expansion_remains_global() {
@@ -977,25 +980,28 @@ fn disambiguation_all_names_givenname_expansion_remains_global() {
     assert_eq!(dropsy, "D Dropsy, E Enteritis, et al., (2000)");
 }
 
-fn disambiguation_by_cite_solo_cite_from_collision_group() {
+fn disambiguation_by_cite_solo_cite_still_expands() {
     let processor = processor_for_givenname_rule(GivennameRule::ByCite);
 
-    // ASTHMA-A is in a global collision group with ASTHMA-B, but cited alone here.
-    // The scoped bibliography has len < 2 so no collision exists in this cite's scope.
+    // ASTHMA-A is in a global collision group with ASTHMA-B, cited alone here.
+    // Collision detection is document-wide: a reference cited alone still expands
+    // if it collides with a reference elsewhere in the bibliography (csl26-8nrt).
     let solo = process_citation_ids(&processor, &["ASTHMA-A"]);
 
-    assert_eq!(solo, "Asthma et al., (1990)");
+    assert_eq!(solo, "A Asthma, B Bronchitis, et al., (1990)");
 }
 
-fn disambiguation_by_cite_mixed_groups_in_same_citation() {
+fn disambiguation_by_cite_mixed_groups_all_expand() {
     let processor = processor_for_givenname_rule(GivennameRule::ByCite);
 
-    // ASTHMA-A and ASTHMA-B collide within this citation; DROPSY-A is alone in scope.
+    // ASTHMA-A/B collide with each other; DROPSY-A collides with DROPSY-B, which
+    // isn't cited here at all. All three still expand — collision membership never
+    // depends on what else appears in the same citation.
     let mixed = process_citation_ids(&processor, &["ASTHMA-A", "ASTHMA-B", "DROPSY-A"]);
 
     assert_eq!(
         mixed,
-        "A Asthma, B Bronchitis, et al., (1990); A Asthma, E Bronchitis, et al., (1990); Dropsy et al., (2000)"
+        "A Asthma, B Bronchitis, et al., (1990); A Asthma, E Bronchitis, et al., (1990); D Dropsy, E Enteritis, et al., (2000)"
     );
 }
 
@@ -1119,6 +1125,70 @@ fn disambiguation_et_al_conflicts_fall_back_to_year_suffixes() {
         disambiguate_year_suffix: true,
         disambiguate_names: true,
         disambiguate_givenname: false,
+        et_al_min: Some(3),
+        et_al_use_first: Some(1),
+    });
+}
+
+/// Regression for csl26-8nrt: under the default `by-cite` givenname rule,
+/// et-al-expansion depth (`disambiguate-add-names`, cascade strategy 1) must not
+/// be affected by citation scope. `by-cite` only governs given-name expansion
+/// (strategy 2); it has no authority over strategy 1's `min_names_to_show`.
+///
+/// ITEM-A and ITEM-B mirror the fixture that exposed the bug
+/// (taylor-and-francis-council-of-science-editors-author-date's
+/// `et-al-single-long-list`/`et-al-with-locator` citations, ITEM-29/ITEM-30 in
+/// tests/fixtures/references-expanded.json): four authors each, same year,
+/// diverging only at the third author. Three names are the minimum that tells
+/// them apart, so both the oracle and a correct engine show exactly three
+/// before `et al.` — whether the colliding reference is cited alone or
+/// alongside its collider.
+#[rstest]
+#[case::cited_alone(
+    vec![vec!["ITEM-A"]],
+    "Smith, Lee, Kumar, et al., (2021)"
+)]
+#[case::cited_together(
+    vec![vec!["ITEM-A", "ITEM-B"]],
+    "Smith, Lee, Kumar, et al., (2021); Smith, Lee, Nguyen, et al., (2021)"
+)]
+fn given_a_by_cite_style_with_an_et_al_collision_when_a_colliding_reference_is_cited_then_the_global_expansion_depth_applies(
+    #[case] citation_items: Vec<Vec<&str>>,
+    #[case] expected: &str,
+) {
+    let input = vec![
+        make_book_multi_author(
+            "ITEM-A",
+            vec![
+                ("Smith", "John"),
+                ("Lee", "Alice"),
+                ("Kumar", "Priya"),
+                ("Zhou", "Ming"),
+            ],
+            2021,
+            "Book A",
+        ),
+        make_book_multi_author(
+            "ITEM-B",
+            vec![
+                ("Smith", "John"),
+                ("Lee", "Alice"),
+                ("Nguyen", "Bao"),
+                ("Patel", "Ravi"),
+            ],
+            2021,
+            "Book B",
+        ),
+    ];
+
+    run_test_case_native_with_options(common::TestCaseOptions {
+        input: &input,
+        citation_items: &citation_items,
+        expected,
+        mode: "citation",
+        disambiguate_year_suffix: false,
+        disambiguate_names: true,
+        disambiguate_givenname: true,
         et_al_min: Some(3),
         et_al_use_first: Some(1),
     });
@@ -2518,11 +2588,11 @@ mod disambiguation {
     }
 
     #[test]
-    fn by_cite_givenname_expansion_is_citation_local() {
+    fn by_cite_givenname_expansion_is_document_wide() {
         announce_behavior(
-            "By-cite given-name disambiguation should expand only names needed by the current citation.",
+            "By-cite given-name disambiguation compares against every reference in the document, not just the current citation — identical to all-names until a real per-position expansion ceiling exists (csl26-8nrt, csl26-5753).",
         );
-        super::disambiguation_by_cite_givenname_expansion_is_citation_local();
+        super::disambiguation_by_cite_givenname_expansion_is_document_wide();
     }
 
     #[test]
@@ -2534,19 +2604,19 @@ mod disambiguation {
     }
 
     #[test]
-    fn by_cite_solo_cite_from_collision_group_stays_unexpanded() {
+    fn by_cite_solo_cite_still_expands() {
         announce_behavior(
-            "A solo by-cite citation of a reference that is in a global collision group must not expand — no collision exists in this citation's scope.",
+            "A solo by-cite citation of a reference that collides with another reference elsewhere in the document must still expand — collision detection is document-wide, never scoped to one citation (csl26-8nrt).",
         );
-        super::disambiguation_by_cite_solo_cite_from_collision_group();
+        super::disambiguation_by_cite_solo_cite_still_expands();
     }
 
     #[test]
-    fn by_cite_mixed_groups_expand_colliders_not_solos() {
+    fn by_cite_mixed_groups_all_expand() {
         announce_behavior(
-            "When a by-cite citation mixes two colliding references with a third unrelated reference, only the colliding pair expands; the solo reference stays unexpanded.",
+            "When a by-cite citation mixes two directly-colliding references with a third reference that collides with something cited elsewhere, all three still expand — collision membership never depends on what else is in the same citation (csl26-8nrt).",
         );
-        super::disambiguation_by_cite_mixed_groups_in_same_citation();
+        super::disambiguation_by_cite_mixed_groups_all_expand();
     }
 
     #[test]
