@@ -32,6 +32,7 @@ const {
   normalizeText,
   parseComponents,
   compareComponents,
+  compareCitationComponents,
   analyzeOrdering,
   findRefDataForEntry,
   loadLocale,
@@ -911,6 +912,25 @@ function runOracle(cliOptions = parseArgs()) {
       } else {
         rawResults.citations.failed++;
       }
+
+      // Unlike bibliography entries (which always carry ~11 tracked
+      // fields, so a passing entry can shortcut to "11/11 matched"),
+      // citation text rarely carries more than contributors + year --
+      // hardcoding a field count for a passing citation would badly
+      // overweight it relative to what's actually present. Always run
+      // real component detection instead, matching or not; a true match
+      // naturally yields 0 differences without needing a shortcut.
+      const itemComparison = compareCitationComponents(
+        comparison.expected,
+        comparison.actual,
+        cite.items,
+        testItems
+      );
+      const componentsSegmented = itemComparison.segmented;
+      const components = itemComparison.segmented
+        ? { matches: itemComparison.matches, differences: itemComparison.differences }
+        : {};
+
       rawResults.citations.entries.push({
         id,
         oracle: comparison.expected,
@@ -923,6 +943,8 @@ function runOracle(cliOptions = parseArgs()) {
         exactAdjudication: comparison.exactAdjudication,
         match,
         caseMismatch: comparison.caseMismatch,
+        components,
+        componentsSegmented,
       });
 
       const citationTypes = collectCitationTypes(cite, testItems);

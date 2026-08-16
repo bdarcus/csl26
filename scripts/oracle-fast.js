@@ -30,6 +30,8 @@ const {
   compareText,
   normalizeText,
   parseComponents,
+  compareComponents,
+  compareCitationComponents,
   analyzeOrdering,
   findRefDataForEntry,
 } = require('./oracle-utils');
@@ -284,6 +286,18 @@ function run() {
       caseSensitive: opts.caseSensitive,
     });
     if (match) rawResults.citations.passed++; else rawResults.citations.failed++;
+
+    // Always run real component detection (matching or not) -- citation
+    // text rarely carries more than contributors + year, so a passing-
+    // entry shortcut (as the bibliography path below takes) would badly
+    // overweight it. See oracle.js's citation loop for the same approach.
+    const itemComparison = compareCitationComponents(
+      comparison.expected,
+      comparison.actual,
+      cite.items || [],
+      testItems
+    );
+
     rawResults.citations.entries.push({
       id: cite.id,
       oracle: comparison.expected,
@@ -296,6 +310,10 @@ function run() {
       exactAdjudication: comparison.exactAdjudication,
       match,
       caseMismatch: comparison.caseMismatch,
+      components: itemComparison.segmented
+        ? { matches: itemComparison.matches, differences: itemComparison.differences }
+        : {},
+      componentsSegmented: itemComparison.segmented,
     });
 
     for (const item of cite.items || []) {
@@ -371,23 +389,7 @@ function run() {
         if (refData) {
           const oComp = parseComponents(pair.oracle, refData);
           const cComp = parseComponents(pair.citum, refData);
-          const differences = [];
-          const matches = [];
-          const keys = ['contributors', 'year', 'title', 'containerTitle', 'volume',
-            'issue', 'pages', 'publisher', 'doi', 'edition', 'editors',
-            'translators', 'interviewers', 'recipients'];
-          for (const key of keys) {
-            const ov = oComp[key];
-            const cv = cComp[key];
-            if (!ov.found && !cv.found) continue;
-            if (ov.found && cv.found) {
-              matches.push({ component: key, status: 'match' });
-            } else if (ov.found && !cv.found) {
-              differences.push({ component: key, issue: 'missing', expected: ov.value, detail: 'Missing in Citum output' });
-            } else {
-              differences.push({ component: key, issue: 'extra', found: cv.value, detail: 'Extra in Citum output' });
-            }
-          }
+          const { differences, matches } = compareComponents(oComp, cComp, refData);
           entryResult.components = { differences, matches };
 
           const oOrder = analyzeOrdering(pair.oracle, refData);
