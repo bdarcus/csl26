@@ -27,7 +27,7 @@ pub mod titles;
 )]
 mod tests;
 
-use citum_schema::options::{Config, Substitute, SubstituteConfig};
+use citum_schema::options::{Config, SubstituteConfig};
 use csl_legacy::model::Style;
 
 /// The full set of configuration and flags extracted from a CSL 1.0 style.
@@ -42,6 +42,8 @@ pub struct MigrationOptions {
     pub bibliography_contributor_overrides: Option<citum_schema::options::ContributorConfig>,
     /// Whether the citation has a scoped shorten option.
     pub citation_has_scope_shorten: bool,
+    /// Whether an authored date fallback conditional could not be represented.
+    pub unsupported_date_fallback: bool,
 }
 
 /// Extracts global style options from a CSL 1.0 structure into Citum Config.
@@ -52,6 +54,8 @@ impl OptionsExtractor {
     pub fn extract_migration_options(style: &Style) -> MigrationOptions {
         let mut options = Self::extract(style);
         Self::apply_preset_extractions(&mut options);
+        let date_fallback = self::dates::extract_date_fallback(style);
+        options.date_fallback = date_fallback.policy;
 
         let bibliography_options =
             self::bibliography::extract_bibliography_config(style).map(|config| {
@@ -84,6 +88,7 @@ impl OptionsExtractor {
             citation_contributor_overrides,
             bibliography_contributor_overrides,
             citation_has_scope_shorten,
+            unsupported_date_fallback: date_fallback.unsupported,
         }
     }
 
@@ -97,21 +102,14 @@ impl OptionsExtractor {
             contributors: self::contributors::extract_contributor_config(style),
 
             // 3. Extract substitute patterns
-            substitute: self::contributors::extract_substitute_pattern(style).map(|sub| {
-                // When the CSL substitute chain uses macro references that the
-                // extractor cannot follow (e.g. APA's complex macro-based
-                // fallback), the template comes back empty. Fall back to the
-                // standard default (editor → title → translator) rather than
-                // emitting an inert empty template.
-                if sub.template.is_empty() && sub.overrides.is_empty() {
-                    SubstituteConfig::Explicit(Substitute::default())
-                } else {
-                    SubstituteConfig::Explicit(sub)
-                }
-            }),
+            substitute: self::contributors::extract_substitute_pattern(style)
+                .map(SubstituteConfig::Explicit),
 
             // 4. Extract date configuration
             dates: self::dates::extract_date_config(style),
+
+            // Explicit no-date and alternative-date branches.
+            date_fallback: self::dates::extract_date_fallback(style).policy,
 
             // 5. Extract title configuration
             titles: self::titles::extract_title_config(style),

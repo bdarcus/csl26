@@ -116,7 +116,6 @@ fn remove_redundant_no_date_terms_in_scope(items: &mut Vec<TemplateComponent>) {
     }
 
     if has_issued && has_no_date {
-        restore_implicit_no_date_fallback(items);
         remove_no_date_terms_recursively(items);
     }
 }
@@ -143,20 +142,6 @@ fn component_contains_no_date_term(component: &TemplateComponent) -> bool {
             TemplateComponent::Group(list)
                 if list.group.iter().any(component_contains_no_date_term)
         )
-}
-
-fn restore_implicit_no_date_fallback(items: &mut [TemplateComponent]) {
-    for item in items {
-        match item {
-            TemplateComponent::Date(date) if date.date == DateVariable::Issued => {
-                date.fallback = None;
-            }
-            TemplateComponent::Group(list) => {
-                restore_implicit_no_date_fallback(&mut list.group);
-            }
-            _ => {}
-        }
-    }
 }
 
 fn remove_no_date_terms_recursively(items: &mut Vec<TemplateComponent>) {

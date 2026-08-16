@@ -81,12 +81,42 @@ fn test_extract_substitute_pattern() {
     let config = OptionsExtractor::extract(&style);
 
     if let Some(SubstituteConfig::Explicit(sub)) = config.substitute {
-        assert_eq!(sub.template.len(), 2);
-        assert_eq!(sub.template[0], SubstituteKey::Editor);
-        assert_eq!(sub.template[1], SubstituteKey::Title);
+        assert_eq!(sub.candidates().len(), 2);
+        assert_eq!(sub.candidates()[0], SubstituteKey::Editor);
+        assert_eq!(sub.candidates()[1], SubstituteKey::Title);
     } else {
         panic!("Substitute pattern not extracted");
     }
+}
+
+#[test]
+fn test_extract_anonymous_terminal_macro_as_otherwise_message() {
+    let xml = r#"<style>
+        <macro name="anonymous"><text term="anonymous" form="short"/></macro>
+        <citation><layout><text variable="title"/></layout></citation>
+        <bibliography><layout>
+            <names variable="author">
+                <name/>
+                <substitute>
+                    <names variable="editor"/>
+                    <text macro="anonymous"/>
+                </substitute>
+            </names>
+        </layout></bibliography>
+    </style>"#;
+    let style = parse_csl(xml).unwrap();
+    let config = OptionsExtractor::extract(&style);
+    let substitute = config
+        .substitute
+        .expect("substitute should be extracted")
+        .resolve();
+
+    assert_eq!(substitute.candidates(), &[SubstituteKey::Editor]);
+    let otherwise = substitute
+        .otherwise_message()
+        .expect("anonymous terminal macro should become otherwise");
+    assert_eq!(otherwise.message, "term.anonymous");
+    assert_eq!(otherwise.form, Some(citum_schema::locale::TermForm::Short));
 }
 
 #[test]

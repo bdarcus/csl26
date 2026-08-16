@@ -159,13 +159,13 @@ fn test_extract_type_conditional_substitute() {
     let sub = config.substitute.unwrap().resolve();
 
     // Default template should have editor (extracted from after choose)
-    assert!(sub.template.contains(&SubstituteKey::Editor));
-    assert!(!sub.template.contains(&SubstituteKey::Title)); // Title is conditional
+    assert!(sub.candidates().contains(&SubstituteKey::Editor));
+    assert!(!sub.candidates().contains(&SubstituteKey::Title)); // Title is conditional
 
     // Overrides should have classic -> title
     assert!(sub.overrides.contains_key("classic"));
     assert_eq!(
-        sub.overrides.get("classic").unwrap(),
-        &vec![SubstituteKey::Title]
+        sub.overrides.get("classic").unwrap().as_slice(),
+        &[SubstituteKey::Title]
     );
 }

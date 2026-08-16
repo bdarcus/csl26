@@ -5,8 +5,10 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus and Citum contributors
 
 use citum_schema::options::{
     AndOptions, ContributorConfig, DelimiterPrecedesLast, DemoteNonDroppingParticle, DisplayAsSort,
-    NameForm, ShortenListOptions, Substitute, SubstituteKey,
+    NameForm, ShortenListOptions, Substitute, SubstituteCandidates, SubstituteKey,
+    SubstituteMessage, SubstituteOtherwise,
 };
+use citum_schema::template::Rendering;
 use csl_legacy::model::{CslNode, Names, Style, Substitute as LegacySubstitute};
 use std::collections::{HashMap, HashSet};
 
@@ -426,7 +428,7 @@ fn find_substitute_in_nodes(
                                 None
                             }
                         });
-                        return Some(convert_substitute(sub, label_form));
+                        return Some(convert_substitute(sub, label_form, style));
                     }
                 }
             }
@@ -469,7 +471,11 @@ fn find_substitute_in_nodes(
     None
 }
 
-fn convert_substitute(sub: &LegacySubstitute, label_form: Option<&str>) -> Substitute {
+fn convert_substitute(
+    sub: &LegacySubstitute,
+    label_form: Option<&str>,
+    style: &Style,
+) -> Substitute {
     let mut output_sub = Substitute::default();
     if let Some(form) = label_form {
         output_sub.contributor_role_form = Some(form.to_string());
@@ -478,19 +484,33 @@ fn convert_substitute(sub: &LegacySubstitute, label_form: Option<&str>) -> Subst
     let mut template = Vec::new();
     let mut overrides = HashMap::new();
 
-    for node in &sub.children {
+    for (index, node) in sub.children.iter().enumerate() {
+        if index + 1 == sub.children.len()
+            && let Some(message) = anonymous_message(node, style, &mut HashSet::new())
+        {
+            output_sub.otherwise = Some(SubstituteOtherwise::Message(message));
+            continue;
+        }
         match node {
             CslNode::Choose(c) => {
                 if let Some(type_name) = &c.if_branch.type_ {
-                    overrides.insert(
-                        type_name.clone(),
-                        extract_substitute_keys(&c.if_branch.children),
-                    );
+                    let candidates = extract_substitute_keys(&c.if_branch.children);
+                    if !candidates.is_empty() {
+                        overrides.insert(
+                            type_name.clone(),
+                            SubstituteCandidates::Candidates(candidates),
+                        );
+                    }
                 }
                 for branch in &c.else_if_branches {
                     if let Some(type_name) = &branch.type_ {
-                        overrides
-                            .insert(type_name.clone(), extract_substitute_keys(&branch.children));
+                        let candidates = extract_substitute_keys(&branch.children);
+                        if !candidates.is_empty() {
+                            overrides.insert(
+                                type_name.clone(),
+                                SubstituteCandidates::Candidates(candidates),
+                            );
+                        }
                     }
                 }
             }
@@ -500,9 +520,91 @@ fn convert_substitute(sub: &LegacySubstitute, label_form: Option<&str>) -> Subst
         }
     }
 
-    output_sub.template = template;
+    if !template.is_empty() {
+        output_sub.candidates = Some(SubstituteCandidates::Candidates(template));
+    }
     output_sub.overrides = overrides;
     output_sub
+}
+
+fn anonymous_message(
+    node: &CslNode,
+    style: &Style,
+    visiting: &mut HashSet<String>,
+) -> Option<SubstituteMessage> {
+    match node {
+        CslNode::Text(text) if text.term.as_deref() == Some("anonymous") => {
+            Some(SubstituteMessage {
+                message: "term.anonymous".to_string(),
+                form: match text.form.as_deref() {
+                    Some("short") => Some(citum_schema::locale::TermForm::Short),
+                    Some("long") | None => Some(citum_schema::locale::TermForm::Long),
+                    _ => None,
+                },
+                rendering: Rendering {
+                    prefix: text.prefix.clone().map(Into::into),
+                    suffix: text.suffix.clone().map(Into::into),
+                    quote: text.quotes,
+                    strip_periods: text.strip_periods,
+                    text_case: match text.text_case.as_deref() {
+                        Some("capitalize-first") => {
+                            Some(citum_schema::options::titles::TextCase::CapitalizeFirst)
+                        }
+                        Some("lowercase") => {
+                            Some(citum_schema::options::titles::TextCase::Lowercase)
+                        }
+                        Some("uppercase") => {
+                            Some(citum_schema::options::titles::TextCase::Uppercase)
+                        }
+                        _ => None,
+                    },
+                    emph: text
+                        .formatting
+                        .font_style
+                        .as_deref()
+                        .is_some_and(|value| value == "italic" || value == "oblique")
+                        .then_some(true),
+                    small_caps: (text.formatting.font_variant.as_deref() == Some("small-caps"))
+                        .then_some(true),
+                    strong: (text.formatting.font_weight.as_deref() == Some("bold"))
+                        .then_some(true),
+                    ..Rendering::default()
+                },
+            })
+        }
+        CslNode::Text(text) => {
+            let macro_name = text.macro_name.as_ref()?;
+            if !visiting.insert(macro_name.clone()) {
+                return None;
+            }
+            let result = style
+                .macros
+                .iter()
+                .find(|style_macro| &style_macro.name == macro_name)
+                .and_then(|style_macro| {
+                    let [child] = style_macro.children.as_slice() else {
+                        return None;
+                    };
+                    anonymous_message(child, style, visiting)
+                });
+            visiting.remove(macro_name);
+            result
+        }
+        CslNode::Group(group) => {
+            let [child] = group.children.as_slice() else {
+                return None;
+            };
+            let mut message = anonymous_message(child, style, visiting)?;
+            if group.prefix.is_some() {
+                message.rendering.prefix = group.prefix.clone().map(Into::into);
+            }
+            if group.suffix.is_some() {
+                message.rendering.suffix = group.suffix.clone().map(Into::into);
+            }
+            Some(message)
+        }
+        _ => None,
+    }
 }
 
 fn extract_substitute_keys(nodes: &[CslNode]) -> Vec<SubstituteKey> {

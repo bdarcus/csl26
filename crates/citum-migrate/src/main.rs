@@ -87,6 +87,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         citation_contributor_overrides,
         bibliography_contributor_overrides,
         citation_has_scope_shorten,
+        unsupported_date_fallback,
     } = OptionsExtractor::extract_migration_options(&legacy_style);
 
     let (style_name, mut resolved) = resolve_style_name_and_templates(path, &cli);
@@ -106,7 +107,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         &tracker,
     ));
 
-    warn_for_unsupported_layouts(xml_fallback.as_ref(), &legacy_style.info.id);
+    warn_for_unsupported_layouts(
+        xml_fallback.as_ref(),
+        unsupported_date_fallback,
+        &legacy_style.info.id,
+    );
 
     log_template_sources(&resolved);
 
@@ -137,6 +142,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         cli.emit_evidence.is_some(),
         &workspace_root,
         xml_fallback.as_ref(),
+        unsupported_date_fallback,
         &legacy_style.info.id,
     )?;
 
@@ -173,6 +179,7 @@ fn migration_diagnostics(
     evidence_requested: bool,
     workspace_root: &Path,
     xml_fallback: Option<&compilation::XmlCompilationOutput>,
+    unsupported_date_fallback: bool,
     style_id: &str,
 ) -> Result<Vec<citum_migrate::evidence::MigrationDiagnostic>, Box<dyn std::error::Error>> {
     if !evidence_requested {
@@ -190,11 +197,21 @@ fn migration_diagnostics(
             ),
         });
     }
+    if unsupported_date_fallback {
+        diagnostics.push(citum_migrate::evidence::MigrationDiagnostic {
+            code: "unsupported-date-fallback-shape".to_string(),
+            item_id: None,
+            message: format!(
+                "CSL date fallback conditionals in {style_id} cannot be represented by `options.date-fallback` without changing behavior"
+            ),
+        });
+    }
     Ok(diagnostics)
 }
 
 fn warn_for_unsupported_layouts(
     xml_fallback: Option<&compilation::XmlCompilationOutput>,
+    unsupported_date_fallback: bool,
     style_id: &str,
 ) {
     if xml_fallback.is_some_and(|fallback| fallback.unsupported_mixed_conditions) {
@@ -205,6 +222,11 @@ fn warn_for_unsupported_layouts(
     if xml_fallback.is_some_and(|fallback| fallback.unsupported_localized_layouts) {
         tracing::warn!(
             "CSL-M localized layouts in {style_id} contain locale-specific wrapper, position, or type-variant shapes that Citum cannot preserve exactly"
+        );
+    }
+    if unsupported_date_fallback {
+        tracing::warn!(
+            "CSL date fallback conditionals in {style_id} cannot be represented by options.date-fallback without changing behavior"
         );
     }
 }
