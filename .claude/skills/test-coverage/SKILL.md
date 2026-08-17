@@ -235,10 +235,28 @@ If a bug report involves one of these types, add a fixture item first.
 
 ## Adding fixture data
 
-When the audit reveals a missing shape, add to
-`tests/fixtures/references-expanded.json` (for core oracle coverage) or to
-the appropriate domain fixture. Use sequential `ITEM-N` IDs in the expanded
-fixture.
+**First decide whether this belongs in the shared default at all.** Every
+entry in `tests/fixtures/references-expanded.json` renders into all ~2,845
+`tests/snapshots/csl/*.json` oracle snapshots (`oracle-snapshot.js` loads the
+full entry set for every legacy style), so any edit to that file is a
+corpus-wide diff — hundreds of thousands of lines — no matter how small the
+change looks. See
+[docs/architecture/audits/2026-08-16_FIXTURE_CHANGE_FAN_OUT.md](../../../docs/architecture/audits/2026-08-16_FIXTURE_CHANGE_FAN_OUT.md).
+
+- **Narrow bug regression** (one style, or a handful): do not touch the
+  shared default. Use a native Rust test instead (no CSL-JSON round-trip —
+  see "Test Style" above), or, if oracle coverage is genuinely needed, a
+  fixture scoped to a `fixture_family` (`scripts/lib/style-verification.js`)
+  consumed only by the smaller `report-core.js` measurement set. Either way:
+  zero snapshot churn.
+- **Genuine corpus-wide coverage gap** (a reference-type shape or citation
+  scenario the whole legacy corpus should exercise): add to
+  `references-expanded.json` or the appropriate domain fixture as below. This
+  is a deliberate, reviewed, corpus-wide change — give it its own commit and
+  follow with `just fixture-refresh` (`just fixture-refresh yes` if it also
+  moves a ratcheted baseline floor).
+
+When it is the latter, use sequential `ITEM-N` IDs in the expanded fixture.
 
 After adding items:
 1. Update `tests/fixtures/coverage-manifest.json` under `reference_types`
