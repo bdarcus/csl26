@@ -361,14 +361,38 @@ third author) rendered the correct three-name expansion only when both
 colliding references were cited together, and silently collapsed to one name
 whenever either was cited alone.
 
-**Current state:** the citation-scoped overlay has been removed. `by-cite`
-behaves identically to `all-names` — both use the single global hint
-computation, and neither implements a real per-position given-name mask.
-Distinguishing them (a true `givensMax`-style escalation cap, so a solo cite
-does not gratuitously add given names beyond what its own visible names need)
-requires storing an explicit per-position expansion mask in `ProcHints`, which
-the current hint model does not have. That is real, tracked, un-implemented
-scope — not a design decision — filed as `csl26-5753`.
+**Current state (csl26-5753, 2026-08-17):** `by-cite` now implements a true
+per-position given-name expansion ceiling, distinguishable from `all-names`.
+The collision group is still computed once, globally (§2.1's invariant is
+untouched — `by-cite`'s per-position search still runs against the full
+document-wide group), but instead of the uniform "escalate the whole
+reference to Initials or Full" flag every other rule uses, `by-cite` tracks
+escalation per author position (`ProcHints.expand_given_names_full_positions`,
+`Option<Vec<bool>>`, index-aligned to the rendered name list). The uniform
+`expand_given_names` trigger still governs *whether* a position's given name
+is revealed at all — this is Citum's own simplification, not a citeproc-js
+behavior: real citeproc-js keeps that reveal itself per position too (a
+`request_base` floor in `evalname`), so a shared, non-disambiguating
+position on a short-form citation baseline can stay at bare family form
+while only the colliding position promotes to a given name at all
+(`disambiguate_ByCiteBaseNameCountOnFailureIfYearSuffixAvailable`). Citum's
+`Disambiguator` has no visibility into the citation template's
+`ContributorForm` to replicate that promotion-level distinction, so it
+promotes every currently-shown position uniformly and only varies *depth*
+per position (tracked as csl26-7jej). Once a position is revealed, it
+escalates to the full given name only if the default depth (initials, when
+reachable; otherwise the full given name directly) still collides with
+another member of the group. A position identical across every colliding
+reference (e.g. a shared first author) never escalates past its default
+depth, since doing so could never help distinguish anything — matching the
+official CSL test suite's `disambiguate_ByCiteMinimalGivennameExpandMinimalNames`
+and `disambiguate_ByCiteGivennameExpandCrossNestedNames` fixtures, including
+the latter's varying per-reference shown name count within one collision
+group. Growing the shown name count itself remains strategy 1
+(`disambiguate-add-names`), which `by-cite` has no authority over — the
+search only grows `n` when that strategy is separately enabled. Implemented
+in `Disambiguator::select_by_cite_resolution` /
+`resolve_by_cite_positions` (`processor/disambiguation.rs`).
 
 **Rejected alternative:** keep the citation-scoped overlay but carve out
 `min_names_to_show` from the clear whenever the global hint's
@@ -572,11 +596,14 @@ added to the citation context.
   compares against every reference in the document; no `givenname-disambiguation-rule`
   value narrows the comparison set (§2.1.1, csl26-8nrt — corrects the 2026-06-02
   citation-scoped `by-cite` implementation)
-- [ ] `by-cite` implements a true per-position given-name expansion ceiling
-  (distinguishable from `all-names`); tracked as `csl26-5753`, §2.1.1
+- [x] `by-cite` implements a true per-position given-name expansion ceiling
+  (distinguishable from `all-names`); csl26-5753, §2.1.1
 - [x] Upstream CSL disambiguation fixtures that distinguish `by-cite` and
-  `all-names` are tracked in the disambiguation fixture generator (fixtures now
-  exercise the document-wide behavior both rules share pending the follow-up above)
+  `all-names` are mirrored natively (`disambiguation_givenname_escalation_is_minimal_per_position`,
+  `disambiguation_givenname_escalation_splits_positions_independently_per_collision`
+  in `crates/citum-engine/tests/citations.rs`), matching
+  `disambiguate_ByCiteMinimalGivennameExpandMinimalNames` and
+  `disambiguate_ByCiteGivennameExpandCrossNestedNames`
 - [x] Year-suffix order follows the article-stripped/locale-collated bibliography
   sort, not a raw lowercased title (csl26-2zy6, audit row 138)
 - [x] APA-7th carries `add-givenname` + `primary-name-with-initials` (global) so
@@ -608,6 +635,29 @@ added to the citation context.
 
 ## Changelog
 
+- 2026-08-17: Implemented csl26-5753: `by-cite` now escalates given names per
+  author position instead of uniformly across the whole reference. `ProcHints`
+  gained `expand_given_names_full_positions: Option<Vec<bool>>`, index-aligned
+  to the rendered name list; every other `givenname_rule` leaves it `None` and
+  keeps the existing uniform `expand_given_names_full` path byte-for-byte.
+  `Disambiguator::select_by_cite_resolution` tries strategy 1 (name-count
+  growth) first, exactly as every other rule, then hands any still-colliding
+  family bucket to `resolve_by_cite_positions`, which escalates positions left
+  to right — only committing an escalation when it actually reduces the
+  bucket's remaining collisions — and grows the shown name count further only
+  when `disambiguate-add-names` is enabled: growing `n` is strategy 1's
+  property, which `by-cite` has no authority over (elsevier-harvard,
+  elsevier-vancouver-author-date, and gb-t-7714-2025-author-date don't enable
+  strategy 1, so an unconditional grow would render full given-name
+  expansions where the oracle prefers plain year-suffix). `report-core.js
+  --all-features` corpus sweep across the embedded portfolio: zero
+  regressions, one genuine gain (`gb-t-7714-2025-author-date` bibliography,
+  +2 exact-parity entries, given names correctly capped at initials instead
+  of escalating to full). Native regressions mirror the official CSL test
+  suite's `disambiguate_ByCiteMinimalGivennameExpandMinimalNames` and
+  `disambiguate_ByCiteGivennameExpandCrossNestedNames` fixtures. The
+  promotion-vs-depth simplification noted in the paragraph above is tracked
+  separately as csl26-7jej.
 - 2026-08-16: Corrected §2.1.1: `by-cite` is document-wide, not citation-local
   (csl26-8nrt). The 2026-06-02 `by-cite` implementation (csl26-lvib) approximated
   a per-cite given-name expansion ceiling by narrowing the comparison set to the
