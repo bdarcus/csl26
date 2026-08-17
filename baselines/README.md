@@ -146,3 +146,16 @@ node scripts/check-core-quality.js \
 
 Refresh committed baselines only in dedicated baseline PRs with a short
 before/after summary and justification for the reset.
+
+## Fixture-Change Fan-Out
+
+Editing `tests/fixtures/references-expanded.json` or
+`tests/fixtures/citations-expanded.json` (the corpus-wide defaults) fans out
+into oracle snapshots, registered coverage-audit manifests, and — only when
+the change is an intended, reviewed baseline reset — the two ratcheted floors
+above. `just fixture-refresh` is the single entrypoint for that fan-out (run
+`just fixture-refresh yes` to also touch the ratcheted floors); see
+[docs/architecture/audits/2026-08-16_FIXTURE_CHANGE_FAN_OUT.md](../docs/architecture/audits/2026-08-16_FIXTURE_CHANGE_FAN_OUT.md)
+for the full map and why a scoped fixture family
+(`scripts/lib/style-verification.js`'s `FIXTURE_SET_REFS`) is usually the
+better target for a new regression fixture than the shared default.
