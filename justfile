@@ -74,9 +74,15 @@ check-core-quality:
 check-style-coverage-audits:
     node scripts/check-style-coverage-audits.js
 
-# Refresh Top-10 oracle aggregate baselines
+# Refresh the Top-10 oracle aggregate baseline: writes
+# scripts/report-data/oracle-top10-baseline.json (previously this recipe never passed --save,
+# so it measured but never refreshed anything). Reuses the style list already pinned in the
+# baseline's own metadata.styles rather than --top 10, so the refreshed file stays in sync with
+# the exact style set check-oracle-regression.js verifies against.
 oracle-refresh:
-    node scripts/oracle-batch-aggregate.js styles-legacy/ --top 10
+    node scripts/oracle-batch-aggregate.js styles-legacy/ \
+        --styles "$(node -e "process.stdout.write(require('./scripts/report-data/oracle-top10-baseline.json').metadata.styles.join(','))")" \
+        --save scripts/report-data/oracle-top10-baseline.json
 
 # Discover recurring per-concern config shapes across the legacy CSL corpus that no named
 # preset covers (contributors, dates, titles, locators) — a worklist for citum-schema-style presets.

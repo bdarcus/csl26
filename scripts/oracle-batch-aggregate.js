@@ -485,12 +485,23 @@ async function main() {
     }
   }
 
-  // Save to file if requested
+  // Save to file if requested. Refuse on a partial run: a style that failed to
+  // render is absent from styleBreakdown, so saving anyway would silently drop
+  // it from a committed baseline (and, on a floor file, erase its ratchet).
+  let saveRefused = false;
   if (savePath) {
-    const outputData = comparison ? { current: summary, comparison } : summary;
-    fs.writeFileSync(savePath, JSON.stringify(outputData, null, 2));
-    if (!jsonOutput) {
-      console.log(`Results saved to: ${savePath}`);
+    if (summary.errors.length > 0) {
+      saveRefused = true;
+      console.error(
+        `Refusing to write ${savePath}: ${summary.errors.length} style(s) failed to render ` +
+        `(${summary.errors.map((e) => e.style).join(', ')}). Fix the failures or drop --save.`
+      );
+    } else {
+      const outputData = comparison ? { current: summary, comparison } : summary;
+      fs.writeFileSync(savePath, JSON.stringify(outputData, null, 2));
+      if (!jsonOutput) {
+        console.log(`Results saved to: ${savePath}`);
+      }
     }
   }
 
@@ -610,6 +621,10 @@ async function main() {
     }
     
     console.log();
+  }
+
+  if (saveRefused) {
+    process.exit(1);
   }
 }
 
