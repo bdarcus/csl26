@@ -114,10 +114,10 @@ citation:
 All rules detect collisions the same way: against every reference in the document,
 never a subset. What differs is *which name positions* are eligible to expand:
 
-- **by-cite**: currently identical to `all-names` in Citum (see note below) —
-  in real CSL it additionally caps how far one cite is forced to escalate, so a
-  cite already showing enough names to disambiguate doesn't gratuitously add
-  given names for a name hidden behind `et al.`
+- **by-cite**: caps how far a name is forced to escalate — a name position
+  identical across every colliding reference (e.g. a shared first author)
+  stays at its default depth instead of gratuitously expanding to the full
+  given name
 - **all-names**: apply to all uses of the name (ensures consistency
   across document)
 - **primary-name**: apply given names only to the first author position
@@ -131,13 +131,10 @@ Smith, John (1980)
 Smith, Jane (1985)
 ```
 
-**Current limitation:** Citum's hint model does not yet support a per-cite
-escalation cap, so `by-cite` and `all-names` produce identical output — both
-expand every colliding reference's name(s) document-wide. See
-[the spec](../specs/DISAMBIGUATION.md), §2.1.1, for the citeproc-js behavior a
-future `by-cite` implementation should match, and `csl26-5753` for the tracked
-gap. A reference is never left unexpanded merely because it was cited alone —
-that was a defect (csl26-8nrt), not `by-cite` semantics.
+See [the spec](../specs/DISAMBIGUATION.md), §2.1.1, for the per-position
+escalation model (csl26-5753) and how it interacts with the document-wide
+collision pool. A reference is never left unexpanded merely because it was
+cited alone — that was a defect (csl26-8nrt), not `by-cite` semantics.
 
 ## Group-Aware Disambiguation
 
