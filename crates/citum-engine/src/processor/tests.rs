@@ -1201,6 +1201,59 @@ fn given_a_no_date_citation_when_style_configures_the_date_slot_then_rendering_m
     assert_eq!(processor.process_citation(&no_date).unwrap(), expected);
 }
 
+/// Real CSL scopes `name-as-sort-order="all"` / `initialize-with=""` to the
+/// bibliography-side `author` macro of T&F CSE; the citation-side
+/// `author-short` macro is `<name form="short" initialize-with="." and="text"/>`
+/// with no `name-as-sort-order`. Migration hoisted the bibliography-only
+/// attributes to style-global `options.contributors`, so given-name
+/// disambiguation escalation rendered "Johnson A" instead of "A. Johnson"
+/// (csl26-jdp6). A citation-scoped `contributors` override restores the
+/// citation-only form. `et-al-single-long-list` never escalates given names,
+/// so it locks the non-inverted, non-escalated short form as a control.
+#[rstest]
+#[case::givenname_escalation_uses_citation_scoped_order_and_punctuation(
+    "disambiguate-givenname",
+    "(A. Johnson 2020; B. Johnson 2020)"
+)]
+#[case::non_escalated_et_al_short_form_is_unaffected(
+    "et-al-single-long-list",
+    "(Smith, Lee, Kumar, et al. 2021)"
+)]
+fn given_a_tf_cse_citation_when_rendered_then_matches_citation_scoped_contributor_config(
+    #[case] citation_id: &str,
+    #[case] expected: &str,
+) {
+    use std::{fs, path::Path};
+
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let bib_path = root.join("tests/fixtures/references-expanded.json");
+    let cite_path = root.join("tests/fixtures/citations-expanded.json");
+    let bibliography = citum_io::load_bibliography(&bib_path).expect("bib should load");
+    let citations = citum_io::load_citations(&cite_path).expect("citations should load");
+    let citation = citations
+        .iter()
+        .find(|c| c.id.as_deref() == Some(citation_id))
+        .cloned()
+        .unwrap_or_else(|| panic!("{citation_id} citation should exist"));
+
+    let style_name = "taylor-and-francis-council-of-science-editors-author-date";
+    let style_path = [
+        root.join("styles").join(format!("{style_name}.yaml")),
+        root.join("styles/embedded")
+            .join(format!("{style_name}.yaml")),
+    ]
+    .into_iter()
+    .find(|path| path.exists())
+    .expect("style fixture should exist");
+    let style_yaml = fs::read_to_string(&style_path).expect("style should read");
+    let style = Style::from_yaml_str(&style_yaml)
+        .expect("style should parse")
+        .into_resolved();
+
+    let processor = Processor::new(style, bibliography);
+    assert_eq!(processor.process_citation(&citation).unwrap(), expected);
+}
+
 /// Explicit date-fallback messages select their own term form.
 #[test]
 fn given_date_fallback_message_when_issued_date_missing_then_term_form_matches_rule() {

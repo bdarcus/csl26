@@ -66,6 +66,14 @@ citation:
     substitute:
       title-quote: by-category
     contributors:
+      # Real CSL scopes name-as-sort-order="all" / initialize-with="" to the
+      # bibliography-side `author` macro; the citation-side `author-short`
+      # macro is <name form="short" initialize-with="." and="text"/> with no
+      # name-as-sort-order. Migration hoisted the bibliography-only
+      # attributes to style scope, so given-name disambiguation escalation
+      # rendered "Johnson A" instead of "A. Johnson" (csl26-jdp6).
+      display-as-sort: none
+      initialize-with: "."
       shorten:
         min: 3
         use-first: 1
