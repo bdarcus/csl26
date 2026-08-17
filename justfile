@@ -84,6 +84,30 @@ oracle-refresh:
         --styles "$(node -e "process.stdout.write(require('./scripts/report-data/oracle-top10-baseline.json').metadata.styles.join(','))")" \
         --save scripts/report-data/oracle-top10-baseline.json
 
+# Regenerate every artifact a tests/fixtures/ change invalidates (see
+# docs/architecture/audits/2026-08-16_FIXTURE_CHANGE_FAN_OUT.md): oracle snapshots and
+# registered coverage-audit manifests always; the two ratcheted CI-floor baselines
+# (embedded-parity-baseline.json, oracle-top10-baseline.json) only when baselines=yes, since
+# baselines/README.md restricts those refreshes to dedicated, reviewed baseline PRs. Concurrency
+# defaults low — corpus-wide sweeps at default concurrency have crashed lower-memory machines.
+# oracle-snapshot.js currently exits non-zero on 2 pre-existing, tracked-elsewhere failures
+# (csl26-u87d); that's allowed to fail this line without aborting the rest of the fan-out, since
+# neither failing style appears in any gated baseline below.
+fixture-refresh baselines="no":
+    node scripts/oracle-snapshot.js --all --concurrency 2 \
+        || echo "warning: oracle-snapshot.js reported failures -- see csl26-u87d" >&2
+    node scripts/refresh-style-coverage-audits.js
+    if [ "{{baselines}}" = "yes" ]; then \
+        node scripts/report-core.js --all-features > /tmp/fixture-refresh-report.json && \
+        node scripts/derive-parity-baseline.js \
+            --report /tmp/fixture-refresh-report.json \
+            --out scripts/report-data/embedded-parity-baseline.json && \
+        just oracle-refresh; \
+    fi
+    just check-core-quality
+    node scripts/check-oracle-regression.js --baseline scripts/report-data/oracle-top10-baseline.json
+    just check-style-coverage-audits
+
 # Discover recurring per-concern config shapes across the legacy CSL corpus that no named
 # preset covers (contributors, dates, titles, locators) — a worklist for citum-schema-style presets.
 analyze-presets styles="styles-legacy":
