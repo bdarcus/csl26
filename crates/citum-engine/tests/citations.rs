@@ -1194,26 +1194,23 @@ fn given_a_by_cite_style_with_an_et_al_collision_when_a_colliding_reference_is_c
     });
 }
 
-/// Regression for csl26-h9jy, mirroring the official CSL test suite's
-/// `disambiguate_ByCiteMinimalGivennameExpandMinimalNames.txt` fixture
-/// exactly (same names, same style shape: et-al-min 3, et-al-use-first 1,
-/// by-cite, initials baseline). Two references share their first and third
-/// authors verbatim (Albert Asthma; Charles/Curtis Cold differs only at
-/// position 3, never shown); only the second author (Brandon vs Biff
-/// Bronchitis) differs at a shown position, and both reduce to the same
-/// initial ("B."), so initials alone don't resolve it — full-name escalation
-/// is required.
+/// Regression for csl26-h9jy and csl26-5753, mirroring the official CSL
+/// test suite's `disambiguate_ByCiteMinimalGivennameExpandMinimalNames.txt`
+/// fixture exactly (same names, same style shape: et-al-min 3,
+/// et-al-use-first 1, by-cite, initials baseline). Two references share
+/// their first and third authors verbatim (Albert Asthma; Charles/Curtis
+/// Cold differs only at position 3, never shown); only the second author
+/// (Brandon vs Biff Bronchitis) differs at a shown position, and both
+/// reduce to the same initial ("B."), so initials alone don't resolve it —
+/// full-name escalation is required.
 ///
-/// **Known, intentional divergence from the oracle:** citeproc-js escalates
-/// only the one position that needs it —
-/// `"A. Asthma, Brandon Bronchitis, et al."` — because it tracks expansion
-/// per name position. Citum's `ProcHints.expand_given_names_full` is a
-/// per-reference flag, so it escalates every shown position uniformly,
-/// including position 1 (which gains nothing from it — both entries share
-/// the same person there). The citations still correctly differ overall,
-/// so this is verbose relative to the oracle, not a misdisambiguation.
-/// Per-position minimality is tracked separately as csl26-5753.
-fn disambiguation_givenname_escalation_reveals_every_shown_position_not_just_the_minimal_one() {
+/// `by-cite` tracks escalation per author position (csl26-5753): position 0
+/// ("Albert Asthma", identical in both references) stays at its default
+/// initials depth — escalating it to the full given name would gain
+/// nothing, since both entries share the same person there — while
+/// position 1 escalates all the way to the full given name, matching the
+/// oracle's own minimal output.
+fn disambiguation_givenname_escalation_is_minimal_per_position() {
     let input = vec![
         make_book_multi_author(
             "ambigs-16",
@@ -1237,7 +1234,223 @@ fn disambiguation_givenname_escalation_reveals_every_shown_position_not_just_the
         ),
     ];
     let citation_items = vec![vec!["ambigs-16", "ambigs-17"]];
-    let expected = "Albert Asthma, Biff Bronchitis, et al., (1990); Albert Asthma, Brandon Bronchitis, et al., (1990)";
+    let expected =
+        "A Asthma, Biff Bronchitis, et al., (1990); A Asthma, Brandon Bronchitis, et al., (1990)";
+
+    run_test_case_native_with_options(common::TestCaseOptions {
+        input: &input,
+        citation_items: &citation_items,
+        expected,
+        mode: "citation",
+        disambiguate_year_suffix: false,
+        disambiguate_names: true,
+        disambiguate_givenname: true,
+        et_al_min: Some(3),
+        et_al_use_first: Some(1),
+    });
+}
+
+/// Companion to `disambiguation_givenname_escalation_is_minimal_per_position`,
+/// same input, `GivennameRule::AllNames` instead of the default `ByCite`:
+/// `all-names` has no per-position ceiling at all, so it escalates *every*
+/// shown position to the full given name uniformly, including position 0
+/// (which gains nothing from it — both entries share "Albert Asthma"
+/// there). This locks in the fork the two rules take on identical input,
+/// rather than leaving the distinction implicit.
+fn disambiguation_all_names_givenname_escalation_is_uniform_not_positional() {
+    let input = vec![
+        make_book_multi_author(
+            "ambigs-16",
+            vec![
+                ("Asthma", "Albert"),
+                ("Bronchitis", "Brandon"),
+                ("Cold", "Charles"),
+            ],
+            1990,
+            "Book M",
+        ),
+        make_book_multi_author(
+            "ambigs-17",
+            vec![
+                ("Asthma", "Albert"),
+                ("Bronchitis", "Biff"),
+                ("Cold", "Curtis"),
+            ],
+            1990,
+            "Book M",
+        ),
+    ];
+    let mut bibliography = indexmap::IndexMap::new();
+    for reference in input {
+        let id = reference.id().expect("fixture id").to_string();
+        bibliography.insert(id, reference);
+    }
+    // `build_author_date_style_with_givenname_rule` already enables
+    // `disambiguate-add-names`/`disambiguate-add-givenname` with
+    // et-al-min 3, et-al-use-first 1 -- the same style shape as the
+    // `ByCite` companion test above, just with the rule overridden.
+    let style = build_author_date_style_with_givenname_rule(GivennameRule::AllNames);
+    let processor = Processor::new(style, bibliography);
+
+    let result = process_citation_ids(&processor, &["ambigs-16", "ambigs-17"]);
+
+    assert_eq!(
+        result,
+        "Albert Asthma, Biff Bronchitis, et al., (1990); Albert Asthma, Brandon Bronchitis, et al., (1990)"
+    );
+}
+
+/// Regression for a code-review finding on csl26-5753's PR: `by-cite`'s
+/// per-position search must examine every position the base citation
+/// already renders, not just position 0, even when `disambiguate-add-names`
+/// is disabled. `disambiguate-add-names` only forbids *growing* past the
+/// base visible name count -- it doesn't gate examining names the style
+/// already shows unconditionally (here, no `shorten` config at all means
+/// every author is always shown; the same gap applies to a style with
+/// `et-al-use-first: 2+`).
+fn disambiguation_by_cite_examines_already_visible_positions_without_add_names() {
+    let input = vec![
+        make_book_multi_author(
+            "ambigs-16",
+            vec![("Asthma", "Albert"), ("Bronchitis", "Brandon")],
+            1990,
+            "Book M",
+        ),
+        make_book_multi_author(
+            "ambigs-17",
+            vec![("Asthma", "Albert"), ("Bronchitis", "Biff")],
+            1990,
+            "Book M",
+        ),
+    ];
+    let citation_items = vec![vec!["ambigs-16", "ambigs-17"]];
+
+    run_test_case_native_with_options(common::TestCaseOptions {
+        input: &input,
+        citation_items: &citation_items,
+        // No `shorten` config at all (et_al_min/et_al_use_first both None)
+        // -- every author is always visible, so by-cite must be able to
+        // escalate position 1 even though disambiguate-add-names is off.
+        // Output order follows the resolved author sort key, not citation
+        // order -- see the sibling tests above for the same pattern.
+        expected: "A Asthma, Biff Bronchitis, (1990); A Asthma, Brandon Bronchitis, (1990)",
+        mode: "citation",
+        disambiguate_year_suffix: false,
+        disambiguate_names: false,
+        disambiguate_givenname: true,
+        et_al_min: None,
+        et_al_use_first: None,
+    });
+}
+
+/// Regression for a code-review finding on csl26-5753's PR: falling back to
+/// year-suffix must retain a `by-cite` search's last-attempted name count
+/// and positional escalation for a residual that's still colliding *next
+/// to a sibling that did split off* -- resetting it would silently
+/// under-display relative to what the sibling shows. `ambigs-a`/`ambigs-c`
+/// share all four authors verbatim (genuinely unresolvable by name; forces
+/// year-suffix) while `ambigs-b` differs at author 3 and splits off
+/// cleanly via `disambiguate-add-names` alone.
+fn disambiguation_by_cite_unresolved_fallback_retains_search_state() {
+    let input = vec![
+        make_book_multi_author(
+            "ambigs-a",
+            vec![
+                ("Smith", "John"),
+                ("Lee", "Alice"),
+                ("Kumar", "Priya"),
+                ("Zhou", "Ming"),
+            ],
+            2021,
+            "Book A",
+        ),
+        make_book_multi_author(
+            "ambigs-b",
+            vec![
+                ("Smith", "John"),
+                ("Lee", "Alice"),
+                ("Owen", "Priya"),
+                ("Zhou", "Ming"),
+            ],
+            2021,
+            "Book B",
+        ),
+        make_book_multi_author(
+            "ambigs-c",
+            vec![
+                ("Smith", "John"),
+                ("Lee", "Alice"),
+                ("Kumar", "Priya"),
+                ("Zhou", "Ming"),
+            ],
+            2021,
+            "Book C",
+        ),
+    ];
+    let citation_items = vec![vec!["ambigs-a", "ambigs-b", "ambigs-c"]];
+
+    run_test_case_native_with_options(common::TestCaseOptions {
+        input: &input,
+        citation_items: &citation_items,
+        // Output order follows the citation's resolved author sort key, not
+        // citation-item order (same pattern as the sibling tests above).
+        // The escalated given-name initials on the still-tied a/c pair are
+        // retained from the search's last attempt rather than reset to
+        // bare family names -- csl26-5753's PR review fix under test here
+        // -- even though they don't distinguish a from c (that's what the
+        // year suffix is for).
+        expected: "J Smith, A Lee, P Kumar, M Zhou, (2021a); J Smith, A Lee, P Kumar, M Zhou, (2021b); Smith, Lee, Owen, et al., (2021)",
+        mode: "citation",
+        disambiguate_year_suffix: true,
+        disambiguate_names: true,
+        disambiguate_givenname: true,
+        et_al_min: Some(3),
+        et_al_use_first: Some(1),
+    });
+}
+
+/// Regression for csl26-5753, mirroring the official CSL test suite's
+/// `disambiguate_ByCiteGivennameExpandCrossNestedNames.txt` fixture exactly
+/// (same names, same style shape: et-al-min 3, et-al-use-first 1, by-cite,
+/// initials baseline). Three references share the same three family names
+/// throughout (Doe/Roe/Jones), so strategy 1 (name-count growth alone)
+/// never splits them — position 0 (John Doe) is identical everywhere and
+/// never needs to escalate past its default initials depth, but positions
+/// 1 and 2 (Roe, Jones) each need escalation for *different* pairs: Roe
+/// alone separates ambigs-13 (Josephine) from the other two, and Jones
+/// alone separates ambigs-12 (Robert) from ambigs-14 (Richard) — so
+/// resolving the group requires both positions escalating jointly, with
+/// ambigs-13 needing only 2 shown names (`et al.`) while ambigs-12/14 need
+/// all 3 (showing all authors suppresses `et al.` even though et-al-min is
+/// met).
+fn disambiguation_givenname_escalation_splits_positions_independently_per_collision() {
+    let input = vec![
+        make_book_multi_author(
+            "ambigs-12",
+            vec![("Doe", "John"), ("Roe", "Jane"), ("Jones", "Robert")],
+            1990,
+            "Book C",
+        ),
+        make_book_multi_author(
+            "ambigs-13",
+            vec![("Doe", "John"), ("Roe", "Josephine"), ("Jones", "Robert")],
+            1990,
+            "Book B",
+        ),
+        make_book_multi_author(
+            "ambigs-14",
+            vec![("Doe", "John"), ("Roe", "Jane"), ("Jones", "Richard")],
+            1990,
+            "Book A",
+        ),
+    ];
+    let citation_items = vec![vec!["ambigs-12", "ambigs-13", "ambigs-14"]];
+    // Output order follows the citation's resolved author sort key (family,
+    // then given), not citation-item registration order — same as
+    // `disambiguation_initials_are_used_when_short_form_family_names_collide`
+    // above: "Jane" sorts before "Josephine", and within the tied "Jane"
+    // pair, "Richard" sorts before "Robert".
+    let expected = "J Doe, Jane Roe, Richard Jones, (1990); J Doe, Jane Roe, Robert Jones, (1990); J Doe, Josephine Roe, et al., (1990)";
 
     run_test_case_native_with_options(common::TestCaseOptions {
         input: &input,
@@ -2755,11 +2968,43 @@ mod disambiguation {
     }
 
     #[test]
-    fn givenname_escalation_reveals_every_shown_position_not_just_the_minimal_one() {
+    fn givenname_escalation_is_minimal_per_position() {
         announce_behavior(
-            "A same-initial collision escalates to the full given name at every shown position, not just the one position that needs it — verbose relative to citeproc-js's per-position minimality (csl26-5753), but not a misdisambiguation.",
+            "A same-initial collision escalates to the full given name only at the author position that needs it, matching citeproc-js's own per-position minimality (csl26-5753) — positions that stay identical between colliders keep their default initials depth.",
         );
-        super::disambiguation_givenname_escalation_reveals_every_shown_position_not_just_the_minimal_one();
+        super::disambiguation_givenname_escalation_is_minimal_per_position();
+    }
+
+    #[test]
+    fn by_cite_examines_already_visible_positions_without_add_names() {
+        announce_behavior(
+            "by-cite's per-position search examines every name position the base citation already shows, even when disambiguate-add-names is disabled — that flag only forbids growing past the base visible name count, not examining it.",
+        );
+        super::disambiguation_by_cite_examines_already_visible_positions_without_add_names();
+    }
+
+    #[test]
+    fn by_cite_unresolved_fallback_retains_search_state() {
+        announce_behavior(
+            "When a by-cite collision remains unresolved next to a sibling that did split off via disambiguate-add-names, the year-suffix fallback retains the search's last-attempted name count and escalation instead of resetting it to the style's default.",
+        );
+        super::disambiguation_by_cite_unresolved_fallback_retains_search_state();
+    }
+
+    #[test]
+    fn all_names_givenname_escalation_is_uniform_not_positional() {
+        announce_behavior(
+            "Unlike by-cite, all-names has no per-position escalation ceiling — on the same input it escalates every shown position uniformly, including one that gains nothing from it.",
+        );
+        super::disambiguation_all_names_givenname_escalation_is_uniform_not_positional();
+    }
+
+    #[test]
+    fn givenname_escalation_splits_positions_independently_per_collision() {
+        announce_behavior(
+            "When several author positions could each resolve a different pairwise collision within a by-cite group, escalation targets each position independently — including varying how many names each colliding reference shows — rather than applying one uniform name count or depth to the whole group (csl26-5753).",
+        );
+        super::disambiguation_givenname_escalation_splits_positions_independently_per_collision();
     }
 
     #[test]

@@ -86,19 +86,59 @@ struct DisambiguationFlags {
     /// `primary-name-with-initials`, which must stop at the initials level
     /// even when initials alone don't resolve a collision (csl26-h9jy).
     givenname_full_allowed: bool,
+    /// Whether `GivennameRule::ByCite`'s per-position expansion ceiling is
+    /// active: `disambiguate-add-givenname` is on and the resolved
+    /// `givenname_rule` is `ByCite`. When set, `select_group_hint_action`
+    /// routes the whole group through `select_by_cite_resolution` instead
+    /// of the uniform name-partition/givenname-resolution cascade every
+    /// other rule uses. See csl26-5753.
+    by_cite_positional: bool,
 }
 
-/// How far given-name expansion escalated past the style's configured
-/// baseline form to resolve a collision. See csl26-h9jy: the baseline
-/// (e.g. initials) can itself collide (Brandon/Biff both "B."), so
-/// resolution may require revealing the full given name.
+/// How far a single author position's given name escalated within
+/// `select_by_cite_resolution`'s search. Unlike the uniform
+/// `expand_given_names_full` flag every other rule uses, `by-cite` tracks
+/// this per position (csl26-5753): a position stops at `Initials` once
+/// that's enough to distinguish it from its collision partners, and only
+/// escalates to `Full` when initials alone still collide (e.g. "Brandon"
+/// and "Biff" both reduce to "B.", csl26-h9jy).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum GivennameLevel {
-    /// Style-configured initials (only reachable when `initialize-with` is
-    /// configured, mirroring real CSL's `initialize-with`-presence gate).
+    /// Initials (only reachable when `initials_available`, mirroring real
+    /// CSL's `initialize-with`-presence gate).
     Initials,
-    /// Full given name, bypassing the configured form.
+    /// Full given name.
     Full,
+}
+
+/// One reference's resolved `by-cite` plan: how many names to show and
+/// which shown positions needed to escalate all the way to the full given
+/// name (every other shown position defaults to `Initials` when reachable,
+/// otherwise `Full` -- see `positional_given_level`) to make it (and its
+/// remaining collision partners, if any) unique. Produced by
+/// `select_by_cite_resolution` and consumed by `apply_by_cite_plans`.
+struct ByCitePlan<'a> {
+    reference: &'a CachedReference<'a>,
+    /// `None` means "no override, use the style's own default" -- reserved
+    /// for a bucket where the search never made *any* progress at all (see
+    /// `select_by_cite_resolution`'s `single_bucket` reset): retaining a
+    /// no-op `Some(n)` there would still flip
+    /// `grouping.rs::group_citation_items_by_author`'s
+    /// `preserve_individual_citations` check, defeating same-author
+    /// collapse for a collision that's genuinely unresolvable by name at
+    /// all (e.g. the exact same person cited for two different works).
+    /// Every other plan -- resolved or an unresolved residual next to a
+    /// sibling that *did* split off -- carries a genuine `Some(n)`.
+    min_names_to_show: Option<usize>,
+    /// Whether any given-name work was needed at all. `false` when the
+    /// bucket was already resolved by name-count alone (strategy 1), or
+    /// reset alongside `min_names_to_show: None` above -- `full_positions`
+    /// is meaningless in either case.
+    expand_given_names: bool,
+    /// Index-aligned to author position; `true` at an index means that
+    /// position must escalate to the full given name. May be empty or
+    /// all-`false` when the default depth already resolved everything.
+    full_positions: Vec<bool>,
 }
 
 struct GroupDisambiguationContext<'a> {
@@ -136,6 +176,16 @@ enum GroupHintAction<'a> {
         min_names_to_show: usize,
         level: GivennameLevel,
         primary_only_requires_suffix: bool,
+    },
+    /// `GivennameRule::ByCite`'s per-position resolution: replaces
+    /// `NamePartitions`/`GivennameResolution`/`CombinedResolution` entirely
+    /// for this rule. `unresolved` holds the last-attempted plan (name
+    /// count, positional escalation) for any member the search couldn't
+    /// separate even at the maximum author count -- these fall through to
+    /// year-suffix, retaining that state rather than resetting it.
+    ByCite {
+        plans: Vec<ByCitePlan<'a>>,
+        unresolved: Vec<ByCitePlan<'a>>,
     },
     FallbackYearSuffix,
 }
@@ -333,6 +383,9 @@ impl<'a> Disambiguator<'a> {
                     GivennameRule::AllNamesWithInitials | GivennameRule::PrimaryNameWithInitials
                 )
             }),
+            by_cite_positional: disamb_config.as_ref().is_some_and(|d| {
+                d.add_givenname && matches!(d.givenname_rule, GivennameRule::ByCite)
+            }),
         }
     }
 
@@ -357,6 +410,33 @@ impl<'a> Disambiguator<'a> {
                 .as_ref()
                 .and_then(|c| c.name_form)
                 .is_some_and(|form| matches!(form, citum_schema::options::NameForm::Initials))
+    }
+
+    /// The number of names the base (non-escalated) citation already shows
+    /// for a group, before any `disambiguate-add-names` growth:
+    /// `et-al-use-first` when the style truncates author lists at all, or
+    /// every author when it doesn't (no `shorten` configured, so there's no
+    /// "hidden" position to begin with -- every position is already
+    /// visible, just not yet given-name-escalated). `by-cite`'s per-position
+    /// search starts here even when `disambiguate-add-names` is disabled:
+    /// that flag only forbids *growing* past this count, not examining
+    /// names the base citation already renders.
+    ///
+    /// Does not account for a reference whose own author count falls below
+    /// `et-al-min` (which would show all its names regardless of
+    /// `use_first`) -- the search still starts from the style-wide
+    /// `use_first`, a residual approximation shared with the group-wide `n`
+    /// concept the rest of this cascade already uses.
+    fn base_visible_name_count(&self, max_authors: usize) -> usize {
+        match self
+            .config
+            .contributors
+            .as_ref()
+            .and_then(|c| c.shorten.as_ref())
+        {
+            Some(opts) => usize::from(opts.use_first).clamp(1, max_authors.max(1)),
+            None => max_authors,
+        }
     }
 
     /// Builds an internal cache of reference data (author keys, group keys, titles)
@@ -577,6 +657,9 @@ impl<'a> Disambiguator<'a> {
                     );
                 }
             }
+            GroupHintAction::ByCite { plans, unresolved } => {
+                self.apply_by_cite_plans(hints, &context, plans, unresolved);
+            }
             GroupHintAction::FallbackYearSuffix => {
                 self.apply_year_suffix(hints, &context, false, false, None);
             }
@@ -594,6 +677,11 @@ impl<'a> Disambiguator<'a> {
 
         if self.select_label_mode_year_suffix(context) {
             return GroupHintAction::LabelYearSuffix;
+        }
+
+        if context.flags.by_cite_positional {
+            let (plans, unresolved) = self.select_by_cite_resolution(context);
+            return GroupHintAction::ByCite { plans, unresolved };
         }
 
         if let Some((min_names_to_show, partitions)) = self.select_name_partitions(context) {
@@ -665,6 +753,395 @@ impl<'a> Disambiguator<'a> {
             return None;
         }
         self.resolve_givenname_level(context.group, None, false, context.flags)
+    }
+
+    /// Entry point for `GivennameRule::ByCite`'s per-position resolution.
+    ///
+    /// Strategy 1 (name-count growth via `disambiguate-add-names`) is tried
+    /// first, exactly as every other rule -- `by-cite` has no authority over
+    /// that axis (`DISAMBIGUATION.md` §2.1.1). Any resulting family bucket
+    /// that's still colliding is handed to `resolve_by_cite_positions`,
+    /// which escalates given-name positions left to right (growing the
+    /// shown name count further when every position at the current count
+    /// has been tried without effect), splitting the bucket as soon as a
+    /// position's value distinguishes some of its members.
+    fn select_by_cite_resolution<'b>(
+        &self,
+        context: &GroupDisambiguationContext<'b>,
+    ) -> (Vec<ByCitePlan<'b>>, Vec<ByCitePlan<'b>>) {
+        let group = context.group;
+        let flags = context.flags;
+        let max_authors = group
+            .iter()
+            .map(|reference| reference.data.names.len())
+            .max()
+            .unwrap_or(0);
+        let base_n = self.base_visible_name_count(max_authors);
+
+        let buckets: Vec<(usize, Vec<&'b CachedReference<'b>>)> = if flags.add_names {
+            match self.partition_by_name_expansion(group) {
+                Some((n, partitions)) => {
+                    partitions.into_values().map(|bucket| (n, bucket)).collect()
+                }
+                None => vec![(base_n, group.to_vec())],
+            }
+        } else {
+            vec![(base_n, group.to_vec())]
+        };
+
+        // Whether `disambiguate-add-names` ever actually split the group by
+        // family name into more than one bucket. `partition_by_name_expansion`
+        // only ever returns `Some` when it found >1 partitions, so this is
+        // exactly "did strategy 1 contribute any real distinguishing
+        // signal at all" -- used below to decide whether an unresolved
+        // residual's search state is worth retaining (see `ByCitePlan::min_names_to_show`).
+        let single_bucket = buckets.len() <= 1;
+
+        let mut plans = Vec::new();
+        let mut unresolved = Vec::new();
+
+        for (start_n, bucket) in buckets {
+            if bucket.len() <= 1 {
+                if let [reference] = bucket.as_slice() {
+                    plans.push(ByCitePlan {
+                        reference,
+                        min_names_to_show: Some(start_n),
+                        expand_given_names: false,
+                        full_positions: Vec::new(),
+                    });
+                }
+                continue;
+            }
+            if !flags.add_givenname {
+                let min_names_to_show = if single_bucket { None } else { Some(start_n) };
+                unresolved.extend(bucket.into_iter().map(|reference| ByCitePlan {
+                    reference,
+                    min_names_to_show,
+                    expand_given_names: false,
+                    full_positions: Vec::new(),
+                }));
+                continue;
+            }
+            let full_positions = vec![false; start_n];
+            let plans_before = plans.len();
+            let unresolved_before = unresolved.len();
+            self.resolve_by_cite_positions(
+                &bucket,
+                start_n,
+                0,
+                &full_positions,
+                max_authors,
+                flags,
+                &mut plans,
+                &mut unresolved,
+            );
+            if single_bucket && plans.len() == plans_before {
+                // Nothing distinguished any member of this bucket from any
+                // other, at any name count or escalation depth tried -- a
+                // genuinely unresolvable collision (e.g. the exact same
+                // person cited for two different works). Retaining the
+                // failed search's state would be a pure no-op for
+                // disambiguation, yet would still render a gratuitous
+                // given-name reveal and defeat
+                // `grouping.rs::group_citation_items_by_author`'s
+                // same-author collapse (which keys off these fields being
+                // empty). Reset to the pre-search default.
+                let reset_from = unresolved.get_mut(unresolved_before..).unwrap_or(&mut []);
+                for plan in reset_from {
+                    plan.min_names_to_show = None;
+                    plan.expand_given_names = false;
+                    plan.full_positions = Vec::new();
+                }
+            }
+        }
+
+        (plans, unresolved)
+    }
+
+    /// Maps a position's `by-cite` escalation bit to the level that
+    /// actually renders there once its shown position is revealed at all:
+    /// `true` always means `Full`; `false` means the default depth for a
+    /// revealed position -- `Initials` when `initials_available` (real
+    /// CSL's `initialize-with`-presence gate), otherwise `Full` directly
+    /// (mirrors `resolve_givenname_level`'s own gating, so a style with no
+    /// initials rung never gets offered one).
+    fn positional_given_level(&self, full: bool) -> GivennameLevel {
+        if full || !self.initials_available() {
+            GivennameLevel::Full
+        } else {
+            GivennameLevel::Initials
+        }
+    }
+
+    /// Recursively resolves a `by-cite` collision `bucket` (all members
+    /// already tied at `n` shown names, positions `0..pos` already
+    /// committed in `full_positions`) by escalating individual positions to
+    /// the full given name, splitting the bucket at the first position
+    /// whose escalated value distinguishes at least some members, and
+    /// growing `n` (revealing one more author) once every position `0..n`
+    /// has been tried without effect. Members still colliding once `n`
+    /// reaches `max_authors` with no position left to try are pushed to
+    /// `unresolved`.
+    #[allow(clippy::too_many_arguments, reason = "recursive search state")]
+    fn resolve_by_cite_positions<'b>(
+        &self,
+        bucket: &[&'b CachedReference<'b>],
+        n: usize,
+        pos: usize,
+        full_positions: &[bool],
+        max_authors: usize,
+        flags: DisambiguationFlags,
+        plans: &mut Vec<ByCitePlan<'b>>,
+        unresolved: &mut Vec<ByCitePlan<'b>>,
+    ) {
+        if bucket.len() <= 1 {
+            if let [reference] = bucket {
+                plans.push(ByCitePlan {
+                    reference,
+                    min_names_to_show: Some(n),
+                    expand_given_names: true,
+                    full_positions: full_positions.to_vec(),
+                });
+            }
+            return;
+        }
+
+        // The bucket may already be split by information already reflected
+        // in `full_positions` at the current `n` -- a freshly revealed
+        // position's own default-depth difference, or an earlier commit
+        // interacting with a position not yet explicitly escalated. Check
+        // before escalating further.
+        let current =
+            self.bucket_by_positional_key(bucket, n, flags.primary_givenname_only, full_positions);
+        if current.len() > 1 {
+            for sub in current.into_values() {
+                self.resolve_by_cite_positions(
+                    &sub,
+                    n,
+                    pos,
+                    full_positions,
+                    max_authors,
+                    flags,
+                    plans,
+                    unresolved,
+                );
+            }
+            return;
+        }
+
+        let max_pos = if flags.primary_givenname_only { 1 } else { n };
+        if pos >= max_pos {
+            // Revealing another author (growing `n`) is strategy 1
+            // (`disambiguate-add-names`), which `by-cite` has no authority
+            // over (§2.1.1) -- only attempt it when that strategy is
+            // actually enabled. Otherwise stop here: escalating given
+            // names within the names already shown is all `by-cite` is
+            // allowed to do.
+            if !flags.add_names || n >= max_authors {
+                unresolved.extend(bucket.iter().map(|reference| ByCitePlan {
+                    reference,
+                    min_names_to_show: Some(n),
+                    expand_given_names: true,
+                    full_positions: full_positions.to_vec(),
+                }));
+            } else {
+                let mut grown = full_positions.to_vec();
+                grown.push(false);
+                self.resolve_by_cite_positions(
+                    bucket,
+                    n + 1,
+                    n,
+                    &grown,
+                    max_authors,
+                    flags,
+                    plans,
+                    unresolved,
+                );
+            }
+            return;
+        }
+
+        if flags.givenname_full_allowed {
+            let mut trial = full_positions.to_vec();
+            #[allow(
+                clippy::indexing_slicing,
+                reason = "pos < max_pos <= n == trial.len(), checked above"
+            )]
+            {
+                trial[pos] = true;
+            }
+            let buckets =
+                self.bucket_by_positional_key(bucket, n, flags.primary_givenname_only, &trial);
+            if buckets.len() > 1 {
+                for sub in buckets.into_values() {
+                    self.resolve_by_cite_positions(
+                        &sub,
+                        n,
+                        pos + 1,
+                        &trial,
+                        max_authors,
+                        flags,
+                        plans,
+                        unresolved,
+                    );
+                }
+                return;
+            }
+        }
+
+        // Escalating this position to full doesn't distinguish any members
+        // (or full escalation isn't allowed at all -- `all-names-with-
+        // initials`/`primary-name-with-initials` never reach `by-cite`, but
+        // stay defensive); leave it at default depth and move on.
+        self.resolve_by_cite_positions(
+            bucket,
+            n,
+            pos + 1,
+            full_positions,
+            max_authors,
+            flags,
+            plans,
+            unresolved,
+        );
+    }
+
+    /// Buckets `group` by the positional collision key (`n` names shown,
+    /// `full_positions` giving each position's escalation state).
+    fn bucket_by_positional_key<'b>(
+        &self,
+        group: &[&'b CachedReference<'b>],
+        n: usize,
+        primary_only: bool,
+        full_positions: &[bool],
+    ) -> HashMap<String, Vec<&'b CachedReference<'b>>> {
+        let mut buckets: HashMap<String, Vec<&'b CachedReference<'b>>> = HashMap::new();
+        let mut buf = String::new();
+        for reference in group {
+            buf.clear();
+            self.append_givenname_resolution_key_positional(
+                &mut buf,
+                &reference.data.names,
+                n,
+                primary_only,
+                full_positions,
+            );
+            buckets.entry(buf.clone()).or_default().push(*reference);
+        }
+        buckets
+    }
+
+    /// Derives the `(expand_given_names_full, expand_given_names_full_positions)`
+    /// pair a `ByCitePlan` renders as. `expand_given_names_full_positions` is
+    /// `None` in exactly three cases: no given-name work was needed at all
+    /// (`!plan.expand_given_names`); initials aren't reachable at all
+    /// (`!initials_available()`), so every escalated position renders as the
+    /// full given name uniformly and there's no per-position depth choice to
+    /// carry (see `positional_given_level`); or, trivially, an empty
+    /// `full_positions` (the name-count-alone resolution path). A genuine
+    /// per-position search whose result happens to be uniform (all `true` or
+    /// all `false`) still returns `Some(...)` -- the field's presence means
+    /// "a real search happened here," not "positions disagree."
+    fn by_cite_positional_fields(&self, plan: &ByCitePlan<'_>) -> (bool, Option<Vec<bool>>) {
+        let uniform_full = plan.expand_given_names && !self.initials_available();
+        let full_positions = if uniform_full || !plan.expand_given_names {
+            None
+        } else {
+            Some(plan.full_positions.clone())
+        };
+        (uniform_full, full_positions)
+    }
+
+    /// Finalizes `select_by_cite_resolution`'s output: inserts a hint per
+    /// resolved plan, then falls through any still-colliding remainder to
+    /// year-suffix via `apply_by_cite_unresolved_fallback`, which retains
+    /// each plan's last-attempted name count and positional escalation
+    /// instead of resetting it.
+    fn apply_by_cite_plans(
+        &self,
+        hints: &mut HashMap<String, ProcHints>,
+        context: &GroupDisambiguationContext<'_>,
+        plans: Vec<ByCitePlan<'_>>,
+        unresolved: Vec<ByCitePlan<'_>>,
+    ) {
+        for (idx, plan) in plans.into_iter().enumerate() {
+            let (uniform_full, full_positions) = self.by_cite_positional_fields(&plan);
+            self.insert_hint(
+                hints,
+                plan.reference,
+                context.author_group_lengths,
+                ProcHints {
+                    disamb_condition: false,
+                    group_index: idx + 1,
+                    group_key: context.key.to_string(),
+                    expand_given_names: plan.expand_given_names,
+                    expand_given_names_full: uniform_full,
+                    expand_given_names_primary_only: context.flags.primary_givenname_only,
+                    expand_given_names_full_positions: full_positions,
+                    min_names_to_show: plan.min_names_to_show,
+                    ..Default::default()
+                },
+            );
+        }
+
+        self.apply_by_cite_unresolved_fallback(hints, context, unresolved);
+    }
+
+    /// Falls unresolved `by-cite` plans through to year-suffix, retaining
+    /// each plan's last-attempted `min_names_to_show`/positional escalation
+    /// rather than resetting it to the style's default (unlike a blanket
+    /// `apply_year_suffix_for_group` call, which has no per-plan state to
+    /// carry). Order follows the same resolved bibliography sort every
+    /// other year-suffix assignment uses (`sort_group_for_year_suffix`).
+    fn apply_by_cite_unresolved_fallback(
+        &self,
+        hints: &mut HashMap<String, ProcHints>,
+        context: &GroupDisambiguationContext<'_>,
+        unresolved: Vec<ByCitePlan<'_>>,
+    ) {
+        if unresolved.is_empty() {
+            return;
+        }
+
+        let refs: Vec<&CachedReference<'_>> =
+            unresolved.iter().map(|plan| plan.reference).collect();
+        let sorted = self.sort_group_for_year_suffix(&refs);
+        let plan_by_id: HashMap<String, &ByCitePlan<'_>> = unresolved
+            .iter()
+            .map(|plan| {
+                (
+                    plan.reference
+                        .reference
+                        .id()
+                        .unwrap_or_default()
+                        .to_string(),
+                    plan,
+                )
+            })
+            .collect();
+
+        for (idx, reference) in sorted.into_iter().enumerate() {
+            let id = reference.reference.id().unwrap_or_default().to_string();
+            let Some(plan) = plan_by_id.get(&id) else {
+                continue;
+            };
+            let (uniform_full, full_positions) = self.by_cite_positional_fields(plan);
+            self.insert_hint(
+                hints,
+                reference,
+                context.author_group_lengths,
+                ProcHints {
+                    disamb_condition: true,
+                    group_index: idx + 1,
+                    group_key: context.key.to_string(),
+                    expand_given_names: plan.expand_given_names,
+                    expand_given_names_full: uniform_full,
+                    expand_given_names_primary_only: context.flags.primary_givenname_only,
+                    expand_given_names_full_positions: full_positions,
+                    min_names_to_show: plan.min_names_to_show,
+                    ..Default::default()
+                },
+            );
+        }
     }
 
     /// Selects collision resolution by using both more names AND given name expansion.
@@ -1465,6 +1942,56 @@ impl<'a> Disambiguator<'a> {
             }
             key.push('|');
             match level {
+                GivennameLevel::Full => {
+                    Self::append_optional_part(key, name.given.as_deref());
+                }
+                GivennameLevel::Initials => {
+                    let initials = name.given.as_deref().map(|given| {
+                        crate::values::contributor::names::initialize_given_name(
+                            given,
+                            self.initialize_with(),
+                            initialize_with_hyphen,
+                        )
+                    });
+                    Self::append_optional_part(key, initials.as_deref());
+                }
+            }
+            key.push('|');
+            Self::append_optional_part(key, name.non_dropping_particle.as_deref());
+            key.push('|');
+            Self::append_optional_part(key, name.dropping_particle.as_deref());
+        }
+    }
+
+    /// `by-cite` positional variant of `append_givenname_resolution_key`:
+    /// instead of one uniform `level` applied to every shown position, each
+    /// position gets its own `bool` from `full_positions` (`true` = full
+    /// given name, `false` = the default depth for a revealed position),
+    /// resolved to a `GivennameLevel` via `positional_given_level`.
+    fn append_givenname_resolution_key_positional(
+        &self,
+        key: &mut String,
+        names: &[crate::reference::FlatName],
+        n: usize,
+        primary_only: bool,
+        full_positions: &[bool],
+    ) {
+        let initialize_with_hyphen = self
+            .config
+            .contributors
+            .as_ref()
+            .and_then(|c| c.initialize_with_hyphen);
+        for (idx, name) in names.iter().take(n).enumerate() {
+            if idx > 0 {
+                key.push_str("||");
+            }
+            Self::append_optional_part(key, name.family.as_deref());
+            if primary_only && idx > 0 {
+                continue;
+            }
+            key.push('|');
+            let full = full_positions.get(idx).copied().unwrap_or(false);
+            match self.positional_given_level(full) {
                 GivennameLevel::Full => {
                     Self::append_optional_part(key, name.given.as_deref());
                 }

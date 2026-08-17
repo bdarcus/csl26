@@ -524,6 +524,22 @@ fn resolve_name_conjunction<'a>(
     }
 }
 
+/// Resolves the `(expand_given_names, expand_given_names_full)` pair used to
+/// render a single author position, honoring `by-cite`'s per-position
+/// escalation mask (csl26-5753) when present and falling back to the
+/// uniform `expand_given_names*` flags every other rule uses.
+fn positional_expand(hints: &ProcHints, index: usize) -> (bool, bool) {
+    let expand = hints.expand_given_names && !(hints.expand_given_names_primary_only && index > 0);
+    let expand_full = expand
+        && hints
+            .expand_given_names_full_positions
+            .as_ref()
+            .map_or(hints.expand_given_names_full, |positions| {
+                positions.get(index).copied().unwrap_or(false)
+            });
+    (expand, expand_full)
+}
+
 fn format_selected_names(
     names: &[crate::reference::FlatName],
     first_names: &[&crate::reference::FlatName],
@@ -537,9 +553,7 @@ fn format_selected_names(
         .iter()
         .enumerate()
         .map(|(index, name)| {
-            let expand =
-                hints.expand_given_names && !(hints.expand_given_names_primary_only && index > 0);
-            let expand_full = expand && hints.expand_given_names_full;
+            let (expand, expand_full) = positional_expand(hints, index);
             decorate_name(
                 format_single_name(name, form, index, context, expand, expand_full),
                 index,
@@ -552,9 +566,7 @@ fn format_selected_names(
         .enumerate()
         .map(|(index, name)| {
             let original_index = names.len() - last_names.len() + index;
-            let expand = hints.expand_given_names
-                && !(hints.expand_given_names_primary_only && original_index > 0);
-            let expand_full = expand && hints.expand_given_names_full;
+            let (expand, expand_full) = positional_expand(hints, original_index);
             decorate_name(
                 format_single_name(name, form, original_index, context, expand, expand_full),
                 original_index,

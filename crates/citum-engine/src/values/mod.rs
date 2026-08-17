@@ -871,6 +871,35 @@ pub struct ProcHints {
     /// initials-level representation still collides (e.g. "Brandon" and
     /// "Biff" both reduce to "B."). See csl26-h9jy.
     pub expand_given_names_full: bool,
+    /// Per-position override of `expand_given_names_full`, for
+    /// `GivennameRule::ByCite` only. The uniform `expand_given_names`
+    /// trigger above still governs *whether* a position's given name is
+    /// revealed at all -- this is a deliberate simplification relative to
+    /// citeproc-js, which additionally keeps that reveal itself per
+    /// position for short/family-only citation forms (its `request_base`
+    /// floor in `evalname`): a shared, non-disambiguating position can stay
+    /// at bare family form while only the position that actually collides
+    /// promotes to a full name. Citum's `Disambiguator` has no visibility
+    /// into the citation template's `ContributorForm` to replicate that, so
+    /// it promotes every currently-shown position uniformly and only varies
+    /// *depth* per position instead (tracked as csl26-7jej). This field
+    /// governs how *deep* each already-revealed position escalates. `None`
+    /// means "use the uniform `expand_given_names_full` above" -- for every
+    /// other rule, or a `by-cite` collision that needed no given-name work
+    /// at all, or one where initials aren't reachable at all (so every
+    /// escalated position is full uniformly and there's no per-position
+    /// depth choice to carry). A genuine per-position search whose result
+    /// happens to be uniform (every position lands at the same depth) still
+    /// produces `Some(...)`, not `None` -- presence of this field means "a
+    /// real per-position search ran," not "positions disagree." `Some(flags)`
+    /// gives one bool per author position, index-aligned to the rendered
+    /// name list: `true`
+    /// escalates that position to the full given name; `false` (or an
+    /// absent index) keeps it at the default depth for a revealed position
+    /// (initials, when the style's `initialize-with`/`name-form: initials`
+    /// makes that rung reachable; otherwise the full given name directly,
+    /// matching `resolve_givenname_level`'s own gate). See csl26-5753.
+    pub expand_given_names_full_positions: Option<Vec<bool>>,
     /// Minimum number of names to show to resolve ambiguity (overrides et-al-use-first).
     pub min_names_to_show: Option<usize>,
     /// Citation number for numeric citation styles (1-based).
