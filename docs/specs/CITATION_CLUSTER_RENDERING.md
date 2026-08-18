@@ -1,8 +1,8 @@
 # Citation Cluster Rendering Specification
 
 **Status:** Active
-**Version:** 1.2
-**Date:** 2026-06-08
+**Version:** 1.3
+**Date:** 2026-08-18
 **Related:** `crates/citum-schema-data/src/citation.rs`,
 `crates/citum-engine/src/processor/citation.rs`,
 `crates/citum-engine/src/processor/rendering/grouped/core.rs`,
@@ -185,19 +185,32 @@ the cluster wrap closes for non-integral mode:
 When items in a same-author group carry locators, the **year + locator** pair is
 the joinable unit:
 
-- **No locators on any item**: years joined by `,` — `Chen (2017, 2020)`.
-- **Different locators**: each item's bare year+postnote fragment is joined by
-  the intra-group delimiter (`;` when any item has a locator, per style
-  convention):
+- **No locators on any item**: years joined by `,` — `Chen (2017, 2020)`. This is
+  Citum's own choice per CMOS 15.30 and is a registered, intentional divergence
+  from citeproc-js's Chicago output (`div-017`) — see
+  [`DIVERGENCE_REGISTER.md`](../adjudication/DIVERGENCE_REGISTER.md).
+- **Any item carries a locator**: the whole intra-group join escalates from the
+  ordinary group delimiter to `citation.multi-cite-delimiter` (default `"; "`),
+  matching CMOS 15.30's "if page numbers are also cited, use semicolons instead
+  of commas" and citeproc-js's `after-collapse-delimiter`:
   - Integral: `Chen (2017, p. 10; 2020, p. 35)`
   - Non-integral: `(Chen, 2017, p. 10; 2020, p. 35)`
 - **Same locator on all items**: no special engine-level merging is attempted;
-  each item's fragment is joined in order. Style authors may craft templates that
-  suppress duplicate postnotes, but the engine does not auto-deduplicate.
+  each item's fragment is joined in order (still under the escalated
+  delimiter, since a locator is present). Style authors may craft templates
+  that suppress duplicate postnotes, but the engine does not auto-deduplicate.
 
-The collapse path (`render_group_item_parts_with_format`) renders each item's
-"year+postnote" fragment with the wrap stripped; per-item locators are included
-naturally in the bare fragment and survive into the joined output.
+Implemented in
+`crates/citum-engine/src/processor/rendering/grouped/core.rs`: the escalation
+is computed once (`group_has_locator`) in
+`render_fallback_grouped_citation_with_format` and applied at both live join
+sites — the non-integral `repeated_item_delimiter` in
+`build_grouped_citation_content`, and the integral `pre_wrapped_years`
+computation in `render_fallback_grouped_citation_with_format` itself (not
+`build_grouped_citation_content`'s integral branch, which is a fallback that
+never runs for collapsed groups). Per-item locators are included naturally in
+each item's bare "year+postnote" fragment and survive into the joined output.
+See `csl26-uctc`.
 
 ### Multiple author groups with locators
 
