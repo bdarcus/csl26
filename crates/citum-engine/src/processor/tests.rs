@@ -3554,6 +3554,155 @@ fn test_same_author_integral_multi_cite_respects_bracket_wrap() {
     assert_eq!(result, "Chen [2017, 2020]");
 }
 
+/// Replays `collapse_ChicagoAfterCollapse.json` from the CSL test suite
+/// (`tests/csl-test-suite/processor-tests/machines/`) natively in Rust and
+/// asserts against citeproc-js's own published output. Nothing else executes
+/// that fixture today, and it happens to be the canonical proof that CMOS
+/// 15.30's escalation ("Sutinen 1969; 1976, 257; 1981") is real, testable CSL
+/// behavior: `<citation collapse="year" after-collapse-delimiter="; ">` with
+/// `<layout delimiter=", ">` produces exactly the comma/semicolon split this
+/// test locks in — comma within a same-author group with no locators,
+/// semicolon once any item in the group carries one. See
+/// docs/specs/CITATION_CLUSTER_RENDERING.md "Same-author collapse with
+/// locators" and `csl26-uctc`.
+#[test]
+#[allow(
+    clippy::too_many_lines,
+    reason = "test functions naturally exceed 100 lines"
+)]
+fn test_same_author_collapse_matches_csl_suite_chicago_after_collapse() {
+    use citum_schema::citation::{CitationLocator, LocatorType};
+    use citum_schema::options::{LabelForm, LocatorConfig};
+
+    let mut style = make_style();
+    if let Some(options) = style.options.as_mut() {
+        // Bare locator numbers ("328", not "p. 328"), matching the CSL
+        // suite's point-locators macro for locator="page".
+        options.locators = Some(LocatorConfig {
+            default_label_form: LabelForm::None,
+            ..Default::default()
+        });
+    }
+    // Mirrors the shipped chicago-author-date-18th.yaml template shape: a
+    // [contributor, date] group joined by a space ("Whittaker 1967"), a
+    // separate locator component with its own ", " prefix, and an empty
+    // cluster-level `delimiter` so repeated same-author items fall back to
+    // ", " (see `build_grouped_citation_content`'s `author_item_delimiter.
+    // trim().is_empty()` branch) while `multi_cite_delimiter` defaults to
+    // "; " for both the locator-escalation path and the between-author-group
+    // join — matching the CSL test's <layout delimiter=", "> /
+    // after-collapse-delimiter="; ".
+    style.citation = Some(CitationSpec {
+        template: Some(
+            vec![
+                TemplateComponent::Group(TemplateGroup {
+                    group: vec![
+                        TemplateComponent::Contributor(TemplateContributor {
+                            contributor: ContributorRole::Author.into(),
+                            form: ContributorForm::Short,
+                            rendering: Rendering::default(),
+                            ..Default::default()
+                        }),
+                        TemplateComponent::Date(TemplateDate {
+                            date: TDateVar::Issued,
+                            form: DateForm::Year,
+                            rendering: Rendering::default(),
+                            ..Default::default()
+                        }),
+                    ],
+                    delimiter: Some(" ".into()),
+                    ..Default::default()
+                }),
+                TemplateComponent::Variable(TemplateVariable {
+                    variable: SimpleVariable::Locator,
+                    rendering: Rendering {
+                        prefix: Some(", ".into()),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                }),
+            ]
+            .into(),
+        ),
+        delimiter: Some(String::new().into()),
+        wrap: Some(WrapPunctuation::Parentheses.into()),
+        ..Default::default()
+    });
+
+    let mut bib = make_bibliography();
+    insert_book_reference(&mut bib, "ITEM-1", "Whittaker", "Phil", 1967, "Book A");
+    insert_book_reference(&mut bib, "ITEM-2", "Whittaker", "Phil", 1975, "Book B");
+    // Same author, same year -> year-suffix collision; titles keep suffix
+    // assignment ("a" before "b") aligned with citation order below.
+    insert_book_reference(&mut bib, "ITEM-3", "Wiens", "Walter", 1989, "Book C");
+    insert_book_reference(&mut bib, "ITEM-4", "Wiens", "Walter", 1989, "Book D");
+    insert_book_reference(&mut bib, "ITEM-5", "Wong", "Richard", 1999, "Book E");
+    insert_book_reference(&mut bib, "ITEM-6", "Wong", "Richard", 2000, "Book F");
+    insert_book_reference(&mut bib, "ITEM-7", "Garcia", "Randy", 1998, "Book G");
+
+    let processor = Processor::new(style, bib);
+    let citations = vec![
+        Citation {
+            id: Some("c1".into()),
+            items: ["ITEM-1", "ITEM-2", "ITEM-3", "ITEM-4"]
+                .into_iter()
+                .map(|id| CitationItem {
+                    id: id.to_string(),
+                    ..Default::default()
+                })
+                .collect(),
+            ..Default::default()
+        },
+        Citation {
+            id: Some("c2".into()),
+            items: vec![
+                CitationItem {
+                    id: "ITEM-5".to_string(),
+                    locator: Some(CitationLocator::single(LocatorType::Page, "328")),
+                    ..Default::default()
+                },
+                CitationItem {
+                    id: "ITEM-6".to_string(),
+                    locator: Some(CitationLocator::single(LocatorType::Page, "475")),
+                    ..Default::default()
+                },
+                CitationItem {
+                    id: "ITEM-7".to_string(),
+                    locator: Some(CitationLocator::single(LocatorType::Page, "67")),
+                    ..Default::default()
+                },
+            ],
+            ..Default::default()
+        },
+        Citation {
+            id: Some("c3".into()),
+            items: ["ITEM-1", "ITEM-4"]
+                .into_iter()
+                .map(|id| CitationItem {
+                    id: id.to_string(),
+                    ..Default::default()
+                })
+                .collect(),
+            ..Default::default()
+        },
+    ];
+
+    let mut run = processor.begin_run();
+    let results = processor
+        .process_citations_with_format::<crate::render::plain::PlainText>(&citations, &mut run)
+        .unwrap();
+
+    assert_eq!(
+        results,
+        vec![
+            "(Whittaker 1967, 1975; Wiens 1989a, 1989b)".to_string(),
+            "(Wong 1999, 328; 2000, 475; Garcia 1998, 67)".to_string(),
+            "(Whittaker 1967; Wiens 1989b)".to_string(),
+        ],
+        "must match citeproc-js's own output for collapse_ChicagoAfterCollapse.json"
+    );
+}
+
 #[test]
 fn test_integral_locator_does_not_duplicate_group_delimiter() {
     let mut style = make_style();
@@ -3625,7 +3774,12 @@ fn test_integral_locator_does_not_duplicate_group_delimiter() {
     };
 
     let result = processor.process_citation(&citation).unwrap();
-    assert_eq!(result, "Kuhn (1962, 1970, pp. 123–125)");
+    // kuhn1970 carries a locator, so per CMOS 15.30 / csl26-uctc the whole
+    // intra-group join escalates to the semicolon -- "1962; 1970, pp. 123-125",
+    // not "1962, 1970, pp. 123-125". This test's own purpose (no duplicated
+    // delimiter around the locator) is unaffected: there's still exactly one
+    // separator between "1970" and "pp. 123-125".
+    assert_eq!(result, "Kuhn (1962; 1970, pp. 123–125)");
 }
 
 /// Tests the behavior of `test_bibliography_per_group_disambiguation`.
