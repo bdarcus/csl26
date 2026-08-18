@@ -24,7 +24,7 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus and Citum contributors
 use citum_engine::Processor;
 use citum_io::load_bibliography;
 use citum_schema::Style;
-use citum_schema::citation::{Citation, CitationItem, CitationLocator, LocatorType};
+use citum_schema::citation::{Citation, CitationItem, CitationLocator, CitationMode, LocatorType};
 use citum_schema::reference::{ClassExtension, MultilingualString};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -287,6 +287,186 @@ fn test_taylor_and_francis_author_date_wrapper_preserves_prefixed_multi_cites() 
     assert_eq!(
         rendered, "(Kuhn 1962 , 44; cf. LeCun, Bengio, and Hinton 2015 , 437)",
         "prefixed multi-cites should retain the full three-author form"
+    );
+}
+
+/// Same-author collapse escalates the intra-group join to `multi-cite-delimiter`
+/// once any item in the group carries a locator, per CMOS 15.30 and
+/// `docs/specs/CITATION_CLUSTER_RENDERING.md` "Same-author collapse with
+/// locators". See `csl26-uctc`.
+#[test]
+fn test_chicago_author_date_same_author_collapse_escalates_delimiter_for_locator_on_second_item() {
+    let root = project_root();
+    let style = load_style(&root.join("styles/embedded/chicago-author-date-18th.yaml"));
+    let bibliography = load_bibliography(&root.join("tests/fixtures/references-expanded.json"))
+        .expect("expanded fixture should parse");
+
+    let processor = Processor::new(style, bibliography);
+    let citation = Citation {
+        items: vec![
+            CitationItem {
+                id: "ITEM-31".to_string(),
+                ..Default::default()
+            },
+            CitationItem {
+                id: "ITEM-32".to_string(),
+                locator: Some(CitationLocator::single(LocatorType::Page, "257")),
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    };
+
+    let rendered = processor
+        .process_citation(&citation)
+        .expect("same-author collapse with a locator should render");
+
+    assert_eq!(
+        rendered, "(Garcia 2019b; 2019a, 257)",
+        "a locator on the second item must escalate the whole intra-group join to semicolon"
+    );
+}
+
+#[test]
+fn test_chicago_author_date_same_author_collapse_escalates_delimiter_for_locator_on_first_item() {
+    let root = project_root();
+    let style = load_style(&root.join("styles/embedded/chicago-author-date-18th.yaml"));
+    let bibliography = load_bibliography(&root.join("tests/fixtures/references-expanded.json"))
+        .expect("expanded fixture should parse");
+
+    let processor = Processor::new(style, bibliography);
+    let citation = Citation {
+        items: vec![
+            CitationItem {
+                id: "ITEM-31".to_string(),
+                locator: Some(CitationLocator::single(LocatorType::Page, "100")),
+                ..Default::default()
+            },
+            CitationItem {
+                id: "ITEM-32".to_string(),
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    };
+
+    let rendered = processor
+        .process_citation(&citation)
+        .expect("same-author collapse with a locator should render");
+
+    assert_eq!(
+        rendered, "(Garcia 2019b, 100; 2019a)",
+        "a locator on the first item must also escalate the whole intra-group join to semicolon"
+    );
+}
+
+/// Regression guard: without any locator, same-author collapse keeps the
+/// comma join (Citum's intentional divergence from citeproc-js here — see
+/// `div-017` in docs/adjudication/DIVERGENCE_REGISTER.md).
+#[test]
+fn test_chicago_author_date_same_author_collapse_without_locator_stays_comma_joined() {
+    let root = project_root();
+    let style = load_style(&root.join("styles/embedded/chicago-author-date-18th.yaml"));
+    let bibliography = load_bibliography(&root.join("tests/fixtures/references-expanded.json"))
+        .expect("expanded fixture should parse");
+
+    let processor = Processor::new(style, bibliography);
+    let citation = Citation {
+        items: vec![
+            CitationItem {
+                id: "ITEM-31".to_string(),
+                ..Default::default()
+            },
+            CitationItem {
+                id: "ITEM-32".to_string(),
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    };
+
+    let rendered = processor
+        .process_citation(&citation)
+        .expect("same-author collapse without a locator should render");
+
+    assert_eq!(
+        rendered, "(Garcia 2019b, 2019a)",
+        "no locator anywhere in the group must not trigger the semicolon escalation"
+    );
+}
+
+#[test]
+fn test_chicago_author_date_same_author_collapse_escalates_delimiter_in_integral_mode() {
+    let root = project_root();
+    let style = load_style(&root.join("styles/embedded/chicago-author-date-18th.yaml"));
+    let bibliography = load_bibliography(&root.join("tests/fixtures/references-expanded.json"))
+        .expect("expanded fixture should parse");
+
+    let processor = Processor::new(style, bibliography);
+    let citation = Citation {
+        mode: CitationMode::Integral,
+        items: vec![
+            CitationItem {
+                id: "ITEM-31".to_string(),
+                ..Default::default()
+            },
+            CitationItem {
+                id: "ITEM-32".to_string(),
+                locator: Some(CitationLocator::single(LocatorType::Page, "257")),
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    };
+
+    let rendered = processor
+        .process_citation(&citation)
+        .expect("integral same-author collapse with a locator should render");
+
+    assert_eq!(
+        rendered, "Garcia (2019b; 2019a, 257)",
+        "integral mode must escalate the same as non-integral -- this is the live join site \
+         (pre_wrapped_years in render_fallback_grouped_citation_with_format), not the \
+         build_grouped_citation_content fallback that never runs for collapsed groups"
+    );
+}
+
+/// Escalation must route through script-aware punctuation realization, not
+/// `DelimiterPunctuation`'s `Deref` (which only ever exposes the Latin
+/// default). GB/T's `multi-cite-delimiter: { mark: semicolon }` under
+/// `punctuation-width: mixed` realizes to the full-width "；", not ASCII
+/// "; " -- confirms the fix flagged in Codex review for csl26-uctc.
+#[test]
+fn test_gb_t_7714_same_author_collapse_escalates_with_full_width_semicolon() {
+    let root = project_root();
+    let style = load_style(&root.join("styles/embedded/gb-t-7714-2025-author-date.yaml"));
+    let bibliography = load_bibliography(&root.join("tests/fixtures/references-expanded.json"))
+        .expect("expanded fixture should parse");
+
+    let processor = Processor::new(style, bibliography);
+    let citation = Citation {
+        items: vec![
+            CitationItem {
+                id: "ITEM-31".to_string(),
+                ..Default::default()
+            },
+            CitationItem {
+                id: "ITEM-32".to_string(),
+                locator: Some(CitationLocator::single(LocatorType::Page, "100")),
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    };
+
+    let rendered = processor
+        .process_citation(&citation)
+        .expect("GB/T same-author collapse with a locator should render");
+
+    assert_eq!(
+        rendered, "（M Garcia，2019a；2019b）",
+        "escalated delimiter must be the script-realized full-width semicolon (；), not the \
+         ASCII default DelimiterPunctuation::Deref exposes"
     );
 }
 

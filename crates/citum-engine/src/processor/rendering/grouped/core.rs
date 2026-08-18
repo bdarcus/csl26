@@ -323,6 +323,41 @@ impl Renderer<'_> {
         );
         let (item_parts, group_delimiter, captured_year_wrap) =
             self.render_group_item_parts_with_format::<F>(&fmt, group, params)?;
+        // CMOS 15.30 / citeproc's `after-collapse-delimiter`: once any item in a
+        // same-author collapsed group carries a locator, the intra-group join
+        // escalates from the ordinary group delimiter to `multi_cite_delimiter`
+        // (default "; ") so the locator doesn't read as a bare extra year, e.g.
+        // "Sutinen 1969; 1976, 257; 1981" rather than "Sutinen 1969, 1976, 257, 1981".
+        // See docs/specs/CITATION_CLUSTER_RENDERING.md "Same-author collapse with
+        // locators".
+        let group_has_locator = group.iter().any(|item| item.locator.is_some());
+        // Script/realization context, shared below by the escalated delimiter and
+        // the integral wrap punctuation. Both must route through the same
+        // script-aware realization table (e.g. GB/T's `{ mark: semicolon }`
+        // resolving to a full-width `；`) rather than DelimiterPunctuation's
+        // `Deref`, which only ever exposes the Latin default and would silently
+        // emit ASCII punctuation in CJK output.
+        let (script, realization) = crate::values::punctuation_realization_context(
+            crate::values::effective_item_language(first_ref).as_deref(),
+            self.config.multilingual.as_ref(),
+            self.locale.punctuation_realization.as_ref(),
+        );
+        let escalated_delimiter = group_has_locator.then(|| {
+            params
+                .spec
+                .multi_cite_delimiter
+                .as_ref()
+                .map(|punctuation| {
+                    crate::render::format::realize_punctuation(
+                        punctuation,
+                        script,
+                        realization.as_deref(),
+                        crate::render::format::PunctuationPosition::Separator,
+                    )
+                    .into_owned()
+                })
+                .unwrap_or_else(|| "; ".to_string())
+        });
         // Pre-compute a format-aware wrapped years string for integral collapsed groups.
         // Using fmt.inner_affix + fmt.wrap_punctuation honours output-format-specific
         // punctuation (e.g. LaTeX ``…'') and preserves WrapConfig.inner_prefix/suffix.
@@ -332,7 +367,11 @@ impl Renderer<'_> {
             if matches!(params.mode, citum_schema::citation::CitationMode::Integral)
                 && !item_parts.is_empty()
             {
-                let delimiter = group_delimiter.as_deref().unwrap_or(params.intra_delimiter);
+                let delimiter = if let Some(escalated) = escalated_delimiter.as_deref() {
+                    escalated
+                } else {
+                    group_delimiter.as_deref().unwrap_or(params.intra_delimiter)
+                };
                 let joined = self.join_integral_group_item_parts(&item_parts, delimiter);
                 let wrap_punct = captured_year_wrap
                     .as_ref()
@@ -348,11 +387,6 @@ impl Renderer<'_> {
                     .unwrap_or("");
                 let inner = fmt.inner_affix(inner_prefix, joined, inner_suffix);
                 let marks = crate::render::format::QuoteMarks::from(&self.locale.grammar_options);
-                let (script, realization) = crate::values::punctuation_realization_context(
-                    crate::values::effective_item_language(first_ref).as_deref(),
-                    self.config.multilingual.as_ref(),
-                    self.locale.punctuation_realization.as_ref(),
-                );
                 Some(fmt.wrap_punctuation(
                     wrap_punct,
                     inner,
@@ -369,6 +403,7 @@ impl Renderer<'_> {
             params,
             group_delimiter.as_deref(),
             pre_wrapped_years.as_deref(),
+            escalated_delimiter.as_deref(),
         ) else {
             return Ok(None);
         };
@@ -401,14 +436,16 @@ impl Renderer<'_> {
         params: &GroupRenderParams<'_>,
         group_delimiter: Option<&str>,
         pre_wrapped_years: Option<&str>,
+        escalated_delimiter: Option<&str>,
     ) -> Option<String> {
         if !author_part.is_empty() && !item_parts.is_empty() {
             let author_item_delimiter = group_delimiter.unwrap_or(params.intra_delimiter);
             return Some(match params.mode {
                 citum_schema::citation::CitationMode::Integral => {
                     // pre_wrapped_years is Some for collapsed multi-item integral groups
-                    // (format-aware wrap applied upstream). For single-item groups this
-                    // path is not reached (they use the explicit integral path instead).
+                    // (format-aware wrap applied upstream, already locator-escalated by
+                    // the caller). For single-item groups this path is not reached (they
+                    // use the explicit integral path instead).
                     let wrapped = pre_wrapped_years.map(str::to_string).unwrap_or_else(|| {
                         self.join_integral_group_item_parts(item_parts, author_item_delimiter)
                     });
@@ -419,7 +456,14 @@ impl Renderer<'_> {
                     )
                 }
                 citum_schema::citation::CitationMode::NonIntegral => {
-                    let repeated_item_delimiter = if author_item_delimiter.trim().is_empty() {
+                    // See the escalated_delimiter comment in
+                    // render_fallback_grouped_citation_with_format: same escalation,
+                    // non-integral side, already script-realized by the caller.
+                    // author_item_delimiter (author -> first year) is untouched --
+                    // only the join between repeated items escalates.
+                    let repeated_item_delimiter = if let Some(escalated) = escalated_delimiter {
+                        escalated
+                    } else if author_item_delimiter.trim().is_empty() {
                         ", "
                     } else {
                         author_item_delimiter
