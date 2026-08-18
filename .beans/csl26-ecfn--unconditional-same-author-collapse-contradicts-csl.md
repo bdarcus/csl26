@@ -1,7 +1,7 @@
 ---
 # csl26-ecfn
 title: Unconditional same-author collapse contradicts CSL's opt-in semantics
-status: todo
+status: in-progress
 type: bug
 priority: normal
 tags:
@@ -10,7 +10,7 @@ tags:
     - citation
     - divergence
 created_at: 2026-08-16T00:16:16Z
-updated_at: 2026-08-16T00:16:16Z
+updated_at: 2026-08-18T19:15:04Z
 ---
 
 Found while validating csl26-p7a8's title-quote flip for
@@ -56,3 +56,33 @@ collapsing.
       after the decision lands to confirm impact.
 
 Related: csl26-dpep (the engine change establishing this behavior).
+
+## Adjudication (2026-08-18)
+
+Resolved: same-author collapse becomes conditional on a style-level setting,
+mirroring CSL's `collapse` attribute more faithfully — not registered as an
+accepted divergence.
+
+Spec: `docs/specs/SAME_AUTHOR_COLLAPSE.md` (Draft, PR pending). Extends the
+existing `citation.collapse` field (today: `citation-number` only) with a
+`same-author` variant carrying its own `year-suffix` sub-setting
+(`separate`/`merged`/`ranged`), rather than adopting CSL's flat four-value
+enum or a regime-derived boolean — see the spec's Rejected Alternatives for why.
+
+Corpus measurement (2 844 independent `styles-legacy/*.csl`): 763 files declare
+no `collapse` attribute at all and Citum collapses them anyway today; of those,
+361 are note-regime (this is the `csl26-m11m` connection) and 44 are numeric
+(collapse invisible there). The other 1 165 `year*`-declaring styles migrate
+today via `extract_citation_collapse`'s `_ => None` arm, which silently
+discards the `year-suffix`/`year-suffix-ranged` distinction — the new field
+maps all four CSL values losslessly.
+
+`div-017` (comma-vs-semicolon on no-locator same-author collapse) is unaffected:
+`chicago-author-date.csl` declares `collapse="year"`, so
+`chicago-author-date-18th` still opts in under the new field and still
+collapses.
+
+Implementation is a separate, stacked PR (schema change, needs the docs PR
+reviewed first per repo policy). `csl26-m11m` is blocked-by this bean and
+closes as a consequence — no note-specific code needed, note styles simply
+never declare `collapse`.

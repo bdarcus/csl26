@@ -1,13 +1,14 @@
 # Citation Cluster Rendering Specification
 
 **Status:** Active
-**Version:** 1.3
+**Version:** 1.4
 **Date:** 2026-08-18
 **Related:** `crates/citum-schema-data/src/citation.rs`,
 `crates/citum-engine/src/processor/citation.rs`,
 `crates/citum-engine/src/processor/rendering/grouped/core.rs`,
 `docs/specs/INTEGRAL_NAME_MEMORY.md`,
-`docs/specs/REPEATED_NOTE_CITATION_STATE_MODEL.md`
+`docs/specs/REPEATED_NOTE_CITATION_STATE_MODEL.md`,
+`docs/specs/SAME_AUTHOR_COLLAPSE.md`
 
 ---
 
@@ -84,9 +85,15 @@ mode, items are joined by `multi_cite_delimiter` (default `"; "`):
 
 ### The rule
 
-When a cluster cites multiple works by **the same author**, the author name
-appears **once** with all year/date references collapsed — regardless of
-citation mode:
+**This behavior is opt-in**, gated on `citation.collapse: same-author` — see
+[`SAME_AUTHOR_COLLAPSE.md`](SAME_AUTHOR_COLLAPSE.md) for the field shape, the
+migrate mapping, and which embedded styles declare it. A style that does not
+declare it renders every item in a multi-item cluster in full, with no
+collapsing, regardless of mode or regime.
+
+When a style declares `collapse: same-author` and a cluster cites multiple
+works by **the same author**, the author name appears **once** with all
+year/date references collapsed — regardless of citation mode:
 
 | Mode | Input | Collapsed output |
 |---|---|---|
@@ -128,6 +135,21 @@ occur for the entire cluster, even for items that share an author and carry no
 hints themselves. The engine's grouping contract is cluster-wide: one item
 requiring expanded author display forces all items in that cluster to render
 individually.
+
+### Exception: styles without `collapse: same-author` never collapse
+
+The most common case, not really an exception: a style with no
+`citation.collapse` (directly or inherited) always renders per-item, in every
+regime and both modes. The gate is on the field, not on `Processing` — a
+`processing: note` style is free to declare `collapse: same-author` and many
+real CSL note styles do (short author-year footnotes have exactly the same
+year-group to collapse onto that author-date citations do). `chicago-notes-18th`
+and its siblings simply don't declare it, because their source CSL renders a
+full bibliographic sentence per citation with no year-group at all — that is
+why `csl26-m11m` ("same-author collapse produces malformed note citations")
+needed no note-specific code to fix. See
+[`SAME_AUTHOR_COLLAPSE.md`](SAME_AUTHOR_COLLAPSE.md) for the full adjudication
+and the list of embedded styles on each side.
 
 ---
 
@@ -182,8 +204,11 @@ the cluster wrap closes for non-integral mode:
 
 ### Same-author collapse with locators
 
-When items in a same-author group carry locators, the **year + locator** pair is
-the joinable unit:
+Applies only to styles that declare `citation.collapse: same-author`
+(see [`SAME_AUTHOR_COLLAPSE.md`](SAME_AUTHOR_COLLAPSE.md)) — the locator
+escalation below is part of the same-author collapse path and is unreachable
+without it. When items in a same-author group carry locators, the **year +
+locator** pair is the joinable unit:
 
 - **No locators on any item**: years joined by `,` — `Chen (2017, 2020)`. This is
   Citum's own choice per CMOS 15.30 and is a registered, intentional divergence
