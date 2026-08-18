@@ -17,6 +17,7 @@ const DIV_008_ID = 'div-008';
 const DIV_009_ID = 'div-009';
 const DIV_010_ID = 'div-010';
 const DIV_011_ID = 'div-011';
+const DIV_017_ID = 'div-017';
 
 // Recognized GB/T 7714—2025 date-annotation forms (§7.5.4.1 era-year
 // parentheticals, §7.5.4.3 copyright/printing-year and approximate-year
@@ -286,6 +287,31 @@ function getFirstAuthorFamily(testItems, id) {
     }
   }
   return null;
+}
+
+/**
+ * Approximates `author_grouping_key` (crates/citum-engine/src/processor/
+ * rendering/grouped/grouping.rs) -- the actual key the engine collapses
+ * same-author citation groups on: full author name list (not just the first
+ * family name), falling back to editor, then title. Used where a mismatch
+ * between "same first family name" and "same author" would matter, e.g.
+ * div-017 -- getFirstAuthorFamily alone would treat "Alice Smith" and
+ * "Bob Smith" as one group.
+ */
+function getAuthorGroupingKey(testItems, id) {
+  const ref = testItems[id];
+  if (!ref) return null;
+  const namesKey = (names) =>
+    Array.isArray(names) && names.length > 0
+      ? names
+          .map((name) => `${name.family || ''} ${name.given || ''}`.trim().toLowerCase())
+          .join('|')
+      : null;
+  return (
+    namesKey(ref.author) ??
+    namesKey(ref.editor) ??
+    (typeof ref.title === 'string' ? ref.title.trim().toLowerCase() : null)
+  );
 }
 
 function detectDiv008OrderDifference(oracleBibliography, citumOrderIds, testItems, divergenceRule) {
@@ -596,7 +622,88 @@ function explainBibliographyMismatchFromDiv009(entry, testItems, divergenceRule)
   return { divergenceId: DIV_009_ID, tag: 'duplicate-url-identifier-tail', itemIds: [entry.id] };
 }
 
-function buildAdjustedOracleResult(rawResults, testCitations, testItems, divergenceInfo, div005Rule, div008Info, div009Rule, div010Rule, div011Rule) {
+/**
+ * div-017: same-author collapse with no locator on any cited item joins the
+ * repeated years with a comma (CMOS 15.30 -- Citum's intentional choice),
+ * where citeproc-js's Chicago output joins with a semicolon. Traced to
+ * chicago-author-date.csl's `<layout delimiter="; ">` leaking into
+ * citeproc-js's `cite-group-delimiter` default, not a considered
+ * CMOS-following choice -- see docs/adjudication/DIVERGENCE_REGISTER.md
+ * div-017 and csl26-uctc.
+ *
+ * Masks a mismatch only when every cited item in the cluster shares the same
+ * first author and *none* carries a locator. The locator-present half of this
+ * same rule (any item has a locator -> semicolon) is a real engine fix
+ * (csl26-uctc), not a divergence -- excluding locator-bearing clusters here
+ * guarantees this mask can never hide a regression in that path. Requiring a
+ * shared first author (rather than masking any ";"-vs-","-only delta)
+ * prevents masking an unrelated between-different-author-group join defect,
+ * which would also produce a semicolon/comma delta but is not this rule.
+ */
+function explainCitationMismatchFromDiv017(citationEntry, citationFixture, testItems, divergenceRule) {
+  // Guards on exactMatch, not the coarse fuzzy `match` field: this
+  // divergence's whole delta is a single punctuation character
+  // (";" vs ","), which already clears the coarse similarity-threshold gate
+  // (`match: true`) with no divergence applied at all. Gating on `match`
+  // like the other div-XXX explainers here would mean this function never
+  // fires -- exactMatch is the metric this divergence actually needs to
+  // explain (see summarizeExactParity's `appliedDivergence` exclusion in
+  // scripts/report-core.js).
+  if (!citationEntry || citationEntry.exactMatch !== false || !citationFixture || !divergenceRule) {
+    return null;
+  }
+
+  const items = citationFixture.items || [];
+  if (items.length < 2) {
+    return null;
+  }
+
+  // Only the no-locator half of the rule is a divergence.
+  if (items.some((item) => item.locator !== undefined && item.locator !== null)) {
+    return null;
+  }
+
+  const itemIds = items.map((item) => item.id).filter(Boolean);
+  if (itemIds.length !== items.length) {
+    return null;
+  }
+
+  // Full author-name key, not just the first family name -- "Alice Smith"
+  // and "Bob Smith" must not be treated as the same author group merely
+  // because they share a surname (see getAuthorGroupingKey).
+  const authorKeys = itemIds.map((id) => getAuthorGroupingKey(testItems, id));
+  if (authorKeys.some((key) => !key) || new Set(authorKeys).size !== 1) {
+    return null;
+  }
+
+  // Compare on the exact-parity fields (exactOracle/exactCitum), the same
+  // strings summarizeExactParity's exactMatch actually failed on -- not
+  // oracle/citum, which run through normalizeText's extra substitutions
+  // (month names, "eds." -> "editors", etc.) irrelevant to this divergence
+  // and not what exactMatch measures.
+  const exactOracle = citationEntry.exactOracle ?? citationEntry.oracle ?? '';
+  const exactCitum = citationEntry.exactCitum ?? citationEntry.citum ?? '';
+
+  // citeproc's semicolon collapses to Citum's comma; require citum's own
+  // output to already be semicolon-free so a genuine, differently-caused
+  // semicolon/comma delta elsewhere in the same string isn't masked away.
+  if (exactCitum.includes(';')) {
+    return null;
+  }
+
+  const foldedOracle = exactOracle.replace(/;\s*/g, ', ');
+  if (foldedOracle !== exactCitum) {
+    return null;
+  }
+
+  return {
+    divergenceId: DIV_017_ID,
+    tag: 'same-author-collapse-no-locator-comma-join',
+    itemIds,
+  };
+}
+
+function buildAdjustedOracleResult(rawResults, testCitations, testItems, divergenceInfo, div005Rule, div008Info, div009Rule, div010Rule, div011Rule, div017Rule) {
   const adjustedCitationEntries = (rawResults.citations?.entries || []).map((entry, index) => {
     const div004Adjustment = explainCitationMismatchFromDiv004(
       entry,
@@ -620,7 +727,14 @@ function buildAdjustedOracleResult(rawResults, testCitations, testItems, diverge
       testItems,
       div010Rule
     );
-    const appliedDivergence = div004Adjustment || div005Adjustment || div008Adjustment || div010Adjustment;
+    const div017Adjustment = explainCitationMismatchFromDiv017(
+      entry,
+      testCitations[index],
+      testItems,
+      div017Rule
+    );
+    const appliedDivergence =
+      div004Adjustment || div005Adjustment || div008Adjustment || div010Adjustment || div017Adjustment;
     return {
       ...entry,
       rawMatch: entry.match,
@@ -676,6 +790,19 @@ function buildAdjustedOracleResult(rawResults, testCitations, testItems, diverge
       note: div005Rule.note || null,
       adjustedCitations: div005Adjustments.length,
       itemIds: [...new Set(div005Adjustments.flatMap((entry) => entry.itemIds || []))],
+    };
+  }
+
+  const div017Adjustments = adjustedCitationEntries
+    .map((entry) => entry.appliedDivergence)
+    .filter((entry) => entry?.divergenceId === DIV_017_ID);
+  if (div017Rule && div017Adjustments.length > 0) {
+    divergenceSummary[DIV_017_ID] = {
+      scopes: div017Rule.scopes || [],
+      tags: div017Rule.tags || [],
+      note: div017Rule.note || null,
+      adjustedCitations: div017Adjustments.length,
+      itemIds: [...new Set(div017Adjustments.flatMap((entry) => entry.itemIds || []))],
     };
   }
 
@@ -766,6 +893,7 @@ function attachRegisteredDivergenceAdjustments(
   const div009Rule = resolveRegisteredDivergence(policy, DIV_009_ID);
   const div010Rule = resolveRegisteredDivergence(policy, DIV_010_ID);
   const div011Rule = resolveRegisteredDivergence(policy, DIV_011_ID);
+  const div017Rule = resolveRegisteredDivergence(policy, DIV_017_ID);
 
   // Positional comparison by authoritative reference ids runs unconditionally,
   // independent of whether any individual entry failed. A reordered
@@ -845,7 +973,7 @@ function attachRegisteredDivergenceAdjustments(
     ...rawResults,
     bibliographyOrder,
     adjusted: buildAdjustedOracleResult(
-      rawResults, testCitations, testItems, divergenceInfo, div005Rule, div008Info, div009Rule, div010Rule, div011Rule
+      rawResults, testCitations, testItems, divergenceInfo, div005Rule, div008Info, div009Rule, div010Rule, div011Rule, div017Rule
     ),
   };
 }
@@ -857,6 +985,7 @@ module.exports = {
   DIV_009_ID,
   DIV_010_ID,
   DIV_011_ID,
+  DIV_017_ID,
   attachRegisteredDivergenceAdjustments,
   buildAdjustedOracleResult,
   buildNumericLabelMap,
@@ -869,6 +998,7 @@ module.exports = {
   explainCitationMismatchFromDiv005,
   explainCitationMismatchFromDiv008,
   explainCitationMismatchFromDiv010,
+  explainCitationMismatchFromDiv017,
   explainBibliographyMismatchFromDiv009,
   explainBibliographyMismatchFromDiv010,
   explainBibliographyMismatchFromDiv011,
