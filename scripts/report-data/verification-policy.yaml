@@ -94,6 +94,28 @@ divergences:
       citeproc-js (the CSL-M byte-parity oracle) is the one that diverges from
       the standard. Adjusted verification masks mismatches that resolve after
       stripping the recognized GB/T date-annotation forms from both sides.
+  div-017:
+    scopes:
+      - citation
+    tags:
+      - same-author-collapse-no-locator-comma-join
+      - documentary-evidence-cmos-15-30
+    note: >-
+      Same-author collapse with no locator on any cited item joins the
+      repeated years with a comma per CMOS 15.30 — Citum's own intentional
+      choice, not an oversight. citeproc-js's Chicago output joins with a
+      semicolon instead, traced to chicago-author-date.csl's
+      `<layout delimiter="; ">` leaking into citeproc-js's undocumented
+      `cite-group-delimiter` default, not a considered CMOS-following choice;
+      confirmed against `collapse_ChicagoAfterCollapse.json` in the CSL test
+      suite, whose comma-delimiter clause reproduces CMOS's comma correctly in
+      the same engine. The companion locator-present half of this rule (any
+      item has a locator → semicolon) is a real engine fix (`csl26-uctc`), not
+      a divergence — masking here requires no cited item to carry a locator,
+      so this can never hide a regression in that path. Adjusted verification
+      masks mismatches that resolve once citeproc-js's semicolons are folded
+      to commas, restricted to clusters where every cited item shares the same
+      first author.
 
 styles:
   numeric-comp:
