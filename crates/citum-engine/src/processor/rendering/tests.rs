@@ -12,7 +12,7 @@ use citum_schema::options::{
     Processing, SubsequentNameForm,
 };
 use citum_schema::template::*;
-use citum_schema::{CitationSpec, Style, StyleInfo};
+use citum_schema::{CitationCollapse, CitationSpec, SameAuthorCollapse, Style, StyleInfo};
 use csl_legacy::csl_json::{
     DateVariable as LegacyDateVariable, Name, Reference as LegacyReference,
 };
@@ -46,6 +46,7 @@ fn grouped_author_date_style() -> Style {
             ..Default::default()
         }),
         citation: Some(CitationSpec {
+            collapse: Some(CitationCollapse::SameAuthor(SameAuthorCollapse::default())),
             template: Some(
                 vec![
                     TemplateComponent::Contributor(TemplateContributor {
@@ -658,7 +659,8 @@ fn grouping_helper_matches_citation_wide_preserve_behavior() {
         },
     ];
 
-    let groups = group_citation_items_by_author(&renderer, &items);
+    let collapse = CitationCollapse::SameAuthor(SameAuthorCollapse::default());
+    let groups = group_citation_items_by_author(&renderer, &items, Some(&collapse));
 
     assert_eq!(groups.len(), 3);
     assert_eq!(

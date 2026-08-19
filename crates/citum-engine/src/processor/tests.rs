@@ -16,7 +16,9 @@ use citum_schema::template::{
     TemplateDate, TemplateGroup, TemplateNumber, TemplateTitle, TemplateVariable, TitleType,
     WrapPunctuation,
 };
-use citum_schema::{BibliographySpec, CitationSpec, StyleInfo};
+use citum_schema::{
+    BibliographySpec, CitationCollapse, CitationSpec, SameAuthorCollapse, StyleInfo,
+};
 use csl_legacy::csl_json::{DateVariable, Name, Reference as LegacyReference, StringOrNumber};
 use rstest::rstest;
 
@@ -2135,7 +2137,9 @@ fn test_numeric_citation_numbers_follow_registry_order() {
 fn test_citation_grouping_same_author() {
     // Test that adjacent citations by the same author are collapsed:
     // (Kuhn 1962a, 1962b) instead of (Kuhn 1962a; Kuhn 1962b)
-    let style = make_style();
+    let mut style = make_style();
+    style.citation.as_mut().unwrap().collapse =
+        Some(CitationCollapse::SameAuthor(SameAuthorCollapse::default()));
     let mut bib = make_bibliography();
 
     // Add second Kuhn 1962 with different title (triggers year-suffix)
@@ -3333,6 +3337,7 @@ fn given_integral_multi_cites_when_rendering_then_joining_respects_integral_beha
 fn test_same_author_integral_multi_cite_collapses_to_grouped_years() {
     let mut style = make_style();
     let mut base_citation = style.citation.take().unwrap_or_default();
+    base_citation.collapse = Some(CitationCollapse::SameAuthor(SameAuthorCollapse::default()));
     // Simulate APA: base spec has multi_cite_delimiter "; " but integral sub-spec does not.
     base_citation.multi_cite_delimiter = Some("; ".into());
     base_citation.integral = Some(Box::new(CitationSpec {
@@ -3434,6 +3439,7 @@ fn test_same_author_non_integral_multi_cite_collapses_to_grouped_years() {
         ),
         wrap: Some(WrapPunctuation::Parentheses.into()),
         multi_cite_delimiter: Some("; ".into()),
+        collapse: Some(CitationCollapse::SameAuthor(SameAuthorCollapse::default())),
         ..Default::default()
     });
 
@@ -3483,6 +3489,7 @@ fn test_same_author_non_integral_multi_cite_collapses_to_grouped_years() {
 fn test_same_author_integral_multi_cite_respects_bracket_wrap() {
     let mut style = make_style();
     let mut base_citation = style.citation.take().unwrap_or_default();
+    base_citation.collapse = Some(CitationCollapse::SameAuthor(SameAuthorCollapse::default()));
     base_citation.multi_cite_delimiter = Some("; ".into());
     base_citation.integral = Some(Box::new(CitationSpec {
         delimiter: Some(" ".into()),
@@ -3626,6 +3633,7 @@ fn test_same_author_collapse_matches_csl_suite_chicago_after_collapse() {
         ),
         delimiter: Some(String::new().into()),
         wrap: Some(WrapPunctuation::Parentheses.into()),
+        collapse: Some(CitationCollapse::SameAuthor(SameAuthorCollapse::default())),
         ..Default::default()
     });
 
@@ -3736,6 +3744,7 @@ fn test_integral_locator_does_not_duplicate_group_delimiter() {
             .into(),
         ),
         wrap: Some(WrapPunctuation::Parentheses.into()),
+        collapse: Some(CitationCollapse::SameAuthor(SameAuthorCollapse::default())),
         integral: Some(Box::new(CitationSpec {
             wrap: None,
             ..Default::default()

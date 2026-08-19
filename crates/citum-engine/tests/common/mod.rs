@@ -403,6 +403,9 @@ pub fn build_author_date_style(
             )),
             template: Some(citation_template.into()),
             multi_cite_delimiter: Some("; ".into()),
+            collapse: Some(citum_schema::CitationCollapse::SameAuthor(
+                citum_schema::SameAuthorCollapse::default(),
+            )),
             ..Default::default()
         }),
         ..Default::default()

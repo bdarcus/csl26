@@ -2159,6 +2159,7 @@ options:
       names: false
       add-givenname: false
 citation:
+  collapse: same-author
   multi-cite-delimiter: ' '
   template:
     - group:
