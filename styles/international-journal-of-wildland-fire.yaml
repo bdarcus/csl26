@@ -53,6 +53,13 @@ options:
   dates: long
   titles: journal-emphasis
 citation:
+  # source (international-journal-of-wildland-fire.csl): collapse="year-suffix"
+  # — SAME_AUTHOR_COLLAPSE.md §7 v1.1. Also inherited from
+  # springer-basic-author-date-core (Custom regime, no cross-family reset);
+  # declared explicitly here since this style's own source requests it.
+  collapse:
+    same-author:
+      year-suffix: merged
   options:
     contributors:
       name-form: initials

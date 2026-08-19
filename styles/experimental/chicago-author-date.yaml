@@ -32,6 +32,10 @@ options:
     month: long
 
 citation:
+  # source (chicago-author-date.csl): collapse="year" —
+  # SAME_AUTHOR_COLLAPSE.md §7 v1.1
+  collapse:
+    same-author: {}
   sort:
     template:
     - key: author

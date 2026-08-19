@@ -43,6 +43,10 @@ options:
   contributors: numeric-compact
   dates: long
 citation:
+  # source (elsevier-vancouver-author-date.csl): collapse="year" —
+  # SAME_AUTHOR_COLLAPSE.md §7 v1.1
+  collapse:
+    same-author: {}
   options:
     contributors:
       name-form: initials
