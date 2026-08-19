@@ -170,6 +170,18 @@ pub enum ResolutionError {
         /// Version of the running engine.
         declared: String,
     },
+    /// A `citation.collapse` value is not licensed for the style's processing
+    /// regime, e.g. `same-author` on a `Numeric` style or `citation-number`
+    /// on an `AuthorDate` style. See `docs/specs/SAME_AUTHOR_COLLAPSE.md` §6.
+    #[error("`{collapse}` collapse is not valid for `{processing}` processing in `{location}`")]
+    IncoherentCollapseRegime {
+        /// Human-readable location hint (e.g. `"citation.collapse"`).
+        location: String,
+        /// The declared collapse value, formatted for the error message.
+        collapse: String,
+        /// The style's resolved processing regime, formatted for the error message.
+        processing: String,
+    },
 }
 
 impl ResolutionError {

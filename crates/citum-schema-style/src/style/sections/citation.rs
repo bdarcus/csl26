@@ -18,13 +18,124 @@ use crate::template::{
     TemplateReference, TemplateVariant, TemplateVariants, matched_localized_template,
 };
 
+/// String forms accepted by [`CitationCollapse`]'s hand-written `Deserialize`.
+const CITATION_COLLAPSE_STRING_VARIANTS: &[&str] = &["citation-number", "same-author"];
+
 /// Citation collapse behavior for multi-item citations.
-#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq)]
+///
+/// `Deserialize`/`Serialize` are hand-written (see the `impl` blocks below),
+/// not derived — a plain `#[derive]` on a tuple variant like `SameAuthor(..)`
+/// only accepts the tagged-map form (`{ "same-author": {...} }`), not the bare
+/// `same-author` string shorthand. This mirrors `Processing`
+/// (`crate::options::processing`), which hand-writes its own impls for the
+/// same reason on `Label(..)`.
+// `rename_all` is retained for `JsonSchema` derive (the hand-written
+// `Serialize`/`Deserialize` impls below already use kebab-case names
+// directly).
+#[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-#[serde(rename_all = "kebab-case")]
+#[cfg_attr(feature = "schema", schemars(rename_all = "kebab-case"))]
+#[non_exhaustive]
 pub enum CitationCollapse {
     /// Collapse adjacent citation numbers into a numeric range such as `1–3`.
     CitationNumber,
+    /// Collapse a same-author multi-item group onto one author name with a
+    /// joined year/date list. See `docs/specs/SAME_AUTHOR_COLLAPSE.md`.
+    SameAuthor(SameAuthorCollapse),
+}
+
+impl Serialize for CitationCollapse {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        match self {
+            CitationCollapse::CitationNumber => serializer.serialize_str("citation-number"),
+            CitationCollapse::SameAuthor(config) => {
+                use serde::ser::SerializeMap;
+                let mut map = serializer.serialize_map(Some(1))?;
+                map.serialize_entry("same-author", config)?;
+                map.end()
+            }
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for CitationCollapse {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        use serde::de::{self, MapAccess, Visitor};
+
+        struct CitationCollapseVisitor;
+
+        impl<'de> Visitor<'de> for CitationCollapseVisitor {
+            type Value = CitationCollapse;
+
+            fn expecting(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+                f.write_str("a citation collapse string or map")
+            }
+
+            fn visit_str<E: de::Error>(self, v: &str) -> Result<CitationCollapse, E> {
+                match v {
+                    "citation-number" => Ok(CitationCollapse::CitationNumber),
+                    "same-author" => {
+                        Ok(CitationCollapse::SameAuthor(SameAuthorCollapse::default()))
+                    }
+                    other => Err(E::unknown_variant(other, CITATION_COLLAPSE_STRING_VARIANTS)),
+                }
+            }
+
+            fn visit_map<A: MapAccess<'de>>(
+                self,
+                mut map: A,
+            ) -> Result<CitationCollapse, A::Error> {
+                let key: String = map
+                    .next_key()?
+                    .ok_or_else(|| de::Error::invalid_length(0, &"1"))?;
+                match key.as_str() {
+                    "same-author" => {
+                        let config: SameAuthorCollapse = map.next_value()?;
+                        Ok(CitationCollapse::SameAuthor(config))
+                    }
+                    other => Err(de::Error::unknown_field(other, &["same-author"])),
+                }
+            }
+        }
+
+        deserializer.deserialize_any(CitationCollapseVisitor)
+    }
+}
+
+/// Configuration for [`CitationCollapse::SameAuthor`].
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+#[serde(rename_all = "kebab-case")]
+pub struct SameAuthorCollapse {
+    /// How same-year disambiguation suffixes render inside a collapsed group.
+    #[serde(default)]
+    pub year_suffix: YearSuffixCollapse,
+}
+
+/// How same-year disambiguation suffixes render inside a same-author collapsed
+/// group. Mirrors CSL's `year-suffix` / `year-suffix-ranged` collapse values.
+#[derive(Debug, Deserialize, Serialize, Clone, Copy, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+#[serde(rename_all = "kebab-case")]
+pub enum YearSuffixCollapse {
+    /// `Smith (2020a, 2020b)` — Citum's existing behavior; each suffixed year
+    /// token stays atomic. See `CITATION_CLUSTER_RENDERING.md` §Same-Year
+    /// Disambiguation.
+    #[default]
+    Separate,
+    /// `Smith (2020a, b)` — CSL `collapse="year-suffix"`. Parses and
+    /// round-trips; not yet implemented by the renderer (falls back to
+    /// `Separate` with a one-time load warning).
+    Merged,
+    /// `Smith (2020a–c)` — CSL `collapse="year-suffix-ranged"`. Same status as
+    /// `Merged`.
+    Ranged,
 }
 
 /// Text-case transform applied when a citation renders at note start.

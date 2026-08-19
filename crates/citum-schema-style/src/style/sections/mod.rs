@@ -9,4 +9,6 @@ pub mod bibliography;
 pub mod citation;
 
 pub use bibliography::BibliographySpec;
-pub use citation::{CitationCollapse, CitationSpec, NoteStartTextCase};
+pub use citation::{
+    CitationCollapse, CitationSpec, NoteStartTextCase, SameAuthorCollapse, YearSuffixCollapse,
+};

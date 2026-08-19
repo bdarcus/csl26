@@ -771,6 +771,7 @@ fn style_validate_emits_warning_for_unknown_type_in_bib_type_variants() {
             assert_eq!(name, "typo-type");
             assert_eq!(location, "bibliography.type-variants");
         }
+        other => panic!("unexpected warning: {other:?}"),
     }
 }
 

@@ -5,11 +5,14 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus and Citum contributors
 
 //! Style validation and resource-limit checks.
 
+use crate::options::processing::RegimeFamily;
 use crate::template::{
     LocalizedTemplateSpec, TemplateComponent, TemplateVariant, TemplateVariants,
 };
 use crate::version::{MAX_TEMPLATE_COMPONENTS, MAX_TEMPLATE_NESTING_DEPTH};
-use crate::{BibliographySpec, CitationSpec, ResolutionError};
+use crate::{
+    BibliographySpec, CitationCollapse, CitationSpec, ResolutionError, YearSuffixCollapse,
+};
 
 use super::Style;
 
@@ -30,6 +33,14 @@ pub enum SchemaWarning {
         /// Human-readable location hint (e.g., `"bibliography.type-variants"`).
         location: String,
     },
+    /// `collapse: same-author` declares `year-suffix: merged` or `ranged`,
+    /// which parses and round-trips but is not yet implemented by the
+    /// renderer — same-year suffixes still render `Separate`.
+    /// See `docs/specs/SAME_AUTHOR_COLLAPSE.md`.
+    UnimplementedCollapseDegree {
+        /// Human-readable location hint (e.g., `"citation.collapse"`).
+        location: String,
+    },
 }
 
 impl std::fmt::Display for SchemaWarning {
@@ -40,6 +51,14 @@ impl std::fmt::Display for SchemaWarning {
                     f,
                     "unknown reference type \"{name}\" in {location} \
                      (may not match a reference; check for typos)"
+                )
+            }
+            SchemaWarning::UnimplementedCollapseDegree { location } => {
+                write!(
+                    f,
+                    "{location} declares a year-suffix collapse degree \
+                     (merged/ranged) not yet implemented by the renderer; \
+                     falls back to separate suffixes"
                 )
             }
         }
@@ -83,6 +102,36 @@ impl Style {
             budget.check_bibliography_spec(bibliography, "bibliography", 0)?;
         }
 
+        Ok(())
+    }
+
+    /// Validate that any declared `citation.collapse` (including on
+    /// `integral`/`non-integral`/`subsequent`/`ibid` sub-specs) is licensed
+    /// for the style's resolved processing regime.
+    ///
+    /// `same-author` is legal on `AuthorDate`-family, `Note`, and `Custom`;
+    /// `citation-number` is legal on `Numeric` and `Custom` — mirroring the
+    /// engine's own existing gate, `should_collapse_citation_numbers`, which
+    /// already requires `Processing::Numeric`. Absent `options.processing`
+    /// resolves to `Processing::default()` (`AuthorDate`), matching the
+    /// schema default. See `docs/specs/SAME_AUTHOR_COLLAPSE.md` §6.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ResolutionError::IncoherentCollapseRegime`] for the first
+    /// sub-spec whose declared `collapse` value is not licensed.
+    pub(crate) fn validate_collapse_regime(&self) -> Result<(), ResolutionError> {
+        let regime = self
+            .options
+            .as_ref()
+            .and_then(|options| options.processing.as_ref())
+            .map_or(
+                RegimeFamily::AuthorDate,
+                crate::options::Processing::regime_family,
+            );
+        if let Some(citation) = &self.citation {
+            check_collapse_regime(citation, "citation", regime)?;
+        }
         Ok(())
     }
 
@@ -295,6 +344,13 @@ fn collect_citation_spec_warnings(
             }
         }
     }
+    if let Some(CitationCollapse::SameAuthor(config)) = &spec.collapse
+        && config.year_suffix != YearSuffixCollapse::Separate
+    {
+        warnings.push(SchemaWarning::UnimplementedCollapseDegree {
+            location: format!("{location}.collapse"),
+        });
+    }
     // Recurse into sub-specs
     for (sub_name, sub_spec) in [
         ("integral", spec.integral.as_deref()),
@@ -307,6 +363,64 @@ fn collect_citation_spec_warnings(
     {
         collect_citation_spec_warnings(sub_spec, &format!("{location}.{sub_name}"), warnings);
     }
+}
+
+/// Human-readable name for a [`CitationCollapse`] value, for error messages.
+fn collapse_label(collapse: &CitationCollapse) -> &'static str {
+    match collapse {
+        CitationCollapse::CitationNumber => "citation-number",
+        CitationCollapse::SameAuthor(_) => "same-author",
+    }
+}
+
+/// Human-readable name for a [`RegimeFamily`], for error messages.
+fn regime_label(regime: RegimeFamily) -> &'static str {
+    match regime {
+        RegimeFamily::AuthorDate => "author-date",
+        RegimeFamily::Numeric => "numeric",
+        RegimeFamily::Note => "note",
+        RegimeFamily::Label => "label",
+        RegimeFamily::Custom => "custom",
+    }
+}
+
+/// Recursively check `collapse` on a `CitationSpec` and its sub-specs against
+/// the style's resolved processing regime.
+fn check_collapse_regime(
+    spec: &CitationSpec,
+    location: &str,
+    regime: RegimeFamily,
+) -> Result<(), ResolutionError> {
+    if let Some(collapse) = &spec.collapse {
+        let licensed = match collapse {
+            CitationCollapse::SameAuthor(_) => matches!(
+                regime,
+                RegimeFamily::AuthorDate | RegimeFamily::Note | RegimeFamily::Custom
+            ),
+            CitationCollapse::CitationNumber => {
+                matches!(regime, RegimeFamily::Numeric | RegimeFamily::Custom)
+            }
+        };
+        if !licensed {
+            return Err(ResolutionError::IncoherentCollapseRegime {
+                location: format!("{location}.collapse"),
+                collapse: collapse_label(collapse).to_string(),
+                processing: regime_label(regime).to_string(),
+            });
+        }
+    }
+    for (sub_name, sub_spec) in [
+        ("integral", spec.integral.as_deref()),
+        ("non-integral", spec.non_integral.as_deref()),
+        ("subsequent", spec.subsequent.as_deref()),
+        ("ibid", spec.ibid.as_deref()),
+    ]
+    .into_iter()
+    .filter_map(|(n, s)| s.map(|s| (n, s)))
+    {
+        check_collapse_regime(sub_spec, &format!("{location}.{sub_name}"), regime)?;
+    }
+    Ok(())
 }
 
 fn collect_date_fallback_warnings(
