@@ -25,7 +25,9 @@ use citum_migrate::{
     template_resolver,
 };
 use citum_schema::{
-    BibliographySpec, CitationCollapse, CitationSpec, Style, StyleInfo,
+    BibliographySpec, CitationCollapse, CitationSpec, SameAuthorCollapse, Style, StyleInfo,
+    YearSuffixCollapse,
+    options::{Processing, RegimeFamily},
     template::{TemplateComponent, TemplateVariant, TypeSelector, WrapPunctuation},
 };
 use std::path::Path;
@@ -288,6 +290,11 @@ fn build_final_style(legacy_style: &csl_legacy::model::Style, mut c: CompiledOut
         _ => None,
     };
     let declares_marker = declared_label_mode.is_some();
+    // Captured before `c.options` moves into the `options:` field below —
+    // `extract_citation_collapse` needs the regime to drop values that would
+    // fail the schema's regime-coherence validation (see §4/§6 of
+    // docs/specs/SAME_AUTHOR_COLLAPSE.md).
+    let collapse_regime = c.options.processing.clone();
 
     let citation_scope_options = if declares_marker || c.citation_contributor_overrides.is_some() {
         Some(citum_schema::CitationOptions {
@@ -350,7 +357,7 @@ fn build_final_style(legacy_style: &csl_legacy::model::Style, mut c: CompiledOut
             template_ref: None,
             template: Some(c.new_cit.into()),
             locales: c.citation_locales,
-            collapse: extract_citation_collapse(&legacy_style.citation),
+            collapse: extract_citation_collapse(&legacy_style.citation, collapse_regime.as_ref()),
             wrap: c.citation_wrap.map(Into::into),
             prefix: c.citation_prefix.map(Into::into),
             suffix: c.citation_suffix.map(Into::into),
@@ -682,11 +689,60 @@ fn measured_selection_unavailable<T>(
     (current, false, None)
 }
 
-fn extract_citation_collapse(citation: &csl_legacy::model::Citation) -> Option<CitationCollapse> {
-    match citation.collapse.as_deref() {
-        Some("citation-number") => Some(CitationCollapse::CitationNumber),
-        _ => None,
-    }
+/// Map a CSL `collapse` attribute to Citum's two-axis `CitationCollapse`,
+/// losslessly for all four CSL values (`docs/specs/SAME_AUTHOR_COLLAPSE.md`
+/// §4), then drop the mapped value if it is not licensed for the style's
+/// processing regime rather than emit something that would fail the schema's
+/// regime-coherence validation (§6's carve-out for the handful of corpus
+/// styles where `collapse` is declared but doesn't fit either mechanism —
+/// 2 inert `Label` styles, 4 `Note` + `citation-number` styles).
+///
+/// Warns once for `year-suffix` / `year-suffix-ranged`: the value round-trips
+/// but the renderer doesn't implement the merged/ranged degree yet, so the
+/// migrated style renders as `separate` until that follow-up lands.
+fn extract_citation_collapse(
+    citation: &csl_legacy::model::Citation,
+    processing: Option<&Processing>,
+) -> Option<CitationCollapse> {
+    let mapped = match citation.collapse.as_deref() {
+        Some("citation-number") => CitationCollapse::CitationNumber,
+        Some("year") => CitationCollapse::SameAuthor(SameAuthorCollapse::default()),
+        Some("year-suffix") => {
+            tracing::warn!(
+                "collapse=\"year-suffix\" migrates to `same-author: {{ year-suffix: merged }}`, \
+                 which parses but is not yet rendered (falls back to separate); see \
+                 docs/specs/SAME_AUTHOR_COLLAPSE.md"
+            );
+            CitationCollapse::SameAuthor(SameAuthorCollapse {
+                year_suffix: YearSuffixCollapse::Merged,
+            })
+        }
+        Some("year-suffix-ranged") => {
+            tracing::warn!(
+                "collapse=\"year-suffix-ranged\" migrates to `same-author: {{ year-suffix: ranged }}`, \
+                 which parses but is not yet rendered (falls back to separate); see \
+                 docs/specs/SAME_AUTHOR_COLLAPSE.md"
+            );
+            CitationCollapse::SameAuthor(SameAuthorCollapse {
+                year_suffix: YearSuffixCollapse::Ranged,
+            })
+        }
+        _ => return None,
+    };
+
+    // `matches!` supplies its own catch-all arm, so this stays exhaustive
+    // against `CitationCollapse` being `#[non_exhaustive]` without an
+    // `unreachable!()` (denied workspace-wide).
+    let regime = processing.map_or(RegimeFamily::AuthorDate, Processing::regime_family);
+    let licensed = if matches!(mapped, CitationCollapse::CitationNumber) {
+        matches!(regime, RegimeFamily::Numeric | RegimeFamily::Custom)
+    } else {
+        matches!(
+            regime,
+            RegimeFamily::AuthorDate | RegimeFamily::Note | RegimeFamily::Custom
+        )
+    };
+    licensed.then_some(mapped)
 }
 
 fn bibliography_sort_matches_processing_default(
@@ -721,6 +777,109 @@ mod tests {
     use csl_legacy::model::{
         Citation, Info, Layout, Sort as LegacySort, SortKey as LegacySortKey, Style as LegacyStyle,
     };
+    use rstest::rstest;
+
+    fn legacy_citation_with_collapse(collapse: Option<&str>) -> Citation {
+        Citation {
+            layout: Layout {
+                prefix: None,
+                suffix: None,
+                delimiter: None,
+                children: vec![],
+            },
+            localized_layouts: Vec::new(),
+            sort: None,
+            collapse: collapse.map(str::to_string),
+            et_al_min: None,
+            et_al_use_first: None,
+            disambiguate_add_year_suffix: None,
+            disambiguate_add_names: None,
+            disambiguate_add_givenname: None,
+            disambiguate_givenname_rule: None,
+        }
+    }
+
+    #[rstest]
+    #[case::citation_number(
+        "citation-number",
+        Some(Processing::Numeric),
+        Some(CitationCollapse::CitationNumber)
+    )]
+    #[case::year(
+        "year",
+        Some(Processing::AuthorDate),
+        Some(CitationCollapse::SameAuthor(SameAuthorCollapse::default()))
+    )]
+    #[case::year_no_processing_defaults_to_author_date(
+        "year",
+        None,
+        Some(CitationCollapse::SameAuthor(SameAuthorCollapse::default()))
+    )]
+    #[case::year_suffix(
+        "year-suffix",
+        Some(Processing::AuthorDate),
+        Some(CitationCollapse::SameAuthor(SameAuthorCollapse {
+            year_suffix: YearSuffixCollapse::Merged,
+        }))
+    )]
+    #[case::year_suffix_ranged(
+        "year-suffix-ranged",
+        Some(Processing::AuthorDate),
+        Some(CitationCollapse::SameAuthor(SameAuthorCollapse {
+            year_suffix: YearSuffixCollapse::Ranged,
+        }))
+    )]
+    #[case::same_author_licensed_on_note(
+        "year",
+        Some(Processing::Note),
+        Some(CitationCollapse::SameAuthor(SameAuthorCollapse::default()))
+    )]
+    fn extract_citation_collapse_maps_legal_csl_values(
+        #[case] csl_value: &str,
+        #[case] processing: Option<Processing>,
+        #[case] expected: Option<CitationCollapse>,
+    ) {
+        // given a CSL citation declaring `collapse` on a regime that licenses it
+        let citation = legacy_citation_with_collapse(Some(csl_value));
+
+        // when extracted for the style's resolved processing regime
+        let extracted = extract_citation_collapse(&citation, processing.as_ref());
+
+        // then it maps losslessly per SAME_AUTHOR_COLLAPSE.md §4
+        assert_eq!(extracted, expected);
+    }
+
+    #[rstest]
+    #[case::same_author_illegal_on_numeric("year", Processing::Numeric)]
+    #[case::citation_number_illegal_on_note("citation-number", Processing::Note)]
+    #[case::citation_number_illegal_on_author_date("citation-number", Processing::AuthorDate)]
+    fn extract_citation_collapse_drops_value_illegal_for_regime(
+        #[case] csl_value: &str,
+        #[case] processing: Processing,
+    ) {
+        // given a CSL citation declaring `collapse` on a regime that does not
+        // license it (SAME_AUTHOR_COLLAPSE.md §6's carve-out)
+        let citation = legacy_citation_with_collapse(Some(csl_value));
+
+        // when extracted for that regime
+        let extracted = extract_citation_collapse(&citation, Some(&processing));
+
+        // then the attribute is dropped rather than emitting a value that
+        // would fail the schema's regime-coherence validation
+        assert_eq!(extracted, None);
+    }
+
+    #[test]
+    fn extract_citation_collapse_absent_attribute_yields_none() {
+        // given a CSL citation with no `collapse` attribute
+        let citation = legacy_citation_with_collapse(None);
+
+        // when extracted
+        let extracted = extract_citation_collapse(&citation, Some(&Processing::AuthorDate));
+
+        // then no collapse is migrated
+        assert_eq!(extracted, None);
+    }
 
     #[test]
     fn bibliography_candidate_preserves_current_citation_section() {
@@ -823,10 +982,19 @@ mod tests {
         let mut style = minimal_legacy_style();
         style.citation.collapse = Some("citation-number".to_string());
 
+        // `citation-number` collapse is only licensed on `Numeric` regime
+        // (SAME_AUTHOR_COLLAPSE.md §6); a real numeric-style migration always
+        // has `processing: numeric` detected ahead of assembly, so the test
+        // fixture must too, or the regime-coherence check drops the value.
+        let options = citum_schema::options::Config {
+            processing: Some(Processing::Numeric),
+            ..citum_schema::options::Config::default()
+        };
+
         let migrated = build_final_style(
             &style,
             CompiledOutput {
-                options: citum_schema::options::Config::default(),
+                options,
                 bibliography_options: None,
                 citation_contributor_overrides: None,
                 bibliography_contributor_overrides: None,
