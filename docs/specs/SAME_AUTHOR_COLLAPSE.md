@@ -1,8 +1,8 @@
 # Same-Author Collapse Specification
 
-**Status:** Draft
-**Version:** 1.0
-**Date:** 2026-08-18
+**Status:** Active
+**Version:** 1.1
+**Date:** 2026-08-19
 **Supersedes:** N/A
 **Related:** `csl26-ecfn`, `csl26-m11m`, `docs/specs/CITATION_CLUSTER_RENDERING.md`,
 `docs/specs/CITATION_REGIME.md`, `docs/adjudication/DIVERGENCE_REGISTER.md` (div-017),
@@ -422,10 +422,13 @@ more expressive intent elsewhere. Consistent with the existing
 regime-coherence enforcement in `docs/specs/CITATION_REGIME.md` (the
 inheritance invariant) and `StyleLineage::apply_regime_guard` in migrate.
 
-### 7. Embedded styles requiring `collapse: same-author`
+### 7. Tracked styles requiring `collapse: same-author`
 
 Source CSL attribute noted in parentheses; declaring this preserves rendering
-exactly as it is today:
+exactly as it is today. v1.0 listed only the 5 embedded styles below; v1.1
+adds the 4 non-embedded tracked styles it missed, found by mechanically
+re-deriving this table against every tracked style's actual `styles-legacy/`
+source rather than trusting the v1.0 enumeration:
 
 | style | source CSL `collapse` | Citum `collapse` after this spec |
 |---|---|---|
@@ -434,13 +437,31 @@ exactly as it is today:
 | `elsevier-harvard-core` | `year` | `same-author` |
 | `springer-basic-author-date-core` | `year-suffix` | `{ same-author: { year-suffix: merged } }` |
 | `gb-t-7714-2025-author-date` | `year` | `same-author` |
+| `elsevier-vancouver-author-date` | `year` | `same-author` |
+| `harvard-cite-them-right` | `year` | `same-author` |
+| `international-journal-of-wildland-fire` | `year-suffix` | `{ same-author: { year-suffix: merged } }` |
+| `styles/experimental/chicago-author-date` | `year` | `same-author` |
 
 `taylor-and-francis-chicago-author-date-core` inherits `collapse` via `extends:
 chicago-author-date-18th`; no separate declaration needed.
-`springer-basic-author-date-core` is the one style that gains real fidelity
+`springer-basic-author-date-core` is one style that gains real fidelity
 from the two-axis shape rather than just parity: its source declares
 `year-suffix`, which the flat-enum alternative below would have flattened to
 plain `year` behavior exactly as migrate does today.
+`international-journal-of-wildland-fire` extends `springer-basic-author-date`
+(itself extending `-core`) and would inherit the merged degree regardless —
+both share `RegimeFamily::Custom`, which never triggers the inheritance
+guard's cross-family sub-spec reset — but is declared explicitly here since
+its own source independently requests it.
+
+Declared using the config-map form (`same-author: {}`, not the bare
+`same-author` string) in every tracked style: the generated JSON schema only
+advertises `same-author` as an object (§1), so
+`scripts/validate-schemas.js` — which has no normalization step for this
+sugar, unlike its existing `processing:` custom-config handling — rejects the
+bare form. The map form is also what every other config-carrying variant in
+this codebase already uses (`processing: { label: {...} }`, never bare
+`label`).
 
 ### 8. Embedded styles that must NOT declare it
 
@@ -507,8 +528,13 @@ output) and a pinned regression test, not oracle-exact shortening.
 `csl26-uctc` deferred "MLA drops the locator delimiter entirely in collapsed
 groups" as out of scope. `modern-language-association.csl` has no `collapse`
 attribute, so under this spec MLA stops collapsing same-author clusters
-entirely, which likely moots that defect (nothing left to drop a delimiter
-from). Implementation should confirm, not assume.
+entirely, which moots that defect (nothing left to drop a delimiter from).
+**Confirmed**, not just predicted: a same-author, no-locator cluster on
+`modern-language-association.yaml` now renders
+`(Garcia, "…"; Garcia, "…")` — each item in full, joined by the ordinary
+delimiter, no collapse path entered
+(`given_a_no_collapse_author_date_style_when_same_author_cluster_has_no_locator_then_items_stay_separate::case_2_modern_language_association`,
+`domain_fixtures.rs`).
 
 ## Rejected Alternatives
 
@@ -561,7 +587,7 @@ CMOS-vs-citeproc-js disagreement that survives this spec unchanged).
 
 ## Acceptance Criteria
 
-- [ ] `collapse: same-author` (bare-string) and `{ same-author: { year-suffix:
+- [x] `collapse: same-author` (bare-string) and `{ same-author: { year-suffix:
       … } }` (config-map) both parse; the config-map form serializes back
       identically (the bare-string form is deserialize-only sugar and is not
       expected to round-trip byte-for-byte, matching `processing: label`'s
@@ -571,9 +597,9 @@ CMOS-vs-citeproc-js disagreement that survives this spec unchanged).
       `Processing`'s published schema (`docs/schemas/style.json`) exactly —
       `"label"` is schema-advertised only as an object, never as a bare
       string, even though the Rust deserializer accepts both.
-- [ ] Absent `citation.collapse` (directly or via inheritance) produces no
+- [x] Absent `citation.collapse` (directly or via inheritance) produces no
       same-author collapse, in every regime and both citation modes.
-- [ ] Migrate maps all four CSL `collapse` values with no information
+- [x] Migrate maps all four CSL `collapse` values with no information
       discarded on `Numeric`, `AuthorDate`-family, and `Note` styles whose
       content matches one of the two collapse mechanisms; `year-suffix` /
       `year-suffix-ranged` additionally emit a one-time load warning naming
@@ -582,27 +608,55 @@ CMOS-vs-citeproc-js disagreement that survives this spec unchanged).
       `Note` + `citation-number` styles per §6's caveat) are a known,
       out-of-scope gap — migrate drops the attribute for them, matching
       today's behavior for a no-`collapse` style, not a validation error.
-- [ ] `collapse: same-author` is accepted on `AuthorDate`-family, `Note`, and
+- [x] `collapse: same-author` is accepted on `AuthorDate`-family, `Note`, and
       `Custom`; rejected on `Numeric` and `Label`. `collapse: citation-number`
       is accepted on `Numeric` and `Custom`; rejected on `AuthorDate`-family,
       `Note`, and `Label`. Every rejection carries an actionable error (§6).
-- [ ] The five embedded styles in §7 show **zero** exactParity movement on
-      `node scripts/report-core.js --style <name>`.
-- [ ] `chicago-notes-18th`'s `note-disambiguate-year-suffix` fixture citation
-      becomes exact.
-- [ ] `div-017` continues to apply to `disambiguate-year-suffix` and
-      `subsequent-author-consecutive` on `chicago-author-date-18th`.
-- [ ] Duplicate-id clusters (no `collapse` set) render each item in full with
+- [x] The nine tracked styles in §7 show **zero** exactParity movement on
+      `node scripts/report-core.js --style <name>` (checked against a
+      `52481a17` worktree baseline: `apa-7th` 93/146, `chicago-author-date-18th`
+      174/542, `elsevier-harvard` 45/67, `gb-t-7714-2025-author-date` 39/62,
+      `springer-basic-author-date` 53/67, `elsevier-vancouver-author-date`
+      17/67, `harvard-cite-them-right` 22/67,
+      `international-journal-of-wildland-fire` 14/67,
+      `taylor-and-francis-chicago-author-date` 174/542 — all unchanged;
+      `styles/experimental/chicago-author-date` isn't scanned by
+      `report-core.js`, verified structurally via `citum style validate`
+      instead).
+- [x] `chicago-notes-18th`'s `note-disambiguate-year-suffix` fixture citation
+      becomes exact — pinned byte-for-byte against
+      `tests/snapshots/csl/chicago-notes.json` in
+      `given_chicago_notes_style_when_same_author_cluster_has_no_locator_then_renders_exact_oracle_match`.
+- [x] `div-017` continues to apply to `disambiguate-year-suffix` and
+      `subsequent-author-consecutive` on `chicago-author-date-18th` — the four
+      pre-existing `csl26-uctc` tests in `domain_fixtures.rs` still pass
+      unchanged.
+- [x] Duplicate-id clusters (no `collapse` set) render each item in full with
       no merged/malformed output — regression test pinned, not compared
       against citeproc-js's shortened form.
-- [ ] A corpus sweep is run and net exactParity movement is reported per style
+- [x] A corpus sweep is run and net exactParity movement is reported per style
       touched, including
-      `taylor-and-francis-council-of-science-editors-author-date`.
+      `taylor-and-francis-council-of-science-editors-author-date`. Full
+      `report-core.js --parallelism 1` sweep of all 24 core-style families
+      against a `52481a17` worktree baseline: net **+6** exactParity, zero
+      regressions. Three families moved:
+      `taylor-and-francis-council-of-science-editors-author-date-core`
+      30/67 → 32/67 (+2, `csl26-ecfn`'s original finding),
+      `modern-language-association` 42/115 → 44/115 (+2),
+      `chicago-18-base` 430/1629 → 432/1629 (+2, aggregating
+      `chicago-notes-18th` 22/72 → 23/72 and
+      `chicago-shortened-notes-bibliography` 60/473 → 61/473).
 
 ## Implementation Notes
 
-Sketch only — implementation is a separate, stacked PR per this repo's
-schema-changes-need-a-docs-PR-first rule.
+Implemented in the stacked PR per this repo's schema-changes-need-a-docs-PR-
+first rule. Two deliberate departures from the v1.0 sketch, both explained
+where they occur below: (2) gates at `group_citation_items_by_author` itself
+rather than only in `render_grouped_citation_group_with_format`'s branch, so
+the integral prose-anchor path is covered by the same mechanism; (7) declares
+the config-map form on every tracked style, not the bare-string sugar shown
+in §1's YAML example, because `scripts/validate-schemas.js` has no
+normalization step for it (see §7 v1.1).
 
 1. **Schema**: add `SameAuthor(SameAuthorCollapse)` to `CitationCollapse`
    (`crates/citum-schema-style/src/style/sections/citation.rs:25`),
@@ -629,33 +683,64 @@ schema-changes-need-a-docs-PR-first rule.
    logic changes needed. Add the regime-coherence validation. Regenerate
    schemas and the data-model reference docs in the same commit:
    `just schema-gen`.
-2. **Engine**: gate the collapse branch in
-   `render_grouped_citation_group_with_format` (`grouped/core.rs:271`) on
-   `collapse == Some(SameAuthor(_))`; when unset, key
-   `group_citation_items_by_author` (`grouped/grouping.rs`) on `(index, id)`
-   per §11. Warn once per style load on `year_suffix != Separate`.
-3. **Migrate**: extend `extract_citation_collapse`
-   (`crates/citum-migrate/src/assembly.rs:685`) per the table in §4.
-4. **Embedded styles**: declare `collapse` on the five styles in §7.
+2. **Engine**: gate at `group_citation_items_by_author`
+   (`grouped/grouping.rs`) itself, not only in
+   `render_grouped_citation_group_with_format`'s collapse branch
+   (`grouped/core.rs:271`) as sketched — that function has two call sites
+   (`render_grouped_citation_with_format` and the integral prose-anchor path,
+   `render_integral_anchor_with_format`), and gating only the first would
+   leave the integral anchor still sharing one author name across a
+   non-collapsed pair. `group_citation_items_by_author` takes the resolved
+   spec's `collapse` and produces one singleton group per item, keyed on
+   `(index, id)` per §11, whenever `collapse != Some(SameAuthor(_))` or any
+   item carries disambiguation hints — making `core.rs:271`'s collapse branch
+   unreachable for multi-item groups by construction rather than needing a
+   second, separately-maintained gate. Warns once per style load on
+   `year_suffix != Separate` via a new `SchemaWarning::UnimplementedCollapseDegree`,
+   surfaced by `Style::validate()` (`citum style validate` — the channel's
+   reach doesn't yet extend to engine render time).
+3. **Migrate**: extended `extract_citation_collapse`
+   (`crates/citum-migrate/src/assembly.rs`) per the table in §4, additionally
+   threading the detected `Processing` through so illegal combinations
+   (§6's carve-out) are dropped rather than emitted.
+4. **Tracked styles**: declared `collapse` on the nine styles in §7 (v1.1),
+   using the config-map form throughout.
 5. **Tests**: `crates/citum-engine/tests/domain_fixtures.rs`, native
-   `InputReference` construction, BDD `given/when/then` names, `#[rstest]`
-   where parameterized, `assert_eq!` on full captured strings — covering the
-   note-regime fix (oracle-exact no-locator case; locator-on-second-item with
-   the pre-existing punctuation defect called out, not silently asserted as
-   parity), the duplicate-id regression, the shortened-notes short form,
-   an author-date regression guard proving `collapse: same-author` still
-   collapses (keeping `csl26-uctc`'s four existing tests meaningful), and
-   schema round-trip / validation-rejection tests for both new value/regime
-   mismatches.
-6. **Verification**: `just pre-commit`; per-style
-   `node scripts/report-core.js --style …` for each style in §7 and §8 plus
-   `chicago-shortened-notes-bibliography`; `git status tests/snapshots/`
-   clean (those snapshots hold citeproc-js output, unaffected by an engine
-   change); one sequential, low-concurrency corpus sweep
-   (`systemd-run … MemoryMax=6G`) diffed against a worktree baseline for the
-   net movement number.
+   `InputReference` construction via `load_bibliography` against
+   `tests/fixtures/references-expanded.json` (no `csl_legacy` round-trip),
+   BDD `given/when/then` names, `#[rstest]` where parameterized,
+   `assert_eq!` on full captured strings — covering the note-regime fix
+   (oracle-exact no-locator case, pinned against
+   `tests/snapshots/csl/chicago-notes.json`'s `note-disambiguate-year-suffix`
+   entry; locator-on-second-item with the pre-existing punctuation defect
+   called out, not silently asserted as parity), the duplicate-id regression,
+   the shortened-notes short form, a T&F CSE / MLA no-collapse case, and
+   schema round-trip / regime-coherence acceptance and rejection tests for
+   every value/regime combination in §6. Existing fixtures whose synthetic
+   styles relied on the old always-on behavior
+   (`grouped_author_date_style`, `citum-engine/tests/common`'s
+   `build_author_date_style`, several unit tests) were updated to declare
+   `collapse: same-author` explicitly, keeping their assertions meaningful.
+6. **Verification**: `just pre-commit` (2629 tests, full workspace); the
+   per-style `report-core.js` and corpus-sweep numbers land in the PR
+   description, not here.
 
 ## Changelog
 
+- v1.1 (2026-08-19): Draft → Active; implementation lands (schema, engine
+  gate, migrate, styles, tests). §7 corrected: v1.0 enumerated only the 5
+  embedded styles requiring `collapse: same-author`; mechanically re-deriving
+  the table against every tracked style's `styles-legacy/` source (not
+  trusting the v1.0 list) found 4 more —
+  `elsevier-vancouver-author-date`, `harvard-cite-them-right`,
+  `international-journal-of-wildland-fire`, and the experimental
+  `chicago-author-date` — whose source CSL also declares `collapse` and
+  would otherwise have silently regressed. All nine declared using the
+  config-map form (`same-author: {}`), not the bare-string shorthand this
+  spec's v1.0 design showed: the generated schema advertises `same-author`
+  only as an object, and `scripts/validate-schemas.js` has no normalization
+  step for the bare-string sugar (unlike its existing handling for
+  `processing:`'s custom-config shorthand), so the bare form fails schema
+  validation for every tracked style that uses it.
 - v1.0 (2026-08-18): Initial draft. Adjudicates `csl26-ecfn` (opt-in, not a
   registered divergence) and resolves `csl26-m11m` as a consequence.

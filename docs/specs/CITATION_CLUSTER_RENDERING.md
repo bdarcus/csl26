@@ -1,8 +1,8 @@
 # Citation Cluster Rendering Specification
 
 **Status:** Active
-**Version:** 1.4
-**Date:** 2026-08-18
+**Version:** 1.5
+**Date:** 2026-08-19
 **Related:** `crates/citum-schema-data/src/citation.rs`,
 `crates/citum-engine/src/processor/citation.rs`,
 `crates/citum-engine/src/processor/rendering/grouped/core.rs`,
