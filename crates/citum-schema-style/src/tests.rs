@@ -2515,3 +2515,178 @@ bibliography:
             if contributor.contributor == template::ContributorRoles::Single(template::ContributorRole::Author)
     ));
 }
+
+// --- CitationCollapse: same-author variant (csl26-ecfn / csl26-m11m) ---
+// docs/specs/SAME_AUTHOR_COLLAPSE.md
+
+#[test]
+fn citation_collapse_bare_citation_number_round_trips() {
+    let style: Style = serde_yaml::from_str(
+        r"
+info:
+  title: Numeric Round Trip
+citation:
+  collapse: citation-number
+",
+    )
+    .unwrap();
+
+    assert_eq!(
+        style.citation.as_ref().and_then(|c| c.collapse.clone()),
+        Some(CitationCollapse::CitationNumber)
+    );
+
+    let serialized = serde_yaml::to_string(&style).unwrap();
+    let serialized_value: serde_yaml::Value = serde_yaml::from_str(&serialized).unwrap();
+    assert_eq!(
+        serialized_value["citation"]["collapse"].as_str(),
+        Some("citation-number"),
+        "citation-number must serialize back to the bare-string form, got:\n{serialized}"
+    );
+}
+
+#[test]
+fn citation_collapse_bare_same_author_string_deserializes_as_default_config() {
+    let style: Style = serde_yaml::from_str(
+        r"
+info:
+  title: Same Author Sugar
+citation:
+  collapse: same-author
+",
+    )
+    .unwrap();
+
+    assert_eq!(
+        style.citation.as_ref().and_then(|c| c.collapse.clone()),
+        Some(CitationCollapse::SameAuthor(SameAuthorCollapse::default()))
+    );
+
+    // Deserialize-only sugar, matching `processing: label`'s existing
+    // asymmetry: the bare string never round-trips byte-for-byte, it
+    // always re-serializes as the tagged map.
+    let serialized = serde_yaml::to_string(&style).unwrap();
+    let serialized_value: serde_yaml::Value = serde_yaml::from_str(&serialized).unwrap();
+    let collapse = &serialized_value["citation"]["collapse"];
+    assert_eq!(
+        collapse["same-author"]["year-suffix"].as_str(),
+        Some("separate"),
+        "same-author must serialize as its tagged map form, got:\n{serialized}"
+    );
+    assert!(
+        collapse.as_mapping().is_some(),
+        "same-author must not serialize as a bare string, got:\n{serialized}"
+    );
+}
+
+#[rstest]
+#[case::merged("merged", YearSuffixCollapse::Merged)]
+#[case::ranged("ranged", YearSuffixCollapse::Ranged)]
+fn citation_collapse_config_map_form_round_trips(
+    #[case] degree: &str,
+    #[case] expected: YearSuffixCollapse,
+) {
+    let yaml = format!(
+        "info:\n  title: Config Map Form\ncitation:\n  collapse:\n    same-author:\n      year-suffix: {degree}\n"
+    );
+    let style: Style = serde_yaml::from_str(&yaml).unwrap();
+
+    assert_eq!(
+        style.citation.as_ref().and_then(|c| c.collapse.clone()),
+        Some(CitationCollapse::SameAuthor(SameAuthorCollapse {
+            year_suffix: expected
+        }))
+    );
+
+    let serialized = serde_yaml::to_string(&style).unwrap();
+    let reparsed: Style = serde_yaml::from_str(&serialized).unwrap();
+    assert_eq!(
+        reparsed.citation.as_ref().and_then(|c| c.collapse.clone()),
+        style.citation.as_ref().and_then(|c| c.collapse.clone()),
+        "config-map form must round-trip byte-for-byte through re-serialization"
+    );
+}
+
+fn style_with_processing_and_collapse(
+    processing: options::Processing,
+    collapse: CitationCollapse,
+) -> Style {
+    Style {
+        info: StyleInfo {
+            title: Some("Regime Coherence Test".to_string()),
+            ..Default::default()
+        },
+        options: Some(options::Config {
+            processing: Some(processing),
+            ..Default::default()
+        }),
+        citation: Some(CitationSpec {
+            collapse: Some(collapse),
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+#[rstest]
+#[case::same_author_on_author_date(
+    options::Processing::AuthorDate,
+    CitationCollapse::SameAuthor(SameAuthorCollapse::default())
+)]
+#[case::same_author_on_note(
+    options::Processing::Note,
+    CitationCollapse::SameAuthor(SameAuthorCollapse::default())
+)]
+#[case::same_author_on_custom(
+    options::Processing::Custom(options::ProcessingCustom::default()),
+    CitationCollapse::SameAuthor(SameAuthorCollapse::default())
+)]
+#[case::citation_number_on_numeric(options::Processing::Numeric, CitationCollapse::CitationNumber)]
+#[case::citation_number_on_custom(
+    options::Processing::Custom(options::ProcessingCustom::default()),
+    CitationCollapse::CitationNumber
+)]
+fn collapse_regime_coherence_accepts_licensed_combinations(
+    #[case] processing: options::Processing,
+    #[case] collapse: CitationCollapse,
+) {
+    let style = style_with_processing_and_collapse(processing, collapse);
+    let resolved = style.try_into_resolved_recursive(&mut std::collections::HashSet::new());
+    assert!(
+        resolved.is_ok(),
+        "expected this collapse/regime combination to be accepted: {resolved:?}"
+    );
+}
+
+#[rstest]
+#[case::same_author_on_numeric(
+    options::Processing::Numeric,
+    CitationCollapse::SameAuthor(SameAuthorCollapse::default())
+)]
+#[case::same_author_on_label(
+    options::Processing::Label(options::LabelConfig::default()),
+    CitationCollapse::SameAuthor(SameAuthorCollapse::default())
+)]
+#[case::citation_number_on_author_date(
+    options::Processing::AuthorDate,
+    CitationCollapse::CitationNumber
+)]
+#[case::citation_number_on_note(options::Processing::Note, CitationCollapse::CitationNumber)]
+#[case::citation_number_on_label(
+    options::Processing::Label(options::LabelConfig::default()),
+    CitationCollapse::CitationNumber
+)]
+fn collapse_regime_coherence_rejects_illegal_combinations(
+    #[case] processing: options::Processing,
+    #[case] collapse: CitationCollapse,
+) {
+    let style = style_with_processing_and_collapse(processing, collapse);
+    let resolved = style.try_into_resolved_recursive(&mut std::collections::HashSet::new());
+    assert!(
+        matches!(
+            resolved,
+            Err(ResolutionError::IncoherentCollapseRegime { .. })
+        ),
+        "expected IncoherentCollapseRegime, got: {resolved:?}"
+    );
+}
