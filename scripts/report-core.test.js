@@ -1498,7 +1498,10 @@ test('generateReport exposes the registered coverage audit on its corresponding 
   assert.equal(audit.outputGroups.some((group) => group.exactEvidence), true);
   assert.equal(audit.postChangeEvidence.status, 'measured');
   assert.equal(audit.postChangeEvidence.beforeExactParity.passed, 34);
-  assert.equal(audit.postChangeEvidence.afterExactParity.passed, 60);
+  // 60 -> 61: same-author collapse opt-in (csl26-ecfn / csl26-m11m) closes
+  // note-disambiguate-year-suffix, since chicago-shortened-notes-bibliography
+  // declares no `collapse` (its source CSL declares none either).
+  assert.equal(audit.postChangeEvidence.afterExactParity.passed, 61);
 });
 
 test('generateReport supports multi-style selected reports', {
