@@ -1,7 +1,7 @@
 ---
 # csl26-m11m
 title: Same-author collapse produces malformed note citations
-status: todo
+status: completed
 type: bug
 priority: normal
 tags:
@@ -11,7 +11,7 @@ tags:
     - citation
     - chicago
 created_at: 2026-08-18T12:49:06Z
-updated_at: 2026-08-18T19:15:15Z
+updated_at: 2026-08-19T13:47:04Z
 parent: csl26-h7oc
 blocked_by:
     - csl26-ecfn
@@ -76,3 +76,35 @@ Also flagged, not filed: an independent, pre-existing locator-punctuation
 defect (`4 (2019), 257` vs oracle `4 (2019): 257`) noticed while reproducing
 this — reproduces on single-item citations, unrelated to collapse, deliberately
 out of scope here.
+
+## Summary of Changes
+
+Resolved as a direct consequence of `csl26-ecfn` landing (PR 2,
+`feat/csl26-ecfn-collapse-opt-in`) — no note-specific code was needed.
+Same-author collapse now gates on `citation.collapse: same-author`
+(`crates/citum-engine/src/processor/rendering/grouped/grouping.rs`);
+`chicago-notes-18th` and `chicago-shortened-notes-bibliography-core`
+simply never declare it, because their source CSL
+(`chicago-notes-bibliography.csl`, `chicago-shortened-notes-bibliography.csl`)
+doesn't either, so they fall out of the collapse path automatically.
+
+The malformed run-on sentence this bean reported —
+`Garcia, "Methods...", "Methods...".` for
+`[@ITEM-31; @ITEM-32]` — is now:
+
+> Maria Garcia, "Methods for Robust Climate Attribution," *Annual Review
+> of Climate Science* 4 (2019): 55–80, https://…; Maria Garcia, "Methods
+> for Probabilistic Climate Attribution," *Annual Review of Climate
+> Science* 4 (2019): 81–104, https://….
+
+Byte-for-byte match against citeproc-js
+(`tests/snapshots/csl/chicago-notes.json`'s `note-disambiguate-year-suffix`
+entry), pinned in
+`given_chicago_notes_style_when_same_author_cluster_has_no_locator_then_renders_exact_oracle_match`
+(`crates/citum-engine/tests/domain_fixtures.rs`).
+`chicago-notes-18th` exactParity: 22/72 → 23/72.
+
+The independent locator-punctuation defect noticed while investigating
+this (`4 (2019), 257` vs oracle `4 (2019): 257`) remains unfixed —
+reproduces on single-item citations, unrelated to collapse, out of scope
+here (see `SAME_AUTHOR_COLLAPSE.md` Scope section).
