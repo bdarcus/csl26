@@ -78,8 +78,8 @@ pub use presets::{ContributorPreset, DatePreset, SortPreset, SubstitutePreset, T
 pub use registry::{RegistryEntry, StyleRegistry};
 pub use style::{
     BibliographySpec, CitationCollapse, CitationField, CitationSpec, NoteStartTextCase,
-    SchemaWarning, Style, StyleDocumentError, StyleDocumentFormat, StyleInfo, StyleLink,
-    StylePerson, StyleSource, check_citum_version,
+    SameAuthorCollapse, SchemaWarning, Style, StyleDocumentError, StyleDocumentFormat, StyleInfo,
+    StyleLink, StylePerson, StyleSource, YearSuffixCollapse, check_citum_version,
 };
 pub use style_base::StyleBase;
 pub use template::{

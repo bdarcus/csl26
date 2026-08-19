@@ -133,6 +133,7 @@ impl Style {
             let mut style = self;
             crate::template::resolve_style_template_variants(&mut style, None)?;
             options::scoped::apply_scoped_style_options(&mut style);
+            style.validate_collapse_regime()?;
             return Ok(style);
         };
 
@@ -194,6 +195,7 @@ impl Style {
         if is_profile {
             effective.extends = None;
         }
+        effective.validate_collapse_regime()?;
 
         Ok(effective)
     }
