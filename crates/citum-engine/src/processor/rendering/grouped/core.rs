@@ -249,7 +249,7 @@ impl Renderer<'_> {
     where
         F: crate::render::format::OutputFormat<Output = String>,
     {
-        let groups = group_citation_items_by_author(self, items);
+        let groups = group_citation_items_by_author(self, items, params.spec.collapse.as_ref());
         let mut rendered_groups = Vec::new();
         for (_author_key, group) in groups {
             rendered_groups
@@ -833,7 +833,7 @@ impl Renderer<'_> {
     where
         F: crate::render::format::OutputFormat<Output = String>,
     {
-        let groups = group_citation_items_by_author(self, items);
+        let groups = group_citation_items_by_author(self, items, spec.collapse.as_ref());
 
         let mut rendered_groups = Vec::new();
         let fmt = F::default();
