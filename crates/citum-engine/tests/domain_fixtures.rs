@@ -26,6 +26,7 @@ use citum_io::load_bibliography;
 use citum_schema::Style;
 use citum_schema::citation::{Citation, CitationItem, CitationLocator, CitationMode, LocatorType};
 use citum_schema::reference::{ClassExtension, MultilingualString};
+use rstest::rstest;
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -498,4 +499,239 @@ fn test_taylor_and_francis_author_date_wrapper_preserves_media_and_translation_d
             .contains("_Metamorphosis_. Translated by David Wyllie. Leipzig: Kurt Wolff Verlag"),
         "translated books should retain translator detail and the inherited monograph emphasis"
     );
+}
+
+// --- Same-author collapse opt-in (csl26-ecfn / csl26-m11m) ---
+//
+// chicago-notes-18th, chicago-shortened-notes-bibliography-core, and
+// modern-language-association declare no `collapse` (their source CSL
+// declares none either — docs/specs/SAME_AUTHOR_COLLAPSE.md §8), so they
+// stop collapsing same-author multi-item clusters entirely.
+// taylor-and-francis-council-of-science-editors-author-date is the same
+// shape for csl26-ecfn's original finding.
+
+/// A full Chicago note has no year-group to collapse onto — a same-author
+/// cluster with no locator now renders each citation in full, joined by
+/// `"; "`, matching citeproc-js on `chicago-notes-bibliography.csl`
+/// byte-for-byte (`tests/snapshots/csl/chicago-notes.json`,
+/// `note-disambiguate-year-suffix`). This is the exact cluster
+/// `csl26-m11m` reported as a malformed run-on sentence.
+#[test]
+fn given_chicago_notes_style_when_same_author_cluster_has_no_locator_then_renders_exact_oracle_match()
+ {
+    let root = project_root();
+    let style = load_style(&root.join("styles/embedded/chicago-notes-18th.yaml"));
+    let bibliography = load_bibliography(&root.join("tests/fixtures/references-expanded.json"))
+        .expect("expanded fixture should parse");
+
+    let processor = Processor::new(style, bibliography);
+    let citation = Citation {
+        items: vec![
+            CitationItem {
+                id: "ITEM-31".to_string(),
+                ..Default::default()
+            },
+            CitationItem {
+                id: "ITEM-32".to_string(),
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    };
+
+    let rendered = processor
+        .process_citation(&citation)
+        .expect("same-author note cluster should render");
+
+    assert_eq!(
+        rendered,
+        "Maria Garcia, \u{201C}Methods for Robust Climate Attribution,\u{201D} \
+         _Annual Review of Climate Science_ 4 (2019): 55\u{2013}80, \
+         https://doi.org/10.5555/arcs.2019.4.55; Maria Garcia, \u{201C}Methods \
+         for Probabilistic Climate Attribution,\u{201D} _Annual Review of \
+         Climate Science_ 4 (2019): 81\u{2013}104, \
+         https://doi.org/10.5555/arcs.2019.4.81.",
+        "note-regime same-author cluster with no locator should match citeproc-js exactly"
+    );
+}
+
+/// Same as above with a locator on the second item. The second clause's
+/// date/locator punctuation (`4 (2019), 257` rather than oracle
+/// `4 (2019): 257`) is an independent, pre-existing defect that reproduces
+/// on single-item citations too — unrelated to collapse and not ratified
+/// here (flagged while investigating `csl26-m11m`, deliberately out of
+/// scope for this spec).
+#[test]
+fn given_chicago_notes_style_when_same_author_cluster_has_a_locator_then_each_item_renders_in_full()
+{
+    let root = project_root();
+    let style = load_style(&root.join("styles/embedded/chicago-notes-18th.yaml"));
+    let bibliography = load_bibliography(&root.join("tests/fixtures/references-expanded.json"))
+        .expect("expanded fixture should parse");
+
+    let processor = Processor::new(style, bibliography);
+    let citation = Citation {
+        items: vec![
+            CitationItem {
+                id: "ITEM-31".to_string(),
+                ..Default::default()
+            },
+            CitationItem {
+                id: "ITEM-32".to_string(),
+                locator: Some(CitationLocator::single(LocatorType::Page, "257")),
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    };
+
+    let rendered = processor
+        .process_citation(&citation)
+        .expect("same-author note cluster with a locator should render");
+
+    assert_eq!(
+        rendered,
+        "Maria Garcia, \u{201C}Methods for Robust Climate Attribution,\u{201D} \
+         _Annual Review of Climate Science_ 4 (2019): 55\u{2013}80, \
+         https://doi.org/10.5555/arcs.2019.4.55; Maria Garcia, \u{201C}Methods \
+         for Probabilistic Climate Attribution,\u{201D} _Annual Review of \
+         Climate Science_ 4 (2019), 257, https://doi.org/10.5555/arcs.2019.4.81.",
+        "second item's locator does not corrupt the first item's rendering"
+    );
+}
+
+/// Two citation items sharing the same reference id (`[@ITEM-31, p. 10;
+/// @ITEM-31, p. 20]`) must not merge into one clause when collapse is
+/// unset -- `group_citation_items_by_author` keys on `(index, id)` rather
+/// than bare `id` specifically to close this hole
+/// (`docs/specs/SAME_AUTHOR_COLLAPSE.md` §11). citeproc-js additionally
+/// *shortens* the repeat via per-item position tracking inside a cluster,
+/// which `docs/specs/REPEATED_NOTE_CITATION_STATE_MODEL.md` explicitly
+/// lists as out of scope -- this test pins the structural fix (no merged
+/// or malformed output), not oracle-exact shortening.
+#[test]
+fn given_chicago_notes_style_when_a_cluster_repeats_the_same_id_then_each_occurrence_renders_in_full()
+ {
+    let root = project_root();
+    let style = load_style(&root.join("styles/embedded/chicago-notes-18th.yaml"));
+    let bibliography = load_bibliography(&root.join("tests/fixtures/references-expanded.json"))
+        .expect("expanded fixture should parse");
+
+    let processor = Processor::new(style, bibliography);
+    let citation = Citation {
+        items: vec![
+            CitationItem {
+                id: "ITEM-31".to_string(),
+                locator: Some(CitationLocator::single(LocatorType::Page, "10")),
+                ..Default::default()
+            },
+            CitationItem {
+                id: "ITEM-31".to_string(),
+                locator: Some(CitationLocator::single(LocatorType::Page, "20")),
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    };
+
+    let rendered = processor
+        .process_citation(&citation)
+        .expect("duplicate-id cluster should render");
+
+    assert_eq!(
+        rendered,
+        "Maria Garcia, \u{201C}Methods for Robust Climate Attribution,\u{201D} \
+         _Annual Review of Climate Science_ 4 (2019), 10, \
+         https://doi.org/10.5555/arcs.2019.4.55; Maria Garcia, \u{201C}Methods \
+         for Robust Climate Attribution,\u{201D} _Annual Review of Climate \
+         Science_ 4 (2019), 20, https://doi.org/10.5555/arcs.2019.4.55.",
+        "duplicate-id items must each render their own full clause, not merge"
+    );
+}
+
+/// `chicago-shortened-notes-bibliography-core` also declares no `collapse`
+/// (its source, `chicago-shortened-notes-bibliography.csl`, has none) --
+/// short-form same-author repeats stay separate, joined by `"; "`.
+#[test]
+fn given_chicago_shortened_notes_style_when_same_author_cluster_has_no_locator_then_items_stay_separate()
+ {
+    let root = project_root();
+    let style =
+        load_style(&root.join("styles/embedded/chicago-shortened-notes-bibliography-core.yaml"));
+    let bibliography = load_bibliography(&root.join("tests/fixtures/references-expanded.json"))
+        .expect("expanded fixture should parse");
+
+    let processor = Processor::new(style, bibliography);
+    let citation = Citation {
+        items: vec![
+            CitationItem {
+                id: "ITEM-31".to_string(),
+                ..Default::default()
+            },
+            CitationItem {
+                id: "ITEM-32".to_string(),
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    };
+
+    let rendered = processor
+        .process_citation(&citation)
+        .expect("shortened-notes same-author cluster should render");
+
+    assert_eq!(
+        rendered,
+        "Garcia, \u{201C}Methods for Robust Climate Attribution\u{201D}; Garcia, \
+         \u{201C}Methods for Probabilistic Climate Attribution.\u{201D}",
+        "short-form same-author repeats must stay separate, not collapse to a shared author"
+    );
+}
+
+/// Neither style's source CSL declares `collapse`, so a no-`collapse`
+/// author-date style now renders each same-author cite separately instead
+/// of collapsing. `taylor-and-francis-council-of-science-editors-author-date`
+/// is `csl26-ecfn`'s original finding
+/// (oracle: `(Garcia 2019a; Garcia 2019b)`); `modern-language-association`
+/// confirms `csl26-uctc`'s deferred "MLA drops the locator delimiter in
+/// collapsed groups" is moot once MLA stops collapsing -- nothing is left
+/// to drop a delimiter from.
+#[rstest]
+#[case::taylor_and_francis_cse(
+    "styles/embedded/taylor-and-francis-council-of-science-editors-author-date.yaml",
+    "(Garcia 2019a; Garcia 2019b)"
+)]
+#[case::modern_language_association(
+    "styles/embedded/modern-language-association.yaml",
+    "(Garcia, \u{201C}Methods for Robust Climate Attribution\u{201D}; Garcia, \u{201C}Methods for Probabilistic Climate Attribution\u{201D})"
+)]
+fn given_a_no_collapse_author_date_style_when_same_author_cluster_has_no_locator_then_items_stay_separate(
+    #[case] style_path: &str,
+    #[case] expected: &str,
+) {
+    let root = project_root();
+    let style = load_style(&root.join(style_path));
+    let bibliography = load_bibliography(&root.join("tests/fixtures/references-expanded.json"))
+        .expect("expanded fixture should parse");
+
+    let processor = Processor::new(style, bibliography);
+    let citation = Citation {
+        items: vec![
+            CitationItem {
+                id: "ITEM-31".to_string(),
+                ..Default::default()
+            },
+            CitationItem {
+                id: "ITEM-32".to_string(),
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    };
+
+    let rendered = processor
+        .process_citation(&citation)
+        .expect("same-author cluster should render");
+
+    assert_eq!(rendered, expected);
 }
