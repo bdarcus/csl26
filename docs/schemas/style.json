@@ -7869,6 +7869,28 @@
           "description": "How same-year disambiguation suffixes render inside a collapsed group.",
           "$ref": "#/$defs/YearSuffixCollapse",
           "default": "separate"
+        },
+        "delimiter": {
+          "description": "Delimiter joining items within a collapsed same-author group. Mirrors\nCSL's `cite-group-delimiter`, which feeds two distinct mechanisms with\ntop precedence in both: when set, it overrides the engine's existing\nyear-to-year join fallback, and it overrides `year_suffix_delimiter`\nfor the suffix-to-suffix join (`year_suffix: Merged`/`Ranged`). `None`\nleaves the year join on its existing fallback and the suffix join on\n`year_suffix_delimiter` / `citation.multi-cite-delimiter`. See\n`docs/specs/SAME_AUTHOR_COLLAPSE.md` §13.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DelimiterPunctuation"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "year-suffix-delimiter": {
+          "description": "Delimiter preceding a merged/ranged suffix token specifically (e.g.\n`2020a-b`). Mirrors CSL's `year-suffix-delimiter`; affects only the\nsuffix-to-suffix join, beneath `delimiter` (which wins when both are\nset) and above the `citation.multi-cite-delimiter` fallback. Has no\neffect on the ordinary year-to-year join. See\n`docs/specs/SAME_AUTHOR_COLLAPSE.md` §13.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DelimiterPunctuation"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       }
     },

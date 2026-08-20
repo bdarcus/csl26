@@ -2594,7 +2594,9 @@ fn citation_collapse_config_map_form_round_trips(
     assert_eq!(
         style.citation.as_ref().and_then(|c| c.collapse.clone()),
         Some(CitationCollapse::SameAuthor(SameAuthorCollapse {
-            year_suffix: expected
+            year_suffix: expected,
+            delimiter: None,
+            year_suffix_delimiter: None,
         }))
     );
 
@@ -2604,6 +2606,54 @@ fn citation_collapse_config_map_form_round_trips(
         reparsed.citation.as_ref().and_then(|c| c.collapse.clone()),
         style.citation.as_ref().and_then(|c| c.collapse.clone()),
         "config-map form must round-trip byte-for-byte through re-serialization"
+    );
+}
+
+#[rstest]
+#[case::delimiter_only(
+    "delimiter: \", \"",
+    SameAuthorCollapse {
+        year_suffix: YearSuffixCollapse::Merged,
+        delimiter: Some(template::DelimiterPunctuation::Custom(", ".to_string())),
+        year_suffix_delimiter: None,
+    }
+)]
+#[case::year_suffix_delimiter_only(
+    "year-suffix-delimiter: \"-\"",
+    SameAuthorCollapse {
+        year_suffix: YearSuffixCollapse::Merged,
+        delimiter: None,
+        year_suffix_delimiter: Some(template::DelimiterPunctuation::Custom("-".to_string())),
+    }
+)]
+#[case::both_delimiters(
+    "delimiter: \", \"\n      year-suffix-delimiter: \"-\"",
+    SameAuthorCollapse {
+        year_suffix: YearSuffixCollapse::Merged,
+        delimiter: Some(template::DelimiterPunctuation::Custom(", ".to_string())),
+        year_suffix_delimiter: Some(template::DelimiterPunctuation::Custom("-".to_string())),
+    }
+)]
+fn same_author_collapse_delimiter_fields_round_trip(
+    #[case] extra_yaml: &str,
+    #[case] expected: SameAuthorCollapse,
+) {
+    let yaml = format!(
+        "info:\n  title: Delimiter Fields\ncitation:\n  collapse:\n    same-author:\n      year-suffix: merged\n      {extra_yaml}\n"
+    );
+    let style: Style = serde_yaml::from_str(&yaml).unwrap();
+
+    assert_eq!(
+        style.citation.as_ref().and_then(|c| c.collapse.clone()),
+        Some(CitationCollapse::SameAuthor(expected))
+    );
+
+    let serialized = serde_yaml::to_string(&style).unwrap();
+    let reparsed: Style = serde_yaml::from_str(&serialized).unwrap();
+    assert_eq!(
+        reparsed.citation.as_ref().and_then(|c| c.collapse.clone()),
+        style.citation.as_ref().and_then(|c| c.collapse.clone()),
+        "delimiter fields must round-trip byte-for-byte through re-serialization"
     );
 }
 
