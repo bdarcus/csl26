@@ -57,6 +57,8 @@ fn test_style_global_initialize_with_co_emits_name_form_initials() {
             localized_layouts: Vec::new(),
             sort: None,
             collapse: None,
+            cite_group_delimiter: None,
+            year_suffix_delimiter: None,
             et_al_min: None,
             et_al_use_first: None,
             disambiguate_add_year_suffix: None,

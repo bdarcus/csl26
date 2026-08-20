@@ -147,6 +147,12 @@ pub struct Citation {
     pub sort: Option<Sort>,
     /// Collapse mode for grouped citations (for example, `"citation-number"`).
     pub collapse: Option<String>,
+    /// Delimiter joining items within a collapsed same-author group,
+    /// overriding the layout delimiter for that join only.
+    pub cite_group_delimiter: Option<String>,
+    /// Delimiter preceding a merged/ranged year-suffix token specifically,
+    /// under `collapse="year-suffix"` or `"year-suffix-ranged"`.
+    pub year_suffix_delimiter: Option<String>,
     /// Minimum number of names before et-al truncation kicks in.
     pub et_al_min: Option<usize>,
     /// Number of names to show before the et-al term.

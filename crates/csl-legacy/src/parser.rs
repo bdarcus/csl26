@@ -75,6 +75,8 @@ pub fn parse_style(node: Node) -> Result<Style, String> {
         localized_layouts: Vec::new(),
         sort: None,
         collapse: None,
+        cite_group_delimiter: None,
+        year_suffix_delimiter: None,
         et_al_min: None,
         et_al_use_first: None,
         disambiguate_add_year_suffix: None,
@@ -261,6 +263,12 @@ fn parse_citation(node: Node) -> Result<Citation, String> {
     let collapse = node
         .attribute("collapse")
         .map(std::string::ToString::to_string);
+    let cite_group_delimiter = node
+        .attribute("cite-group-delimiter")
+        .map(std::string::ToString::to_string);
+    let year_suffix_delimiter = node
+        .attribute("year-suffix-delimiter")
+        .map(std::string::ToString::to_string);
     let et_al_min = node.attribute("et-al-min").and_then(|s| s.parse().ok());
     let et_al_use_first = node
         .attribute("et-al-use-first")
@@ -294,6 +302,8 @@ fn parse_citation(node: Node) -> Result<Citation, String> {
         localized_layouts,
         sort,
         collapse,
+        cite_group_delimiter,
+        year_suffix_delimiter,
         et_al_min,
         et_al_use_first,
         disambiguate_add_year_suffix,
@@ -975,6 +985,18 @@ mod tests {
         );
         let style = parse(&xml).unwrap();
         assert_eq!(style.citation.collapse.as_deref(), Some("citation-number"));
+    }
+
+    #[test]
+    fn test_parse_citation_collapse_delimiters() {
+        let xml = wrap_style("").replace(
+            "<citation><layout/></citation>",
+            r#"<citation collapse="year-suffix" cite-group-delimiter=", " year-suffix-delimiter="-"><layout/></citation>"#,
+        );
+        let style = parse(&xml).unwrap();
+        assert_eq!(style.citation.collapse.as_deref(), Some("year-suffix"));
+        assert_eq!(style.citation.cite_group_delimiter.as_deref(), Some(", "));
+        assert_eq!(style.citation.year_suffix_delimiter.as_deref(), Some("-"));
     }
 
     #[test]
