@@ -116,6 +116,24 @@ pub struct SameAuthorCollapse {
     /// How same-year disambiguation suffixes render inside a collapsed group.
     #[serde(default)]
     pub year_suffix: YearSuffixCollapse,
+    /// Delimiter joining items within a collapsed same-author group. Mirrors
+    /// CSL's `cite-group-delimiter`, which feeds two distinct mechanisms with
+    /// top precedence in both: when set, it overrides the engine's existing
+    /// year-to-year join fallback, and it overrides `year_suffix_delimiter`
+    /// for the suffix-to-suffix join (`year_suffix: Merged`/`Ranged`). `None`
+    /// leaves the year join on its existing fallback and the suffix join on
+    /// `year_suffix_delimiter` / `citation.multi-cite-delimiter`. See
+    /// `docs/specs/SAME_AUTHOR_COLLAPSE.md` §13.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub delimiter: Option<DelimiterPunctuation>,
+    /// Delimiter preceding a merged/ranged suffix token specifically (e.g.
+    /// `2020a-b`). Mirrors CSL's `year-suffix-delimiter`; affects only the
+    /// suffix-to-suffix join, beneath `delimiter` (which wins when both are
+    /// set) and above the `citation.multi-cite-delimiter` fallback. Has no
+    /// effect on the ordinary year-to-year join. See
+    /// `docs/specs/SAME_AUTHOR_COLLAPSE.md` §13.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub year_suffix_delimiter: Option<DelimiterPunctuation>,
 }
 
 /// How same-year disambiguation suffixes render inside a same-author collapsed

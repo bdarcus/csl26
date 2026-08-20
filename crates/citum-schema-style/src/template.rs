@@ -1863,7 +1863,7 @@ pub enum TemplateConditionField {
 /// YAML strings are always literal. Semantic marks use the explicit mapping
 /// form `{ mark: comma }`, so a string such as `comma` is never interpreted as
 /// punctuation intent.
-#[derive(Debug, Default, Clone, PartialEq)]
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub enum DelimiterPunctuation {
     /// A semantic comma mark.
     #[default]
