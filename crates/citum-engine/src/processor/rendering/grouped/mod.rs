@@ -10,5 +10,6 @@ pub(super) mod core;
 pub(super) mod grouping;
 pub(super) mod sentence_initial;
 pub(super) mod template_policy;
+pub(super) mod year_suffix;
 
 pub(super) use grouping::group_citation_items_by_author;

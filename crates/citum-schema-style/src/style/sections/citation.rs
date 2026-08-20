@@ -147,12 +147,14 @@ pub enum YearSuffixCollapse {
     /// Disambiguation.
     #[default]
     Separate,
-    /// `Smith (2020a, b)` — CSL `collapse="year-suffix"`. Parses and
-    /// round-trips; not yet implemented by the renderer (falls back to
-    /// `Separate` with a one-time load warning).
+    /// `Smith (2020a, b)` — CSL `collapse="year-suffix"`. Adjacent
+    /// same-author, same-year suffixed tokens merge onto one shared year,
+    /// joined by the resolved delimiter. See
+    /// `docs/specs/SAME_AUTHOR_COLLAPSE.md` §13.
     Merged,
-    /// `Smith (2020a–c)` — CSL `collapse="year-suffix-ranged"`. Same status as
-    /// `Merged`.
+    /// `Smith (2020a–c)` — CSL `collapse="year-suffix-ranged"`. Like
+    /// `Merged`, additionally collapsing runs of 3+ consecutive suffixes into
+    /// an en-dash range. See `docs/specs/SAME_AUTHOR_COLLAPSE.md` §13.
     Ranged,
 }
 

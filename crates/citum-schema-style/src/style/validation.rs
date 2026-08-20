@@ -10,9 +10,7 @@ use crate::template::{
     LocalizedTemplateSpec, TemplateComponent, TemplateVariant, TemplateVariants,
 };
 use crate::version::{MAX_TEMPLATE_COMPONENTS, MAX_TEMPLATE_NESTING_DEPTH};
-use crate::{
-    BibliographySpec, CitationCollapse, CitationSpec, ResolutionError, YearSuffixCollapse,
-};
+use crate::{BibliographySpec, CitationCollapse, CitationSpec, ResolutionError};
 
 use super::Style;
 
@@ -33,14 +31,6 @@ pub enum SchemaWarning {
         /// Human-readable location hint (e.g., `"bibliography.type-variants"`).
         location: String,
     },
-    /// `collapse: same-author` declares `year-suffix: merged` or `ranged`,
-    /// which parses and round-trips but is not yet implemented by the
-    /// renderer — same-year suffixes still render `Separate`.
-    /// See `docs/specs/SAME_AUTHOR_COLLAPSE.md`.
-    UnimplementedCollapseDegree {
-        /// Human-readable location hint (e.g., `"citation.collapse"`).
-        location: String,
-    },
 }
 
 impl std::fmt::Display for SchemaWarning {
@@ -51,14 +41,6 @@ impl std::fmt::Display for SchemaWarning {
                     f,
                     "unknown reference type \"{name}\" in {location} \
                      (may not match a reference; check for typos)"
-                )
-            }
-            SchemaWarning::UnimplementedCollapseDegree { location } => {
-                write!(
-                    f,
-                    "{location} declares a year-suffix collapse degree \
-                     (merged/ranged) not yet implemented by the renderer; \
-                     falls back to separate suffixes"
                 )
             }
         }
@@ -343,13 +325,6 @@ fn collect_citation_spec_warnings(
                 });
             }
         }
-    }
-    if let Some(CitationCollapse::SameAuthor(config)) = &spec.collapse
-        && config.year_suffix != YearSuffixCollapse::Separate
-    {
-        warnings.push(SchemaWarning::UnimplementedCollapseDegree {
-            location: format!("{location}.collapse"),
-        });
     }
     // Recurse into sub-specs
     for (sub_name, sub_spec) in [

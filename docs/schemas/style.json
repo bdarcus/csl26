@@ -7903,12 +7903,12 @@
           "const": "separate"
         },
         {
-          "description": "`Smith (2020a, b)` — CSL `collapse=\"year-suffix\"`. Parses and\nround-trips; not yet implemented by the renderer (falls back to\n`Separate` with a one-time load warning).",
+          "description": "`Smith (2020a, b)` — CSL `collapse=\"year-suffix\"`. Adjacent\nsame-author, same-year suffixed tokens merge onto one shared year,\njoined by the resolved delimiter. See\n`docs/specs/SAME_AUTHOR_COLLAPSE.md` §13.",
           "type": "string",
           "const": "merged"
         },
         {
-          "description": "`Smith (2020a–c)` — CSL `collapse=\"year-suffix-ranged\"`. Same status as\n`Merged`.",
+          "description": "`Smith (2020a–c)` — CSL `collapse=\"year-suffix-ranged\"`. Like\n`Merged`, additionally collapsing runs of 3+ consecutive suffixes into\nan en-dash range. See `docs/specs/SAME_AUTHOR_COLLAPSE.md` §13.",
           "type": "string",
           "const": "ranged"
         }

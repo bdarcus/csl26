@@ -38,9 +38,7 @@ options:
   punctuation-in-quote: true
 citation:
   # source (springer-basic-author-date.csl): collapse="year-suffix"
-  # cite-group-delimiter=", " — SAME_AUTHOR_COLLAPSE.md §7, §13. `merged`
-  # parses and round-trips but isn't yet rendered by the engine (falls
-  # back to `separate`).
+  # cite-group-delimiter=", " — SAME_AUTHOR_COLLAPSE.md §7, §13.
   collapse:
     same-author:
       year-suffix: merged
