@@ -1,7 +1,7 @@
 ---
 # csl26-ctkb
 title: Implement year-suffix merged/ranged collapse rendering
-status: todo
+status: in-progress
 type: feature
 priority: normal
 tags:
@@ -9,7 +9,7 @@ tags:
     - citation
     - engine
 created_at: 2026-08-19T13:47:45Z
-updated_at: 2026-08-19T13:48:02Z
+updated_at: 2026-08-20T13:05:12Z
 ---
 
 `SameAuthorCollapse::year_suffix` supports `Merged` (`Smith (2020a, b)`) and `Ranged` (`Smith (2020a–c)`) — CSL's `collapse="year-suffix"` / `collapse="year-suffix-ranged"`. Both parse and round-trip through the schema (landed in csl26-ecfn's implementation, `docs/specs/SAME_AUTHOR_COLLAPSE.md`) but the renderer doesn't implement either degree yet — it falls back to `Separate`, with a one-time `SchemaWarning::UnimplementedCollapseDegree` at `citum style validate` time (not yet at render time — see below) and a migrate-time `tracing::warn!`.
