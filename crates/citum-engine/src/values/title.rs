@@ -143,7 +143,13 @@ fn parent_short_title(reference: &Reference, title_type: &TitleType) -> Option<S
     }
 }
 
-fn looks_like_djot_markup(value: &str) -> bool {
+/// Cheap heuristic for whether `value` contains Djot inline markup
+/// (`_emph_`, `*strong*`, `[text](url)`, `[text]{.class}`, `` `code` ``),
+/// used both to route title rendering through the Djot pipeline and to
+/// decide whether a sort key needs markup stripped (see `sort_support`'s
+/// `title_sort_text`) — kept as one predicate so the two paths agree on
+/// what counts as markup.
+pub(crate) fn looks_like_djot_markup(value: &str) -> bool {
     value.contains('_')
         || value.contains('*')
         || value.contains("](")
