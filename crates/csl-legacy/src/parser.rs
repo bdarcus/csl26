@@ -321,6 +321,9 @@ fn parse_bibliography(node: Node) -> Result<Bibliography, String> {
         .attribute("et-al-use-first")
         .and_then(|s| s.parse().ok());
     let hanging_indent = node.attribute("hanging-indent").map(|s| s == "true");
+    let second_field_align = node
+        .attribute("second-field-align")
+        .map(std::string::ToString::to_string);
 
     let subsequent_author_substitute = node
         .attribute("subsequent-author-substitute")
@@ -347,6 +350,7 @@ fn parse_bibliography(node: Node) -> Result<Bibliography, String> {
         et_al_min,
         et_al_use_first,
         hanging_indent,
+        second_field_align,
         subsequent_author_substitute,
         subsequent_author_substitute_rule,
     })

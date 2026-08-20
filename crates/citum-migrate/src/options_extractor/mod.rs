@@ -64,6 +64,7 @@ impl OptionsExtractor {
                     subsequent_author_substitute: config.subsequent_author_substitute,
                     subsequent_author_substitute_rule: config.subsequent_author_substitute_rule,
                     hanging_indent: config.hanging_indent,
+                    second_field_align: config.second_field_align,
                     entry_suffix: config.entry_suffix,
                     separator: config.separator,
                     suppress_period_after_url: config.suppress_period_after_url,

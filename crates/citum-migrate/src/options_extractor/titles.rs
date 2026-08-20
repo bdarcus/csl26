@@ -376,6 +376,7 @@ mod tests {
                 et_al_min: None,
                 et_al_use_first: None,
                 hanging_indent: None,
+                second_field_align: None,
                 subsequent_author_substitute: None,
                 subsequent_author_substitute_rule: None,
             }),

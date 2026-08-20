@@ -76,13 +76,19 @@ pub fn term_locale_fallback_warnings(processor: &Processor) -> Vec<Warning> {
 /// `1. Smith` or `[1] Smith`).
 ///
 /// `label-separator` defaults to empty by design, and several shipped
-/// styles depend on a genuinely flush marker — `royal-society-of-chemistry`
-/// documents `second-field-align="flush"` from its CSL source, and
-/// `gb-t-7714-2025-base` documents a bracketed-but-flush marker — so this is
-/// advisory, not an error: it surfaces a configuration shape that is easy to
-/// author unintentionally without asserting it is wrong. `author-date` mode
-/// is exempt: it never produces a bibliography marker (see `marker.rs`), so
-/// wrap and separator are inert for it. See `docs/specs/REFERENCE_MARKERS.md`.
+/// styles depend on a genuinely flush marker. A declared
+/// `second-field-align` (see `docs/specs/SECOND_FIELD_ALIGN.md`) is the
+/// structural, affirmative signal that flush is intentional, and suppresses
+/// this warning outright — `royal-society-of-chemistry` is the case this
+/// replaces: its in-file comment documented `second-field-align="flush"`
+/// from its CSL source as the reason a bare flush marker was fine, and now
+/// that is declarable instead of asserted in prose. For everything else this
+/// stays advisory, not an error: it surfaces a configuration shape that is
+/// easy to author unintentionally without asserting it is wrong (e.g.
+/// `gb-t-7714-2025-base`'s bracketed-but-flush marker, which declares no
+/// `second-field-align`). `author-date` mode is exempt: it never produces a
+/// bibliography marker (see `marker.rs`), so wrap and separator are inert for
+/// it. See `docs/specs/REFERENCE_MARKERS.md`.
 pub fn bibliography_label_missing_separator_warnings(processor: &Processor) -> Vec<Warning> {
     let config = processor.get_bibliography_options();
     let produces_marker = matches!(
@@ -92,7 +98,11 @@ pub fn bibliography_label_missing_separator_warnings(processor: &Processor) -> V
                 | citum_schema::options::BibliographyLabelMode::Alphabetic
         )
     );
-    if !produces_marker || config.label_wrap.is_some() || config.label_separator.is_some() {
+    if !produces_marker
+        || config.label_wrap.is_some()
+        || config.label_separator.is_some()
+        || config.second_field_align.is_some()
+    {
         return Vec::new();
     }
 
@@ -501,6 +511,22 @@ mod tests {
                 .any(|w| w.code == "bibliography_label_no_separator"),
             "author-date mode never produces a bibliography marker, so wrap/separator are \
              inert; did not expect a warning, got: {warnings:?}"
+        );
+    }
+
+    #[test]
+    fn bibliography_label_missing_separator_warnings_silent_with_second_field_align() {
+        let yaml = "info:\n  title: Test\nbibliography:\n  options:\n    label-mode: numeric\n    second-field-align: flush\n";
+        let style = citum_schema::Style::from_yaml_str(yaml).unwrap();
+        let processor = Processor::new(style, Bibliography::new());
+
+        let warnings = bibliography_label_missing_separator_warnings(&processor);
+        assert!(
+            !warnings
+                .iter()
+                .any(|w| w.code == "bibliography_label_no_separator"),
+            "a declared second-field-align is the affirmative signal that flush is \
+             intentional; did not expect a warning, got: {warnings:?}"
         );
     }
 

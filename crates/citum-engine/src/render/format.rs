@@ -602,8 +602,13 @@ pub trait OutputFormat: Default + Clone {
 
     /// Render a full bibliography container.
     ///
-    /// The default implementation joins the entries with double newlines.
-    fn bibliography(&self, entries: Vec<Self::Output>) -> Self::Output {
+    /// The default implementation joins the entries with double newlines and
+    /// ignores `layout`.
+    fn bibliography(
+        &self,
+        entries: Vec<Self::Output>,
+        _layout: &BibliographyLayout,
+    ) -> Self::Output {
         self.join(entries, "\n\n")
     }
 
@@ -618,6 +623,57 @@ pub trait OutputFormat: Default + Clone {
         _metadata: &ProcEntryMetadata,
     ) -> Self::Output {
         content
+    }
+
+    /// Join a bibliography entry's reference marker and body into the entry's
+    /// rendered content, honoring `layout`.
+    ///
+    /// The default implementation fuses the already-rendered marker and body with no separator —
+    /// `[1]J. Smith`, matching citeproc-js `second-field-align` output
+    /// flattened to text — and ignores `layout` entirely, so every format
+    /// that doesn't override this method is unaffected by a style declaring
+    /// `second-field-align`. Only [`Html`](super::html::Html) overrides this,
+    /// to emit the marker and body as sibling slots when
+    /// `layout.second_field_align` is set. See
+    /// `docs/specs/SECOND_FIELD_ALIGN.md`.
+    fn entry_slots(
+        &self,
+        marker: Option<Self::Output>,
+        body: Self::Output,
+        _layout: &BibliographyLayout,
+    ) -> Self::Output {
+        match marker {
+            Some(marker) => self.join(vec![marker, body], ""),
+            None => body,
+        }
+    }
+}
+
+/// Runtime bibliography layout, resolved from
+/// [`BibliographyConfig`](citum_schema::options::BibliographyConfig) and
+/// handed to the output format at the point a marker meets its body and when
+/// the bibliography container is emitted. See
+/// `docs/specs/SECOND_FIELD_ALIGN.md`.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct BibliographyLayout {
+    /// CSL `second-field-align`. `None` when the style declares neither
+    /// `flush` nor `margin`.
+    pub second_field_align: Option<citum_schema::options::SecondFieldAlign>,
+    /// CSL `hanging-indent`.
+    pub hanging_indent: bool,
+}
+
+impl BibliographyLayout {
+    /// Resolve a [`BibliographyLayout`] from a style's bibliography config.
+    #[must_use]
+    pub fn from_config(config: Option<&citum_schema::options::BibliographyConfig>) -> Self {
+        let Some(config) = config else {
+            return Self::default();
+        };
+        Self {
+            second_field_align: config.second_field_align,
+            hanging_indent: config.hanging_indent.unwrap_or(false),
+        }
     }
 }
 
@@ -767,7 +823,10 @@ mod tests {
         );
         assert_eq!(fmt.format_id("id1"), "id1");
         assert_eq!(
-            fmt.bibliography(vec!["entry1".to_string(), "entry2".to_string()]),
+            fmt.bibliography(
+                vec!["entry1".to_string(), "entry2".to_string()],
+                &BibliographyLayout::default()
+            ),
             "entry1\n\nentry2"
         );
         assert_eq!(
@@ -778,6 +837,53 @@ mod tests {
                 &ProcEntryMetadata::default()
             ),
             "content"
+        );
+    }
+
+    #[test]
+    fn entry_slots_default_fuses_marker_and_body_with_no_separator() {
+        let fmt = DummyFormat;
+        assert_eq!(
+            fmt.entry_slots(
+                Some("[1]".to_string()),
+                "J. Smith".to_string(),
+                &BibliographyLayout::default()
+            ),
+            "[1]J. Smith"
+        );
+        assert_eq!(
+            fmt.entry_slots(None, "J. Smith".to_string(), &BibliographyLayout::default()),
+            "J. Smith"
+        );
+    }
+
+    #[test]
+    fn entry_slots_default_ignores_second_field_align() {
+        let fmt = DummyFormat;
+        let layout = BibliographyLayout {
+            second_field_align: Some(citum_schema::options::SecondFieldAlign::Flush),
+            hanging_indent: true,
+        };
+        assert_eq!(
+            fmt.entry_slots(Some("[1]".to_string()), "J. Smith".to_string(), &layout),
+            "[1]J. Smith",
+            "a format that doesn't override entry_slots must render identically \
+             whether or not the style declares second-field-align"
+        );
+    }
+
+    #[test]
+    fn entry_slots_default_preserves_preformatted_typst_marker() {
+        use crate::render::typst::Typst;
+
+        let fmt = Typst;
+        assert_eq!(
+            fmt.entry_slots(
+                Some(r"\[1\]".to_string()),
+                "Title Text".to_string(),
+                &BibliographyLayout::default(),
+            ),
+            r"\[1\]Title Text"
         );
     }
 

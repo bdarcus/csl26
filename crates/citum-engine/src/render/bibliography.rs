@@ -10,7 +10,9 @@ use crate::api::{AnnotationFormat, AnnotationStyle};
 use crate::render::component::{
     ProcEntry, ProcTemplateComponent, RenderedComponent, render_component_detailed,
 };
-use crate::render::format::{OutputFormat, PunctuationPosition, RealizedPunctuation};
+use crate::render::format::{
+    BibliographyLayout, OutputFormat, PunctuationPosition, RealizedPunctuation,
+};
 use crate::render::plain::PlainText;
 use crate::render::punctuation::{
     leading_movable_mark, move_punctuation_into_quote, resolve_punctuation_collision,
@@ -180,15 +182,29 @@ pub fn refs_to_string(proc_entries: Vec<ProcEntry>) -> String {
 /// The entry's reference marker leads the body, carrying its own wrap and
 /// `label-separator`; it is not a template component and never took part in the
 /// entry's component-separator logic. See `docs/specs/REFERENCE_MARKERS.md`.
+///
+/// Marker and body are joined through [`OutputFormat::entry_slots`], which
+/// fuses them flush by default (unchanged from before that method existed)
+/// and only differs when the format overrides it to honor a declared
+/// `second-field-align`. See `docs/specs/SECOND_FIELD_ALIGN.md`.
 #[must_use]
 pub fn render_entry_body_with_format<F: OutputFormat<Output = String>>(
     entry: &ProcEntry,
 ) -> String {
     let body = render_entry_body_components_with_format::<F>(&entry.template);
-    match entry.marker.as_deref() {
-        Some(marker) => format!("{marker}{body}"),
-        None => body,
-    }
+    let layout = entry_bibliography_layout(&entry.template);
+    F::default().entry_slots(entry.marker.clone(), body, &layout)
+}
+
+/// Resolve a [`BibliographyLayout`] from an entry's leading template
+/// component, mirroring how [`render_entry_body_components_with_format`]
+/// reads the same component's `bibliography_config` for the separator.
+fn entry_bibliography_layout(proc_template: &[ProcTemplateComponent]) -> BibliographyLayout {
+    BibliographyLayout::from_config(
+        proc_template
+            .first()
+            .and_then(|c| c.bibliography_config.as_deref()),
+    )
 }
 
 /// Append `rendered` to `entry_output`, either via the normal separator logic
@@ -474,7 +490,12 @@ pub fn refs_to_string_slice_with_format<F: OutputFormat<Output = String>>(
     let mut rendered_entries = Vec::with_capacity(proc_entries.len());
 
     for entry in proc_entries {
-        let mut entry_output = render_entry_body_with_format::<F>(entry);
+        // Rendered separately from the marker (rather than via
+        // `render_entry_body_with_format`) so the annotation below can be
+        // appended to the body *before* the marker/body fuse. Fusing first
+        // would put the annotation outside the HTML body slot when
+        // second-field-align is declared. See docs/specs/SECOND_FIELD_ALIGN.md.
+        let mut body = render_entry_body_components_with_format::<F>(&entry.template);
         let proc_template = &entry.template;
 
         // Apply annotation if present
@@ -494,9 +515,12 @@ pub fn refs_to_string_slice_with_format<F: OutputFormat<Output = String>>(
 
             if !rendered.is_empty() {
                 let annotation_output = fmt.text(rendered);
-                entry_output.push_str(&fmt.annotation(annotation_output));
+                body.push_str(&fmt.annotation(annotation_output));
             }
         }
+
+        let layout = entry_bibliography_layout(proc_template);
+        let entry_output = fmt.entry_slots(entry.marker.clone(), body, &layout);
 
         if fmt.visible_text(&entry_output).trim().is_empty() {
             continue;
@@ -523,7 +547,13 @@ pub fn refs_to_string_slice_with_format<F: OutputFormat<Output = String>>(
         rendered_entries.push(fmt.entry(&entry.id, entry_output, entry_url, &entry.metadata));
     }
 
-    fmt.finish(fmt.bibliography(rendered_entries))
+    let bibliography_layout = BibliographyLayout::from_config(
+        proc_entries
+            .first()
+            .and_then(|entry| entry.template.first())
+            .and_then(|c| c.bibliography_config.as_deref()),
+    );
+    fmt.finish(fmt.bibliography(rendered_entries, &bibliography_layout))
 }
 
 /// Classification of a bibliography entry's terminal token, used to decide
@@ -871,6 +901,181 @@ mod tests {
 
         // then the marker sits flush ahead of the body, with no separator
         assert_eq!(refs_to_string(entries), expected);
+    }
+
+    /// A style declaring no `second-field-align` must render byte-identical
+    /// to before `entry_slots` existed, on every format — the invariant
+    /// `docs/specs/SECOND_FIELD_ALIGN.md` pins as the parity gate.
+    #[test]
+    fn test_absent_second_field_align_is_unaffected_by_entry_slots() {
+        use citum_schema::options::{BibliographyConfig, Config};
+
+        let config = Config::default();
+        let bibliography_config = BibliographyConfig {
+            separator: Some(". ".into()),
+            entry_suffix: Some(String::new().into()),
+            ..Default::default()
+        };
+        let content = ProcTemplateComponent {
+            template_component: TemplateComponent::Term(
+                citum_schema::template::TemplateTerm::default(),
+            ),
+            value: "Title Text".to_string(),
+            config: Some(config.into()),
+            bibliography_config: Some(bibliography_config.into()),
+            ..Default::default()
+        };
+        let entries = vec![ProcEntry {
+            marker: Some("[1]".to_string()),
+            id: "id1".to_string(),
+            template: vec![content],
+            metadata: crate::render::format::ProcEntryMetadata::default(),
+        }];
+
+        assert_eq!(refs_to_string(entries), "[1]Title Text");
+    }
+
+    /// When alignment is declared, HTML splits the marker and body into
+    /// sibling `citum-entry-marker` / `citum-entry-body` divs; when it is
+    /// not, HTML fuses flush exactly as before this feature existed. Both
+    /// `flush` and `margin` produce the same markup — the distinction is a
+    /// CSS-layer concern, not a Citum rendering difference. See
+    /// `docs/specs/SECOND_FIELD_ALIGN.md`.
+    #[rstest]
+    #[case::flush_renders_sibling_slots(
+        Some(citum_schema::options::SecondFieldAlign::Flush),
+        "<div class=\"citum-bibliography\">\n<div class=\"citum-entry\" id=\"ref-id1\"><div class=\"citum-entry-marker\">[1]</div><div class=\"citum-entry-body\">Title Text</div></div>\n</div>"
+    )]
+    #[case::margin_renders_identically_to_flush(
+        Some(citum_schema::options::SecondFieldAlign::Margin),
+        "<div class=\"citum-bibliography\">\n<div class=\"citum-entry\" id=\"ref-id1\"><div class=\"citum-entry-marker\">[1]</div><div class=\"citum-entry-body\">Title Text</div></div>\n</div>"
+    )]
+    #[case::absent_renders_flush_fused(
+        None,
+        "<div class=\"citum-bibliography\">\n<div class=\"citum-entry\" id=\"ref-id1\">[1]Title Text</div>\n</div>"
+    )]
+    fn test_html_entry_slots_honor_second_field_align(
+        #[case] second_field_align: Option<citum_schema::options::SecondFieldAlign>,
+        #[case] expected: &str,
+    ) {
+        use crate::render::html::Html;
+        use citum_schema::options::{BibliographyConfig, Config};
+
+        let config = Config::default();
+        let bibliography_config = BibliographyConfig {
+            separator: Some(". ".into()),
+            entry_suffix: Some(String::new().into()),
+            second_field_align,
+            ..Default::default()
+        };
+        let content = ProcTemplateComponent {
+            template_component: TemplateComponent::Term(
+                citum_schema::template::TemplateTerm::default(),
+            ),
+            value: "Title Text".to_string(),
+            config: Some(config.into()),
+            bibliography_config: Some(bibliography_config.into()),
+            ..Default::default()
+        };
+        let entries = vec![ProcEntry {
+            marker: Some("[1]".to_string()),
+            id: "id1".to_string(),
+            template: vec![content],
+            metadata: crate::render::format::ProcEntryMetadata::default(),
+        }];
+
+        let result = refs_to_string_with_format::<Html>(entries, None, None);
+        assert_eq!(result, expected);
+    }
+
+    /// An annotation appended to an entry declaring `second-field-align` must
+    /// land inside `citum-entry-body`, not after the closing `</div>` of the
+    /// body slot — the ordering hazard `docs/specs/SECOND_FIELD_ALIGN.md`
+    /// calls out: fusing marker and body before appending the annotation
+    /// would put it outside both slots.
+    #[test]
+    fn test_html_annotation_stays_inside_body_slot_with_second_field_align() {
+        use crate::render::html::Html;
+        use citum_schema::options::{BibliographyConfig, Config};
+
+        let config = Config::default();
+        let bibliography_config = BibliographyConfig {
+            separator: Some(". ".into()),
+            entry_suffix: Some(String::new().into()),
+            second_field_align: Some(citum_schema::options::SecondFieldAlign::Flush),
+            ..Default::default()
+        };
+        let content = ProcTemplateComponent {
+            template_component: TemplateComponent::Term(
+                citum_schema::template::TemplateTerm::default(),
+            ),
+            value: "Title Text".to_string(),
+            config: Some(config.into()),
+            bibliography_config: Some(bibliography_config.into()),
+            ..Default::default()
+        };
+        let entries = vec![ProcEntry {
+            marker: Some("[1]".to_string()),
+            id: "id1".to_string(),
+            template: vec![content],
+            metadata: crate::render::format::ProcEntryMetadata::default(),
+        }];
+
+        let mut annotations = HashMap::new();
+        annotations.insert("id1".to_string(), "A useful overview.".to_string());
+        let style = AnnotationStyle::default();
+
+        let result = refs_to_string_with_format::<Html>(entries, Some(&annotations), Some(&style));
+        assert_eq!(
+            result,
+            "<div class=\"citum-bibliography\">\n<div class=\"citum-entry\" id=\"ref-id1\"><div class=\"citum-entry-marker\">[1]</div><div class=\"citum-entry-body\">Title Text<div class=\"citum-annotation\">A useful overview.</div></div></div>\n</div>"
+        );
+    }
+
+    /// `hanging-indent` is carried on `BibliographyConfig` but was consumed
+    /// by nothing before this spec; the HTML container now renders a
+    /// modifier class from it. See `docs/specs/SECOND_FIELD_ALIGN.md`.
+    #[rstest]
+    #[case::hanging_indent_true_adds_modifier_class(
+        true,
+        "<div class=\"citum-bibliography citum-bibliography--hanging-indent\">\n<div class=\"citum-entry\" id=\"ref-id1\">Title Text</div>\n</div>"
+    )]
+    #[case::hanging_indent_false_is_unchanged(
+        false,
+        "<div class=\"citum-bibliography\">\n<div class=\"citum-entry\" id=\"ref-id1\">Title Text</div>\n</div>"
+    )]
+    fn test_html_bibliography_container_hanging_indent_class(
+        #[case] hanging_indent: bool,
+        #[case] expected: &str,
+    ) {
+        use crate::render::html::Html;
+        use citum_schema::options::{BibliographyConfig, Config};
+
+        let config = Config::default();
+        let bibliography_config = BibliographyConfig {
+            separator: Some(". ".into()),
+            entry_suffix: Some(String::new().into()),
+            hanging_indent: Some(hanging_indent),
+            ..Default::default()
+        };
+        let content = ProcTemplateComponent {
+            template_component: TemplateComponent::Term(
+                citum_schema::template::TemplateTerm::default(),
+            ),
+            value: "Title Text".to_string(),
+            config: Some(config.into()),
+            bibliography_config: Some(bibliography_config.into()),
+            ..Default::default()
+        };
+        let entries = vec![ProcEntry {
+            marker: None,
+            id: "id1".to_string(),
+            template: vec![content],
+            metadata: crate::render::format::ProcEntryMetadata::default(),
+        }];
+
+        let result = refs_to_string_with_format::<Html>(entries, None, None);
+        assert_eq!(result, expected);
     }
 
     #[test]

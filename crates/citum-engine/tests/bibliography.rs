@@ -32,8 +32,8 @@ use citum_schema::{
         BibliographyPartitionHeading, BibliographyPartitionKind, BibliographyPartitionMode,
         BibliographySortPartitioning, Config, ContributorConfig, DelimiterPrecedesLast,
         DemoteNonDroppingParticle, DisplayAsSort, LinkAnchor, LinkTarget, LinksConfig,
-        MultilingualConfig, MultilingualMode, Processing, ProcessingCustom, Sort, SortKey,
-        SortSpec, SortingConfig, SortingMultilingualMode, TwoNameDelimiterPolicy,
+        MultilingualConfig, MultilingualMode, Processing, ProcessingCustom, SecondFieldAlign, Sort,
+        SortKey, SortSpec, SortingConfig, SortingMultilingualMode, TwoNameDelimiterPolicy,
     },
     reference::{
         Contributor, ContributorList, DateValue, InputReference, Monograph, MonographType,
@@ -2819,6 +2819,113 @@ fn two_names_bibliography_contextual_omits_delimiter_for_two_names() {
     let result = processor.render_bibliography();
 
     assert_eq!(result, "John Smith and Jane Jones");
+}
+
+/// Same shape as [`build_numeric_style`], but with `second-field-align`
+/// declared or not via `align` — everything else, including the absence of
+/// `label-separator`, held identical between the two, so a comparison
+/// between `align: None` and `align: Some(...)` output isolates exactly the
+/// alignment option's effect and nothing else. See
+/// `docs/specs/SECOND_FIELD_ALIGN.md`.
+fn build_numeric_style_with_alignment(align: Option<SecondFieldAlign>) -> Style {
+    Style {
+        info: StyleInfo {
+            title: Some("Numeric Second-Field-Align Test".to_string()),
+            id: Some("numeric-second-field-align-test".into()),
+            ..Default::default()
+        },
+        options: Some(Config {
+            processing: Some(Processing::Numeric),
+            ..Default::default()
+        }),
+        citation: Some(CitationSpec {
+            options: Some(citum_schema::CitationOptions {
+                label_mode: Some(citum_schema::options::CitationLabelMode::Numeric),
+                ..Default::default()
+            }),
+            wrap: Some(citum_schema::template::WrapPunctuation::Brackets.into()),
+            ..Default::default()
+        }),
+        bibliography: Some(BibliographySpec {
+            options: Some(citum_schema::BibliographyOptions {
+                label_mode: Some(citum_schema::options::BibliographyLabelMode::Numeric),
+                second_field_align: align,
+                ..Default::default()
+            }),
+            template: Some(
+                vec![
+                    citum_schema::tc_contributor!(Author, Long),
+                    citum_schema::tc_date!(Issued, Year, prefix = " (", suffix = ")"),
+                ]
+                .into(),
+            ),
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// End-to-end: a style declaring `second-field-align: flush` renders HTML
+/// with the marker and body as sibling `citum-entry-marker` /
+/// `citum-entry-body` divs, exercising the full path from YAML-shaped
+/// `BibliographyOptions` through processing to the HTML `entry_slots` seam —
+/// not just the hand-built `ProcEntry` the inline unit tests in
+/// `render/bibliography.rs` cover. See `docs/specs/SECOND_FIELD_ALIGN.md`.
+#[test]
+fn given_second_field_align_flush_when_rendering_html_then_marker_and_body_are_sibling_slots() {
+    let style = build_numeric_style_with_alignment(Some(SecondFieldAlign::Flush));
+
+    let bib =
+        citum_schema::bib_map!["item1" => make_book("item1", "Smith", "John", 2020, "Title A")];
+    let processor = Processor::new(style, bib);
+    processor
+        .process_citation(&citum_schema::cite!("item1"))
+        .unwrap();
+
+    let result = processor
+        .render_selected_bibliography_with_format_standalone::<Html, _>(vec!["item1".to_string()]);
+
+    assert_eq!(
+        result,
+        "<div class=\"citum-bibliography\">\n<div class=\"citum-entry\" id=\"ref-item1\" data-author=\"Smith\" data-year=\"2020\" data-title=\"Title A\"><div class=\"citum-entry-marker\">1</div><div class=\"citum-entry-body\"><span class=\"citum-author\">John Smith</span><span class=\"citum-issued\"> (2020)</span></div></div>\n</div>"
+    );
+}
+
+/// Parity guard: declaring `second-field-align` must not change plain-text
+/// output at all, since `PlainText` never overrides `entry_slots`. Compared
+/// directly against the identical style with no alignment declared, not just
+/// against a hardcoded string, so the two builders can't silently drift
+/// apart from each other.
+#[test]
+fn given_second_field_align_when_rendering_plain_text_then_output_is_unaffected() {
+    let bib_for =
+        || citum_schema::bib_map!["item1" => make_book("item1", "Smith", "John", 2020, "Title A")];
+
+    let baseline_processor = Processor::new(build_numeric_style_with_alignment(None), bib_for());
+    baseline_processor
+        .process_citation(&citum_schema::cite!("item1"))
+        .unwrap();
+    let baseline = baseline_processor
+        .render_selected_bibliography_with_format_standalone::<PlainText, _>(vec![
+            "item1".to_string(),
+        ]);
+
+    let aligned_processor = Processor::new(
+        build_numeric_style_with_alignment(Some(SecondFieldAlign::Flush)),
+        bib_for(),
+    );
+    aligned_processor
+        .process_citation(&citum_schema::cite!("item1"))
+        .unwrap();
+    let aligned = aligned_processor
+        .render_selected_bibliography_with_format_standalone::<PlainText, _>(vec![
+            "item1".to_string(),
+        ]);
+
+    assert_eq!(
+        baseline, aligned,
+        "second-field-align must not change plain-text output"
+    );
 }
 
 // --- Numeric Bibliography Tests ---

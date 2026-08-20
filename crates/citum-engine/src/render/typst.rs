@@ -251,7 +251,11 @@ impl OutputFormat for Typst {
         "\\\n".to_string()
     }
 
-    fn bibliography(&self, entries: Vec<Self::Output>) -> Self::Output {
+    fn bibliography(
+        &self,
+        entries: Vec<Self::Output>,
+        _layout: &super::format::BibliographyLayout,
+    ) -> Self::Output {
         self.join(entries, "\n\n")
     }
 
