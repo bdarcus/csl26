@@ -32,6 +32,26 @@ struct ItemRenderState<'a> {
     template: Cow<'a, [TemplateComponent]>,
 }
 
+/// Delimiter overrides threaded into
+/// [`Renderer::build_grouped_citation_content`], bundled to stay under the
+/// clippy argument-count limit.
+struct GroupedContentDelimiters<'a> {
+    group_delimiter: Option<&'a str>,
+    pre_wrapped_years: Option<&'a str>,
+    escalated_delimiter: Option<&'a str>,
+    same_author_delimiter: Option<&'a str>,
+}
+
+/// Context threaded into [`Renderer::compute_pre_wrapped_years`], bundled to
+/// stay under the clippy argument-count limit.
+struct PreWrappedYearsContext<'a> {
+    group_delimiter: Option<&'a str>,
+    escalated_delimiter: Option<&'a str>,
+    same_author_delimiter: Option<&'a str>,
+    script: crate::values::ScriptClass,
+    realization: Option<&'a citum_schema::options::PunctuationRealization>,
+}
+
 struct GroupItemRenderRequest<'a> {
     item: &'a crate::reference::CitationItem,
     template: &'a [TemplateComponent],
@@ -321,7 +341,7 @@ impl Renderer<'_> {
             params.suppress_author,
             params.position,
         );
-        let (item_parts, group_delimiter, captured_year_wrap) =
+        let (item_parts, suffix_indices, group_delimiter, captured_year_wrap) =
             self.render_group_item_parts_with_format::<F>(&fmt, group, params)?;
         // CMOS 15.30 / citeproc's `after-collapse-delimiter`: once any item in a
         // same-author collapsed group carries a locator, the intra-group join
@@ -329,18 +349,30 @@ impl Renderer<'_> {
         // (default "; ") so the locator doesn't read as a bare extra year, e.g.
         // "Sutinen 1969; 1976, 257; 1981" rather than "Sutinen 1969, 1976, 257, 1981".
         // See docs/specs/CITATION_CLUSTER_RENDERING.md "Same-author collapse with
-        // locators".
+        // locators". The same condition bounds year-suffix merging below (§13
+        // of SAME_AUTHOR_COLLAPSE.md): a locator-bearing group never merges.
         let group_has_locator = group.iter().any(|item| item.locator.is_some());
-        // Script/realization context, shared below by the escalated delimiter and
-        // the integral wrap punctuation. Both must route through the same
-        // script-aware realization table (e.g. GB/T's `{ mark: semicolon }`
-        // resolving to a full-width `；`) rather than DelimiterPunctuation's
-        // `Deref`, which only ever exposes the Latin default and would silently
-        // emit ASCII punctuation in CJK output.
+        // Script/realization context, shared below by the escalated delimiter,
+        // the same-author collapse delimiter, and the integral wrap punctuation.
+        // All must route through the same script-aware realization table (e.g.
+        // GB/T's `{ mark: semicolon }` resolving to a full-width `；`) rather
+        // than DelimiterPunctuation's `Deref`, which only ever exposes the
+        // Latin default and would silently emit ASCII punctuation in CJK output.
         let (script, realization) = crate::values::punctuation_realization_context(
             crate::values::effective_item_language(first_ref).as_deref(),
             self.config.multilingual.as_ref(),
             self.locale.punctuation_realization.as_ref(),
+        );
+        // Merges/ranges same-year suffix tokens (SAME_AUTHOR_COLLAPSE.md §13)
+        // and resolves the same-author collapse delimiter override, ahead of
+        // the existing join-delimiter resolution below.
+        let (item_parts, same_author_delimiter) = self.apply_same_author_year_suffix(
+            item_parts,
+            &suffix_indices,
+            group_has_locator,
+            params,
+            script,
+            realization.as_deref(),
         );
         let escalated_delimiter = group_has_locator.then(|| {
             params
@@ -359,51 +391,31 @@ impl Renderer<'_> {
                 .unwrap_or_else(|| "; ".to_string())
         });
         // Pre-compute a format-aware wrapped years string for integral collapsed groups.
-        // Using fmt.inner_affix + fmt.wrap_punctuation honours output-format-specific
-        // punctuation (e.g. LaTeX ``…'') and preserves WrapConfig.inner_prefix/suffix.
         // Non-integral groups leave pre_wrapped_years as None and rely on the
         // per-item template path in build_grouped_citation_content.
-        let pre_wrapped_years =
-            if matches!(params.mode, citum_schema::citation::CitationMode::Integral)
-                && !item_parts.is_empty()
-            {
-                let delimiter = if let Some(escalated) = escalated_delimiter.as_deref() {
-                    escalated
-                } else {
-                    group_delimiter.as_deref().unwrap_or(params.intra_delimiter)
-                };
-                let joined = self.join_integral_group_item_parts(&item_parts, delimiter);
-                let wrap_punct = captured_year_wrap
-                    .as_ref()
-                    .map(|w| &w.punctuation)
-                    .unwrap_or(&WrapPunctuation::Parentheses);
-                let inner_prefix = captured_year_wrap
-                    .as_ref()
-                    .and_then(|w| w.inner_prefix.as_deref())
-                    .unwrap_or("");
-                let inner_suffix = captured_year_wrap
-                    .as_ref()
-                    .and_then(|w| w.inner_suffix.as_deref())
-                    .unwrap_or("");
-                let inner = fmt.inner_affix(inner_prefix, joined, inner_suffix);
-                let marks = crate::render::format::QuoteMarks::from(&self.locale.grammar_options);
-                Some(fmt.wrap_punctuation(
-                    wrap_punct,
-                    inner,
-                    &marks,
-                    script,
-                    realization.as_deref(),
-                ))
-            } else {
-                None
-            };
+        let pre_wrapped_years = self.compute_pre_wrapped_years::<F>(
+            &fmt,
+            &item_parts,
+            captured_year_wrap.as_ref(),
+            params,
+            PreWrappedYearsContext {
+                group_delimiter: group_delimiter.as_deref(),
+                escalated_delimiter: escalated_delimiter.as_deref(),
+                same_author_delimiter: same_author_delimiter.as_deref(),
+                script,
+                realization: realization.as_deref(),
+            },
+        );
         let Some(content) = self.build_grouped_citation_content::<F>(
             &author_part,
             &item_parts,
             params,
-            group_delimiter.as_deref(),
-            pre_wrapped_years.as_deref(),
-            escalated_delimiter.as_deref(),
+            GroupedContentDelimiters {
+                group_delimiter: group_delimiter.as_deref(),
+                pre_wrapped_years: pre_wrapped_years.as_deref(),
+                escalated_delimiter: escalated_delimiter.as_deref(),
+                same_author_delimiter: same_author_delimiter.as_deref(),
+            },
         ) else {
             return Ok(None);
         };
@@ -429,15 +441,65 @@ impl Renderer<'_> {
         )))
     }
 
+    /// Format-aware wrapped years string for an integral collapsed group
+    /// (`None` for non-integral groups or empty `item_parts`). Using
+    /// `fmt.inner_affix` + `fmt.wrap_punctuation` honours output-format-specific
+    /// punctuation (e.g. LaTeX ``…'') and preserves
+    /// `WrapConfig.inner_prefix`/`inner_suffix`.
+    fn compute_pre_wrapped_years<F: crate::render::format::OutputFormat<Output = String>>(
+        &self,
+        fmt: &F,
+        item_parts: &[String],
+        captured_year_wrap: Option<&WrapConfig>,
+        params: &GroupRenderParams<'_>,
+        context: PreWrappedYearsContext<'_>,
+    ) -> Option<String> {
+        if !matches!(params.mode, citum_schema::citation::CitationMode::Integral)
+            || item_parts.is_empty()
+        {
+            return None;
+        }
+        let delimiter = if let Some(escalated) = context.escalated_delimiter {
+            escalated
+        } else if let Some(same_author) = context.same_author_delimiter {
+            same_author
+        } else {
+            context.group_delimiter.unwrap_or(params.intra_delimiter)
+        };
+        let joined = self.join_integral_group_item_parts(item_parts, delimiter);
+        let wrap_punct = captured_year_wrap
+            .map(|w| &w.punctuation)
+            .unwrap_or(&WrapPunctuation::Parentheses);
+        let inner_prefix = captured_year_wrap
+            .and_then(|w| w.inner_prefix.as_deref())
+            .unwrap_or("");
+        let inner_suffix = captured_year_wrap
+            .and_then(|w| w.inner_suffix.as_deref())
+            .unwrap_or("");
+        let inner = fmt.inner_affix(inner_prefix, joined, inner_suffix);
+        let marks = crate::render::format::QuoteMarks::from(&self.locale.grammar_options);
+        Some(fmt.wrap_punctuation(
+            wrap_punct,
+            inner,
+            &marks,
+            context.script,
+            context.realization,
+        ))
+    }
+
     fn build_grouped_citation_content<F: crate::render::format::OutputFormat<Output = String>>(
         &self,
         author_part: &str,
         item_parts: &[String],
         params: &GroupRenderParams<'_>,
-        group_delimiter: Option<&str>,
-        pre_wrapped_years: Option<&str>,
-        escalated_delimiter: Option<&str>,
+        delimiters: GroupedContentDelimiters<'_>,
     ) -> Option<String> {
+        let GroupedContentDelimiters {
+            group_delimiter,
+            pre_wrapped_years,
+            escalated_delimiter,
+            same_author_delimiter,
+        } = delimiters;
         if !author_part.is_empty() && !item_parts.is_empty() {
             let author_item_delimiter = group_delimiter.unwrap_or(params.intra_delimiter);
             return Some(match params.mode {
@@ -460,9 +522,12 @@ impl Renderer<'_> {
                     // render_fallback_grouped_citation_with_format: same escalation,
                     // non-integral side, already script-realized by the caller.
                     // author_item_delimiter (author -> first year) is untouched --
-                    // only the join between repeated items escalates.
+                    // only the join between repeated items escalates or takes the
+                    // declared same-author collapse delimiter.
                     let repeated_item_delimiter = if let Some(escalated) = escalated_delimiter {
                         escalated
+                    } else if let Some(same_author) = same_author_delimiter {
+                        same_author
                     } else if author_item_delimiter.trim().is_empty() {
                         ", "
                     } else {
@@ -554,11 +619,26 @@ impl Renderer<'_> {
         fmt: &F,
         group: &[&crate::reference::CitationItem],
         params: &GroupRenderParams<'_>,
-    ) -> Result<(Vec<String>, Option<String>, Option<WrapConfig>), ProcessorError>
+    ) -> Result<
+        (
+            Vec<String>,
+            Vec<Option<u32>>,
+            Option<String>,
+            Option<WrapConfig>,
+        ),
+        ProcessorError,
+    >
     where
         F: crate::render::format::OutputFormat<Output = String>,
     {
         let mut item_parts = Vec::new();
+        // Index-aligned with `item_parts`: `year_suffix_group_index` for the
+        // item that produced each part, or `None` when that item isn't
+        // rendering a year-suffix disambiguator. Pushed at the same point as
+        // `item_parts` so an item that renders empty (and is therefore
+        // skipped) never desynchronizes the pairing. See §13 in
+        // `docs/specs/SAME_AUTHOR_COLLAPSE.md`.
+        let mut suffix_indices = Vec::new();
         let mut group_delimiter: Option<String> = None;
         // For integral multi-item same-author groups, capture the full WrapConfig
         // (punctuation + inner_prefix/inner_suffix) from the first item's filtered
@@ -631,9 +711,15 @@ impl Renderer<'_> {
                     item.suffix.as_deref(),
                     Some(item.id.as_str()),
                 ));
+                suffix_indices.push(self.year_suffix_group_index(&item.id));
             }
         }
-        Ok((item_parts, group_delimiter, captured_year_wrap))
+        Ok((
+            item_parts,
+            suffix_indices,
+            group_delimiter,
+            captured_year_wrap,
+        ))
     }
 
     fn resolve_group_render_state<'b>(

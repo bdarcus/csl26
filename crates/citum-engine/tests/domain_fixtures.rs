@@ -21,6 +21,8 @@ SPDX-License-Identifier: MIT OR Apache-2.0
 SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus and Citum contributors
 */
 
+mod common;
+
 use citum_engine::Processor;
 use citum_io::load_bibliography;
 use citum_schema::Style;
@@ -732,6 +734,257 @@ fn given_a_no_collapse_author_date_style_when_same_author_cluster_has_no_locator
     let rendered = processor
         .process_citation(&citation)
         .expect("same-author cluster should render");
+
+    assert_eq!(rendered, expected);
+}
+
+// --- Year-suffix merged/ranged rendering (csl26-ctkb) ---
+//
+// SAME_AUTHOR_COLLAPSE.md §13. springer-basic-author-date-core and
+// international-journal-of-wildland-fire both declare
+// `collapse: { same-author: { year-suffix: merged } }`; their oracle
+// snapshots (tests/snapshots/csl/) disagree on the merged-suffix join
+// delimiter, which is exactly what proves the delimiter-precedence
+// resolution rather than just the merge mechanism.
+
+/// `springer-basic-author-date-core` declares `delimiter: ", "` (from
+/// source `cite-group-delimiter=", "`), which wins the suffix-join
+/// precedence -- byte-exact against
+/// `tests/snapshots/csl/springer-basic-author-date.json`'s
+/// `disambiguate-year-suffix` entry.
+#[test]
+fn given_springer_style_when_same_year_suffixes_merge_then_renders_exact_oracle_match() {
+    let root = project_root();
+    let style = load_style(&root.join("styles/embedded/springer-basic-author-date-core.yaml"));
+    let bibliography = load_bibliography(&root.join("tests/fixtures/references-expanded.json"))
+        .expect("expanded fixture should parse");
+
+    let processor = Processor::new(style, bibliography);
+    let citation = Citation {
+        items: vec![
+            CitationItem {
+                id: "ITEM-31".to_string(),
+                ..Default::default()
+            },
+            CitationItem {
+                id: "ITEM-32".to_string(),
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    };
+
+    let rendered = processor
+        .process_citation(&citation)
+        .expect("merged same-year suffix cluster should render");
+
+    assert_eq!(rendered, "(Garcia 2019a, b)");
+}
+
+/// `international-journal-of-wildland-fire` declares no delimiter override,
+/// so the suffix join falls through to its layout delimiter (`"; "`) --
+/// byte-exact against its own oracle snapshot. This is the case that
+/// proves the delimiter *resolution*, not just that a merge happened: a
+/// hardcoded `", "` join (springer's answer) would fail here.
+#[test]
+fn given_wildland_fire_style_when_same_year_suffixes_merge_then_renders_exact_oracle_match() {
+    let root = project_root();
+    let style = load_style(&root.join("styles/international-journal-of-wildland-fire.yaml"));
+    let bibliography = load_bibliography(&root.join("tests/fixtures/references-expanded.json"))
+        .expect("expanded fixture should parse");
+
+    let processor = Processor::new(style, bibliography);
+    let citation = Citation {
+        items: vec![
+            CitationItem {
+                id: "ITEM-31".to_string(),
+                ..Default::default()
+            },
+            CitationItem {
+                id: "ITEM-32".to_string(),
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    };
+
+    let rendered = processor
+        .process_citation(&citation)
+        .expect("merged same-year suffix cluster should render");
+
+    assert_eq!(rendered, "(Garcia 2019a; b)");
+}
+
+/// A same-author group with *different* years never triggers the merge --
+/// `(Chen 2022, 2024)`, not `(Chen 2022, 4)` -- on both merged-degree
+/// styles, exactly as it already did on `Separate` before this change.
+/// `tests/snapshots/csl/*.json`'s `subsequent-author-consecutive` entry
+/// pins the same string for both styles.
+#[rstest]
+#[case::springer("styles/embedded/springer-basic-author-date-core.yaml")]
+#[case::wildland_fire("styles/international-journal-of-wildland-fire.yaml")]
+fn given_a_merged_degree_style_when_years_differ_then_items_stay_separate(
+    #[case] style_path: &str,
+) {
+    let root = project_root();
+    let style = load_style(&root.join(style_path));
+    let bibliography = load_bibliography(&root.join("tests/fixtures/references-expanded.json"))
+        .expect("expanded fixture should parse");
+
+    let processor = Processor::new(style, bibliography);
+    let citation = Citation {
+        items: vec![
+            CitationItem {
+                id: "ITEM-37".to_string(),
+                ..Default::default()
+            },
+            CitationItem {
+                id: "ITEM-38".to_string(),
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    };
+
+    let rendered = processor
+        .process_citation(&citation)
+        .expect("different-year same-author cluster should render");
+
+    assert_eq!(rendered, "(Chen 2022, 2024)");
+}
+
+/// A same-author, same-year, suffixed group with a locator on either item
+/// never merges -- the group-level locator bound in
+/// `docs/specs/SAME_AUTHOR_COLLAPSE.md` §13 skips the merge transform for
+/// the whole group, leaving the existing locator-escalation path
+/// (`CITATION_CLUSTER_RENDERING.md` "Same-author collapse with locators")
+/// as the only mechanism in play. Structural regression, not an oracle
+/// comparison: no fixture in the corpus exercises this exact combination.
+#[test]
+fn given_a_locator_in_the_group_when_years_would_otherwise_merge_then_merge_is_skipped() {
+    let root = project_root();
+    let style = load_style(&root.join("styles/embedded/springer-basic-author-date-core.yaml"));
+    let bibliography = load_bibliography(&root.join("tests/fixtures/references-expanded.json"))
+        .expect("expanded fixture should parse");
+
+    let processor = Processor::new(style, bibliography);
+    let citation = Citation {
+        items: vec![
+            CitationItem {
+                id: "ITEM-31".to_string(),
+                ..Default::default()
+            },
+            CitationItem {
+                id: "ITEM-32".to_string(),
+                locator: Some(CitationLocator::single(LocatorType::Page, "10")),
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    };
+
+    let rendered = processor
+        .process_citation(&citation)
+        .expect("locator-bearing suffixed cluster should render");
+
+    assert_eq!(rendered, "(Garcia 2019a; 2019b, p. 10)");
+}
+
+/// `Ranged` collapses a 3+ run of consecutive same-year suffixes to an
+/// en-dash range; a 2-item run renders identically to `Merged`. No tracked
+/// style declares `year-suffix: ranged`, so this uses a synthetic style
+/// (based on `common::build_author_date_style`, with a citation-level wrap
+/// instead of a per-item date wrap -- see the inline comment) over
+/// natively-constructed `Monograph` references -- never a `csl_legacy`
+/// round-trip. The style declares no `SameAuthorCollapse::delimiter` /
+/// `::year_suffix_delimiter`, so the suffix join falls through to the
+/// `multi_cite_delimiter` default (`"; "`).
+#[rstest]
+#[case::two_item_run_stays_merged(
+    &["r1", "r2"],
+    "(Smith, 2020a; b)"
+)]
+#[case::three_item_run_collapses_to_a_range(
+    &["r1", "r2", "r3"],
+    "(Smith, 2020a\u{2013}c)"
+)]
+fn given_a_ranged_degree_style_when_run_length_varies_then_only_three_plus_ranges(
+    #[case] item_ids: &[&str],
+    #[case] expected: &str,
+) {
+    // A citation-level `wrap` (not a per-item date wrap) matches how
+    // springer-basic-author-date-core and international-journal-of-wildland-fire
+    // are actually authored -- render_group_item_parts_with_format only
+    // captures/strips a per-item wrap for Integral mode, and this test's
+    // citations render NonIntegral (`CitationMode::default()`), so a
+    // date-component wrap (as in common::build_author_date_style) would
+    // stay attached to each item individually instead of wrapping the
+    // merged/ranged group once.
+    use citum_schema::options::{Config, Disambiguation, Processing, ProcessingCustom};
+    use citum_schema::template::WrapConfig;
+    use citum_schema::{CitationCollapse, CitationSpec, SameAuthorCollapse, YearSuffixCollapse};
+
+    let mut style = common::build_author_date_style(true, false, false, None, None);
+    style.options = Some(Config {
+        processing: Some(Processing::Custom(ProcessingCustom {
+            base: None,
+            disambiguate: Some(Disambiguation {
+                year_suffix: true,
+                names: false,
+                add_givenname: false,
+                ..Default::default()
+            }),
+            ..Default::default()
+        })),
+        ..Default::default()
+    });
+    style.citation = Some(CitationSpec {
+        template: Some(
+            vec![
+                citum_schema::tc_contributor!(Author, Short),
+                citum_schema::tc_date!(Issued, Year),
+            ]
+            .into(),
+        ),
+        wrap: Some(WrapConfig {
+            punctuation: citum_schema::template::WrapPunctuation::Parentheses,
+            inner_prefix: None,
+            inner_suffix: None,
+        }),
+        collapse: Some(CitationCollapse::SameAuthor(SameAuthorCollapse {
+            year_suffix: YearSuffixCollapse::Ranged,
+            ..Default::default()
+        })),
+        ..Default::default()
+    });
+
+    let all_references = [
+        common::make_book("r1", "Smith", "John", 2020, "Book A"),
+        common::make_book("r2", "Smith", "John", 2020, "Book B"),
+        common::make_book("r3", "Smith", "John", 2020, "Book C"),
+    ];
+    let mut bibliography = indexmap::IndexMap::new();
+    for reference in &all_references {
+        if let Some(id) = reference.id() {
+            bibliography.insert(id.to_string(), reference.clone());
+        }
+    }
+
+    let processor = Processor::new(style, bibliography);
+    let citation = Citation {
+        items: item_ids
+            .iter()
+            .map(|id| CitationItem {
+                id: (*id).to_string(),
+                ..Default::default()
+            })
+            .collect(),
+        ..Default::default()
+    };
+
+    let rendered = processor
+        .process_citation(&citation)
+        .expect("ranged same-author cluster should render");
 
     assert_eq!(rendered, expected);
 }

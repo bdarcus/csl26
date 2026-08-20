@@ -766,13 +766,9 @@ fn style_validate_emits_warning_for_unknown_type_in_bib_type_variants() {
 
     let warnings = style.validate();
     assert_eq!(warnings.len(), 1);
-    match &warnings[0] {
-        SchemaWarning::UnknownTypeName { name, location } => {
-            assert_eq!(name, "typo-type");
-            assert_eq!(location, "bibliography.type-variants");
-        }
-        other => panic!("unexpected warning: {other:?}"),
-    }
+    let SchemaWarning::UnknownTypeName { name, location } = &warnings[0];
+    assert_eq!(name, "typo-type");
+    assert_eq!(location, "bibliography.type-variants");
 }
 
 #[test]
