@@ -1,14 +1,15 @@
 # Same-Author Collapse Specification
 
 **Status:** Active
-**Version:** 1.1
-**Date:** 2026-08-19
+**Version:** 1.2
+**Date:** 2026-08-20
 **Supersedes:** N/A
-**Related:** `csl26-ecfn`, `csl26-m11m`, `docs/specs/CITATION_CLUSTER_RENDERING.md`,
+**Related:** `csl26-ecfn`, `csl26-m11m`, `csl26-ctkb`, `docs/specs/CITATION_CLUSTER_RENDERING.md`,
 `docs/specs/CITATION_REGIME.md`, `docs/adjudication/DIVERGENCE_REGISTER.md` (div-017),
 `crates/citum-schema-style/src/style/sections/citation.rs`,
 `crates/citum-engine/src/processor/rendering/grouped/grouping.rs`,
-`crates/citum-migrate/src/assembly.rs`
+`crates/citum-engine/src/processor/rendering/grouped/core.rs`,
+`crates/citum-migrate/src/assembly.rs`, `crates/csl-legacy/src/model.rs`
 
 ## Purpose
 
@@ -32,10 +33,16 @@ In scope:
 - Migrate's mapping from CSL's `collapse` attribute to the new variant.
 - Regime-coherence validation between `collapse` and `Processing`.
 - The resulting behavior change for note-regime styles (`csl26-m11m`).
+- **v1.2 (`csl26-ctkb`):** rendering `YearSuffixCollapse::Merged` /
+  `::Ranged`, the two `SameAuthorCollapse` degrees v1.0/v1.1 parsed and
+  round-tripped but left unimplemented (§13). Adds `delimiter` and
+  `year-suffix-delimiter` to `SameAuthorCollapse`, migrate support for CSL's
+  `cite-group-delimiter` / `year-suffix-delimiter` attributes (new fields on
+  `csl_legacy::model::Citation`), and removes the
+  `SchemaWarning::UnimplementedCollapseDegree` channel that stood in for the
+  missing rendering.
 
 Out of scope (tracked separately):
-- Implementing `year-suffix: merged` / `year-suffix-ranged: ranged` rendering —
-  parsed and round-tripped here, rendering is a follow-up bean.
 - Per-item position tracking inside a citation cluster (duplicate-id repeats
   getting citeproc-js's shortened second-occurrence form) — explicitly out of
   scope per `docs/specs/REPEATED_NOTE_CITATION_STATE_MODEL.md`.
@@ -242,6 +249,20 @@ pub struct SameAuthorCollapse {
     /// How same-year disambiguation suffixes render inside a collapsed group.
     #[serde(default)]
     pub year_suffix: YearSuffixCollapse,
+    /// Delimiter joining items within a collapsed same-author group — both
+    /// the ordinary year-to-year join and, for `year_suffix: merged`/
+    /// `ranged`, the suffix-to-suffix join. Mirrors CSL's
+    /// `cite-group-delimiter`. `None` falls back to `citation.delimiter`
+    /// (year join) or `citation.multi-cite-delimiter` (suffix join) — see
+    /// §13. Added in `csl26-ctkb` (v1.2).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub delimiter: Option<DelimiterPunctuation>,
+    /// Delimiter preceding a merged/ranged suffix token specifically (e.g.
+    /// `2020a-b` with no space). Mirrors CSL's `year-suffix-delimiter`.
+    /// Takes precedence over `delimiter` for the suffix join only — see
+    /// §13's precedence table. Added in `csl26-ctkb` (v1.2).
+    #[serde(rename = "year-suffix-delimiter", skip_serializing_if = "Option::is_none")]
+    pub year_suffix_delimiter: Option<DelimiterPunctuation>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, Copy, PartialEq, Eq, Default)]
@@ -253,12 +274,13 @@ pub enum YearSuffixCollapse {
     /// Disambiguation).
     #[default]
     Separate,
-    /// `Smith (2020a, b)` — CSL `collapse="year-suffix"`. Parses and
-    /// round-trips; **not yet implemented** by the renderer (falls back to
-    /// `Separate` with a one-time load warning). Follow-up bean.
+    /// `Smith (2020a, b)` — CSL `collapse="year-suffix"`. Adjacent
+    /// same-author, same-year suffixed tokens merge onto one shared year,
+    /// joined by the resolved delimiter (§13).
     Merged,
-    /// `Smith (2020a–c)` — CSL `collapse="year-suffix-ranged"`. Same status as
-    /// `Merged`.
+    /// `Smith (2020a–c)` — CSL `collapse="year-suffix-ranged"`. Like
+    /// `Merged`, additionally collapsing runs of 3+ consecutive suffixes into
+    /// an en-dash range (§13).
     Ranged,
 }
 ```
@@ -319,6 +341,22 @@ common case:
 | `year-suffix-ranged` | `{ same-author: { year-suffix: ranged } }` |
 | *(absent)* | *(absent)* — no collapse |
 
+| CSL attribute (v1.2, `csl26-ctkb`) | Citum `same-author` field |
+|---|---|
+| `cite-group-delimiter` | `delimiter` |
+| `year-suffix-delimiter` | `year-suffix-delimiter` |
+
+The two delimiter attributes migrate independently of the `year-suffix` /
+`year-suffix-ranged` *degree* — a CSL style may declare `cite-group-delimiter`
+under plain `collapse="year"` (no suffix merging at all), where it still
+governs the ordinary year-to-year join per §13's "governs both joins"
+paragraph. `year-suffix-delimiter` only has an effect once suffix merging is
+active (`year-suffix`/`year-suffix-ranged`); migrate still maps it whenever
+declared, matching citeproc-js's own inert-but-harmless handling of the
+attribute outside that context. Migrate maps both fields whenever the source
+attribute is present, independent of which `year_suffix` degree the CSL
+`collapse` value resolves to.
+
 This table assumes the CSL value is legal under §6's regime rule for the
 source style's detected `Processing`. It is, for all but 6 of the 2 081
 CSL-derived styles that declare `collapse` — the 2 `Label`-regime styles and
@@ -330,12 +368,9 @@ This is otherwise the entire point of the two-axis shape: today's `_ => None` ar
 silently drops 1 165 styles' declared intent (232 `year-suffix` + 14
 `year-suffix-ranged` + 919 `year`, of which only the `year` forms happen to
 render correctly by coincidence). `merged` / `ranged` parse and round-trip
-faithfully into the new enum; because the renderer doesn't implement them yet,
-migrate additionally emits a one-time warning for those two cases (not for
-`year`, which is fully implemented) so the gap is visible rather than silent.
-The style data is preserved correctly regardless, and lights up correctly the
-moment the renderer lands — a strict improvement over flattening it at migrate
-time.
+faithfully into the new enum, and — as of v1.2 (§13) — render faithfully too.
+The style data is preserved correctly and, since `csl26-ctkb`, produces the
+correct output directly, rather than needing a later rendering follow-up.
 
 ### 5. Naming: why `citation-number` isn't renamed, and why the value can't be inferred from regime
 
@@ -435,7 +470,7 @@ source rather than trusting the v1.0 enumeration:
 | `apa-7th` | `year` | `same-author` |
 | `chicago-author-date-18th` | `year` | `same-author` |
 | `elsevier-harvard-core` | `year` | `same-author` |
-| `springer-basic-author-date-core` | `year-suffix` | `{ same-author: { year-suffix: merged } }` |
+| `springer-basic-author-date-core` | `year-suffix` (+ `cite-group-delimiter=", "`) | `{ same-author: { year-suffix: merged, delimiter: ", " } }` |
 | `gb-t-7714-2025-author-date` | `year` | `same-author` |
 | `elsevier-vancouver-author-date` | `year` | `same-author` |
 | `harvard-cite-them-right` | `year` | `same-author` |
@@ -447,7 +482,10 @@ chicago-author-date-18th`; no separate declaration needed.
 `springer-basic-author-date-core` is one style that gains real fidelity
 from the two-axis shape rather than just parity: its source declares
 `year-suffix`, which the flat-enum alternative below would have flattened to
-plain `year` behavior exactly as migrate does today.
+plain `year` behavior exactly as migrate does today. As of v1.2 (§13) it also
+declares `delimiter: ", "` (from source `cite-group-delimiter=", "`), needed
+for the merged-suffix join to render `2019a, b` rather than the layout
+delimiter's `2019a; b`.
 `international-journal-of-wildland-fire` extends `springer-basic-author-date`
 (itself extending `-core`) and would inherit the merged degree regardless —
 both share `RegimeFamily::Custom`, which never triggers the inheritance
@@ -536,6 +574,124 @@ delimiter, no collapse path entered
 (`given_a_no_collapse_author_date_style_when_same_author_cluster_has_no_locator_then_items_stay_separate::case_2_modern_language_association`,
 `domain_fixtures.rs`).
 
+### 13. Year-suffix merged/ranged rendering (v1.2, `csl26-ctkb`)
+
+v1.0/v1.1 shipped `YearSuffixCollapse::Merged`/`::Ranged` as parse-only —
+schema-valid, round-tripping, but rendered as `Separate` with a load-time
+warning (§Scope). This section specifies the rendering those degrees were
+always meant to produce, closing the two tracked styles that already declare
+`merged`: `springer-basic-author-date-core` and
+`international-journal-of-wildland-fire`.
+
+**Ground truth.** Oracle snapshots (`tests/snapshots/csl/`, citeproc-js
+output) diverge on the same fixture:
+
+| style | `disambiguate-year-suffix` | `subsequent-author-consecutive` |
+|---|---|---|
+| `springer-basic-author-date` | `(Garcia 2019a, b)` | `(Chen 2022, 2024)` |
+| `international-journal-of-wildland-fire` | `(Garcia 2019a; b)` | `(Chen 2022, 2024)` |
+
+Both styles declare `collapse="year-suffix"`; only their join delimiter
+differs. citeproc-js implements **two distinct mechanisms** here, each with
+its own fallback chain:
+
+- **The year-to-year splice** (`CSL.getSpliceDelimiter`,
+  `scripts/node_modules/citeproc/citeproc_commonjs.js:7946-7963`) joins
+  adjacent rendered cites generally, collapsed or not. Absent an explicit
+  `cite-group-delimiter`, its fallback for a collapsed in-text style is a
+  **hardcoded `", "`** (`:7962`, the `have_collapsed && xclass === "in-text"`
+  branch) — not the CSL layout delimiter. `wildland-fire`'s
+  `subsequent-author-consecutive` row proves this: its layout delimiter is
+  `"; "` and its `citation.delimiter` is `". "`, yet the oracle renders
+  `(Chen 2022, 2024)` — neither of those, only the hardcoded default
+  explains it. Citum's engine already reproduces this fallback via existing,
+  independent machinery (`author_item_delimiter`'s empty-after-trim check in
+  `grouped/core.rs`); §13 does not touch it except to let an explicit
+  `cite-group-delimiter` override it, matching citeproc.
+- **The suffix-to-suffix join**, inside the `year-suffix` variable's own exec
+  block (`:15443-15484`), joins a new suffix letter onto the previous one
+  within a merged run (`"2020a"` + join + `"b"`). Its precedence:
+
+  ```
+  successor_prefix (suffix join only)
+    = layout_delimiter                          (citation.multi-cite-delimiter)
+    overridden by  year-suffix-delimiter        (build-time, if declared)
+    overridden by  cite-group-delimiter         (render-time, if declared — wins)
+  ```
+
+  The override order matters: `year-suffix-delimiter` is assigned once when
+  the template node builds; `cite-group-delimiter` is re-assigned inside the
+  per-item exec function that runs at render time, so when both are declared
+  it wins. `cite_group_delimiter` has no default —
+  `CSL.Attributes["@cite-group-delimiter"]` (`:17106-17110`) only sets it
+  when the attribute is present. Springer declares `cite-group-delimiter=", "`
+  and no `year-suffix-delimiter`; wildland-fire declares neither, so its
+  suffix join falls through to its own layout delimiter `"; "`. This explains
+  both oracle rows exactly.
+
+Same CSL attribute (`cite-group-delimiter`), two different mechanisms it
+feeds.
+
+Citum's existing fields don't express either override: `citation.delimiter`
+is the intra-item component delimiter (not exposed as a splice delimiter),
+and `citation.multi-cite-delimiter` is the layout-delimiter analog with no
+override path for either mechanism. §1 adds `SameAuthorCollapse::delimiter`
+(= `cite-group-delimiter`) and `::year_suffix_delimiter` (=
+`year-suffix-delimiter`): `delimiter`, when set, overrides the year-to-year
+splice's existing fallback and (with top precedence) the suffix join;
+`year_suffix_delimiter` affects only the suffix join, beneath `delimiter`,
+above the `multi-cite-delimiter` fallback.
+
+Corpus sizing (`styles-legacy/`, 2 844 styles): of the 246 declaring
+`collapse="year-suffix"` or `"year-suffix-ranged"`, 19 declare
+`cite-group-delimiter` and 100 declare `year-suffix-delimiter`. Adding only
+`delimiter` would satisfy the two tracked styles but leave those 100 corpus
+styles' declared intent silently dropped by migrate — the same information
+loss this spec's parent design (§4) exists to close for `collapse` itself.
+Both fields ship together.
+
+**Rendering semantics**, read from the same citeproc-js source:
+
+- **Year suppression** (`:10120-10139`): inside a collapsed group, an item's
+  year is omitted only when the *immediately preceding* item in the group
+  rendered the identical year *and* year-suffix disambiguation is active.
+  Items with different years stay in full — `(Chen 2022, 2024)` is not
+  `(Chen 2022, 4)`. Citum's rendering already produces this; §13 doesn't
+  change it.
+- **Merge condition**: adjacent items are merge-eligible when both carry a
+  disambiguation suffix and share the same year. Merging is bound at the
+  **group** level, not per-item: if *any* item in the group carries a
+  locator, the transform is skipped for the whole group. Locator interaction
+  under year-suffix collapse is unpinned in the oracle corpus, and the
+  existing locator-escalation mechanism (§10, `CITATION_CLUSTER_RENDERING.md`
+  "Same-author collapse with locators") already owns that path — layering a
+  second, untested interaction on top of it is out of scope here.
+- **Range arity** (`CSL.NumericBlob.prototype.checkNext`,
+  `:18723-18755`): a range forms only at **3 or more** consecutive suffixes
+  in a run (`checkNext` requires a prior `SUCCESSOR` status before it will
+  promote to `SUCCESSOR_OF_SUCCESSOR`/range). A 2-item run — `a, b` — renders
+  identically under `ranged` and `merged`; a 3+ run — `a, b, c` — collapses to
+  `a–c`. The range delimiter is an en dash (`–`), matching citeproc's
+  `citation-range-delimiter` term and Citum's existing numeric-range
+  precedent (`collapse_numeric_citation_chunks`,
+  `crates/citum-engine/src/processor/rendering/collapse.rs:87`) — not the
+  locator-scoped `page-range-delimiter` term.
+
+**Migration.** `crates/csl-legacy/src/model.rs`'s `Citation` struct (`:138`)
+does not currently parse `cite-group-delimiter` or `year-suffix-delimiter` —
+verified by reading the struct definition, not assumed. Both must be added
+there before `extract_citation_collapse`
+(`crates/citum-migrate/src/assembly.rs`) can map them onto the new
+`SameAuthorCollapse` fields.
+
+**Retiring the gap warning.** `SchemaWarning::UnimplementedCollapseDegree`
+(`crates/citum-schema-style/src/style/validation.rs:40`) and the matching
+`tracing::warn!` calls in `extract_citation_collapse` exist to flag exactly
+the gap this section closes. Once `Merged`/`Ranged` render, both are removed
+outright — not retargeted to a different condition. `SchemaWarning` is not
+`#[non_exhaustive]`, so removing a variant is a breaking change to
+`citum-schema-style`'s public API and lands under a `feat(engine)!:` commit.
+
 ## Rejected Alternatives
 
 **(a) Regime-keyed suppression.** Gate same-author collapse on
@@ -603,7 +759,8 @@ CMOS-vs-citeproc-js disagreement that survives this spec unchanged).
       discarded on `Numeric`, `AuthorDate`-family, and `Note` styles whose
       content matches one of the two collapse mechanisms; `year-suffix` /
       `year-suffix-ranged` additionally emit a one-time load warning naming
-      the unimplemented-rendering gap. The 6 corpus styles where `collapse` is
+      the unimplemented-rendering gap (superseded by v1.2 — see below; the
+      warning is removed once the gap it names is closed). The 6 corpus styles where `collapse` is
       declared but doesn't fit either mechanism (2 inert `Label` styles, 4
       `Note` + `citation-number` styles per §6's caveat) are a known,
       out-of-scope gap — migrate drops the attribute for them, matching
@@ -646,6 +803,39 @@ CMOS-vs-citeproc-js disagreement that survives this spec unchanged).
       `chicago-18-base` 430/1629 → 432/1629 (+2, aggregating
       `chicago-notes-18th` 22/72 → 23/72 and
       `chicago-shortened-notes-bibliography` 60/473 → 61/473).
+
+### v1.2 (`csl26-ctkb`)
+
+- [x] `SameAuthorCollapse::delimiter` and `::year_suffix_delimiter` parse,
+      round-trip, and are documented as governing both the year join and the
+      merged-suffix join (§13).
+- [x] `csl_legacy::model::Citation` parses `cite-group-delimiter` and
+      `year-suffix-delimiter`; `extract_citation_collapse` maps both onto the
+      new fields whenever present, independent of `year_suffix` degree.
+- [x] `YearSuffixCollapse::Merged` renders `springer-basic-author-date`'s
+      `disambiguate-year-suffix` fixture citation exact against
+      `tests/snapshots/csl/springer-basic-author-date.json`
+      (`(Garcia 2019a, b)`).
+- [x] `YearSuffixCollapse::Merged` renders
+      `international-journal-of-wildland-fire`'s `disambiguate-year-suffix`
+      fixture citation exact against its own oracle snapshot
+      (`(Garcia 2019a; b)`) — proves the delimiter-precedence resolution, not
+      just the merge itself.
+- [x] `YearSuffixCollapse::Ranged` collapses a 3+ run to an en-dash range and
+      leaves a 2-item run identical to `Merged`'s output — pinned against a
+      natively-constructed synthetic fixture (no tracked style declares
+      `ranged`).
+- [x] A same-author group where any item carries a locator does not merge,
+      regardless of `year_suffix` degree — regression test pinned.
+- [x] `SchemaWarning::UnimplementedCollapseDegree` and its Display arm, the
+      validation check that pushed it, and migrate's matching
+      `tracing::warn!` calls are removed. This is a breaking change to
+      `citum-schema-style`'s public API (`SchemaWarning` is not
+      `#[non_exhaustive]`) and lands under `feat(engine)!:`.
+- [x] `node scripts/report-core.js --style springer-basic-author-date` and
+      `--style international-journal-of-wildland-fire` show exactParity
+      increasing from the v1.1 baseline (53/67 and 14/67 respectively) and
+      regressing on neither.
 
 ## Implementation Notes
 
@@ -695,10 +885,11 @@ normalization step for it (see §7 v1.1).
    `(index, id)` per §11, whenever `collapse != Some(SameAuthor(_))` or any
    item carries disambiguation hints — making `core.rs:271`'s collapse branch
    unreachable for multi-item groups by construction rather than needing a
-   second, separately-maintained gate. Warns once per style load on
-   `year_suffix != Separate` via a new `SchemaWarning::UnimplementedCollapseDegree`,
-   surfaced by `Style::validate()` (`citum style validate` — the channel's
-   reach doesn't yet extend to engine render time).
+   second, separately-maintained gate. v1.1 warned once per style load on
+   `year_suffix != Separate` via `SchemaWarning::UnimplementedCollapseDegree`,
+   surfaced by `Style::validate()`; v1.2 (§13) removes that warning outright
+   once rendering closes the gap it flagged — see the v1.2 Acceptance
+   Criteria above.
 3. **Migrate**: extended `extract_citation_collapse`
    (`crates/citum-migrate/src/assembly.rs`) per the table in §4, additionally
    threading the detected `Processing` through so illegal combinations
@@ -727,6 +918,18 @@ normalization step for it (see §7 v1.1).
 
 ## Changelog
 
+- v1.2 (2026-08-20, `csl26-ctkb`): Adds §13, specifying and (in the stacked
+  follow-up PRs) implementing `YearSuffixCollapse::Merged`/`::Ranged`
+  rendering, deferred by v1.0/v1.1's Scope section as a "follow-up bean."
+  Adds `SameAuthorCollapse::delimiter` / `::year_suffix_delimiter` (CSL
+  `cite-group-delimiter` / `year-suffix-delimiter`), migrate support for both
+  attributes on `csl_legacy::model::Citation`, and removes
+  `SchemaWarning::UnimplementedCollapseDegree` (breaking change to
+  `citum-schema-style`'s public API) along with migrate's matching
+  `tracing::warn!` calls, now that the gap they named is closed. §1, §4, §7,
+  and the Scope/Acceptance-Criteria sections updated accordingly; §13's own
+  Acceptance Criteria are unchecked pending the stacked implementation PRs
+  this docs-only revision precedes.
 - v1.1 (2026-08-19): Draft → Active; implementation lands (schema, engine
   gate, migrate, styles, tests). §7 corrected: v1.0 enumerated only the 5
   embedded styles requiring `collapse: same-author`; mechanically re-deriving
