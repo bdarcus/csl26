@@ -697,36 +697,30 @@ fn measured_selection_unavailable<T>(
 /// styles where `collapse` is declared but doesn't fit either mechanism —
 /// 2 inert `Label` styles, 4 `Note` + `citation-number` styles).
 ///
-/// Warns once for `year-suffix` / `year-suffix-ranged`: the value round-trips
-/// but the renderer doesn't implement the merged/ranged degree yet, so the
-/// migrated style renders as `separate` until that follow-up lands.
+/// Also maps CSL's `cite-group-delimiter` / `year-suffix-delimiter`
+/// attributes onto `SameAuthorCollapse::delimiter` /
+/// `::year_suffix_delimiter` whenever present, independent of which
+/// `year_suffix` degree the `collapse` value resolves to (a style may
+/// declare `cite-group-delimiter` under plain `collapse="year"`, where it
+/// still governs the ordinary year-to-year join). See
+/// `docs/specs/SAME_AUTHOR_COLLAPSE.md` §13.
 fn extract_citation_collapse(
     citation: &csl_legacy::model::Citation,
     processing: Option<&Processing>,
 ) -> Option<CitationCollapse> {
     let mapped = match citation.collapse.as_deref() {
         Some("citation-number") => CitationCollapse::CitationNumber,
-        Some("year") => CitationCollapse::SameAuthor(SameAuthorCollapse::default()),
-        Some("year-suffix") => {
-            tracing::warn!(
-                "collapse=\"year-suffix\" migrates to `same-author: {{ year-suffix: merged }}`, \
-                 which parses but is not yet rendered (falls back to separate); see \
-                 docs/specs/SAME_AUTHOR_COLLAPSE.md"
-            );
-            CitationCollapse::SameAuthor(SameAuthorCollapse {
-                year_suffix: YearSuffixCollapse::Merged,
-            })
-        }
-        Some("year-suffix-ranged") => {
-            tracing::warn!(
-                "collapse=\"year-suffix-ranged\" migrates to `same-author: {{ year-suffix: ranged }}`, \
-                 which parses but is not yet rendered (falls back to separate); see \
-                 docs/specs/SAME_AUTHOR_COLLAPSE.md"
-            );
-            CitationCollapse::SameAuthor(SameAuthorCollapse {
-                year_suffix: YearSuffixCollapse::Ranged,
-            })
-        }
+        Some("year") => CitationCollapse::SameAuthor(same_author_collapse_from_legacy(
+            citation,
+            YearSuffixCollapse::Separate,
+        )),
+        Some("year-suffix") => CitationCollapse::SameAuthor(same_author_collapse_from_legacy(
+            citation,
+            YearSuffixCollapse::Merged,
+        )),
+        Some("year-suffix-ranged") => CitationCollapse::SameAuthor(
+            same_author_collapse_from_legacy(citation, YearSuffixCollapse::Ranged),
+        ),
         _ => return None,
     };
 
@@ -743,6 +737,20 @@ fn extract_citation_collapse(
         )
     };
     licensed.then_some(mapped)
+}
+
+/// Build a [`SameAuthorCollapse`] for `year_suffix`, threading the source
+/// CSL's `cite-group-delimiter` / `year-suffix-delimiter` attributes through
+/// when present. See `docs/specs/SAME_AUTHOR_COLLAPSE.md` §13.
+fn same_author_collapse_from_legacy(
+    citation: &csl_legacy::model::Citation,
+    year_suffix: YearSuffixCollapse,
+) -> SameAuthorCollapse {
+    SameAuthorCollapse {
+        year_suffix,
+        delimiter: citation.cite_group_delimiter.clone().map(Into::into),
+        year_suffix_delimiter: citation.year_suffix_delimiter.clone().map(Into::into),
+    }
 }
 
 fn bibliography_sort_matches_processing_default(
@@ -780,6 +788,14 @@ mod tests {
     use rstest::rstest;
 
     fn legacy_citation_with_collapse(collapse: Option<&str>) -> Citation {
+        legacy_citation_with_collapse_and_delimiters(collapse, None, None)
+    }
+
+    fn legacy_citation_with_collapse_and_delimiters(
+        collapse: Option<&str>,
+        cite_group_delimiter: Option<&str>,
+        year_suffix_delimiter: Option<&str>,
+    ) -> Citation {
         Citation {
             layout: Layout {
                 prefix: None,
@@ -790,6 +806,8 @@ mod tests {
             localized_layouts: Vec::new(),
             sort: None,
             collapse: collapse.map(str::to_string),
+            cite_group_delimiter: cite_group_delimiter.map(str::to_string),
+            year_suffix_delimiter: year_suffix_delimiter.map(str::to_string),
             et_al_min: None,
             et_al_use_first: None,
             disambiguate_add_year_suffix: None,
@@ -820,6 +838,8 @@ mod tests {
         Some(Processing::AuthorDate),
         Some(CitationCollapse::SameAuthor(SameAuthorCollapse {
             year_suffix: YearSuffixCollapse::Merged,
+            delimiter: None,
+            year_suffix_delimiter: None,
         }))
     )]
     #[case::year_suffix_ranged(
@@ -827,6 +847,8 @@ mod tests {
         Some(Processing::AuthorDate),
         Some(CitationCollapse::SameAuthor(SameAuthorCollapse {
             year_suffix: YearSuffixCollapse::Ranged,
+            delimiter: None,
+            year_suffix_delimiter: None,
         }))
     )]
     #[case::same_author_licensed_on_note(
@@ -879,6 +901,66 @@ mod tests {
 
         // then no collapse is migrated
         assert_eq!(extracted, None);
+    }
+
+    #[rstest]
+    #[case::cite_group_delimiter_only(
+        "year-suffix",
+        Some("; "),
+        None,
+        SameAuthorCollapse {
+            year_suffix: YearSuffixCollapse::Merged,
+            delimiter: Some(citum_schema::template::DelimiterPunctuation::Custom(
+                "; ".to_string()
+            )),
+            year_suffix_delimiter: None,
+        }
+    )]
+    #[case::year_suffix_delimiter_only(
+        "year-suffix-ranged",
+        None,
+        Some("-"),
+        SameAuthorCollapse {
+            year_suffix: YearSuffixCollapse::Ranged,
+            delimiter: None,
+            year_suffix_delimiter: Some(citum_schema::template::DelimiterPunctuation::Custom(
+                "-".to_string()
+            )),
+        }
+    )]
+    #[case::cite_group_delimiter_on_plain_year(
+        "year",
+        Some(", "),
+        None,
+        SameAuthorCollapse {
+            year_suffix: YearSuffixCollapse::Separate,
+            delimiter: Some(citum_schema::template::DelimiterPunctuation::Custom(
+                ", ".to_string()
+            )),
+            year_suffix_delimiter: None,
+        }
+    )]
+    fn extract_citation_collapse_maps_delimiter_attributes(
+        #[case] csl_value: &str,
+        #[case] cite_group_delimiter: Option<&str>,
+        #[case] year_suffix_delimiter: Option<&str>,
+        #[case] expected: SameAuthorCollapse,
+    ) {
+        // given a CSL citation declaring `cite-group-delimiter` and/or
+        // `year-suffix-delimiter` alongside `collapse` (SAME_AUTHOR_COLLAPSE.md
+        // §13 — the delimiter attributes migrate independently of the
+        // `year_suffix` degree)
+        let citation = legacy_citation_with_collapse_and_delimiters(
+            Some(csl_value),
+            cite_group_delimiter,
+            year_suffix_delimiter,
+        );
+
+        // when extracted for a licensing regime
+        let extracted = extract_citation_collapse(&citation, Some(&Processing::AuthorDate));
+
+        // then both delimiter attributes map onto SameAuthorCollapse
+        assert_eq!(extracted, Some(CitationCollapse::SameAuthor(expected)));
     }
 
     #[test]
@@ -1228,6 +1310,8 @@ mod tests {
                 localized_layouts: Vec::new(),
                 sort: None,
                 collapse: None,
+                cite_group_delimiter: None,
+                year_suffix_delimiter: None,
                 et_al_min: None,
                 et_al_use_first: None,
                 disambiguate_add_year_suffix: None,
