@@ -8,6 +8,8 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus and Citum contributors
 use std::cmp::Ordering;
 
 use crate::reference::{FlatName, Reference};
+use crate::render::djot::Djot;
+use crate::render::format::OutputFormat;
 use citum_schema::grouping::NameSortOrder;
 use citum_schema::locale::Locale;
 use citum_schema::options::{Config, SortingLocale, SortingMultilingualMode};
@@ -313,8 +315,8 @@ fn structured_name_sort_text(
 }
 
 fn structured_name_original_text(name: &StructuredName, name_order: NameSortOrder) -> String {
-    let family = name.family.to_string();
-    let given = name.given.to_string();
+    let family = strip_markup_for_sort(&name.family.to_string());
+    let given = strip_markup_for_sort(&name.given.to_string());
     compose_family_given_key(&family, &given, name_order)
 }
 
@@ -343,17 +345,34 @@ fn structured_name_sort_as_text(name: &StructuredName, name_order: NameSortOrder
 }
 
 fn title_sort_text(title: &Title, options: &SortKeyOptions) -> String {
-    match title {
+    let text = match title {
         Title::Multilingual(complex) => multilingual_complex_sort_text(complex, options),
         _ => title.to_string(),
+    };
+    strip_markup_for_sort(&text)
+}
+
+/// Reduce a title or name string to its visible text for sort-key purposes,
+/// so authored Djot markup (`[…]{.nocase}`, `_emph_`, `[text](url)`) does not
+/// decide alphabetization — e.g. an institutional author authored as
+/// `[IBM]{.nocase}` sorts under `I`, not `[`. For titles this runs before
+/// [`Locale::strip_sort_articles`] in [`title_sort_key_with_options`], so a
+/// leading article hidden behind markup (e.g. `[The Library]{.nocase}`) is
+/// still stripped.
+fn strip_markup_for_sort(text: &str) -> String {
+    if crate::values::title::looks_like_djot_markup(text) {
+        Djot.visible_text(text).into_owned()
+    } else {
+        text.to_string()
     }
 }
 
 fn multilingual_string_sort_text(string: &MultilingualString, options: &SortKeyOptions) -> String {
-    match string {
+    let text = match string {
         MultilingualString::Simple(value) => value.clone(),
         MultilingualString::Complex(complex) => multilingual_complex_sort_text(complex, options),
-    }
+    };
+    strip_markup_for_sort(&text)
 }
 
 fn multilingual_complex_sort_text(
@@ -455,7 +474,8 @@ fn default_icu_locale() -> IcuLocale {
 )]
 mod tests {
     use super::*;
-    use citum_schema::reference::contributor::ContributorList;
+    use citum_schema::reference::contributor::{ContributorList, SimpleName};
+    use rstest::rstest;
 
     #[test]
     #[cfg(feature = "icu")]
@@ -747,5 +767,85 @@ mod tests {
             single_key < multi_key,
             "expected {single_key:?} < {multi_key:?} (single-author entry sorts before the multi-author entry it prefixes)"
         );
+    }
+
+    /// csl26-4wts: `title_sort_text` used to return the raw title string, so
+    /// authored Djot markup decided alphabetization instead of the visible
+    /// text a reader sees. Covers `.nocase` spans, emphasis, links, markup
+    /// preceding an article (proving the strip runs before
+    /// `strip_sort_articles`), and the literal-bracket carve-out in
+    /// `Djot::visible_runs` (a bare `[Dataset]` is house-style punctuation,
+    /// not markup, and must survive untouched).
+    #[rstest]
+    #[case::nocase_span_sorts_under_visible_text(
+        "[Library of Congress]{.nocase}",
+        "Library of Congress"
+    )]
+    #[case::emphasis_delimiters_stripped(
+        "_Homo Sapiens_ and Modern Science",
+        "Homo Sapiens and Modern Science"
+    )]
+    #[case::link_markup_keeps_link_text_only("[Example](https://example.com)", "Example")]
+    #[case::markup_stripped_before_article_strip("[The Library]{.nocase}", "Library")]
+    #[case::literal_brackets_are_not_markup("[Dataset]", "[Dataset]")]
+    #[case::plain_title_is_unchanged("Plain Title Without Markup", "Plain Title Without Markup")]
+    fn given_a_title_with_djot_markup_when_building_the_title_sort_key_then_markup_is_stripped(
+        #[case] title_str: &str,
+        #[case] expected: &str,
+    ) {
+        let reference = Reference::Monograph(Box::new(citum_schema::reference::Monograph {
+            r#type: citum_schema::reference::MonographType::Book,
+            title: Some(Title::Single(title_str.to_string())),
+            ..Default::default()
+        }));
+        let locale = Locale::en_us();
+        let options = SortKeyOptions::uniform();
+
+        let key = title_sort_key_with_options(&reference, &locale, &options);
+
+        assert_eq!(key, expected);
+    }
+
+    /// csl26-lirf (follow-up to csl26-4wts): `multilingual_string_sort_text`
+    /// had the identical raw-markup leak as titles, for contributor sort
+    /// keys — an institutional author authored as `[IBM]{.nocase}` (a
+    /// `SimpleName`) would sort under `[` instead of `I`.
+    #[rstest]
+    #[case::simple_name_nocase_span_sorts_under_visible_text("[IBM]{.nocase}", "IBM")]
+    #[case::simple_name_plain_is_unchanged("Acme Corp", "Acme Corp")]
+    fn given_a_simple_name_with_djot_markup_when_building_the_contributor_sort_key_then_markup_is_stripped(
+        #[case] name_str: &str,
+        #[case] expected: &str,
+    ) {
+        let contributor = Contributor::SimpleName(SimpleName {
+            name: MultilingualString::Simple(name_str.to_string()),
+            location: None,
+            short_name: None,
+        });
+        let options = SortKeyOptions::uniform();
+
+        let key = contributor_sort_key(&contributor, NameSortOrder::FamilyGiven, &options);
+
+        assert_eq!(key.as_deref(), Some(expected));
+    }
+
+    /// Same leak for a `StructuredName`'s `family`/`given` fields (e.g. a
+    /// person authored with markup rather than an institutional
+    /// `SimpleName`), reached via `structured_name_sort_text`.
+    #[rstest]
+    #[case::nocase_span_in_family("[Smith]{.nocase}", "John", "Smith\u{0}John")]
+    #[case::emphasis_delimiters_in_given("Smith", "_John_", "Smith\u{0}John")]
+    #[case::markup_in_both_family_and_given("[Smith]{.nocase}", "_John_", "Smith\u{0}John")]
+    fn given_a_structured_name_with_djot_markup_when_building_the_contributor_sort_key_then_markup_is_stripped(
+        #[case] family: &str,
+        #[case] given: &str,
+        #[case] expected: &str,
+    ) {
+        let contributor = structured_contributor(family, given);
+        let options = SortKeyOptions::uniform();
+
+        let key = contributor_sort_key(&contributor, NameSortOrder::FamilyGiven, &options);
+
+        assert_eq!(key.as_deref(), Some(expected));
     }
 }
