@@ -318,8 +318,12 @@ fn format_document_returns_citations_bibliography_and_warnings() {
     let content = bibliography["content"]
         .as_str()
         .expect("bibliography.content should be a string");
+    // APA 7th declares `hanging-indent: true`
+    // (crates/citum-schema-style/embedded/styles/apa-7th.yaml), so the
+    // container carries the hanging-indent modifier class — see
+    // docs/specs/SECOND_FIELD_ALIGN.md.
     assert!(
-        content.contains(r#"<div class="citum-bibliography">"#),
+        content.contains(r#"<div class="citum-bibliography citum-bibliography--hanging-indent">"#),
         "bibliography.content should contain rendered bibliography markup: {content}"
     );
 

@@ -42,10 +42,12 @@ pub fn detect_processing_mode(style: &Style) -> Option<Processing> {
         return Some(Processing::Note);
     }
 
-    // 1. Explicitly numeric style
-    // Check if bibliography uses second-field-align (heuristic for numeric labels)
-    // Actually, check if it's APA (not numeric) or check common markers
-    // Since 'second_field_align' is missing in my model read, I'll use a safer heuristic.
+    // 1. Explicitly numeric style. `second-field-align` is now parsed
+    // (`csl_legacy::model::Bibliography::second_field_align`,
+    // `docs/specs/SECOND_FIELD_ALIGN.md`) but is not used as a numeric-mode
+    // signal here: it is a layout attribute, not proof a style is numeric —
+    // an author-date style could in principle declare it too. Citation-number
+    // presence in the layout stays the numeric-mode heuristic.
 
     // Helper to recursively search for citation-number in layout nodes
     fn has_citation_number(nodes: &[csl_legacy::model::CslNode]) -> bool {

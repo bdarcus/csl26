@@ -1,12 +1,12 @@
 ---
 title: Second-Field-Align Bibliography Layout
-status: Draft
+status: Active
 created: 2026-08-20
 ---
 
 # Second-Field-Align Bibliography Layout
 
-**Status:** Draft
+**Status:** Active
 **Date:** 2026-08-20
 **Related:** bean `csl26-qdff`; `REFERENCE_MARKERS.md`
 

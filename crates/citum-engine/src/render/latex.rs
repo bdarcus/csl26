@@ -223,7 +223,11 @@ impl OutputFormat for Latex {
         "\\\\\n".to_string()
     }
 
-    fn bibliography(&self, entries: Vec<Self::Output>) -> Self::Output {
+    fn bibliography(
+        &self,
+        entries: Vec<Self::Output>,
+        _layout: &super::format::BibliographyLayout,
+    ) -> Self::Output {
         entries.join("\\par\\vspace{0.5em}")
     }
 

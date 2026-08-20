@@ -86,7 +86,7 @@ note. The `—` marker in the Tests column means no targeted test exists yet.
 | [`ANNOTATED_BIBLIOGRAPHY.md`](./ANNOTATED_BIBLIOGRAPHY.md) — document-scoped annotation overlay for bibliography rendering | Active | `bibliography.rs::annotated_html_preview`, `document.rs` |
 | [`BIBLIOGRAPHY_GROUPING.md`](./BIBLIOGRAPHY_GROUPING.md) — grouped bibliography architecture: group specs, heading generation, nested groups | Active | `document.rs::grouped_bibliography` |
 | [`ARTICLE_JOURNAL_NO_PAGE_FALLBACK.md`](./ARTICLE_JOURNAL_NO_PAGE_FALLBACK.md) — external bibliography parameter for article-journal page fallback | Active | `bibliography.rs::article_journal_no_page_fallback` |
-| [`SECOND_FIELD_ALIGN.md`](./SECOND_FIELD_ALIGN.md) — CSL `second-field-align` runtime layout model and HTML marker/body slot rendering | Draft | — |
+| [`SECOND_FIELD_ALIGN.md`](./SECOND_FIELD_ALIGN.md) — CSL `second-field-align` runtime layout model and HTML marker/body slot rendering | Active | `bibliography.rs::test_html_entry_slots_honor_second_field_align` |
 | [`CITATION_BIBLIOGRAPHY_OPTION_SPLIT.md`](./CITATION_BIBLIOGRAPHY_OPTION_SPLIT.md) — strict schema split for citation and bibliography option scopes | Active | `bibliography.rs`, `citations.rs` |
 | [`INLINE_JOURNAL_DETAIL_GROUPING.md`](./INLINE_JOURNAL_DETAIL_GROUPING.md) — inline article-journal detail blocks with mixed delimiters | Active | `bibliography.rs` |
 | [`CROSS_ROLE_CONTRIBUTOR_LISTS.md`](./CROSS_ROLE_CONTRIBUTOR_LISTS.md) — merged multi-role name lists with per-name/collective labels and same-person combination | Active | `cross_role_contributors.rs` |

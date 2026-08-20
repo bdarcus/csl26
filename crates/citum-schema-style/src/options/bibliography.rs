@@ -91,6 +91,12 @@ pub struct BibliographyConfig {
     /// (Chicago's "well-known reference works are cited in notes only").
     #[serde(skip_serializing_if = "Option::is_none")]
     pub anonymous_entries: Option<AnonymousEntriesMode>,
+    /// CSL `second-field-align`: splits each bibliography entry into a marker
+    /// slot and a body slot for column alignment by the output consumer.
+    /// `None` when the style declares neither `flush` nor `margin`. See
+    /// `docs/specs/SECOND_FIELD_ALIGN.md`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub second_field_align: Option<SecondFieldAlign>,
     /// Forward-compat: captures unknown keys when an older engine reads a
     /// style produced by a newer schema. Empty by default; treated as a
     /// SoftDegrade signal. See `docs/specs/FORWARD_COMPATIBILITY.md`.
@@ -144,6 +150,22 @@ pub enum AnonymousEntriesMode {
     /// entirely — Chicago's "well-known reference works are cited in notes
     /// only" convention.
     NotesOnly,
+}
+
+/// CSL `second-field-align` value: how the marker and body slots of a
+/// bibliography entry relate for column alignment. HTML renders the same
+/// sibling-`<div>` shape for both — the distinction is preserved for
+/// round-trip fidelity with CSL source, not for a rendering difference. See
+/// `docs/specs/SECOND_FIELD_ALIGN.md`.
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+#[serde(rename_all = "kebab-case")]
+pub enum SecondFieldAlign {
+    /// Marker and body render flush; a consuming stylesheet aligns the body
+    /// into a second column regardless of marker width.
+    Flush,
+    /// Marker and body render with a margin/gutter between the two boxes.
+    Margin,
 }
 
 /// Bibliography partitioning policy for multilingual sort order and sections.
@@ -348,6 +370,7 @@ impl Default for BibliographyConfig {
             compound_numeric: None,
             sort_partitioning: None,
             anonymous_entries: None,
+            second_field_align: None,
             unknown_fields: std::collections::BTreeMap::new(),
         }
     }
@@ -455,6 +478,31 @@ mod tests {
     fn test_anonymous_entries_roundtrip() {
         let config = BibliographyConfig {
             anonymous_entries: Some(AnonymousEntriesMode::ContainerLed),
+            ..Default::default()
+        };
+        let json = serde_json::to_string(&config).unwrap();
+        let deserialized: BibliographyConfig = serde_json::from_str(&json).unwrap();
+        assert_eq!(config, deserialized);
+    }
+
+    #[test]
+    fn test_second_field_align_deserializes_flush() {
+        let json = r#"{"second-field-align":"flush"}"#;
+        let config: BibliographyConfig = serde_json::from_str(json).unwrap();
+        assert_eq!(config.second_field_align, Some(SecondFieldAlign::Flush));
+    }
+
+    #[test]
+    fn test_second_field_align_deserializes_margin() {
+        let json = r#"{"second-field-align":"margin"}"#;
+        let config: BibliographyConfig = serde_json::from_str(json).unwrap();
+        assert_eq!(config.second_field_align, Some(SecondFieldAlign::Margin));
+    }
+
+    #[test]
+    fn test_second_field_align_roundtrip() {
+        let config = BibliographyConfig {
+            second_field_align: Some(SecondFieldAlign::Margin),
             ..Default::default()
         };
         let json = serde_json::to_string(&config).unwrap();

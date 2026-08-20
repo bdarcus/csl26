@@ -8365,6 +8365,17 @@
             }
           ]
         },
+        "second-field-align": {
+          "description": "CSL `second-field-align`: splits each bibliography entry into a marker\nslot and a body slot for column alignment. See\n`docs/specs/SECOND_FIELD_ALIGN.md`.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SecondFieldAlign"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "links": {
           "description": "Hyperlink configuration.",
           "anyOf": [
@@ -8709,6 +8720,21 @@
           "description": "Rewrite the entry to lead with the container title, and additionally\nsuppress print-like entries (no DOI/URL) from the bibliography\nentirely — Chicago's \"well-known reference works are cited in notes\nonly\" convention.",
           "type": "string",
           "const": "notes-only"
+        }
+      ]
+    },
+    "SecondFieldAlign": {
+      "description": "CSL `second-field-align` value: how the marker and body slots of a\nbibliography entry relate for column alignment. HTML renders the same\nsibling-`<div>` shape for both — the distinction is preserved for\nround-trip fidelity with CSL source, not for a rendering difference. See\n`docs/specs/SECOND_FIELD_ALIGN.md`.",
+      "oneOf": [
+        {
+          "description": "Marker and body render flush; a consuming stylesheet aligns the body\ninto a second column regardless of marker width.",
+          "type": "string",
+          "const": "flush"
+        },
+        {
+          "description": "Marker and body render with a margin/gutter between the two boxes.",
+          "type": "string",
+          "const": "margin"
         }
       ]
     },

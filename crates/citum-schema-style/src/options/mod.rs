@@ -24,7 +24,8 @@ pub use crate::presets::{MultilingualConfigEntry, MultilingualPreset};
 pub use bibliography::{
     AnonymousEntriesMode, ArticleJournalBibliographyConfig, ArticleJournalNoPageFallback,
     BibliographyConfig, BibliographyPartitionHeading, BibliographyPartitionKind,
-    BibliographyPartitionMode, BibliographySortPartitioning, SubsequentAuthorSubstituteRule,
+    BibliographyPartitionMode, BibliographySortPartitioning, SecondFieldAlign,
+    SubsequentAuthorSubstituteRule,
 };
 pub use cascade::ScopedRawOptions;
 pub use contributors::{
@@ -452,6 +453,11 @@ pub struct BibliographyOptions {
     /// [`AnonymousEntriesMode`].
     #[serde(skip_serializing_if = "Option::is_none")]
     pub anonymous_entries: Option<AnonymousEntriesMode>,
+    /// CSL `second-field-align`: splits each bibliography entry into a marker
+    /// slot and a body slot for column alignment. See
+    /// `docs/specs/SECOND_FIELD_ALIGN.md`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub second_field_align: Option<bibliography::SecondFieldAlign>,
     /// Hyperlink configuration.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub links: Option<LinksConfig>,
@@ -960,6 +966,7 @@ impl BibliographyOptions {
             compound_numeric: self.compound_numeric.clone(),
             sort_partitioning: self.sort_partitioning.clone(),
             anonymous_entries: self.anonymous_entries,
+            second_field_align: self.second_field_align,
             unknown_fields: std::collections::BTreeMap::new(),
         }
     }
@@ -1047,6 +1054,7 @@ impl BibliographyOptions {
             compound_numeric,
             sort_partitioning,
             anonymous_entries,
+            second_field_align,
             date_position,
             title_terminator,
             repeated_author_rendering,
@@ -1864,6 +1872,35 @@ punctuation:
         let merged = overrides.merged_with(&base);
         assert_eq!(merged.processing, Some(Processing::AuthorDate));
         assert!(merged.contributors.is_some());
+    }
+
+    #[test]
+    fn test_bibliography_options_merge_inherits_second_field_align_from_parent() {
+        let mut parent = BibliographyOptions {
+            second_field_align: Some(bibliography::SecondFieldAlign::Flush),
+            ..Default::default()
+        };
+        // A child declaring no override for this field, merged over the
+        // parent, must retain the parent's value — the failure mode this
+        // guards is `second_field_align` missing from the `merge_options!`
+        // list in `BibliographyOptions::merge`, which would silently drop it
+        // under `extends` while it kept working on a standalone style.
+        let child = BibliographyOptions::default();
+        parent.merge(&child);
+        assert_eq!(
+            parent.second_field_align,
+            Some(bibliography::SecondFieldAlign::Flush)
+        );
+
+        let overriding_child = BibliographyOptions {
+            second_field_align: Some(bibliography::SecondFieldAlign::Margin),
+            ..Default::default()
+        };
+        parent.merge(&overriding_child);
+        assert_eq!(
+            parent.second_field_align,
+            Some(bibliography::SecondFieldAlign::Margin)
+        );
     }
 
     #[test]

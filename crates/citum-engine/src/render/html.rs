@@ -190,9 +190,18 @@ impl OutputFormat for Html {
         format!("ref-{id}")
     }
 
-    fn bibliography(&self, entries: Vec<Self::Output>) -> Self::Output {
+    fn bibliography(
+        &self,
+        entries: Vec<Self::Output>,
+        layout: &super::format::BibliographyLayout,
+    ) -> Self::Output {
+        let class = if layout.hanging_indent {
+            "citum-bibliography citum-bibliography--hanging-indent"
+        } else {
+            "citum-bibliography"
+        };
         format!(
-            r#"<div class="citum-bibliography">
+            r#"<div class="{class}">
 {}
 </div>"#,
             self.join(entries, "\n")
@@ -233,6 +242,29 @@ impl OutputFormat for Html {
         }
 
         format!(r#"<div class="citum-entry" {attrs}>{content}</div>"#)
+    }
+
+    fn entry_slots(
+        &self,
+        marker: Option<Self::Output>,
+        body: Self::Output,
+        layout: &super::format::BibliographyLayout,
+    ) -> Self::Output {
+        let Some(marker) = marker else {
+            return body;
+        };
+        if layout.second_field_align.is_none() {
+            // No alignment declared: fall back to the flush fuse every other
+            // format uses, unchanged from before this method existed.
+            return self.join(vec![marker, body], "");
+        }
+        // `flush` and `margin` render identically here — both are two
+        // sibling boxes; the distinction is a CSS-layer concern for the
+        // consuming stylesheet, not a difference in Citum's own markup. See
+        // docs/specs/SECOND_FIELD_ALIGN.md.
+        format!(
+            r#"<div class="citum-entry-marker">{marker}</div><div class="citum-entry-body">{body}</div>"#
+        )
     }
 
     fn visible_runs(&self, fragment: &str) -> Vec<std::ops::Range<usize>> {

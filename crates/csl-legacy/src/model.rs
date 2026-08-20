@@ -187,6 +187,11 @@ pub struct Bibliography {
     pub et_al_use_first: Option<usize>,
     /// If `true`, a hanging indent is applied to each entry.
     pub hanging_indent: Option<bool>,
+    /// The `second-field-align` attribute (`"flush"` or `"margin"`), used by
+    /// citeproc-js to split each entry into a marker box and a body box for
+    /// column alignment. Carried as the raw attribute string; interpretation
+    /// happens in `citum-migrate`. See `docs/specs/SECOND_FIELD_ALIGN.md`.
+    pub second_field_align: Option<String>,
     /// String substituted for repeated subsequent authors (e.g., `"---"`).
     pub subsequent_author_substitute: Option<String>,
     /// Rule controlling when `subsequent_author_substitute` is applied.

@@ -6,8 +6,8 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus and Citum contributors
 use super::*;
 use citum_schema::grouping::SortKey as GroupSortKey;
 use citum_schema::options::{
-    ArticleJournalNoPageFallback, GivennameRule, Processing, SortKey, SubstituteConfig,
-    SubstituteKey,
+    ArticleJournalNoPageFallback, GivennameRule, Processing, SecondFieldAlign, SortKey,
+    SubstituteConfig, SubstituteKey,
 };
 use citum_schema::presets::{SortPreset, SubstitutePreset};
 use csl_legacy::parser::parse_style;
@@ -775,4 +775,77 @@ fn test_extract_bibliography_entry_suffix_stays_literal() {
             ".".to_string()
         ))
     );
+}
+
+#[test]
+fn test_extract_second_field_align_flush() {
+    let xml = r#"<style>
+        <citation><layout><text variable="title"/></layout></citation>
+        <bibliography second-field-align="flush">
+            <layout><text variable="title"/></layout>
+        </bibliography>
+    </style>"#;
+    let style = parse_csl(xml).unwrap();
+
+    let bibliography = super::bibliography::extract_bibliography_config(&style);
+
+    assert_eq!(
+        bibliography.and_then(|bibliography| bibliography.second_field_align),
+        Some(citum_schema::options::SecondFieldAlign::Flush)
+    );
+}
+
+#[test]
+fn test_extract_migration_options_preserves_second_field_align() {
+    let xml = r#"<style>
+        <citation><layout><text variable="title"/></layout></citation>
+        <bibliography second-field-align="flush">
+            <layout><text variable="title"/></layout>
+        </bibliography>
+    </style>"#;
+    let style = parse_csl(xml).unwrap();
+
+    let options = OptionsExtractor::extract_migration_options(&style);
+
+    assert_eq!(
+        options
+            .bibliography_options
+            .and_then(|bibliography| bibliography.second_field_align),
+        Some(SecondFieldAlign::Flush)
+    );
+}
+
+#[test]
+fn test_extract_second_field_align_margin() {
+    let xml = r#"<style>
+        <citation><layout><text variable="title"/></layout></citation>
+        <bibliography second-field-align="margin">
+            <layout><text variable="title"/></layout>
+        </bibliography>
+    </style>"#;
+    let style = parse_csl(xml).unwrap();
+
+    let bibliography = super::bibliography::extract_bibliography_config(&style);
+
+    assert_eq!(
+        bibliography.and_then(|bibliography| bibliography.second_field_align),
+        Some(citum_schema::options::SecondFieldAlign::Margin)
+    );
+}
+
+#[test]
+fn test_extract_second_field_align_absent_when_not_declared() {
+    let xml = r#"<style>
+        <citation><layout><text variable="title"/></layout></citation>
+        <bibliography>
+            <layout><text variable="title"/></layout>
+        </bibliography>
+    </style>"#;
+    let style = parse_csl(xml).unwrap();
+
+    // With nothing else in the bibliography to extract, the config comes
+    // back None entirely -- confirms this extractor doesn't manufacture an
+    // Option::Some(BibliographyConfig::default()) out of an empty element.
+    let bibliography = super::bibliography::extract_bibliography_config(&style);
+    assert!(bibliography.is_none());
 }

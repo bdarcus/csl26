@@ -7,8 +7,8 @@ use citum_schema::grouping::{
     GroupSort, GroupSortEntry, GroupSortKey, SortKey as GroupSortKeyType,
 };
 use citum_schema::options::{
-    ArticleJournalBibliographyConfig, ArticleJournalNoPageFallback, BibliographyConfig, Sort,
-    SortKey, SortSpec, SubsequentAuthorSubstituteRule,
+    ArticleJournalBibliographyConfig, ArticleJournalNoPageFallback, BibliographyConfig,
+    SecondFieldAlign, Sort, SortKey, SortSpec, SubsequentAuthorSubstituteRule,
 };
 use citum_schema::presets::SortPreset;
 use citum_schema::template::DelimiterPunctuation;
@@ -44,6 +44,22 @@ pub fn extract_bibliography_config(style: &Style) -> Option<BibliographyConfig> 
     if let Some(hanging) = bib.hanging_indent {
         config.hanging_indent = Some(hanging);
         has_config = true;
+    }
+
+    // Extract `second-field-align` (e.g. from `<bibliography
+    // second-field-align="flush">`). Unrecognized values are dropped rather
+    // than defaulted, matching `subsequent_author_substitute_rule`'s
+    // fallback-to-default policy above being the exception, not the norm —
+    // an unknown alignment value is more likely a CSL authoring mistake than
+    // a value this converter should silently coerce. See
+    // `docs/specs/SECOND_FIELD_ALIGN.md`.
+    if let Some(align) = &bib.second_field_align {
+        config.second_field_align = match align.as_str() {
+            "flush" => Some(SecondFieldAlign::Flush),
+            "margin" => Some(SecondFieldAlign::Margin),
+            _ => None,
+        };
+        has_config = has_config || config.second_field_align.is_some();
     }
 
     // Extract layout suffix (e.g., "." from `<layout suffix=".">`).

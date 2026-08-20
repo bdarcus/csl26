@@ -250,9 +250,13 @@ fn given_example_mla_document_when_rendered_as_html_then_citation_markup_is_not_
         r#"<span class="citum-citation" data-ref="smith2010">"#,
         "citation markup should be real HTML",
     );
+    // MLA declares `hanging-indent: true`
+    // (crates/citum-schema-style/embedded/styles/modern-language-association.yaml),
+    // so the container carries the hanging-indent modifier class — see
+    // docs/specs/SECOND_FIELD_ALIGN.md.
     assert_output_includes(
         &html_output,
-        r#"<div class="citum-bibliography">"#,
+        r#"<div class="citum-bibliography citum-bibliography--hanging-indent">"#,
         "bibliography markup should be real HTML",
     );
     assert_output_excludes(
