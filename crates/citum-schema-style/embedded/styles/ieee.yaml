@@ -83,6 +83,7 @@ bibliography:
     entry-suffix-after-doi: true
     label-mode: numeric
     label-wrap: brackets
+    second-field-align: flush
   type-variants:
     article-journal:
       modify:

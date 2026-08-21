@@ -73,6 +73,7 @@ bibliography:
     label-mode: alphabetic
     label-wrap: brackets
     label-separator: ' '
+    second-field-align: flush
   type-variants:
     article-journal:
     - contributor: author

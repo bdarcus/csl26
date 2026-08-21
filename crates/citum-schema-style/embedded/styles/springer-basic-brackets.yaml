@@ -7,3 +7,4 @@ bibliography:
     label-mode: numeric
     label-wrap: period
     label-separator: " "
+    second-field-align: flush

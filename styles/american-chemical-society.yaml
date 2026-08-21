@@ -48,6 +48,7 @@ bibliography:
     separator: ". "
     label-mode: numeric
     label-wrap: parentheses
+    second-field-align: flush
   type-variants:
     article-journal:
       modify:

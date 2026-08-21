@@ -3879,9 +3879,11 @@ fn royal_society_of_chemistry_restores_legacy_page_less_doi_behavior() {
         );
 
     // The leading `1` is the reference marker: the CSL bibliography layout
-    // renders citation-number for every entry (second-field-align="flush"),
-    // which the style now declares once via bibliography label-mode rather
-    // than authoring on six type-variants. See docs/specs/REFERENCE_MARKERS.md.
+    // renders citation-number for every entry, which the style now declares
+    // once via bibliography label-mode rather than authoring on six
+    // type-variants. See docs/specs/REFERENCE_MARKERS.md. The style also
+    // declares second-field-align: flush (see docs/specs/SECOND_FIELD_ALIGN.md),
+    // which is inert for PlainText — this assertion stays byte-identical.
     assert_eq!(
         result,
         "1T. S. Kuhn, _International Encyclopedia of Unified Science_, DOI:10.1234/example."
