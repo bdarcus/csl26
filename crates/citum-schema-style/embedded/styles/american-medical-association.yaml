@@ -62,6 +62,7 @@ bibliography:
     separator: ". "
     label-mode: numeric
     label-wrap: period
+    second-field-align: flush
   type-variants:
     [article-journal, article-magazine]:
     - contributor: author

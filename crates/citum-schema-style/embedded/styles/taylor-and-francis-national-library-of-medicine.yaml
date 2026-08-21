@@ -12,3 +12,4 @@ bibliography:
     label-mode: numeric
     label-wrap: brackets
     label-separator: " "
+    second-field-align: flush

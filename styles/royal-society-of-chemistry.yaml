@@ -55,10 +55,12 @@ bibliography:
       no-page-fallback: doi
     entry-suffix: .
     separator: ", "
-    # The CSL bibliography layout renders citation-number for every entry
-    # (second-field-align="flush"); only six type-variants carried it, which
-    # was an incomplete migration. See docs/specs/REFERENCE_MARKERS.md.
+    # The CSL source declares second-field-align="flush" on <bibliography>;
+    # only six type-variants carried it in the original migration, which was
+    # incomplete. See docs/specs/REFERENCE_MARKERS.md and
+    # docs/specs/SECOND_FIELD_ALIGN.md.
     label-mode: numeric
+    second-field-align: flush
   type-variants:
     article-journal:
     - contributor: author

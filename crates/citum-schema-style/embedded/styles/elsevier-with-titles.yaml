@@ -5,3 +5,4 @@ extends: elsevier-with-titles-core
 bibliography:
   options:
     label-mode: numeric
+    second-field-align: flush

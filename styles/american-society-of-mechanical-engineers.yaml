@@ -45,6 +45,7 @@ bibliography:
       sort-separator: ', '
     entry-suffix: .
     separator: ', '
+    second-field-align: flush
   type-variants:
     article-journal:
     - contributor: author
