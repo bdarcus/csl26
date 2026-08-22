@@ -32,6 +32,12 @@ info:
   short-name: "Chicago Author-Date"
   edition: "18th edition"
 options:
+  messages:
+    pattern.chicago-episode: "Episode {$number}"
+    pattern.chicago-of: "of {$container}"
+    pattern.chicago-volume: "Vol. {$number}"
+    pattern.chicago-volume-lower: "vol. {$number}"
+    pattern.chicago-version: "V. {$version}"
   date-fallback: standard
   # multilingual, page-range-format, dates, punctuation-in-quote, and
   # contributors.demote-non-dropping-particle are inherited from chicago-18-base.
@@ -364,7 +370,27 @@ bibliography:
         form: year
       render-when:
         field-absent: original-published
-    - title: primary
+    - group:
+      - variable: volume-title
+        emph: true
+      render-when:
+        field-present: volume-title
+        field-absent: part-number-non-numeric
+    - group:
+      - title: primary
+      render-when:
+        field-absent: volume-title
+    - group:
+      - title: primary
+      render-when:
+        field-present: part-number-non-numeric
+    - group:
+      - group:
+        - title: primary
+        render-when:
+          field-absent: volume-title
+      render-when:
+        field-present: part-number-numeric
     - contributor: translator
       form: verb
       name-order: given-first
@@ -391,14 +417,98 @@ bibliography:
         name-order: given-first
       - title: parent-monograph
         emph: true
-    - title: parent-serial
-      emph: true
+      render-when:
+        field-absent: volume-or-issue
     - group:
-      - number: volume
+      - contributor: editor
+        form: verb
+        name-order: given-first
+      render-when:
+        field-present: volume-or-issue
+    - group:
+      - message: pattern.chicago-volume
+        args:
+          number:
+            number: volume
+      - number: part-number
+        label-form: short
+      - message: pattern.chicago-of
+        args:
+          container:
+            title: parent-monograph
+            emph: true
+      delimiter: ", "
+      render-when:
+        field-present: part-number-numeric
+    - group:
+      - group:
+        - group:
+          - number: part-number
+            label-form: short
+            text-case: capitalize-first
+          - message: pattern.chicago-of
+            args:
+              container:
+                title: parent-monograph
+                emph: true
+          delimiter: " "
+        - group:
+          - message: pattern.chicago-volume-lower
+            args:
+              number:
+                number: volume
+          - message: pattern.chicago-of
+            args:
+              container:
+                title: collection-title
+                emph: true
+          delimiter: " "
+        delimiter: ", "
+        render-when:
+          field-present: volume-title
+      - group:
+        - message: pattern.chicago-volume
+          args:
+            number:
+              number: volume
+        - number: part-number
+          label-form: short
+        - message: pattern.chicago-of
+          args:
+            container:
+              title: parent-monograph
+              emph: true
+        delimiter: ", "
+        render-when:
+          field-absent: volume-title
+      render-when:
+        field-present: part-number-non-numeric
+    - group:
+      - message: pattern.chicago-volume
+        args:
+          number:
+            number: volume
+      - message: pattern.chicago-of
+        args:
+          container:
+            title: parent-monograph
+            emph: true
       - number: issue
         prefix: " "
         wrap:
           punctuation: parentheses
+      delimiter: " "
+      render-when:
+        field-absent: part-number
+        field-present: volume-or-issue
+    - title: parent-serial
+      emph: true
+    - group:
+      - number: number-of-volumes
+        label-form: short
+        prefix: ". "
+      render-when:
+        field-absent: volume-or-issue
     - group:
       - variable: original-publisher
       render-when:
@@ -410,7 +520,23 @@ bibliography:
     - number: edition
       text-case: capitalize-first
     - variable: publisher
+    - group:
+      - date: issued
+        form: year
+        prefix: ", "
+      render-when:
+        field-present: volume-title
+    - group:
+      - date: issued
+        form: year
+        prefix: ", "
+      render-when:
+        field-present: part-number
+        field-absent: volume-title
+    - variable: references
+      prefix: ". "
     - variable: doi
+      prefix: https://doi.org/
     - variable: url
     - group:
       # CMOS 18 13.101: a translation or reprint under a different title notes
@@ -453,9 +579,22 @@ bibliography:
       form: year
     - title: parent-serial
       emph: true
-    - variable: number
+    - group:
+      - message: pattern.chicago-episode
+        args:
+          number:
+            variable: number
+      render-when:
+        field-absent: genre
       prefix: ". "
-      text-case: capitalize-first
+    - group:
+      - variable: genre
+        text-case: capitalize-first
+      - variable: number
+      delimiter: " "
+      render-when:
+        field-present: genre
+      prefix: ". "
     - title: primary
       wrap:
         punctuation: quotes
@@ -488,6 +627,8 @@ bibliography:
           variable: publisher
       prefix: ", "
     - variable: dimensions
+      prefix: ". "
+    - variable: medium
       prefix: ". "
     - variable: url
     # `collection` is included here because a note-field `type: collection`
@@ -582,6 +723,75 @@ bibliography:
       delimiter: ". "
     interview:
     - group:
+      - contributor: author
+        form: long
+        name-order: family-first
+        shorten:
+          min: 8
+          use-first: 3
+      - date: issued
+        form: year
+      - title: primary
+        text-case: as-is
+        wrap:
+          punctuation: quotes
+      - group:
+        - variable: raw-genre
+          text-case: capitalize-first
+        - message: pattern.chicago-by
+          args:
+            name:
+              contributor: interviewer
+              form: long
+              name-order: given-first
+        delimiter: " "
+        render-when:
+          field-present: genre
+      - group:
+        - message: pattern.chicago-interview-by
+          args:
+            name:
+              contributor: interviewer
+              form: long
+              name-order: given-first
+          text-case: capitalize-first
+        render-when:
+          field-absent: genre
+      - group:
+        - variable: event-title
+        - variable: event-place
+        delimiter: ", "
+      - title: parent-monograph
+        text-case: as-is
+      - variable: publisher
+      - date: event-date
+        form: full
+      - group:
+        - variable: status
+          text-case: capitalize-first
+        - date: issued
+          form: month-day
+          prefix: " "
+        delimiter: ''
+      - group:
+        - variable: raw-medium
+          text-case: capitalize-first
+        - variable: dimensions
+          prefix: ", "
+        delimiter: ''
+      - variable: archive-location
+        text-case: capitalize-first
+      - variable: archive-collection
+      - group:
+        - variable: archive-name
+        - variable: archive-place
+          prefix: ", "
+      - variable: references
+      - variable: url
+      render-when:
+        field-present: author
+      delimiter: ". "
+    - group:
       - title: primary
         text-case: as-is
         wrap:
@@ -614,59 +824,7 @@ bibliography:
       - variable: url
       render-when:
         field-present: title
-      delimiter: ". "
-    - group:
-      - contributor: author
-        form: long
-        name-order: family-first
-        shorten:
-          min: 8
-          use-first: 3
-      - date: issued
-        form: year
-      - message: pattern.chicago-interview-by
-        args:
-          name:
-            contributor: interviewer
-            form: long
-            name-order: given-first
-        text-case: capitalize-first
-      - variable: raw-genre
-        text-case: capitalize-first
-      - group:
-        - variable: event-title
-        - variable: event-place
-        delimiter: ", "
-      - title: parent-monograph
-        text-case: as-is
-      - variable: publisher
-      - date: event-date
-        form: full
-      - date: issued
-        form: month-day
-      - group:
-        - variable: status
-          text-case: capitalize-first
-        - date: issued
-          form: month-day
-          prefix: " "
-        delimiter: ''
-      - group:
-        - variable: raw-medium
-          text-case: capitalize-first
-        - variable: dimensions
-          prefix: ", "
-        delimiter: ''
-      - variable: archive-location
-      - variable: archive-collection
-      - group:
-        - variable: archive-name
-        - variable: archive-place
-          prefix: ", "
-      - variable: references
-      - variable: url
-      render-when:
-        field-absent: title
+        field-absent: author
       delimiter: ". "
     chapter:
     - contributor: author
@@ -693,6 +851,7 @@ bibliography:
       prefix: ", "
     - variable: publisher
     - variable: doi
+      prefix: https://doi.org/
     - variable: url
     entry-dictionary:
     - title: parent-monograph
@@ -750,14 +909,10 @@ bibliography:
     - title: primary
       text-case: title
     - variable: raw-genre
-    # STYLE010 exception: matches locale term.version (short "v.") in
-    # en-US.yaml, but `variable:` components have no label-form mechanism
-    # (only `number:` does, and `version` isn't a NumberVariable — would need
-    # a schema change) and STYLE009 disallows an ad hoc `message: term.version`
-    # for a non-allowlisted lexical term. Left literal; see csl26-07ww
-    # (lint.rs port) for whether variable-level label-form is worth adding.
-    - variable: version
-      prefix: "V. "
+    - message: pattern.chicago-version
+      args:
+        version:
+          variable: version
     - message: pattern.chicago-released-date
       args:
         date:
@@ -774,7 +929,16 @@ bibliography:
       extends: book
       modify:
         - match:
-            title: primary
+            group:
+            - title: primary
+            render-when:
+              field-absent: volume-title
+          emph: true
+        - match:
+            group:
+            - title: primary
+            render-when:
+              field-present: part-number-non-numeric
           emph: true
       remove:
         - match:
@@ -918,7 +1082,18 @@ bibliography:
             contributor: translator
       modify:
         - match:
-            title: primary
+            group:
+            - title: primary
+            render-when:
+              field-absent: volume-title
+          emph: false
+          wrap:
+            punctuation: quotes
+        - match:
+            group:
+            - title: primary
+            render-when:
+              field-present: part-number-non-numeric
           emph: false
           wrap:
             punctuation: quotes
@@ -960,6 +1135,7 @@ bibliography:
       - date: issued
         form: month-day
       - variable: archive-location
+        text-case: capitalize-first
       - variable: archive-collection
       - variable: archive-name
       render-when:
@@ -1054,4 +1230,5 @@ bibliography:
       field-absent: volume-or-issue
   - variable: publisher
   - variable: doi
+    prefix: https://doi.org/
   - variable: url

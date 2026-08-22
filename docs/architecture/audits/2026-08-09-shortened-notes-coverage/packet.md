@@ -2,7 +2,7 @@
 
 - **Schema:** `citum.style-coverage-packet/v1`
 - **Style:** `chicago-shortened-notes-bibliography`
-- **Source revision:** `727dba21f0af95c9554d1dc35ee62ad0dddc9976`
+- **Source revision:** `223c9b090f95083a7afe7f0c0ff0e364cec0e307`
 - **Baseline eligible:** yes
 - **Coverage evidence:** inferred structural coverage from a Citum-resolved style
 
@@ -63,7 +63,7 @@ Structural coverage identifies a resolved component path; it does not prove that
 | 31 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-13/webpage/issued/entry` | relevant | fallback | comparable | false |
 | 32 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-13/webpage/title/entry` | relevant | fallback | comparable | false |
 | 33 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-13/webpage/url/entry` | relevant | fallback | comparable | false |
-| 34 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-14/book/editor/entry` | relevant | uncovered | comparable | false |
+| 34 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-14/book/editor/entry` | relevant | rendered | comparable | false |
 | 35 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-14/book/issued/entry` | relevant | rendered | comparable | false |
 | 36 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-14/book/publisher-place/entry` | relevant | suppressed | comparable | false |
 | 37 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-14/book/publisher/entry` | relevant | rendered | comparable | false |
@@ -236,7 +236,7 @@ Structural coverage identifies a resolved component path; it does not prove that
 | 204 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-4/chapter/container-title/entry` | relevant | rendered | comparable | false |
 | 205 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-4/chapter/editor/entry` | relevant | rendered | comparable | false |
 | 206 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-4/chapter/issued/entry` | relevant | rendered | comparable | false |
-| 207 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-4/chapter/page/entry` | relevant | rendered | comparable | false |
+| 207 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-4/chapter/page/entry` | relevant | uncovered | comparable | false |
 | 208 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-4/chapter/publisher/entry` | relevant | rendered | comparable | false |
 | 209 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-4/chapter/title/entry` | relevant | rendered | comparable | false |
 | 210 | `chicago-shortened-notes-bibliography/bibliography/references-expanded/ITEM-5/report/author/entry` | relevant | fallback | comparable | true |

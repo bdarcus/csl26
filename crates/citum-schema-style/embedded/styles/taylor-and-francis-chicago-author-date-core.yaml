@@ -7,6 +7,10 @@ info:
 extends: chicago-author-date-18th
 options:
   multilingual: romanized-translated
+  messages:
+    pattern.chicago-of: "of {$container}"
+    pattern.chicago-volume: "Vol. {$number}"
+    pattern.chicago-volume-lower: "vol. {$number}"
   page-range-format: expanded
   # T&F Style F (tf_f.pdf) prescribes sentence-style capitalisation for titles
   # (only the first word capitalised) — a deliberate divergence from the CSL
@@ -91,11 +95,115 @@ bibliography:
       form: long
     - date: issued
       form: year
-    - title: primary
+    - group:
+      - variable: volume-title
+        emph: true
+      render-when:
+        field-present: volume-title
+        field-absent: part-number-non-numeric
+    - group:
+      - title: primary
+      render-when:
+        field-absent: volume-title
+    - group:
+      - title: primary
+      render-when:
+        field-present: part-number-non-numeric
+    - group:
+      - group:
+        - title: primary
+        render-when:
+          field-absent: volume-title
+      render-when:
+        field-present: part-number-numeric
     - contributor: translator
       form: verb
       name-order: given-first
       text-case: capitalize-first
+    - group:
+      - contributor: editor
+        form: verb
+        name-order: given-first
+      render-when:
+        field-present: volume-or-issue
+    - group:
+      - message: pattern.chicago-volume
+        args:
+          number:
+            number: volume
+      - number: part-number
+        label-form: short
+      - message: pattern.chicago-of
+        args:
+          container:
+            title: parent-monograph
+            emph: true
+      delimiter: ", "
+      render-when:
+        field-present: part-number-numeric
+    - group:
+      - group:
+        - group:
+          - number: part-number
+            label-form: short
+            text-case: capitalize-first
+          - message: pattern.chicago-of
+            args:
+              container:
+                title: parent-monograph
+                emph: true
+          delimiter: " "
+        - group:
+          - message: pattern.chicago-volume-lower
+            args:
+              number:
+                number: volume
+          - message: pattern.chicago-of
+            args:
+              container:
+                title: collection-title
+                emph: true
+          delimiter: " "
+        delimiter: ", "
+        render-when:
+          field-present: volume-title
+      - group:
+        - message: pattern.chicago-volume
+          args:
+            number:
+              number: volume
+        - number: part-number
+          label-form: short
+        - message: pattern.chicago-of
+          args:
+            container:
+              title: parent-monograph
+              emph: true
+        delimiter: ", "
+        render-when:
+          field-absent: volume-title
+      render-when:
+        field-present: part-number-non-numeric
+    - group:
+      - message: pattern.chicago-volume
+        args:
+          number:
+            number: volume
+      - message: pattern.chicago-of
+        args:
+          container:
+            title: parent-monograph
+            emph: true
+      delimiter: " "
+      render-when:
+        field-absent: part-number
+        field-present: volume-or-issue
+    - group:
+      - number: number-of-volumes
+        label-form: short
+        prefix: ". "
+      render-when:
+        field-absent: volume-or-issue
     - variable: publisher-place
     - variable: publisher
       prefix: ": "

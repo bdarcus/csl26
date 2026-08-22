@@ -115,7 +115,7 @@
     ],
     "manifest": {
       "path": "docs/architecture/audits/2026-08-09-shortened-notes-coverage/manifest.yaml",
-      "sha256": "853aef69a83246bf582f8cf74deb559419f63a4ffc0f25cbbddb58fb41edf822"
+      "sha256": "ca24e4c05326ead3c93b2327c1afeb4263d681db266336f57ca16abd8cc68e26"
     },
     "relevance": {
       "default": "relevant",
@@ -151,7 +151,7 @@
     "schema": "citum.style-coverage-audit-manifest/v1",
     "source": {
       "baselineEligible": true,
-      "revision": "727dba21f0af95c9554d1dc35ee62ad0dddc9976",
+      "revision": "223c9b090f95083a7afe7f0c0ff0e364cec0e307",
       "worktreeClean": true
     },
     "style": {
@@ -164,22 +164,22 @@
         {
           "id": "chicago-shortened-notes-bibliography-core",
           "path": "crates/citum-schema-style/embedded/styles/chicago-shortened-notes-bibliography-core.yaml",
-          "sha256": "dfc023a5388f31483039ff348b9cf2741110894935ceea4212b3ed04c258dc62"
+          "sha256": "c7e179d38f5db9732eccccd837538ee01f90acc198568e35e5ab6c55ac1f5023"
         },
         {
           "id": "chicago-notes-18th",
           "path": "crates/citum-schema-style/embedded/styles/chicago-notes-18th.yaml",
-          "sha256": "7ef31fca41da23ae8b7f7fb0579bedc01c4e8f4843729c7a5a3a3135b31efba5"
+          "sha256": "ce8b1e5f31440b7904ccdcfe2c1c55d0af54399f0d40a800c6804478ff5a311a"
         },
         {
           "id": "chicago-18-base",
           "path": "crates/citum-schema-style/embedded/styles/chicago-18-base.yaml",
-          "sha256": "b93012ce48bd4bff58cabfdefd02d638f254f363914eba5203ef7b55c0805d2c"
+          "sha256": "fa8cadf78de3efabec01f7e1d524d5f1e51b0682fab247b92f2c46f6352f2c74"
         }
       ],
       "id": "chicago-shortened-notes-bibliography",
       "path": "crates/citum-schema-style/embedded/styles/chicago-shortened-notes-bibliography.yaml",
-      "resolvedSha256": "f639dd987bbd5bc313e72f21501a79bdeab0ee1ba8b673ba006a0582799edd0a",
+      "resolvedSha256": "116f2634ff06e20202a30a15d59fd5efc1efd2b7c674be47071c2077982ef09e",
       "sha256": "5ee7afd5c74169d8882747d8ab6ede8b84aa12cd1760e1f0f3f544198cd1be94"
     },
     "surfaces": [
@@ -795,10 +795,10 @@
       "referenceType": "book",
       "relevance": "relevant",
       "relevanceRationale": null,
-      "renderDisposition": "uncovered",
+      "renderDisposition": "rendered",
       "row": 34,
       "surface": "bibliography",
-      "templatePath": null
+      "templatePath": "resolved.bibliography.type-variants.book.template[4].group[0].contributor"
     },
     {
       "comparisonEligibility": "comparable",
@@ -816,7 +816,7 @@
       "renderDisposition": "rendered",
       "row": 35,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.type-variants.book.template[4].date"
+      "templatePath": "resolved.bibliography.type-variants.book.template[9].date"
     },
     {
       "comparisonEligibility": "comparable",
@@ -852,7 +852,7 @@
       "renderDisposition": "rendered",
       "row": 37,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.type-variants.book.template[3].variable"
+      "templatePath": "resolved.bibliography.type-variants.book.template[8].variable"
     },
     {
       "comparisonEligibility": "comparable",
@@ -870,7 +870,7 @@
       "renderDisposition": "rendered",
       "row": 38,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.type-variants.book.template[1].title"
+      "templatePath": "resolved.bibliography.type-variants.book.template[1].group[0].title"
     },
     {
       "comparisonEligibility": "comparable",
@@ -1482,7 +1482,7 @@
       "renderDisposition": "rendered",
       "row": 72,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.type-variants.book.template[4].date"
+      "templatePath": "resolved.bibliography.type-variants.book.template[9].date"
     },
     {
       "comparisonEligibility": "comparable",
@@ -1518,7 +1518,7 @@
       "renderDisposition": "rendered",
       "row": 74,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.type-variants.book.template[3].variable"
+      "templatePath": "resolved.bibliography.type-variants.book.template[8].variable"
     },
     {
       "comparisonEligibility": "comparable",
@@ -1536,7 +1536,7 @@
       "renderDisposition": "rendered",
       "row": 75,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.type-variants.book.template[1].title"
+      "templatePath": "resolved.bibliography.type-variants.book.template[1].group[0].title"
     },
     {
       "comparisonEligibility": "comparable",
@@ -2094,7 +2094,7 @@
       "renderDisposition": "rendered",
       "row": 106,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.type-variants.book.template[4].date"
+      "templatePath": "resolved.bibliography.type-variants.book.template[9].date"
     },
     {
       "comparisonEligibility": "comparable",
@@ -2148,7 +2148,7 @@
       "renderDisposition": "rendered",
       "row": 109,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.type-variants.book.template[3].variable"
+      "templatePath": "resolved.bibliography.type-variants.book.template[8].variable"
     },
     {
       "comparisonEligibility": "comparable",
@@ -2166,7 +2166,7 @@
       "renderDisposition": "rendered",
       "row": 110,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.type-variants.book.template[1].title"
+      "templatePath": "resolved.bibliography.type-variants.book.template[1].group[0].title"
     },
     {
       "comparisonEligibility": "comparable",
@@ -2184,7 +2184,7 @@
       "renderDisposition": "rendered",
       "row": 111,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.type-variants.book.template[2].contributor"
+      "templatePath": "resolved.bibliography.type-variants.book.template[3].contributor"
     },
     {
       "comparisonEligibility": "comparable",
@@ -2220,7 +2220,7 @@
       "renderDisposition": "rendered",
       "row": 113,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.type-variants.book.template[4].date"
+      "templatePath": "resolved.bibliography.type-variants.book.template[9].date"
     },
     {
       "comparisonEligibility": "comparable",
@@ -2274,7 +2274,7 @@
       "renderDisposition": "rendered",
       "row": 116,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.type-variants.book.template[3].variable"
+      "templatePath": "resolved.bibliography.type-variants.book.template[8].variable"
     },
     {
       "comparisonEligibility": "comparable",
@@ -2292,7 +2292,7 @@
       "renderDisposition": "rendered",
       "row": 117,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.type-variants.book.template[1].title"
+      "templatePath": "resolved.bibliography.type-variants.book.template[1].group[0].title"
     },
     {
       "comparisonEligibility": "comparable",
@@ -3228,7 +3228,7 @@
       "renderDisposition": "rendered",
       "row": 169,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.type-variants.book.template[3].variable"
+      "templatePath": "resolved.bibliography.type-variants.book.template[8].variable"
     },
     {
       "comparisonEligibility": "comparable",
@@ -3246,7 +3246,7 @@
       "renderDisposition": "rendered",
       "row": 170,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.type-variants.book.template[1].title"
+      "templatePath": "resolved.bibliography.type-variants.book.template[1].group[0].title"
     },
     {
       "comparisonEligibility": "comparable",
@@ -3909,10 +3909,10 @@
       "referenceType": "chapter",
       "relevance": "relevant",
       "relevanceRationale": null,
-      "renderDisposition": "rendered",
+      "renderDisposition": "uncovered",
       "row": 207,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.type-variants.chapter.template[5].number"
+      "templatePath": null
     },
     {
       "comparisonEligibility": "comparable",
@@ -4092,7 +4092,7 @@
       "renderDisposition": "rendered",
       "row": 217,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.type-variants.book.template[4].date"
+      "templatePath": "resolved.bibliography.type-variants.book.template[9].date"
     },
     {
       "comparisonEligibility": "comparable",
@@ -4128,7 +4128,7 @@
       "renderDisposition": "rendered",
       "row": 219,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.type-variants.book.template[3].variable"
+      "templatePath": "resolved.bibliography.type-variants.book.template[8].variable"
     },
     {
       "comparisonEligibility": "comparable",
@@ -4146,7 +4146,7 @@
       "renderDisposition": "rendered",
       "row": 220,
       "surface": "bibliography",
-      "templatePath": "resolved.bibliography.type-variants.book.template[1].title"
+      "templatePath": "resolved.bibliography.type-variants.book.template[1].group[0].title"
     },
     {
       "comparisonEligibility": "comparable",
@@ -6144,7 +6144,7 @@
       "renderDisposition": "fallback",
       "row": 331,
       "surface": "citation",
-      "templatePath": "resolved.citation.template.template[0].contributor"
+      "templatePath": "resolved.citation.template.template[0].group[0].contributor"
     },
     {
       "comparisonEligibility": "comparable",
@@ -6270,7 +6270,7 @@
       "renderDisposition": "fallback",
       "row": 338,
       "surface": "citation",
-      "templatePath": "resolved.citation.template.template[1].title"
+      "templatePath": "resolved.citation.template.template[0].group[1].group[0].group[0].title"
     },
     {
       "comparisonEligibility": "comparable",
@@ -6306,7 +6306,7 @@
       "renderDisposition": "fallback",
       "row": 340,
       "surface": "citation",
-      "templatePath": "resolved.citation.template.template[0].contributor"
+      "templatePath": "resolved.citation.template.template[0].group[0].contributor"
     },
     {
       "comparisonEligibility": "comparable",
@@ -6414,7 +6414,7 @@
       "renderDisposition": "fallback",
       "row": 346,
       "surface": "citation",
-      "templatePath": "resolved.citation.template.template[1].title"
+      "templatePath": "resolved.citation.template.template[0].group[1].group[0].group[0].title"
     },
     {
       "comparisonEligibility": "comparable",
@@ -6450,7 +6450,7 @@
       "renderDisposition": "fallback",
       "row": 348,
       "surface": "citation",
-      "templatePath": "resolved.citation.template.template[0].contributor"
+      "templatePath": "resolved.citation.template.template[0].group[0].contributor"
     },
     {
       "comparisonEligibility": "comparable",
@@ -6522,7 +6522,7 @@
       "renderDisposition": "fallback",
       "row": 352,
       "surface": "citation",
-      "templatePath": "resolved.citation.template.template[1].title"
+      "templatePath": "resolved.citation.template.template[0].group[1].group[0].group[0].title"
     },
     {
       "comparisonEligibility": "comparable",
@@ -6540,7 +6540,7 @@
       "renderDisposition": "fallback",
       "row": 353,
       "surface": "citation",
-      "templatePath": "resolved.citation.template.template[0].contributor"
+      "templatePath": "resolved.citation.template.template[0].group[0].contributor"
     },
     {
       "comparisonEligibility": "comparable",
@@ -6630,7 +6630,7 @@
       "renderDisposition": "fallback",
       "row": 358,
       "surface": "citation",
-      "templatePath": "resolved.citation.template.template[1].title"
+      "templatePath": "resolved.citation.template.template[0].group[1].group[0].group[0].title"
     },
     {
       "comparisonEligibility": "comparable",
@@ -6666,7 +6666,7 @@
       "renderDisposition": "fallback",
       "row": 360,
       "surface": "citation",
-      "templatePath": "resolved.citation.template.template[0].contributor"
+      "templatePath": "resolved.citation.template.template[0].group[0].contributor"
     },
     {
       "comparisonEligibility": "comparable",
@@ -6702,7 +6702,7 @@
       "renderDisposition": "fallback",
       "row": 362,
       "surface": "citation",
-      "templatePath": "resolved.citation.template.template[1].title"
+      "templatePath": "resolved.citation.template.template[0].group[1].group[0].group[0].title"
     },
     {
       "comparisonEligibility": "comparable",
@@ -6810,7 +6810,7 @@
       "renderDisposition": "fallback",
       "row": 368,
       "surface": "citation",
-      "templatePath": "resolved.citation.template.template[1].title"
+      "templatePath": "resolved.citation.template.template[0].group[1].group[0].group[0].title"
     },
     {
       "comparisonEligibility": "comparable",
@@ -6918,7 +6918,7 @@
       "renderDisposition": "fallback",
       "row": 374,
       "surface": "citation",
-      "templatePath": "resolved.citation.template.template[1].title"
+      "templatePath": "resolved.citation.template.template[0].group[1].group[0].group[0].title"
     },
     {
       "comparisonEligibility": "comparable",
@@ -6954,7 +6954,7 @@
       "renderDisposition": "fallback",
       "row": 376,
       "surface": "citation",
-      "templatePath": "resolved.citation.template.template[0].contributor"
+      "templatePath": "resolved.citation.template.template[0].group[0].contributor"
     },
     {
       "comparisonEligibility": "comparable",
@@ -7026,7 +7026,7 @@
       "renderDisposition": "fallback",
       "row": 380,
       "surface": "citation",
-      "templatePath": "resolved.citation.template.template[1].title"
+      "templatePath": "resolved.citation.template.template[0].group[1].group[0].group[0].title"
     },
     {
       "comparisonEligibility": "comparable",
@@ -7044,7 +7044,7 @@
       "renderDisposition": "fallback",
       "row": 381,
       "surface": "citation",
-      "templatePath": "resolved.citation.template.template[0].contributor"
+      "templatePath": "resolved.citation.template.template[0].group[0].contributor"
     },
     {
       "comparisonEligibility": "comparable",
@@ -7134,7 +7134,7 @@
       "renderDisposition": "fallback",
       "row": 386,
       "surface": "citation",
-      "templatePath": "resolved.citation.template.template[1].title"
+      "templatePath": "resolved.citation.template.template[0].group[1].group[0].group[0].title"
     },
     {
       "comparisonEligibility": "comparable",
@@ -7170,7 +7170,7 @@
       "renderDisposition": "fallback",
       "row": 388,
       "surface": "citation",
-      "templatePath": "resolved.citation.template.template[0].contributor"
+      "templatePath": "resolved.citation.template.template[0].group[0].contributor"
     },
     {
       "comparisonEligibility": "comparable",
@@ -7260,7 +7260,7 @@
       "renderDisposition": "fallback",
       "row": 393,
       "surface": "citation",
-      "templatePath": "resolved.citation.template.template[1].title"
+      "templatePath": "resolved.citation.template.template[0].group[1].group[0].group[0].title"
     },
     {
       "comparisonEligibility": "comparable",
@@ -7314,7 +7314,7 @@
       "renderDisposition": "fallback",
       "row": 396,
       "surface": "citation",
-      "templatePath": "resolved.citation.template.template[0].contributor"
+      "templatePath": "resolved.citation.template.template[0].group[0].contributor"
     },
     {
       "comparisonEligibility": "comparable",
@@ -7368,7 +7368,7 @@
       "renderDisposition": "fallback",
       "row": 399,
       "surface": "citation",
-      "templatePath": "resolved.citation.template.template[1].title"
+      "templatePath": "resolved.citation.template.template[0].group[1].group[0].group[0].title"
     },
     {
       "comparisonEligibility": "comparable",
@@ -7404,7 +7404,7 @@
       "renderDisposition": "fallback",
       "row": 401,
       "surface": "citation",
-      "templatePath": "resolved.citation.template.template[0].contributor"
+      "templatePath": "resolved.citation.template.template[0].group[0].contributor"
     },
     {
       "comparisonEligibility": "comparable",
@@ -7476,7 +7476,7 @@
       "renderDisposition": "fallback",
       "row": 405,
       "surface": "citation",
-      "templatePath": "resolved.citation.template.template[1].title"
+      "templatePath": "resolved.citation.template.template[0].group[1].group[0].group[0].title"
     },
     {
       "comparisonEligibility": "comparable",
@@ -7566,7 +7566,7 @@
       "renderDisposition": "fallback",
       "row": 410,
       "surface": "citation",
-      "templatePath": "resolved.citation.template.template[1].title"
+      "templatePath": "resolved.citation.template.template[0].group[1].group[0].group[0].title"
     },
     {
       "comparisonEligibility": "comparable",
@@ -7602,7 +7602,7 @@
       "renderDisposition": "fallback",
       "row": 412,
       "surface": "citation",
-      "templatePath": "resolved.citation.template.template[0].contributor"
+      "templatePath": "resolved.citation.template.template[0].group[0].contributor"
     },
     {
       "comparisonEligibility": "comparable",
@@ -7674,7 +7674,7 @@
       "renderDisposition": "fallback",
       "row": 416,
       "surface": "citation",
-      "templatePath": "resolved.citation.template.template[1].title"
+      "templatePath": "resolved.citation.template.template[0].group[1].group[0].group[0].title"
     },
     {
       "comparisonEligibility": "comparable",
@@ -7692,7 +7692,7 @@
       "renderDisposition": "fallback",
       "row": 417,
       "surface": "citation",
-      "templatePath": "resolved.citation.template.template[0].contributor"
+      "templatePath": "resolved.citation.template.template[0].group[0].contributor"
     },
     {
       "comparisonEligibility": "comparable",
@@ -7782,7 +7782,7 @@
       "renderDisposition": "fallback",
       "row": 422,
       "surface": "citation",
-      "templatePath": "resolved.citation.template.template[1].title"
+      "templatePath": "resolved.citation.template.template[0].group[1].group[0].group[0].title"
     },
     {
       "comparisonEligibility": "comparable",
@@ -7800,7 +7800,7 @@
       "renderDisposition": "fallback",
       "row": 423,
       "surface": "citation",
-      "templatePath": "resolved.citation.template.template[0].contributor"
+      "templatePath": "resolved.citation.template.template[0].group[0].contributor"
     },
     {
       "comparisonEligibility": "comparable",
@@ -7890,7 +7890,7 @@
       "renderDisposition": "fallback",
       "row": 428,
       "surface": "citation",
-      "templatePath": "resolved.citation.template.template[1].title"
+      "templatePath": "resolved.citation.template.template[0].group[1].group[0].group[0].title"
     },
     {
       "comparisonEligibility": "comparable",
@@ -7908,7 +7908,7 @@
       "renderDisposition": "fallback",
       "row": 429,
       "surface": "citation",
-      "templatePath": "resolved.citation.template.template[0].contributor"
+      "templatePath": "resolved.citation.template.template[0].group[0].contributor"
     },
     {
       "comparisonEligibility": "comparable",
@@ -7980,7 +7980,7 @@
       "renderDisposition": "fallback",
       "row": 433,
       "surface": "citation",
-      "templatePath": "resolved.citation.template.template[1].title"
+      "templatePath": "resolved.citation.template.template[0].group[1].group[0].group[0].title"
     },
     {
       "comparisonEligibility": "comparable",
@@ -8016,7 +8016,7 @@
       "renderDisposition": "fallback",
       "row": 435,
       "surface": "citation",
-      "templatePath": "resolved.citation.template.template[0].contributor"
+      "templatePath": "resolved.citation.template.template[0].group[0].contributor"
     },
     {
       "comparisonEligibility": "comparable",
@@ -8106,7 +8106,7 @@
       "renderDisposition": "fallback",
       "row": 440,
       "surface": "citation",
-      "templatePath": "resolved.citation.template.template[1].title"
+      "templatePath": "resolved.citation.template.template[0].group[1].group[0].group[0].title"
     },
     {
       "comparisonEligibility": "comparable",
@@ -8142,7 +8142,7 @@
       "renderDisposition": "fallback",
       "row": 442,
       "surface": "citation",
-      "templatePath": "resolved.citation.template.template[0].contributor"
+      "templatePath": "resolved.citation.template.template[0].group[0].contributor"
     },
     {
       "comparisonEligibility": "comparable",
@@ -8232,7 +8232,7 @@
       "renderDisposition": "fallback",
       "row": 447,
       "surface": "citation",
-      "templatePath": "resolved.citation.template.template[1].title"
+      "templatePath": "resolved.citation.template.template[0].group[1].group[0].group[0].title"
     },
     {
       "comparisonEligibility": "comparable",
@@ -8250,7 +8250,7 @@
       "renderDisposition": "fallback",
       "row": 448,
       "surface": "citation",
-      "templatePath": "resolved.citation.template.template[0].contributor"
+      "templatePath": "resolved.citation.template.template[0].group[0].contributor"
     },
     {
       "comparisonEligibility": "comparable",
@@ -8358,7 +8358,7 @@
       "renderDisposition": "fallback",
       "row": 454,
       "surface": "citation",
-      "templatePath": "resolved.citation.template.template[1].title"
+      "templatePath": "resolved.citation.template.template[0].group[1].group[0].group[0].title"
     },
     {
       "comparisonEligibility": "comparable",
@@ -8376,7 +8376,7 @@
       "renderDisposition": "fallback",
       "row": 455,
       "surface": "citation",
-      "templatePath": "resolved.citation.template.template[0].contributor"
+      "templatePath": "resolved.citation.template.template[0].group[0].contributor"
     },
     {
       "comparisonEligibility": "comparable",
@@ -8430,7 +8430,7 @@
       "renderDisposition": "fallback",
       "row": 458,
       "surface": "citation",
-      "templatePath": "resolved.citation.template.template[1].title"
+      "templatePath": "resolved.citation.template.template[0].group[1].group[0].group[0].title"
     },
     {
       "comparisonEligibility": "comparable",
@@ -8466,7 +8466,7 @@
       "renderDisposition": "fallback",
       "row": 460,
       "surface": "citation",
-      "templatePath": "resolved.citation.template.template[0].contributor"
+      "templatePath": "resolved.citation.template.template[0].group[0].contributor"
     },
     {
       "comparisonEligibility": "comparable",
@@ -8484,7 +8484,7 @@
       "renderDisposition": "fallback",
       "row": 461,
       "surface": "citation",
-      "templatePath": "resolved.citation.template.template[0].contributor"
+      "templatePath": "resolved.citation.template.template[0].group[0].contributor"
     },
     {
       "comparisonEligibility": "comparable",
@@ -8682,7 +8682,7 @@
       "renderDisposition": "fallback",
       "row": 472,
       "surface": "citation",
-      "templatePath": "resolved.citation.template.template[1].title"
+      "templatePath": "resolved.citation.template.template[0].group[1].group[0].group[0].title"
     },
     {
       "comparisonEligibility": "comparable",
@@ -8700,7 +8700,7 @@
       "renderDisposition": "fallback",
       "row": 473,
       "surface": "citation",
-      "templatePath": "resolved.citation.template.template[1].title"
+      "templatePath": "resolved.citation.template.template[0].group[1].group[0].group[0].title"
     },
     {
       "comparisonEligibility": "comparable",
@@ -8754,7 +8754,7 @@
       "renderDisposition": "fallback",
       "row": 476,
       "surface": "citation",
-      "templatePath": "resolved.citation.template.template[0].contributor"
+      "templatePath": "resolved.citation.template.template[0].group[0].contributor"
     },
     {
       "comparisonEligibility": "comparable",
@@ -8844,7 +8844,7 @@
       "renderDisposition": "fallback",
       "row": 481,
       "surface": "citation",
-      "templatePath": "resolved.citation.template.template[1].title"
+      "templatePath": "resolved.citation.template.template[0].group[1].group[0].group[0].title"
     },
     {
       "comparisonEligibility": "comparable",
@@ -8880,7 +8880,7 @@
       "renderDisposition": "fallback",
       "row": 483,
       "surface": "citation",
-      "templatePath": "resolved.citation.template.template[0].contributor"
+      "templatePath": "resolved.citation.template.template[0].group[0].contributor"
     },
     {
       "comparisonEligibility": "comparable",
@@ -8898,7 +8898,7 @@
       "renderDisposition": "fallback",
       "row": 484,
       "surface": "citation",
-      "templatePath": "resolved.citation.template.template[0].contributor"
+      "templatePath": "resolved.citation.template.template[0].group[0].contributor"
     },
     {
       "comparisonEligibility": "comparable",
@@ -9096,7 +9096,7 @@
       "renderDisposition": "fallback",
       "row": 495,
       "surface": "citation",
-      "templatePath": "resolved.citation.template.template[1].title"
+      "templatePath": "resolved.citation.template.template[0].group[1].group[0].group[0].title"
     },
     {
       "comparisonEligibility": "comparable",
@@ -9114,7 +9114,7 @@
       "renderDisposition": "fallback",
       "row": 496,
       "surface": "citation",
-      "templatePath": "resolved.citation.template.template[1].title"
+      "templatePath": "resolved.citation.template.template[0].group[1].group[0].group[0].title"
     },
     {
       "comparisonEligibility": "comparable",
@@ -9168,7 +9168,7 @@
       "renderDisposition": "fallback",
       "row": 499,
       "surface": "citation",
-      "templatePath": "resolved.citation.template.template[0].contributor"
+      "templatePath": "resolved.citation.template.template[0].group[0].contributor"
     },
     {
       "comparisonEligibility": "comparable",
@@ -9186,7 +9186,7 @@
       "renderDisposition": "fallback",
       "row": 500,
       "surface": "citation",
-      "templatePath": "resolved.citation.template.template[0].contributor"
+      "templatePath": "resolved.citation.template.template[0].group[0].contributor"
     },
     {
       "comparisonEligibility": "comparable",
@@ -9348,7 +9348,7 @@
       "renderDisposition": "fallback",
       "row": 509,
       "surface": "citation",
-      "templatePath": "resolved.citation.template.template[1].title"
+      "templatePath": "resolved.citation.template.template[0].group[1].group[0].group[0].title"
     },
     {
       "comparisonEligibility": "comparable",
@@ -9366,7 +9366,7 @@
       "renderDisposition": "fallback",
       "row": 510,
       "surface": "citation",
-      "templatePath": "resolved.citation.template.template[1].title"
+      "templatePath": "resolved.citation.template.template[0].group[1].group[0].group[0].title"
     },
     {
       "comparisonEligibility": "comparable",
@@ -9420,7 +9420,7 @@
       "renderDisposition": "fallback",
       "row": 513,
       "surface": "citation",
-      "templatePath": "resolved.citation.template.template[0].contributor"
+      "templatePath": "resolved.citation.template.template[0].group[0].contributor"
     },
     {
       "comparisonEligibility": "comparable",
@@ -9438,7 +9438,7 @@
       "renderDisposition": "fallback",
       "row": 514,
       "surface": "citation",
-      "templatePath": "resolved.citation.template.template[0].contributor"
+      "templatePath": "resolved.citation.template.template[0].group[0].contributor"
     },
     {
       "comparisonEligibility": "comparable",
@@ -9600,7 +9600,7 @@
       "renderDisposition": "fallback",
       "row": 523,
       "surface": "citation",
-      "templatePath": "resolved.citation.template.template[1].title"
+      "templatePath": "resolved.citation.template.template[0].group[1].group[0].group[0].title"
     },
     {
       "comparisonEligibility": "comparable",
@@ -9618,7 +9618,7 @@
       "renderDisposition": "fallback",
       "row": 524,
       "surface": "citation",
-      "templatePath": "resolved.citation.template.template[1].title"
+      "templatePath": "resolved.citation.template.template[0].group[1].group[0].group[0].title"
     },
     {
       "comparisonEligibility": "comparable",
@@ -9672,7 +9672,7 @@
       "renderDisposition": "fallback",
       "row": 527,
       "surface": "citation",
-      "templatePath": "resolved.citation.template.template[0].contributor"
+      "templatePath": "resolved.citation.template.template[0].group[0].contributor"
     },
     {
       "comparisonEligibility": "comparable",
@@ -9780,7 +9780,7 @@
       "renderDisposition": "fallback",
       "row": 533,
       "surface": "citation",
-      "templatePath": "resolved.citation.template.template[1].title"
+      "templatePath": "resolved.citation.template.template[0].group[1].group[0].group[0].title"
     },
     {
       "comparisonEligibility": "comparable",
@@ -9798,7 +9798,7 @@
       "renderDisposition": "fallback",
       "row": 534,
       "surface": "citation",
-      "templatePath": "resolved.citation.template.template[0].contributor"
+      "templatePath": "resolved.citation.template.template[0].group[0].contributor"
     },
     {
       "comparisonEligibility": "comparable",
@@ -9870,7 +9870,7 @@
       "renderDisposition": "fallback",
       "row": 538,
       "surface": "citation",
-      "templatePath": "resolved.citation.template.template[1].title"
+      "templatePath": "resolved.citation.template.template[0].group[1].group[0].group[0].title"
     },
     {
       "comparisonEligibility": "comparable",
@@ -9888,7 +9888,7 @@
       "renderDisposition": "fallback",
       "row": 539,
       "surface": "citation",
-      "templatePath": "resolved.citation.template.template[0].contributor"
+      "templatePath": "resolved.citation.template.template[0].group[0].contributor"
     },
     {
       "comparisonEligibility": "comparable",
@@ -9978,7 +9978,7 @@
       "renderDisposition": "fallback",
       "row": 544,
       "surface": "citation",
-      "templatePath": "resolved.citation.template.template[1].title"
+      "templatePath": "resolved.citation.template.template[0].group[1].group[0].group[0].title"
     },
     {
       "comparisonEligibility": "comparable",
@@ -9996,7 +9996,7 @@
       "renderDisposition": "fallback",
       "row": 545,
       "surface": "citation",
-      "templatePath": "resolved.citation.template.template[0].contributor"
+      "templatePath": "resolved.citation.template.template[0].group[0].contributor"
     },
     {
       "comparisonEligibility": "comparable",
@@ -10068,7 +10068,7 @@
       "renderDisposition": "fallback",
       "row": 549,
       "surface": "citation",
-      "templatePath": "resolved.citation.template.template[1].title"
+      "templatePath": "resolved.citation.template.template[0].group[1].group[0].group[0].title"
     },
     {
       "comparisonEligibility": "comparable",
@@ -10104,7 +10104,7 @@
       "renderDisposition": "fallback",
       "row": 551,
       "surface": "citation",
-      "templatePath": "resolved.citation.template.template[0].contributor"
+      "templatePath": "resolved.citation.template.template[0].group[0].contributor"
     },
     {
       "comparisonEligibility": "comparable",
@@ -10212,7 +10212,7 @@
       "renderDisposition": "fallback",
       "row": 557,
       "surface": "citation",
-      "templatePath": "resolved.citation.template.template[1].title"
+      "templatePath": "resolved.citation.template.template[0].group[1].group[0].group[0].title"
     },
     {
       "comparisonEligibility": "comparable",
@@ -10248,7 +10248,7 @@
       "renderDisposition": "fallback",
       "row": 559,
       "surface": "citation",
-      "templatePath": "resolved.citation.template.template[0].contributor"
+      "templatePath": "resolved.citation.template.template[0].group[0].contributor"
     },
     {
       "comparisonEligibility": "comparable",
@@ -10338,7 +10338,7 @@
       "renderDisposition": "fallback",
       "row": 564,
       "surface": "citation",
-      "templatePath": "resolved.citation.template.template[1].title"
+      "templatePath": "resolved.citation.template.template[0].group[1].group[0].group[0].title"
     },
     {
       "comparisonEligibility": "comparable",

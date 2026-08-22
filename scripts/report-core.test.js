@@ -1498,10 +1498,9 @@ test('generateReport exposes the registered coverage audit on its corresponding 
   assert.equal(audit.outputGroups.some((group) => group.exactEvidence), true);
   assert.equal(audit.postChangeEvidence.status, 'measured');
   assert.equal(audit.postChangeEvidence.beforeExactParity.passed, 34);
-  // 60 -> 61: same-author collapse opt-in (csl26-ecfn / csl26-m11m) closes
-  // note-disambiguate-year-suffix, since chicago-shortened-notes-bibliography
-  // declares no `collapse` (its source CSL declares none either).
-  assert.equal(audit.postChangeEvidence.afterExactParity.passed, 61);
+  // Multivolume title/part routing and number-of-volumes support close the
+  // current shortened-notes residual cluster.
+  assert.equal(audit.postChangeEvidence.afterExactParity.passed, 81);
 });
 
 test('generateReport supports multi-style selected reports', {

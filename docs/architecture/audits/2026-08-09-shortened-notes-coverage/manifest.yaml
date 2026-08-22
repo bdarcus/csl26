@@ -5,7 +5,7 @@ surfaces:
   - citation
 expected-observations: 565
 source:
-  revision: 727dba21f0af95c9554d1dc35ee62ad0dddc9976
+  revision: 223c9b090f95083a7afe7f0c0ff0e364cec0e307
   worktree-clean: true
 style:
   id: chicago-shortened-notes-bibliography
@@ -17,13 +17,13 @@ style:
       sha256: 5ee7afd5c74169d8882747d8ab6ede8b84aa12cd1760e1f0f3f544198cd1be94
     - id: chicago-shortened-notes-bibliography-core
       path: crates/citum-schema-style/embedded/styles/chicago-shortened-notes-bibliography-core.yaml
-      sha256: dfc023a5388f31483039ff348b9cf2741110894935ceea4212b3ed04c258dc62
+      sha256: c7e179d38f5db9732eccccd837538ee01f90acc198568e35e5ab6c55ac1f5023
     - id: chicago-notes-18th
       path: crates/citum-schema-style/embedded/styles/chicago-notes-18th.yaml
-      sha256: 7ef31fca41da23ae8b7f7fb0579bedc01c4e8f4843729c7a5a3a3135b31efba5
+      sha256: ce8b1e5f31440b7904ccdcfe2c1c55d0af54399f0d40a800c6804478ff5a311a
     - id: chicago-18-base
       path: crates/citum-schema-style/embedded/styles/chicago-18-base.yaml
-      sha256: b93012ce48bd4bff58cabfdefd02d638f254f363914eba5203ef7b55c0805d2c
+      sha256: fa8cadf78de3efabec01f7e1d524d5f1e51b0682fab247b92f2c46f6352f2c74
 fixtures:
   references:
     id: references-expanded
