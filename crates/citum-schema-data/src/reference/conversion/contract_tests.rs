@@ -176,6 +176,65 @@ fn book_volume_title_note_field_survives_as_monograph_metadata() {
 }
 
 #[test]
+fn book_number_of_volumes_survives_legacy_conversion() {
+    let mut legacy = minimal_reference("book");
+    legacy.number_of_volumes = Some(csl_legacy::csl_json::StringOrNumber::String(
+        "3 vols. in 9 bks.".to_string(),
+    ));
+
+    let converted = InputReference::from(legacy);
+
+    assert_eq!(
+        converted.number_of_volumes(),
+        Some("3 vols. in 9 bks.".to_string())
+    );
+}
+
+#[test]
+fn book_part_and_volume_title_convert_to_nested_monograph_containers() {
+    let mut legacy = minimal_reference("book");
+    legacy.volume = Some(csl_legacy::csl_json::StringOrNumber::Number(2));
+    legacy.note = Some(
+        "volume-title: A Century of Wonder\npart-number: bk. 3\npart-title: The Scholarly Disciplines"
+            .to_string(),
+    );
+    legacy.parse_note_field_hacks();
+
+    let converted = InputReference::from(legacy);
+    let crate::reference::ClassExtension::Monograph(monograph) = converted.extension() else {
+        panic!("book must convert to a Monograph");
+    };
+    assert_eq!(
+        monograph.title.as_ref().map(ToString::to_string).as_deref(),
+        Some("The Scholarly Disciplines")
+    );
+    assert_eq!(
+        monograph.volume_title.as_deref(),
+        Some("A Century of Wonder")
+    );
+
+    let Some(crate::reference::WorkRelation::Embedded(parent)) = monograph.container.as_ref()
+    else {
+        panic!("volume title should become an embedded parent monograph");
+    };
+    assert_eq!(
+        parent.title().map(|title| title.to_string()).as_deref(),
+        Some("A Century of Wonder")
+    );
+    let crate::reference::ClassExtension::Monograph(parent_monograph) = parent.extension() else {
+        panic!("volume title parent should be a Monograph");
+    };
+    let Some(crate::reference::WorkRelation::Embedded(set)) = parent_monograph.container.as_ref()
+    else {
+        panic!("part plus volume title should preserve the outer set container");
+    };
+    assert_eq!(
+        set.title().map(|title| title.to_string()).as_deref(),
+        Some("Contract Test Title")
+    );
+}
+
+#[test]
 fn map_scale_and_dimensions_survive_as_monograph_metadata() {
     let mut legacy = minimal_reference("map");
     legacy.note = Some("dimensions: 128cm×84cm".to_string());

@@ -184,5 +184,8 @@ fn audio_visual_numbering(legacy: &csl_legacy::csl_json::Reference) -> Vec<Numbe
             value: chapter,
         });
     }
+    if let Some(number_of_volumes) = legacy_number_of_volumes(legacy) {
+        numbering.push(number_of_volumes);
+    }
     numbering
 }

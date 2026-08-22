@@ -37,7 +37,12 @@ fn project_root() -> PathBuf {
 }
 
 fn load_style(path: &Path) -> Style {
-    let bytes = fs::read(path).expect("style fixture should be readable");
+    let relative = path
+        .strip_prefix(project_root())
+        .expect("style path should be rooted at the repository")
+        .to_string_lossy();
+    let bytes =
+        fs::read(common::test_style_path(&relative)).expect("style fixture should be readable");
     Style::from_yaml_bytes(&bytes).expect("style fixture should parse")
 }
 
@@ -247,7 +252,7 @@ fn test_humanities_note_fixture_preserves_archive_and_interview_fields() {
     );
     assert_eq!(
         interview,
-        "Michel Foucault, Truth and power, interviewed by Alessandro Fontana, _Power/Knowledge: Selected Interviews and Other Writings_ (New York), Pantheon Books, 1977, 115.",
+        "Michel Foucault, “Truth and power,” interview by Alessandro Fontana, _Power/Knowledge: Selected Interviews and Other Writings_ (New York), Pantheon Books, 1977, 115.",
         "interview citation should include interviewer, container title, and locator"
     );
     assert_eq!(
@@ -557,12 +562,8 @@ fn given_chicago_notes_style_when_same_author_cluster_has_no_locator_then_render
     );
 }
 
-/// Same as above with a locator on the second item. The second clause's
-/// date/locator punctuation (`4 (2019), 257` rather than oracle
-/// `4 (2019): 257`) is an independent, pre-existing defect that reproduces
-/// on single-item citations too — unrelated to collapse and not ratified
-/// here (flagged while investigating `csl26-m11m`, deliberately out of
-/// scope for this spec).
+/// Same as above with a locator on the second item. Both clauses retain the
+/// Chicago colon before their locators while remaining independently rendered.
 #[test]
 fn given_chicago_notes_style_when_same_author_cluster_has_a_locator_then_each_item_renders_in_full()
 {
@@ -597,7 +598,7 @@ fn given_chicago_notes_style_when_same_author_cluster_has_a_locator_then_each_it
          _Annual Review of Climate Science_ 4 (2019): 55\u{2013}80, \
          https://doi.org/10.5555/arcs.2019.4.55; Maria Garcia, \u{201C}Methods \
          for Probabilistic Climate Attribution,\u{201D} _Annual Review of \
-         Climate Science_ 4 (2019), 257, https://doi.org/10.5555/arcs.2019.4.81.",
+         Climate Science_ 4 (2019): 257, https://doi.org/10.5555/arcs.2019.4.81.",
         "second item's locator does not corrupt the first item's rendering"
     );
 }
@@ -643,10 +644,10 @@ fn given_chicago_notes_style_when_a_cluster_repeats_the_same_id_then_each_occurr
     assert_eq!(
         rendered,
         "Maria Garcia, \u{201C}Methods for Robust Climate Attribution,\u{201D} \
-         _Annual Review of Climate Science_ 4 (2019), 10, \
+         _Annual Review of Climate Science_ 4 (2019): 10, \
          https://doi.org/10.5555/arcs.2019.4.55; Maria Garcia, \u{201C}Methods \
          for Robust Climate Attribution,\u{201D} _Annual Review of Climate \
-         Science_ 4 (2019), 20, https://doi.org/10.5555/arcs.2019.4.55.",
+         Science_ 4 (2019): 20, https://doi.org/10.5555/arcs.2019.4.55.",
         "duplicate-id items must each render their own full clause, not merge"
     );
 }

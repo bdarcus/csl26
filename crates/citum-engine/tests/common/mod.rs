@@ -285,9 +285,31 @@ pub fn project_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..")
 }
 
+/// Resolve production Chicago paths to pinned engine-test style fixtures.
+pub fn test_style_path(path: &str) -> PathBuf {
+    let fixture = match path {
+        "styles/embedded/chicago-author-date-18th.yaml" => {
+            Some("crates/citum-engine/tests/fixtures/styles/chicago-author-date-18th.yaml")
+        }
+        "styles/embedded/chicago-notes-18th.yaml" => {
+            Some("crates/citum-engine/tests/fixtures/styles/chicago-notes-18th.yaml")
+        }
+        "styles/embedded/chicago-shortened-notes-bibliography-core.yaml"
+        | "styles/embedded/chicago-shortened-notes-bibliography.yaml" => Some(
+            "crates/citum-engine/tests/fixtures/styles/chicago-shortened-notes-bibliography-core.yaml",
+        ),
+        "styles/embedded/taylor-and-francis-chicago-author-date.yaml"
+        | "styles/embedded/taylor-and-francis-chicago-author-date-core.yaml" => Some(
+            "crates/citum-engine/tests/fixtures/styles/taylor-and-francis-chicago-author-date.yaml",
+        ),
+        _ => None,
+    };
+    project_root().join(fixture.unwrap_or(path))
+}
+
 /// Load a YAML style relative to the repository root.
 pub fn load_style(path: &str) -> Style {
-    let style_path = project_root().join(path);
+    let style_path = test_style_path(path);
     let yaml = fs::read_to_string(&style_path)
         .unwrap_or_else(|err| panic!("failed to read style {}: {err}", style_path.display()));
     Style::from_yaml_str(&yaml)

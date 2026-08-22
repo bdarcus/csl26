@@ -1703,10 +1703,17 @@ smith2020:
             .unwrap()
             .parent()
             .unwrap()
-            .join("styles/embedded/chicago-notes-18th.yaml")
+            .join("crates/citum-engine/tests/fixtures/styles/chicago-notes-18th.yaml")
             .to_str()
             .unwrap()
             .to_string()
+    }
+
+    fn chicago_notes_style_without_ibid() -> String {
+        let yaml = std::fs::read_to_string(chicago_notes_path())
+            .expect("Chicago notes fixture should be readable");
+        let ibid = "  ibid:\n    note-start-text-case: capitalize-first\n    suffix: \"\"\n    delimiter: \", \"\n    template:\n    - message: term.ibid\n    - variable: locator\n      suffix: .\n";
+        yaml.replacen(ibid, "", 1)
     }
 
     fn make_citation_occ(id: &str, ref_id: &str, mode: Option<CitationMode>) -> CitationOccurrence {
@@ -1796,7 +1803,7 @@ smith2020:
     }
 
     #[test]
-    fn format_document_note_style_repeat_citations_produce_ibid() {
+    fn format_document_note_style_repeat_citations_use_subsequent_form() {
         let refs = RefsInput::Json(serde_json::json!({
             "smith1995": {
                 "id": "smith1995",
@@ -1809,7 +1816,7 @@ smith2020:
         }));
 
         let request = FormatDocumentRequest {
-            style: StyleInput::Path(chicago_notes_path()),
+            style: StyleInput::Yaml(chicago_notes_style_without_ibid()),
             style_overrides: None,
             locale: None,
             output_format: OutputFormatKind::Plain,
@@ -1836,15 +1843,13 @@ smith2020:
             first.contains("Smith"),
             "first citation should render full form: {first:?}"
         );
-        assert_eq!(
-            second.as_str(),
-            "Ibid.",
-            "immediate repeat should render as ibid: {second:?}"
+        assert!(
+            second.contains("Smith") && second.contains("A Great Book"),
+            "immediate repeat should render the subsequent form: {second:?}"
         );
-        assert_eq!(
-            third.as_str(),
-            "Ibid.",
-            "third repeat should also render as ibid: {third:?}"
+        assert!(
+            third.contains("Smith") && third.contains("A Great Book"),
+            "third repeat should also render the subsequent form: {third:?}"
         );
     }
 

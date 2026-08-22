@@ -1,0 +1,923 @@
+extends: chicago-18-base
+info:
+  title: Chicago Manual of Style 18th edition (notes without bibliography)
+  description: Chicago-style source citations (with Bluebook for legal citations), notes system
+    without bibliography, listing up to six authors in a full citation (CMOS18 13.23), displaying
+    number of volumes (CMOS18 14.20)
+  fields:
+  - anthropology
+  - communications
+  - geography
+  - history
+  - humanities
+  - law
+  - linguistics
+  - literature
+  - philosophy
+  - science
+  - sociology
+  - theology
+  source:
+    csl-id: http://www.zotero.org/styles/chicago-notes
+    adapted-by: citum-migrate
+    license: http://creativecommons.org/licenses/by-sa/3.0/
+    original-authors:
+    - name: Andrew Dunning
+      uri: https://orcid.org/0000-0003-0464-5036
+    links:
+    - href: http://www.zotero.org/styles/chicago-notes
+      rel: self
+    - href: http://www.zotero.org/styles/chicago-notes-bibliography
+      rel: template
+    - href: https://www.chicagomanualofstyle.org/
+      rel: documentation
+  short-name: "Chicago Notes"
+  edition: "18th edition"
+options:
+  messages:
+    pattern.chicago-episode: "episode {$number}"
+    pattern.chicago-of-number: "of {$number}"
+  date-fallback: standard
+  dates:
+    range-format: expanded
+  # multilingual, page-range-format, dates, punctuation-in-quote, and
+  # contributors.demote-non-dropping-particle are inherited from chicago-18-base.
+  processing: note
+  substitute: editor-translator-short
+  contributors:
+    and: text
+    delimiter-precedes-last: contextual
+  titles: chicago
+citation:
+  delimiter: ""
+  subsequent:
+    options:
+      contributors:
+        name-form: family-only
+    type-variants:
+      article-journal:
+        add:
+          - component:
+              variable: locator
+              prefix: ', '
+            after:
+              title: primary
+      book:
+        add:
+          - component:
+              variable: locator
+              prefix: ', '
+            after:
+              title: primary
+      chapter:
+        add:
+          - component:
+              variable: locator
+              prefix: ', '
+            after:
+              title: primary
+    template:
+    - contributor: author
+      form: short
+    - title: primary
+      form: short
+      prefix: ", "
+  type-variants:
+    article-journal:
+    - contributor: author
+      form: long
+      shorten:
+        min: 7
+        use-first: 3
+        and-others: et-al
+    - title: primary
+      prefix: ", "
+    - contributor: translator
+      form: long
+      label: {term: translator, form: short, placement: prefix}
+      prefix: ", "
+    - group:
+      - title: parent-serial
+        prefix: ", "
+      - variable: publisher-place
+        wrap:
+          punctuation: parentheses
+        prefix: " "
+      - number: volume
+        prefix: " "
+      - number: issue
+        label-form: short
+        prefix: ", "
+      - date: issued
+        form: year
+        wrap:
+          punctuation: parentheses
+        prefix: " "
+      - number: pages
+        prefix: ": "
+      delimiter: ""
+    - variable: locator
+      prefix: ": "
+    - variable: doi
+      prefix: ", https://doi.org/"
+    article-magazine:
+    - contributor: author
+      form: long
+      shorten:
+        min: 8
+        use-first: 3
+        and-others: et-al
+    - group:
+      - title: primary
+        prefix: ", "
+      render-when:
+        field-present: title
+      delimiter: ''
+    - group:
+      - title: parent-serial
+      - variable: section
+        text-case: title
+        prefix: ", "
+      - date: issued
+        form: month-abbr-day-year
+        prefix: ", "
+      delimiter: ""
+      render-when:
+        field-absent: title
+    - group:
+      - title: parent-serial
+        prefix: ", "
+      - variable: publisher-place
+        wrap:
+          punctuation: parentheses
+        prefix: " "
+      - number: volume
+        prefix: " "
+      - number: issue
+        label-form: short
+        prefix: ", "
+      - date: issued
+        form: year
+        wrap:
+          punctuation: parentheses
+        prefix: " "
+      - number: pages
+        prefix: ": "
+      delimiter: ""
+      render-when:
+        field-present: title
+    - variable: doi
+      prefix: ", https://doi.org/"
+    article-newspaper:
+    - contributor: author
+      form: long
+      shorten:
+        min: 8
+        use-first: 3
+        and-others: et-al
+    - title: primary
+      text-case: title
+      prefix: ", "
+    - message: pattern.chicago-review-of
+      args:
+        genre:
+          variable: raw-genre
+      prefix: ", "
+    - message: pattern.chicago-by
+      args:
+        name:
+          contributor: reviewed-author
+          form: long
+      prefix: " "
+    - variable: event-title
+      prefix: ", "
+    - variable: event-place
+      prefix: ", "
+    - variable: section
+      prefix: ", "
+    - group:
+      - title: parent-serial
+        prefix: ", "
+      - variable: publisher-place
+        wrap:
+          punctuation: parentheses
+        prefix: " "
+      - number: volume
+        prefix: " "
+      - number: issue
+        label-form: short
+        prefix: ", "
+      - date: issued
+        form: year
+        wrap:
+          punctuation: parentheses
+        prefix: " "
+      - number: pages
+        prefix: ": "
+      delimiter: ""
+    - variable: doi
+      prefix: ", https://doi.org/"
+    - variable: url
+      prefix: ", "
+    book:
+    - contributor: author
+      form: long
+      shorten:
+        min: 8
+        use-first: 3
+        and-others: et-al
+    - group:
+      - title: primary
+        prefix: ", "
+      render-when:
+        field-absent: volume-or-issue
+    - group:
+      - group:
+        - title: collection-title
+          prefix: ""
+          text-case: title
+        - number: volume
+          label-form: short
+          prefix: ", "
+        - title: parent-monograph
+          prefix: ", "
+          text-case: title
+        - number: part-number
+          label-form: short
+          prefix: ", "
+        - group:
+          - variable: volume-title
+            emph: true
+            prefix: ", "
+            text-case: title
+          render-when:
+            field-present: volume-title
+            field-absent: part-number-non-numeric
+        - group:
+          - title: primary
+            prefix: ", "
+            text-case: title
+          render-when:
+            field-absent: volume-title
+        - group:
+          - title: primary
+            prefix: ", "
+            text-case: title
+          render-when:
+            field-present: part-number-non-numeric
+        - group:
+          - group:
+            - title: primary
+              prefix: ", "
+              text-case: title
+            render-when:
+              field-absent: volume-title
+          render-when:
+            field-present: part-number-numeric
+        delimiter: ""
+        render-when:
+          field-present: collection-title
+      - group:
+        - group:
+          - title: parent-monograph
+            prefix: ""
+            text-case: title
+          - number: volume
+            label-form: short
+            prefix: ", "
+          - message: pattern.chicago-of-number
+            args:
+              number:
+                number: number-of-volumes
+            prefix: " "
+          - group:
+            - variable: volume-title
+              emph: true
+              prefix: ", "
+              text-case: title
+            render-when:
+              field-present: volume-title
+          - group:
+            - title: primary
+              prefix: ", "
+              text-case: title
+            render-when:
+              field-absent: volume-title
+          delimiter: ""
+          render-when:
+            field-absent: part-number
+        - group:
+          - title: parent-monograph
+            prefix: ""
+            text-case: title
+          - number: volume
+            label-form: short
+            prefix: ", "
+          - title: primary
+            prefix: ", "
+            text-case: title
+          - number: part-number
+            label-form: short
+            prefix: ", "
+          delimiter: ""
+          render-when:
+            field-present: part-number-non-numeric
+        - group:
+          - group:
+            - variable: volume-title
+              emph: true
+              prefix: ", "
+              text-case: title
+            render-when:
+              field-present: volume-title
+          - group:
+            - title: primary
+              prefix: ", "
+              text-case: title
+            render-when:
+              field-absent: volume-title
+          render-when:
+            field-present: part-number-numeric
+        delimiter: ""
+        render-when:
+          field-absent: collection-title
+      delimiter: ""
+      render-when:
+        field-present: volume-or-issue
+    - contributor: translator
+      form: long
+      label: {term: translator, form: short, placement: prefix}
+      prefix: ", "
+    - group:
+      - date: original-published
+        form: year
+        wrap:
+          punctuation: parentheses
+      - variable: original-publisher
+        prefix: " "
+      - variable: original-publisher-place
+        prefix: ", "
+      delimiter: ""
+      prefix: " "
+    - group:
+      - group:
+        - title: collection-title
+        - date: issued
+          form: year
+          wrap:
+            punctuation: parentheses
+          prefix: " "
+        delimiter: ""
+        prefix: ", "
+        render-when:
+          field-present: collection-title
+      render-when:
+        field-absent: volume-or-issue
+    - group:
+      - group:
+        - variable: genre
+        - variable: publisher
+        - date: issued
+          form: year
+        delimiter: ", "
+        wrap:
+          punctuation: parentheses
+        prefix: " "
+        render-when:
+          field-absent: number-of-volumes
+      - group:
+        - group:
+          - group:
+            - contributor: editor
+              form: long
+              name-order: given-first
+              label: {term: editor, form: short, placement: prefix}
+              prefix: ", "
+            render-when:
+              field-present: editor
+          - number: number-of-volumes
+            label-form: short
+            prefix: ", "
+          - group:
+            - variable: genre
+            - variable: publisher
+            - date: issued
+              form: year
+            delimiter: ", "
+            wrap:
+              punctuation: parentheses
+            prefix: " "
+          delimiter: ""
+          render-when:
+            field-absent: volume-or-issue
+        - group:
+          - variable: genre
+          - variable: publisher
+          - date: issued
+            form: year
+          delimiter: ", "
+          wrap:
+            punctuation: parentheses
+          prefix: " "
+          render-when:
+            field-present: volume-or-issue
+        render-when:
+          field-present: number-of-volumes
+    - variable: locator
+      prefix: ", "
+    broadcast:
+    - contributor: author
+      form: long
+      shorten:
+        min: 8
+        use-first: 3
+        and-others: et-al
+    - title: parent-serial
+      prefix: ", "
+    - group:
+      - message: pattern.chicago-episode
+        args:
+          number:
+            variable: number
+      render-when:
+        field-absent: genre
+      prefix: ", "
+    - group:
+      - variable: genre
+        text-case: capitalize-first
+      - variable: number
+      delimiter: " "
+      render-when:
+        field-present: genre
+      prefix: ", "
+    - title: primary
+      text-case: title
+      wrap:
+        punctuation: quotes
+      prefix: ", "
+    - message: pattern.chicago-written-by
+      args:
+        name:
+          contributor: writer
+          form: long
+          name-order: given-first
+      prefix: ", "
+    - message: pattern.chicago-with
+      args:
+        name:
+          contributor: performer
+          form: long
+          name-order: given-first
+      prefix: ", "
+    - message: pattern.chicago-aired-date
+      args:
+        date:
+          group:
+          - date: issued
+            form: month-day
+          - date: issued
+            form: year
+            prefix: ", "
+          delimiter: ""
+      prefix: ", "
+    - message: pattern.chicago-on
+      args:
+        source:
+          variable: publisher
+      prefix: ", "
+    - variable: dimensions
+      prefix: ", "
+    - variable: raw-medium
+      prefix: ", "
+    chapter:
+    - contributor: author
+      form: long
+      shorten:
+        min: 8
+        use-first: 3
+        and-others: et-al
+    - title: primary
+      prefix: ", "
+      text-case: title
+    - contributor: translator
+      form: long
+      label: {term: translator, form: short, placement: prefix}
+      prefix: ", "
+    - group:
+      - message: pattern.in-container
+        args:
+          container:
+            title: parent-monograph
+        prefix: ", "
+      - contributor: editor
+        form: long
+        label: {term: editor, form: short, placement: prefix}
+        prefix: ", "
+      - group:
+        - variable: publisher
+        - date: issued
+          form: year
+        delimiter: ", "
+        wrap:
+          punctuation: parentheses
+        prefix: " "
+      delimiter: ""
+    - variable: locator
+      prefix: ", "
+    - variable: doi
+      prefix: ", https://doi.org/"
+    dataset:
+    - contributor: author
+      form: long
+      shorten:
+        min: 8
+        use-first: 3
+        and-others: et-al
+    - title: primary
+      prefix: ", "
+    - group:
+      - variable: genre
+      - variable: publisher
+      - date: issued
+        form: year
+      delimiter: ", "
+      wrap:
+        punctuation: parentheses
+      prefix: " "
+    - variable: publisher
+      prefix: ", "
+    - variable: url
+      prefix: ", "
+    entry-encyclopedia:
+    - contributor: author
+      form: long
+      shorten:
+        min: 8
+        use-first: 3
+        and-others: et-al
+    - title: primary
+      prefix: ", "
+    - group:
+      - message: pattern.in-container
+        args:
+          container:
+            title: parent-monograph
+        prefix: ", "
+      - message: pattern.in-container
+        args:
+          container:
+            title: parent-serial
+        prefix: ", "
+      - number: volume
+        label-form: short
+        prefix: ", "
+      - contributor: editor
+        form: long
+        label: {term: editor, form: short, placement: prefix}
+        prefix: ", "
+      - group:
+        - variable: publisher
+        - date: issued
+          form: year
+        delimiter: ", "
+        wrap:
+          punctuation: parentheses
+        prefix: " "
+      delimiter: ""
+    - variable: doi
+      prefix: ", https://doi.org/"
+    collection:
+    - title: primary
+      text-case: title
+    - variable: archive-collection
+      prefix: ", "
+    - variable: archive-name
+      prefix: ", "
+    interview:
+    - contributor: author
+      form: long
+      shorten:
+        min: 8
+        use-first: 3
+        and-others: et-al
+    - group:
+      - title: primary
+        wrap:
+          punctuation: quotes
+        prefix: ", "
+      - group:
+        - variable: raw-genre
+        - message: pattern.chicago-by
+          args:
+            name:
+              contributor: interviewer
+              form: long
+        delimiter: " "
+        render-when:
+          field-present: genre
+        prefix: ", "
+      - group:
+        - message: pattern.chicago-interview-by
+          args:
+            name:
+              contributor: interviewer
+              form: long
+        render-when:
+          field-absent: genre
+        prefix: ", "
+      - title: parent-monograph
+        prefix: ", "
+      - variable: publisher-place
+        wrap:
+          punctuation: parentheses
+        prefix: " "
+      - variable: publisher
+        prefix: ", "
+      - date: issued
+        form: full
+        prefix: ", "
+      - variable: locator
+        prefix: ", "
+      - variable: url
+        prefix: ", "
+      delimiter: ""
+      render-when:
+        field-present: title
+    - group:
+      - message: pattern.chicago-interview-by
+        args:
+          name:
+            contributor: interviewer
+            form: long
+        prefix: ", "
+      - variable: event-place
+        prefix: ", "
+      - date: event-date
+        form: full
+        prefix: ", "
+      - group:
+        - variable: status
+        - date: issued
+          form: month-day
+          prefix: " "
+        - date: issued
+          form: year
+          prefix: ", "
+        delimiter: ""
+        prefix: ", "
+      - variable: raw-medium
+        prefix: ", "
+      - variable: url
+        prefix: ", "
+      - variable: locator
+        prefix: ", "
+      delimiter: ""
+      render-when:
+        field-absent: title
+    legal-case:
+    - contributor: author
+      form: long
+      shorten:
+        min: 8
+        use-first: 3
+        and-others: et-al
+    - title: primary
+      prefix: ", "
+    - group:
+      - number: volume
+      - variable: reporter
+      - number: pages
+      delimiter: " "
+      prefix: ", "
+    - group:
+      - variable: authority
+      - date: issued
+        form: year
+      delimiter: " "
+      wrap:
+        punctuation: parentheses
+      prefix: " "
+    manuscript:
+    - contributor: author
+      form: long
+      shorten:
+        min: 8
+        use-first: 3
+        and-others: et-al
+    - title: primary
+      prefix: ", "
+      wrap:
+        punctuation: quotes
+    - variable: genre
+      prefix: ", "
+    - date: issued
+      form: year
+      prefix: ", "
+    - variable: archive-collection
+      prefix: ", "
+    - variable: archive-location
+      prefix: ", "
+    - variable: archive-name
+      prefix: ", "
+    - variable: archive-place
+      prefix: ", "
+    - group:
+      - number: pages
+        prefix: ": "
+      delimiter: ""
+    - variable: doi
+      prefix: ", https://doi.org/"
+    motion-picture:
+    - contributor: author
+      form: long
+      shorten:
+        min: 8
+        use-first: 3
+        and-others: et-al
+    - title: primary
+      prefix: ", "
+    - variable: genre
+      prefix: ", "
+    - contributor: director
+      form: verb
+      prefix: ", "
+    - date: issued
+      form: year
+      prefix: ", "
+    - variable: medium
+      prefix: ", "
+    paper-conference:
+      remove:
+        - match:
+            group:
+              - variable: genre
+              - variable: publisher
+              - date: issued
+                form: year
+    patent:
+    - contributor: author
+      form: long
+      shorten:
+        min: 8
+        use-first: 3
+        and-others: et-al
+    - title: primary
+      prefix: ", "
+    - group:
+      - message: pattern.patent-number
+        args:
+          number:
+            number: number
+        text-case: capitalize-first
+        prefix: ", "
+    - message: pattern.issued-date
+      args:
+        date:
+          group:
+            - date: issued
+              form: month-day
+            - date: issued
+              form: year
+              prefix: ", "
+      prefix: ", "
+    personal-communication:
+    - contributor: author
+      form: long
+      shorten:
+        min: 8
+        use-first: 3
+        and-others: et-al
+    - group:
+      - title: primary
+        prefix: ", "
+      - variable: archive
+        prefix: ""
+      - date: issued
+        form: month-day
+        prefix: ", "
+      - message: pattern.chicago-to
+        args:
+          name:
+            contributor: recipient
+            form: long
+        prefix: ", "
+      delimiter: ""
+      render-when:
+        field-present: title
+    - group:
+      - message: pattern.chicago-to
+        args:
+          name:
+            contributor: recipient
+            form: long
+        prefix: " "
+      - date: issued
+        form: month-day
+        prefix: ", "
+      - date: issued
+        form: year
+        prefix: ", "
+      - variable: archive-location
+        prefix: ", "
+      - variable: archive-collection
+        prefix: ", "
+      - variable: archive-name
+        prefix: ", "
+      delimiter: ""
+      render-when:
+        field-absent: title
+    report:
+      extends: dataset
+      remove:
+        - match:
+            variable: publisher
+        - match:
+            variable: url
+    thesis:
+      extends: dataset
+      remove:
+        - match:
+            variable: publisher
+        - match:
+            variable: url
+    webpage:
+      extends: dataset
+      remove:
+        - match:
+            variable: publisher
+  template:
+  - contributor: author
+    form: long
+    shorten:
+      min: 8
+      use-first: 3
+      and-others: et-al
+  - title: primary
+    prefix: ", "
+  - group:
+    - title: parent-serial
+      prefix: ", "
+    - variable: publisher-place
+      wrap:
+        punctuation: parentheses
+      prefix: " "
+    - number: volume
+      prefix: " "
+    - number: issue
+      label-form: short
+      prefix: ", "
+    - date: issued
+      form: year
+      wrap:
+        punctuation: parentheses
+      prefix: " "
+    - number: pages
+      prefix: ": "
+    delimiter: ""
+  - group:
+    - message: pattern.in-container
+      args:
+        container:
+          title: parent-monograph
+      prefix: ", "
+    - message: pattern.in-container
+      args:
+        container:
+          title: parent-serial
+      prefix: ", "
+    - number: volume
+      label-form: short
+      prefix: ", "
+    - contributor: editor
+      form: long
+      label: {term: editor, form: short, placement: prefix}
+      prefix: ", "
+    - group:
+      - variable: publisher
+      - date: issued
+        form: year
+      delimiter: ", "
+      wrap:
+        punctuation: parentheses
+      prefix: " "
+    delimiter: ""
+  - group:
+    - variable: genre
+    - variable: publisher
+    - date: issued
+      form: year
+    delimiter: ", "
+    wrap:
+      punctuation: parentheses
+    prefix: " "
+  - group:
+    - title: parent-serial
+    - date: issued
+      form: year
+    - number: pages
+    delimiter: ", "
+    prefix: ", "
+  - variable: doi
+    prefix: ", https://doi.org/"
+  suffix: .
+  multi-cite-delimiter: "; "

@@ -488,13 +488,12 @@ fn given_example_chicago_note_document_when_rendered_as_plain_text_then_integral
         )
         .expect("document should render");
 
-    // Body anchors and note bodies are distinct rendered surfaces. Smith is
-    // introduced first in the manual note, so later body anchors use the
-    // surname anchor; Kuhn has no prior integral-name mention, so its body
-    // anchor uses the full note-style long form.
+    // Body anchors and note bodies are distinct rendered surfaces. The first
+    // body mention uses the full shortened-note name form, the next one uses
+    // the surname anchor, and Kuhn has no prior integral-name mention.
     assert_output_has_line(
         &output,
-        "First narrative mention: Smith[^citum-auto-5] surveys the broader literature.",
+        "First narrative mention: Smith, Anthony D.[^citum-auto-5] surveys the broader literature.",
         "Chicago note output should keep Smith's first narrative anchor",
     );
     assert_output_has_line(
@@ -504,7 +503,7 @@ fn given_example_chicago_note_document_when_rendered_as_plain_text_then_integral
     );
     assert_output_has_line(
         &output,
-        "Integral with locator: Thomas S. Kuhn[^citum-auto-7] argues...",
+        "Integral with locator: Kuhn, Thomas S.[^citum-auto-7] argues...",
         "Chicago note output should keep Kuhn's narrative anchor",
     );
 
@@ -725,10 +724,16 @@ fn given_locale_specific_ibid_term_when_the_style_has_no_ibid_override_then_the_
 
 fn given_explicit_style_ibid_suffix_when_locale_also_defines_ibid_then_the_style_suffix_wins() {
     let mut style = load_style("styles/embedded/chicago-notes-18th.yaml").into_resolved();
-    if let Some(citation) = style.citation.as_mut()
-        && let Some(ibid) = citation.ibid.as_mut()
-    {
-        ibid.suffix = Some("IBIDX".into());
+    if let Some(citation) = style.citation.as_mut() {
+        // The embedded Chicago 18 notes style intentionally has no ibid
+        // override. Inject one here so this test remains a generic precedence
+        // check rather than making the real style carry the obsolete branch.
+        citation.ibid = Some(Box::new(
+            serde_yaml::from_str::<CitationSpec>(
+                "template:\n- message: term.ibid\nsuffix: IBIDX\n",
+            )
+            .expect("ibid test overlay should parse"),
+        ));
     }
 
     let mut locale = Locale::en_us();

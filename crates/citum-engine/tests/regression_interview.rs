@@ -117,12 +117,10 @@ fn test_chicago_author_date_interview_moves_period_inside_quote() {
     let processor = Processor::new(style, bib);
     let result = processor.render_bibliography();
 
-    // The title-first ordering (rather than author-first) is a separate,
-    // already-tracked defect (bean csl26-4q7v) in the `interview:` variant's
-    // `render-when: field-present: title` gating — unrelated to, and not
-    // fixed by, the punctuation-in-quote join-boundary fix this test guards.
+    // Chicago's interview bibliography variant routes the interviewer record
+    // through the author-first branch before rendering the title and date.
     assert_eq!(
         result,
-        "\u{201C}The Future of Artificial Intelligence.\u{201D} 2023. Interview by Stephen Colbert. November 10."
+        "Bengio, Yoshua. 2023. \u{201C}The Future of Artificial Intelligence.\u{201D} Interview by Stephen Colbert. November 10."
     );
 }

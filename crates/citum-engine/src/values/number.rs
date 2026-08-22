@@ -24,6 +24,7 @@ fn resolve_number_value(
 ) -> Option<String> {
     match number {
         NumberVariable::Volume => reference.volume().map(|v| v.to_string()),
+        NumberVariable::NumberOfVolumes => reference.number_of_volumes(),
         NumberVariable::Issue => reference.issue().map(|v| v.to_string()),
         NumberVariable::Pages => {
             let suppress = !show_with_locator
@@ -115,9 +116,26 @@ fn resolve_number_label<F: crate::render::format::OutputFormat<Output = String>>
     options: &RenderOptions<'_>,
     fmt: &F,
 ) -> Option<String> {
+    // Chicago labels only bare numeric part numbers. Exported values such as
+    // `bk. 2` already carry their own label and must not become `pt. bk. 2`.
+    if matches!(number, NumberVariable::PartNumber) && !is_numeric(value) {
+        return None;
+    }
     if let Some(locator_type) = number_var_to_locator_type(number) {
-        // Check pluralization
-        let plural = check_plural(value, &locator_type);
+        // `number-of-volumes` is a count, so a bare value greater than one
+        // selects the plural volume label. Other volume values are
+        // identifiers (`vol. 2`) and retain the ordinary locator heuristic.
+        let plural = if matches!(number, NumberVariable::NumberOfVolumes) {
+            let Ok(count) = value.trim().parse::<u64>() else {
+                // citeproc-js labels this variable only when its value is
+                // numeric; values such as `3 vols. in 9 bks.` are already
+                // human-readable and must remain unlabeled.
+                return None;
+            };
+            count != 1
+        } else {
+            check_plural(value, &locator_type)
+        };
         let term_form = label_form_to_term_form(label_form);
 
         options
@@ -250,14 +268,14 @@ impl ComponentValues for TemplateNumber {
             };
             let value_is_numeric = is_numeric(&value);
 
-            let value = if self.form == Some(NumberForm::Ordinal) {
+            let mut value = if self.form == Some(NumberForm::Ordinal) {
                 render_ordinal(value, options)
             } else {
                 value
             };
 
             // Handle label if label_form is specified
-            let label_prefix = if let Some(label_form) = &self.label_form {
+            let mut label_prefix = if let Some(label_form) = &self.label_form {
                 resolve_number_label(
                     &self.number,
                     label_form,
@@ -270,6 +288,16 @@ impl ComponentValues for TemplateNumber {
             } else {
                 None
             };
+
+            // CSL renders `number-of-volumes` as a count followed by its
+            // pluralized label (`2 vols.`), unlike locator-style numbers
+            // whose labels precede the value (`vol. 2`).
+            if matches!(self.number, NumberVariable::NumberOfVolumes)
+                && let Some(label) = label_prefix.take()
+            {
+                value.push(' ');
+                value.push_str(label.trim());
+            }
 
             // `when_numeric` resolves this number's locale term (GB/T 7714's
             // `edition`/`volume` general terms) and wraps the value with it —
@@ -325,7 +353,7 @@ impl ComponentValues for TemplateNumber {
 /// (`"新1版"`) or contains none (`"修订版"`, `"美国卷"`, `"第二卷"` — the last
 /// uses a CJK numeral character, not an ASCII digit, and so is treated as an
 /// already-complete label rather than a bare number to wrap.
-fn is_numeric(value: &str) -> bool {
+pub(crate) fn is_numeric(value: &str) -> bool {
     let value = value.trim();
     let mut saw_digit = false;
     for ch in value.chars() {

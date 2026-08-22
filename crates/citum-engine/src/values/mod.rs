@@ -115,6 +115,17 @@ fn condition_field_present(
         TemplateConditionField::VolumeOrIssue => {
             reference.volume().is_some() || reference.issue().is_some()
         }
+        TemplateConditionField::PartNumber => reference
+            .numbering_value(&citum_schema::reference::NumberingType::Part)
+            .is_some(),
+        TemplateConditionField::PartNumberNumeric => reference
+            .numbering_value(&citum_schema::reference::NumberingType::Part)
+            .is_some_and(|value| number::is_numeric(&value)),
+        TemplateConditionField::PartNumberNonNumeric => reference
+            .numbering_value(&citum_schema::reference::NumberingType::Part)
+            .is_some_and(|value| !number::is_numeric(&value)),
+        TemplateConditionField::NumberOfVolumes => reference.number_of_volumes().is_some(),
+        TemplateConditionField::VolumeTitle => reference.volume_title().is_some(),
     }
 }
 

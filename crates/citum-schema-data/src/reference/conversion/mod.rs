@@ -514,6 +514,16 @@ fn legacy_extra_str(legacy: &csl_legacy::csl_json::Reference, key: &str) -> Opti
         .map(str::to_string)
 }
 
+/// Preserve CSL's `number-of-volumes` field in the canonical numbering list.
+pub(super) fn legacy_number_of_volumes(
+    legacy: &csl_legacy::csl_json::Reference,
+) -> Option<Numbering> {
+    legacy.number_of_volumes.as_ref().map(|number| Numbering {
+        r#type: NumberingType::Custom("number-of-volumes".to_string()),
+        value: number.to_string(),
+    })
+}
+
 fn legacy_extra_date(legacy: &csl_legacy::csl_json::Reference, key: &str) -> Option<DateValue> {
     legacy
         .extra
