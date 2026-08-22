@@ -47,6 +47,31 @@ citation:
 }
 
 #[test]
+fn multivolume_part_number_conditions_parse() {
+    let yaml = r#"
+group:
+  - number: part-number
+render-when:
+  field-present: part-number-numeric
+"#;
+    let component: TemplateComponent =
+        serde_yaml::from_str(yaml).expect("part-number condition should parse");
+    assert!(matches!(
+        component,
+        TemplateComponent::Group(group) if group.render_when.is_some()
+    ));
+
+    let nonnumeric = r#"
+group:
+  - number: part-number
+render-when:
+  field-present: part-number-non-numeric
+"#;
+    let _: TemplateComponent =
+        serde_yaml::from_str(nonnumeric).expect("nonnumeric condition should parse");
+}
+
+#[test]
 fn supplementary_identifier_template_components_parse() {
     let component: TemplateComponent = serde_yaml::from_str(
         r#"

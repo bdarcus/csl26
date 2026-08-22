@@ -1221,6 +1221,11 @@ impl InputReference {
         }
     }
 
+    /// Return the total number of volumes in a multi-volume work.
+    pub fn number_of_volumes(&self) -> Option<String> {
+        self.find_numbering(NumberingType::Custom("number-of-volumes".to_string()))
+    }
+
     /// Return the collection number (series number).
     pub fn collection_number(&self) -> Option<String> {
         match &self.extension {

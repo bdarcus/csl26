@@ -1856,6 +1856,16 @@ pub enum TemplateConditionField {
     /// assigned to an issue, which need a full publication date instead of
     /// a bare year.
     VolumeOrIssue,
+    /// The document-level part number used by multivolume and multipart works.
+    PartNumber,
+    /// A document-level part number whose value is a bare numeric value.
+    PartNumberNumeric,
+    /// A document-level part number whose value already contains a textual label.
+    PartNumberNonNumeric,
+    /// The total number of volumes in a multivolume work.
+    NumberOfVolumes,
+    /// The title of an individual volume within a multivolume work.
+    VolumeTitle,
 }
 
 /// Literal text or an explicit semantic punctuation mark.

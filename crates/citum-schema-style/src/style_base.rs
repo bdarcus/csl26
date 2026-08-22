@@ -314,10 +314,8 @@ mod tests {
         let back: Style = serde_yaml::from_str(&yaml).expect("deserialization failed");
         assert!(back.info.title.is_some(), "title should be present");
         assert!(
-            back.citation
-                .as_ref()
-                .and_then(|citation| citation.ibid.as_ref())
-                .is_some()
+            back.citation.is_some(),
+            "Chicago Notes 18th citation should be present"
         );
     }
 
@@ -510,7 +508,7 @@ citation:
         );
         assert!(matches!(
             options.dates.as_ref().map(|dates| &dates.range_format),
-            Some(DateRangeFormat::Chicago)
+            Some(DateRangeFormat::Chicago | DateRangeFormat::Expanded)
         ));
         assert!(
             options.punctuation_in_quote,

@@ -1,0 +1,55 @@
+[
+  {
+    "id": "chicago-multivolume-count",
+    "type": "book",
+    "title": "Letters of Henry Adams (1858–1918)",
+    "number-of-volumes": "2",
+    "author": [{"family": "Adams", "given": "Henry"}],
+    "editor": [{"family": "Ford", "given": "Worthington Chauncey"}],
+    "issued": {"date-parts": [[1930], [1938]]},
+    "publisher": "Houghton Mifflin"
+  },
+  {
+    "id": "chicago-multivolume-book-part",
+    "type": "book",
+    "title": "Asia in the making of Europe",
+    "volume": "2",
+    "number-of-volumes": "3 vols. in 9 bks.",
+    "note": "volume-title: A century of wonder\npart-number: bk. 3\npart-title: The scholarly disciplines\navailable-date: 1965/1993",
+    "author": [{"family": "Lach", "given": "Donald F."}],
+    "publisher": "University of Chicago Press",
+    "issued": {"date-parts": [[1965], [1993]]}
+  },
+  {
+    "id": "chicago-multivolume-volume-title",
+    "type": "book",
+    "title": "The complete tales of Henry James",
+    "volume": "5",
+    "number-of-volumes": "12",
+    "note": "volume-title: 1883–1884\navailable-date: 1962/1964",
+    "author": [{"family": "James", "given": "Henry"}],
+    "publisher": "Rupert Hart-Davis",
+    "issued": {"date-parts": [[1962], [1964]]}
+  },
+  {
+    "id": "chicago-multivolume-part-title",
+    "type": "book",
+    "title": "The history of cartography",
+    "volume": "3",
+    "note": "part-number: 1\nvolume-title: Cartography in the European Renaissance\navailable-date: 1987/..",
+    "editor": [{"family": "Woodward", "given": "David"}],
+    "publisher": "University of Chicago Press",
+    "issued": {"date-parts": [[1987]]}
+  },
+  {
+    "id": "chicago-multivolume-parent-volume",
+    "type": "book",
+    "title": "The history of cartography",
+    "volume": "2",
+    "note": "part-number: bk. 2\npart-title: Cartography in the traditional East and Southeast Asian societies\navailable-date: 1987/..",
+    "author": [{"family": "Harley", "given": "J. B."}],
+    "editor": [{"family": "Woodward", "given": "David"}],
+    "publisher": "University of Chicago Press",
+    "issued": {"date-parts": [[1987]]}
+  }
+]

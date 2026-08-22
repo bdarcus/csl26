@@ -1,0 +1,377 @@
+info:
+  title: 'Taylor & Francis Journals Standard Reference Style Guide: Chicago'
+  id: taylor-and-francis-chicago-author-date-core
+  description: 'Taylor & Francis Journals adaptation of Chicago-style, author-date system, using style
+    presets.'
+
+extends: chicago-author-date-18th
+options:
+  multilingual: romanized-translated
+  messages:
+    pattern.chicago-of: "of {$container}"
+    pattern.chicago-volume: "Vol. {$number}"
+    pattern.chicago-volume-lower: "vol. {$number}"
+  page-range-format: expanded
+  # T&F Style F (tf_f.pdf) prescribes sentence-style capitalisation for titles
+  # (only the first word capitalised) — a deliberate divergence from the CSL
+  # reference, which renders title-case. Journal/serial names stay title-case.
+  # Applied to article (`component`) titles only: `text-case: sentence` has no
+  # proper-noun protection by design (see docs/policies/TEXT_CASE_PROTECTION.md)
+  # — a single-capital word like `Cambridge` or `La Ciotat` is indistinguishable
+  # from title-case source data without a data-declared `.nocase` span, so
+  # monograph/container titles stay title-case rather than risk lowercasing
+  # proper nouns the source data hasn't marked. The parent's `type-mapping`
+  # (chicago-author-date-18th) would otherwise route broadcast/collection/
+  # manuscript/motion-picture/song/webpage into `component` too, so it is
+  # explicitly cleared here rather than letting sentence-case reach those
+  # categories through inheritance (see csl26-svfg / STYLE_INHERITANCE.md
+  # rule 1 and 3).
+  titles:
+    # Not a defect: permanent style-content decision, not a workaround for an
+    # engine gap. See docs/policies/TEXT_CASE_PROTECTION.md and csl26-4kt3 for
+    # why proper-noun protection here would need `.nocase` in the source data,
+    # which this style cannot supply.
+    type-mapping: ~
+    component:
+      text-case: sentence
+  contributors:
+    role:
+      omit:
+      - translator
+      # Style F forbids the plural "eds." label in this position (guide, tf_f.pdf);
+      # the chapter/default templates supply "edited by" manually.
+      - editor
+
+citation:
+  options:
+    contributors:
+      shorten:
+        min: 4
+        use-first: 1
+  template:
+  - contributor: author
+    form: short
+    shorten:
+      min: 4
+      use-first: 1
+      and-others: et-al
+      delimiter-precedes-last: contextual
+    and: text
+  - date: issued
+    form: year
+  - variable: locator
+    prefix: ", "
+  wrap:
+    punctuation: parentheses
+  delimiter: " "
+  multi-cite-delimiter: "; "
+bibliography:
+  type-variants:
+    article-journal:
+    - contributor: author
+      form: long
+    - date: issued
+      form: year
+    - title: primary
+    - contributor: translator
+      form: verb
+      name-order: given-first
+      text-case: capitalize-first
+    - title: parent-serial
+    - number: volume
+      prefix: " "
+    - number: issue
+      wrap:
+        punctuation: parentheses
+    - number: pages
+      prefix: ": "
+    - variable: doi
+      prefix: ". https://doi.org/"
+      suffix: "."
+    - variable: url
+      suffix: "."
+    book:
+    - contributor: author
+      form: long
+    - date: issued
+      form: year
+    - group:
+      - variable: volume-title
+        emph: true
+      render-when:
+        field-present: volume-title
+        field-absent: part-number-non-numeric
+    - group:
+      - title: primary
+      render-when:
+        field-absent: volume-title
+    - group:
+      - title: primary
+      render-when:
+        field-present: part-number-non-numeric
+    - group:
+      - group:
+        - title: primary
+        render-when:
+          field-absent: volume-title
+      render-when:
+        field-present: part-number-numeric
+    - contributor: translator
+      form: verb
+      name-order: given-first
+      text-case: capitalize-first
+    - group:
+      - contributor: editor
+        form: verb
+        name-order: given-first
+      render-when:
+        field-present: volume-or-issue
+    - group:
+      - message: pattern.chicago-volume
+        args:
+          number:
+            number: volume
+      - number: part-number
+        label-form: short
+      - message: pattern.chicago-of
+        args:
+          container:
+            title: parent-monograph
+            emph: true
+      delimiter: ", "
+      render-when:
+        field-present: part-number-numeric
+    - group:
+      - group:
+        - group:
+          - number: part-number
+            label-form: short
+            text-case: capitalize-first
+          - message: pattern.chicago-of
+            args:
+              container:
+                title: parent-monograph
+                emph: true
+          delimiter: " "
+        - group:
+          - message: pattern.chicago-volume-lower
+            args:
+              number:
+                number: volume
+          - message: pattern.chicago-of
+            args:
+              container:
+                title: collection-title
+                emph: true
+          delimiter: " "
+        delimiter: ", "
+        render-when:
+          field-present: volume-title
+      - group:
+        - message: pattern.chicago-volume
+          args:
+            number:
+              number: volume
+        - number: part-number
+          label-form: short
+        - message: pattern.chicago-of
+          args:
+            container:
+              title: parent-monograph
+              emph: true
+        delimiter: ", "
+        render-when:
+          field-absent: volume-title
+      render-when:
+        field-present: part-number-non-numeric
+    - group:
+      - message: pattern.chicago-volume
+        args:
+          number:
+            number: volume
+      - message: pattern.chicago-of
+        args:
+          container:
+            title: parent-monograph
+            emph: true
+      delimiter: " "
+      render-when:
+        field-absent: part-number
+        field-present: volume-or-issue
+    - group:
+      - number: number-of-volumes
+        label-form: short
+        prefix: ". "
+      render-when:
+        field-absent: volume-or-issue
+    - variable: publisher-place
+    - variable: publisher
+      prefix: ": "
+    - date: issued
+      form: year
+      prefix: ", "
+      suffix: "."
+    - variable: doi
+      prefix: ". https://doi.org/"
+      suffix: "."
+    - variable: url
+      suffix: "."
+    chapter:
+    - contributor: author
+      form: long
+    - date: issued
+      form: year
+    - title: primary
+      suffix: "."
+    - contributor: translator
+      form: verb
+      name-order: given-first
+      text-case: capitalize-first
+    - message: pattern.in-container
+      args:
+        container:
+          title: parent-monograph
+      text-case: capitalize-first
+      prefix: " "
+    - contributor: editor
+      form: verb
+      name-order: given-first
+      prefix: ", "
+    - number: pages
+      prefix: ", "
+    - delimiter: ": "
+      group:
+      - variable: publisher-place
+      - variable: publisher
+    - variable: doi
+      prefix: ". https://doi.org/"
+      suffix: "."
+    - variable: url
+      suffix: "."
+    default:
+    - contributor: author
+      form: long
+    - date: issued
+      form: year
+    - title: primary
+    - message: pattern.in-container
+      args:
+        container:
+          title: parent-monograph
+      text-case: capitalize-first
+      prefix: " "
+    - contributor: editor
+      form: verb
+      name-order: given-first
+      prefix: ", "
+    - title: parent-serial
+    - number: volume
+      prefix: " "
+    - number: issue
+      wrap:
+        punctuation: parentheses
+    - number: pages
+      prefix: ", "
+    - delimiter: ": "
+      group:
+      - variable: publisher-place
+      - variable: publisher
+    - date: issued
+      form: year
+      prefix: ", "
+      suffix: "."
+    - variable: doi
+      prefix: ". https://doi.org/"
+      suffix: "."
+    - variable: url
+      suffix: "."
+    interview:
+    - contributor: author
+      form: long
+      name-order: family-first
+    - date: issued
+      form: year
+    - title: primary
+    - message: pattern.chicago-interview-by
+      args:
+        name:
+          contributor: interviewer
+          form: long
+          name-order: given-first
+      text-case: capitalize-first
+    - delimiter: ", "
+      group:
+      - date: issued
+        form: month-day
+      - date: issued
+        form: year
+    - variable: genre
+      text-case: capitalize-first
+    - variable: url
+      suffix: "."
+    motion-picture:
+    - contributor: author
+      form: long
+      name-order: family-first
+    - date: issued
+      form: year
+    - title: primary
+    - variable: genre
+      text-case: capitalize-first
+    # STYLE010 exception: text matches locale director.verb ("directed by"),
+    # but this component declares `contributor: author`, not `director` — the
+    # same author is being credited twice under different roles/name-orders.
+    # Converting to `contributor: director, form: verb` would change which
+    # reference field is read (author vs. a separate director field), a
+    # correctness question, not a wording one, and out of scope here. Left
+    # literal; the role mismatch itself may be worth its own bean.
+    - contributor: author
+      form: long
+      name-order: given-first
+      prefix: "Directed by "
+    - date: issued
+      form: year
+      suffix: "."
+    - variable: medium
+      text-case: capitalize-first
+  template:
+  - contributor: author
+    form: long
+  - date: issued
+    form: year
+  - title: primary
+  - contributor: translator
+    form: verb
+    name-order: given-first
+    text-case: capitalize-first
+  - message: pattern.in-container
+    args:
+      container:
+        title: parent-monograph
+    text-case: capitalize-first
+    prefix: " "
+  - contributor: editor
+    form: verb
+    name-order: given-first
+    prefix: ", "
+  - title: parent-serial
+  - number: volume
+    prefix: " "
+  - number: issue
+    wrap:
+      punctuation: parentheses
+  - number: pages
+    prefix: ": "
+  - variable: publisher-place
+  - variable: publisher
+    prefix: ": "
+  - date: issued
+    form: year
+    prefix: ", "
+    suffix: "."
+  - variable: doi
+    prefix: ". https://doi.org/"
+    suffix: "."
+  - variable: url
+    suffix: "."
+

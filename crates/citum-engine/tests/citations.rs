@@ -2209,19 +2209,26 @@ citation:
 
 // --- Note Style Position Scenarios ---
 
-fn chicago_notes_immediate_repeat_renders_compact_ibid() {
-    use std::path::PathBuf;
-
-    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .unwrap()
-        .parent()
-        .unwrap()
-        .join("styles/embedded/chicago-notes-18th.yaml");
-
+fn chicago_notes_style_with_ibid() -> Style {
+    let path = common::test_style_path("styles/embedded/chicago-notes-18th.yaml");
     let yaml = std::fs::read_to_string(&path).expect("Failed to read chicago-notes.yaml");
-    let style: citum_schema::Style =
-        serde_yaml::from_str(&yaml).expect("Failed to parse chicago-notes.yaml");
+    let existing_ibid = "  ibid:\n    note-start-text-case: capitalize-first\n    suffix: \"\"\n    delimiter: \", \"\n    template:\n    - message: term.ibid\n    - variable: locator\n      suffix: .\n";
+    let yaml = yaml.replacen(existing_ibid, "", 1);
+    let marker = "citation:\n  delimiter: \"\"\n";
+    assert!(
+        yaml.contains(marker),
+        "Chicago notes fixture marker is missing"
+    );
+    let yaml = yaml.replacen(
+        marker,
+        "citation:\n  delimiter: \"\"\n  ibid:\n    note-start-text-case: capitalize-first\n    suffix: \"\"\n    delimiter: \", \"\n    template:\n    - message: term.ibid\n    - variable: locator\n      suffix: .\n",
+        1,
+    );
+    serde_yaml::from_str(&yaml).expect("Failed to parse Chicago notes ibid fixture")
+}
+
+fn chicago_notes_immediate_repeat_renders_compact_ibid() {
+    let style = chicago_notes_style_with_ibid();
 
     let bib = citum_schema::bib_map![
         "smith1995" => make_book("smith1995", "Smith", "John", 1995, "A Great Book"),
@@ -2261,18 +2268,7 @@ fn chicago_notes_immediate_repeat_renders_compact_ibid() {
 }
 
 fn chicago_notes_prefixed_ibid_remains_mid_sentence() {
-    use std::path::PathBuf;
-
-    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .unwrap()
-        .parent()
-        .unwrap()
-        .join("styles/embedded/chicago-notes-18th.yaml");
-
-    let yaml = std::fs::read_to_string(&path).expect("Failed to read chicago-notes.yaml");
-    let style: citum_schema::Style =
-        serde_yaml::from_str(&yaml).expect("Failed to parse chicago-notes.yaml");
+    let style = chicago_notes_style_with_ibid();
 
     let bib = citum_schema::bib_map![
         "smith1995" => make_book("smith1995", "Smith", "John", 1995, "A Great Book"),
@@ -2304,18 +2300,7 @@ fn chicago_notes_prefixed_ibid_remains_mid_sentence() {
 }
 
 fn chicago_notes_immediate_repeat_with_locator_keeps_the_locator() {
-    use std::path::PathBuf;
-
-    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .unwrap()
-        .parent()
-        .unwrap()
-        .join("styles/embedded/chicago-notes-18th.yaml");
-
-    let yaml = std::fs::read_to_string(&path).expect("Failed to read chicago-notes.yaml");
-    let style: citum_schema::Style =
-        serde_yaml::from_str(&yaml).expect("Failed to parse chicago-notes.yaml");
+    let style = chicago_notes_style_with_ibid();
 
     let bib = citum_schema::bib_map![
         "smith1995" => make_book("smith1995", "Smith", "John", 1995, "A Great Book"),
@@ -2347,14 +2332,7 @@ fn chicago_notes_immediate_repeat_with_locator_keeps_the_locator() {
 }
 
 fn chicago_notes_non_immediate_repeat_uses_the_subsequent_short_form() {
-    use std::path::PathBuf;
-
-    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .unwrap()
-        .parent()
-        .unwrap()
-        .join("styles/embedded/chicago-notes-18th.yaml");
+    let path = common::test_style_path("styles/embedded/chicago-notes-18th.yaml");
 
     let yaml = std::fs::read_to_string(&path).expect("Failed to read chicago-notes.yaml");
     let style: citum_schema::Style =
@@ -2383,14 +2361,7 @@ fn chicago_notes_non_immediate_repeat_uses_the_subsequent_short_form() {
 }
 
 fn chicago_notes_reprint_full_note_renders_original_publisher_metadata() {
-    use std::path::PathBuf;
-
-    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .unwrap()
-        .parent()
-        .unwrap()
-        .join("styles/embedded/chicago-notes-18th.yaml");
+    let path = common::test_style_path("styles/embedded/chicago-notes-18th.yaml");
 
     let yaml = std::fs::read_to_string(&path).expect("Failed to read chicago-notes.yaml");
     let style: citum_schema::Style =

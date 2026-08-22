@@ -112,6 +112,29 @@ fn shorthand_numbering_accessors_cover_all_numbered_reference_variants() {
 }
 
 #[test]
+fn number_of_volumes_accessor_resolves_the_canonical_numbering_value() {
+    let reference = parse_reference(
+        r#"{
+            "class": "monograph",
+            "type": "book",
+            "title": "A multi-volume work",
+            "numbering": [
+                { "type": "number-of-volumes", "value": "3 vols. in 9 bks." }
+            ]
+        }"#,
+    );
+
+    assert_eq!(
+        reference.number_of_volumes(),
+        Some("3 vols. in 9 bks.".to_string())
+    );
+    assert_eq!(
+        reference.numbering_value(&NumberingType::Custom("number-of-volumes".to_string())),
+        Some("3 vols. in 9 bks.".to_string())
+    );
+}
+
+#[test]
 fn report_number_accessor_stays_separate_from_generic_number() {
     let reference = parse_reference(
         r#"{
@@ -190,6 +213,11 @@ fn collection_component_collection_number_bubbles_from_embedded_container() {
     );
 
     assert_eq!(reference.collection_number(), Some("7".to_string()));
+    assert_eq!(
+        reference.volume(),
+        Some(NumOrStr::Str("7".to_string())),
+        "volume should bubble from the embedded parent monograph"
+    );
 }
 
 #[test]

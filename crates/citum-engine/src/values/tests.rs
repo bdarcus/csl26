@@ -3182,6 +3182,58 @@ fn test_report_number_variable_uses_report_number_accessor() {
 }
 
 #[test]
+fn number_of_volumes_variable_renders_the_converted_csl_value() {
+    let config = make_config();
+    let locale = make_locale();
+    let options = RenderOptions {
+        config: Arc::new(config),
+        bibliography_config: None,
+        locale: &locale,
+        context: RenderContext::Bibliography,
+        mode: citum_schema::citation::CitationMode::NonIntegral,
+        suppress_author: false,
+        locator_raw: None,
+        ref_type: None,
+        show_semantics: true,
+        current_template_index: None,
+        abbreviation_map: None,
+    };
+    let reference = Reference::from(LegacyReference {
+        id: "multivolume".to_string(),
+        ref_type: "book".to_string(),
+        number_of_volumes: Some(StringOrNumber::String("2".to_string())),
+        ..Default::default()
+    });
+    let component = TemplateNumber {
+        number: NumberVariable::NumberOfVolumes,
+        label_form: Some(citum_schema::template::LabelForm::Short),
+        ..Default::default()
+    };
+
+    assert_eq!(
+        component
+            .values::<PlainText>(&reference, &ProcHints::default(), &options)
+            .expect("number-of-volumes should render")
+            .value,
+        "2 vols."
+    );
+
+    let preformatted = Reference::from(LegacyReference {
+        id: "multivolume-preformatted".to_string(),
+        ref_type: "book".to_string(),
+        number_of_volumes: Some(StringOrNumber::String("3 vols. in 9 bks.".to_string())),
+        ..Default::default()
+    });
+    assert_eq!(
+        component
+            .values::<PlainText>(&preformatted, &ProcHints::default(), &options)
+            .expect("preformatted number-of-volumes should render")
+            .value,
+        "3 vols. in 9 bks."
+    );
+}
+
+#[test]
 fn template_number_ordinal_form_uses_the_active_locale_message() {
     let config = make_config();
     let english_locale = make_embedded_english_locale();

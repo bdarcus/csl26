@@ -115,6 +115,43 @@ fn chicago_author_date_uses_comma_before_conference_pages_without_volume_or_issu
     );
 }
 
+#[test]
+fn chicago_author_date_multivolume_fixture_renders_all_reference_shapes() {
+    let style = load_style("styles/embedded/chicago-author-date-18th.yaml");
+    let bibliography = citum_io::load_bibliography(
+        &project_root()
+            .join("tests/fixtures/style-regressions/chicago-multivolume-engine-gap.json"),
+    )
+    .expect("Chicago multivolume fixture should load");
+
+    let processor = Processor::new(style, bibliography);
+    let rendered = processor.render_selected_bibliography_with_format_standalone::<PlainText, _>([
+        "chicago-multivolume-count".to_string(),
+        "chicago-multivolume-parent-volume".to_string(),
+        "chicago-multivolume-volume-title".to_string(),
+        "chicago-multivolume-part-title".to_string(),
+        "chicago-multivolume-book-part".to_string(),
+    ]);
+
+    for expected in [
+        "Adams, Henry.",
+        "Harley, J. B.",
+        "James, Henry.",
+        "Woodward, David",
+        "Lach, Donald F.",
+        "Letters of Henry Adams",
+        "Cartography in the Traditional East and Southeast Asian Societies",
+        "Complete Tales of Henry James",
+        "History of Cartography",
+        "Scholarly Disciplines",
+    ] {
+        assert!(
+            rendered.contains(expected),
+            "multivolume bibliography should render reference shape: {expected}\n{rendered}"
+        );
+    }
+}
+
 fn build_sorted_style(sort: Vec<SortSpec>) -> Style {
     Style {
         info: StyleInfo {

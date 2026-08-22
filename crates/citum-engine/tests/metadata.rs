@@ -332,10 +332,8 @@ fn test_date_rendering_range() {
 }
 
 #[test]
-fn chicago_18_condenses_edtf_year_ranges() {
-    announce_behavior(
-        "Chicago 18 condenses a closed EDTF year range using inclusive-number rules.",
-    );
+fn chicago_18_preserves_edtf_year_ranges() {
+    announce_behavior("Chicago 18 preserves a closed EDTF year range with both years expanded.");
     let style = load_style("styles/embedded/chicago-author-date-18th.yaml");
 
     let mut bib = indexmap::IndexMap::new();
@@ -350,7 +348,7 @@ fn chicago_18_condenses_edtf_year_ranges() {
         processor
             .process_citation(&citum_schema::cite!("item1"))
             .unwrap(),
-        "(Smith 2021–26)"
+        "(Smith 2021–2026)"
     );
 }
 

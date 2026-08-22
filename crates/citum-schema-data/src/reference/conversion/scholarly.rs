@@ -14,6 +14,89 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus and Citum contributors
 use super::*;
 use crate::reference::Classic;
 
+/// Resolve the primary title and nested monograph relation for a legacy book.
+fn monograph_title_and_container(
+    legacy: &csl_legacy::csl_json::Reference,
+    r#type: &MonographType,
+    ctx: &RefContext,
+    volume: Option<&str>,
+    volume_title: Option<&str>,
+    part_title: Option<&str>,
+    collection_title: Option<String>,
+) -> (Option<String>, Option<WorkRelation>) {
+    let title = if *r#type == MonographType::Webpage {
+        ctx.title.clone().map(|base_title| {
+            let mut combined = base_title;
+            if let Some(part_num) = legacy_extra_str(legacy, "part-number") {
+                combined.push_str(": Pt. ");
+                combined.push_str(&part_num);
+            }
+            if let Some(part) = part_title {
+                if legacy_extra_str(legacy, "part-number").is_none() {
+                    combined.push(':');
+                    combined.push(' ');
+                } else {
+                    combined.push('.');
+                    combined.push(' ');
+                }
+                combined.push_str(part);
+            }
+            combined
+        })
+    } else if let Some(part) = part_title {
+        Some(part.to_string())
+    } else {
+        ctx.title.clone()
+    };
+
+    let base_title = legacy
+        .container_title
+        .clone()
+        .map(Title::Single)
+        .or_else(|| {
+            (volume.is_some() && (part_title.is_some() || volume_title.is_some()))
+                .then(|| ctx.title.clone().map(Title::Single))
+                .flatten()
+        });
+    let collection = relation_collection_title(collection_title);
+    let container = match base_title {
+        Some(title) => {
+            let parent = Some(WorkRelation::Embedded(Box::new(InputReference::Monograph(
+                Box::new(Monograph {
+                    title: Some(title),
+                    container: collection,
+                    ..Default::default()
+                }),
+            ))));
+            if part_title.is_some() && volume_title.is_some() {
+                Some(WorkRelation::Embedded(Box::new(InputReference::Monograph(
+                    Box::new(Monograph {
+                        title: volume_title.map(|title| Title::Single(title.to_string())),
+                        container: parent,
+                        ..Default::default()
+                    }),
+                ))))
+            } else {
+                parent
+            }
+        }
+        None if collection.is_some() => {
+            // A book in a series with no intermediate container-title still
+            // needs a title-less parent so collection_title can walk upward.
+            Some(WorkRelation::Embedded(Box::new(InputReference::Monograph(
+                Box::new(Monograph {
+                    title: None,
+                    container: collection,
+                    ..Default::default()
+                }),
+            ))))
+        }
+        None => None,
+    };
+
+    (title, container)
+}
+
 #[allow(
     clippy::too_many_lines,
     reason = "Legacy CSL mapping requires extensive branching"
@@ -79,6 +162,7 @@ pub(super) fn from_monograph_ref(
     let original_date = legacy_extra_date(&legacy, "original-date");
     let original_publisher = legacy_extra_str(&legacy, "original-publisher");
     let original_publisher_place = legacy_extra_str(&legacy, "original-publisher-place");
+    let number_of_volumes = legacy_number_of_volumes(&legacy);
     let volume_title = legacy_extra_str(&legacy, "volume-title");
     let part_title = legacy_extra_str(&legacy, "part-title");
     let part_number = legacy_extra_str(&legacy, "part-number");
@@ -155,9 +239,10 @@ pub(super) fn from_monograph_ref(
         legacy_extra_names(&legacy, "producer")
             .or_else(|| legacy_extra_names(&legacy, "executive-producer")),
     );
-    let edition = ctx.edition;
+    let edition = ctx.edition.clone();
     let volume = legacy
         .volume
+        .as_ref()
         .map(|v| v.to_string())
         .or_else(|| legacy.collection_number.clone().map(|cn| cn.to_string()));
     let number = if r#type == MonographType::Report {
@@ -174,60 +259,25 @@ pub(super) fn from_monograph_ref(
         original_publisher_place,
     );
 
-    let title = if r#type == MonographType::Webpage {
-        ctx.title.clone().map(|base_title| {
-            let mut combined = base_title;
-            if let Some(part_num) = part_number.as_ref() {
-                combined.push_str(": Pt. ");
-                combined.push_str(part_num);
-            }
-            if let Some(part) = part_title.as_ref() {
-                if part_number.is_none() {
-                    combined.push(':');
-                    combined.push(' ');
-                } else {
-                    combined.push('.');
-                    combined.push(' ');
-                }
-                combined.push_str(part);
-            }
-            combined
-        })
-    } else {
-        part_title.or(ctx.title)
-    };
+    let (title, container) = monograph_title_and_container(
+        &legacy,
+        &r#type,
+        &ctx,
+        volume.as_deref(),
+        volume_title.as_deref(),
+        part_title.as_deref(),
+        collection_title,
+    );
 
     // Batch 1: part-number adds a Part numbering entry.
-    let container = {
-        let base_title = legacy.container_title.clone().map(Title::Single);
-        let collection = relation_collection_title(collection_title);
-        if let Some(t) = base_title {
-            Some(WorkRelation::Embedded(Box::new(InputReference::Monograph(
-                Box::new(Monograph {
-                    title: Some(t),
-                    container: collection,
-                    ..Default::default()
-                }),
-            ))))
-        } else if collection.is_some() {
-            // Book in a series with no intermediate container-title: wrap in a
-            // title-less parent so nested_collection_title can still find the series.
-            Some(WorkRelation::Embedded(Box::new(InputReference::Monograph(
-                Box::new(Monograph {
-                    title: None,
-                    container: collection,
-                    ..Default::default()
-                }),
-            ))))
-        } else {
-            None
-        }
-    };
     if let Some(part_num) = part_number {
         numbering.push(Numbering {
             r#type: NumberingType::Part,
             value: part_num,
         });
+    }
+    if let Some(number_of_volumes) = number_of_volumes {
+        numbering.push(number_of_volumes);
     }
     if let Some(chapter_num) = legacy.chapter_number.clone()
         && numbering.iter().all(|n| n.r#type != NumberingType::Chapter)
@@ -364,6 +414,7 @@ pub(super) fn from_collection_component_ref(
     let original_date = legacy_extra_date(&legacy, "original-date");
     let original_publisher = legacy_extra_str(&legacy, "original-publisher");
     let original_publisher_place = legacy_extra_str(&legacy, "original-publisher-place");
+    let number_of_volumes = legacy_number_of_volumes(&legacy);
     let parent_title = legacy.container_title.clone().map(Title::Single);
     let collection_title = legacy.collection_title.clone();
     let parent_volume = legacy
@@ -507,6 +558,9 @@ pub(super) fn from_collection_component_ref(
         status,
         numbering: {
             let mut numbering = Vec::new();
+            if let Some(number_of_volumes) = number_of_volumes {
+                numbering.push(number_of_volumes);
+            }
             if let Some(part_number) = part_number {
                 numbering.push(Numbering {
                     r#type: NumberingType::Part,
@@ -563,6 +617,9 @@ pub fn input_reference_from_legacy_edited_book(
     legacy: csl_legacy::csl_json::Reference,
 ) -> InputReference {
     let mut numbering = Vec::new();
+    if let Some(number_of_volumes) = legacy_number_of_volumes(&legacy) {
+        numbering.push(number_of_volumes);
+    }
     if let Some(cn) = legacy.collection_number.clone() {
         numbering.push(Numbering {
             r#type: NumberingType::Volume,
@@ -795,6 +852,9 @@ pub(super) fn from_serial_component_ref(
         number: legacy.number.clone(),
         numbering: {
             let mut numbering = Vec::new();
+            if let Some(number_of_volumes) = legacy_number_of_volumes(&legacy) {
+                numbering.push(number_of_volumes);
+            }
             if let Some(supplement_number) = supplement_number {
                 numbering.push(Numbering {
                     r#type: NumberingType::Supplement,
@@ -879,6 +939,9 @@ pub(super) fn from_document_ref(
 
     let volume = legacy.volume.as_ref().map(ToString::to_string);
     let number = legacy.number.clone();
+    let numbering = legacy_number_of_volumes(&legacy)
+        .into_iter()
+        .collect::<Vec<_>>();
     let scale = legacy_extra_str(&legacy, "scale");
     let dimensions = legacy_extra_str(&legacy, "dimensions");
     // Seed genre from ref_type for CSL types whose round trip through
@@ -941,6 +1004,7 @@ pub(super) fn from_document_ref(
         size: dimensions,
         volume,
         number,
+        numbering,
         genre,
         medium: legacy.medium,
         edition: legacy.edition.as_ref().map(ToString::to_string),
@@ -986,7 +1050,7 @@ pub(super) fn from_preprint_ref(
         legacy.translator.clone(),
     );
 
-    let numbering = legacy
+    let mut numbering = legacy
         .number
         .as_ref()
         .map(|number| {
@@ -996,6 +1060,9 @@ pub(super) fn from_preprint_ref(
             }]
         })
         .unwrap_or_default();
+    if let Some(number_of_volumes) = legacy_number_of_volumes(&legacy) {
+        numbering.push(number_of_volumes);
+    }
     let version = legacy_extra_str(&legacy, "version");
 
     InputReference::Monograph(Box::new(Monograph {

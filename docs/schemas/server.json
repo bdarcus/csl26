@@ -3199,6 +3199,31 @@
           "description": "The volume number, or the issue number when volume is absent (i.e.\n\"does this serial component have any volume/issue identifier at\nall?\"). Used to detect online-first articles that have not yet been\nassigned to an issue, which need a full publication date instead of\na bare year.",
           "type": "string",
           "const": "volume-or-issue"
+        },
+        {
+          "description": "The document-level part number used by multivolume and multipart works.",
+          "type": "string",
+          "const": "part-number"
+        },
+        {
+          "description": "A document-level part number whose value is a bare numeric value.",
+          "type": "string",
+          "const": "part-number-numeric"
+        },
+        {
+          "description": "A document-level part number whose value already contains a textual label.",
+          "type": "string",
+          "const": "part-number-non-numeric"
+        },
+        {
+          "description": "The total number of volumes in a multivolume work.",
+          "type": "string",
+          "const": "number-of-volumes"
+        },
+        {
+          "description": "The title of an individual volume within a multivolume work.",
+          "type": "string",
+          "const": "volume-title"
         }
       ]
     },
