@@ -1,11 +1,11 @@
 ---
 # csl26-s2kt
 title: 'Cluster 7: multi-volume chains, legal, patents, original/reprint trailers'
-status: todo
+status: in-progress
 type: task
 priority: normal
 created_at: 2026-08-07T13:21:11Z
-updated_at: 2026-08-08T13:36:52Z
+updated_at: 2026-08-21T19:40:44Z
 parent: csl26-h7oc
 ---
 

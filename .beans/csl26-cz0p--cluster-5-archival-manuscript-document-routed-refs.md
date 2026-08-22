@@ -5,7 +5,7 @@ status: todo
 type: task
 priority: normal
 created_at: 2026-08-07T13:21:11Z
-updated_at: 2026-08-08T13:36:32Z
+updated_at: 2026-08-21T18:13:16Z
 parent: csl26-h7oc
 ---
 
@@ -24,3 +24,5 @@ By reference type, current exactParity bibliography failures (fail/total), ident
 document is failing 100% across all three styles -- consistent with "no archival treatment exists yet," not scattered drift. Per this bean's own caution, don't treat 35 as a clean target count: it still likely mixes real archival/document-routed refs with the ~30 unrelated placeholder items that caused the prior document->397 regression (csl26-giun 2026-07-02). manuscript at 13/15 (87-93%) is a cleaner, narrower type to land first and validate the selector approach against before touching document's broader, contaminated pool.
 
 Because author-date-18th and T&F show byte-identical fail/total counts on both types, a fix landed on the shared ancestor template clears both styles in one pass -- confirms the "fix once, land across the family" framing this bean and the epic already assume.
+
+\n\nFresh YAML experiment: adding the archival manuscript/document tails gained two exact bibliography cases but lowered author-date fidelity from 0.890 to 0.888 and SQI from 0.910 to 0.902. The experiment was reverted; keep this cluster as a follow-up and do not blanket-route document records in PR A.

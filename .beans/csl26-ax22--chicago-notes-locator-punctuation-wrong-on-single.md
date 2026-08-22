@@ -1,7 +1,7 @@
 ---
 # csl26-ax22
 title: 'Chicago notes: locator punctuation wrong on single-item citations'
-status: todo
+status: in-progress
 type: bug
 priority: normal
 tags:
@@ -10,7 +10,7 @@ tags:
     - rendering
     - citation
 created_at: 2026-08-19T13:48:54Z
-updated_at: 2026-08-19T13:49:02Z
+updated_at: 2026-08-21T18:13:15Z
 parent: csl26-h7oc
 ---
 
@@ -23,3 +23,7 @@ Noticed while investigating `csl26-m11m` / `csl26-ecfn`: the second clause of a 
 - [ ] Find the template/punctuation rule that should route the locator after a colon rather than a comma for this style's citation template.
 - [ ] Add a regression test pinning the fix against the citeproc-js oracle.
 - [ ] Re-run `report-core.js --style chicago-notes-18th` to measure exactParity movement.
+
+\n\nOutcome (Chicago style-only wave, 2026-08-21): Implemented the single-item article-journal locator delimiter as a colon in chicago-notes-18th.yaml. Direct native reproduction now matches citeproc-js: 4 (2019): 257. The reduced report corpus does not include that exact custom locator case, so the aggregate denominator is unchanged.
+
+\n\nThe style-only fix and direct oracle reproduction are complete. The bean's requested Rust regression test is intentionally excluded from PR A, so keep the bean open for that test follow-up.
