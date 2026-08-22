@@ -34,6 +34,10 @@ info:
   default-locale: en-US
 options:
   multilingual: romanized-translated
+  messages:
+    pattern.chicago-of: "of {$container}"
+    pattern.chicago-volume: "Vol. {$number}"
+    pattern.chicago-volume-lower: "vol. {$number}"
   locale-override: en-US-chicago
   processing: note
   contributors:
@@ -54,28 +58,54 @@ citation:
         use-first: 1
         and-others: et-al
         delimiter-precedes-last: contextual
-  ibid:
-    note-start-text-case: capitalize-first
-    suffix: ""
-    delimiter: ", "
-    template:
-    - message: term.ibid
-    - variable: locator
-      suffix: .
-  type-variants:
+  # The shortened style has one author-title citation shape; do not inherit
+  # the notes style's position-dependent grammar or its type-specific full
+  # citation additions.
+  ibid: ~
+  subsequent: ~
+  type-variants: ~
   template:
-  - contributor: author
-    form: short
-    name-order: family-first-only
-    shorten:
-      min: 3
-      use-first: 1
-  - title: primary
-    prefix: ", "
+  - group:
+    - contributor: author
+      form: short
+      name-order: family-first-only
+      shorten:
+        min: 3
+        use-first: 1
+    - group:
+      - group:
+        - title: primary
+          wrap:
+            punctuation: quotes
+        render-when:
+          field-present: genre
+      - group:
+        - title: primary
+        render-when:
+          field-absent: genre
+      delimiter: ''
+    delimiter: ", "
+    render-when:
+      field-present: author
+  - group:
+    - group:
+      - group:
+        - title: primary
+          wrap:
+            punctuation: quotes
+        render-when:
+          field-present: genre
+      - group:
+        - title: primary
+        render-when:
+          field-absent: genre
+      delimiter: ''
+    delimiter: ''
+    render-when:
+      field-absent: author
   - variable: locator
     prefix: ", "
   suffix: .
-  delimiter: ". "
   multi-cite-delimiter: "; "
 bibliography:
   options:
@@ -85,6 +115,10 @@ bibliography:
         use-first: 3
         and-others: et-al
         delimiter-precedes-last: contextual
+    date-fallback:
+      first-issued:
+        manuscript: none
+        collection: none
     hanging-indent: true
     entry-suffix: .
     entry-suffix-after-url: true
@@ -157,15 +191,216 @@ bibliography:
       shorten:
         min: 8
         use-first: 3
-    - title: primary
-      text-case: title
+    - group:
+      - title: primary
+        text-case: title
+      render-when:
+        field-absent: volume-or-issue
+    - group:
+      - group:
+        - title: collection-title
+          text-case: title
+        - message: pattern.chicago-volume
+          args:
+            number:
+              number: volume
+          prefix: ". "
+        - title: parent-monograph
+          text-case: title
+          prefix: ", "
+        - number: part-number
+          label-form: short
+          prefix: ", "
+        - group:
+          - variable: volume-title
+            emph: true
+            text-case: title
+            prefix: ", "
+          render-when:
+            field-present: volume-title
+            field-absent: part-number-non-numeric
+        - group:
+          - title: primary
+            text-case: title
+            prefix: ", "
+          render-when:
+            field-absent: volume-title
+        - group:
+          - title: primary
+            text-case: title
+            prefix: ", "
+          render-when:
+            field-present: part-number-non-numeric
+        - group:
+          - group:
+            - variable: volume-title
+              emph: true
+              text-case: title
+              prefix: ", "
+            render-when:
+              field-present: volume-title
+          - group:
+            - title: primary
+              text-case: title
+              prefix: ", "
+            render-when:
+              field-absent: volume-title
+          render-when:
+            field-present: part-number-numeric
+        delimiter: ""
+        render-when:
+          field-present: collection-title
+      - group:
+        - group:
+          - title: parent-monograph
+            text-case: title
+          - message: pattern.chicago-volume
+            args:
+              number:
+                number: volume
+            prefix: ". "
+          - group:
+            - variable: volume-title
+              emph: true
+              text-case: title
+              prefix: ", "
+            render-when:
+              field-present: volume-title
+              field-absent: part-number-non-numeric
+          - group:
+            - title: primary
+              text-case: title
+              prefix: ", "
+            render-when:
+              field-absent: volume-title
+          delimiter: ""
+          render-when:
+            field-absent: part-number
+        - group:
+          - title: parent-monograph
+            text-case: title
+          - message: pattern.chicago-volume
+            args:
+              number:
+                number: volume
+            prefix: ". "
+          - title: primary
+            text-case: title
+            prefix: ", "
+          - number: part-number
+            label-form: short
+            prefix: ", "
+          delimiter: ""
+          render-when:
+            field-present: part-number-non-numeric
+        - group:
+          - group:
+            - variable: volume-title
+              emph: true
+              text-case: title
+              prefix: ", "
+            render-when:
+              field-present: volume-title
+          - group:
+            - title: primary
+              text-case: title
+              prefix: ", "
+            render-when:
+              field-absent: volume-title
+          render-when:
+            field-present: part-number-numeric
+        delimiter: ""
+        render-when:
+          field-absent: collection-title
+      delimiter: ""
+      render-when:
+        field-present: volume-or-issue
     - contributor: translator
       form: verb
       prefix: ". "
+      text-case: capitalize-first
+    - group:
+      - contributor: editor
+        form: verb
+        name-order: given-first
+        prefix: ". "
+        text-case: capitalize-first
+      render-when:
+        field-absent: volume-or-issue
+    - group:
+      - message: pattern.chicago-volume
+        args:
+          number:
+            number: volume
+      - number: part-number
+        label-form: short
+      - message: pattern.chicago-of
+        args:
+          container:
+            title: parent-monograph
+            emph: true
+      delimiter: ", "
+      render-when:
+        field-present: part-number-numeric
+        field-absent: volume-or-issue
+    - group:
+      - group:
+        - group:
+          - number: part-number
+            label-form: short
+            text-case: capitalize-first
+          - message: pattern.chicago-of
+            args:
+              container:
+                title: parent-monograph
+                emph: true
+          delimiter: " "
+        - group:
+          - message: pattern.chicago-volume-lower
+            args:
+              number:
+                number: volume
+          - message: pattern.chicago-of
+            args:
+              container:
+                title: collection-title
+                emph: true
+          delimiter: " "
+        delimiter: ", "
+        render-when:
+          field-present: volume-title
+      - group:
+        - message: pattern.chicago-volume
+          args:
+            number:
+              number: volume
+        - number: part-number
+          label-form: short
+        - message: pattern.chicago-of
+          args:
+            container:
+              title: parent-monograph
+              emph: true
+        delimiter: ", "
+        render-when:
+          field-absent: volume-title
+      render-when:
+        field-present: part-number-non-numeric
+        field-absent: volume-or-issue
+    - group:
+      - number: number-of-volumes
+        label-form: short
+        prefix: ". "
+      render-when:
+        field-absent: volume-or-issue
     - variable: publisher
     - date: issued
       form: year
       prefix: ", "
+    - variable: references
+      prefix: ". "
+    - variable: doi
+      prefix: https://doi.org/
     chapter:
     - contributor: author
       form: long
@@ -184,20 +419,21 @@ bibliography:
           group:
             - title: parent-monograph
               emph: false
+              text-case: title
             - contributor: editor
               form: verb
               name-order: given-first
               prefix: ", "
           delimiter: " "
       text-case: capitalize-first
-      prefix: " "
+      prefix: ". "
     - variable: publisher
       prefix: ". "
     - date: issued
       form: year
       prefix: ", "
-    - number: pages
-      prefix: ": "
+    - variable: doi
+      prefix: https://doi.org/
     manuscript:
     - contributor: author
       form: long
@@ -219,6 +455,26 @@ bibliography:
       prefix: ". "
     - variable: archive-place
       prefix: ", "
+    # Some archival manuscripts in the Chicago corpus carry a narrow
+    # `type: collection` note override. Keep that override on the archival
+    # path so it does not fall through to the generic author/title template.
+    collection:
+    - contributor: author
+      form: long
+      name-order: family-first-only
+      shorten:
+        min: 7
+        use-first: 3
+    - title: primary
+      text-case: title
+    - variable: archive-location
+      prefix: ". "
+    - variable: archive-collection
+      prefix: ". "
+    - group:
+      - variable: archive-name
+      - variable: archive-place
+        prefix: ", "
     entry-dictionary:
     - title: parent-monograph
       text-case: title
@@ -341,4 +597,5 @@ bibliography:
   - number: pages
     prefix: ": "
   - variable: doi
+    prefix: https://doi.org/
   - variable: url

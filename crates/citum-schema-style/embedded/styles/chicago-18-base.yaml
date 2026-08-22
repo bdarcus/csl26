@@ -15,7 +15,9 @@ options:
     uncertainty-marker-prefix: "["
     approximation-marker: "ca. "
     range-delimiter: "–"
-    range-format: chicago
+    # citeproc-js leaves publication-year ranges expanded in Chicago 18
+    # (page ranges remain independently controlled by page-range-format).
+    range-format: expanded
   punctuation-in-quote: true
   contributors:
     demote-non-dropping-particle: display-and-sort
