@@ -1,7 +1,7 @@
 ---
 # csl26-j1wp
 title: 'Fix chicago-shortened-notes-bibliography-core: remove ibid/subsequent grammar leaked from chicago-notes-18th'
-status: todo
+status: in-progress
 type: bug
 priority: high
 tags:
@@ -9,7 +9,7 @@ tags:
     - fidelity
     - chicago
 created_at: 2026-08-08T12:30:24Z
-updated_at: 2026-08-08T12:45:51Z
+updated_at: 2026-08-21T18:13:16Z
 parent: csl26-h7oc
 blocked_by:
     - csl26-adka
@@ -33,3 +33,7 @@ Likely fix: delete `citation.ibid` from `chicago-shortened-notes-bibliography-co
 - [ ] `node scripts/report-core.js` and `cargo nextest run` — confirm no exact-parity regression elsewhere
 - [ ] `note-disambiguate-add-names-et-al` (Citum expands "Smith et al." to "Smith, Lee, Kumar, et al." where oracle doesn't) is a separate, unresolved symptom — `disambiguate-add-names="true"` is a correct, expected attribute on this style's `<citation>` element (shared template default, also present on chicago-notes.csl), so the fix here is not "suppress it." Note whether this fix changes that symptom at all; if not, it needs its own investigation.
 - [ ] Note the outcome in this bean's summary when done
+
+\n\nOutcome (Chicago style-only wave, 2026-08-21): Implemented shortened-notes citation isolation in chicago-shortened-notes-bibliography-core.yaml by clearing inherited ibid, subsequent, and type-variant citation grammar. Fresh shortened report remains stable on the family floor and the final style wave is 62/473 exact parity.
+
+\n\nThe YAML inheritance isolation is complete and measured. The existing note-style conformance/test expectations still encode lexical ibid behavior; leave this bean open for the excluded Rust/test-contract follow-up.

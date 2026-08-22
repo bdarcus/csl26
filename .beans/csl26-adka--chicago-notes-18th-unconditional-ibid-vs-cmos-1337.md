@@ -1,7 +1,7 @@
 ---
 # csl26-adka
 title: 'Fix chicago-notes-18th: shortened form instead of ibid for repeat citations'
-status: todo
+status: in-progress
 type: bug
 priority: normal
 tags:
@@ -9,7 +9,7 @@ tags:
     - chicago
     - fidelity
 created_at: 2026-08-07T18:39:26Z
-updated_at: 2026-08-07T19:04:59Z
+updated_at: 2026-08-21T18:13:33Z
 parent: csl26-h7oc
 ---
 
@@ -27,3 +27,7 @@ Likely fix: delete the `citation.ibid:` block (lines 47–54 of `chicago-notes-1
 - [ ] Confirm `chicago-shortened-notes-bibliography-core` and `chicago-notes-18th-script` (both extend `chicago-notes-18th`) don't regress
 - [ ] `node scripts/report-core.js` and `cargo nextest run` — confirm no exact-parity regression elsewhere
 - [ ] Note the outcome in this bean's summary when done
+
+\n\nOutcome (Chicago style-only wave, 2026-08-21): Implemented in chicago-notes-18th.yaml by removing the incorrect citation.ibid branch. Fresh notes report contains no lexical Ibid output; exact parity is now 24/72. The report's generic ibid-conformance profile is not authoritative for this style because the shipped CSL and Chicago policy require shortened repeats.
+
+\n\nThe style change is intentional and source-backed, but the existing Rust test format_document_note_style_repeat_citations_produce_ibid still asserts Ibid. Rust/test-contract work is explicitly excluded from PR A; keep this bean open until that follow-up is handled.
