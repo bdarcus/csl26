@@ -5,7 +5,7 @@ status: in-progress
 type: epic
 priority: high
 created_at: 2026-06-30T14:30:24Z
-updated_at: 2026-08-08T14:19:50Z
+updated_at: 2026-08-23T20:41:23Z
 parent: csl26-40n4
 ---
 
@@ -132,3 +132,56 @@ Cross-referenced every currently-failing exactParity bibliography entry (chicago
 Not proposing new cluster beans unilaterally -- this needs the same "is it one shared-template gap or several" triage the existing five clusters got before being split out. Flagging so the next planning pass treats the 5-cluster list as a subset of the remaining gap, not the whole of it.
 
 Also: chicago-shortened-notes-bibliography had a single-cause defect independent of all of the above -- a wrong `bibliography.options.separator` value (comma instead of period), tracked and fixed as csl26-zl7f. 326 of its 422 failing bibliography entries matched that signature, but the fix's measured impact was smaller than that count implied (exactParity 13/473 -> 20/473, +7) -- most of the flagged entries carry a second, independent defect the separator fix alone doesn't clear. See csl26-zl7f for the full before/after and the note on why the signature count overstated the gain.
+
+## Restructured by the 2026-08-23 leverage audit
+
+docs/architecture/audits/2026-08-23_CHICAGO_PARITY_LEVERAGE_AUDIT.md
+computed the first exact-parity leverage table for this family (10
+defect classes explain 69% of 1,148 failing rows, concentrated on
+book/article-journal rather than the exotic tail) and diagnosed why
+PR #1218 moved only +17 entries in a day: clusters were ranked by
+narrative rather than measured count, worked one source-type at a
+time, and the tune loop's ordering let a fidelity-saturated family
+stop before exact parity moved.
+
+**New children, in leverage order (fix in this order for max return):**
+1. csl26-4xr6 -- title case not applied (304 rows)
+2. csl26-jxco -- title quote boundary, all types at once (300 rows)
+3. csl26-4ndr -- date detail (month/day) dropped (264 rows)
+4. csl26-wtaq -- terminal punctuation/delimiter grammar (221 rows)
+5. csl26-i7nz -- contributor role and ordering (143 rows)
+6. csl26-x61x -- volume/issue/series grammar (136 rows)
+7. csl26-rrsb -- year-suffix letter, engine layer (97 rows)
+8. csl26-78ay -- URL/DOI, genre label, edition, in-container tail (~190 rows)
+
+A wave that does not move parity across every style it touches is
+reverted, not argued for (carried from docs/specs/CHICAGO_FAMILY_STRATEGY.md).
+Report before/after per-type parity for book and article-journal
+specifically, not just family totals.
+
+**Disposition of prior clusters:**
+- csl26-vf5x (cluster 3), csl26-yqma (cluster 4): scrapped, superseded
+  by csl26-wtaq/csl26-i7nz/csl26-x61x with fresh, larger, verified counts.
+- csl26-87yl (cluster 2): stays completed; noted that the audit found
+  its defect is 3x larger family-wide than its own estimate. csl26-jxco
+  picks up the deferred scope.
+- csl26-cz0p (cluster 5, archival/document), csl26-rpza (cluster 6,
+  broadcast/episode), csl26-s2kt (cluster 7, legal/multi-volume/patents):
+  kept as-is, still type-scoped and data-confirmed. Re-verify their
+  residual counts with node scripts/analyze-parity-residuals.js
+  --by-type AFTER waves 1-4 land above -- several of their sampled rows
+  (e.g. the CMOS-18 corpus-annotation document rows) fail on title-case
+  and quoting, not type-specific grammar, so their true remaining scope
+  is likely smaller than currently recorded.
+- csl26-gukd: all acceptance criteria were already checked with a
+  Summary of Changes recorded; marked completed (was left in-progress).
+
+**Adjudication:** scripts/report-data/parity-adjudication.json now
+carries one entry (genre-slug fixture artifact, state 'unclear' --
+see the audit for why the CMOS-18 corpus-annotation rows were
+considered and NOT adjudicated the same way). Any citum-correct
+candidate stays a human call; none written by this pass.
+
+**In-progress cap:** csl26-s2kt remains the only in-progress cluster
+child; all eight new leverage-class beans are filed todo, one at a
+time per docs/guides/STYLE_WORKFLOW_EXECUTION.md's tune loop.

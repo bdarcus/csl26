@@ -1,11 +1,11 @@
 ---
 # csl26-vf5x
 title: 'Cluster 3: container-title terminal punctuation before volume/issue'
-status: todo
+status: scrapped
 type: task
 priority: high
 created_at: 2026-08-07T13:20:49Z
-updated_at: 2026-08-08T13:36:08Z
+updated_at: 2026-08-23T20:40:55Z
 parent: csl26-h7oc
 ---
 
@@ -17,3 +17,14 @@ Per docs/specs/CHICAGO_FAMILY_STRATEGY.md cluster ordering. Stray/missing period
 Re-verified against `node scripts/report-core.js` (references-expanded + chicago-18th corpora) rather than the 2026-07-30 clustering this bean's ~68 estimate came from, per this bean's own "possibly stale" flag. Result: scanning every currently-failing article-journal/article-magazine/article-newspaper bibliography entry across chicago-author-date-18th, taylor-and-francis-chicago-author-date, and chicago-shortened-notes-bibliography for the described "container-title, no period, before volume:issue:page" shape found zero clear matches. The ~68 estimate looks stale -- either already fixed by intervening work, or the pattern's actual current shape doesn't match the original description closely enough for an automated check.
 
 The underlying population is still large and worth investigating, just not via the assumed pattern: article-journal fails 123/213 combined across the three styles (author-date 31/76, T&F 31/76, shortened 61/61), article-magazine 38/50 (11/17, 11/17, 16/16), article-newspaper 63/65 (21/22, 21/22, 21/21). Before starting, pull a fresh small sample of current failing diffs for these three types and re-derive the actual pattern(s) rather than trusting the original description. Note shortened's article-journal/magazine rates (100%/94%) are much worse than author-date/T&F's (~41%/~65%) on the same types -- likely dominated by the unrelated bibliography-separator bug tracked in csl26-zl7f, not this cluster's punctuation issue; re-check shortened's numbers after that lands so this cluster isn't scoped against a confounded baseline.
+
+## Reasons for Scrapping
+
+Superseded by the 2026-08-23 leverage audit
+(docs/architecture/audits/2026-08-23_CHICAGO_PARITY_LEVERAGE_AUDIT.md). This
+bean's own 2026-08-08 re-check already found the described container-title
+pattern 'not found in current failures, likely stale.' The audit's
+freshly measured, larger classes csl26-wtaq (terminal punctuation, 221
+rows) and csl26-x61x (volume/issue/series grammar, 136 rows) supersede
+it with current evidence. Investigation history preserved here per
+convention.

@@ -5,7 +5,7 @@ status: completed
 type: task
 priority: high
 created_at: 2026-08-07T13:20:49Z
-updated_at: 2026-08-07T17:48:55Z
+updated_at: 2026-08-23T20:41:03Z
 parent: csl26-h7oc
 ---
 
@@ -116,3 +116,14 @@ as goals; only the first is being pursued by the cluster plan as currently
 scoped. Reducing LOC would require a deliberate pass to extract genuinely
 family-shared logic into the base style, which none of the 7 cluster beans
 under csl26-h7oc currently plan to do.
+
+## Update from the 2026-08-23 leverage audit
+
+docs/architecture/audits/2026-08-23_CHICAGO_PARITY_LEVERAGE_AUDIT.md
+re-measured this defect family-wide (not per-type) and found title
+quote boundary is the single largest class in the family (300 entries,
+26% of all failing rows), not the ~111 estimated here. csl26-jxco picks
+up where this bean's deferred per-type list (map, dataset, report,
+webpage) left off, scoped to all source types at once rather than one
+type per pass -- the execution pattern this bean's own history shows
+does not converge.
