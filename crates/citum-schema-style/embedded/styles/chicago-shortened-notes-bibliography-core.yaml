@@ -47,7 +47,35 @@ options:
       and-others: et-al
       delimiter-precedes-last: contextual
     demote-non-dropping-particle: display-and-sort
-  titles: chicago
+  titles:
+    # See chicago-notes-18th.yaml's titles: block for the full rationale:
+    # shared `chicago` TitlePreset has no text-case (MLA also uses it, so
+    # the fix is per-style); `quote: true` on component is preserved from
+    # the preset and is load-bearing (this style's citation-form quoting
+    # depends on it, confirmed by testing); type-mapping is deliberately
+    # narrower than chicago-author-date-18th's (manuscript/motion-picture/
+    # etc. regressed 3 archival entries by pulling in that same quote:true
+    # where the oracle doesn't want it -- deferred to wave 2, csl26-jxco).
+    # This style restates rather than inherits titles: (own explicit value
+    # at this level), so the same conversion is needed here too. See
+    # docs/architecture/audits/2026-08-23_CHICAGO_PARITY_LEVERAGE_AUDIT.md,
+    # wave 1.
+    type-mapping:
+      map: component
+      dataset: component
+    component:
+      quote: true
+      text-case: title
+    monograph:
+      text-case: title
+      emph: true
+    container-monograph:
+      text-case: title
+      emph: true
+    periodical:
+      emph: true
+    serial:
+      emph: true
   page-range-format: chicago16
   punctuation-in-quote: true
 citation:

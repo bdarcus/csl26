@@ -45,7 +45,47 @@ options:
   contributors:
     and: text
     delimiter-precedes-last: contextual
-  titles: chicago
+  titles:
+    # CMOS 18 title-cases nearly every reference-type title; the shared
+    # `chicago` TitlePreset (crates/citum-schema-style/src/presets.rs)
+    # supplies quote/emph but no text-case -- MLA also uses that preset, so
+    # the case fix is applied here explicitly per-style rather than by
+    # changing the shared preset. `quote: true` on component is preserved
+    # from the preset (load-bearing here: unlike chicago-author-date-18th,
+    # whose quoting comes from `wrap: punctuation: quotes` on its own
+    # default bibliography template, this style's citation-form title
+    # quoting has no such template-level source and depends entirely on
+    # this category-level flag -- confirmed by testing, which showed
+    # dropping it strips quotes from every component-category citation).
+    # See docs/architecture/audits/2026-08-23_CHICAGO_PARITY_LEVERAGE_AUDIT.md,
+    # wave 1.
+    #
+    # Deliberately narrower than chicago-author-date-18th's type-mapping:
+    # broadcast/collection/manuscript/motion-picture/song/webpage are NOT
+    # added here. Testing showed routing them into `component` also pulls
+    # in this same `quote: true`, which the oracle does not want on bare
+    # archival/manuscript titles ("Revere Family Papers", "Landscapes of
+    # Zambia, Central Africa") -- a real regression, not a wash. Only
+    # map/dataset are added here, matching what's proven safe; the rest is
+    # deferred to wave 2 (csl26-jxco, title quote boundary), which must land
+    # per-type with verification, not as a bulk copy of author-date-18th's
+    # list.
+    type-mapping:
+      map: component
+      dataset: component
+    component:
+      quote: true
+      text-case: title
+    monograph:
+      text-case: title
+      emph: true
+    container-monograph:
+      text-case: title
+      emph: true
+    periodical:
+      emph: true
+    serial:
+      emph: true
 citation:
   delimiter: ""
   subsequent:
