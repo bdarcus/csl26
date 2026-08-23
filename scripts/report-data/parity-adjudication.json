@@ -6,5 +6,62 @@
     "unclear": "Neither side's correctness is established from available evidence. Excluded from the exact-parity gate denominator until resolved. An agent may record this state unilaterally, but it escalates to the user for adjudication -- it is not a terminal classification.",
     "citum-correct": "Citum is right and the oracle (citeproc-js) is wrong or not authoritative for this case. Excluded from the exact-parity gate. Requires \"authority\" (a cited source: publisher rules, biblatex prior art, a spec section, documentary evidence) and \"confirmedBy\" (the user). An agent must never write this state; check-core-quality.js rejects citum-correct entries missing either field."
   },
-  "entries": {}
+  "entries": {
+    "chicago-author-date-18th": {
+      "ITEM-11": {
+        "state": "unclear",
+        "reason": "genre-slug fixture artifact: references-expanded.json stores genre as the kebab-case slug 'phd-thesis'. citeproc-js echoes the literal slug capitalize-first ('Phd-thesis'); Citum humanizes it ('PhD thesis'). The real CMOS-18 corpus stores genre as free prose ('PhD diss.'), so neither renderer's behavior is evidence of correctness here -- it is an artifact of how this one synthetic fixture encodes the field.",
+        "recordedBy": "2026-08-23 Chicago parity leverage audit (docs/architecture/audits/2026-08-23_CHICAGO_PARITY_LEVERAGE_AUDIT.md)"
+      },
+      "ITEM-22": {
+        "state": "unclear",
+        "reason": "genre-slug fixture artifact: references-expanded.json stores genre as 'short-film'. citeproc-js echoes 'Short-film'; Citum renders 'Short film'. Same fixture-encoding artifact as ITEM-11.",
+        "recordedBy": "2026-08-23 Chicago parity leverage audit (docs/architecture/audits/2026-08-23_CHICAGO_PARITY_LEVERAGE_AUDIT.md)"
+      },
+      "ITEM-27": {
+        "state": "unclear",
+        "reason": "genre-slug fixture artifact: references-expanded.json stores genre as 'assessment-report'. Same fixture-encoding artifact as ITEM-11.",
+        "recordedBy": "2026-08-23 Chicago parity leverage audit (docs/architecture/audits/2026-08-23_CHICAGO_PARITY_LEVERAGE_AUDIT.md)"
+      }
+    },
+    "taylor-and-francis-chicago-author-date": {
+      "ITEM-11": {
+        "state": "unclear",
+        "reason": "genre-slug fixture artifact; inherits from chicago-author-date-18th via extends:. See that style's ITEM-11 entry for the full explanation.",
+        "recordedBy": "2026-08-23 Chicago parity leverage audit (docs/architecture/audits/2026-08-23_CHICAGO_PARITY_LEVERAGE_AUDIT.md)"
+      },
+      "ITEM-22": {
+        "state": "unclear",
+        "reason": "genre-slug fixture artifact; inherits from chicago-author-date-18th via extends:. See that style's ITEM-22 entry for the full explanation.",
+        "recordedBy": "2026-08-23 Chicago parity leverage audit (docs/architecture/audits/2026-08-23_CHICAGO_PARITY_LEVERAGE_AUDIT.md)"
+      },
+      "ITEM-27": {
+        "state": "unclear",
+        "reason": "genre-slug fixture artifact; inherits from chicago-author-date-18th via extends:. See that style's ITEM-27 entry for the full explanation.",
+        "recordedBy": "2026-08-23 Chicago parity leverage audit (docs/architecture/audits/2026-08-23_CHICAGO_PARITY_LEVERAGE_AUDIT.md)"
+      }
+    },
+    "chicago-shortened-notes-bibliography": {
+      "ITEM-11": {
+        "state": "unclear",
+        "reason": "genre-slug fixture artifact; same 'phd-thesis' slug divergence as chicago-author-date-18th's ITEM-11.",
+        "recordedBy": "2026-08-23 Chicago parity leverage audit (docs/architecture/audits/2026-08-23_CHICAGO_PARITY_LEVERAGE_AUDIT.md)"
+      },
+      "ITEM-22": {
+        "state": "unclear",
+        "reason": "genre-slug fixture artifact; same 'short-film' slug divergence as chicago-author-date-18th's ITEM-22.",
+        "recordedBy": "2026-08-23 Chicago parity leverage audit (docs/architecture/audits/2026-08-23_CHICAGO_PARITY_LEVERAGE_AUDIT.md)"
+      },
+      "ITEM-24": {
+        "state": "unclear",
+        "reason": "genre-slug fixture artifact: references-expanded.json stores genre as 'video-interview'. citeproc-js echoes the literal slug capitalize-first; Citum humanizes it. Same fixture-encoding artifact as ITEM-11/ITEM-22/ITEM-27.",
+        "recordedBy": "2026-08-23 Chicago parity leverage audit (docs/architecture/audits/2026-08-23_CHICAGO_PARITY_LEVERAGE_AUDIT.md)"
+      },
+      "ITEM-27": {
+        "state": "unclear",
+        "reason": "genre-slug fixture artifact; same 'assessment-report' slug divergence as chicago-author-date-18th's ITEM-27.",
+        "recordedBy": "2026-08-23 Chicago parity leverage audit (docs/architecture/audits/2026-08-23_CHICAGO_PARITY_LEVERAGE_AUDIT.md)"
+      }
+    }
+  }
 }

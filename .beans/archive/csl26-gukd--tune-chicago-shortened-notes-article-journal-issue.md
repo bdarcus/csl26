@@ -1,11 +1,11 @@
 ---
 # csl26-gukd
 title: Tune Chicago shortened-notes article-journal issue/year grammar
-status: in-progress
+status: completed
 type: task
 priority: high
 created_at: 2026-08-11T15:03:58Z
-updated_at: 2026-08-11T17:25:07Z
+updated_at: 2026-08-23T20:41:02Z
 parent: csl26-h7oc
 ---
 
