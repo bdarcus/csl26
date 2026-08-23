@@ -1498,9 +1498,11 @@ test('generateReport exposes the registered coverage audit on its corresponding 
   assert.equal(audit.outputGroups.some((group) => group.exactEvidence), true);
   assert.equal(audit.postChangeEvidence.status, 'measured');
   assert.equal(audit.postChangeEvidence.beforeExactParity.passed, 34);
-  // Multivolume title/part routing and number-of-volumes support close the
-  // current shortened-notes residual cluster.
-  assert.equal(audit.postChangeEvidence.afterExactParity.passed, 81);
+  // Multivolume title/part routing and number-of-volumes support closed
+  // the residual cluster registered on 2026-08-09 (81); the 2026-08-23
+  // Chicago parity leverage audit's wave 1 (title case) moved it further
+  // to 86 -- see docs/architecture/audits/2026-08-23_CHICAGO_PARITY_LEVERAGE_AUDIT.md.
+  assert.equal(audit.postChangeEvidence.afterExactParity.passed, 86);
 });
 
 test('generateReport supports multi-style selected reports', {

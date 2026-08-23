@@ -63,11 +63,13 @@ options:
       - translator
   titles:
     # CMOS 18 title-cases nearly every reference-type title (article, book,
-    # broadcast, manuscript, motion picture, song, webpage); the engine's
-    # legacy type->category fallback only recognizes a small hardcoded set
-    # (component: articles/chapters/entries; monograph: book/thesis/report).
-    # Map the remaining CMOS title-case types explicitly rather than widen
-    # the shared engine default, which would affect every embedded style.
+    # broadcast, manuscript, motion picture, song, webpage, map, dataset);
+    # the engine's legacy type->category fallback only recognizes a small
+    # hardcoded set (component: articles/chapters/entries; monograph:
+    # book/thesis/report). Map the remaining CMOS title-case types
+    # explicitly rather than widen the shared engine default, which would
+    # affect every embedded style. map/dataset added per docs/architecture/
+    # audits/2026-08-23_CHICAGO_PARITY_LEVERAGE_AUDIT.md, wave 1.
     type-mapping:
       broadcast: component
       collection: component
@@ -75,6 +77,8 @@ options:
       motion-picture: component
       song: component
       webpage: component
+      map: component
+      dataset: component
     component:
       text-case: title
     monograph:
