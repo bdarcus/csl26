@@ -1,8 +1,8 @@
 # Style Workflow Execution
 
 **Status:** Active
-**Version:** 1.2
-**Date:** 2026-08-11
+**Version:** 1.4
+**Date:** 2026-08-23
 **Related:** [STYLE_WORKFLOW_DECISION_RULES.md](../policies/STYLE_WORKFLOW_DECISION_RULES.md),
 [MIGRATE_RESEARCH_RICH_INPUTS.md](../specs/MIGRATE_RESEARCH_RICH_INPUTS.md),
 [STYLE_TEMPLATE_EXPRESSIVENESS_AND_PARITY.md](../specs/STYLE_TEMPLATE_EXPRESSIVENESS_AND_PARITY.md),
@@ -160,6 +160,16 @@ loop; SQI is a final structural pass once the visible text is correct. See
 [2026-07-31_EXACT_PARITY_REFOCUS.md](../architecture/audits/2026-07-31_EXACT_PARITY_REFOCUS.md)
 for why fidelity alone is not sufficient evidence of correct rendering.
 
+**Leverage-first ordering.** If the seed's fidelity score already exceeds its
+exact-parity rate by more than 0.3, run the exact-parity loop (step 3) before
+the fidelity loop (step 2) — the fidelity loop otherwise spends the pass's
+budget polishing a metric that is nearly saturated while the metric with real
+headroom goes untouched. This was the root cause diagnosed in
+[2026-08-23_CHICAGO_PARITY_LEVERAGE_AUDIT.md](../architecture/audits/2026-08-23_CHICAGO_PARITY_LEVERAGE_AUDIT.md):
+three Chicago-family styles sat at 0.90–0.96 fidelity against 0.17–0.39 exact
+parity, and the ordering below let each pass complete without moving the
+number that mattered.
+
 ### Execution order
 1. **Seed:** run `citum-migrate` (or accept the existing Citum YAML) to produce
    a concrete candidate. Record oracle fidelity baseline and exact-parity
@@ -178,9 +188,16 @@ for why fidelity alone is not sufficient evidence of correct rendering.
    d. Re-run oracle. Repeat until fidelity is 100%.
    e. If a residual is clearly a `processor-defect` or `intentional divergence`,
       reclassify and exclude — do not keep iterating.
-3. **Exact-parity loop (begins once fidelity is green):**
+3. **Exact-parity loop (begins once fidelity is green, or first — see
+   "Leverage-first ordering" above):**
    a. Run `node scripts/report-core.js --style <name> --all-features` and read
       `exactParity` for the style.
+   a1. Rank the residual before triaging entry-by-entry: run
+      `node scripts/analyze-parity-residuals.js <report.json>` (optionally
+      `--by-type <fixture>` for a per-reference-type breakdown) and work its
+      greedy-set-cover ordering biggest-class-first. This is the exact-parity
+      analogue of `analyze-oracle-clusters.py`'s fidelity triage — do not
+      select the next cluster by narrative or by whichever entry is on screen.
    b. For each residual: classify as `style-defect` (fix the YAML),
       `processor-defect` (escalate to Rust workflow), a generalizable
       `intentional divergence` (add to
@@ -191,13 +208,34 @@ for why fidelity alone is not sufficient evidence of correct rendering.
       `citum-correct`; that state is the user's call, made with a cited
       authority.
    c. Apply the smallest correct fix. Re-run and confirm the `passed` count
-      rose and fidelity did not regress.
+      rose and fidelity did not regress. **The aggregate `passed` count is
+      not sufficient regression evidence on its own** — compare `exactMatch`
+      per entry id between the before/after reports (a style previously
+      passing that now fails is a regression even when the aggregate count
+      still rose net). A fix that routes a rendering decision through a
+      shared category (e.g. a `titles.type-mapping` entry affecting several
+      reference types at once) can flip several previously-passing entries
+      to failing while flipping more failing entries to passing, and the
+      net aggregate delta alone cannot distinguish that from a clean win.
+      This is not a hypothetical: a 2026-08-23 Chicago wave-1 pass landed a
+      change that looked like a clean +5-entry net win by aggregate count
+      and was hiding 3 regressions, caught only by this per-entry check —
+      see [2026-08-23_CHICAGO_PARITY_LEVERAGE_AUDIT.md](../architecture/audits/2026-08-23_CHICAGO_PARITY_LEVERAGE_AUDIT.md)'s
+      postscript.
    d. Continue until no further residual is classifiable without escalation,
       or the floor is raised as far as this pass supports; regenerate
       `embedded-parity-baseline.json` to ratchet the new floor in. Always
       regenerate it from the full portfolio, not `--style`-scoped — this is
       the only mechanism that protects (and credits) sibling styles when a
       fix landed in a shared `style.chain` ancestor.
+   e. **Narrowed stop condition:** a pass may not stop while a defect class
+      from step a1 carrying 20 or more rows remains unaddressed, unless every
+      style that class touches has been fixed or the class has been
+      reclassified `processor-defect`. A pass may still land with a smaller
+      residual gap fully classified, per the stop conditions below — this
+      only closes the specific failure mode of clearing one source-type at a
+      time out of a class two orders of magnitude larger and calling the
+      class "worked."
 4. **SQI loop (begins only when fidelity and exact parity are stable):**
    a. Run `node scripts/report-core.js --style <name>` to get the SQI score.
    b. Apply SQI improvements — hoist shared options, use presets, introduce
@@ -228,6 +266,21 @@ for why fidelity alone is not sufficient evidence of correct rendering.
 - [x] `tune` loop is defined here once, not in individual skill files.
 
 ## Changelog
+- 2026-08-23: Required per-entry `exactMatch` regression comparison (not
+  just the aggregate `passed` count) in exact-parity loop step 3c, after a
+  Chicago wave-1 pass landed a change that looked like a clean net win by
+  aggregate count while hiding 3 real regressions — see
+  [2026-08-23_CHICAGO_PARITY_LEVERAGE_AUDIT.md](../architecture/audits/2026-08-23_CHICAGO_PARITY_LEVERAGE_AUDIT.md)'s
+  postscript.
+- 2026-08-23: Added leverage-first ordering (exact-parity loop runs before
+  the fidelity loop when fidelity already exceeds exact parity by >0.3),
+  wired `scripts/analyze-parity-residuals.js` into the exact-parity loop as
+  step 3a1, and narrowed the exact-parity stop condition so a pass cannot
+  stop while a ≥20-row defect class remains unaddressed across the styles it
+  touches. Prompted by
+  [2026-08-23_CHICAGO_PARITY_LEVERAGE_AUDIT.md](../architecture/audits/2026-08-23_CHICAGO_PARITY_LEVERAGE_AUDIT.md),
+  which found the prior ordering let a fidelity-saturated family spend a full
+  tuning pass without moving exact parity.
 - 2026-08-11: Documented `style-coverage-review.js --update-manifest` as the
   recovery path when a coverage-audit pre-flight goes stale from an edit to
   the audited style or a shared `style.chain` ancestor. Added the

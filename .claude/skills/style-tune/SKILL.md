@@ -64,12 +64,26 @@ Follow the full `tune` loop from `docs/guides/STYLE_WORKFLOW_EXECUTION.md`:
    guide, rather than treating it as blocking.
 2. **Fidelity loop** — oracle → classify failure → smallest correct YAML fix →
    re-run. Repeat until 100%.
-3. **Exact-parity loop** (begins once fidelity is green) — `report-core --style
-   --all-features` → classify each residual → smallest correct fix or ledger
-   entry → re-run. Continue until no further residual is classifiable without
-   escalation; regenerate `embedded-parity-baseline.json` from the full
-   portfolio (not `--style`-scoped) per the shared-ancestor rule to ratchet
-   the new floor in.
+   **Leverage-first exception:** if the seed's fidelity already exceeds its
+   exact-parity rate by more than 0.3, run step 3 before this step — see
+   `STYLE_WORKFLOW_EXECUTION.md`'s "Leverage-first ordering."
+3. **Exact-parity loop** (begins once fidelity is green, or first per the
+   exception above) — `report-core --style --all-features` → **rank residuals
+   by leverage** with `node scripts/analyze-parity-residuals.js <report.json>`
+   and work its greedy-set-cover order biggest-class-first, not by whichever
+   entry is on screen → classify each residual → smallest correct fix or
+   ledger entry → re-run. **Confirm with per-entry `exactMatch` comparison,
+   not just the aggregate `passed` count** — a fix routed through a shared
+   category (e.g. a `titles.type-mapping` entry) can flip several
+   previously-passing entries to failing while flipping more failing
+   entries to passing, and a rising aggregate count alone cannot rule that
+   out. Continue until no further residual is classifiable
+   without escalation; regenerate `embedded-parity-baseline.json` from the
+   full portfolio (not `--style`-scoped) per the shared-ancestor rule to
+   ratchet the new floor in. **A pass may not stop while a ≥20-row defect
+   class is unaddressed** unless every style it touches is fixed or the class
+   is reclassified `processor-defect` — see `STYLE_WORKFLOW_EXECUTION.md`'s
+   narrowed stop condition.
 4. **SQI loop** (only after fidelity and exact parity are stable) —
    `report-core` → hoist/preset/prune → oracle re-check → repeat until clean.
 5. **QA gate** — regenerate and validate any registered packet on a clean,
@@ -121,6 +135,13 @@ Every completed tune pass delivers:
 - Oracle: `node scripts/oracle.js styles-legacy/<name>.csl --json`
 - Exact parity: `node scripts/report-core.js --style <name> --all-features`
   (read `styles[0].exactParity`)
+- Residual leverage ranking: `node scripts/analyze-parity-residuals.js <report.json>`
+  (add `--by-type <fixture>` for a per-reference-type breakdown; add
+  `--list "<label>"` to drill a ranked class down to its individual
+  entries once you're ready to fix rather than triage)
+- Regression check: diff `exactMatch` per entry id between the before/after
+  reports (not just the aggregate `passed` count) before treating any
+  exact-parity fix as clean
 - SQI: `node scripts/report-core.js --style <name>`
 - Render smoke-check: `cargo run --bin citum -- render refs -b tests/fixtures/references-expanded.json -s crates/citum-schema-style/embedded/styles/<name>.yaml`
 - QA handoff: `../style-qa/SKILL.md` with `tier: embedded-core`
