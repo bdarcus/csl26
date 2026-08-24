@@ -82,6 +82,13 @@ options:
       # analogy to dataset/document.
       map: monograph
       graphic: monograph
+      # `classic`/`hearing` share the exact same choose-block bucket as
+      # map/graphic above (never-quote, always-italic) -- added together
+      # with them once confirmed to apply identically. See
+      # docs/architecture/audits/2026-08-23_CHICAGO_PARITY_LEVERAGE_AUDIT.md
+      # wave 3, csl26-vmw3.
+      classic: monograph
+      hearing: monograph
       dataset: component
       # `document` and `thesis` per docs/architecture/audits/2026-08-23_
       # CHICAGO_PARITY_LEVERAGE_AUDIT.md wave 2 (csl26-jxco): the shipped
