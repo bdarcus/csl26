@@ -31,7 +31,14 @@ options:
     # engine gap. See docs/policies/TEXT_CASE_PROTECTION.md and csl26-4kt3 for
     # why proper-noun protection here would need `.nocase` in the source data,
     # which this style cannot supply.
-    type-mapping: ~
+    #
+    # `document` re-added narrowly (not the full parent list — see the
+    # type-mapping-clearing rationale above) per docs/architecture/audits/
+    # 2026-08-23_CHICAGO_PARITY_LEVERAGE_AUDIT.md wave 2: without it, `document`
+    # falls to the engine's hardcoded Default title category (no case
+    # transform at all) rather than this style's own `component` category.
+    type-mapping:
+      document: component
     component:
       text-case: sentence
   contributors:
