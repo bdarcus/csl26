@@ -901,6 +901,59 @@ bibliography:
       prefix: ", "
     - variable: doi
       prefix: ". https://doi.org/"
+    # `map`/`graphic` previously fell through to this file's default
+    # `template:` (below), whose `title: primary` unconditionally wraps in
+    # quotes. Per the shipped chicago-author-date.csl's title choose-block,
+    # `book classic graphic hearing map` are the never-quote, always-italic
+    # set -- confirmed against the oracle ("Cable, D. 2013. The Racial Dot
+    # Map. Map. University of Virginia..." has no quotes). Structurally
+    # identical to the default template otherwise; only the title node
+    # changes (wrap:quotes -> text-case/emph set explicitly, matching how
+    # `software`'s title:primary above sets text-case without relying on
+    # the shared `component`/`monograph` category). See docs/architecture/
+    # audits/2026-08-23_CHICAGO_PARITY_LEVERAGE_AUDIT.md wave 3, csl26-vmw3.
+    map, graphic:
+    - contributor: author
+      form: long
+      name-order: family-first
+      shorten:
+        min: 8
+        use-first: 3
+    - date: issued
+      form: year
+    - title: primary
+      text-case: title
+      emph: true
+    - group:
+      - contributor: editor
+        form: verb
+        name-order: given-first
+      - title: parent-monograph
+        emph: true
+    - title: parent-serial
+      emph: true
+    - group:
+      - number: volume
+      - number: issue
+        prefix: " "
+        wrap:
+          punctuation: parentheses
+      prefix: " "
+      delimiter: ""
+    - group:
+      - number: pages
+      prefix: ": "
+      render-when:
+        field-present: volume-or-issue
+    - group:
+      - number: pages
+      prefix: ", "
+      render-when:
+        field-absent: volume-or-issue
+    - variable: publisher
+    - variable: doi
+      prefix: https://doi.org/
+    - variable: url
     software:
     - contributor: author
       form: long
