@@ -417,10 +417,22 @@ pub(crate) fn apply_text_case_markup_aware_with_language(
     }
 }
 
-// English title-case stop words (articles, short conjunctions, short prepositions).
+// English title-case stop words (articles, short conjunctions, prepositions).
+//
+// Sourced from citeproc-js's `CSL.SKIP_WORDS`
+// (scripts/node_modules/citeproc/citeproc_commonjs.js:1076, an npm dependency
+// of scripts/ tooling -- not vendored here), intersected with words observed
+// in real Chicago exact-parity residuals. Scope is deliberately word-list
+// only: citeproc-js's case algorithm never force-lowercases (it only
+// capitalizes words already exactly lowercase), which is architecturally
+// different from this function's normalize-then-recapitalize model -- that
+// difference is NOT ported here. The observed defects were word-list gaps,
+// not algorithm-shape gaps. See docs/architecture/audits/2026-08-23_
+// CHICAGO_PARITY_LEVERAGE_AUDIT.md and bean csl26-omqk.
 const TITLE_CASE_STOP_WORDS: &[&str] = &[
-    "a", "an", "and", "as", "at", "but", "by", "for", "from", "in", "nor", "of", "on", "or", "so",
-    "the", "to", "up", "yet", "along", "between", "during", "with", "v", "vs",
+    "a", "about", "after", "along", "an", "and", "as", "at", "before", "between", "but", "by",
+    "during", "for", "from", "in", "into", "nor", "of", "on", "or", "so", "than", "the", "to",
+    "under", "up", "versus", "via", "vs", "with", "without", "yet", "v",
 ];
 
 /// Hyphen-like characters that join compound words for title-case purposes.
@@ -914,6 +926,24 @@ mod tests {
             ),
             "Fighting for Forests: Protection and Exploitation during the War with China"
         );
+    }
+
+    #[rstest]
+    #[case::about("a book about the war", "A Book about the War")]
+    #[case::after("a study after the fall", "A Study after the Fall")]
+    #[case::before("the years before the storm", "The Years before the Storm")]
+    #[case::into("a journey into the wild", "A Journey into the Wild")]
+    #[case::than("more than a feeling", "More than a Feeling")]
+    #[case::under("a nation under the law", "A Nation under the Law")]
+    #[case::versus("the state versus the people", "The State versus the People")]
+    #[case::via("a passage via the alps", "A Passage via the Alps")]
+    #[case::without("a life without the state", "A Life without the State")]
+    #[case::new_stop_word_in_last_position("a life without", "A Life Without")]
+    fn given_citeproc_skip_word_when_title_case_then_interior_occurrence_stays_lowercase(
+        #[case] input: &str,
+        #[case] expected: &str,
+    ) {
+        assert_eq!(to_title_case(input), expected);
     }
 
     #[test]
