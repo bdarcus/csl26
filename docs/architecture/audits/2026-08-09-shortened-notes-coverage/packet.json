@@ -115,7 +115,7 @@
     ],
     "manifest": {
       "path": "docs/architecture/audits/2026-08-09-shortened-notes-coverage/manifest.yaml",
-      "sha256": "496025addf9b0f8e8b306a75a29fa7674c787bc185c86285b46f61518d6c4c81"
+      "sha256": "8cb437f12aadb8a8e27d961bea68cefc5978cd8bf14e9477836b9261da5b6aa2"
     },
     "relevance": {
       "default": "relevant",
@@ -164,12 +164,12 @@
         {
           "id": "chicago-shortened-notes-bibliography-core",
           "path": "crates/citum-schema-style/embedded/styles/chicago-shortened-notes-bibliography-core.yaml",
-          "sha256": "acffc5f23e181e89b6894a285065647f6393911c9088fb08951f3dd861da119d"
+          "sha256": "f95595ebbc0dac728c9e210e73ab11f27f520965f5dc7b9fc3be9931d4977657"
         },
         {
           "id": "chicago-notes-18th",
           "path": "crates/citum-schema-style/embedded/styles/chicago-notes-18th.yaml",
-          "sha256": "a87c1bb0152f3fa88550d398e0d9389a09d80f95d8fe26a171a3982b2e3505e5"
+          "sha256": "8df9d7dfa392b30828d217576b455088c4536f7525cd643b913730ad3b4c4490"
         },
         {
           "id": "chicago-18-base",
@@ -179,7 +179,7 @@
       ],
       "id": "chicago-shortened-notes-bibliography",
       "path": "crates/citum-schema-style/embedded/styles/chicago-shortened-notes-bibliography.yaml",
-      "resolvedSha256": "6ccd8dc057a61c9c96eb9a6499ae199e37238d08ad7c2e49ecb599d7a040ae00",
+      "resolvedSha256": "5a461963f22e3ec6dfd3be63e7a6ff708ff8ff58bd18d7be97f197815908926c",
       "sha256": "5ee7afd5c74169d8882747d8ab6ede8b84aa12cd1760e1f0f3f544198cd1be94"
     },
     "surfaces": [

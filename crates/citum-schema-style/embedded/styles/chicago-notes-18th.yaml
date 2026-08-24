@@ -71,7 +71,17 @@ options:
     # per-type with verification, not as a bulk copy of author-date-18th's
     # list.
     type-mapping:
-      map: component
+      # `map`/`graphic` route to `monograph` (title-case + emph, no quote),
+      # not `component`: the shipped chicago-author-date.csl's title
+      # choose-block puts `book classic graphic hearing map` in the
+      # never-quote, always-italic set. `map` was originally added as
+      # `component` (wave 1, csl26-4xr6) for its title-case fix alone,
+      # which also pulled in `component`'s `quote: true` -- wrong for map,
+      # caught here in wave 3 (csl26-vmw3) once quoting was checked
+      # per-type against the real .csl rather than assumed safe by
+      # analogy to dataset/document.
+      map: monograph
+      graphic: monograph
       dataset: component
       # `document` and `thesis` per docs/architecture/audits/2026-08-23_
       # CHICAGO_PARITY_LEVERAGE_AUDIT.md wave 2 (csl26-jxco): the shipped
