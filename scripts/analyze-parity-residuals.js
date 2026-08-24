@@ -28,6 +28,23 @@
  *   node scripts/analyze-parity-residuals.js /tmp/r.json --json
  *   node scripts/analyze-parity-residuals.js /tmp/r.json --by-type <refs.json>
  *   node scripts/analyze-parity-residuals.js /tmp/r.json --list "A1 title-case not applied"
+ *   node scripts/analyze-parity-residuals.js /tmp/after.json --diff /tmp/before.json
+ *   node scripts/analyze-parity-residuals.js /tmp/after.json --diff /tmp/before.json --json
+ *
+ * --diff <before.json> compares this report (the "after") against an
+ * earlier one, per style plus a summed "ALL STYLES" aggregate: exactMatch
+ * delta (newly-passing / newly-failing rows -- the regression signal
+ * docs/guides/STYLE_WORKFLOW_EXECUTION.md's exact-parity loop, step 3c,
+ * requires before treating any aggregate `passed` increase as a clean win),
+ * per-label instance-count delta, a rows-by-label-count histogram, and a
+ * near-miss queue (rows carrying exactly one remaining label -- the next
+ * wave's ready-to-convert target list). Rows commonly carry 2+ overlapping
+ * labels and don't flip to exactMatch until every one clears, so a wave can
+ * do real, measurable work while the aggregate `passed` count stays flat;
+ * --diff surfaces that progress directly instead of requiring it to be
+ * reconstructed by hand, which is how the 2026-08-23 audit's wave 1/2
+ * postscript first found it -- see
+ * docs/architecture/audits/2026-08-23_CHICAGO_PARITY_LEVERAGE_AUDIT.md.
  *
  * --by-type additionally joins each failing bibliography row's reference
  * `type` from a CSL-JSON-shaped fixture file (an object keyed by id, or an
@@ -253,6 +270,48 @@ function failingRows(styleReport) {
   return rows;
 }
 
+/**
+ * Every row (pass and fail) from one style report, with the same source
+ * arrays and gating as `failingRows` (`oracleDetail` gated on
+ * `exactParityEligible`, `citationEntries` ungated) but keeping
+ * `exactMatch` on each row instead of filtering to failures. `failingRows`
+ * alone can't see newly-passing rows, so a diff needs this separately.
+ */
+function allRows(styleReport) {
+  const rows = [];
+  for (const e of styleReport.oracleDetail || []) {
+    if (e.exactParityEligible) {
+      rows.push({ kind: 'bib', id: e.id, oracle: e.exactOracle, citum: e.exactCitum, exactMatch: e.exactMatch });
+    }
+  }
+  for (const e of styleReport.citationEntries || []) {
+    rows.push({ kind: 'cite', id: e.id, oracle: e.exactOracle, citum: e.exactCitum, exactMatch: e.exactMatch });
+  }
+  return rows;
+}
+
+function rowKey(row) {
+  return `${row.kind} ${row.id}`;
+}
+
+/**
+ * Per-row exactMatch map for one style report, keyed by `(kind, id)` (see
+ * `listLabel`'s note below: a report can carry the same id twice across
+ * merged benchmark runs). Duplicates fold with AND -- any failing instance
+ * marks the key failing. Conservative default for regression detection: a
+ * row that fails in even one duplicate should not be reported as cleanly
+ * passing.
+ */
+function exactMatchMap(styleReport) {
+  const map = new Map();
+  for (const row of allRows(styleReport)) {
+    const key = rowKey(row);
+    const existing = map.get(key);
+    map.set(key, existing === undefined ? row.exactMatch : existing && row.exactMatch);
+  }
+  return map;
+}
+
 function loadTypeMap(fixturePath) {
   const raw = JSON.parse(fs.readFileSync(fixturePath, 'utf8'));
   const items = Array.isArray(raw) ? raw : raw.items || raw;
@@ -336,14 +395,197 @@ function analyzeStyle(styleReport, typeMap) {
   };
 }
 
+// ─── Diff (wave before/after comparison) ───────────────────────────────────
+//
+// Rows in this corpus commonly carry 2-4 overlapping defect labels and
+// don't flip to exactMatch until every one of them clears. That means a
+// leverage-ordered wave can do real, measurable work -- clearing labels off
+// rows -- while the aggregate `passed` count stays flat, because the rows
+// it touched still have other labels outstanding. The functions below
+// surface that underlying signal directly instead of requiring it to be
+// reconstructed by hand (as the 2026-08-23 audit's wave 1/2 postscript was),
+// and give the `newlyFailing` regression check that
+// docs/guides/STYLE_WORKFLOW_EXECUTION.md's exact-parity loop (step 3c)
+// already mandates in prose but has never had a named tool for.
+
+/**
+ * Diff two style reports' per-row exactMatch state. `newlyFailing` is the
+ * regression signal: a fix routed through a shared category (e.g. a
+ * `titles.type-mapping` entry) can flip several previously-passing rows to
+ * failing while flipping more failing rows to passing, and a rising
+ * aggregate `passed` count alone cannot distinguish that from a clean win.
+ */
+function diffExactMatch(beforeStyle, afterStyle) {
+  const beforeMap = exactMatchMap(beforeStyle);
+  const afterMap = exactMatchMap(afterStyle);
+  const afterRowsByKey = new Map(allRows(afterStyle).map((r) => [rowKey(r), r]));
+
+  const newlyPassing = [];
+  const newlyFailing = [];
+  for (const [key, wasPassing] of beforeMap) {
+    if (!afterMap.has(key)) continue;
+    const isPassing = afterMap.get(key);
+    if (wasPassing === isPassing) continue;
+    const [kind, id] = key.split(' ');
+    if (isPassing) {
+      newlyPassing.push({ kind, id });
+    } else {
+      const row = afterRowsByKey.get(key);
+      newlyFailing.push({ kind, id, oracle: row ? row.oracle : undefined, citum: row ? row.citum : undefined });
+    }
+  }
+
+  return {
+    newlyPassing,
+    newlyFailing,
+    before: { passed: beforeStyle.exactParity.passed, total: beforeStyle.exactParity.total },
+    after: { passed: afterStyle.exactParity.passed, total: afterStyle.exactParity.total },
+  };
+}
+
+/**
+ * Diff two `analyzeStyle(...).labelCounts` arrays. Pure diff of already-
+ * computed output -- no new labeling logic. Sorted by |delta| descending
+ * (biggest moves first), label name ascending as a tiebreaker.
+ */
+function diffLabelCounts(beforeAnalysis, afterAnalysis) {
+  const beforeMap = new Map(beforeAnalysis.labelCounts.map((l) => [l.label, l.rows]));
+  const afterMap = new Map(afterAnalysis.labelCounts.map((l) => [l.label, l.rows]));
+  const labels = new Set([...beforeMap.keys(), ...afterMap.keys()]);
+  const result = [...labels].map((label) => {
+    const before = beforeMap.get(label) || 0;
+    const after = afterMap.get(label) || 0;
+    return { label, before, after, delta: after - before };
+  });
+  result.sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta) || a.label.localeCompare(b.label));
+  return result;
+}
+
+/** Sum `rows` per label across several `analyzeStyle(...).labelCounts` arrays. */
+function mergeLabelCounts(analyses) {
+  const totals = new Map();
+  for (const a of analyses) {
+    for (const { label, rows } of a.labelCounts) {
+      totals.set(label, (totals.get(label) || 0) + rows);
+    }
+  }
+  return [...totals.entries()].map(([label, rows]) => ({ label, rows }));
+}
+
+/**
+ * Bucket failing rows by how many defect labels they carry. A row with N
+ * labels needs all N cleared before it flips to exactMatch -- this
+ * histogram is the leading indicator that a wave is converging the
+ * residual population even when the aggregate `passed` count hasn't moved:
+ * rows migrate from higher buckets to lower ones before any of them reach
+ * zero.
+ */
+function labelCountHistogram(styleReport) {
+  const histogram = {};
+  for (const row of failingRows(styleReport)) {
+    const n = labelsFor(row.oracle, row.citum).length;
+    histogram[n] = (histogram[n] || 0) + 1;
+  }
+  return histogram;
+}
+
+/**
+ * Rows carrying exactly one remaining defect label -- the row-level
+ * complement to `analyzeStyle`'s `soleCause` counts. This is the next
+ * wave's ready-to-convert target list: fixing that one label flips the row
+ * to exactMatch.
+ */
+function nearMissQueue(styleReport) {
+  const seen = new Set();
+  const out = [];
+  for (const row of failingRows(styleReport)) {
+    const key = rowKey(row);
+    if (seen.has(key)) continue;
+    const labels = labelsFor(row.oracle, row.citum);
+    if (labels.length !== 1) continue;
+    seen.add(key);
+    out.push({ kind: row.kind, id: row.id, label: labels[0], oracle: row.oracle, citum: row.citum });
+  }
+  out.sort((a, b) => a.label.localeCompare(b.label) || a.id.localeCompare(b.id));
+  return out;
+}
+
+function diffStyles(beforeStyle, afterStyle, beforeAnalysis, afterAnalysis) {
+  const ba = beforeAnalysis || analyzeStyle(beforeStyle);
+  const aa = afterAnalysis || analyzeStyle(afterStyle);
+  return {
+    name: afterStyle.name,
+    exactMatch: diffExactMatch(beforeStyle, afterStyle),
+    labelDeltas: diffLabelCounts(ba, aa),
+    histogramBefore: labelCountHistogram(beforeStyle),
+    histogramAfter: labelCountHistogram(afterStyle),
+    nearMiss: nearMissQueue(afterStyle),
+  };
+}
+
+function sumHistograms(histograms) {
+  const out = {};
+  for (const h of histograms) {
+    for (const [k, v] of Object.entries(h)) out[k] = (out[k] || 0) + v;
+  }
+  return out;
+}
+
+/**
+ * Diff two full reports (as produced by `report-core.js --all-features`,
+ * typically without `--style` so multiple styles are present -- that is
+ * the normal input shape, not an edge case, since a cross-style regression
+ * check needs it). Styles present in only one report are listed under
+ * `addedStyles`/`removedStyles` rather than silently dropped from the diff.
+ */
+function diffReports(beforeReport, afterReport) {
+  const beforeByName = new Map((beforeReport.styles || []).map((s) => [s.name, s]));
+  const afterByName = new Map((afterReport.styles || []).map((s) => [s.name, s]));
+  const common = [...afterByName.keys()].filter((name) => beforeByName.has(name));
+
+  const beforeAnalyses = common.map((name) => analyzeStyle(beforeByName.get(name)));
+  const afterAnalyses = common.map((name) => analyzeStyle(afterByName.get(name)));
+
+  const styles = common.map((name, i) =>
+    diffStyles(beforeByName.get(name), afterByName.get(name), beforeAnalyses[i], afterAnalyses[i])
+  );
+
+  const aggregate = {
+    exactMatch: {
+      newlyPassing: styles.flatMap((s) => s.exactMatch.newlyPassing.map((r) => ({ style: s.name, ...r }))),
+      newlyFailing: styles.flatMap((s) => s.exactMatch.newlyFailing.map((r) => ({ style: s.name, ...r }))),
+      before: {
+        passed: styles.reduce((n, s) => n + s.exactMatch.before.passed, 0),
+        total: styles.reduce((n, s) => n + s.exactMatch.before.total, 0),
+      },
+      after: {
+        passed: styles.reduce((n, s) => n + s.exactMatch.after.passed, 0),
+        total: styles.reduce((n, s) => n + s.exactMatch.after.total, 0),
+      },
+    },
+    labelDeltas: diffLabelCounts({ labelCounts: mergeLabelCounts(beforeAnalyses) }, { labelCounts: mergeLabelCounts(afterAnalyses) }),
+    histogramBefore: sumHistograms(styles.map((s) => s.histogramBefore)),
+    histogramAfter: sumHistograms(styles.map((s) => s.histogramAfter)),
+    nearMiss: styles.flatMap((s) => s.nearMiss.map((r) => ({ style: s.name, ...r }))),
+  };
+
+  return {
+    styles,
+    aggregate,
+    addedStyles: [...afterByName.keys()].filter((name) => !beforeByName.has(name)),
+    removedStyles: [...beforeByName.keys()].filter((name) => !afterByName.has(name)),
+  };
+}
+
 // ─── CLI ─────────────────────────────────────────────────────────────────
 
 function parseArgs(argv) {
-  const opts = { json: false, byType: null, input: null, list: null };
+  const opts = { json: false, byType: null, input: null, list: null, diff: null };
   for (let i = 0; i < argv.length; i += 1) {
     if (argv[i] === '--json') opts.json = true;
     else if (argv[i] === '--by-type') opts.byType = path.resolve(argv[(i += 1)]);
     else if (argv[i] === '--list') opts.list = argv[(i += 1)];
+    else if (argv[i] === '--diff') opts.diff = path.resolve(argv[(i += 1)]);
     else if (!opts.input) opts.input = argv[i];
   }
   return opts;
@@ -397,17 +639,78 @@ function printHuman(result) {
   }
 }
 
+/** Print one diff section (a per-style diff, or the aggregate) in the shared column style. */
+function printDiffSection(label, diff) {
+  const { exactMatch, labelDeltas, histogramBefore, histogramAfter, nearMiss } = diff;
+  console.log(`\n### ${label}`);
+  console.log(
+    `  exactMatch: ${exactMatch.before.passed}/${exactMatch.before.total} -> ` +
+      `${exactMatch.after.passed}/${exactMatch.after.total} ` +
+      `(+${exactMatch.newlyPassing.length} newly passing, ${exactMatch.newlyFailing.length} newly failing)`
+  );
+  if (exactMatch.newlyFailing.length) {
+    console.log('  REGRESSIONS:');
+    for (const r of exactMatch.newlyFailing) {
+      const where = r.style ? `${r.style} ` : '';
+      console.log(`    [${where}${r.kind} ${r.id}]`);
+      console.log(`      O: ${r.oracle}`);
+      console.log(`      C: ${r.citum}`);
+    }
+  }
+  const nonzeroDeltas = labelDeltas.filter((d) => d.delta !== 0);
+  if (nonzeroDeltas.length) {
+    console.log('  label-instance deltas (nonzero only):');
+    for (const { label: l, before, after, delta } of nonzeroDeltas) {
+      const sign = delta > 0 ? '+' : '';
+      console.log(`    ${l.padEnd(44)} ${String(before).padStart(4)} -> ${String(after).padStart(4)} (${sign}${delta})`);
+    }
+  }
+  const keys = new Set([...Object.keys(histogramBefore), ...Object.keys(histogramAfter)]);
+  if (keys.size) {
+    console.log('  rows-by-label-count histogram:');
+    console.log(`    ${'n-labels'.padEnd(10)}${'before'.padEnd(8)}after`);
+    for (const k of [...keys].sort((a, b) => Number(a) - Number(b))) {
+      console.log(`    ${k.padEnd(10)}${String(histogramBefore[k] || 0).padEnd(8)}${histogramAfter[k] || 0}`);
+    }
+  }
+  console.log(`  near-miss queue (rows 1 label from passing): ${nearMiss.length}`);
+}
+
+function printDiffHuman(result) {
+  for (const style of result.styles) {
+    printDiffSection(style.name, style);
+  }
+  printDiffSection('ALL STYLES (aggregate)', result.aggregate);
+  if (result.addedStyles.length) {
+    console.log(`\n(styles only in the after report, not diffed: ${result.addedStyles.join(', ')})`);
+  }
+  if (result.removedStyles.length) {
+    console.log(`\n(styles only in the before report, not diffed: ${result.removedStyles.join(', ')})`);
+  }
+}
+
 function main() {
   const opts = parseArgs(process.argv.slice(2));
   if (!opts.input) {
     console.error(
       'usage: analyze-parity-residuals.js <report.json> [--json] [--by-type <refs.json>] ' +
-        '[--list "<label>"]'
+        '[--list "<label>"] [--diff <before-report.json>]'
     );
     return 2;
   }
   const report = JSON.parse(fs.readFileSync(opts.input, 'utf8'));
   const styles = report.styles || [];
+
+  if (opts.diff) {
+    const beforeReport = JSON.parse(fs.readFileSync(opts.diff, 'utf8'));
+    const result = diffReports(beforeReport, report);
+    if (opts.json) {
+      console.log(JSON.stringify(result, null, 2));
+    } else {
+      printDiffHuman(result);
+    }
+    return 0;
+  }
 
   if (opts.list) {
     for (const style of styles) {
@@ -449,4 +752,14 @@ module.exports = {
   loadTypeMap,
   listLabel,
   LABEL_RULES,
+  allRows,
+  rowKey,
+  exactMatchMap,
+  diffExactMatch,
+  diffLabelCounts,
+  mergeLabelCounts,
+  labelCountHistogram,
+  nearMissQueue,
+  diffStyles,
+  diffReports,
 };
