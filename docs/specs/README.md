@@ -160,6 +160,7 @@ note. The `—` marker in the Tests column means no targeted test exists yet.
 | [`SHORT_NAME.md`](./SHORT_NAME.md) — short-name rendering for abbreviated contributor identifiers | Active | `bibliography.rs::title_short_resolution` |
 | [`ABBREVIATION_MAP.md`](./ABBREVIATION_MAP.md) — abbreviation lookup map for journal and publisher names | Active | `bibliography.rs` |
 | [`SUBSTITUTED_VALUE_FORMATTING.md`](./SUBSTITUTED_VALUE_FORMATTING.md) — whether a value promoted into the author slot (`<substitute>`) keeps its own formatting or takes the slot's, per substituted-value kind | Draft | `crates/citum-engine/src/values/tests.rs` (div-011 block) |
+| [`SUBSTITUTED_TITLE_BIBLIOGRAPHY_FORMATTING.md`](./SUBSTITUTED_TITLE_BIBLIOGRAPHY_FORMATTING.md) — bibliography-context companion to `SUBSTITUTED_VALUE_FORMATTING.md`: whether a substituted title should quote or italicize in bibliography context, and why category-level config can't express either for Chicago | Draft | `crates/citum-engine/src/values/tests.rs` (div-011 block) |
 
 ### Document & Input
 

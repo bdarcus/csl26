@@ -1,10 +1,13 @@
 # Substituted-Value Formatting Specification
 
 **Status:** Draft
-**Version:** 1.3
-**Date:** 2026-08-15
+**Version:** 1.5
+**Date:** 2026-08-26
 **Supersedes:** None
-**Related:** bean `csl26-p7a8`; bean `csl26-0dca`; `docs/adjudication/DIVERGENCE_REGISTER.md` div-011
+**Related:** bean `csl26-p7a8`; bean `csl26-0dca`; bean `csl26-0u0f`;
+`docs/adjudication/DIVERGENCE_REGISTER.md` div-011;
+`docs/specs/SUBSTITUTED_TITLE_BIBLIOGRAPHY_FORMATTING.md` (bibliography-context
+companion, covers quote and italic formatting, not quoting alone)
 
 ## Purpose
 
@@ -35,7 +38,12 @@ Out of scope (this doc only): writing the style YAML changes themselves
 (stage 2, a stacked follow-on PR); a `citum-migrate` heuristic to infer
 `title-quote` from a CSL style's `<substitute>` block (flagged as a
 follow-up bean, §7); a per-substitute-key contributor rendering override
-(flagged as a follow-up bean, §7).
+(flagged as a follow-up bean, §7); **bibliography-context** substitute-title
+formatting (quote, italic, or otherwise) — this spec's recommendation and
+acceptance criteria are citation-scoped only (§5). Bibliography-context
+formatting of a substituted title is covered separately in
+[`SUBSTITUTED_TITLE_BIBLIOGRAPHY_FORMATTING.md`](./SUBSTITUTED_TITLE_BIBLIOGRAPHY_FORMATTING.md),
+filed to evaluate bean `csl26-0u0f`.
 
 ## Design
 
@@ -672,3 +680,13 @@ Stage 2 (a stacked follow-on PR, only after this spec is reviewed):
   Oracle-confirmed with `dead-sea-scrolls` plus three synthetic fixtures.
   Still the simplest fully type-representable candidate, just not for the
   originally-claimed reason.
+- v1.4 (2026-08-24): Pointer-only revision. Added
+  `SUBSTITUTED_TITLE_BIBLIOGRAPHY_QUOTING.md` as the bibliography-context
+  companion this spec's §5 scoping decision always implied but never named;
+  no change to this spec's own citation-scoped analysis, recommendation, or
+  acceptance criteria.
+- v1.5 (2026-08-26): Pointer-only revision. The companion doc was renamed
+  `SUBSTITUTED_TITLE_BIBLIOGRAPHY_FORMATTING.md` after review found its v1.0
+  scope (quoting only) was itself too narrow — it now covers every
+  bibliography-context title-formatting axis. No change to this spec's own
+  citation-scoped content.
