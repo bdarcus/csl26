@@ -1,7 +1,7 @@
 ---
 # csl26-0u0f
 title: 'Chicago author-date-18th: bibliography substitute path drops quote'
-status: todo
+status: in-progress
 type: bug
 priority: high
 tags:
@@ -11,7 +11,7 @@ tags:
     - fidelity
     - punctuation
 created_at: 2026-08-24T17:52:16Z
-updated_at: 2026-08-24T18:43:39Z
+updated_at: 2026-08-26T12:54:11Z
 parent: csl26-h7oc
 ---
 
@@ -151,3 +151,67 @@ Write a spec revision (new section or new companion doc, referencing
 
 Get the spec reviewed before implementing -- this is a schema/engine
 change, not a style-config fix.
+
+## Progress: spec written, pending review
+
+Per this bean's own "Recommended next step," wrote
+`docs/specs/SUBSTITUTED_TITLE_BIBLIOGRAPHY_QUOTING.md` (Draft v1.0) — the
+bibliography-context companion to `SUBSTITUTED_VALUE_FORMATTING.md`, which is
+citation-scoped only. Docs-only PR; no engine/schema change yet.
+
+Evidence re-measured at HEAD (`8cc47b8b`, `cd372f76` already applied): residual
+is now 40 sole-cause / 18 quote-only-clean (down from the bean's 41/19),
+17 real after excluding one quote-character-normalization false positive,
+16 in scope after excluding one citation-context row. All 16 are
+`document`/`manuscript`/`article-journal`, all resolving to the `component`
+title category — but that category is not internally uniform for quoting
+(`map`/`graphic`/`classic`/`hearing` never quote via a type-template override,
+confirmed via `Rendering::merge`/`TitleRendering::merge` semantics that a
+naive `titles.component.quote: true` fix would regress those four types,
+undoing `cd372f76`/`8cc47b8b`). `taylor-and-francis-chicago-author-date-core`
+checked independently: identical current residual, and its own narrowed
+`titles.type-mapping` (missing `manuscript`) is a concrete inheritance hazard
+for any type-keyed fix. `apa-7th`/`elsevier-harvard` confirmed to have zero
+bibliography-context defects of this kind today — no regression risk measured
+for either.
+
+Spec recommends mechanism (ii): an explicit per-type quote declaration on the
+bibliography substitute config, scoped to `chicago-author-date-18th` and its
+T&F descendant, both updated in the same stage-2 commit. Two other mechanisms
+considered and rejected — see the spec's Design/Rejected Alternatives sections.
+
+Bean stays `in-progress` — implementation is a separate stacked PR after the
+spec is reviewed, per repo schema-change policy.
+
+## Progress update: broadened from quoting to all formatting axes
+
+Bruce's PR #1231 review correctly flagged that the spec's initial v1.0
+(quoting only) was too narrow. Traced the cause: the bean's own residual was
+sized via `scripts/analyze-parity-residuals.js`'s `"B title quote boundary"`
+label, which regex-matches quote characters in markup-stripped diffs — italic
+markup never survives that stripping, so the tool used to size this bean was
+structurally blind to any non-quote formatting mismatch. Direct
+markup-preserving comparison (new script:
+`scripts/audit-substitute-bibliography-formatting.py`) found a real
+**emphasis-gap** (`map`/`hearing`/`software`/`song`/`speech` should
+italicize, render plain) alongside the quote-gap, both caused by one root
+issue: the substitute path resolves title-category config only, never the
+resolved template node a style may already declare formatting on.
+
+Also surfaced, and explicitly scoped **out** of this spec: a
+**candidate-gap** (some `article-magazine`/`article-newspaper` rows should
+promote `container-title`, not `title` — a different defect surface,
+`SubstituteField::Title` resolution, not formatting), plus one CMOS-14.102
+"anonymous review" macro-shape case. Both documented in the spec's taxonomy;
+candidate-gap needs its own follow-up bean (not yet filed).
+
+Spec renamed `SUBSTITUTED_TITLE_BIBLIOGRAPHY_FORMATTING.md` (was
+`..._QUOTING.md`), v1.1. Mechanism recommendation changed from a per-type
+quote list to deriving formatting from the reference type's own resolved
+bibliography template node (gated behind an explicit opt-in to preserve
+div-011's backward-compatibility contract) — the render-when ambiguity that
+blocked this mechanism in v1.0 resolves by reusing the engine's existing
+`group_condition_matches` function.
+
+Bean stays `in-progress`; implementation remains a separate stacked PR after
+this revised spec is reviewed.
