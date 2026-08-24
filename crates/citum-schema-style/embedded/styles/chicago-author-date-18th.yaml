@@ -79,6 +79,7 @@ options:
       webpage: component
       map: component
       dataset: component
+      document: component
     component:
       text-case: title
     monograph:

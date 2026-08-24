@@ -63,6 +63,15 @@ options:
     type-mapping:
       map: component
       dataset: component
+      # `document` and `thesis` per docs/architecture/audits/2026-08-23_
+      # CHICAGO_PARITY_LEVERAGE_AUDIT.md wave 2 (csl26-jxco): the shipped
+      # chicago-author-date.csl's title choose-block quotes+title-cases both
+      # (`article dataset document interview manuscript paper-conference
+      # personal_communication speech thesis webpage`); the engine's hardcoded
+      # type->category fallback has neither (document falls to Default;
+      # thesis is hardcoded to Monograph/italic, which is wrong for Chicago).
+      document: component
+      thesis: component
     component:
       quote: true
       text-case: title
