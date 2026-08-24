@@ -12,6 +12,14 @@ const {
   greedySetCover,
   analyzeStyle,
   listLabel,
+  allRows,
+  exactMatchMap,
+  diffExactMatch,
+  diffLabelCounts,
+  mergeLabelCounts,
+  labelCountHistogram,
+  nearMissQueue,
+  diffReports,
 } = require('./analyze-parity-residuals.js');
 
 test('diffOps: identical strings produce no opcodes', () => {
@@ -203,4 +211,215 @@ test('listLabel: drills a class down to its actual entries, deduped by id', () =
     ['r1']
   );
   assert.ok(entries[0].labels.includes('A1 title-case not applied'));
+});
+
+// ─── Diff (wave before/after comparison) ───────────────────────────────────
+
+test('allRows: includes both passing and failing rows, with exactMatch on each', () => {
+  const styleReport = {
+    oracleDetail: [
+      { id: 'b1', exactParityEligible: true, exactMatch: true, exactOracle: 'X', exactCitum: 'X' },
+      { id: 'b2', exactParityEligible: true, exactMatch: false, exactOracle: 'Y', exactCitum: 'y' },
+      { id: 'b3', exactParityEligible: false, exactMatch: false, exactOracle: 'Z', exactCitum: 'z' },
+    ],
+    citationEntries: [{ id: 'c1', exactMatch: true, exactOracle: 'W', exactCitum: 'W' }],
+  };
+  const rows = allRows(styleReport);
+  assert.deepEqual(
+    rows.map((r) => [r.kind, r.id, r.exactMatch]),
+    [
+      ['bib', 'b1', true],
+      ['bib', 'b2', false],
+      ['cite', 'c1', true],
+    ]
+  );
+});
+
+test('exactMatchMap: duplicate (kind,id) rows fold with AND -- any failure wins', () => {
+  const styleReport = {
+    oracleDetail: [
+      { id: 'b1', exactParityEligible: true, exactMatch: true, exactOracle: 'X', exactCitum: 'X' },
+      { id: 'b1', exactParityEligible: true, exactMatch: false, exactOracle: 'X', exactCitum: 'x' },
+    ],
+    citationEntries: [],
+  };
+  const map = exactMatchMap(styleReport);
+  assert.equal(map.get('bib b1'), false);
+});
+
+test('diffExactMatch: detects newly-passing and newly-failing rows, ignoring unchanged ones', () => {
+  const before = {
+    exactParity: { passed: 1, total: 3 },
+    oracleDetail: [
+      { id: 'b1', exactParityEligible: true, exactMatch: false, exactOracle: 'A', exactCitum: 'a' },
+      { id: 'b2', exactParityEligible: true, exactMatch: true, exactOracle: 'B', exactCitum: 'B' },
+      { id: 'b3', exactParityEligible: true, exactMatch: true, exactOracle: 'C', exactCitum: 'C' },
+    ],
+    citationEntries: [],
+  };
+  const after = {
+    exactParity: { passed: 1, total: 3 },
+    oracleDetail: [
+      { id: 'b1', exactParityEligible: true, exactMatch: true, exactOracle: 'A', exactCitum: 'A' },
+      { id: 'b2', exactParityEligible: true, exactMatch: true, exactOracle: 'B', exactCitum: 'B' },
+      { id: 'b3', exactParityEligible: true, exactMatch: false, exactOracle: 'C', exactCitum: 'c' },
+    ],
+    citationEntries: [],
+  };
+  const diff = diffExactMatch(before, after);
+  assert.deepEqual(diff.newlyPassing, [{ kind: 'bib', id: 'b1' }]);
+  assert.deepEqual(diff.newlyFailing, [{ kind: 'bib', id: 'b3', oracle: 'C', citum: 'c' }]);
+  assert.deepEqual(diff.before, { passed: 1, total: 3 });
+  assert.deepEqual(diff.after, { passed: 1, total: 3 });
+});
+
+test('diffExactMatch: rows present in only one report are not reported as changed', () => {
+  const before = {
+    exactParity: { passed: 0, total: 1 },
+    oracleDetail: [{ id: 'b1', exactParityEligible: true, exactMatch: false, exactOracle: 'A', exactCitum: 'a' }],
+    citationEntries: [],
+  };
+  const after = {
+    exactParity: { passed: 1, total: 1 },
+    oracleDetail: [{ id: 'b2', exactParityEligible: true, exactMatch: true, exactOracle: 'B', exactCitum: 'B' }],
+    citationEntries: [],
+  };
+  const diff = diffExactMatch(before, after);
+  assert.deepEqual(diff.newlyPassing, []);
+  assert.deepEqual(diff.newlyFailing, []);
+});
+
+test('diffLabelCounts: computes before/after/delta and sorts by |delta| descending', () => {
+  const beforeAnalysis = {
+    labelCounts: [
+      { label: 'A1 title-case not applied', rows: 64 },
+      { label: 'B title quote boundary', rows: 10 },
+    ],
+  };
+  const afterAnalysis = {
+    labelCounts: [
+      { label: 'A1 title-case not applied', rows: 39 },
+      { label: 'B title quote boundary', rows: 10 },
+      { label: 'N punctuation/delimiter only', rows: 5 },
+    ],
+  };
+  const result = diffLabelCounts(beforeAnalysis, afterAnalysis);
+  assert.deepEqual(result, [
+    { label: 'A1 title-case not applied', before: 64, after: 39, delta: -25 },
+    { label: 'N punctuation/delimiter only', before: 0, after: 5, delta: 5 },
+    { label: 'B title quote boundary', before: 10, after: 10, delta: 0 },
+  ]);
+});
+
+test('mergeLabelCounts: sums rows per label across several analyses', () => {
+  const analyses = [
+    { labelCounts: [{ label: 'X', rows: 3 }, { label: 'Y', rows: 1 }] },
+    { labelCounts: [{ label: 'X', rows: 2 }] },
+  ];
+  const merged = mergeLabelCounts(analyses);
+  const map = new Map(merged.map((l) => [l.label, l.rows]));
+  assert.equal(map.get('X'), 5);
+  assert.equal(map.get('Y'), 1);
+});
+
+test('labelCountHistogram: buckets failing rows by how many labels each carries', () => {
+  const styleReport = {
+    oracleDetail: [
+      // 1 label: punctuation only.
+      { id: 'r1', exactParityEligible: true, exactMatch: false, exactOracle: 'Foo, Bar (2020): 42.', exactCitum: 'Foo, Bar (2020), 42.' },
+      // 2 labels: quote boundary + title case not applied.
+      {
+        id: 'r2',
+        exactParityEligible: true,
+        exactMatch: false,
+        exactOracle: '“Mesopotamia: Between Two Rivers.” 1957.',
+        exactCitum: 'Mesopotamia: between two rivers. 1957.',
+      },
+    ],
+    citationEntries: [],
+  };
+  const histogram = labelCountHistogram(styleReport);
+  assert.equal(histogram['1'], 1);
+  assert.equal(histogram['2'], 1);
+});
+
+test('nearMissQueue: only rows with exactly one label, deduped by (kind,id)', () => {
+  const styleReport = {
+    oracleDetail: [
+      // 1 label, appears twice (merged benchmark runs) -- must appear once.
+      { id: 'r1', exactParityEligible: true, exactMatch: false, exactOracle: 'Foo, Bar (2020): 42.', exactCitum: 'Foo, Bar (2020), 42.' },
+      { id: 'r1', exactParityEligible: true, exactMatch: false, exactOracle: 'Foo, Bar (2020): 42.', exactCitum: 'Foo, Bar (2020), 42.' },
+      // 2 labels -- excluded.
+      {
+        id: 'r2',
+        exactParityEligible: true,
+        exactMatch: false,
+        exactOracle: '“Mesopotamia: Between Two Rivers.” 1957.',
+        exactCitum: 'Mesopotamia: between two rivers. 1957.',
+      },
+    ],
+    citationEntries: [],
+  };
+  const queue = nearMissQueue(styleReport);
+  assert.deepEqual(
+    queue.map((r) => r.id),
+    ['r1']
+  );
+  assert.equal(queue[0].label, 'N punctuation/delimiter only');
+});
+
+test('diffReports: end-to-end aggregate matches per-style sums, and reports added/removed styles', () => {
+  const makeStyle = (name, passed, total, rows) => ({
+    name,
+    exactParity: { passed, total },
+    fidelityScore: 1,
+    oracleDetail: rows,
+    citationEntries: [],
+  });
+  const before = {
+    styles: [
+      makeStyle('style-a', 0, 1, [{ id: 'r1', exactParityEligible: true, exactMatch: false, exactOracle: 'A', exactCitum: 'a' }]),
+      makeStyle('style-only-before', 0, 1, [{ id: 'r1', exactParityEligible: true, exactMatch: false, exactOracle: 'A', exactCitum: 'a' }]),
+    ],
+  };
+  const after = {
+    styles: [
+      makeStyle('style-a', 1, 1, [{ id: 'r1', exactParityEligible: true, exactMatch: true, exactOracle: 'A', exactCitum: 'A' }]),
+      makeStyle('style-only-after', 1, 1, [{ id: 'r1', exactParityEligible: true, exactMatch: true, exactOracle: 'B', exactCitum: 'B' }]),
+    ],
+  };
+  const result = diffReports(before, after);
+  assert.deepEqual(
+    result.styles.map((s) => s.name),
+    ['style-a']
+  );
+  assert.deepEqual(result.aggregate.exactMatch.newlyPassing, [{ style: 'style-a', kind: 'bib', id: 'r1' }]);
+  assert.deepEqual(result.aggregate.exactMatch.newlyFailing, []);
+  assert.deepEqual(result.aggregate.exactMatch.before, { passed: 0, total: 1 });
+  assert.deepEqual(result.aggregate.exactMatch.after, { passed: 1, total: 1 });
+  assert.deepEqual(result.addedStyles, ['style-only-after']);
+  assert.deepEqual(result.removedStyles, ['style-only-before']);
+});
+
+test('diffReports: self-diff (identical before/after) reports zero deltas everywhere', () => {
+  const report = {
+    styles: [
+      {
+        name: 'style-a',
+        exactParity: { passed: 1, total: 2 },
+        fidelityScore: 1,
+        oracleDetail: [
+          { id: 'r1', exactParityEligible: true, exactMatch: true, exactOracle: 'A', exactCitum: 'A' },
+          { id: 'r2', exactParityEligible: true, exactMatch: false, exactOracle: 'B', exactCitum: 'b' },
+        ],
+        citationEntries: [],
+      },
+    ],
+  };
+  const result = diffReports(report, report);
+  assert.deepEqual(result.styles[0].exactMatch.newlyPassing, []);
+  assert.deepEqual(result.styles[0].exactMatch.newlyFailing, []);
+  assert.ok(result.styles[0].labelDeltas.every((d) => d.delta === 0));
+  assert.deepEqual(result.addedStyles, []);
+  assert.deepEqual(result.removedStyles, []);
 });

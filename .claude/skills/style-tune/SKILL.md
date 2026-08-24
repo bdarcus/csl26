@@ -72,12 +72,13 @@ Follow the full `tune` loop from `docs/guides/STYLE_WORKFLOW_EXECUTION.md`:
    by leverage** with `node scripts/analyze-parity-residuals.js <report.json>`
    and work its greedy-set-cover order biggest-class-first, not by whichever
    entry is on screen → classify each residual → smallest correct fix or
-   ledger entry → re-run. **Confirm with per-entry `exactMatch` comparison,
-   not just the aggregate `passed` count** — a fix routed through a shared
-   category (e.g. a `titles.type-mapping` entry) can flip several
-   previously-passing entries to failing while flipping more failing
-   entries to passing, and a rising aggregate count alone cannot rule that
-   out. Continue until no further residual is classifiable
+   ledger entry → re-run. **Confirm with
+   `node scripts/analyze-parity-residuals.js <after.json> --diff <before.json>`,
+   not just the aggregate `passed` count** — require its `newlyFailing` list
+   empty across every style; a fix routed through a shared category (e.g. a
+   `titles.type-mapping` entry) can flip several previously-passing entries
+   to failing while flipping more failing entries to passing, and a rising
+   aggregate count alone cannot rule that out. Continue until no further residual is classifiable
    without escalation; regenerate `embedded-parity-baseline.json` from the
    full portfolio (not `--style`-scoped) per the shared-ancestor rule to
    ratchet the new floor in. **A pass may not stop while a ≥20-row defect
@@ -120,8 +121,9 @@ Every completed tune pass delivers:
 - seed baseline: oracle fidelity %, exact-parity passed/total, SQI score
 - final: oracle fidelity %, exact-parity passed/total, SQI score
 - fidelity changes made (per mismatch cluster)
-- exact-parity changes made (per residual class), and any new
-  `parity-adjudication.json` entries with their state
+- exact-parity changes made (per residual class), label-instance delta and
+  remaining near-miss count from `analyze-parity-residuals.js --diff`, and
+  any new `parity-adjudication.json` entries with their state
 - coverage-audit status and, when registered, render-disposition and joined
   exact-parity deltas
 - if a `style.chain` ancestor shared with other embedded-core styles changed,
@@ -139,9 +141,13 @@ Every completed tune pass delivers:
   (add `--by-type <fixture>` for a per-reference-type breakdown; add
   `--list "<label>"` to drill a ranked class down to its individual
   entries once you're ready to fix rather than triage)
-- Regression check: diff `exactMatch` per entry id between the before/after
-  reports (not just the aggregate `passed` count) before treating any
-  exact-parity fix as clean
+- Regression check: `node scripts/analyze-parity-residuals.js <after.json>
+  --diff <before.json>`, and require `newlyFailing` empty across every style
+  (not just the aggregate `passed` count) before treating any exact-parity
+  fix as clean
+- Next-target queue: the same `--diff` run's near-miss list (rows carrying
+  exactly one remaining defect label) is the next pass's ready-to-convert
+  target list — work from it before re-triaging the full residual
 - SQI: `node scripts/report-core.js --style <name>`
 - Render smoke-check: `cargo run --bin citum -- render refs -b tests/fixtures/references-expanded.json -s crates/citum-schema-style/embedded/styles/<name>.yaml`
 - QA handoff: `../style-qa/SKILL.md` with `tier: embedded-core`

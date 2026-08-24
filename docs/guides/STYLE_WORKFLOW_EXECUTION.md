@@ -1,7 +1,7 @@
 # Style Workflow Execution
 
 **Status:** Active
-**Version:** 1.4
+**Version:** 1.5
 **Date:** 2026-08-23
 **Related:** [STYLE_WORKFLOW_DECISION_RULES.md](../policies/STYLE_WORKFLOW_DECISION_RULES.md),
 [MIGRATE_RESEARCH_RICH_INPUTS.md](../specs/MIGRATE_RESEARCH_RICH_INPUTS.md),
@@ -143,6 +143,19 @@ A style wave is a bounded cohort executed through repeated `upgrade`, `migrate`,
   root first and then `upgrade` to reduce the public handles.
 - Do not add a separate public "wave" command surface; waves are an execution
   pattern, not a new mode.
+- Every wave reports three numbers via
+  `node scripts/analyze-parity-residuals.js <after.json> --diff <before.json>`,
+  not the aggregate `passed` count alone: the exactMatch delta (newly-passing
+  / newly-failing), the total label-instance delta, and the remaining
+  near-miss (rows one label from passing) count. This is a hard requirement,
+  not advisory — same standing as the per-entry `exactMatch` regression check
+  below, which it supersedes with a named tool. Rows in a leverage-ordered
+  residual population commonly carry 2+ overlapping defect labels and do not
+  flip to `passed` until every one clears, so the aggregate count can stay
+  flat across a wave that is doing real, measurable work; label-instance
+  delta and near-miss count are the leading indicators that catch that
+  progress. Report per-type floors (e.g. `book`, `article-journal`) as
+  already required elsewhere — do not restate them here.
 
 ## The `tune` loop (embedded-core styles)
 
@@ -209,19 +222,22 @@ number that mattered.
       authority.
    c. Apply the smallest correct fix. Re-run and confirm the `passed` count
       rose and fidelity did not regress. **The aggregate `passed` count is
-      not sufficient regression evidence on its own** — compare `exactMatch`
-      per entry id between the before/after reports (a style previously
-      passing that now fails is a regression even when the aggregate count
-      still rose net). A fix that routes a rendering decision through a
-      shared category (e.g. a `titles.type-mapping` entry affecting several
-      reference types at once) can flip several previously-passing entries
-      to failing while flipping more failing entries to passing, and the
-      net aggregate delta alone cannot distinguish that from a clean win.
-      This is not a hypothetical: a 2026-08-23 Chicago wave-1 pass landed a
-      change that looked like a clean +5-entry net win by aggregate count
-      and was hiding 3 regressions, caught only by this per-entry check —
-      see [2026-08-23_CHICAGO_PARITY_LEVERAGE_AUDIT.md](../architecture/audits/2026-08-23_CHICAGO_PARITY_LEVERAGE_AUDIT.md)'s
-      postscript.
+      not sufficient regression evidence on its own** — run
+      `node scripts/analyze-parity-residuals.js <after.json> --diff <before.json>`
+      and require its `newlyFailing` list to be empty across every style in
+      the report (a style previously passing that now fails is a regression
+      even when the aggregate count still rose net). A fix that routes a
+      rendering decision through a shared category (e.g. a
+      `titles.type-mapping` entry affecting several reference types at once)
+      can flip several previously-passing entries to failing while flipping
+      more failing entries to passing, and the net aggregate delta alone
+      cannot distinguish that from a clean win. This is not a hypothetical: a
+      2026-08-23 Chicago wave-1 pass landed a change that looked like a clean
+      +5-entry net win by aggregate count and was hiding 3 regressions,
+      caught only by this per-entry check — see
+      [2026-08-23_CHICAGO_PARITY_LEVERAGE_AUDIT.md](../architecture/audits/2026-08-23_CHICAGO_PARITY_LEVERAGE_AUDIT.md)'s
+      postscript. The same `--diff` run's label-instance deltas and near-miss
+      queue are the wave-report numbers required under "## Waves" above.
    d. Continue until no further residual is classifiable without escalation,
       or the floor is raised as far as this pass supports; regenerate
       `embedded-parity-baseline.json` to ratchet the new floor in. Always
@@ -266,6 +282,14 @@ number that mattered.
 - [x] `tune` loop is defined here once, not in individual skill files.
 
 ## Changelog
+- 2026-08-24: Named `scripts/analyze-parity-residuals.js`'s new `--diff`
+  mode as the required tool for step 3c's per-entry regression check, and made a wave's
+  report format a hard requirement under "## Waves": exactMatch delta,
+  total label-instance delta, and remaining near-miss count, not the
+  aggregate `passed` count alone. Prompted by a Chicago wave-1/wave-2
+  before/after comparison where the aggregate count stayed flat across a
+  wave that had, in fact, moved 55 rows from "2 defects away" to "1 defect
+  away" — invisible without the label-instance and near-miss numbers.
 - 2026-08-23: Required per-entry `exactMatch` regression comparison (not
   just the aggregate `passed` count) in exact-parity loop step 3c, after a
   Chicago wave-1 pass landed a change that looked like a clean net win by
