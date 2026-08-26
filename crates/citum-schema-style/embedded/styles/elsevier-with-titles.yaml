@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=https://docs.citum.org/schemas/style.json
 info:
   title: Elsevier (numeric, with titles)
   description: A style for many of Elsevier's journals that includes article titles in the reference list

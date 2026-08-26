@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=https://docs.citum.org/schemas/style.json
 # Minimal style to demonstrate automatic bibliography partitioning.
 #
 # Partitions by LANGUAGE, not by script.

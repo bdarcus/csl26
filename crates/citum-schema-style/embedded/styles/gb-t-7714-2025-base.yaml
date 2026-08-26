@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=https://docs.citum.org/schemas/style.json
 version: 0.71.0
 info:
   title: GB/T 7714—2025 shared bibliography base (hidden)

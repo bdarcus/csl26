@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=https://docs.citum.org/schemas/style.json
 info:
   title: Springer - NLM/Vancouver (citation-sequence, brackets)
   description: Based on the document "Key Style Points 2.0 І December 2024".
