@@ -1081,6 +1081,7 @@ impl Processor {
             show_semantics: self.show_semantics,
             current_template_index: None,
             abbreviation_map: self.abbreviation_map.as_ref(),
+            substitute_title_template: None,
         };
 
         let ml = bibliography_config.multilingual.as_ref();

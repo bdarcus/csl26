@@ -68,7 +68,7 @@ pub use sorting::{SortingConfig, SortingLocale, SortingMultilingualMode};
 pub use substitute::{
     Substitute, SubstituteCandidates, SubstituteConfig, SubstituteContributor, SubstituteDisabled,
     SubstituteField, SubstituteKey, SubstituteMessage, SubstituteOtherwise,
-    SubstituteTitleQuoteMode,
+    SubstituteTitleQuoteMode, SubstituteTitleRendering,
 };
 
 use crate::template::DelimiterPunctuation;

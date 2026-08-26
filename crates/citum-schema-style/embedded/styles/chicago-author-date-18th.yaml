@@ -200,6 +200,10 @@ bibliography:
       - translator
       - collection-editor
       - title
+      # A substituted title takes the reference type's own bibliography
+      # `title: primary` formatting (quote/emph) instead of category-only
+      # config — see SUBSTITUTED_TITLE_BIBLIOGRAPHY_FORMATTING.md.
+      title-rendering: from-template
     contributors:
       display-as-sort: first
       # Inverted Chicago bibliography names use a serial comma even at two
@@ -636,12 +640,19 @@ bibliography:
     - variable: medium
       prefix: ". "
     - variable: url
-    # `collection` is included here because a note-field `type: collection`
-    # override is how this corpus tags archival manuscripts cataloged as
-    # collections (e.g. "Revere family papers") — see
-    # docs/specs/CSL_TYPE_CONVERSION_CONTRACT.md. Both route to the same
-    # archival rendering shape (author/title substitute, archive fields).
-    manuscript, collection:
+    # `collection` is a separate native type from `manuscript`: a note-field
+    # `type: collection` override is how this corpus tags archival
+    # manuscripts cataloged as collections (e.g. "Revere family papers"),
+    # and that override round-trips to the distinct `collection` ref_type —
+    # see docs/specs/CSL_TYPE_CONVERSION_CONTRACT.md. Both share the same
+    # archival rendering shape (author/title substitute, archive fields),
+    # but CMOS 18 quotes an individual manuscript item's title while an
+    # archival collection's title is not quoted — so the two keys share
+    # every component except the title node's `wrap` (csl26-0u0f: keeping
+    # this as one compound key with unconditional `wrap: quotes` regressed
+    # every author-less `collection` entry once the substitute path started
+    # reading node-level formatting).
+    manuscript:
     # Same finding as broadcast above: identical to the default author
     # component, not a special rule.
     - contributor: author
@@ -656,10 +667,33 @@ bibliography:
       render-when:
         field-present: issued
     - title: primary
-      # Archival manuscript and collection titles are quoted in the source
+      # An individual manuscript item's title is quoted in the source
       # Chicago style.
       wrap:
         punctuation: quotes
+    - date: issued
+      form: month-day
+    - variable: raw-genre
+    - variable: archive-location
+    - variable: archive-collection
+    - group:
+      - variable: archive-name
+      - variable: archive-place
+        prefix: ", "
+    - variable: url
+    collection:
+    - contributor: author
+      form: long
+      name-order: family-first
+      shorten:
+        min: 8
+        use-first: 3
+    - group:
+      - date: issued
+        form: year
+      render-when:
+        field-present: issued
+    - title: primary
     - date: issued
       form: month-day
     - variable: raw-genre

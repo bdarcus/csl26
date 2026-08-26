@@ -971,6 +971,14 @@ pub struct RenderOptions<'a> {
     pub current_template_index: Option<usize>,
     /// Document-level abbreviation map for post-render substitution.
     pub abbreviation_map: Option<&'a crate::api::AbbreviationMap>,
+    /// The resolved bibliography template for the current entry, after
+    /// type-variant and policy resolution — set only when a style opts in to
+    /// `substitute.title-rendering: from-template` (see
+    /// `SUBSTITUTED_TITLE_BIBLIOGRAPHY_FORMATTING.md`). The substitute path
+    /// walks this to find the reference type's own `title: primary` node and
+    /// derive quote/emph formatting for a promoted title, instead of relying
+    /// solely on category-level title config.
+    pub substitute_title_template: Option<&'a [TemplateComponent]>,
 }
 
 /// Trait for extracting values from template components.

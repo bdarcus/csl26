@@ -903,6 +903,7 @@ impl<'a> Renderer<'a> {
             show_semantics: self.show_semantics,
             current_template_index: None,
             abbreviation_map: self.abbreviation_map,
+            substitute_title_template: None,
         }
     }
 

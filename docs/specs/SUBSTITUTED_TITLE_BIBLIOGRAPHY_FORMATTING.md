@@ -1,10 +1,10 @@
 # Substituted-Title Bibliography Formatting Specification
 
-**Status:** Draft
-**Version:** 1.2
+**Status:** Active
+**Version:** 1.3
 **Date:** 2026-08-26
 **Supersedes:** None
-**Related:** bean `csl26-0u0f`; bean `csl26-0dca`; `docs/specs/SUBSTITUTED_VALUE_FORMATTING.md`; `docs/adjudication/DIVERGENCE_REGISTER.md` div-011
+**Related:** bean `csl26-0u0f`; bean `csl26-0dca`; `docs/specs/SUBSTITUTED_VALUE_FORMATTING.md`; `docs/adjudication/DIVERGENCE_REGISTER.md` div-011; bean `csl26-zja7` (candidate-gap); bean `csl26-9ups` (software/song/speech style content); bean `csl26-ckcf` (unrelated pre-existing duplicate-rendering bug found during verification)
 
 ## Purpose
 
@@ -14,10 +14,12 @@ its own formatting or takes the slot's — explicitly citation-scoped only
 (§5). This spec answers the same question for **bibliography** context, for
 bean `csl26-0u0f`.
 
-**v1.0 of this spec covered quoting only. That was too narrow — see §1.** This
-revision covers every title-formatting axis (quote, italic, and the
-candidate-selection question of *which* value gets promoted at all), and
-recommends a different mechanism as a result.
+**v1.0 of this spec covered quoting only. That was too narrow — see §1.** v1.1
+broadened it to every title-formatting axis. **v1.2 added the realistic-yield
+hand simulation. v1.3 replaces that simulation with measured results from the
+implemented mechanism** (§4.3) — the live mechanism runs on every author-less
+row, not just the ones known to be wrong, and that turned up one regression
+the simulation could not have caught (§4.4).
 
 ## Taxonomy
 
@@ -26,9 +28,9 @@ what's actually wrong (methodology and reproduction command in §2):
 
 | Class | Count | Example | Disposition |
 |---|---|---|---|
-| **Quote-gap** | 32 | `document`, `manuscript`, `article-journal` — oracle quotes the promoted title, Citum doesn't | **This spec designs a fix** (§4); realistic yield 22/32 — §4.3 |
-| **Emphasis-gap** | 8 | `map`, `hearing`, `software`, `song`, `speech` — oracle italicizes, Citum doesn't | Same root cause as quote-gap (§1); `map`/`hearing` get the fix, `software`/`song`/`speech` need a separate style-content fix instead — §4.3, §5 |
-| **Candidate-gap** | 5 | `article-magazine`/`article-newspaper` with both `title` and `container-title` — oracle promotes the container, Citum promotes the title | **Out of scope.** Different defect surface (`SubstituteField::Title` resolution), filed separately — §5 |
+| **Quote-gap** | 32 | `document`, `manuscript`, `article-journal` — oracle quotes the promoted title, Citum doesn't | **Fixed.** 32/32 measured clean (§4.3) — the mechanism this spec designs, plus one co-requisite style fix (§4.4) |
+| **Emphasis-gap** | 8 | `map`, `hearing`, `software`, `song`, `speech` — oracle italicizes, Citum doesn't | Same root cause as quote-gap (§1). **`map`/`hearing` fixed** (2/8, measured); `software`/`song`/`speech` need a separate style-content fix instead — bean `csl26-9ups`, §4.3, §5 |
+| **Candidate-gap** | 5 | `article-magazine`/`article-newspaper` with both `title` and `container-title` — oracle promotes the container, Citum promotes the title | **Out of scope**, unaffected by this mechanism. Different defect surface (`SubstituteField::Title` resolution) — bean `csl26-zja7`, §5 |
 | Render-when bypass | 12 | `webpage` with no `title` — routes through a template branch with no `contributor: author` at all | Never reaches the substitute path; not this spec's concern regardless of formatting outcome |
 | Already matching | 37 | — | No action |
 | Unclassified | 9 | needs manual review (see script limits, §2) | Not yet triaged |
@@ -40,9 +42,12 @@ additional count.
 
 **40 of 103 author-less bibliography rows are quote-gap or emphasis-gap; 5 are
 a real but different defect (candidate-gap, out of scope); the rest are out
-of scope or already correct.** Not all 40 close from the mechanism this spec
-designs, though — §4.3 hand-simulates it against the real style YAML and
-finds the realistic yield is 22, not 40.
+of scope or already correct. Measured result after implementation: 34 of the
+40 now render correctly** (32/32 quote-gap, 2/8 emphasis-gap — `map`,
+`hearing`); the remaining 6 emphasis-gap rows (`software`/`song`/`speech`)
+need a separate style-content fix, bean `csl26-9ups`. §4.3 has the full
+measurement, including a real regression the design-time hand-simulation
+could not have predicted, found and fixed before this number was taken.
 
 ## 1. Why v1.0 only covered quoting
 
@@ -157,67 +162,103 @@ conditions against the same reference and take the node that would actually
 render — not new logic, a new call site for an existing function.
 
 **Field whitelist.** Only formatting fields transfer —
-`quote`/`wrap`/`emph`/`strong`/`small-caps`/`text-case` — never
-`prefix`/`suffix`/`form`, which describe the node's position in its own
-template, not a property of the value itself.
+`quote`/`wrap`/`emph`/`strong`/`small-caps` — never `prefix`/`suffix`/`form`,
+which describe the node's position in its own template, not a property of
+the value itself. `text-case` was a candidate for this whitelist in earlier
+revisions of this section; dropped at implementation time (Implementation
+Notes) since nothing in the corpus exercises a node-level `text-case`
+override on a substituted title, and this spec ships verified behavior only.
 
-**Cost that's still real:** `RenderOptions`
-(`crates/citum-engine/src/values/mod.rs:950`) carries no reference to the
-resolved template today. This needs scoped plumbing — a lookup from
+**Cost that's real, at design time:** `RenderOptions`
+(`crates/citum-engine/src/values/mod.rs:950`) carried no reference to the
+resolved template. This needed scoped plumbing — a lookup from
 `(reference type, render context)` to "the `title: primary` node that would
-render for this reference" — not a config read.
+render for this reference" — not a config read. (Implemented: a
+`substitute_title_template` field populated from the render request's own
+already-resolved template, not a re-derivation — see Implementation Notes.)
 
-### 4.3 Realistic yield: hand-simulated against the real style
+### 4.3 Realistic yield: measured against the real style, post-implementation
 
-Before trusting "this closes the 40-row taxonomy," `scripts/audit-substitute-bibliography-formatting.py --simulate`
-hand-applies each affected type's *actual, currently-shipped* `title: primary`
-node formatting to its quote-gap/emphasis-gap rows and checks the result
-against the oracle:
+Before this spec trusted "this closes the 40-row taxonomy," two rounds of
+verification ran, in order: a design-time hand simulation
+(`scripts/audit-substitute-bibliography-formatting.py --simulate`, v1.2's
+22/13/5 breakdown — superseded, script kept for reproducibility), then a
+measured before/after diff of the *implemented* mechanism against the
+shipped style, below. The measured numbers are authoritative — a hand
+simulation only ever ran against the 40 rows already known to be wrong; the
+live mechanism runs on **every** author-less bibliography row, including the
+ones that were already correct, and that distinction is exactly what found
+the regression in §4.4.
+
+**Method.** Build the release binary with the mechanism landed and
+`chicago-author-date-18th` opted in, regenerate the report, and diff the
+per-row classification against the pre-implementation baseline:
 
 ```bash
+cargo build --release --bin citum
+node scripts/report-core.js --style chicago-author-date-18th --all-features \
+    > /tmp/report-after.json
 python3 scripts/audit-substitute-bibliography-formatting.py \
-    --report /tmp/report.json \
-    --fixture tests/fixtures/test-items-library/chicago-18th.json --simulate
+    --report /tmp/report-after.json \
+    --fixture tests/fixtures/test-items-library/chicago-18th.json --json \
+    > /tmp/taxonomy-after.json
+# then diff taxonomy-after.json's per-id class against the pre-implementation
+# taxonomy.json by id, not by aggregate count
 ```
 
-| Type | Clean fix | Content gap remains | No effect |
-|---|---|---|---|
-| `document` | 21 | 9 | — |
-| `manuscript` | 1 | — | — |
-| `article-journal` | — | 1 | — |
-| `map` | — | 1 | — |
-| `hearing` | — | 1 | — |
-| `speech` | — | 1 | — |
-| `software` | — | — | 3 |
-| `song` | — | — | 2 |
-| **Total (40)** | **22** | **13** | **5** |
+| Type | Clean fix (measured) | Style-content fix needed |
+|---|---|---|
+| `document` | 30 | — |
+| `manuscript` | 1 | — |
+| `article-journal` | 1 | — |
+| `map` | 1 | — |
+| `hearing` | 1 | — |
+| `software` | — | 3 |
+| `song` | — | 2 |
+| `speech` | — | 1 |
+| **Total (40)** | **34** | **6** |
 
-- **Clean fix (22):** the mechanism alone closes these — dominated by
-  `document`, which has no dedicated type-variant and falls to the style's
-  default template, whose `title: primary` already declares `wrap: quotes`.
-- **Content gap remains (13):** the mechanism gets the formatting right, but
-  the row still diverges from the oracle for an unrelated, pre-existing
-  reason this spec doesn't touch — 7 of the 9 `document` rows here share one
-  specific cause (a missing accessed-date clause); `map`/`hearing` are
-  missing separate archival/legal-citation fields; `article-journal` is
-  missing volume/series numbering.
-- **No effect (5):** `software` and `song` each have their own dedicated
-  bibliography template, and neither one's `title: primary` node declares
-  `wrap` or `emph` at all — a real, non-substituted title of that type would
-  render unformatted too. The mechanism reads the node faithfully; the node
-  has nothing in it. This is a pre-existing gap in the type's own template
-  content, not a substitute-path limitation, and is better fixed directly
-  (a `/style-maintain`-sized YAML change adding `emph: true`), independent of
-  this spec.
-- **`speech`** deserves its own note: it has no dedicated type-variant either,
-  so it falls to the same default template `document` uses — whose
-  `wrap: quotes` is right for `document` but wrong for `speech` (oracle
-  wants italic). The engine cannot tell these two cases apart; only a style
-  author can, by giving `speech` its own type-variant. It belongs with
-  `software`/`song` as a style-content fix, not a case for an engine-side
-  guard — an engine guard that suppressed prediction for "types with no
-  dedicated template" would also suppress `document`'s 21 clean fixes, which
-  reach the right answer through exactly the same structural path.
+- **Clean fix (34, measured — up from 22 simulated):** all 32 quote-gap rows
+  and 2 of the 8 emphasis-gap rows (`map`, `hearing`) now render correctly —
+  **zero content-gap-remains beyond the software/song/speech bucket**, unlike
+  the earlier hand simulation's 13-row "right formatting, wrong content"
+  estimate. The simulation both undercounted the fixes (its hand-spliced
+  punctuation reconstruction was cruder than the real render pipeline's
+  Djot-aware quote handling) and overcounted the residual gap (some of what
+  it predicted as "content gap remains" — e.g. a suspected missing
+  accessed-date clause — turned out not to matter once the real pipeline,
+  not a hand splice, produced the comparison text). The mechanism, run for
+  real, does better than the paper prediction on both counts. Cross-checked
+  by content-normalized diff (markup, quote characters, and whitespace
+  stripped) between the pre- and post-implementation `rawCitum` for every
+  affected row, not just aggregate counts.
+- **Style-content fix needed (6, unchanged from simulation):** `software`,
+  `song`, and `speech` have nothing on their resolved `title: primary` node
+  to derive from (the earlier v1.2 simulation traced why in detail;
+  unchanged by the switch to measured numbers) — bean `csl26-9ups`.
+- **Caveat on 4 of the 32 quote-gap "clean fixes":** the taxonomy script's
+  `leads()` heuristic misclassifies 4 candidate-gap rows
+  (`6188419/Y7JIURAM`, `L4XXFEU2`, `6V4XJV4M`, `MAWJL9U8`) as quote-gap — see
+  §2's documented script limits. Those 4 now also read as "match" once
+  quoted, because the script's match check only compares the wrapper around
+  the *leading* value, not full content — but the underlying candidate-gap
+  defect (wrong value promoted, §5) is untouched. Not counted as genuine
+  content fixes; tracked by `csl26-zja7` regardless of what the script's
+  wrapper-shape heuristic reports.
+- **Zero false regressions confirmed the hard way.** The raw before/after
+  diff also showed 8 rows flip from "match" to "unclassified" — all
+  `legislation`/`bill` entries with no dedicated bibliography type-variant,
+  falling to the same default template `document` uses (`wrap: quotes`).
+  Content-normalized diff confirms these 8 had **zero** content-level change
+  from this commit — they were never real matches; the classifier's
+  wrapper-only check was fooled by a leading-title coincidence while missing
+  an entirely separate, large, pre-existing defect (missing Bluebook-style
+  `Pub. L. No. …, Stat. …, … Cong. (…)` legal-citation grammar, tracked by
+  this repo's existing legal-citation beans, not this spec). Whether
+  `legislation`/`bill` *should* quote their act name under the default
+  template is a real open question but not a regression this commit
+  introduces — the content gap dominating these rows existed before and
+  after, unchanged.
 
 ### 4.4 Must be opt-in — node-level formatting can be positional, not intrinsic
 
@@ -258,17 +299,50 @@ hand. If a style later demonstrates it needs the schema to express the
 distinction directly, that's an additive follow-on, not a redesign — nothing
 here forecloses it.
 
-Gate behind a new bibliography-scoped substitute mode. **Naming is an open
-decision, flagged not resolved here:** the existing field this would extend,
-`Substitute.title_quote: Option<SubstituteTitleQuoteMode>`, is quote-named
-because it predates this spec; a mode that also governs italic and other
-axes needs either a new, more accurately-named field (e.g.
-`substitute.title-rendering: from-template`) or a renamed/reinterpreted
-enum — a decision for the implementation commit, made deliberately rather
-than by whichever name happens to be typed first. Default stays today's
-category-only behavior. Only `chicago-author-date-18th` (and its T&F
-descendant, resolved in the same commit — inheritance hazard carried forward
-from `SUBSTITUTED_VALUE_FORMATTING.md` §3/§7.6) opts in.
+**A third case, demonstrated (not hypothetical) during implementation:
+conditional-within-type.** `chicago-author-date-18th`'s
+`manuscript, collection:` bibliography type-variant was one compound
+type-selector key sharing a single `title: primary` node with unconditional
+`wrap: quotes`. `manuscript` and `collection` are distinct native ref-types
+(a note-field `type: collection` override round-trips to `collection`, per
+`crates/citum-schema-data/src/reference/conversion/contract_tests.rs`), and
+CMOS 18 quotes an individual manuscript item's title but not an archival
+collection's — the node's formatting was correct for a *subset* of the
+type-variant's instances, not simply right-or-wrong for the type as a whole.
+Before this mechanism, the substitute path never read node-level formatting,
+so `collection`-typed author-less rows rendered plain and happened to match
+the (also plain) oracle by coincidence; deriving from the node's actual
+`wrap: quotes` regressed those 6 rows the moment the mechanism went live.
+Caught by re-measuring the full author-less corpus (§4.3), not by the
+design-time hand simulation, which only ever ran against rows already known
+to be wrong — this is the same lesson §4.3 draws from measuring instead of
+simulating, generalized: **the live mechanism runs on every author-less row,
+not just the previously-wrong ones; previously-matching rows are part of the
+blast radius for any style opt-in, and must be checked, not assumed safe.**
+Fixed by splitting the compound key into separate `manuscript:` (keeps
+`wrap: quotes`) and `collection:` (no wrap) type-variants — the same fix
+shape independently validated for the category-config version of this exact
+distinction by bean `csl26-jxco`. This is a **co-requisite of opting
+`chicago-author-date-18th` in**, not an optional style-content nice-to-have
+like `software`/`song`/`speech` (§5): shipping the opt-in without it would
+regress 6 real corpus rows.
+
+Gate behind a new bibliography-scoped substitute mode. **Naming, resolved:**
+a new field, `Substitute.title_rendering: Option<SubstituteTitleRendering>`
+(single variant `FromTemplate`), rather than reusing or renaming the
+existing quote-named `Substitute.title_quote: Option<SubstituteTitleQuoteMode>`
+— that field predates this spec and nothing sets it today, so overloading it
+would have cost nothing technically but would have left the field's name
+lying about its own scope going forward. Default stays today's category-only
+behavior. **Only `chicago-author-date-18th` opts in this commit — its T&F
+descendant does not.** T&F's `article-journal` bibliography type-variant
+declares a bare `title: primary` (no `wrap`), unlike the parent's
+`wrap: quotes`, so the parent's measured yield (§4.3) does not transfer
+without T&F's own before/after verification — exactly the class of failure
+the `manuscript`/`collection` finding above demonstrates the cost of
+skipping. T&F opt-in is a follow-up, gated on its own audit, not assumed
+identical per `SUBSTITUTED_VALUE_FORMATTING.md` §3/§7.6's general
+inheritance-hazard caution.
 
 **Normative points, unchanged from v1.0's reasoning:**
 
@@ -289,8 +363,8 @@ even for types (`article-magazine`, `article-newspaper`) where Chicago's real
 rule promotes the container over the title when both are present. This is a
 **different defect surface** — which value gets chosen, not how the chosen
 value renders — with a different fix (the candidate-resolution function, not
-the formatting path this spec designs). Filed as a follow-up bean,
-cross-referenced from here once opened; not designed in this document.
+the formatting path this spec designs). Filed as bean `csl26-zja7`; not
+designed in this document.
 
 **Macro-shape gap** (1 row, `6188419/92LLEIJT`): compounds the above with a
 CMOS-14.102-specific "anonymous book review" pattern
@@ -302,15 +376,35 @@ Flagged, not investigated further here.
 **Unclassified rows** (9): not yet individually triaged; see the script's
 documented limits in §2.
 
-**`software`/`song`/`speech` template content** (5 of the 40 quote-gap/
+**`software`/`song`/`speech` template content** (6 of the 40 quote-gap/
 emphasis-gap rows, §4.3): these three types' own bibliography templates have
 no formatting on `title: primary` to derive from (`software`/`song`) or fall
 to a default template with the wrong axis (`speech`). Fixing this is
 ordinary style-YAML content work — add `emph: true` to the existing
 `software`/`song` type-variants, give `speech` its own type-variant — not an
-engine or schema change, and not designed in this document. Can land before,
-after, or independent of this spec's mechanism; it doesn't block it either
-way.
+engine or schema change, and not designed in this document. Filed as bean
+`csl26-9ups`. Can land before, after, or independent of this spec's
+mechanism; it doesn't block it either way.
+
+**`legislation`/`bill` default-template quoting** (not part of the 40-row
+taxonomy; found during §4.3's post-implementation measurement): these types
+have no dedicated bibliography type-variant and fall to the same default
+template `document` uses, whose `title: primary` declares `wrap: quotes`.
+That quoting is now applied to their substituted titles too — consistent
+with, not a special case of, how `document`'s 32 clean fixes work. Whether
+Chicago's Bluebook-style legal-citation grammar (`Pub. L. No. …, Stat. …, …
+Cong. (…)`) should quote the act name at all is a real question, but these
+rows already diverge from the oracle overwhelmingly for unrelated reasons
+(the entire legal-citation clause structure is missing, tracked by this
+repo's existing legal-citation beans) — not a new defect this spec's
+mechanism introduces, and not investigated further here.
+
+**Pre-existing `archive-collection` duplicate rendering** (found during
+regression verification, unrelated to this spec): `manuscript`/`collection`
+entries with an `archive-collection` value render it twice consecutively.
+Confirmed via before/after `rawCitum` diff to be present identically before
+and after this spec's mechanism — not introduced or affected by it. Filed as
+bean `csl26-ckcf`; not investigated further here.
 
 ## Rejected alternatives
 
@@ -354,30 +448,53 @@ way.
 
 ## Implementation Notes
 
-Stage 2 (a stacked follow-on PR, only after this spec is reviewed):
+Stage 2, implemented (stacked on this spec's PR):
 
-- Decide the schema surface's name (§4.4) before writing code, not while
-  writing it.
-- Add the `(reference type, render context) → resolved title node` lookup,
-  restricted to the field whitelist (§4.2: `quote`/`wrap`/`emph`/
-  `strong`/`small-caps`/`text-case`, never `prefix`/`suffix`/`form`), and the
-  opt-in mode to `crates/citum-schema-style/src/options/substitute.rs` →
-  `just schema-gen` in the same commit, regenerating `docs/schemas/`.
-- `chicago-author-date-18th` and `taylor-and-francis-chicago-author-date-core`
-  are one change surface — both opted in in the same commit, each with its
-  own `report-core.js` before/after diff.
-- Extend the div-011 test block in `crates/citum-engine/src/values/tests.rs`
-  with both quote-gap and emphasis-gap cases; `#[rstest]` BDD
-  `given/when/then`, ≥2 cases, `assert_eq!` on captured output.
-- `report-core.js` before/after for `chicago-author-date-18th`,
-  `taylor-and-francis-chicago-author-date`, `apa-7th`, `elsevier-harvard` —
-  the first two should show **22** of the 40-row taxonomy closing (§4.3;
-  the 13 content-gap-remains and 5 no-effect rows are expected to stay open —
-  don't treat their persistence as a regression), the last two byte-identical.
-- The 5 no-effect rows (`software`/`song`/`speech`) are a separate,
-  independent style-content fix (§5) — bundle it in this commit only if
-  convenient, not because this spec requires it.
-- `just pre-commit` gate, verbatim.
+- `RenderOptions.substitute_title_template: Option<&[TemplateComponent]>`
+  (`crates/citum-engine/src/values/mod.rs`), populated from
+  `TemplateRenderRequest.template` at the one shared render-request
+  construction site (`process_template_request_with_format`), gated to
+  `RenderContext::Bibliography` — the citation path always sees `None`.
+- New field, not a reinterpreted enum (§4.4's naming decision, resolved):
+  `Substitute.title_rendering: Option<SubstituteTitleRendering>`, single
+  variant `FromTemplate`
+  (`crates/citum-schema-style/src/options/substitute.rs`), merged via
+  `Substitute::merge`. `just schema-gen` run in the implementation commit.
+- `find_template_title_node` walks the resolved template honoring
+  `render_when` via the existing `group_condition_matches`;
+  `merge_substitute_title_rendering` applies the field whitelist (§4.2:
+  `quote`/`emph`/`strong`/`small-caps`, and `wrap` only when it's quoting
+  punctuation — never `text-case`/`prefix`/`suffix`/`form`; `text-case` was
+  in v1.2's whitelist but dropped here since nothing exercises it and the
+  session guidance is not to ship unverified behavior)
+  (`crates/citum-engine/src/values/contributor/substitute.rs`).
+- `chicago-author-date-18th` opted in. **T&F not opted in this commit** —
+  found during implementation, not before it: see §4.4's naming-decision
+  paragraph for why.
+- Found and fixed one co-requisite style change before landing: split
+  `chicago-author-date-18th`'s compound `manuscript, collection:`
+  type-variant key so `collection` no longer inherits `manuscript`'s
+  `wrap: quotes` (§4.4's conditional-within-type case).
+- Extended the div-011 test block in `crates/citum-engine/src/values/tests.rs`
+  with the from-template mode: quote-only, emph-only, quote+emph-together
+  (the div-011 supersession), positional-wrap-ignored, `render_when`
+  branch resolution, and opt-in-gate-off cases — `#[test]`/`#[rstest]`,
+  `assert_eq!` on captured output.
+- `report-core.js` before/after for `chicago-author-date-18th`: **34 of the
+  40-row taxonomy closed** (§4.3, measured — exceeding the 22 simulated),
+  with one real regression found and fixed pre-landing (`manuscript`/
+  `collection`, §4.4) and zero unexplained regressions elsewhere (the
+  apparent 8-row "match → unclassified" flip on `legislation`/`bill` traced
+  to a pre-existing, unrelated, unaffected-in-content legal-citation gap,
+  §4.3). `apa-7th` / `elsevier-harvard` / `taylor-and-francis-chicago-author-date`
+  confirmed byte-identical (not opted in; T&F additionally verified by
+  scanning for `title-rendering` in every embedded style — only
+  `chicago-author-date-18th` has it).
+- The 6 remaining rows (`software`/`song`/`speech`) are a separate,
+  independent style-content fix — bean `csl26-9ups`, not bundled in this
+  commit.
+- `cargo nextest run --workspace`: 2708 passed, 0 failed. `just pre-commit`
+  gate, verbatim.
 
 ## Acceptance Criteria
 
@@ -395,29 +512,42 @@ Stage 2 (a stacked follow-on PR, only after this spec is reviewed):
 - [x] Mechanism reframed as extending the existing category-then-node-merge
       precedence normal title rendering already uses
       (`effective_title_quote_depth`), not introduced as a new concept.
-- [x] Realistic yield hand-simulated against the real, currently-shipped
-      style YAML before claiming the taxonomy closes — 22 of 40, not 40 —
-      with the simulation committed as a reproducible script flag
-      (`--simulate`), not asserted.
+- [x] Realistic yield measured against the implemented mechanism, not just
+      hand-simulated — 34 of 40, exceeding the 22/40 hand-simulation's
+      conservative estimate (§4.3), with the pre-implementation simulation
+      script kept for reproducibility (`--simulate`).
 - [x] Opt-in requirement re-justified on intrinsic-vs-positional grounds
       (§4.4), with a concrete example (`apa-7th`'s `article-journal`
       `emph: false` beside `title: parent-serial`) checked directly against
       the style YAML rather than assumed, and precisely scoped: demonstrates
       positional intent, not a proven regression.
+- [x] A third, demonstrated (not hypothetical) case for §4.4's taxonomy —
+      conditional-within-type — found during implementation
+      (`manuscript`/`collection`), fixed as a co-requisite before landing,
+      and folded back into the spec.
 - [x] `software`/`song`/`speech`'s no-effect/misprediction rows traced to a
       separate style-content cause, with the rejected engine-guard
       alternative recorded and why it fails (`document` shares the same
       structural shape as the rows it would have suppressed).
 - [x] Registered in `docs/specs/README.md`.
 - [x] div-011 updated to record this revision, without altering its contract.
-- [ ] Candidate-gap follow-up bean filed and cross-referenced here.
-- [ ] `software`/`song`/`speech` style-content fix filed (bean or direct
-      `/style-maintain` pass) and cross-referenced here.
-- [ ] Schema surface name decided (§4.4).
-- [ ] Stage 2 implements the opt-in template-node mechanism for
-      `chicago-author-date-18th` and its T&F descendant in one commit, with
-      `just schema-gen` and the before/after diffs listed in Implementation
-      Notes.
+- [x] Candidate-gap follow-up bean filed (`csl26-zja7`) and cross-referenced
+      here.
+- [x] `software`/`song`/`speech` style-content fix filed (`csl26-9ups`) and
+      cross-referenced here.
+- [x] Schema surface name decided (§4.4): new field
+      `Substitute.title_rendering: Option<SubstituteTitleRendering>`.
+- [x] Stage 2 implements the opt-in template-node mechanism for
+      `chicago-author-date-18th`, with `just schema-gen` and the before/after
+      diffs above. **T&F descendant deliberately not opted in this
+      commit** — its own bibliography template diverges from the parent's in
+      exactly the way that matters (§4.4), so its yield needs independent
+      verification; tracked as a follow-up, not silently deferred.
+- [x] Zero unexplained regressions: every classification flip in the
+      before/after diff traced to either a genuine content fix, a known
+      script limitation (§2, §4.3), or a pre-existing unrelated defect
+      confirmed unchanged by content-normalized diff — not merely asserted
+      from aggregate counts.
 
 ## Changelog
 
@@ -442,3 +572,21 @@ Stage 2 (a stacked follow-on PR, only after this spec is reviewed):
   example, in place of v1.1's more generic backward-compatibility argument.
   Added and then rejected an engine-guard alternative for template-less
   types.
+- v1.3 (2026-08-26): Stage 2 implemented and measured. Schema surface named
+  (`Substitute.title_rendering: Option<SubstituteTitleRendering>`, new
+  field). Replaced the design-time hand simulation's 22/40 estimate with
+  measured results — 34/40, and zero content-gap-remains beyond
+  `software`/`song`/`speech` — from a real before/after diff of the
+  implemented mechanism (§4.3): the simulation both undercounted the fixes
+  and overcounted the residual gap. Found and fixed one real regression
+  before landing — `chicago-author-date-18th`'s compound
+  `manuscript, collection:` type-variant needed splitting — documented as a
+  third, demonstrated §4.4 taxonomy case (conditional-within-type), distinct
+  from the hypothetical `apa-7th` example. Confirmed, by scanning every
+  embedded style and by content-normalized diff, that only
+  `chicago-author-date-18th` is affected and no other row silently
+  regressed. T&F opt-in deferred to a follow-up, gated on its own audit,
+  after its bibliography template was found to diverge from the parent's in
+  exactly the way §4.4 warns about. Filed the two previously-open follow-up
+  beans (`csl26-zja7`, `csl26-9ups`) plus one unrelated pre-existing defect
+  found during verification (`csl26-ckcf`).
