@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=https://docs.citum.org/schemas/style.json
 info:
   title: Modern Language Association Handbook 9th edition (in-text citations)
   description: MLA source citations, in-text citations system (chapter 6)

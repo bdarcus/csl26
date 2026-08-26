@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=https://docs.citum.org/schemas/style.json
 info:
   title: OSCOLA 4th edition (no ibid.)
   description: 'Oxford University Standard for Citation of Legal Authorities, notes system, no ibid. For a Zotero group showing data entry: https://zotero.org/groups/2205533/collections/AC7ETLN4'

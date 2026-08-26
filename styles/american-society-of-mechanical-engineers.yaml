@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=https://docs.citum.org/schemas/style.json
 extends: ieee
 info:
   title: American Society of Mechanical Engineers

@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=https://docs.citum.org/schemas/style.json
 info:
   title: Chicago Manual of Style 17th edition (notes and bibliography)
   description: Chicago-style source citations (with Bluebook for legal citations), notes and bibliography system, 17th edition

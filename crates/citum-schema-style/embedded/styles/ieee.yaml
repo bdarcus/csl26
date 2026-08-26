@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=https://docs.citum.org/schemas/style.json
 info:
   title: IEEE Reference Guide version 11.29.2023
   description: IEEE style as per the 2023 guidelines.

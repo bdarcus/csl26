@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=https://docs.citum.org/schemas/style.json
 info:
   title: 'Taylor & Francis Journals Standard Reference Style Guide: Chicago'
   id: taylor-and-francis-chicago-author-date-core

@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=https://docs.citum.org/schemas/style.json
 info:
   title: Taylor & Francis - Council of Science Editors (author-date)
   description: The Council of Science Editors style for T&F journals as per guidelines (version 2.0, 18 Jan 2018).

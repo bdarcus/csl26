@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=https://docs.citum.org/schemas/style.json
 info:
   title: Springer - Basic (author-date)
   description: Springer Author Date Style for the disciplines Medicine, Biomedicine, Life Sciences, Chemistry, Geosciences, Computer Science, Engineering, Economics. This style is based on Harvard style and recommendations of the Council of Biology Editors.

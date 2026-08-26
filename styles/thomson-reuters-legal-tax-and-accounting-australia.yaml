@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=https://docs.citum.org/schemas/style.json
 info:
   title: Thomson Reuters - Legal, Tax & Accounting Australia
   description: Style for a series of Thomson Reuters law publications for Australia
