@@ -15,13 +15,15 @@ use crate::values::title::{render_substitute_title_text, resolve_substitute_text
 use crate::values::{ProcHints, ProcValues, RenderContext, RenderOptions};
 use citum_schema::options::{
     RoleLabelPreset, SubstituteField, SubstituteKey, SubstituteTitleQuoteMode,
+    SubstituteTitleRendering,
 };
 use citum_schema::reference::Title;
 use citum_schema::reference::{
     AudioVisualType, ClassExtension, Contributor, ContributorRole as DataRole,
 };
 use citum_schema::template::{
-    ContributorRole, ContributorRoles, Rendering, TemplateComponent, TemplateContributor, TitleType,
+    ContributorRole, ContributorRoles, Rendering, TemplateComponent, TemplateContributor,
+    TemplateTitle, TitleType, WrapPunctuation,
 };
 
 /// Resolved value occupying the style's effective primary-contributor slot.
@@ -592,6 +594,10 @@ fn substituted_key_for_title_type(title_type: &TitleType) -> &'static str {
     }
 }
 
+#[allow(
+    clippy::too_many_arguments,
+    reason = "Title-substitute rendering needs shared engine state until this module is refactored."
+)]
 fn resolve_title_substitute<F: OutputFormat<Output = String>>(
     title: Title,
     title_type: &TitleType,
@@ -600,6 +606,7 @@ fn resolve_title_substitute<F: OutputFormat<Output = String>>(
     reference: &Reference,
     fmt: &F,
     quote_in_citation: bool,
+    substitute: &citum_schema::options::Substitute,
 ) -> ProcValues<F::Output> {
     let substituted_key = substituted_key_for_title_type(title_type);
     let title_str = title_substitute_text(title, options.context);
@@ -609,7 +616,22 @@ fn resolve_title_substitute<F: OutputFormat<Output = String>>(
     // `resolve_substitute_text_case`.
     let case = resolve_substitute_text_case(title_type, reference, options);
     let language = crate::values::title::effective_title_language(title_type, reference);
-    let quoted = options.context == RenderContext::Citation && quote_in_citation;
+    // Bibliography-context styles opted into `title-rendering: from-template`
+    // derive formatting from the reference type's own resolved `title:
+    // primary` node instead of category-only config — see
+    // `SUBSTITUTED_TITLE_BIBLIOGRAPHY_FORMATTING.md`.
+    let template_rendering = resolve_template_derived_title_rendering(
+        title_type,
+        reference,
+        language.as_deref(),
+        options,
+        substitute,
+    );
+    let quoted = if let Some(rendering) = &template_rendering {
+        rendering.quote == Some(true)
+    } else {
+        options.context == RenderContext::Citation && quote_in_citation
+    };
     let quote_depth = usize::from(quoted);
     // Route through the same Djot-aware pipeline as `TemplateTitle::values`
     // so markup (e.g. `[...]{.nocase}`) and case-protection are honoured
@@ -621,17 +643,33 @@ fn resolve_title_substitute<F: OutputFormat<Output = String>>(
     } else {
         fmt.text(&rendered)
     };
-    // Category-level `titles:` emphasis (emph/strong/small-caps) that a normal
-    // `title:` component would pick up from `get_effective_rendering` — the
-    // substitute chain renders through a contributor component, so it never
-    // reaches that path and must apply it here. Order mirrors
-    // `render_component_detailed_with_format_and_renderer`. Skipped when
-    // quoting: per div-011, quote and category emphasis are either/or for a
-    // substituted title, so the default unconditional-quote path stays
-    // byte-identical.
-    let rendered = if quoted {
+    let rendered = if let Some(rendering) = &template_rendering {
+        // From-template mode faithfully applies the merged node rendering:
+        // quote and emph both apply if the node declares both, superseding
+        // div-011's either/or for opted-in styles.
+        let mut output = rendered;
+        if rendering.emph == Some(true) {
+            output = fmt.emph(output);
+        }
+        if rendering.strong == Some(true) {
+            output = fmt.strong(output);
+        }
+        if rendering.small_caps == Some(true) {
+            output = fmt.small_caps(output);
+        }
+        output
+    } else if quoted {
         rendered
     } else {
+        // Category-level `titles:` emphasis (emph/strong/small-caps) that a
+        // normal `title:` component would pick up from
+        // `get_effective_rendering` — the substitute chain renders through a
+        // contributor component, so it never reaches that path and must
+        // apply it here. Order mirrors
+        // `render_component_detailed_with_format_and_renderer`. Skipped when
+        // quoting: per div-011, quote and category emphasis are either/or
+        // for a substituted title, so the default unconditional-quote path
+        // stays byte-identical.
         apply_substitute_title_emphasis(
             rendered,
             title_type,
@@ -717,6 +755,101 @@ fn resolve_category_quote(reference: &Reference, options: &RenderOptions<'_>) ->
     )
     .and_then(|rendering| rendering.quote)
     .unwrap_or(false)
+}
+
+/// Find the resolved bibliography template's own node for `title_type`
+/// (e.g. `title: primary`), honoring `render_when` branches the same way
+/// the normal render path resolves them — see
+/// [`crate::values::group_condition_matches`]. Returns the first matching
+/// node in document order, matching how the renderer walks a template.
+fn find_template_title_node<'a>(
+    template: &'a [TemplateComponent],
+    title_type: &TitleType,
+    reference: &Reference,
+) -> Option<&'a TemplateTitle> {
+    for component in template {
+        if component.rendering().suppress == Some(true) {
+            continue;
+        }
+        match component {
+            TemplateComponent::Title(title) if title.title == *title_type => {
+                return Some(title);
+            }
+            TemplateComponent::Group(group) => {
+                if group.render_when.as_ref().is_some_and(|condition| {
+                    !crate::values::group_condition_matches(reference, condition)
+                }) {
+                    continue;
+                }
+                if let Some(found) = find_template_title_node(&group.group, title_type, reference) {
+                    return Some(found);
+                }
+            }
+            _ => {}
+        }
+    }
+    None
+}
+
+/// Transfer only the formatting fields that describe how a title's *text*
+/// is presented — never structural fields like `prefix`/`suffix`/`form`,
+/// which are positional and meaningless detached from the node's slot. A
+/// `wrap` transfers only when it is quoting punctuation: `wrap: parentheses`
+/// / `wrap: brackets` on a template node is positional (correct next to a
+/// specific sibling), not title formatting, so it is deliberately ignored
+/// here — see `SUBSTITUTED_TITLE_BIBLIOGRAPHY_FORMATTING.md` §4.2/§4.4.
+fn merge_substitute_title_rendering(base: &mut Rendering, node: &Rendering) {
+    if node.emph.is_some() {
+        base.emph = node.emph;
+    }
+    if node.quote.is_some() {
+        base.quote = node.quote;
+    }
+    if node.strong.is_some() {
+        base.strong = node.strong;
+    }
+    if node.small_caps.is_some() {
+        base.small_caps = node.small_caps;
+    }
+    if let Some(wrap) = &node.wrap
+        && wrap.punctuation == WrapPunctuation::Quotes
+    {
+        base.quote = Some(true);
+    }
+}
+
+/// Resolve a substituted title's bibliography-context rendering from the
+/// reference type's own resolved template node, merged over the title
+/// category's rendering (category-then-node precedence, matching
+/// `effective_title_quote_depth`). Returns `None` when the style has not
+/// opted in (`substitute.title-rendering: from-template`), when no
+/// resolved template was threaded through for this render, or when the
+/// template has no matching title node.
+fn resolve_template_derived_title_rendering(
+    title_type: &TitleType,
+    reference: &Reference,
+    language: Option<&str>,
+    options: &RenderOptions<'_>,
+    substitute: &citum_schema::options::Substitute,
+) -> Option<Rendering> {
+    if options.context != RenderContext::Bibliography {
+        return None;
+    }
+    if substitute.title_rendering != Some(SubstituteTitleRendering::FromTemplate) {
+        return None;
+    }
+    let template = options.substitute_title_template?;
+    let node = find_template_title_node(template, title_type, reference)?;
+    let ref_type = reference.ref_type();
+    let mut rendering = crate::render::component::get_title_category_rendering(
+        title_type,
+        Some(&ref_type),
+        language,
+        &options.config,
+    )
+    .unwrap_or_default();
+    merge_substitute_title_rendering(&mut rendering, &node.rendering);
+    Some(rendering)
 }
 
 fn title_substitute_text(title: Title, context: RenderContext) -> String {
@@ -992,6 +1125,7 @@ pub(super) fn resolve_author_substitute<F: OutputFormat<Output = String>>(
                 reference,
                 fmt,
                 quote_in_citation,
+                substitute,
             ))
         }
         None => None,

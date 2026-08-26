@@ -11,7 +11,7 @@ tags:
     - fidelity
     - punctuation
 created_at: 2026-08-24T17:52:16Z
-updated_at: 2026-08-26T12:54:11Z
+updated_at: 2026-08-26T14:51:42Z
 parent: csl26-h7oc
 ---
 
@@ -215,3 +215,73 @@ blocked this mechanism in v1.0 resolves by reusing the engine's existing
 
 Bean stays `in-progress`; implementation remains a separate stacked PR after
 this revised spec is reviewed.
+
+## Progress update: from-template mechanism implemented, one co-requisite style fix found and landed
+
+Implementation stack started (jj change on top of the spec commit, both to be
+merged as PR #2 stacked on the spec PR):
+
+- `RenderOptions.substitute_title_template: Option<&[TemplateComponent]>`
+  threaded through from `process_template_request_with_format`, gated to
+  `RenderContext::Bibliography` only (citation path unaffected, confirmed by
+  a regression test that supplies a template in citation context and asserts
+  no effect).
+- New `Substitute.title_rendering: Option<SubstituteTitleRendering>` field
+  (single variant `FromTemplate`), resolved through `Substitute::merge`.
+  Chose a new field over reusing `title_quote` per the spec's §4.4 open
+  decision.
+- `find_template_title_node` walks the resolved bibliography template,
+  honoring `render_when` via the existing `group_condition_matches`
+  (verified with a dedicated two-branch test).
+- `merge_substitute_title_rendering` applies the field whitelist
+  (quote/emph/strong/small-caps; `wrap` transfers only when it's quoting
+  punctuation) over the category rendering, mirroring
+  `effective_title_quote_depth`'s precedence.
+- `chicago-author-date-18th` opted in
+  (`bibliography.options.substitute.title-rendering: from-template`).
+  **T&F not opted in this PR** — its `article-journal` bibliography
+  type-variant has a bare `title: primary` (no `wrap`), unlike the parent's
+  `wrap: quotes`, so the parent's yield numbers don't transfer without T&F's
+  own before/after verification. Left as a follow-up, gated on its own
+  audit.
+
+**Regression found and fixed before landing:** `chicago-author-date-18th`'s
+`manuscript, collection:` bibliography type-variant was one compound
+type-selector key sharing a single `title: primary` node with unconditional
+`wrap: quotes`. Real Chicago quotes an individual manuscript item's title but
+not an archival collection's title (CMOS 18). Before this mechanism, the
+substitute path ignored node-level formatting entirely, so `collection`-typed
+entries (note-field `type: collection` override — round-trips to the native
+`collection` ref_type, confirmed via
+`crates/citum-schema-data/src/reference/conversion/contract_tests.rs`) were
+plain and happened to already match the (also plain) oracle by coincidence.
+Once the mechanism reads the node's `wrap: quotes` unconditionally, those 6
+rows regressed (became wrongly quoted). Fixed by splitting the compound key
+into separate `manuscript:` (keeps `wrap: quotes`) and `collection:` (no
+wrap) type-variants — same fix shape already validated independently by
+`csl26-jxco` for the category-config version of this exact same
+manuscript/collection distinction. This is now a demonstrated third case for
+§4.4's intrinsic-vs-positional taxonomy: **conditional-within-type** —
+node formatting correct for a subset of a type's instances, not simply
+right-or-wrong per type. Confirmed via before/after `rawCitum` diff that this
+was the *only* delta introduced (a pre-existing, unrelated
+"archive-collection rendered twice" bug is present in both — filed
+separately as csl26-ckcf, not chased in this PR).
+
+Filed as unblocking follow-ups (previously unchecked acceptance criteria):
+
+- csl26-zja7 — candidate-gap (`SubstituteField::Title` should sometimes
+  promote `container-title`).
+- csl26-9ups — `software`/`song`/`speech` style-content fix.
+- csl26-ckcf — pre-existing archive-collection duplicate-rendering bug,
+  found during regression verification, unrelated to this bean.
+
+Real (not simulated) `report-core.js` + taxonomy-script measurement pending
+final release-build rerun; spec's §4.3/Acceptance-Criteria numbers to be
+updated from measured reality rather than the earlier hand-simulation, which
+undercounted (simulation's crude punctuation handling missed some fixes) and
+also — as `--simulate` only ever ran on the 40 gap rows — never modeled the
+manuscript/collection regression risk on already-matching rows. Lesson
+carried into the spec: the live mechanism runs on every author-less row, not
+just the previously-wrong ones; previously-matching rows are part of the
+blast radius for any future style opt-in.

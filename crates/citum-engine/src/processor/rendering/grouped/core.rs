@@ -1140,6 +1140,8 @@ impl Renderer<'_> {
             show_semantics: self.show_semantics,
             current_template_index: None,
             abbreviation_map: self.abbreviation_map,
+            substitute_title_template: matches!(context, RenderContext::Bibliography)
+                .then_some(template),
         };
         // Only carry the first-reference note number (and its suppression side-effect)
         // when the template actually renders it.  Suppressing a `disambiguate-only`

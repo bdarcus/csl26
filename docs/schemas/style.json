@@ -3758,6 +3758,17 @@
             }
           ]
         },
+        "title-rendering": {
+          "description": "Bibliography-context formatting policy for a title substituted into\nthe author position. Unset (the default) preserves the pre-existing\ncategory-only behavior; see\n`SUBSTITUTED_TITLE_BIBLIOGRAPHY_FORMATTING.md`.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SubstituteTitleRendering"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "otherwise": {
           "description": "Terminal locale message rendered after the primary chain is exhausted.",
           "anyOf": [
@@ -3867,6 +3878,16 @@
           "description": "Resolve quoting via the normal title-category rendering machinery.",
           "type": "string",
           "const": "by-category"
+        }
+      ]
+    },
+    "SubstituteTitleRendering": {
+      "description": "Bibliography-context formatting policy for a title substituted into the\nauthor position.",
+      "oneOf": [
+        {
+          "description": "Derive quote/emph/strong/small-caps from the reference type's own\nresolved `title: primary` template node, merged over the title\ncategory's rendering — the same category-then-node precedence\n`title: primary` already uses for a normally-authored reference.\nSuperseds div-011's either/or (quote *or* emph) for opted-in styles:\nthe node's own `Rendering` is applied faithfully, so quote and emph\nboth apply if the node declares both.",
+          "type": "string",
+          "const": "from-template"
         }
       ]
     },

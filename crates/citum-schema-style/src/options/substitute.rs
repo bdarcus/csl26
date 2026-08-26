@@ -202,6 +202,12 @@ pub struct Substitute {
     /// Quoting policy for a title substituted into the author position.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub title_quote: Option<SubstituteTitleQuoteMode>,
+    /// Bibliography-context formatting policy for a title substituted into
+    /// the author position. Unset (the default) preserves the pre-existing
+    /// category-only behavior; see
+    /// `SUBSTITUTED_TITLE_BIBLIOGRAPHY_FORMATTING.md`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub title_rendering: Option<SubstituteTitleRendering>,
     /// Terminal locale message rendered after the primary chain is exhausted.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub otherwise: Option<SubstituteOtherwise>,
@@ -274,6 +280,9 @@ impl Substitute {
         if other.title_quote.is_some() {
             self.title_quote = other.title_quote;
         }
+        if other.title_rendering.is_some() {
+            self.title_rendering = other.title_rendering;
+        }
         if other.otherwise.is_some() {
             self.otherwise = other.otherwise.clone();
         }
@@ -300,6 +309,22 @@ pub enum SubstituteTitleQuoteMode {
     Always,
     /// Resolve quoting via the normal title-category rendering machinery.
     ByCategory,
+}
+
+/// Bibliography-context formatting policy for a title substituted into the
+/// author position.
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+#[serde(rename_all = "kebab-case")]
+pub enum SubstituteTitleRendering {
+    /// Derive quote/emph/strong/small-caps from the reference type's own
+    /// resolved `title: primary` template node, merged over the title
+    /// category's rendering — the same category-then-node precedence
+    /// `title: primary` already uses for a normally-authored reference.
+    /// Superseds div-011's either/or (quote *or* emph) for opted-in styles:
+    /// the node's own `Rendering` is applied faithfully, so quote and emph
+    /// both apply if the node declares both.
+    FromTemplate,
 }
 
 /// One candidate in an effective-primary substitution chain.

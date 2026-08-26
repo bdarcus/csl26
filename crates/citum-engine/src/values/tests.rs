@@ -450,6 +450,7 @@ fn test_contributor_values() {
         show_semantics: true,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
     let reference = make_reference();
     let hints = ProcHints::default();
@@ -500,6 +501,7 @@ fn test_family_first_except_last_inverts_all_but_last_name() {
         show_semantics: true,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
     let reference = make_custom_role_reference(
         citum_schema::reference::ContributorRole::Author,
@@ -544,6 +546,7 @@ fn test_spanish_role_label_uses_feminine_form_for_single_editor() {
         show_semantics: true,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
     let reference = make_editor_reference(&[ContributorGender::Feminine]);
     let hints = ProcHints::default();
@@ -586,6 +589,7 @@ fn test_spanish_role_label_uses_plural_feminine_form_for_matching_group() {
         show_semantics: true,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
     let reference =
         make_editor_reference(&[ContributorGender::Feminine, ContributorGender::Feminine]);
@@ -629,6 +633,7 @@ fn test_spanish_role_label_prefers_common_form_for_mixed_group() {
         show_semantics: true,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
     let reference =
         make_editor_reference(&[ContributorGender::Feminine, ContributorGender::Masculine]);
@@ -686,6 +691,7 @@ roles:
         show_semantics: true,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
     let reference =
         make_editor_reference(&[ContributorGender::Feminine, ContributorGender::Masculine]);
@@ -729,6 +735,7 @@ fn test_french_role_label_uses_feminine_form_for_single_contributor() {
         show_semantics: true,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
     let reference = make_editor_reference(&[ContributorGender::Feminine]);
     let hints = ProcHints::default();
@@ -771,6 +778,7 @@ fn test_arabic_role_label_uses_feminine_form_for_single_contributor() {
         show_semantics: true,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
     let reference = make_editor_reference(&[ContributorGender::Feminine]);
     let hints = ProcHints::default();
@@ -813,6 +821,7 @@ fn test_french_role_label_falls_back_to_masculine_plural_for_mixed_group() {
         show_semantics: true,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
     let reference =
         make_editor_reference(&[ContributorGender::Feminine, ContributorGender::Masculine]);
@@ -856,6 +865,7 @@ fn test_arabic_role_label_falls_back_to_verbal_noun_for_mixed_group() {
         show_semantics: true,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
     let reference =
         make_editor_reference(&[ContributorGender::Feminine, ContributorGender::Masculine]);
@@ -899,6 +909,7 @@ fn test_arabic_role_label_falls_back_to_roles_common_when_gender_missing() {
         show_semantics: true,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
 
     // Reference with no gender info
@@ -962,6 +973,7 @@ fn test_collection_editor_role_label_derives_gender_from_reference_data() {
         show_semantics: true,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
     let reference = make_custom_role_reference(
         citum_schema::reference::ContributorRole::Unknown("collection-editor".to_string()),
@@ -1008,6 +1020,7 @@ fn test_date_values() {
         show_semantics: true,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
     let reference = make_reference();
     let hints = ProcHints::default();
@@ -1047,6 +1060,7 @@ fn test_message_component_renders_accessed_date_argument() {
         show_semantics: true,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
     let reference = Reference::from(LegacyReference {
         id: "web-2021".to_string(),
@@ -1101,6 +1115,7 @@ fn test_message_component_renders_in_container_argument_with_formatting() {
         show_semantics: true,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
     let reference = Reference::from(LegacyReference {
         id: "chapter-1".to_string(),
@@ -1155,6 +1170,7 @@ fn style_owned_mf2_message_selects_reference_type_and_carrier() {
         show_semantics: true,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
     let reference = Reference::from(LegacyReference {
         id: "online-book".to_string(),
@@ -1211,6 +1227,7 @@ fn test_message_component_renders_grouped_container_argument() {
         show_semantics: true,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
     let reference = Reference::from(LegacyReference {
         id: "chapter-1".to_string(),
@@ -1290,6 +1307,7 @@ fn test_message_component_reorders_locale_phrase_arguments() {
         show_semantics: true,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
     let reference = Reference::from(LegacyReference {
         id: "localized-phrase".to_string(),
@@ -1375,6 +1393,7 @@ fn test_message_component_resolves_term_backed_messages() {
         show_semantics: true,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
     let reference = make_reference();
     let hints = ProcHints::default();
@@ -1415,6 +1434,7 @@ fn test_message_component_preserves_term_rendering_options() {
         show_semantics: true,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
     let reference = make_reference();
     let hints = ProcHints::default();
@@ -1460,6 +1480,7 @@ fn test_message_component_renders_embedded_container_author_group() {
         show_semantics: true,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
     let reference = InputReference::CollectionComponent(Box::new(CollectionComponent {
         id: Some("chapter-1".into()),
@@ -1547,6 +1568,7 @@ fn test_message_component_renders_legacy_container_author_group() {
         show_semantics: true,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
     let reference = Reference::from(LegacyReference {
         id: "chapter-1".to_string(),
@@ -1613,6 +1635,7 @@ fn test_year_month_day_dates_inline_disambiguation_suffix_on_year() {
         show_semantics: true,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
     let reference = Reference::from(LegacyReference {
         id: "dated-2018".to_string(),
@@ -1661,6 +1684,7 @@ fn test_et_al() {
         show_semantics: true,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
     let hints = ProcHints::default();
 
@@ -1726,6 +1750,7 @@ fn test_et_al_delimiter_never() {
         show_semantics: true,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
     let hints = ProcHints::default();
 
@@ -1784,6 +1809,7 @@ fn test_role_substitute_uses_custom_fallback_roles_without_silent_drop() {
         show_semantics: true,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
     let reference = Reference::from(LegacyReference {
         id: "compiler-fallback".to_string(),
@@ -1855,6 +1881,7 @@ fn typed_editorial_roles_resolve_through_substitution() {
             show_semantics: true,
             current_template_index: None,
             abbreviation_map: None,
+            substitute_title_template: None,
         };
         let reference = make_custom_role_reference(data_role, &[ContributorGender::Common]);
         let hints = ProcHints::default();
@@ -1899,6 +1926,7 @@ fn test_et_al_delimiter_always() {
         show_semantics: true,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
     let hints = ProcHints::default();
 
@@ -2207,6 +2235,7 @@ fn test_template_list_suppression() {
         show_semantics: true,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
     let reference = Reference::from(LegacyReference {
         id: "multi".to_string(),
@@ -2259,6 +2288,7 @@ fn test_et_al_use_last() {
         show_semantics: true,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
     let hints = ProcHints::default();
 
@@ -2314,6 +2344,7 @@ fn test_et_al_use_last_overlap() {
         show_semantics: true,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
     let hints = ProcHints::default();
 
@@ -2375,6 +2406,7 @@ fn test_et_al_use_last_multiple_first_names_delimiter() {
         show_semantics: true,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
     let hints = ProcHints::default();
 
@@ -2434,6 +2466,7 @@ fn test_et_al_uses_configured_delimiter() {
         show_semantics: true,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
     let hints = ProcHints::default();
 
@@ -2480,6 +2513,7 @@ fn test_title_hyperlink() {
         show_semantics: true,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
     let hints = ProcHints::default();
 
@@ -2529,6 +2563,7 @@ fn test_title_hyperlink_url_fallback() {
         show_semantics: true,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
     let hints = ProcHints::default();
 
@@ -2577,6 +2612,7 @@ fn test_title_values_smarten_leading_single_quotes() {
         show_semantics: true,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
     let hints = ProcHints::default();
 
@@ -2619,6 +2655,7 @@ fn test_title_values_smarten_starting_apostrophe() {
         show_semantics: true,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
     let hints = ProcHints::default();
 
@@ -2664,6 +2701,7 @@ fn test_title_values_smarten_french_apostrophes() {
         show_semantics: true,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
     let hints = ProcHints::default();
 
@@ -2707,6 +2745,7 @@ fn test_title_values_smarten_double_quotes() {
         show_semantics: true,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
     let hints = ProcHints::default();
 
@@ -2745,6 +2784,7 @@ fn test_title_values_flip_flop_outer_single_inner_double_quotes() {
         show_semantics: true,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
     let hints = ProcHints::default();
 
@@ -2783,6 +2823,7 @@ fn test_title_values_flip_flop_outer_double_inner_single_quotes() {
         show_semantics: true,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
     let hints = ProcHints::default();
 
@@ -2821,6 +2862,7 @@ fn test_title_values_preserve_ambiguous_double_quotes() {
         show_semantics: true,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
     let hints = ProcHints::default();
 
@@ -2859,6 +2901,7 @@ fn test_title_values_render_djot_markup_as_preformatted() {
         show_semantics: true,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
     let hints = ProcHints::default();
 
@@ -2898,6 +2941,7 @@ fn test_title_values_smarten_djot_text_leaves() {
         show_semantics: true,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
     let hints = ProcHints::default();
 
@@ -2937,6 +2981,7 @@ fn test_title_values_smarten_djot_double_quotes() {
         show_semantics: true,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
     let hints = ProcHints::default();
 
@@ -2976,6 +3021,7 @@ fn test_title_values_inline_link_suppresses_outer_title_link() {
         show_semantics: true,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
     let hints = ProcHints::default();
 
@@ -3025,6 +3071,7 @@ fn test_variable_hyperlink() {
         show_semantics: true,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
     let hints = ProcHints::default();
 
@@ -3144,6 +3191,7 @@ fn test_report_number_variable_uses_report_number_accessor() {
         show_semantics: true,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
     let hints = ProcHints::default();
 
@@ -3197,6 +3245,7 @@ fn number_of_volumes_variable_renders_the_converted_csl_value() {
         show_semantics: true,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
     let reference = Reference::from(LegacyReference {
         id: "multivolume".to_string(),
@@ -3265,6 +3314,7 @@ fn template_number_ordinal_form_uses_the_active_locale_message() {
             show_semantics: true,
             current_template_index: None,
             abbreviation_map: None,
+            substitute_title_template: None,
         };
 
         assert_eq!(
@@ -3293,6 +3343,7 @@ fn template_number_localizes_digits_for_the_active_locale() {
         show_semantics: true,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
     let reference = Reference::from(LegacyReference {
         id: "localized-number".to_string(),
@@ -3343,6 +3394,7 @@ fn monograph_metadata_variables_render_their_accessors() {
         show_semantics: true,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
     let hints = ProcHints::default();
     let reference = InputReference::Monograph(Box::new(Monograph {
@@ -3389,6 +3441,7 @@ fn test_number_variable_excludes_report_number_accessor() {
         show_semantics: true,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
     let hints = ProcHints::default();
 
@@ -3448,6 +3501,7 @@ locators:
         show_semantics: true,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
     let hints = ProcHints::default();
 
@@ -3514,6 +3568,7 @@ locators:
         show_semantics: true,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
 
     let reference: Reference = serde_json::from_str(
@@ -3559,6 +3614,7 @@ fn test_template_number_gender_overrides_locator_label_resolution() {
         show_semantics: true,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
     let hints = ProcHints::default();
 
@@ -3629,6 +3685,7 @@ fn test_role_label_preset_applies_to_translator_component() {
         show_semantics: true,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
     let component = TemplateContributor {
         contributor: ContributorRole::Translator.into(),
@@ -3660,6 +3717,7 @@ fn test_translator_substitute_uses_locale_aware_role_label() {
         overrides: std::collections::HashMap::new(),
         role_substitute: std::collections::HashMap::new(),
         title_quote: None,
+        title_rendering: None,
         otherwise: None,
         unknown_fields: Default::default(),
     }));
@@ -3683,6 +3741,7 @@ fn test_translator_substitute_uses_locale_aware_role_label() {
         show_semantics: true,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
     let component = TemplateContributor {
         contributor: ContributorRole::Author.into(),
@@ -3739,6 +3798,7 @@ fn test_editor_substitute_suppresses_verb_prefix_role_label() {
         show_semantics: true,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
     let component = TemplateContributor {
         contributor: ContributorRole::Author.into(),
@@ -3792,6 +3852,7 @@ fn test_editor_component_keeps_verb_prefix_role_label() {
         show_semantics: true,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
     let component = TemplateContributor {
         contributor: ContributorRole::Editor.into(),
@@ -3833,6 +3894,7 @@ fn test_role_substitute_normalizes_primary_role_lookup_keys() {
         show_semantics: true,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
     let reference = Reference::from(LegacyReference {
         id: "normalized-role-key".to_string(),
@@ -3872,6 +3934,7 @@ fn test_role_specific_name_order_applies_in_substitute_path() {
         overrides: std::collections::HashMap::new(),
         role_substitute: std::collections::HashMap::new(),
         title_quote: None,
+        title_rendering: None,
         otherwise: None,
         unknown_fields: Default::default(),
     }));
@@ -3912,6 +3975,7 @@ fn test_role_specific_name_order_applies_in_substitute_path() {
         show_semantics: true,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
     let component = TemplateContributor {
         contributor: ContributorRole::Author.into(),
@@ -3950,6 +4014,7 @@ fn test_term_values() {
         show_semantics: true,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
     let reference = make_reference();
     let hints = ProcHints::default();
@@ -3984,6 +4049,7 @@ fn test_template_list_term_suppression() {
         show_semantics: true,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
     // Reference with no editor
     let reference = make_reference();
@@ -4030,6 +4096,7 @@ fn test_date_fallback() {
         show_semantics: true,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
     // Reference with NO issued date
     let reference = Reference::from(LegacyReference {
@@ -4073,6 +4140,7 @@ fn given_omitted_date_fallback_when_issued_missing_then_date_is_omitted() {
         show_semantics: true,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
     let reference = Reference::from(LegacyReference {
         id: "no-date".to_string(),
@@ -4115,6 +4183,7 @@ fn given_exhausted_date_fallback_when_issued_missing_then_date_is_omitted() {
         show_semantics: true,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
     let reference = Reference::from(LegacyReference {
         id: "no-date-or-doi".to_string(),
@@ -4182,6 +4251,7 @@ fn test_author_otherwise_renders_anonymous_term_when_substitute_chain_is_empty()
         show_semantics: false,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
 
     let values = component
@@ -4220,6 +4290,7 @@ fn test_strip_periods_global_config() {
         show_semantics: true,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
 
     let component = TemplateContributor {
@@ -4265,6 +4336,7 @@ fn test_strip_periods_component_override() {
         show_semantics: true,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
 
     // Component overrides global setting
@@ -4314,6 +4386,7 @@ fn test_strip_periods_no_strip_by_default() {
         show_semantics: true,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
 
     let component = TemplateContributor {
@@ -4360,6 +4433,7 @@ fn test_should_strip_periods_precedence() {
         show_semantics: true,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
 
     // Component override takes precedence
@@ -4393,6 +4467,7 @@ fn test_should_strip_periods_precedence() {
         show_semantics: true,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
     assert!(!should_strip_periods(&rendering_default, &options_none));
 }
@@ -4926,6 +5001,7 @@ fn title_value_with_config(title_str: &str, ref_type: &str, config: &Config) -> 
         show_semantics: true,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
     let hints = ProcHints::default();
     let reference = Reference::from(LegacyReference {
@@ -4973,6 +5049,7 @@ fn structured_title_value_with_config_and_locale(
         show_semantics: true,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
     let hints = ProcHints::default();
 
@@ -5146,6 +5223,7 @@ fn substitute_title_value_with_rendering(
         show_semantics: true,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
     let hints = ProcHints::default();
     let reference = InputReference::Monograph(Box::new(Monograph {
@@ -5322,6 +5400,304 @@ fn given_djot_markup_and_category_emphasis_when_title_substituted_then_case_and_
     assert_eq!(result, "_The role of mRNA in modern science_");
 }
 
+// ── From-template substitute-title formatting tests (csl26-0u0f) ──────────
+//
+// `title-rendering: from-template` derives a substituted title's
+// bibliography-context formatting from the reference type's own resolved
+// `title: primary` template node, superseding div-011's either/or (quote
+// *or* emph) for opted-in styles. See
+// `SUBSTITUTED_TITLE_BIBLIOGRAPHY_FORMATTING.md`.
+
+fn single_title_primary_template(rendering: Rendering) -> Vec<TemplateComponent> {
+    vec![TemplateComponent::Title(TemplateTitle {
+        title: TitleType::Primary,
+        rendering,
+        ..Default::default()
+    })]
+}
+
+/// As [`substitute_title_value_with_rendering`], but opts the style into
+/// `title-rendering: from-template` and threads `template` through
+/// `RenderOptions.substitute_title_template`, so tests can exercise the
+/// resolved-template-node derivation instead of category-only config.
+fn substitute_title_value_from_template(title_str: &str, template: &[TemplateComponent]) -> String {
+    let config = make_config_with_titles(TitlesConfig::default());
+    let mut config = config;
+    config.substitute = Some(SubstituteConfig::Explicit(Substitute {
+        title_rendering: Some(SubstituteTitleRendering::FromTemplate),
+        ..Default::default()
+    }));
+    let locale = make_locale();
+    let options = RenderOptions {
+        config: Arc::new(config),
+        bibliography_config: None,
+        locale: &locale,
+        context: RenderContext::Bibliography,
+        mode: citum_schema::citation::CitationMode::NonIntegral,
+        suppress_author: false,
+        locator_raw: None,
+        ref_type: None,
+        show_semantics: true,
+        current_template_index: None,
+        abbreviation_map: None,
+        substitute_title_template: Some(template),
+    };
+    let hints = ProcHints::default();
+    let reference = InputReference::Monograph(Box::new(Monograph {
+        r#type: MonographType::Book,
+        title: Some(Title::Single(title_str.to_string())),
+        ..Default::default()
+    }));
+    let component = TemplateContributor {
+        contributor: ContributorRole::Author.into(),
+        form: ContributorForm::Long,
+        ..Default::default()
+    };
+    component
+        .values::<PlainText>(&reference, &hints, &options)
+        .expect("author-substitute title should render")
+        .value
+}
+
+#[test]
+fn given_node_wrap_quotes_when_title_substituted_from_template_then_title_is_quoted() {
+    let template = single_title_primary_template(Rendering {
+        wrap: Some(WrapConfig {
+            punctuation: WrapPunctuation::Quotes,
+            inner_prefix: None,
+            inner_suffix: None,
+        }),
+        ..Default::default()
+    });
+    let result = substitute_title_value_from_template("Anonymous Document", &template);
+    assert_eq!(result, "“Anonymous Document”");
+}
+
+#[test]
+fn given_node_emph_when_title_substituted_from_template_then_title_is_italicized() {
+    let template = single_title_primary_template(Rendering {
+        emph: Some(true),
+        ..Default::default()
+    });
+    let result = substitute_title_value_from_template("Map of the Empire", &template);
+    assert_eq!(result, "_Map of the Empire_");
+}
+
+#[test]
+fn given_node_quote_and_emph_when_title_substituted_from_template_then_both_apply() {
+    // Supersedes div-011's either/or: the node's own `Rendering` is applied
+    // faithfully once a style opts into `from-template`.
+    let template = single_title_primary_template(Rendering {
+        emph: Some(true),
+        wrap: Some(WrapConfig {
+            punctuation: WrapPunctuation::Quotes,
+            inner_prefix: None,
+            inner_suffix: None,
+        }),
+        ..Default::default()
+    });
+    let result = substitute_title_value_from_template("Doubly Formatted", &template);
+    assert_eq!(result, "“_Doubly Formatted_”");
+}
+
+#[test]
+fn given_node_with_no_formatting_when_title_substituted_from_template_then_title_is_plain() {
+    let template = single_title_primary_template(Rendering::default());
+    let result = substitute_title_value_from_template("Plain Software Title", &template);
+    assert_eq!(result, "Plain Software Title");
+}
+
+#[test]
+fn given_positional_wrap_when_title_substituted_from_template_then_wrap_is_ignored() {
+    // `wrap: parentheses` / `wrap: brackets` on a template node is
+    // positional (correct only next to a specific sibling), not title
+    // formatting -- the whitelist deliberately does not transfer it.
+    let template = single_title_primary_template(Rendering {
+        wrap: Some(WrapConfig {
+            punctuation: WrapPunctuation::Parentheses,
+            inner_prefix: None,
+            inner_suffix: None,
+        }),
+        ..Default::default()
+    });
+    let result = substitute_title_value_from_template("Not Wrapped", &template);
+    assert_eq!(result, "Not Wrapped");
+}
+
+#[test]
+fn given_render_when_gated_nodes_when_title_substituted_from_template_then_matching_branch_wins() {
+    // Two `render_when`-guarded groups, only one of which matches a
+    // reference with no `editor` -- the walker must resolve the same
+    // branch the normal render path would, not just the first title node
+    // in document order.
+    let template = vec![
+        TemplateComponent::Group(TemplateGroup {
+            group: vec![TemplateComponent::Title(TemplateTitle {
+                title: TitleType::Primary,
+                rendering: Rendering {
+                    emph: Some(true),
+                    ..Default::default()
+                },
+                ..Default::default()
+            })],
+            render_when: Some(TemplateGroupCondition {
+                field_present: Some(TemplateConditionField::Editor),
+                field_absent: None,
+            }),
+            delimiter: None,
+            rendering: Rendering::default(),
+            custom: None,
+        }),
+        TemplateComponent::Group(TemplateGroup {
+            group: vec![TemplateComponent::Title(TemplateTitle {
+                title: TitleType::Primary,
+                rendering: Rendering {
+                    wrap: Some(WrapConfig {
+                        punctuation: WrapPunctuation::Quotes,
+                        inner_prefix: None,
+                        inner_suffix: None,
+                    }),
+                    ..Default::default()
+                },
+                ..Default::default()
+            })],
+            render_when: Some(TemplateGroupCondition {
+                field_present: None,
+                field_absent: Some(TemplateConditionField::Editor),
+            }),
+            delimiter: None,
+            rendering: Rendering::default(),
+            custom: None,
+        }),
+    ];
+    let result = substitute_title_value_from_template("Editor Absent", &template);
+    assert_eq!(result, "“Editor Absent”");
+}
+
+#[test]
+fn given_suppressed_group_precedes_active_title_when_substituted_from_template_then_suppressed_group_is_skipped()
+ {
+    // A group with `suppress: true` never renders for any reference (see
+    // `render_group_component_with_format`'s suppress check at
+    // grouped/core.rs:1320) -- the walker must skip it the same way,
+    // rather than reading formatting off a title node that could never
+    // actually appear in output.
+    let template = vec![
+        TemplateComponent::Group(TemplateGroup {
+            group: vec![TemplateComponent::Title(TemplateTitle {
+                title: TitleType::Primary,
+                rendering: Rendering {
+                    emph: Some(true),
+                    ..Default::default()
+                },
+                ..Default::default()
+            })],
+            render_when: None,
+            delimiter: None,
+            rendering: Rendering {
+                suppress: Some(true),
+                ..Default::default()
+            },
+            custom: None,
+        }),
+        TemplateComponent::Title(TemplateTitle {
+            title: TitleType::Primary,
+            rendering: Rendering {
+                wrap: Some(WrapConfig {
+                    punctuation: WrapPunctuation::Quotes,
+                    inner_prefix: None,
+                    inner_suffix: None,
+                }),
+                ..Default::default()
+            },
+            ..Default::default()
+        }),
+    ];
+    let result = substitute_title_value_from_template("Suppressed Group", &template);
+    assert_eq!(result, "“Suppressed Group”");
+}
+
+#[test]
+fn given_suppressed_title_node_precedes_active_title_when_substituted_from_template_then_suppressed_node_is_skipped()
+ {
+    // A `title:` component with `suppress: true` on itself never renders
+    // (see the `rendering().suppress` check at grouped/core.rs:1271) --
+    // the walker must skip it and fall through to the next matching
+    // `title: primary` node instead of reading its (never-rendered)
+    // formatting.
+    let template = vec![
+        TemplateComponent::Title(TemplateTitle {
+            title: TitleType::Primary,
+            rendering: Rendering {
+                emph: Some(true),
+                suppress: Some(true),
+                ..Default::default()
+            },
+            ..Default::default()
+        }),
+        TemplateComponent::Title(TemplateTitle {
+            title: TitleType::Primary,
+            rendering: Rendering {
+                wrap: Some(WrapConfig {
+                    punctuation: WrapPunctuation::Quotes,
+                    inner_prefix: None,
+                    inner_suffix: None,
+                }),
+                ..Default::default()
+            },
+            ..Default::default()
+        }),
+    ];
+    let result = substitute_title_value_from_template("Suppressed Node", &template);
+    assert_eq!(result, "“Suppressed Node”");
+}
+
+#[test]
+fn given_mode_not_opted_in_when_template_is_supplied_then_legacy_category_only_behavior_wins() {
+    // The opt-in gate: a resolved template alone must never change
+    // behavior -- only `title-rendering: from-template` does.
+    let template = single_title_primary_template(Rendering {
+        wrap: Some(WrapConfig {
+            punctuation: WrapPunctuation::Quotes,
+            inner_prefix: None,
+            inner_suffix: None,
+        }),
+        ..Default::default()
+    });
+    let config = make_config_with_titles(TitlesConfig::default());
+    let locale = make_locale();
+    let options = RenderOptions {
+        config: Arc::new(config),
+        bibliography_config: None,
+        locale: &locale,
+        context: RenderContext::Bibliography,
+        mode: citum_schema::citation::CitationMode::NonIntegral,
+        suppress_author: false,
+        locator_raw: None,
+        ref_type: None,
+        show_semantics: true,
+        current_template_index: None,
+        abbreviation_map: None,
+        substitute_title_template: Some(&template),
+    };
+    let hints = ProcHints::default();
+    let reference = InputReference::Monograph(Box::new(Monograph {
+        r#type: MonographType::Book,
+        title: Some(Title::Single("Not Opted In".to_string())),
+        ..Default::default()
+    }));
+    let component = TemplateContributor {
+        contributor: ContributorRole::Author.into(),
+        form: ContributorForm::Long,
+        ..Default::default()
+    };
+    let result = component
+        .values::<PlainText>(&reference, &hints, &options)
+        .expect("author-substitute title should render")
+        .value;
+    assert_eq!(result, "Not Opted In");
+}
+
 /// Renders a monograph's primary title under `text-case: sentence-apa`,
 /// built natively (no `csl_legacy` round-trip) so markup-bearing and
 /// plain-text titles are exercised through identical construction.
@@ -5346,6 +5722,7 @@ fn sentence_apa_monograph_title_value(title_str: &str) -> String {
         show_semantics: true,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
     let hints = ProcHints::default();
     let reference = InputReference::Monograph(Box::new(Monograph {
@@ -5424,6 +5801,7 @@ fn test_text_case_structured_title_sentence_apa() {
         show_semantics: true,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
     let hints = ProcHints::default();
 
@@ -5672,6 +6050,7 @@ fn test_text_case_structured_title_sentence_nlm() {
         show_semantics: true,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
     let hints = ProcHints::default();
 
@@ -5727,6 +6106,7 @@ fn test_text_case_non_english_falls_back_to_as_is() {
         show_semantics: true,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
     let hints = ProcHints::default();
 
@@ -5773,6 +6153,7 @@ fn test_text_case_template_level_override() {
         show_semantics: true,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
     let hints = ProcHints::default();
     let reference = Reference::from(LegacyReference {
@@ -5824,6 +6205,7 @@ fn test_structured_title_form_short_returns_main_only() {
         show_semantics: true,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
     let hints = ProcHints::default();
 
@@ -5899,6 +6281,7 @@ fn given_abbreviation_map_when_title_matches_then_abbreviation_returned() {
         show_semantics: false,
         current_template_index: None,
         abbreviation_map: Some(&abbrev_map_obj),
+        substitute_title_template: None,
     };
 
     let component = TemplateTitle {
@@ -5946,6 +6329,7 @@ fn given_abbreviation_map_when_title_not_in_map_then_original_returned() {
         show_semantics: false,
         current_template_index: None,
         abbreviation_map: Some(&abbrev_map_obj),
+        substitute_title_template: None,
     };
 
     let component = TemplateTitle {
@@ -6025,6 +6409,7 @@ fn test_date_note_appends_full_width_wrap_for_cjk_script_item() {
         show_semantics: false,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
     let hints = ProcHints::default();
 
@@ -6062,6 +6447,7 @@ fn test_date_note_appends_half_width_wrap_for_latin_script_item() {
         show_semantics: false,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
     let hints = ProcHints::default();
 
@@ -6092,6 +6478,7 @@ fn test_date_note_hidden_when_style_has_no_note_wrap() {
         show_semantics: false,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
     let hints = ProcHints::default();
 
@@ -6134,6 +6521,7 @@ fn test_date_note_hidden_when_component_suppresses_it() {
         show_semantics: false,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
     let hints = ProcHints::default();
     let component = TemplateDate {
@@ -6175,6 +6563,7 @@ fn test_date_note_hidden_when_input_has_no_note() {
         show_semantics: false,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
     let hints = ProcHints::default();
 
@@ -6212,6 +6601,7 @@ fn test_date_note_follows_year_suffix_disambiguator() {
         show_semantics: false,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
     let hints = ProcHints {
         disamb_condition: true,
@@ -6268,6 +6658,7 @@ fn test_date_note_wraps_after_a_closed_interval() {
         show_semantics: false,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
     let hints = ProcHints::default();
     let component = TemplateDate {
@@ -6316,6 +6707,7 @@ fn test_date_note_escapes_through_the_active_output_format() {
         show_semantics: false,
         current_template_index: None,
         abbreviation_map: None,
+        substitute_title_template: None,
     };
     let hints = ProcHints::default();
 
