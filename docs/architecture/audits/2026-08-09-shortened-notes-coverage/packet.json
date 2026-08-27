@@ -115,7 +115,7 @@
     ],
     "manifest": {
       "path": "docs/architecture/audits/2026-08-09-shortened-notes-coverage/manifest.yaml",
-      "sha256": "f3a6509d7b3c6dedb8612d296299c473bcaa7a6b90d00e74e674abff28d264e5"
+      "sha256": "02bd7a5b8b01dcf03932b9abb9274bbe9711e1e2f569d0dc44e7737796c7739a"
     },
     "relevance": {
       "default": "relevant",
@@ -159,28 +159,28 @@
         {
           "id": "chicago-shortened-notes-bibliography",
           "path": "crates/citum-schema-style/embedded/styles/chicago-shortened-notes-bibliography.yaml",
-          "sha256": "5ee7afd5c74169d8882747d8ab6ede8b84aa12cd1760e1f0f3f544198cd1be94"
+          "sha256": "0350678436d9d2827d896e0ee16b8724c3542e6e8b9c0b369f5b80d1425972f5"
         },
         {
           "id": "chicago-shortened-notes-bibliography-core",
           "path": "crates/citum-schema-style/embedded/styles/chicago-shortened-notes-bibliography-core.yaml",
-          "sha256": "ce674bebad0888fcc608b3fc9d89c3752a0a1f88b5aff8ddf3e4b60422ab50df"
+          "sha256": "6f1d5dcaf9eb67f7fff4787884c9eb8c0c3d31b03331ef3ba0305df66bef23a7"
         },
         {
           "id": "chicago-notes-18th",
           "path": "crates/citum-schema-style/embedded/styles/chicago-notes-18th.yaml",
-          "sha256": "52f6130154400cb4cd7b6b680ae8d16128faf314e92c9b8cd23ca3f1ba0ad6f1"
+          "sha256": "13cf8bbf1ff43af3649a07c47a19ba23ea24e2f0065b77f6b1e40a9b2c2af6fa"
         },
         {
           "id": "chicago-18-base",
           "path": "crates/citum-schema-style/embedded/styles/chicago-18-base.yaml",
-          "sha256": "fa8cadf78de3efabec01f7e1d524d5f1e51b0682fab247b92f2c46f6352f2c74"
+          "sha256": "2cfc1a483740f6e14f56d3433a0b72ba5195de7518f000d3af7bd5f14ccc3b43"
         }
       ],
       "id": "chicago-shortened-notes-bibliography",
       "path": "crates/citum-schema-style/embedded/styles/chicago-shortened-notes-bibliography.yaml",
       "resolvedSha256": "6dc52378865a482a312922f04daa7a63b6f9e75dc80ecdb9efa70f7bd7619975",
-      "sha256": "5ee7afd5c74169d8882747d8ab6ede8b84aa12cd1760e1f0f3f544198cd1be94"
+      "sha256": "0350678436d9d2827d896e0ee16b8724c3542e6e8b9c0b369f5b80d1425972f5"
     },
     "surfaces": [
       "bibliography",
