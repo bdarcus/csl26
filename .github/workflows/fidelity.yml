@@ -56,7 +56,19 @@ jobs:
           style_files="$(printf '%s\n' "$changed" | grep -E '^styles/(embedded/)?[^/]+\.yaml$' || true)"
 
           if [ -n "$style_files" ] && [ -z "$broad" ]; then
-            styles="$(printf '%s\n' "$style_files" | sed -E 's#^styles/(embedded/)?##; s#\.yaml$##' | sort -u | paste -sd, -)"
+            # report-core.js's SKIPPED_STYLES excludes these from its corpus
+            # entirely (no CSL oracle, or hidden inheritance roots) — passing
+            # one to --styles crashes with "Unknown style name(s)". Keep this
+            # list in sync with SKIPPED_STYLES in scripts/report-core.js.
+            styles="$(printf '%s\n' "$style_files" \
+              | sed -E 's#^styles/(embedded/)?##; s#\.yaml$##' \
+              | grep -vE '^(alpha|chicago-18-base|chicago-notes-18th-script)$' \
+              | sort -u | paste -sd, -)"
+          else
+            styles=""
+          fi
+
+          if [ -n "$styles" ]; then
             echo "mode=selected" >> "$GITHUB_OUTPUT"
             echo "styles=$styles" >> "$GITHUB_OUTPUT"
             echo "Running fidelity for changed styles: $styles"
