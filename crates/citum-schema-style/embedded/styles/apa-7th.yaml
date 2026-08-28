@@ -87,7 +87,7 @@ options:
     serial:
       text-case: as-is
   multilingual: romanized-translated
-  page-range-format: expanded
+  range-format: expanded
   punctuation-in-quote: true
 citation:
   # source (apa.csl): collapse="year" — docs/specs/SAME_AUTHOR_COLLAPSE.md §7

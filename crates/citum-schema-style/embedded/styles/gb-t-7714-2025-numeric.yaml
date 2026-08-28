@@ -32,7 +32,7 @@ options:
     delimiter: null
     demote-non-dropping-particle: never
     name-form: initials
-  page-range-format: expanded
+  range-format: expanded
 citation:
   options:
     label-mode: numeric

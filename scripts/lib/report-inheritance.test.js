@@ -36,7 +36,7 @@ test('inheritance index resolves hidden roots, forms, aliases, and latest eviden
   writeFixture(
     root,
     'styles/member.yaml',
-    'extends: family-core\noptions:\n  page-range-format: expanded\n'
+    'extends: family-core\noptions:\n  range-format: expanded\n'
   );
   const registryPath = writeFixture(
     root,

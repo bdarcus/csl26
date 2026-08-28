@@ -11,7 +11,7 @@ options:
     pattern.chicago-of: "of {$container}"
     pattern.chicago-volume: "Vol. {$number}"
     pattern.chicago-volume-lower: "vol. {$number}"
-  page-range-format: expanded
+  range-format: expanded
   # T&F Style F (tf_f.pdf) prescribes sentence-style capitalisation for titles
   # (only the first word capitalised) — a deliberate divergence from the CSL
   # reference, which renders title-case. Journal/serial names stay title-case.

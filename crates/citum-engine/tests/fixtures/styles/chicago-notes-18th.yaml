@@ -40,7 +40,7 @@ options:
   date-fallback: standard
   dates:
     range-format: expanded
-  # multilingual, page-range-format, dates, punctuation-in-quote, and
+  # multilingual, range-format, dates, punctuation-in-quote, and
   # contributors.demote-non-dropping-particle are inherited from chicago-18-base.
   processing: note
   substitute: editor-translator-short

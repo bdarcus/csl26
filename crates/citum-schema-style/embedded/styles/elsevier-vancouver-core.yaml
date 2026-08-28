@@ -37,7 +37,7 @@ options:
       - editor
   dates:
     month: long
-  page-range-format: minimal
+  range-format: minimal
   punctuation-in-quote: true
 
 citation:

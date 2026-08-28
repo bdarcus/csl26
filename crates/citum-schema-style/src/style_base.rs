@@ -304,7 +304,7 @@ impl StyleBase {
 )]
 mod tests {
     use super::*;
-    use crate::options::{Config, PageRangeFormat};
+    use crate::options::{Config, RangeFormat};
     use crate::{Style, StyleInfo, TemplateVariant};
 
     #[test]
@@ -425,7 +425,7 @@ citation:
             },
             extends: Some(StyleBase::ChicagoAuthorDate18th.into()),
             options: Some(Config {
-                page_range_format: Some(PageRangeFormat::Expanded),
+                range_format: Some(RangeFormat::Expanded),
                 ..Default::default()
             }),
             ..Default::default()
@@ -435,7 +435,7 @@ citation:
         let options = resolved
             .options
             .expect("resolved options should be present");
-        assert_eq!(options.page_range_format, Some(PageRangeFormat::Expanded));
+        assert_eq!(options.range_format, Some(RangeFormat::Expanded));
         assert!(
             options.processing.is_some(),
             "local override should preserve inherited processing"
@@ -497,13 +497,13 @@ citation:
 
     #[test]
     fn chicago_18_base_carries_shared_component_options() {
-        use crate::options::{DateRangeFormat, PageRangeFormat};
+        use crate::options::{DateRangeFormat, RangeFormat};
 
         let resolved = StyleBase::Chicago18Base.base().into_resolved();
         let options = resolved.options.expect("chicago-18-base has options");
         assert_eq!(
-            options.page_range_format,
-            Some(PageRangeFormat::Chicago16),
+            options.range_format,
+            Some(RangeFormat::Chicago16),
             "shared page-range-format must be present"
         );
         assert!(matches!(

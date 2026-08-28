@@ -1416,7 +1416,7 @@ info:
   id: elsevier-harvard
 extends: elsevier-harvard-core
 options:
-  page-range-format: expanded
+  range-format: expanded
 "#;
     let resolved = Style::from_yaml_str(yaml)
         .unwrap()
@@ -1426,8 +1426,8 @@ options:
         resolved
             .options
             .as_ref()
-            .and_then(|options| options.page_range_format.clone()),
-        Some(options::PageRangeFormat::Expanded)
+            .and_then(|options| options.range_format.clone()),
+        Some(options::RangeFormat::Expanded)
     );
 }
 

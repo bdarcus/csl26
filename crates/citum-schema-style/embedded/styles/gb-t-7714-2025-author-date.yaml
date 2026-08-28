@@ -44,7 +44,7 @@ options:
     delimiter: { mark: comma }
     demote-non-dropping-particle: never
     name-form: initials
-  page-range-format: expanded
+  range-format: expanded
 citation:
   # source (tests/fixtures/csl-m/gb-t-7714-2025-author-date.csl):
   # collapse="year" — SAME_AUTHOR_COLLAPSE.md §7

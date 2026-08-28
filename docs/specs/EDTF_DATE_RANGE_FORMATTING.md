@@ -32,7 +32,7 @@ BCE values (`-0326/-0020` becomes `327–21 BCE` when BCE/CE labels are active).
 Cross-era, unspecified, reversed, and open intervals retain endpoint-by-endpoint
 rendering.
 
-This option is independent of `page-range-format`. The Chicago 18 shared style base opts into `chicago`; all other styles retain `expanded` until explicitly configured.
+This option is independent of `range-format`. The Chicago 18 shared style base opts into `chicago`; all other styles retain `expanded` until explicitly configured.
 
 ### Shared-year locale messages
 

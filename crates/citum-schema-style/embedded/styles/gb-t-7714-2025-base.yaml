@@ -100,8 +100,8 @@ options:
     show-timezone: false
     era-labels: default
     negative-unspecified-years: range
-  page-range-format: expanded
-  page-range-delimiter: '-'
+  range-format: expanded
+  range-delimiter: '-'
 bibliography:
   sort: citation-number
   options:

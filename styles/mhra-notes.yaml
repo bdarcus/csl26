@@ -32,7 +32,7 @@ options:
       emph: true
     periodical:
       emph: true
-  page-range-format: minimal-two
+  range-format: minimal-two
 citation:
   options:
     contributors:

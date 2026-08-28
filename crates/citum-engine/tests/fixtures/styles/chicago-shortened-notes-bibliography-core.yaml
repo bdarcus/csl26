@@ -48,7 +48,7 @@ options:
       delimiter-precedes-last: contextual
     demote-non-dropping-particle: display-and-sort
   titles: chicago
-  page-range-format: chicago16
+  range-format: chicago16
   punctuation-in-quote: true
 citation:
   options:

@@ -8,7 +8,7 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus and Citum contributors
 //! Defines how citation locators (page numbers, sections, etc.) are displayed,
 //! including label forms, range formatting, and compound locator patterns.
 
-use super::PageRangeFormat;
+use super::RangeFormat;
 use citum_schema_data::citation::LocatorType;
 use std::collections::HashMap;
 
@@ -70,7 +70,7 @@ pub struct LocatorKindConfig {
     pub label_form: Option<LabelForm>,
     /// Override the global range format for this locator kind.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub range_format: Option<PageRangeFormat>,
+    pub range_format: Option<RangeFormat>,
     /// Strip trailing periods from labels (e.g., "p." → "p").
     #[serde(skip_serializing_if = "Option::is_none")]
     pub strip_label_periods: Option<bool>,
@@ -128,7 +128,7 @@ pub struct LocatorConfig {
     pub default_label_form: LabelForm,
     /// Range format for all locator kinds (default: Expanded).
     #[serde(default)]
-    pub range_format: PageRangeFormat,
+    pub range_format: RangeFormat,
     /// Strip trailing periods from labels globally (e.g., "p." → "p").
     #[serde(skip_serializing_if = "Option::is_none")]
     pub strip_label_periods: Option<bool>,
@@ -157,7 +157,7 @@ impl Default for LocatorConfig {
     fn default() -> Self {
         Self {
             default_label_form: LabelForm::Short,
-            range_format: PageRangeFormat::Expanded,
+            range_format: RangeFormat::Expanded,
             strip_label_periods: None,
             kinds: HashMap::new(),
             patterns: Vec::new(),
@@ -196,7 +196,7 @@ impl LocatorPreset {
         match self {
             LocatorPreset::Note => LocatorConfig {
                 default_label_form: LabelForm::Short,
-                range_format: PageRangeFormat::Expanded,
+                range_format: RangeFormat::Expanded,
                 strip_label_periods: None,
                 kinds: {
                     let mut m = HashMap::new();
@@ -218,7 +218,7 @@ impl LocatorPreset {
             },
             LocatorPreset::AuthorDate => LocatorConfig {
                 default_label_form: LabelForm::Short,
-                range_format: PageRangeFormat::Expanded,
+                range_format: RangeFormat::Expanded,
                 strip_label_periods: None,
                 kinds: HashMap::new(),
                 patterns: Vec::new(),
@@ -227,7 +227,7 @@ impl LocatorPreset {
             },
             LocatorPreset::Numeric => LocatorConfig {
                 default_label_form: LabelForm::Short,
-                range_format: PageRangeFormat::Expanded,
+                range_format: RangeFormat::Expanded,
                 strip_label_periods: Some(true),
                 kinds: HashMap::new(),
                 patterns: Vec::new(),
@@ -289,14 +289,14 @@ mod tests {
     fn test_locator_preset_note() {
         let config = LocatorPreset::Note.config();
         assert_eq!(config.default_label_form, LabelForm::Short);
-        assert_eq!(config.range_format, PageRangeFormat::Expanded);
+        assert_eq!(config.range_format, RangeFormat::Expanded);
     }
 
     #[test]
     fn test_locator_preset_author_date() {
         let config = LocatorPreset::AuthorDate.config();
         assert_eq!(config.default_label_form, LabelForm::Short);
-        assert_eq!(config.range_format, PageRangeFormat::Expanded);
+        assert_eq!(config.range_format, RangeFormat::Expanded);
     }
 
     #[test]

@@ -3513,19 +3513,19 @@
             }
           ]
         },
-        "page-range-format": {
-          "description": "Page range formatting (expanded, minimal, chicago).",
+        "range-format": {
+          "description": "Style-wide numeric range endpoint-abbreviation default. Applies to\nthe page variable and, per `docs/specs/RANGE_COLLAPSE_MODEL.md`\nDecision 2, every locator kind unless overridden.",
           "anyOf": [
             {
-              "$ref": "#/$defs/PageRangeFormat"
+              "$ref": "#/$defs/RangeFormat"
             },
             {
               "type": "null"
             }
           ]
         },
-        "page-range-delimiter": {
-          "description": "Separator between page-range endpoints. Overrides the locale's\n`page-range-delimiter` (en-dash by default); AMA and similar use `-`.",
+        "range-delimiter": {
+          "description": "Separator between range endpoints. Overrides the locale's\n`page-range-delimiter` (en-dash by default); AMA and similar use `-`.",
           "type": [
             "string",
             "null"
@@ -6466,7 +6466,7 @@
         },
         "range-format": {
           "description": "Range format for all locator kinds (default: Expanded).",
-          "$ref": "#/$defs/PageRangeFormat",
+          "$ref": "#/$defs/RangeFormat",
           "default": "expanded"
         },
         "strip-label-periods": {
@@ -6525,8 +6525,8 @@
         }
       ]
     },
-    "PageRangeFormat": {
-      "description": "Page range formatting options.",
+    "RangeFormat": {
+      "description": "Numeric range endpoint-abbreviation format, shared by every\nrange-producing surface (pages, locators, citation numbers).",
       "oneOf": [
         {
           "description": "Full expansion: 321-328 → 321–328",
@@ -6574,7 +6574,7 @@
           "description": "Override the global range format for this locator kind.",
           "anyOf": [
             {
-              "$ref": "#/$defs/PageRangeFormat"
+              "$ref": "#/$defs/RangeFormat"
             },
             {
               "type": "null"
@@ -7270,17 +7270,6 @@
           "anyOf": [
             {
               "$ref": "#/$defs/LocatorConfigEntry"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "page-range-format": {
-          "description": "Page range formatting (expanded, minimal, chicago).",
-          "anyOf": [
-            {
-              "$ref": "#/$defs/PageRangeFormat"
             },
             {
               "type": "null"
@@ -8291,17 +8280,6 @@
           "anyOf": [
             {
               "$ref": "#/$defs/TitlesConfigEntry"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "page-range-format": {
-          "description": "Page range formatting (expanded, minimal, chicago).",
-          "anyOf": [
-            {
-              "$ref": "#/$defs/PageRangeFormat"
             },
             {
               "type": "null"
