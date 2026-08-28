@@ -156,6 +156,7 @@ note. The `—` marker in the Tests column means no targeted test exists yet.
 | [`TITLE_TEXT_CASE.md`](./TITLE_TEXT_CASE.md) — modeling and applying title-like text-case transformations | Active | `bibliography.rs` |
 | [`TITLE_NAME_INFLECTION.md`](./TITLE_NAME_INFLECTION.md) — grammatical inflection of title-adjacent names | Active | `bibliography.rs` |
 | [`PUNCTUATION_NORMALIZATION.md`](./PUNCTUATION_NORMALIZATION.md) — normalization of punctuation at rendered output boundaries | Draft | `bibliography.rs`, `citations.rs` |
+| [`RANGE_COLLAPSE_MODEL.md`](./RANGE_COLLAPSE_MODEL.md) — shared configuration resolution for range abbreviation and delimiters | Draft | — |
 | [`DJOT_RICH_TEXT.md`](./DJOT_RICH_TEXT.md) — Djot as the rich-text markup substrate for note/abstract fields | Active | `document.rs::djot_adapter` |
 | [`SHORT_NAME.md`](./SHORT_NAME.md) — short-name rendering for abbreviated contributor identifiers | Active | `bibliography.rs::title_short_resolution` |
 | [`ABBREVIATION_MAP.md`](./ABBREVIATION_MAP.md) — abbreviation lookup map for journal and publisher names | Active | `bibliography.rs` |
