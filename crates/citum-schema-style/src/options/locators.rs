@@ -126,9 +126,12 @@ pub struct LocatorConfig {
     /// Default label form for all locator kinds (default: Short).
     #[serde(default = "default_label_form")]
     pub default_label_form: LabelForm,
-    /// Range format for all locator kinds (default: Expanded).
-    #[serde(default)]
-    pub range_format: RangeFormat,
+    /// Range format for all locator kinds. `None` inherits the style-wide
+    /// `options.range-format` default (see
+    /// `docs/specs/RANGE_COLLAPSE_MODEL.md` Decision 2); `Some` overrides it
+    /// for every kind unless a `kinds.<kind>.range-format` entry wins first.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub range_format: Option<RangeFormat>,
     /// Strip trailing periods from labels globally (e.g., "p." → "p").
     #[serde(skip_serializing_if = "Option::is_none")]
     pub strip_label_periods: Option<bool>,
@@ -157,7 +160,7 @@ impl Default for LocatorConfig {
     fn default() -> Self {
         Self {
             default_label_form: LabelForm::Short,
-            range_format: RangeFormat::Expanded,
+            range_format: None,
             strip_label_periods: None,
             kinds: HashMap::new(),
             patterns: Vec::new(),
@@ -196,7 +199,7 @@ impl LocatorPreset {
         match self {
             LocatorPreset::Note => LocatorConfig {
                 default_label_form: LabelForm::Short,
-                range_format: RangeFormat::Expanded,
+                range_format: None,
                 strip_label_periods: None,
                 kinds: {
                     let mut m = HashMap::new();
@@ -218,7 +221,7 @@ impl LocatorPreset {
             },
             LocatorPreset::AuthorDate => LocatorConfig {
                 default_label_form: LabelForm::Short,
-                range_format: RangeFormat::Expanded,
+                range_format: None,
                 strip_label_periods: None,
                 kinds: HashMap::new(),
                 patterns: Vec::new(),
@@ -227,7 +230,7 @@ impl LocatorPreset {
             },
             LocatorPreset::Numeric => LocatorConfig {
                 default_label_form: LabelForm::Short,
-                range_format: RangeFormat::Expanded,
+                range_format: None,
                 strip_label_periods: Some(true),
                 kinds: HashMap::new(),
                 patterns: Vec::new(),
@@ -289,14 +292,16 @@ mod tests {
     fn test_locator_preset_note() {
         let config = LocatorPreset::Note.config();
         assert_eq!(config.default_label_form, LabelForm::Short);
-        assert_eq!(config.range_format, RangeFormat::Expanded);
+        // `None` inherits the style-wide default (Decision 2), not a
+        // preset-hardcoded `Expanded`.
+        assert_eq!(config.range_format, None);
     }
 
     #[test]
     fn test_locator_preset_author_date() {
         let config = LocatorPreset::AuthorDate.config();
         assert_eq!(config.default_label_form, LabelForm::Short);
-        assert_eq!(config.range_format, RangeFormat::Expanded);
+        assert_eq!(config.range_format, None);
     }
 
     #[test]
@@ -348,5 +353,6 @@ mod tests {
         let config = LocatorConfig::default();
         assert_eq!(config.default_label_form, LabelForm::Short);
         assert_eq!(config.fallback_delimiter, ", ");
+        assert_eq!(config.range_format, None);
     }
 }

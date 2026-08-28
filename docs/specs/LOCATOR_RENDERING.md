@@ -56,7 +56,7 @@ pub enum LabelRepeat {
 /// Per-kind configuration overrides.
 pub struct LocatorKindConfig {
     pub label_form: Option<LabelForm>,       // overrides LocatorConfig::default_label_form
-    pub range_format: Option<PageRangeFormat>,
+    pub range_format: Option<RangeFormat>,
     pub strip_label_periods: Option<bool>,
 }
 
@@ -78,7 +78,10 @@ pub struct LocatorPattern {
 /// Top-level locator rendering configuration.
 pub struct LocatorConfig {
     pub default_label_form: LabelForm,     // Default: Short
-    pub range_format: PageRangeFormat,     // Default: Expanded
+    // `None` inherits the style-wide `options.range-format` default for
+    // every locator kind (RANGE_COLLAPSE_MODEL.md Decision 2); `Some`
+    // overrides it here.
+    pub range_format: Option<RangeFormat>,
     pub kinds: HashMap<LocatorType, LocatorKindConfig>,
     pub patterns: Vec<LocatorPattern>,
     pub fallback_delimiter: String,        // Default: ", "
@@ -127,7 +130,7 @@ locators:
 ```
 
 `Config::merge` treats `locators` as an atomic replace (same as
-`page_range_format`).
+`range_format`).
 
 ### Engine API (`citum-engine/src/values/locator.rs`)
 
@@ -141,6 +144,7 @@ pub fn render_locator(
     ref_type: &str,
     config: &LocatorConfig,
     locale: &Locale,
+    style_range_format: Option<&RangeFormat>,
 ) -> String;
 ```
 
