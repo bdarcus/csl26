@@ -5911,6 +5911,7 @@ fn test_compound_numeric_citation_subentry_collapse_enabled() {
         }),
         options: Some(Config {
             processing: Some(Processing::Numeric),
+            identifier_range_delimiter: Some("-".to_string()),
             ..Default::default()
         }),
         bibliography: Some(BibliographySpec {

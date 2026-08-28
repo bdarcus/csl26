@@ -1417,6 +1417,7 @@ info:
 extends: elsevier-harvard-core
 options:
   range-format: expanded
+  identifier-range-delimiter: "~"
 "#;
     let resolved = Style::from_yaml_str(yaml)
         .unwrap()
@@ -1428,6 +1429,13 @@ options:
             .as_ref()
             .and_then(|options| options.range_format.clone()),
         Some(options::RangeFormat::Expanded)
+    );
+    assert_eq!(
+        resolved
+            .options
+            .as_ref()
+            .and_then(|options| options.identifier_range_delimiter.as_deref()),
+        Some("~")
     );
 }
 

@@ -172,6 +172,18 @@ pub struct Config {
     /// `page-range-delimiter` (en-dash by default); AMA and similar use `-`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub range_delimiter: Option<String>,
+    /// Separator between collapsed identifier or suffix range endpoints.
+    /// This is independent of `range_delimiter`, which applies to numeric
+    /// textual ranges such as pages and locators. Defaults to an en dash.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub identifier_range_delimiter: Option<String>,
+    /// Citation-number range formatting. Independent of `range_format`:
+    /// identifier sequences are list positions, not prose numerals, so they
+    /// default to `Expanded` on their own rather than inheriting the
+    /// style-wide default. See `docs/specs/RANGE_COLLAPSE_MODEL.md`
+    /// Decision 1.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub citation_numbers: Option<CitationNumberConfig>,
     /// Hyperlink configuration.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub links: Option<LinksConfig>,
@@ -633,6 +645,18 @@ pub enum RangeFormat {
     Chicago16,
 }
 
+/// Citation-number range formatting (identifier sequences, e.g. `[1-3]`).
+#[derive(Debug, Default, PartialEq, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+#[serde(rename_all = "kebab-case")]
+pub struct CitationNumberConfig {
+    /// Endpoint-abbreviation format for collapsed citation-number ranges.
+    /// Defaults to `Expanded`, independent of the style-wide `range-format`
+    /// default (see `docs/specs/RANGE_COLLAPSE_MODEL.md` Decision 1).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub range_format: Option<RangeFormat>,
+}
+
 pub mod titles;
 
 pub use title_class::{
@@ -777,6 +801,7 @@ impl Config {
             locators,
             range_format,
             range_delimiter,
+            citation_numbers,
             links,
             volume_pages_delimiter,
             locale_override,
@@ -787,6 +812,7 @@ impl Config {
             custom,
         );
 
+        self.merge_identifier_range_delimiter(other);
         self.merge_multilingual(other);
         self.merge_punctuation(other);
         self.messages.extend(other.messages.clone());
@@ -822,6 +848,12 @@ impl Config {
         }
     }
 
+    fn merge_identifier_range_delimiter(&mut self, other: &Config) {
+        if let Some(delimiter) = &other.identifier_range_delimiter {
+            self.identifier_range_delimiter = Some(delimiter.clone());
+        }
+    }
+
     /// Create a merged config from base and override, returning a new Config.
     ///
     /// Convenience method that clones base, then merges override into it.
@@ -851,6 +883,8 @@ impl CitationOptions {
             locators: self.locators.clone(),
             range_format: None,
             range_delimiter: None,
+            identifier_range_delimiter: None,
+            citation_numbers: None,
             links: self.links.clone(),
             punctuation_in_quote: self.punctuation_in_quote,
             punctuation: None,
@@ -985,6 +1019,8 @@ impl BibliographyOptions {
             locators: None,
             range_format: None,
             range_delimiter: None,
+            identifier_range_delimiter: None,
+            citation_numbers: None,
             links: self.links.clone(),
             punctuation_in_quote: self.punctuation_in_quote,
             punctuation: None,
@@ -1263,6 +1299,10 @@ impl<'de> Deserialize<'de> for Config {
             #[serde(skip_serializing_if = "Option::is_none")]
             range_delimiter: Option<String>,
             #[serde(skip_serializing_if = "Option::is_none")]
+            identifier_range_delimiter: Option<String>,
+            #[serde(skip_serializing_if = "Option::is_none")]
+            citation_numbers: Option<CitationNumberConfig>,
+            #[serde(skip_serializing_if = "Option::is_none")]
             links: Option<LinksConfig>,
             #[serde(default, skip_serializing_if = "std::ops::Not::not")]
             punctuation_in_quote: bool,
@@ -1313,6 +1353,8 @@ impl<'de> Deserialize<'de> for Config {
             locators: wire.locators,
             range_format: wire.range_format,
             range_delimiter: wire.range_delimiter,
+            identifier_range_delimiter: wire.identifier_range_delimiter,
+            citation_numbers: wire.citation_numbers,
             links: wire.links,
             punctuation_in_quote: wire.punctuation_in_quote,
             punctuation: wire.punctuation,

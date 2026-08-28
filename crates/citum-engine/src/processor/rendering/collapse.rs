@@ -7,6 +7,7 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus and Citum contributors
 
 use super::{CitationChunk, Renderer};
 use crate::processor::rendering::marker::MarkerValue;
+use crate::values::number::format_page_range;
 use crate::values::range::{ConsecutiveSegment, consecutive_segments};
 #[cfg(test)]
 use std::sync::Arc;
@@ -80,11 +81,21 @@ impl Renderer<'_> {
                 continue;
             }
 
+            let range_format = self
+                .config
+                .citation_numbers
+                .as_ref()
+                .and_then(|cfg| cfg.range_format.as_ref());
+            let range = format_page_range(
+                &format!("{citation_number}-{end_number}"),
+                range_format,
+                self.identifier_range_delimiter(),
+            );
             collapsed.push(CitationChunk {
                 ids: block_ids,
                 content: String::new(),
                 marker: chunks[i].marker.clone().map(|mut marker| {
-                    marker.value = MarkerValue::Range(format!("{citation_number}–{end_number}"));
+                    marker.value = MarkerValue::Range(range);
                     marker
                 }),
             });
@@ -94,7 +105,7 @@ impl Renderer<'_> {
         collapsed
     }
 
-    /// Collapse consecutive compound sub-labels into ranges (e.g., "1a-c").
+    /// Collapse consecutive compound sub-labels into ranges (e.g., "1a–c").
     ///
     /// Only applies for alphabetic sub-labels when:
     /// - The chunks belong to the same numeric citation (same number).
@@ -186,18 +197,10 @@ impl Renderer<'_> {
                 continue;
             }
 
+            let range_delimiter = self.identifier_range_delimiter();
             let labels = consecutive_segments(&member_ordinals)
                 .into_iter()
-                .map(|segment| match segment {
-                    ConsecutiveSegment::Single(value) => {
-                        crate::values::int_to_letter(value).unwrap_or_default()
-                    }
-                    ConsecutiveSegment::Range { start, end } => {
-                        let start_label = crate::values::int_to_letter(start).unwrap_or_default();
-                        let end_label = crate::values::int_to_letter(end).unwrap_or_default();
-                        format!("{start_label}-{end_label}")
-                    }
-                })
+                .map(|segment| format_compound_sub_label_segment(segment, range_delimiter))
                 .collect::<Vec<_>>()
                 .join(",");
 
@@ -216,6 +219,19 @@ impl Renderer<'_> {
         }
 
         collapsed
+    }
+}
+
+fn format_compound_sub_label_segment(segment: ConsecutiveSegment, range_delimiter: &str) -> String {
+    match segment {
+        ConsecutiveSegment::Single(value) => {
+            crate::values::int_to_letter(value).unwrap_or_default()
+        }
+        ConsecutiveSegment::Range { start, end } => {
+            let start_label = crate::values::int_to_letter(start).unwrap_or_default();
+            let end_label = crate::values::int_to_letter(end).unwrap_or_default();
+            format!("{start_label}{range_delimiter}{end_label}")
+        }
     }
 }
 
@@ -369,5 +385,87 @@ mod tests {
                 .collect::<Vec<_>>();
             assert_eq!(actual, expected);
         }
+    }
+
+    #[test]
+    fn given_citation_numbers_range_format_when_collapsing_then_it_abbreviates() {
+        // given a style that opts citation-number ranges into Chicago
+        // abbreviation, independent of the style-wide range-format default
+        let style = citum_schema::Style::default();
+        let bib = Bibliography::default();
+        let loc = Locale::default();
+        let config = Config {
+            identifier_range_delimiter: Some("~".to_string()),
+            citation_numbers: Some(citum_schema::options::CitationNumberConfig {
+                range_format: Some(citum_schema::options::RangeFormat::Chicago),
+            }),
+            ..Default::default()
+        };
+        let cfg = Arc::new(config);
+        let hints = HashMap::new();
+
+        let mut nums = HashMap::new();
+        nums.insert("A".to_string(), 1002);
+        nums.insert("B".to_string(), 1003);
+        nums.insert("C".to_string(), 1004);
+        nums.insert("D".to_string(), 1005);
+        nums.insert("E".to_string(), 1006);
+        let citation_numbers = RwLock::new(nums);
+        let empty_map_string = HashMap::new();
+        let empty_map_usize = HashMap::new();
+        let empty_index = IndexMap::new();
+
+        let renderer = make_renderer(
+            &style,
+            &bib,
+            &loc,
+            cfg,
+            &hints,
+            &citation_numbers,
+            &empty_map_string,
+            &empty_map_usize,
+            &empty_index,
+            None,
+        );
+
+        let chunks = ["A", "B", "C", "D", "E"]
+            .into_iter()
+            .map(|id| CitationChunk {
+                marker: citation_numbers
+                    .read()
+                    .unwrap()
+                    .get(id)
+                    .copied()
+                    .map(|number| crate::processor::rendering::ResolvedMarker {
+                        value: MarkerValue::Number {
+                            number,
+                            sub_label: None,
+                        },
+                        spec: crate::processor::rendering::marker::CitationMarkerSpec {
+                            kind: crate::processor::rendering::marker::MarkerKind::Numeric,
+                            label_wrap: None,
+                            item_wrap: None,
+                            placement:
+                                crate::processor::rendering::marker::MarkerPlacement::Leading,
+                        },
+                    }),
+                ids: vec![id.to_string()],
+                content: String::new(),
+            })
+            .collect();
+
+        // when collapsed
+        let actual = renderer.collapse_numeric_citation_chunks(chunks);
+
+        // then the range abbreviates per Chicago rules, matching the page
+        // variable's own algorithm (values/number.rs::format_page_range)
+        assert_eq!(actual.len(), 1);
+        assert_eq!(
+            actual[0]
+                .marker
+                .as_ref()
+                .map(|marker| marker.value.as_text()),
+            Some("1002~6".to_string())
+        );
     }
 }

@@ -137,6 +137,21 @@ pub struct CompoundRenderData<'a> {
     pub sets: &'a IndexMap<String, Vec<String>>,
 }
 
+/// Default separator for collapsed identifier and suffix ranges (`[1–3]`,
+/// `2020a–c`), independent of the page/locator range delimiter.
+pub(crate) const DEFAULT_IDENTIFIER_RANGE_DELIMITER: &str = "\u{2013}";
+
+impl Renderer<'_> {
+    /// Resolve the separator for citation-number, compound-sub-label, and
+    /// year-suffix ranges.
+    pub(crate) fn identifier_range_delimiter(&self) -> &str {
+        self.config
+            .identifier_range_delimiter
+            .as_deref()
+            .unwrap_or(DEFAULT_IDENTIFIER_RANGE_DELIMITER)
+    }
+}
+
 mod collapse;
 mod grouped;
 mod grouped_fallback;

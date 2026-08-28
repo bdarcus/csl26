@@ -3531,6 +3531,24 @@
             "null"
           ]
         },
+        "identifier-range-delimiter": {
+          "description": "Separator between collapsed identifier or suffix range endpoints.\nThis is independent of `range_delimiter`, which applies to numeric\ntextual ranges such as pages and locators. Defaults to an en dash.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "citation-numbers": {
+          "description": "Citation-number range formatting. Independent of `range_format`:\nidentifier sequences are list positions, not prose numerals, so they\ndefault to `Expanded` on their own rather than inheriting the\nstyle-wide default. See `docs/specs/RANGE_COLLAPSE_MODEL.md`\nDecision 1.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CitationNumberConfig"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "links": {
           "description": "Hyperlink configuration.",
           "anyOf": [
@@ -6686,6 +6704,23 @@
           "const": "none"
         }
       ]
+    },
+    "CitationNumberConfig": {
+      "description": "Citation-number range formatting (identifier sequences, e.g. `[1-3]`).",
+      "type": "object",
+      "properties": {
+        "range-format": {
+          "description": "Endpoint-abbreviation format for collapsed citation-number ranges.\nDefaults to `Expanded`, independent of the style-wide `range-format`\ndefault (see `docs/specs/RANGE_COLLAPSE_MODEL.md` Decision 1).",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RangeFormat"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
     },
     "PunctuationConfig": {
       "description": "Style-level overrides for locale punctuation-collision defaults.",
