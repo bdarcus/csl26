@@ -1,7 +1,7 @@
 # Range/Collapse Model Specification
 
-**Status:** Draft
-**Version:** 1.0
+**Status:** Active
+**Version:** 1.1
 **Date:** 2026-08-28
 **Supersedes:** (none — no prior spec covers this ground)
 **Related:** `docs/architecture/audits/2026-08-26_RANGE_COLLAPSE_CONFIG.md`
@@ -63,7 +63,7 @@ override mechanism `mhra-notes.yaml` already uses for locators today
 
 | # | Decision | Resolution |
 |---|---|---|
-| 1 | One configuration-resolution mechanism for every range, organized by semantic class; generic field names instead of page-specific ones | `range-format` / `range-delimiter` replace `page-range-format` / `page-range-delimiter`; every surface gets an explicit-override path; defaults are set per semantic class, not flatly |
+| 1 | One configuration-resolution mechanism for every range, organized by semantic class; generic field names instead of page-specific ones | `range-format` / `range-delimiter` replace `page-range-format` / `page-range-delimiter`; `identifier-range-delimiter` configures citation-number, compound-sub-label, and suffix ranges; defaults are set per semantic class, not flatly |
 | 2 | Does the style-wide default apply to every locator kind, or only pages? | **All kinds**, by design. Per-kind override (already in the schema) is how a style opts a specific kind back out |
 | 3 | Citation-scoped and bibliography-scoped range settings — fix or remove? | **Remove.** Zero of 17 styles that set `page-range-format` use a scoped copy distinct from the style-level value |
 
@@ -122,8 +122,13 @@ flat value:
 - **Suffix sequences** — `2020a–c`. Letter endpoints; shares only the
   delimiter/collapsing mechanism, not an abbreviation policy.
 
-Inheritance chain: `explicit surface override → semantic-class default →
-style-wide default → Expanded`.
+Endpoint abbreviation and delimiter resolution use separate chains. Numeric
+textual locators resolve `kind override -> locator override -> style-wide
+default -> Expanded`. Citation numbers resolve their own override and then
+default to `Expanded`. Dates keep their independent configuration. Page and
+locator delimiters resolve `range-delimiter -> locale page-range-delimiter`;
+identifier and suffix delimiters resolve `identifier-range-delimiter -> en
+dash`.
 
 ### 2. Locator default: all kinds
 
@@ -167,15 +172,15 @@ left for one to pair with.
 
 ## Acceptance Criteria
 
-- [ ] `range-format`/`range-delimiter` resolve for every surface in scope,
+- [x] `range-format`/`range-delimiter` resolve for every surface in scope,
       with an explicit override available at each
-- [ ] `chi-chapter-locator` renders `112–18`, matching citeproc-js
-- [ ] `mhra-notes`' explicit `locators.range-format: expanded` still wins —
+- [x] `chi-chapter-locator` renders `112–18`, matching citeproc-js
+- [x] `mhra-notes`' explicit `locators.range-format: expanded` still wins —
       explicit overrides beat every inherited default
-- [ ] `CitationOptions`/`BibliographyOptions` no longer carry a
+- [x] `CitationOptions`/`BibliographyOptions` no longer carry a
       `page-range-format`/`range-format` field
-- [ ] `docs/guides/style-authoring/` documents the resulting model
-- [ ] Unintentional oracle-verified output changes are regressions and block
+- [x] `docs/guides/style-authoring/` documents the resulting model
+- [x] Unintentional oracle-verified output changes are regressions and block
       the implementation PR. Any style where the all-kinds locator default
       (Decision 2) diverges from citeproc-js gets a `div-0NN` entry in
       `DIVERGENCE_REGISTER.md`, following the `div-017`/`div-009` pattern
@@ -191,21 +196,17 @@ Full surface inventory and evidence: see the audit doc linked above.
 - **Dates stay a separate field.** `DateRangeFormat` is not merged into
   `range-format` — `dates.range-format` remains its own key, per the shipped
   EDTF spec. What unifies: value vocabulary and the underlying algorithm.
-- **Delimiter chain**: scope option → style option → locale
-  `grammar-options.page-range-delimiter`, applied identically by the page
-  variable (`values/number.rs`), locators (`values/locator.rs`),
-  citation-number ranges (`collapse.rs:85`), compound sub-labels
-  (`collapse.rs:198`), and same-author suffix ranges (`year_suffix.rs:22`),
-  retiring all three currently-hardcoded literals. Whether
-  citation-number/compound/suffix ranges use the *page* delimiter term or a
-  distinct locale term (citeproc-js's `citation-range-delimiter` concept) is
-  open — resolve during implementation if no corpus evidence forces the
-  answer earlier.
+- **Delimiter chains.** Page variables and locators use
+  `options.range-delimiter`, then the locale's
+  `grammar-options.page-range-delimiter`. Citation-number, compound
+  sub-label, and same-author suffix ranges use
+  `options.identifier-range-delimiter`, then an en dash. The two defaults
+  stay independent because AMA and ACS use a hyphen for page ranges while
+  retaining an en dash for identifier ranges.
 - **Locator kind gating**: `locators.kinds.<kind>.range-format` →
   `locators.range-format` → `options.range-format` → `Expanded`, applied to
-  every kind (Decision 2). `LocatorConfig::range_format` becomes
-  `Option<RangeFormat>` (currently non-optional, hardcoded `Expanded` —
-  audit incoherence 1); the three `LocatorPreset::config()` arms set `None`.
+  every kind (Decision 2). `LocatorConfig::range_format` is
+  `Option<RangeFormat>`; the three `LocatorPreset::config()` arms set `None`.
   **Rejected:** resolving the style default at preset-injection time
   instead — the four styles with an explicit `locators:` map
   (`american-medical-association`, `oscola`, `oscola-no-ibid`,
@@ -217,9 +218,9 @@ Full surface inventory and evidence: see the audit doc linked above.
 - **Also found, unrelated to any decision above**: `pattern.page-range`
   (an MF2 locale message in 5 locale files) is dead — nothing reads it
   (audit incoherence 6). Delete it during implementation.
-- **Rejected (general)**: resolving format/delimiter freshly at each call
-  site instead of at config-merge time — this is the current state that
-  produced three independent hardcoded literals.
+- **Rejected (general)**: resolving format/delimiter independently at each
+  call site. Central resolution avoids duplicated precedence logic and
+  hardcoded literals.
 - **Architecture test.** The implementation should express all of the
   following through configuration and one shared resolution API, with no
   duplicated precedence logic across `number.rs`, `locator.rs`,
@@ -228,6 +229,7 @@ Full surface inventory and evidence: see the audit doc linked above.
   ```yaml
   options:
     range-format: chicago
+    identifier-range-delimiter: "–"
     locators:
       kinds:
         chapter:
@@ -242,6 +244,9 @@ Full surface inventory and evidence: see the audit doc linked above.
 
 ## Changelog
 
+- v1.1 (2026-08-28): Activated after implementation. Added the independent
+  `identifier-range-delimiter` resolution chain and marked the acceptance
+  criteria complete.
 - v1.0 (2026-08-28): Resolved for implementation — generic `range-format`/
   `range-delimiter` naming; locator default applies to all kinds with
   per-kind opt-out; citation/bibliography-scoped range settings removed

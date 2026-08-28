@@ -138,7 +138,6 @@ messages:
   pattern.date-month-day: "{$month}ren {$day}a"
   pattern.date-year-month: "{$year}ko {$month}"
 
-  pattern.page-range: "{$start}–{$end}"
   pattern.accessed-date: "kontsulta-data: {$date}"
   pattern.accessed-date-colon: "kontsulta-data: {$date}"
   pattern.in-container: "{$container}(e)n"

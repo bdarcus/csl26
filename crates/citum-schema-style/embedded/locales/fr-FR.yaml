@@ -922,7 +922,6 @@ messages:
     when one {Pièce}
     when * {Pièces}
   # Compositional patterns
-  pattern.page-range: "{$start}–{$end}"
   pattern.accessed-date: "consulté le {$date}"
   pattern.accessed-date-colon: "consulté le : {$date}"
   pattern.in-container: "dans {$container}"
