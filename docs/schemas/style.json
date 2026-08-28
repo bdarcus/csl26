@@ -6465,9 +6465,15 @@
           "default": "short"
         },
         "range-format": {
-          "description": "Range format for all locator kinds (default: Expanded).",
-          "$ref": "#/$defs/RangeFormat",
-          "default": "expanded"
+          "description": "Range format for all locator kinds. `None` inherits the style-wide\n`options.range-format` default (see\n`docs/specs/RANGE_COLLAPSE_MODEL.md` Decision 2); `Some` overrides it\nfor every kind unless a `kinds.<kind>.range-format` entry wins first.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RangeFormat"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "strip-label-periods": {
           "description": "Strip trailing periods from labels globally (e.g., \"p.\" → \"p\").",

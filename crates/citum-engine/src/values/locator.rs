@@ -22,14 +22,24 @@ use citum_schema::options::{LabelForm, LabelRepeat, LocatorConfig, RangeFormat};
 /// * `ref_type` - The reference type for optional type-class gating.
 /// * `config` - The locator configuration.
 /// * `locale` - The locale for term lookup.
+/// * `style_range_format` - The style-wide `options.range-format` default.
+///   Applies to every locator kind (see
+///   `docs/specs/RANGE_COLLAPSE_MODEL.md` Decision 2) unless `config` or a
+///   per-kind entry overrides it.
+/// * `style_range_delimiter` - The style-wide `options.range-delimiter`
+///   override, falling back to the locale's page-range delimiter.
 #[must_use]
 pub fn render_locator(
     locator: &CitationLocator,
     ref_type: &str,
     config: &LocatorConfig,
     locale: &Locale,
+    style_range_format: Option<&RangeFormat>,
+    style_range_delimiter: Option<&str>,
 ) -> String {
     let segments = locator.segments();
+    let range_delimiter =
+        style_range_delimiter.unwrap_or(locale.grammar_options.page_range_delimiter.as_str());
 
     // Collect the set of locator kinds present in the locator
     let kinds: std::collections::HashSet<LocatorType> =
@@ -55,9 +65,22 @@ pub fn render_locator(
     });
 
     if let Some(pattern) = pattern {
-        render_with_pattern(segments, pattern, config, locale)
+        render_with_pattern(
+            segments,
+            pattern,
+            config,
+            locale,
+            style_range_format,
+            range_delimiter,
+        )
     } else {
-        render_default(segments, config, locale)
+        render_default(
+            segments,
+            config,
+            locale,
+            style_range_format,
+            range_delimiter,
+        )
     }
 }
 
@@ -67,6 +90,8 @@ fn render_with_pattern(
     pattern: &citum_schema::options::LocatorPattern,
     config: &LocatorConfig,
     locale: &Locale,
+    style_range_format: Option<&RangeFormat>,
+    range_delimiter: &str,
 ) -> String {
     let mut rendered = Vec::new();
 
@@ -88,13 +113,15 @@ fn render_with_pattern(
                     config,
                     config.strip_label_periods,
                     locale,
+                    style_range_format,
+                    range_delimiter,
                 )
             } else {
-                let range_format = effective_range_format(kind_cfg, config);
+                let range_format = effective_range_format(kind_cfg, config, style_range_format);
                 crate::values::number::format_page_range(
                     seg.value.value_str(),
                     Some(&range_format),
-                    locale.grammar_options.page_range_delimiter.as_str(),
+                    range_delimiter,
                 )
             };
 
@@ -109,11 +136,11 @@ fn render_with_pattern(
         let form = kind_cfg
             .and_then(|cfg| cfg.label_form)
             .unwrap_or(config.default_label_form);
-        let range_format = effective_range_format(kind_cfg, config);
+        let range_format = effective_range_format(kind_cfg, config, style_range_format);
         let value_str = crate::values::number::format_page_range(
             seg.value.value_str(),
             Some(&range_format),
-            locale.grammar_options.page_range_delimiter.as_str(),
+            range_delimiter,
         );
         let rendered_segment = if matches!(form, LabelForm::None) {
             value_str
@@ -134,7 +161,13 @@ fn render_with_pattern(
 }
 
 /// Render segments without a matched pattern (default behavior).
-fn render_default(segments: &[LocatorSegment], config: &LocatorConfig, locale: &Locale) -> String {
+fn render_default(
+    segments: &[LocatorSegment],
+    config: &LocatorConfig,
+    locale: &Locale,
+    style_range_format: Option<&RangeFormat>,
+    range_delimiter: &str,
+) -> String {
     let mut rendered = Vec::new();
 
     for seg in segments {
@@ -144,11 +177,11 @@ fn render_default(segments: &[LocatorSegment], config: &LocatorConfig, locale: &
             .unwrap_or(config.default_label_form);
 
         let rendered_segment = if matches!(form, LabelForm::None) {
-            let range_format = effective_range_format(kind_cfg, config);
+            let range_format = effective_range_format(kind_cfg, config, style_range_format);
             crate::values::number::format_page_range(
                 seg.value.value_str(),
                 Some(&range_format),
-                locale.grammar_options.page_range_delimiter.as_str(),
+                range_delimiter,
             )
         } else {
             render_segment_with_label(
@@ -158,6 +191,8 @@ fn render_default(segments: &[LocatorSegment], config: &LocatorConfig, locale: &
                 config,
                 config.strip_label_periods,
                 locale,
+                style_range_format,
+                range_delimiter,
             )
         };
 
@@ -168,6 +203,10 @@ fn render_default(segments: &[LocatorSegment], config: &LocatorConfig, locale: &
 }
 
 /// Render a single segment with label.
+#[allow(
+    clippy::too_many_arguments,
+    reason = "internal helper, callers are the small set above"
+)]
 fn render_segment_with_label(
     seg: &LocatorSegment,
     kind_cfg: Option<&citum_schema::options::LocatorKindConfig>,
@@ -175,12 +214,14 @@ fn render_segment_with_label(
     config: &LocatorConfig,
     global_strip: Option<bool>,
     locale: &Locale,
+    style_range_format: Option<&RangeFormat>,
+    range_delimiter: &str,
 ) -> String {
-    let range_format = effective_range_format(kind_cfg, config);
+    let range_format = effective_range_format(kind_cfg, config, style_range_format);
     let value_str = crate::values::number::format_page_range(
         seg.value.value_str(),
         Some(&range_format),
-        locale.grammar_options.page_range_delimiter.as_str(),
+        range_delimiter,
     );
     render_segment_with_label_str(seg, kind_cfg, form, &value_str, global_strip, locale)
 }
@@ -222,13 +263,20 @@ fn render_segment_with_label_str(
 }
 
 /// Resolve the effective range format for a locator segment.
+///
+/// Chain: per-kind override -> `locators.range-format` override -> the
+/// style-wide `options.range-format` default (applies to every locator kind
+/// per `docs/specs/RANGE_COLLAPSE_MODEL.md` Decision 2) -> `Expanded`.
 fn effective_range_format(
     kind_cfg: Option<&citum_schema::options::LocatorKindConfig>,
     config: &LocatorConfig,
+    style_range_format: Option<&RangeFormat>,
 ) -> RangeFormat {
     kind_cfg
         .and_then(|k| k.range_format.clone())
-        .unwrap_or_else(|| config.range_format.clone())
+        .or_else(|| config.range_format.clone())
+        .or_else(|| style_range_format.cloned())
+        .unwrap_or_default()
 }
 
 #[cfg(test)]
@@ -260,7 +308,7 @@ mod tests {
             value: LocatorValue::Text("42".to_string()),
         });
         // when rendered with the default locale (which has "p." for page)
-        let result = render_locator(&locator, "book", &config, &Locale::default());
+        let result = render_locator(&locator, "book", &config, &Locale::default(), None, None);
         // then the output includes the short label and value
         assert!(
             result.contains("42"),
@@ -280,7 +328,7 @@ mod tests {
             value: LocatorValue::Text("42".to_string()),
         });
         // when rendered
-        let result = render_locator(&locator, "book", &config, &Locale::default());
+        let result = render_locator(&locator, "book", &config, &Locale::default(), None, None);
         // then output is just the bare value
         assert_eq!(result, "42");
     }
@@ -314,7 +362,7 @@ mod tests {
             ],
         };
         // when rendered
-        let result = render_locator(&locator, "book", &config, &Locale::default());
+        let result = render_locator(&locator, "book", &config, &Locale::default(), None, None);
         // then label appears only on first segment, value present for both
         assert!(result.contains("33"), "should contain page value: {result}");
         assert!(result.contains('5'), "should contain line value: {result}");
@@ -333,7 +381,7 @@ mod tests {
             value: LocatorValue::Text("42".to_string()),
         });
         // when rendered
-        let result = render_locator(&locator, "book", &config, &Locale::default());
+        let result = render_locator(&locator, "book", &config, &Locale::default(), None, None);
         // then the label has no trailing period
         assert!(result.contains("42"), "should contain page value: {result}");
         assert!(
@@ -346,7 +394,7 @@ mod tests {
     fn test_render_global_range_format_applies_to_labeled_and_unlabeled_locators() {
         let config = LocatorConfig {
             default_label_form: LabelForm::Short,
-            range_format: RangeFormat::Chicago,
+            range_format: Some(RangeFormat::Chicago),
             ..Default::default()
         };
         let locale = Locale::from_yaml_str(
@@ -366,19 +414,123 @@ locators:
         });
 
         assert_eq!(
-            render_locator(&locator, "book", &config, &locale),
+            render_locator(&locator, "book", &config, &locale, None, None),
             "page 3–10"
         );
 
         let unlabeled_config = LocatorConfig {
             default_label_form: LabelForm::None,
-            range_format: RangeFormat::Chicago,
+            range_format: Some(RangeFormat::Chicago),
             ..Default::default()
         };
 
         assert_eq!(
-            render_locator(&locator, "book", &unlabeled_config, &locale),
+            render_locator(&locator, "book", &unlabeled_config, &locale, None, None),
             "3–10"
+        );
+    }
+
+    #[test]
+    fn test_render_style_range_delimiter_applies_to_page_and_non_page_locators() {
+        let config = LocatorConfig {
+            default_label_form: LabelForm::Short,
+            ..Default::default()
+        };
+        let locale = Locale::from_yaml_str(
+            r#"
+locale: en-US
+locators:
+  page:
+    short:
+      singular: "page"
+      plural: "pages"
+  chapter:
+    short:
+      singular: "chapter"
+      plural: "chapters"
+"#,
+        )
+        .expect("custom locale should parse");
+        let page = CitationLocator::Single(LocatorSegment {
+            label: LocatorType::Page,
+            value: LocatorValue::Text("10-12".to_string()),
+        });
+        let chapter = CitationLocator::Single(LocatorSegment {
+            label: LocatorType::Chapter,
+            value: LocatorValue::Text("3-5".to_string()),
+        });
+
+        assert_eq!(
+            render_locator(&page, "book", &config, &locale, None, Some("~")),
+            "pages 10~12"
+        );
+        assert_eq!(
+            render_locator(&chapter, "book", &config, &locale, None, Some("~")),
+            "chapters 3~5"
+        );
+    }
+
+    #[test]
+    fn test_render_style_wide_range_format_applies_to_locator_kinds_by_default() {
+        // Decision 2 of docs/specs/RANGE_COLLAPSE_MODEL.md: the style-wide
+        // `options.range-format` default reaches every locator kind, not
+        // just pages, when neither the locator config nor a per-kind entry
+        // overrides it.
+        let config = LocatorConfig {
+            default_label_form: LabelForm::Short,
+            ..Default::default()
+        };
+        let locale = Locale::from_yaml_str(
+            r#"
+locale: en-US
+locators:
+  chapter:
+    short:
+      singular: "chapter"
+      plural: "chapters"
+"#,
+        )
+        .expect("custom locale should parse");
+        let locator = CitationLocator::Single(LocatorSegment {
+            label: LocatorType::Chapter,
+            value: LocatorValue::Text("112-118".to_string()),
+        });
+
+        assert_eq!(
+            render_locator(
+                &locator,
+                "book",
+                &config,
+                &locale,
+                Some(&RangeFormat::Chicago),
+                None,
+            ),
+            "chapters 112–18"
+        );
+
+        let mut kinds = std::collections::HashMap::new();
+        kinds.insert(
+            LocatorType::Chapter,
+            citum_schema::options::LocatorKindConfig {
+                range_format: Some(RangeFormat::Expanded),
+                ..Default::default()
+            },
+        );
+        let kind_override = LocatorConfig {
+            default_label_form: LabelForm::Short,
+            kinds,
+            ..Default::default()
+        };
+        assert_eq!(
+            render_locator(
+                &locator,
+                "book",
+                &kind_override,
+                &locale,
+                Some(&RangeFormat::Chicago),
+                None,
+            ),
+            "chapters 112–118"
         );
     }
 
@@ -394,7 +546,7 @@ locators:
         );
         let config = LocatorConfig {
             default_label_form: LabelForm::Short,
-            range_format: RangeFormat::Expanded,
+            range_format: Some(RangeFormat::Expanded),
             kinds,
             ..Default::default()
         };
@@ -419,18 +571,18 @@ locators:
         });
 
         assert_eq!(
-            render_locator(&labeled, "book", &config, &locale),
+            render_locator(&labeled, "book", &config, &locale, None, None),
             "page 505–17"
         );
 
         let unlabeled_config = LocatorConfig {
             default_label_form: LabelForm::None,
-            range_format: RangeFormat::Expanded,
+            range_format: Some(RangeFormat::Expanded),
             kinds: config.kinds.clone(),
             ..Default::default()
         };
         assert_eq!(
-            render_locator(&unlabeled, "book", &unlabeled_config, &locale),
+            render_locator(&unlabeled, "book", &unlabeled_config, &locale, None, None,),
             "1002–6"
         );
     }
@@ -456,7 +608,7 @@ locators:
             value: LocatorValue::Text("42".to_string()),
         });
         // when rendered as a non-legal type
-        let result = render_locator(&locator, "book", &config, &Locale::default());
+        let result = render_locator(&locator, "book", &config, &Locale::default(), None, None);
         // then the legal pattern does NOT apply (default rendering applies instead)
         assert!(result.contains("42"));
     }
@@ -490,7 +642,7 @@ locators:
             ],
         };
         // when rendered
-        let result = render_locator(&locator, "book", &config, &Locale::default());
+        let result = render_locator(&locator, "book", &config, &Locale::default(), None, None);
         // then both segments contain their values
         assert!(result.contains("33"));
         assert!(result.contains('5'));
@@ -518,7 +670,10 @@ locators:
             value: LocatorValue::Text("3".to_string()),
         });
 
-        assert_eq!(render_locator(&locator, "book", &config, &locale), "reel 3");
+        assert_eq!(
+            render_locator(&locator, "book", &config, &locale, None, None),
+            "reel 3"
+        );
     }
 
     #[test]
@@ -553,6 +708,9 @@ locators:
             value: LocatorValue::Text("3".to_string()),
         });
 
-        assert_eq!(render_locator(&locator, "book", &config, &locale), "reel 3");
+        assert_eq!(
+            render_locator(&locator, "book", &config, &locale, None, None),
+            "reel 3"
+        );
     }
 }

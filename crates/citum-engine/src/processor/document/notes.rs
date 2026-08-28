@@ -382,6 +382,8 @@ impl Processor {
                         &ref_type,
                         locator_config,
                         &self.locale,
+                        citation_config.range_format.as_ref(),
+                        citation_config.range_delimiter.as_deref(),
                     )
                 })
                 .filter(|value| !value.trim().is_empty());

@@ -350,7 +350,14 @@ fn resolve_variable_value(
                 &derived
             };
             let ref_type = options.ref_type.as_deref().unwrap_or("");
-            crate::values::locator::render_locator(loc, ref_type, cfg, options.locale)
+            crate::values::locator::render_locator(
+                loc,
+                ref_type,
+                cfg,
+                options.locale,
+                options.config.range_format.as_ref(),
+                options.config.range_delimiter.as_deref(),
+            )
         }),
         _ => None,
     }
