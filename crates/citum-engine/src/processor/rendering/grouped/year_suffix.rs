@@ -15,13 +15,6 @@ use citum_schema::options::PunctuationRealization;
 use citum_schema::template::DelimiterPunctuation;
 use citum_schema::{SameAuthorCollapse, YearSuffixCollapse};
 
-/// En dash used to join a ranged suffix run (`2020a–c`). Matches citeproc-js's
-/// `citation-range-delimiter` term and Citum's existing numeric-range
-/// precedent (`collapse_numeric_citation_chunks`,
-/// `crate::processor::rendering::collapse`) — not the locator-scoped
-/// `page-range-delimiter` term.
-const RANGE_DELIMITER: &str = "–";
-
 impl Renderer<'_> {
     /// The 1-based disambiguation-group index for `item_id`, when that item
     /// is currently rendering a year-suffix disambiguator.
@@ -124,7 +117,13 @@ impl Renderer<'_> {
             return item_parts;
         }
         let ranged = matches!(same_author.year_suffix, YearSuffixCollapse::Ranged);
-        merge_suffix_runs(item_parts, suffix_indices, ranged, suffix_delimiter)
+        merge_suffix_runs(
+            item_parts,
+            suffix_indices,
+            ranged,
+            suffix_delimiter,
+            self.identifier_range_delimiter(),
+        )
     }
 
     /// Resolve `params.spec.collapse` as `SameAuthorCollapse`, merge any
@@ -193,6 +192,7 @@ fn merge_suffix_runs(
     suffix_indices: &[Option<u32>],
     ranged: bool,
     suffix_delimiter: &str,
+    range_delimiter: &str,
 ) -> Vec<String> {
     let mut result = Vec::with_capacity(item_parts.len());
     let mut index = 0;
@@ -206,7 +206,7 @@ fn merge_suffix_runs(
         };
         let suffix = if ranged && run.letters.len() >= 3 {
             match (run.letters.first(), run.letters.last()) {
-                (Some(first), Some(last)) => format!("{first}{RANGE_DELIMITER}{last}"),
+                (Some(first), Some(last)) => format!("{first}{range_delimiter}{last}"),
                 _ => run.letters.join(suffix_delimiter),
             }
         } else {
@@ -347,7 +347,7 @@ mod tests {
         #[case] suffix_indices: &[Option<u32>],
         #[case] expected: &[&str],
     ) {
-        let result = merge_suffix_runs(parts(input), suffix_indices, ranged, ", ");
+        let result = merge_suffix_runs(parts(input), suffix_indices, ranged, ", ", "\u{2013}");
 
         assert_eq!(
             result,
@@ -356,5 +356,18 @@ mod tests {
                 .map(|s| (*s).to_string())
                 .collect::<Vec<_>>()
         );
+    }
+
+    #[test]
+    fn given_a_ranged_suffix_run_when_delimiter_is_configured_then_it_is_used() {
+        let result = merge_suffix_runs(
+            parts(&["2019a", "2019b", "2019c"]),
+            &[Some(1), Some(2), Some(3)],
+            true,
+            ", ",
+            "~",
+        );
+
+        assert_eq!(result, vec!["2019a~c".to_string()]);
     }
 }
