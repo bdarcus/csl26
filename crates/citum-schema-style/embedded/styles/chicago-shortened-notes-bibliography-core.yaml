@@ -103,7 +103,7 @@ options:
       emph: true
     serial:
       emph: true
-  page-range-format: chicago16
+  range-format: chicago16
   punctuation-in-quote: true
 citation:
   options:

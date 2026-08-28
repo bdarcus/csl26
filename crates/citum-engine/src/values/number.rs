@@ -39,12 +39,12 @@ fn resolve_number_value(
             } else {
                 reference.pages().map(|p| {
                     let delimiter =
-                        options.config.page_range_delimiter.as_deref().unwrap_or(
+                        options.config.range_delimiter.as_deref().unwrap_or(
                             options.locale.grammar_options.page_range_delimiter.as_str(),
                         );
                     format_page_range(
                         &p.to_string(),
-                        options.config.page_range_format.as_ref(),
+                        options.config.range_format.as_ref(),
                         delimiter,
                     )
                 })
@@ -513,10 +513,10 @@ pub fn check_plural(value: &str, _locator_type: &citum_schema::citation::Locator
 #[must_use]
 pub fn format_page_range(
     pages: &str,
-    format: Option<&citum_schema::options::PageRangeFormat>,
+    format: Option<&citum_schema::options::RangeFormat>,
     delimiter: &str,
 ) -> String {
-    use citum_schema::options::PageRangeFormat;
+    use citum_schema::options::RangeFormat;
 
     // Normalize any en-dash separator to a plain hyphen so splitting below is
     // delimiter-agnostic; ranges are re-joined with the configured `delimiter`.
@@ -542,12 +542,10 @@ pub fn format_page_range(
     match (start_num, end_num) {
         (Some(s), Some(e)) if e > s => {
             let formatted_end = match format {
-                PageRangeFormat::Expanded => end.to_string(),
-                PageRangeFormat::Minimal => format_minimal(start, end, 1),
-                PageRangeFormat::MinimalTwo => format_minimal(start, end, 2),
-                PageRangeFormat::Chicago | PageRangeFormat::Chicago16 => {
-                    format_chicago_range_end(s, e)
-                }
+                RangeFormat::Expanded => end.to_string(),
+                RangeFormat::Minimal => format_minimal(start, end, 1),
+                RangeFormat::MinimalTwo => format_minimal(start, end, 2),
+                RangeFormat::Chicago | RangeFormat::Chicago16 => format_chicago_range_end(s, e),
                 _ => end.to_string(), // Future variants: default to expanded
             };
             format!("{start}{delimiter}{formatted_end}")
@@ -639,7 +637,7 @@ pub fn format_chicago(start: u32, end: u32) -> String {
 )]
 mod tests {
     use super::*;
-    use citum_schema::options::PageRangeFormat;
+    use citum_schema::options::RangeFormat;
 
     #[test]
     fn test_format_chicago_page_range_end() {
@@ -687,50 +685,46 @@ mod tests {
             ("10-15", None, "10–15"),
             ("10–15", None, "10–15"),
             ("321-328", None, "321–328"),
-            ("10-15", Some(PageRangeFormat::Expanded), "10–15"),
-            ("42-45", Some(PageRangeFormat::Expanded), "42–45"),
-            ("3-10", Some(PageRangeFormat::Chicago), "3–10"),
-            ("71-72", Some(PageRangeFormat::Chicago), "71–72"),
-            ("92-113", Some(PageRangeFormat::Chicago), "92–113"),
-            ("100-104", Some(PageRangeFormat::Chicago), "100–104"),
-            ("600-613", Some(PageRangeFormat::Chicago), "600–613"),
-            ("107-108", Some(PageRangeFormat::Chicago), "107–8"),
-            ("505-517", Some(PageRangeFormat::Chicago), "505–17"),
-            ("1002-1006", Some(PageRangeFormat::Chicago), "1002–6"),
-            ("321-325", Some(PageRangeFormat::Chicago), "321–25"),
-            ("415-532", Some(PageRangeFormat::Chicago), "415–532"),
-            ("1087-1089", Some(PageRangeFormat::Chicago), "1087–89"),
-            ("1496-1500", Some(PageRangeFormat::Chicago), "1496–500"),
-            ("13792-13803", Some(PageRangeFormat::Chicago), "13792–803"),
-            ("12991-13001", Some(PageRangeFormat::Chicago), "12991–3001"),
-            ("3-10", Some(PageRangeFormat::Chicago16), "3–10"),
-            ("71-72", Some(PageRangeFormat::Chicago16), "71–72"),
-            ("92-113", Some(PageRangeFormat::Chicago16), "92–113"),
-            ("100-104", Some(PageRangeFormat::Chicago16), "100–104"),
-            ("600-613", Some(PageRangeFormat::Chicago16), "600–613"),
-            ("107-108", Some(PageRangeFormat::Chicago16), "107–8"),
-            ("505-517", Some(PageRangeFormat::Chicago16), "505–17"),
-            ("1002-1006", Some(PageRangeFormat::Chicago16), "1002–6"),
-            ("321-325", Some(PageRangeFormat::Chicago16), "321–25"),
-            ("415-532", Some(PageRangeFormat::Chicago16), "415–532"),
-            ("1087-1089", Some(PageRangeFormat::Chicago16), "1087–89"),
-            ("1496-1500", Some(PageRangeFormat::Chicago16), "1496–500"),
-            ("13792-13803", Some(PageRangeFormat::Chicago16), "13792–803"),
-            (
-                "12991-13001",
-                Some(PageRangeFormat::Chicago16),
-                "12991–3001",
-            ),
-            ("100-105", Some(PageRangeFormat::Minimal), "100–5"),
-            ("321-328", Some(PageRangeFormat::Minimal), "321–8"),
-            ("42-45", Some(PageRangeFormat::Minimal), "42–5"),
-            ("12-17", Some(PageRangeFormat::Minimal), "12–7"),
-            ("100-105", Some(PageRangeFormat::MinimalTwo), "100–05"),
-            ("42-45", Some(PageRangeFormat::MinimalTwo), "42–45"),
-            ("10", Some(PageRangeFormat::Chicago), "10"),
-            ("10-5", Some(PageRangeFormat::Chicago), "10–5"),
-            ("X-Y", Some(PageRangeFormat::Chicago), "X–Y"),
-            ("10-15-20", Some(PageRangeFormat::Chicago), "10–15–20"),
+            ("10-15", Some(RangeFormat::Expanded), "10–15"),
+            ("42-45", Some(RangeFormat::Expanded), "42–45"),
+            ("3-10", Some(RangeFormat::Chicago), "3–10"),
+            ("71-72", Some(RangeFormat::Chicago), "71–72"),
+            ("92-113", Some(RangeFormat::Chicago), "92–113"),
+            ("100-104", Some(RangeFormat::Chicago), "100–104"),
+            ("600-613", Some(RangeFormat::Chicago), "600–613"),
+            ("107-108", Some(RangeFormat::Chicago), "107–8"),
+            ("505-517", Some(RangeFormat::Chicago), "505–17"),
+            ("1002-1006", Some(RangeFormat::Chicago), "1002–6"),
+            ("321-325", Some(RangeFormat::Chicago), "321–25"),
+            ("415-532", Some(RangeFormat::Chicago), "415–532"),
+            ("1087-1089", Some(RangeFormat::Chicago), "1087–89"),
+            ("1496-1500", Some(RangeFormat::Chicago), "1496–500"),
+            ("13792-13803", Some(RangeFormat::Chicago), "13792–803"),
+            ("12991-13001", Some(RangeFormat::Chicago), "12991–3001"),
+            ("3-10", Some(RangeFormat::Chicago16), "3–10"),
+            ("71-72", Some(RangeFormat::Chicago16), "71–72"),
+            ("92-113", Some(RangeFormat::Chicago16), "92–113"),
+            ("100-104", Some(RangeFormat::Chicago16), "100–104"),
+            ("600-613", Some(RangeFormat::Chicago16), "600–613"),
+            ("107-108", Some(RangeFormat::Chicago16), "107–8"),
+            ("505-517", Some(RangeFormat::Chicago16), "505–17"),
+            ("1002-1006", Some(RangeFormat::Chicago16), "1002–6"),
+            ("321-325", Some(RangeFormat::Chicago16), "321–25"),
+            ("415-532", Some(RangeFormat::Chicago16), "415–532"),
+            ("1087-1089", Some(RangeFormat::Chicago16), "1087–89"),
+            ("1496-1500", Some(RangeFormat::Chicago16), "1496–500"),
+            ("13792-13803", Some(RangeFormat::Chicago16), "13792–803"),
+            ("12991-13001", Some(RangeFormat::Chicago16), "12991–3001"),
+            ("100-105", Some(RangeFormat::Minimal), "100–5"),
+            ("321-328", Some(RangeFormat::Minimal), "321–8"),
+            ("42-45", Some(RangeFormat::Minimal), "42–5"),
+            ("12-17", Some(RangeFormat::Minimal), "12–7"),
+            ("100-105", Some(RangeFormat::MinimalTwo), "100–05"),
+            ("42-45", Some(RangeFormat::MinimalTwo), "42–45"),
+            ("10", Some(RangeFormat::Chicago), "10"),
+            ("10-5", Some(RangeFormat::Chicago), "10–5"),
+            ("X-Y", Some(RangeFormat::Chicago), "X–Y"),
+            ("10-15-20", Some(RangeFormat::Chicago), "10–15–20"),
         ] {
             assert_eq!(format_page_range(input, format.as_ref(), en), expected);
         }
@@ -743,8 +737,8 @@ mod tests {
         for (input, format, expected) in [
             ("436-444", None, "436-444"),
             ("436–444", None, "436-444"),
-            ("321-328", Some(PageRangeFormat::Expanded), "321-328"),
-            ("321-328", Some(PageRangeFormat::Chicago), "321-28"),
+            ("321-328", Some(RangeFormat::Expanded), "321-328"),
+            ("321-328", Some(RangeFormat::Chicago), "321-28"),
         ] {
             assert_eq!(format_page_range(input, format.as_ref(), "-"), expected);
         }

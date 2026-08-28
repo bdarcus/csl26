@@ -10,7 +10,7 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus and Citum contributors
 
 use citum_schema::citation::{CitationLocator, LocatorSegment, LocatorType};
 use citum_schema::locale::{Locale, TermForm};
-use citum_schema::options::{LabelForm, LabelRepeat, LocatorConfig, PageRangeFormat};
+use citum_schema::options::{LabelForm, LabelRepeat, LocatorConfig, RangeFormat};
 
 /// Render a citation locator to a display string.
 ///
@@ -225,7 +225,7 @@ fn render_segment_with_label_str(
 fn effective_range_format(
     kind_cfg: Option<&citum_schema::options::LocatorKindConfig>,
     config: &LocatorConfig,
-) -> PageRangeFormat {
+) -> RangeFormat {
     kind_cfg
         .and_then(|k| k.range_format.clone())
         .unwrap_or_else(|| config.range_format.clone())
@@ -346,7 +346,7 @@ mod tests {
     fn test_render_global_range_format_applies_to_labeled_and_unlabeled_locators() {
         let config = LocatorConfig {
             default_label_form: LabelForm::Short,
-            range_format: PageRangeFormat::Chicago,
+            range_format: RangeFormat::Chicago,
             ..Default::default()
         };
         let locale = Locale::from_yaml_str(
@@ -372,7 +372,7 @@ locators:
 
         let unlabeled_config = LocatorConfig {
             default_label_form: LabelForm::None,
-            range_format: PageRangeFormat::Chicago,
+            range_format: RangeFormat::Chicago,
             ..Default::default()
         };
 
@@ -388,13 +388,13 @@ locators:
         kinds.insert(
             LocatorType::Page,
             citum_schema::options::LocatorKindConfig {
-                range_format: Some(PageRangeFormat::Chicago),
+                range_format: Some(RangeFormat::Chicago),
                 ..Default::default()
             },
         );
         let config = LocatorConfig {
             default_label_form: LabelForm::Short,
-            range_format: PageRangeFormat::Expanded,
+            range_format: RangeFormat::Expanded,
             kinds,
             ..Default::default()
         };
@@ -425,7 +425,7 @@ locators:
 
         let unlabeled_config = LocatorConfig {
             default_label_form: LabelForm::None,
-            range_format: PageRangeFormat::Expanded,
+            range_format: RangeFormat::Expanded,
             kinds: config.kinds.clone(),
             ..Default::default()
         };

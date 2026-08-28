@@ -114,7 +114,7 @@ test('resolveStyleData deep-merges preset wrappers with local overrides', () => 
   const rawStyleData = yaml.load(fs.readFileSync(yamlPath, 'utf8')) || {};
   const resolved = resolveStyleData(rawStyleData);
 
-  assert.equal(resolved.options['page-range-format'], 'expanded');
+  assert.equal(resolved.options['range-format'], 'expanded');
   // Inherits chicago-author-date-18th's processing, now the `author-date-full`
   // string preset (names + add-givenname + primary-name + year-suffix) rather than
   // an inline disambiguate map. The Rust engine expands the preset at render time.

@@ -40,7 +40,7 @@ options:
       text-case: as-is
     monograph:
       text-case: as-is
-  page-range-format: minimal
+  range-format: minimal
   punctuation-in-quote: true
 
 citation:

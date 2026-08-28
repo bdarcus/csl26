@@ -265,7 +265,7 @@ and four-tier classification are documented in `STYLE_TAXONOMY.md`.
 - [x] A style YAML with `extends: chicago-notes-18th` + `citation.ibid: ~`
       produces a `Style` where `citation.ibid` is `None`.
 - [x] A style YAML with `extends: chicago-author-date-18th` +
-      `options.page-range-format: expanded` preserves inherited option fields
+      `options.range-format: expanded` preserves inherited option fields
       while overriding only the page-range behavior.
 - [x] `options.locale-override: de-DE-chicago` paired with
       `extends: chicago-author-date-18th` renders `"und"` (not `"and"`) for a

@@ -163,13 +163,15 @@ pub struct Config {
     )]
     #[cfg_attr(feature = "schema", schemars(with = "Option<LocatorConfigEntry>"))]
     pub locators: Option<LocatorConfig>,
-    /// Page range formatting (expanded, minimal, chicago).
+    /// Style-wide numeric range endpoint-abbreviation default. Applies to
+    /// the page variable and, per `docs/specs/RANGE_COLLAPSE_MODEL.md`
+    /// Decision 2, every locator kind unless overridden.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub page_range_format: Option<PageRangeFormat>,
-    /// Separator between page-range endpoints. Overrides the locale's
+    pub range_format: Option<RangeFormat>,
+    /// Separator between range endpoints. Overrides the locale's
     /// `page-range-delimiter` (en-dash by default); AMA and similar use `-`.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub page_range_delimiter: Option<String>,
+    pub range_delimiter: Option<String>,
     /// Hyperlink configuration.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub links: Option<LinksConfig>,
@@ -287,9 +289,6 @@ pub struct CitationOptions {
     )]
     #[cfg_attr(feature = "schema", schemars(with = "Option<LocatorConfigEntry>"))]
     pub locators: Option<LocatorConfig>,
-    /// Page range formatting (expanded, minimal, chicago).
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub page_range_format: Option<PageRangeFormat>,
     /// Hyperlink configuration.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub links: Option<LinksConfig>,
@@ -410,9 +409,6 @@ pub struct BibliographyOptions {
     )]
     #[cfg_attr(feature = "schema", schemars(with = "Option<TitlesConfigEntry>"))]
     pub titles: Option<crate::options::titles::TitlesConfig>,
-    /// Page range formatting (expanded, minimal, chicago).
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub page_range_format: Option<PageRangeFormat>,
     /// Article-journal-specific bibliography policies.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub article_journal: Option<ArticleJournalBibliographyConfig>,
@@ -617,12 +613,13 @@ pub enum NoteMarkerOrder {
     After,
 }
 
-/// Page range formatting options.
+/// Numeric range endpoint-abbreviation format, shared by every
+/// range-producing surface (pages, locators, citation numbers).
 #[derive(Debug, Default, PartialEq, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(rename_all = "kebab-case")]
 #[non_exhaustive]
-pub enum PageRangeFormat {
+pub enum RangeFormat {
     /// Full expansion: 321-328 → 321–328
     #[default]
     Expanded,
@@ -778,8 +775,8 @@ impl Config {
             dates,
             titles,
             locators,
-            page_range_format,
-            page_range_delimiter,
+            range_format,
+            range_delimiter,
             links,
             volume_pages_delimiter,
             locale_override,
@@ -852,8 +849,8 @@ impl CitationOptions {
             dates: self.dates.clone(),
             titles: self.titles.clone(),
             locators: self.locators.clone(),
-            page_range_format: self.page_range_format.clone(),
-            page_range_delimiter: None,
+            range_format: None,
+            range_delimiter: None,
             links: self.links.clone(),
             punctuation_in_quote: self.punctuation_in_quote,
             punctuation: None,
@@ -907,7 +904,6 @@ impl CitationOptions {
             dates,
             titles,
             locators,
-            page_range_format,
             links,
             volume_pages_delimiter,
             strip_periods,
@@ -987,8 +983,8 @@ impl BibliographyOptions {
             dates: self.dates.clone(),
             titles: self.titles.clone(),
             locators: None,
-            page_range_format: self.page_range_format.clone(),
-            page_range_delimiter: None,
+            range_format: None,
+            range_delimiter: None,
             links: self.links.clone(),
             punctuation_in_quote: self.punctuation_in_quote,
             punctuation: None,
@@ -1041,7 +1037,6 @@ impl BibliographyOptions {
             multilingual,
             dates,
             titles,
-            page_range_format,
             links,
             volume_pages_delimiter,
             strip_periods,
@@ -1264,9 +1259,9 @@ impl<'de> Deserialize<'de> for Config {
             )]
             locators: Option<LocatorConfig>,
             #[serde(skip_serializing_if = "Option::is_none")]
-            page_range_format: Option<PageRangeFormat>,
+            range_format: Option<RangeFormat>,
             #[serde(skip_serializing_if = "Option::is_none")]
-            page_range_delimiter: Option<String>,
+            range_delimiter: Option<String>,
             #[serde(skip_serializing_if = "Option::is_none")]
             links: Option<LinksConfig>,
             #[serde(default, skip_serializing_if = "std::ops::Not::not")]
@@ -1316,8 +1311,8 @@ impl<'de> Deserialize<'de> for Config {
             dates: wire.dates,
             titles: wire.titles,
             locators: wire.locators,
-            page_range_format: wire.page_range_format,
-            page_range_delimiter: wire.page_range_delimiter,
+            range_format: wire.range_format,
+            range_delimiter: wire.range_delimiter,
             links: wire.links,
             punctuation_in_quote: wire.punctuation_in_quote,
             punctuation: wire.punctuation,

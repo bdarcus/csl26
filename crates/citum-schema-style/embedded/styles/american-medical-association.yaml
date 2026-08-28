@@ -42,8 +42,8 @@ options:
       and-others: et-al
   dates: long
   titles: humanities
-  page-range-format: expanded
-  page-range-delimiter: "-"
+  range-format: expanded
+  range-delimiter: "-"
   punctuation-in-quote: true
 citation:
   options:

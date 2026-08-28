@@ -30,7 +30,7 @@ options:
     sort-separator: ", "
   dates: long
   titles: humanities
-  page-range-format: expanded
+  range-format: expanded
   punctuation-in-quote: true
 citation:
   template-ref: numeric-citation

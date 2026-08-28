@@ -9,7 +9,7 @@ info:
     extend it. Rendered order stays per-style; see csl26-40n4.
 options:
   multilingual: romanized-translated
-  page-range-format: chicago16
+  range-format: chicago16
   dates:
     month: long
     uncertainty-marker: "?]"
@@ -17,7 +17,7 @@ options:
     approximation-marker: "ca. "
     range-delimiter: "–"
     # citeproc-js leaves publication-year ranges expanded in Chicago 18
-    # (page ranges remain independently controlled by page-range-format).
+    # (page ranges remain independently controlled by range-format).
     range-format: expanded
   punctuation-in-quote: true
   contributors:

@@ -3,7 +3,7 @@ SPDX-License-Identifier: MIT OR Apache-2.0
 SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus and Citum contributors
 */
 
-use citum_schema::options::PageRangeFormat;
+use citum_schema::options::RangeFormat;
 use citum_schema::template::DelimiterPunctuation;
 use csl_legacy::model::{CslNode, Style};
 use std::collections::HashSet;
@@ -129,17 +129,17 @@ fn group_contains_macro_with_page(nodes: &[CslNode]) -> bool {
 /// Determines how page ranges should be abbreviated (expanded, minimal, Chicago, etc.)
 /// based on the style's layout rules.
 #[must_use]
-pub fn extract_page_range_format(style: &Style) -> Option<PageRangeFormat> {
+pub fn extract_range_format(style: &Style) -> Option<RangeFormat> {
     style
         .page_range_format
         .as_ref()
         .and_then(|f| match f.as_str() {
-            "expanded" => Some(PageRangeFormat::Expanded),
-            "minimal" => Some(PageRangeFormat::Minimal),
-            "minimal-two" => Some(PageRangeFormat::MinimalTwo),
-            "chicago" => Some(PageRangeFormat::Chicago),
-            "chicago-15" => Some(PageRangeFormat::Chicago),
-            "chicago-16" => Some(PageRangeFormat::Chicago16),
+            "expanded" => Some(RangeFormat::Expanded),
+            "minimal" => Some(RangeFormat::Minimal),
+            "minimal-two" => Some(RangeFormat::MinimalTwo),
+            "chicago" => Some(RangeFormat::Chicago),
+            "chicago-15" => Some(RangeFormat::Chicago),
+            "chicago-16" => Some(RangeFormat::Chicago16),
             _ => None,
         })
 }

@@ -46,7 +46,7 @@ options:
     title-mode: combined
     name-mode: primary
     preferred-script: Latn
-  page-range-format: minimal-two
+  range-format: minimal-two
   punctuation-in-quote: true
 citation:
   options:

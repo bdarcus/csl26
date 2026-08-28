@@ -23,7 +23,7 @@ options:
   processing: numeric
   contributors: numeric-medium
   dates: long
-  page-range-format: expanded
+  range-format: expanded
   punctuation-in-quote: true
 citation:
   options:

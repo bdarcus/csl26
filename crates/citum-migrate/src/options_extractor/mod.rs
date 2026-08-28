@@ -116,7 +116,7 @@ impl OptionsExtractor {
             titles: self::titles::extract_title_config(style),
 
             // 6. Extract page range format
-            page_range_format: self::numbers::extract_page_range_format(style),
+            range_format: self::numbers::extract_range_format(style),
 
             // 7. Extract locator configuration
             locators: self::locators::extract_locator_config(style),

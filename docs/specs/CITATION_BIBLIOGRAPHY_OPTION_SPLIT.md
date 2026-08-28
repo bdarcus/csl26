@@ -92,7 +92,6 @@ to a `CitationSpec`. Shared fields may still be configured globally under
 - `dates`
 - `titles`
 - `locators`
-- `page_range_format`
 - `links`
 - `punctuation_in_quote`
 - `volume_pages_delimiter`
@@ -118,7 +117,6 @@ be configured under `Style.options`:
 - `contributors`
 - `dates`
 - `titles`
-- `page_range_format`
 - `links`
 - `punctuation_in_quote`
 - `volume_pages_delimiter`

@@ -557,7 +557,7 @@ const TEMPLATE_PRESETS = {
         'name-mode': 'primary',
         'preferred-script': 'Latn',
       },
-      'page-range-format': 'expanded',
+      'range-format': 'expanded',
       'punctuation-in-quote': true,
     },
   },
