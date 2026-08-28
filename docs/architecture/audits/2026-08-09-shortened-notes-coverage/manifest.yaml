@@ -17,13 +17,13 @@ style:
       sha256: 0350678436d9d2827d896e0ee16b8724c3542e6e8b9c0b369f5b80d1425972f5
     - id: chicago-shortened-notes-bibliography-core
       path: crates/citum-schema-style/embedded/styles/chicago-shortened-notes-bibliography-core.yaml
-      sha256: 6f1d5dcaf9eb67f7fff4787884c9eb8c0c3d31b03331ef3ba0305df66bef23a7
+      sha256: 3801c8b65dcea1d760c3ce1da7ba78f5719986cf79d08c497d39ead4eeca650d
     - id: chicago-notes-18th
       path: crates/citum-schema-style/embedded/styles/chicago-notes-18th.yaml
-      sha256: 13cf8bbf1ff43af3649a07c47a19ba23ea24e2f0065b77f6b1e40a9b2c2af6fa
+      sha256: b7d1337fa0b55402812e6ab60f60f54e172c467d87107004ebd40d2aa593035b
     - id: chicago-18-base
       path: crates/citum-schema-style/embedded/styles/chicago-18-base.yaml
-      sha256: 2cfc1a483740f6e14f56d3433a0b72ba5195de7518f000d3af7bd5f14ccc3b43
+      sha256: 1500f19c29a8c516b8b042a63b44183e7be5a3d75abe83d6ef8aef60d9c579ef
 fixtures:
   references:
     id: references-expanded

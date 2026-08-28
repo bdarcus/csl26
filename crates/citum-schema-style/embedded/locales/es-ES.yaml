@@ -334,7 +334,6 @@ messages:
     when common * {equipo de traducción}
     when * * {equipo de traducción}
   # Compositional patterns
-  pattern.page-range: "{$start}–{$end}"
   pattern.accessed-date: "consultado el {$date}"
   pattern.accessed-date-colon: "consultado: {$date}"
   pattern.in-container: "en {$container}"

@@ -85,6 +85,61 @@ section or component overrides them.</p>
                     <tbody><tr><td><code>processing</code></td><td>author-date, numeric, note, or label behavior</td></tr><tr><td><code>contributors</code></td><td>name order, initials, conjunctions, shortening</td></tr><tr><td><code>dates</code></td><td>long, short, numeric, or ISO date rendering</td></tr><tr><td><code>titles</code></td><td>title casing and title form behavior</td></tr></tbody>
                 </table>
             </div>
+        <h2 id="range-and-number-formatting">Range and number formatting</h2><p><code>options.range-format</code> controls how a closed numeric range abbreviates
+its second number (<code>112–118</code> → <code>112–18</code>). It's the style-wide
+default for the bibliography page count and, unless a locator kind opts out,
+every citation locator kind too — a page locator and a chapter locator both
+inherit it.</p>
+
+            <div class="workshop-block">
+                <pre><code class="language-yaml"><span class="text-indigo-400">options</span>:
+  <span class="text-primary">range-format</span>: <span class="text-emerald-400">chicago16</span>
+  <span class="text-primary">locators</span>:
+    <span class="text-primary">kinds</span>:
+      <span class="text-primary">chapter</span>:
+        <span class="text-primary">range-format</span>: <span class="text-emerald-400">expanded</span>   <span class="text-slate-400"># opt this one kind out</span></code></pre>
+            </div>
+
+            <div class="doc-table-shell">
+                <table class="doc-table">
+                    <thead><tr><th>Value</th><th>112–118 becomes</th></tr></thead>
+                    <tbody><tr><td><code>expanded</code> (default)</td><td>112–118</td></tr><tr><td><code>minimal</code></td><td>112–8</td></tr><tr><td><code>minimal-two</code></td><td>112–18</td></tr><tr><td><code>chicago</code> / <code>chicago16</code></td><td>112–18 (Chicago Manual of Style rules)</td></tr></tbody>
+                </table>
+            </div>
+
+            <p>Citation-number ranges (<code>[1–3]</code> in a numeric style) and
+compound sub-entry / same-author-suffix letter ranges
+(<code>1a–c</code>, <code>2020a–c</code>) don't inherit
+<code>options.range-format</code> — they're list positions and
+disambiguation letters, not prose page numbers, so citeproc-js and Citum
+both treat them as their own kind of thing. Citation numbers default to
+<code>expanded</code> independently; opt them into abbreviation with
+their own key:</p>
+
+            <div class="workshop-block">
+                <pre><code class="language-yaml"><span class="text-indigo-400">options</span>:
+  <span class="text-primary">range-format</span>: <span class="text-emerald-400">chicago</span>
+  <span class="text-primary">citation-numbers</span>:
+    <span class="text-primary">range-format</span>: <span class="text-emerald-400">expanded</span>   <span class="text-slate-400"># stays its own default</span></code></pre>
+            </div>
+
+            <p>The join character is separate from the abbreviation rule.
+<code>options.range-delimiter</code> overrides the locale delimiter for page
+and locator ranges. American Medical Association, for example, uses a
+hyphen. Citation-number, compound sub-label, and same-author suffix ranges
+use <code>options.identifier-range-delimiter</code>. Its default is an en
+dash and remains independent of the page/locator delimiter.</p>
+
+            <div class="workshop-block">
+                <pre><code class="language-yaml"><span class="text-indigo-400">options</span>:
+  <span class="text-primary">range-delimiter</span>: <span class="text-emerald-400">"-"</span>                 <span class="text-slate-400"># pages and locators</span>
+  <span class="text-primary">identifier-range-delimiter</span>: <span class="text-emerald-400">"~"</span>      <span class="text-slate-400"># [1~3], 1a~c, 2020a~c</span></code></pre>
+            </div>
+
+            <p>Migration note: the former top-level keys
+<code>page-range-format</code> and <code>page-range-delimiter</code> are now
+<code>range-format</code> and <code>range-delimiter</code>. Update authored
+styles before loading them with this schema version.</p>
         <h2 id="component-rendering-options">Component rendering options</h2><p>Use component options for punctuation, wrapping, and emphasis.</p>
 
             <div class="workshop-block">

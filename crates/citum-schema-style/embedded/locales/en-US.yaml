@@ -1030,7 +1030,6 @@ messages:
     when one {item}
     when * {items}
   # Compositional patterns
-  pattern.page-range: "{$start}–{$end}"
   pattern.accessed-date: "accessed {$date}"
   pattern.accessed-date-colon: "accessed: {$date}"
   pattern.in-container: "in {$container}"

@@ -806,7 +806,6 @@ messages:
   role.guest.label-long: "konuk"
   role.guest.verb: "konuk olarak"
   # Compositional patterns
-  pattern.page-range: "{$start}–{$end}"
   pattern.accessed-date: "erişim tarihi: {$date}"
   pattern.accessed-date-colon: "erişim tarihi: {$date}"
   pattern.in-container: "{$container} içinde"
