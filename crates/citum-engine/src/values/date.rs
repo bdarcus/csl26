@@ -174,6 +174,43 @@ pub(crate) fn fallback_message_discriminant(
     ))
 }
 
+/// Resolve the visible collision-key text for a `variable:` fallback
+/// candidate (e.g. `status`, csl26-qmxw). Narrowly scoped to the variables
+/// actually reachable through `DateFallbackCandidate::Variable` today —
+/// mirrors `TemplateVariable`'s own plain-string render path (value, then
+/// text-case) without the richer machinery (rich text, abbreviation map,
+/// links) that path also carries, none of which a date-fallback candidate
+/// can exercise. Extend the match arm here if a future style wires a
+/// `variable:` fallback candidate to a `SimpleVariable` beyond `Status`.
+pub(crate) fn fallback_variable_discriminant(
+    variable: &citum_schema::template::TemplateVariable,
+    reference: &Reference,
+) -> Option<String> {
+    if variable.rendering.suppress == Some(true) {
+        return None;
+    }
+    let raw = match variable.variable {
+        citum_schema::template::SimpleVariable::Status => reference.status(),
+        _ => None,
+    }?;
+    if raw.is_empty() {
+        return None;
+    }
+    let value = if let Some(tc) = variable.rendering.text_case {
+        crate::values::text_case::apply_text_case_with_language(
+            &raw,
+            tc,
+            reference.language().as_deref(),
+        )
+    } else {
+        raw
+    };
+    Some(format!(
+        "{value}|{}",
+        visible_rendering_discriminant(&variable.rendering)
+    ))
+}
+
 fn visible_rendering_discriminant(rendering: &Rendering) -> String {
     format!(
         "{:?}|{:?}|{:?}|{:?}|{:?}|{:?}|{:?}|{:?}",
