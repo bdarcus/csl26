@@ -1661,11 +1661,34 @@ impl<'a> Disambiguator<'a> {
         let mut key = String::with_capacity(author_key.len() + 8);
         key.push_str(author_key);
         key.push(':');
-        if let Some(year) = reference
-            .effective_issued_date()
-            .and_then(|d| d.year().parse::<i32>().ok())
+        if let Some(date) = reference.effective_issued_date()
+            && let Ok(year) = date.year().parse::<i32>()
         {
-            let _ = write!(key, "{year}");
+            if !date.is_range() {
+                let _ = write!(key, "{year}");
+                return key;
+            }
+            // A ranged issued date (e.g. "1930/1938") shares its start year
+            // with any same-year bare date, but the two render differently.
+            // Grouping them under the bare year alone invents a
+            // disambiguation letter that leaks into the range's own suffix
+            // (Adams's undated letter "1930" vs. his edited-letters
+            // collection "1930/1938" — citeproc-js disambiguates neither).
+            // Key on the rendered, form-restricted issued text instead —
+            // the same discriminant the no-year branch below already uses —
+            // so two references only collide here when they'd actually
+            // render the same date. csl26-rrsb.
+            let discriminant = self.date_slot_discriminant(reference);
+            if discriminant.is_empty() {
+                // No bibliography/citation date component resolved (should
+                // not happen for a reference that reaches collision
+                // grouping at all, but stay defensive): fall back to the
+                // raw EDTF value so distinct ranges still don't silently
+                // collide under an empty discriminant.
+                key.push_str(&date.value);
+            } else {
+                key.push_str(&discriminant);
+            }
             return key;
         }
 
@@ -3016,6 +3039,77 @@ substitute:
         assert_eq!(first.group_key, second.group_key);
         assert!(!first.group_key.contains(':'));
         assert_ne!(first.group_index, second.group_index);
+    }
+
+    /// csl26-rrsb: a ranged issued date (`1930/1938`) shares its start year
+    /// with a same-author, same-*start*-year bare date but renders
+    /// differently. Keying the collision on the bare start year alone
+    /// invented a disambiguation letter that leaked into the range's own
+    /// suffix (`1930a` / `1930b–1938`) even though citeproc-js
+    /// disambiguates neither.
+    #[test]
+    fn test_year_suffix_range_and_same_start_year_bare_date_do_not_collide() {
+        let bare = make_dated_ref("bare", "Adams", "1930", None);
+        let ranged = make_dated_ref("ranged", "Adams", "1930/1938", None);
+
+        let mut bib = Bibliography::new();
+        bib.insert("bare".to_string(), bare);
+        bib.insert("ranged".to_string(), ranged);
+
+        let config = Config::default();
+        let locale = Locale::en_us();
+
+        let hints = Disambiguator::new(&bib, &config, &config, &locale).calculate_hints();
+
+        assert!(!hints.get("bare").unwrap().disamb_condition);
+        assert!(!hints.get("ranged").unwrap().disamb_condition);
+    }
+
+    /// The inverse of the case above: two references that render the exact
+    /// same range must still collide and receive distinct suffix letters —
+    /// the range-aware key must not become so specific that it stops
+    /// catching genuine collisions.
+    #[test]
+    fn test_year_suffix_two_identical_ranges_do_collide() {
+        let first = make_dated_ref("r1", "Adams", "1930/1938", None);
+        let second = make_dated_ref("r2", "Adams", "1930/1938", None);
+
+        let mut bib = Bibliography::new();
+        bib.insert("r1".to_string(), first);
+        bib.insert("r2".to_string(), second);
+
+        let config = Config::default();
+        let locale = Locale::en_us();
+
+        let hints = Disambiguator::new(&bib, &config, &config, &locale).calculate_hints();
+
+        let first_hints = hints.get("r1").unwrap();
+        let second_hints = hints.get("r2").unwrap();
+        assert!(first_hints.disamb_condition);
+        assert!(second_hints.disamb_condition);
+        assert_eq!(first_hints.group_key, second_hints.group_key);
+        assert_ne!(first_hints.group_index, second_hints.group_index);
+    }
+
+    /// Two different ranges sharing a start year (`1930/1938` vs.
+    /// `1930/1940`) render different text and must not collide, mirroring
+    /// the bare-date-vs-range case but between two genuine ranges.
+    #[test]
+    fn test_year_suffix_different_ranges_sharing_a_start_year_do_not_collide() {
+        let first = make_dated_ref("r1", "Adams", "1930/1938", None);
+        let second = make_dated_ref("r2", "Adams", "1930/1940", None);
+
+        let mut bib = Bibliography::new();
+        bib.insert("r1".to_string(), first);
+        bib.insert("r2".to_string(), second);
+
+        let config = Config::default();
+        let locale = Locale::en_us();
+
+        let hints = Disambiguator::new(&bib, &config, &config, &locale).calculate_hints();
+
+        assert!(!hints.get("r1").unwrap().disamb_condition);
+        assert!(!hints.get("r2").unwrap().disamb_condition);
     }
 
     /// Build a reference whose author is `Contributor::Multilingual` with distinct
