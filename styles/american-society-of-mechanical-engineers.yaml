@@ -35,6 +35,12 @@ citation:
   wrap:
     punctuation: brackets
   multi-cite-delimiter: ','
+  # collapse: citation-number is NOT added here despite the source CSL
+  # declaring it (see csl26-rgys). Adding it is inert: this style's citation
+  # numbers render doubly-bracketed ([[1],[2],[3]]) via a pre-existing,
+  # unrelated defect in ASME's numeric-citation/wrap interaction — the same
+  # defect blocks should_collapse_citation_numbers's mode gate from ever
+  # seeing CitationMode::NonIntegral. Filed as csl26-aafz; fix that first.
 bibliography:
   options:
     contributors:

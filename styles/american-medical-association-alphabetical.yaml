@@ -46,6 +46,7 @@ citation:
       punctuation: parentheses
   delimiter: ""
   multi-cite-delimiter: ','
+  collapse: citation-number
 bibliography:
   options:
     contributors:

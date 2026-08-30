@@ -44,6 +44,7 @@ citation:
   wrap:
     punctuation: brackets
   multi-cite-delimiter: ','
+  collapse: citation-number
 bibliography:
   options:
     contributors:
