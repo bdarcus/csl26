@@ -54,6 +54,10 @@ citation:
     # bracket inherited from elsevier-with-titles is cancelled.
     label-mode: alphabetic
     label-wrap: none
+  # citation-number collapse (inherited from elsevier-with-titles-core,
+  # csl26-rgys) is invalid for this style's alphabetic label-mode -- clear it
+  # explicitly rather than let the inherited value leak through.
+  collapse: null
   sort: author-date-title
   wrap:
     punctuation: brackets
