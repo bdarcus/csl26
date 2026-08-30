@@ -21,6 +21,12 @@ options:
   substitute: editor-translator-title-long
   contributors: numeric-medium
 citation:
+  # source (entomological-society-of-america.csl) declares collapse="year".
+  # Verified empirically (csl26-rgys) that this style already renders
+  # same-author/multi-year collapse correctly without an explicit
+  # `collapse: same-author: {}` — adding it produced zero output difference
+  # (oracle and a synthetic same-author probe both identical before/after).
+  # Correctly absent, not a gap.
   options:
     contributors:
       name-form: initials

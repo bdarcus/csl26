@@ -61,6 +61,7 @@ citation:
     delimiter: " "
   multi-cite-delimiter: ","
   delimiter: ""
+  collapse: citation-number
 
 bibliography:
   options:

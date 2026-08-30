@@ -47,6 +47,7 @@ citation:
   template-ref: numeric-citation
   multi-cite-delimiter: ','
   delimiter: ''
+  collapse: citation-number
 bibliography:
   options:
     entry-suffix: .
