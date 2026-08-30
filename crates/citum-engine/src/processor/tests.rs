@@ -1314,6 +1314,60 @@ date-fallback:
     );
 }
 
+/// A `variable: status` date-fallback candidate renders the reference's own
+/// status text (e.g. "Forthcoming.") ahead of the terminal no-date message,
+/// matching CMOS18's rule of printing the actual status rather than a
+/// generic locale term — csl26-qmxw. A reference with neither an issued
+/// date nor a status still falls through to the message candidate.
+#[rstest]
+#[case::status_present_renders_status_text("forthcoming", "(Doe, Forthcoming)")]
+#[case::status_absent_falls_through_to_no_date_message("", "(Doe, n.d.)")]
+fn given_a_status_date_fallback_candidate_when_issued_date_missing_then_status_or_no_date_renders(
+    #[case] status_note: &str,
+    #[case] expected: &str,
+) {
+    let mut bib = Bibliography::new();
+    bib.insert(
+        "undated".to_string(),
+        Reference::from(LegacyReference {
+            id: "undated".to_string(),
+            ref_type: "book".to_string(),
+            author: Some(vec![Name::new("Doe", "Jane")]),
+            title: Some("Untitled Work".to_string()),
+            note: (!status_note.is_empty()).then(|| format!("status: {status_note}")),
+            ..Default::default()
+        }),
+    );
+    let citation = Citation {
+        id: Some("c1".into()),
+        items: vec![crate::reference::CitationItem {
+            id: "undated".to_string(),
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+
+    let mut style = make_style();
+    style.options = Some(
+        serde_yaml::from_str(
+            r#"
+date-fallback:
+  first-issued:
+    default:
+    - variable: status
+      text-case: capitalize-first
+    - message: term.no-date
+      form: short
+"#,
+        )
+        .expect("status date fallback should parse"),
+    );
+    let rendered = Processor::new(style, bib)
+        .process_citation(&citation)
+        .unwrap();
+    assert_eq!(rendered, expected);
+}
+
 /// Tests the behavior of `test_render_bibliography`.
 #[test]
 fn test_render_bibliography() {

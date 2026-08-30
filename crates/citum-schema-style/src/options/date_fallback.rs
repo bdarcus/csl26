@@ -7,8 +7,8 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus and Citum contributors
 
 use crate::locale::TermForm;
 use crate::template::{
-    DateForm, DateVariable, Rendering, TemplateComponent, TemplateDate, TemplateMessage,
-    TypeSelector,
+    DateForm, DateVariable, Rendering, SimpleVariable, TemplateComponent, TemplateDate,
+    TemplateMessage, TemplateVariable, TypeSelector,
 };
 use indexmap::IndexMap;
 #[cfg(feature = "schema")]
@@ -25,6 +25,9 @@ pub enum DateFallbackCandidate {
     Date(DateFallbackDate),
     /// Render a locale message, normally `term.no-date`.
     Message(DateFallbackMessage),
+    /// Render a reference's own variable, e.g. `status` for a forthcoming
+    /// or in-press work. See `docs/specs/STATUS_DATE_FALLBACK.md`.
+    Variable(DateFallbackVariable),
 }
 
 impl DateFallbackCandidate {
@@ -44,6 +47,12 @@ impl DateFallbackCandidate {
                 form: candidate.form.clone(),
                 rendering: candidate.rendering.clone(),
                 ..TemplateMessage::default()
+            }),
+            Self::Variable(candidate) => TemplateComponent::Variable(TemplateVariable {
+                variable: candidate.variable.clone(),
+                rendering: candidate.rendering.clone(),
+                links: None,
+                custom: None,
             }),
         }
     }
@@ -76,6 +85,23 @@ pub struct DateFallbackMessage {
     /// Optional term form for a term-backed message.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub form: Option<TermForm>,
+    /// Candidate-local rendering configuration.
+    #[serde(flatten, default)]
+    pub rendering: Rendering,
+}
+
+/// A reference-variable candidate in an options-level fallback rule.
+///
+/// Renders a variable straight from the reference — e.g. `status` for a
+/// forthcoming or in-press work, matching CSL's own pattern of printing the
+/// reference's actual status text rather than a generic locale term (see
+/// `docs/specs/STATUS_DATE_FALLBACK.md`).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
+pub struct DateFallbackVariable {
+    /// Reference variable to render.
+    pub variable: SimpleVariable,
     /// Candidate-local rendering configuration.
     #[serde(flatten, default)]
     pub rendering: Rendering,

@@ -1,6 +1,6 @@
 # Status-Aware Date Fallback Specification
 
-**Status:** Draft
+**Status:** Active
 **Version:** 1.0
 **Date:** 2026-08-30
 **Supersedes:** (none)
@@ -184,22 +184,41 @@ the same generic word regardless of what the reference says.
 
 ## Acceptance Criteria
 
-- [ ] `DateFallbackCandidate::Variable` added to
+- [x] `DateFallbackCandidate::Variable` added to
       `crates/citum-schema-style/src/options/date_fallback.rs`, schema
       regenerated.
-- [ ] `render_date_fallback_chain` renders a `Variable` candidate and
+- [x] `render_date_fallback_chain` renders a `Variable` candidate and
       appends the year-suffix disambiguation letter after it, matching the
       `Message` candidate's behavior.
-- [ ] `chicago-author-date-18th.yaml`'s bibliography date fallback renders
+- [x] `chicago-author-date-18th.yaml`'s bibliography date fallback renders
       `Forthcoming.` (capitalized, from the reference's own `status` field)
       instead of `n.d.` for the four `chicago-18th.json` fixture references
       carrying `status: forthcoming` (`V54M6HLX`, `JXGCXGLD`, `9RPXBW6V`,
-      `94SYPMEQ`).
-- [ ] No other oracle entry in `chicago-author-date-18th`'s corpus moves.
-- [ ] Unit tests: BDD-named, `#[rstest]` with 2+ cases (a `status`-present
-      entry and a genuinely undated entry falling through to "n.d."),
-      `assert_eq!` on the captured rendered string.
+      `94SYPMEQ`) — verified directly against citeproc-js
+      (`node scripts/oracle.js styles-legacy/chicago-author-date.csl
+      --refs-fixture tests/fixtures/test-items-library/chicago-18th.json
+      --scope bibliography`, all four `MATCH`).
+- [x] No other oracle entry in `chicago-author-date-18th`'s corpus moves
+      (342/393 both before and after, identical component-issue breakdown).
+- [x] Unit tests: `#[rstest]` with 2 cases (a `status`-present entry and a
+      genuinely undated entry falling through to "n.d."), `assert_eq!` on
+      the captured rendered string
+      (`given_a_status_date_fallback_candidate_when_issued_date_missing_then_status_or_no_date_renders`
+      in `crates/citum-engine/src/processor/tests.rs`).
+
+## Implementation Note (deviates from Draft)
+
+The test reference is built via `Reference::from(csl_legacy::csl_json::Reference{..})`
+(the file's established local pattern for this exact class of test —
+`given_date_fallback_message_when_issued_date_missing_then_term_form_matches_rule`,
+immediately above it), not a from-scratch native `Monograph{..}` literal.
+Noted because this project's convention elsewhere favors native
+construction in new tests; the deviation was a deliberate scope call given
+the immediately-adjacent test this one extends already uses this pattern.
 
 ## Changelog
 
 - v1.0 (2026-08-30): Initial draft, `csl26-qmxw`.
+- v1.0 (2026-08-30): Status → Active. Implemented as designed, scoped to
+  `chicago-author-date-18th`'s bibliography date slot per this spec's Scope
+  section.
