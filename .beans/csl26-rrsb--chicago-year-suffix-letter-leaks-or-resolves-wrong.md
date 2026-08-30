@@ -9,7 +9,7 @@ tags:
     - chicago
     - fidelity
 created_at: 2026-08-23T20:40:45Z
-updated_at: 2026-08-30T13:29:17Z
+updated_at: 2026-08-30T14:08:44Z
 parent: csl26-h7oc
 ---
 
@@ -73,3 +73,79 @@ with type-routing/edition-precedence (other waves' scope); Gourmet/OpenAI
 "missing suffix" rows are tangled with author-drop/structural defects.
 `Forthcoming`->`n.d.` rows are classifier noise for this bucket, not a
 year-suffix defect — filed as follow-up csl26-qmxw.
+
+## Correction + PR 2 summary (2026-08-30)
+
+**Correction to the progress note above:** the earlier claim "(B) flips
+6188419/ESET6WVE" is wrong. Root-caused further (see csl26-uy29): that
+row's swap is caused by a third, distinct engine defect (same-year
+issued-date sort comparing full month/day precision, so a year-only date
+beats a day-precision date to the earlier letter regardless of title) --
+not by article-stripping. Filed as its own bean; not fixed here.
+
+**Commit B (`codex/engine-title-sort-article-parity`, stacked on commit
+A) — two fixes landed:**
+
+1. **Article-stripping removed** (`sort_support.rs`,
+   `title_sort_key_with_options`): CSL has no automatic leading-article
+   stripping: citeproc-js sorts by literal title text. Citum stripped
+   unconditionally via `Locale::strip_sort_articles`, swapping year-suffix
+   letters on any same-year collision where exactly one title carried a
+   leading article. Confirmed via the Shakespeare pair (Othello / The
+   Complete Works, no `title-short` complication): letters now correctly
+   match citeproc-js order. `Locale::strip_sort_articles` and locale
+   `sort_articles` data stay in place (public schema-crate API, semver);
+   just unused by this call site now.
+2. **`Title::Shorthand` sort-text fix** (found while investigating, not
+   the Fogel explanation -- see correction above): `Title::Shorthand`'s
+   `Display` composes `"short (full)"` for *rendering*; sorting by that
+   composite let a short title silently override sort order. Fixed to sort
+   by the full title. Currently inert on CSL-JSON-sourced fixtures (CSL-JSON's
+   `title-short` isn't mapped to Citum's `short_title` field by the
+   csl-legacy/citum-refs conversion path -- confirmed via `citum convert
+   refs`), but a real correctness gap for any reference that does carry a
+   `short_title` (e.g. native Citum YAML).
+
+**Verified:**
+- Full nextest: 2719/2719 (nextest count includes new/renamed tests; 6
+  pre-existing tests encoded the old stripping behavior in their
+  assertions/names and were updated to the new literal-text semantics:
+  `disambiguation::year_suffix_follows_locale_collated_title_order`
+  (citations.rs), `test_bibliography_per_group_disambiguation`,
+  `test_sort_anonymous_work_by_title` (processor/tests.rs),
+  `sorting::anonymous_works_sort_by_explicit_title_key_uses_literal_text`,
+  `sorting::anonymous_titles_sort_by_literal_text`,
+  `sorting::anonymous_same_year_entries_keep_years_in_order_before_tiebreaks`
+  (tests/bibliography.rs -- the last rewritten to use one shared title
+  across all three entries so it actually isolates year-ordering instead
+  of being confounded by title-driven author-key-fallback bucketing),
+  `test_apa_7th_sort_same_author_year_by_title` (tests/sort_oracle.rs).
+- Full-portfolio sweep (`node scripts/report-core.js --all-features` +
+  per-style `exactParity` diff against the PR-1 baseline): **0
+  regressions across all 35 styles**, **+5 exact-parity**
+  (`american-medical-association-alphabetical`, 22/67 -> 27/67), 34
+  styles unchanged. Chicago family: +1 already landed via commit A;
+  no further movement from commit B alone (Fogel doesn't flip, per the
+  correction above; no other sole-cause C-labeled row in the corpus
+  happens to be a clean leading-article case without a co-occurring
+  defect).
+- `check-core-quality.js --parity-baseline` gate: passed (fidelity=1.0/35,
+  exact-parity >= floor for all 19 embedded-core styles). Regenerated
+  `embedded-parity-baseline.json` from the full portfolio per
+  STYLE_WORKFLOW_DECISION_RULES' shared-ancestor rule (this touches
+  shared `sort_support.rs`/engine code) -- note the prior baseline was
+  stale (2026-08-19), so the regenerated floors also absorb unrelated
+  gains from PRs merged since then, not only this change.
+- Gate: `cargo fmt --check` + `cargo clippy --all-targets --all-features
+  -- -D warnings` + `cargo nextest run` all clean.
+
+**Follow-up filed:** csl26-uy29 (date-precision tie-break defect,
+confirmed root cause of the Fogel swap and structurally similar cases;
+needs citeproc-js behavior research before any engine fix, portfolio-wide
+blast radius since `compare_by_issued` is shared by every Issued-sort
+style).
+
+**Status:** both engine roots this bean's scope covers are now fixed and
+verified (PR 1 merged pending review, PR 2 open). The Fogel-shaped
+"wrong letter" residual is real but out of this bean's original two-root
+scope -- tracked as csl26-uy29.

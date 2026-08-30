@@ -226,17 +226,29 @@ pub(crate) fn flat_names_sort_key(names: &[FlatName], name_order: NameSortOrder)
 }
 
 /// Build the normalized title sort key with configured multilingual behavior.
+///
+/// Does not strip a leading article ("The"/"A"/"An") — CSL has no automatic
+/// article-stripping for `variable: title` sorting, and citeproc-js sorts
+/// the literal title text. Citum previously stripped unconditionally via
+/// `Locale::strip_sort_articles`, which swapped year-suffix letters on
+/// genuine same-year collisions whenever exactly one title carried a
+/// leading article (csl26-rrsb root 2; confirmed against oracle order with
+/// zero counterexamples, and a full-portfolio sweep with stripping disabled
+/// found zero exact-parity regressions across all embedded-core styles).
+/// `Locale::strip_sort_articles` and the locale's `sort_articles` data stay
+/// in place — this is `pub` schema-crate API — just unused by this call
+/// site now; `_locale` documents that deliberately, not an oversight.
 #[must_use]
 pub(crate) fn title_sort_key_with_options(
     reference: &Reference,
-    locale: &Locale,
+    _locale: &Locale,
     options: &SortKeyOptions,
 ) -> String {
     let title = reference
         .title()
         .map(|title| title_sort_text(&title, options))
         .unwrap_or_default();
-    normalize_sort_text(locale.strip_sort_articles(&title))
+    normalize_sort_text(&title)
 }
 
 /// Normalize plain text for bibliography sorting.
@@ -347,6 +359,19 @@ fn structured_name_sort_as_text(name: &StructuredName, name_order: NameSortOrder
 fn title_sort_text(title: &Title, options: &SortKeyOptions) -> String {
     let text = match title {
         Title::Multilingual(complex) => multilingual_complex_sort_text(complex, options),
+        // The full title is CSL's `variable: title` sort key; the
+        // abbreviated form only participates in *rendering* —
+        // `Title::Shorthand`'s `Display` impl composes `"short (full)"`
+        // for that purpose. Sorting by the `Display` text would let a
+        // reference's short title silently override its sort order (a
+        // short title with no leading article sorting ahead of a full
+        // title that has one, for instance). Found while investigating
+        // csl26-rrsb; not itself observed causing a corpus mismatch there
+        // (CSL-JSON's `title-short` isn't currently mapped to Citum's
+        // `short_title` field, so `Title::Shorthand` doesn't yet occur for
+        // any CSL-JSON-sourced reference) but a real correctness gap for
+        // any reference — CSL-JSON-sourced or not — that does carry one.
+        Title::Shorthand(_short, full) => full.clone(),
         _ => title.to_string(),
     };
     strip_markup_for_sort(&text)
@@ -355,10 +380,7 @@ fn title_sort_text(title: &Title, options: &SortKeyOptions) -> String {
 /// Reduce a title or name string to its visible text for sort-key purposes,
 /// so authored Djot markup (`[…]{.nocase}`, `_emph_`, `[text](url)`) does not
 /// decide alphabetization — e.g. an institutional author authored as
-/// `[IBM]{.nocase}` sorts under `I`, not `[`. For titles this runs before
-/// [`Locale::strip_sort_articles`] in [`title_sort_key_with_options`], so a
-/// leading article hidden behind markup (e.g. `[The Library]{.nocase}`) is
-/// still stripped.
+/// `[IBM]{.nocase}` sorts under `I`, not `[`.
 fn strip_markup_for_sort(text: &str) -> String {
     if crate::values::title::looks_like_djot_markup(text) {
         Djot.visible_text(text).into_owned()
@@ -771,11 +793,9 @@ mod tests {
 
     /// csl26-4wts: `title_sort_text` used to return the raw title string, so
     /// authored Djot markup decided alphabetization instead of the visible
-    /// text a reader sees. Covers `.nocase` spans, emphasis, links, markup
-    /// preceding an article (proving the strip runs before
-    /// `strip_sort_articles`), and the literal-bracket carve-out in
-    /// `Djot::visible_runs` (a bare `[Dataset]` is house-style punctuation,
-    /// not markup, and must survive untouched).
+    /// text a reader sees. Covers `.nocase` spans, emphasis, links, and the
+    /// literal-bracket carve-out in `Djot::visible_runs` (a bare `[Dataset]`
+    /// is house-style punctuation, not markup, and must survive untouched).
     #[rstest]
     #[case::nocase_span_sorts_under_visible_text(
         "[Library of Congress]{.nocase}",
@@ -786,7 +806,7 @@ mod tests {
         "Homo Sapiens and Modern Science"
     )]
     #[case::link_markup_keeps_link_text_only("[Example](https://example.com)", "Example")]
-    #[case::markup_stripped_before_article_strip("[The Library]{.nocase}", "Library")]
+    #[case::markup_stripped_leading_article_kept("[The Library]{.nocase}", "The Library")]
     #[case::literal_brackets_are_not_markup("[Dataset]", "[Dataset]")]
     #[case::plain_title_is_unchanged("Plain Title Without Markup", "Plain Title Without Markup")]
     fn given_a_title_with_djot_markup_when_building_the_title_sort_key_then_markup_is_stripped(
@@ -804,6 +824,32 @@ mod tests {
         let key = title_sort_key_with_options(&reference, &locale, &options);
 
         assert_eq!(key, expected);
+    }
+
+    /// Found while investigating csl26-rrsb: a reference with a short title
+    /// (`title-short`) resolves to `Title::Shorthand(short, full)`, whose
+    /// `Display` impl composes `"short (full)"` for *rendering*. Sorting by
+    /// that composite text would let the short form silently decide sort
+    /// order — e.g. a short title with no leading article sorting ahead of
+    /// a full title that has one. The sort key must use the full title,
+    /// matching CSL's `variable: title` sort semantics.
+    #[test]
+    fn given_a_reference_with_a_short_title_when_building_the_sort_key_then_the_full_title_is_used()
+    {
+        let reference = Reference::Monograph(Box::new(citum_schema::reference::Monograph {
+            r#type: citum_schema::reference::MonographType::Book,
+            title: Some(Title::Single(
+                "The escape from hunger and premature death".to_string(),
+            )),
+            short_title: Some("Escape from hunger and premature death".to_string()),
+            ..Default::default()
+        }));
+        let locale = Locale::en_us();
+        let options = SortKeyOptions::uniform();
+
+        let key = title_sort_key_with_options(&reference, &locale, &options);
+
+        assert_eq!(key, "The escape from hunger and premature death");
     }
 
     /// csl26-lirf (follow-up to csl26-4wts): `multilingual_string_sort_text`

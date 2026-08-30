@@ -2300,7 +2300,9 @@ fn test_citation_grouping_different_authors() {
 /// Tests the behavior of `test_sort_anonymous_work_by_title`.
 #[test]
 fn test_sort_anonymous_work_by_title() {
-    // Anonymous works (no author) should sort by title, with leading articles stripped
+    // Anonymous works (no author) sort by title, literal text — CSL has no
+    // automatic leading-article stripping, so "The Role of Theory" sorts
+    // under 'T', not 'R'.
     let style = make_style();
     let mut bib = indexmap::IndexMap::new();
 
@@ -2317,7 +2319,7 @@ fn test_sort_anonymous_work_by_title() {
         }),
     );
 
-    // Anonymous work - should sort by "Role" (stripping "The")
+    // Anonymous work - sorts under "The" (its literal title text)
     bib.insert(
         "anon".to_string(),
         Reference::from(LegacyReference {
@@ -2345,19 +2347,19 @@ fn test_sort_anonymous_work_by_title() {
     let processor = Processor::new(style, bib);
     let result = processor.render_bibliography();
 
-    // Order should be: Jones (J), anon/Role (R), Smith (S)
+    // Order should be: Jones (J), Smith (S), anon/"The Role of Theory" (T)
     let jones_pos = result.find("Jones").expect("Jones not found");
     let role_pos = result.find("Role of Theory").expect("Role not found");
     let smith_pos = result.find("Smith").expect("Smith not found");
 
     assert!(
-        jones_pos < role_pos,
-        "Jones should come before Role. Got:
+        jones_pos < smith_pos,
+        "Jones should come before Smith. Got:
 {result}"
     );
     assert!(
-        role_pos < smith_pos,
-        "Role should come before Smith. Got:
+        smith_pos < role_pos,
+        "Smith should come before Role. Got:
 {result}"
     );
 }
@@ -3907,13 +3909,18 @@ fn test_bibliography_per_group_disambiguation() {
     let result = processor
         .render_grouped_bibliography_with_format_standalone::<crate::render::plain::PlainText>();
 
-    // Year-suffix letters follow the article-stripped bibliography sort (§3): the
-    // leading "A" of "A title" is a sort article, so it normalizes to "title" and
-    // sorts after "B title". Group 1 therefore assigns a→"B title", b→"A title";
-    // Group 2 restarts the sequence (locally scoped) at a→"C title", b→"D title".
+    // This style has no explicit `bibliography.sort`, so render position
+    // within a group follows registration order (r1 "B title" before r2 "A
+    // title") regardless of the fix below — only the *letter* each entry
+    // gets changes. Year-suffix letters follow literal title-text order —
+    // CSL has no automatic leading-article stripping, so "A title" sorts
+    // before "B title" ('A' < 'B') and gets the earlier letter even though
+    // it renders second. Group 1 therefore assigns a→"A title", b→"B
+    // title"; Group 2 restarts the sequence (locally scoped) at a→"C
+    // title", b→"D title".
     assert_eq!(
         result,
-        "## Group 1\n\nKuhn, Thomas (1962a). _B title_\n\nKuhn, Thomas (1962b). _A title_\n\n## Group 2\n\nKuhn, Thomas (1962a). _C title_\n\nKuhn, Thomas (1962b). _D title_"
+        "## Group 1\n\nKuhn, Thomas (1962b). _B title_\n\nKuhn, Thomas (1962a). _A title_\n\n## Group 2\n\nKuhn, Thomas (1962a). _C title_\n\nKuhn, Thomas (1962b). _D title_"
     );
 }
 

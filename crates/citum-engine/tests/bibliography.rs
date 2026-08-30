@@ -2982,11 +2982,11 @@ fn numeric_bibliography_uses_assigned_citation_numbers() {
     assert_eq!(result, "1. John Smith (2020)");
 }
 
-fn anonymous_works_sort_by_explicit_title_key_strips_leading_articles() {
+fn anonymous_works_sort_by_explicit_title_key_uses_literal_text() {
     // SortKey::Title directly (not Author-key fallback) — verifies the Title-key contract.
-    // "A Zen Perspective on Method" stripped → "Zen" (Z).
-    // "The Academic Press Guide" stripped → "Academic" (A).
-    // Without stripping: A < T → "A Zen…" first (wrong). With stripping: A < Z → Academic first.
+    // CSL has no automatic leading-article stripping (citum-migrate csl26-rrsb): citeproc-js
+    // sorts by the literal title variable, so "A Zen Perspective on Method" (A) sorts before
+    // "The Academic Press Guide" (T).
     let style = build_title_year_sorted_style(vec![SortSpec {
         key: SortKey::Title,
         ascending: true,
@@ -3006,13 +3006,13 @@ fn anonymous_works_sort_by_explicit_title_key_strips_leading_articles() {
     let result = processor.render_bibliography();
 
     assert!(
-        result.find("The Academic Press Guide").unwrap()
-            < result.find("A Zen Perspective").unwrap(),
-        "SortKey::Title must strip leading articles: 'Academic' (A) before 'Zen' (Z). Got:\n{result}"
+        result.find("A Zen Perspective").unwrap()
+            < result.find("The Academic Press Guide").unwrap(),
+        "SortKey::Title must use literal text, no article stripping: 'A Zen Perspective…' (starts 'A') before 'The Academic Press Guide' (starts 'T'). Got:\n{result}"
     );
 }
 
-fn anonymous_works_sort_by_title_ignoring_leading_articles() {
+fn anonymous_works_sort_by_title_using_literal_text() {
     let style = build_title_year_sorted_style(vec![
         SortSpec {
             key: SortKey::Author,
@@ -3025,12 +3025,11 @@ fn anonymous_works_sort_by_title_ignoring_leading_articles() {
     ]);
 
     let mut bib = indexmap::IndexMap::new();
-    // Anonymous work with "The" article should sort as "Chicago Manual"
+    // Anonymous work substitutes its title for the missing author key.
     bib.insert(
         "anon1".to_string(),
         make_book("anon1", "", "", 2018, "The Chicago Manual of Style"),
     );
-    // Another anonymous work starting with title after article
     bib.insert(
         "anon2".to_string(),
         make_book("anon2", "", "", 2015, "A Guide to Citation"),
@@ -3039,8 +3038,8 @@ fn anonymous_works_sort_by_title_ignoring_leading_articles() {
     let processor = Processor::new(style, bib);
     let result = processor.render_bibliography();
 
-    // "The Chicago..." (C) should come BEFORE "A Guide..." (G) when articles are stripped
-    assert!(result.find("The Chicago").unwrap() < result.find("A Guide").unwrap());
+    // "A Guide..." (A) should come BEFORE "The Chicago..." (T) — literal text, no stripping.
+    assert!(result.find("A Guide").unwrap() < result.find("The Chicago").unwrap());
 }
 
 fn anonymous_works_with_the_same_year_still_sort_by_year_first() {
@@ -3055,6 +3054,12 @@ fn anonymous_works_with_the_same_year_still_sort_by_year_first() {
         },
     ]);
 
+    // Every entry shares one title, so anonymous entries' title-substituted
+    // author key ties across all three (removing title text as a confound —
+    // see csl26-rrsb, which found the previous two-title version of this
+    // test only passed because leading-article stripping happened to make
+    // the titles' relative bucket order line up with the years). Year alone
+    // must then decide the order.
     let mut bib = indexmap::IndexMap::new();
     bib.insert(
         "anon1".to_string(),
@@ -3062,7 +3067,7 @@ fn anonymous_works_with_the_same_year_still_sort_by_year_first() {
     );
     bib.insert(
         "anon2".to_string(),
-        make_book("anon2", "", "", 2020, "An Earlier Publication"),
+        make_book("anon2", "", "", 2020, "The Chicago Manual"),
     );
     bib.insert(
         "anon3".to_string(),
@@ -3072,7 +3077,7 @@ fn anonymous_works_with_the_same_year_still_sort_by_year_first() {
     let processor = Processor::new(style, bib);
     let result = processor.render_bibliography();
 
-    // 2019 entry should come before 2020 entries
+    // 2019 entry should come before the 2020 entries
     assert!(result.find("2019").unwrap() < result.find("2020").unwrap());
 }
 
@@ -4245,19 +4250,19 @@ mod sorting {
     }
 
     #[test]
-    fn anonymous_works_sort_by_explicit_title_key_strips_leading_articles() {
+    fn anonymous_works_sort_by_explicit_title_key_uses_literal_text() {
         announce_behavior(
-            "SortKey::Title strips leading articles so 'The Academic…' (A) sorts before 'A Zen…' (Z).",
+            "SortKey::Title uses literal title text, no article stripping, so 'A Zen…' (A) sorts before 'The Academic…' (T).",
         );
-        super::anonymous_works_sort_by_explicit_title_key_strips_leading_articles();
+        super::anonymous_works_sort_by_explicit_title_key_uses_literal_text();
     }
 
     #[test]
-    fn anonymous_titles_ignore_leading_articles_during_sorting() {
+    fn anonymous_titles_sort_by_literal_text() {
         announce_behavior(
-            "Anonymous bibliography entries should ignore leading articles like The or A when sorting by title.",
+            "Anonymous bibliography entries sort by the literal title text (no automatic leading-article stripping), matching citeproc-js.",
         );
-        super::anonymous_works_sort_by_title_ignoring_leading_articles();
+        super::anonymous_works_sort_by_title_using_literal_text();
     }
 
     #[test]
