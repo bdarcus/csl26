@@ -418,11 +418,24 @@ Author and year are equal across a same-author/same-year group, so what breaks t
 tie depends on whether the style has a resolved `group_sort` at all:
 
 - **No resolved bibliography sort** (a style with no `bibliography.sort` and no
-  `processing` preset supplying one): the tiebreaker is the title, sorted with the
-  *same* normalization the bibliography uses — leading-article stripping plus
-  locale collation via `sort_support::title_sort_key`. A raw lowercased title is
-  **not** used — it sorts "An Ecology…" before "Biology…", yielding `2019b` before
-  `2019a` (fixed for csl26-2zy6, guide-conformance audit row 138). The raw title
+  `processing` preset supplying one): the tiebreaker is the title, normalized
+  the *same* way the bibliography's own title sort key is
+  (`sort_support::title_sort_key_with_options` — markup-stripped,
+  `Title::Shorthand` resolved to its full form, no leading-article
+  stripping — CSL has no automatic article-stripping for `variable: title`
+  sorting, and neither does Citum; see `SORTING.md`'s `Title` row and
+  csl26-rrsb), then compared **byte-wise** (`String::cmp`, case-sensitive,
+  not the locale collator the resolved-sort branch below uses). A raw,
+  un-normalized title is **not** used — reusing the real sort-key function
+  instead of independently re-deriving one keeps this tiebreak from
+  drifting from the bibliography's own title handling (markup, shorthand
+  titles, multilingual resolution) even though this fallback path doesn't
+  collate. For example, "An Ecology of Rivers" sorts before "Biology of
+  Lakes" (literal text, `'A' < 'B'`) and takes `2019a`; Biology takes
+  `2019b` (fixed for csl26-2zy6, guide-conformance audit row 138 — that fix
+  targeted a raw `to_lowercase()` bug, not article-stripping specifically;
+  the stripping was an unvalidated side effect of the sort-key function
+  used at the time and has since been removed, csl26-rrsb). The raw title
   survives only as a deterministic final tiebreaker.
 - **A resolved bibliography sort exists but doesn't fully order the group**
   (either its template is empty — e.g. the `citation-number` preset, which is
@@ -467,6 +480,18 @@ group (see §5 below).
 
 The letter sequence is base-26 with wrapping: 1→a, 26→z, 27→aa, 52→az, 53→ba,
 … Implemented in `int_to_letter` in `values/date.rs`.
+
+**Leading articles and citeproc parity.** Style guides (APA, MLA, Chicago)
+prescribe ignoring a leading article ("The"/"A"/"An") when alphabetizing a
+bibliography. citeproc-js does not implement this — its `variable: title`
+sort compares the literal title text — and Citum follows citeproc-js for
+parity (the project's stated target for CSL-derived styles), not the guide
+prose, when the two diverge. Confirmed against real oracle order on two
+same-year collisions with zero counterexamples (csl26-rrsb). If a future
+change reintroduces article-stripping, it needs the same oracle evidence
+this removal was based on; the `parity-adjudication.json` ledger's
+"citum-correct" designation exists for a deliberate, adjudicated divergence
+like this, if one is ever wanted — not exercised here.
 
 ### 3.1 Per-guide application (engine default vs. style flags)
 
@@ -604,8 +629,10 @@ added to the citation context.
   in `crates/citum-engine/tests/citations.rs`), matching
   `disambiguate_ByCiteMinimalGivennameExpandMinimalNames` and
   `disambiguate_ByCiteGivennameExpandCrossNestedNames`
-- [x] Year-suffix order follows the article-stripped/locale-collated bibliography
-  sort, not a raw lowercased title (csl26-2zy6, audit row 138)
+- [x] Year-suffix order follows the bibliography title sort key (literal
+  text, no article stripping — collated when the style has a resolved
+  bibliography sort, byte-wise otherwise), not a raw lowercased title
+  (csl26-2zy6, audit row 138; article-stripping removed, csl26-rrsb)
 - [x] APA-7th carries `add-givenname` + `primary-name-with-initials` (global) so
   same-surname authors get initials, not a spurious year suffix (csl26-2zy6, row 114)
 - [x] MLA disables `year_suffix` and disambiguates same-author works via the
@@ -635,6 +662,22 @@ added to the citation context.
 
 ## Changelog
 
+- 2026-08-30: Removed leading-article stripping from the bibliography title
+  sort key (csl26-rrsb, wave 7 of the 2026-08-23 Chicago parity leverage
+  audit). §3's "no resolved bibliography sort" tiebreak example is
+  re-derived: "An Ecology of Rivers" now takes `2019a` (literal text, `'A' <
+  'B'`), "Biology of Lakes" `2019b` — the reverse of the outcome recorded
+  when csl26-2zy6 landed. That 2026-06-21 fix's actual target was a raw
+  `to_lowercase()` bug; the article-stripping it introduced as a side
+  effect of routing through the real sort-key function was never
+  independently oracle-validated for this pair, and direct oracle-order
+  evidence on two real same-year collisions (zero counterexamples) now
+  shows citeproc-js does not strip leading articles. Also fixed: sorting by
+  a reference's `title-short`-composed `Title::Shorthand` used to sort by
+  its `Display` text (`"short (full)"`, meant for rendering) instead of
+  the full title alone. See the new "Leading articles and citeproc parity"
+  note above and `SORTING.md`'s changelog for the `sort_support.rs` side of
+  this change.
 - 2026-08-17: Implemented csl26-5753: `by-cite` now escalates given names per
   author position instead of uniformly across the whole reference. `ProcHints`
   gained `expand_given_names_full_positions: Option<Vec<bool>>`, index-aligned

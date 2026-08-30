@@ -76,9 +76,9 @@ Sort keys are defined by `SortKey` (non-exhaustive) in
 
 | Key | Semantics |
 |---|---|
-| `Author` | Primary author name (family-first); falls back to editor, then title if no contributor. When the Author key falls back to title (no contributor present), the title value is passed through the same `Locale::strip_sort_articles` pass as `SortKey::Title`. |
+| `Author` | Primary author name (family-first); falls back to editor, then title if no contributor. When the Author key falls back to title (no contributor present), the title value is normalized through the same `title_sort_key_with_options` pass as `SortKey::Title`. |
 | `Year` | Issued date year; year-bearing entries precede year-less entries |
-| `Title` | Title text with locale article stripping (see `Locale::strip_sort_articles`) |
+| `Title` | Literal title text (markup-stripped, multilingual-resolved, `Title::Shorthand` sorts by its full form) — no leading-article stripping, matching citeproc-js's `variable: title` sort semantics (`title_sort_key_with_options`; `Locale::strip_sort_articles` exists as public API but is unused by this call site, csl26-rrsb) |
 | `CitationNumber` | Reserved for citation-cluster sort templates. In a bibliography sort template it produces `Equal` for all comparisons (effectively a no-op there) — numeric ordering of bibliography entries is assigned by the citation-processing pass, not by sorting. |
 
 Each key has an `ascending` flag (default `true`).
@@ -158,3 +158,11 @@ behavior. Bibliography-specific sort tests: `mod sorting` in
 
 - 2026-05-31: Initial version — documents shipped behavior; references narrow sub-specs.
 - 2026-07-08: Reference `MULTILINGUAL_SORTING.md` for multilingual sort modes and transliteration-aware sort keys.
+- 2026-08-30: Removed unconditional leading-article stripping from
+  `SortKey::Title` (and the `Author`-falls-back-to-title case). CSL has no
+  automatic article-stripping for `variable: title` sorting; citeproc-js
+  sorts the literal title text. Citum's stripping was never independently
+  oracle-validated and caused year-suffix letters to diverge from
+  citeproc-js on same-year collisions where exactly one title carried a
+  leading article. See `DISAMBIGUATION.md` §3 for the disambiguation-side
+  detail and csl26-rrsb.

@@ -1,6 +1,6 @@
 {
-  "generated": "2026-08-19T14:17:58.897Z",
-  "commit": "f071dcf6",
+  "generated": "2026-08-30T14:06:50.791Z",
+  "commit": "489bd726",
   "source": "scripts/report-core.js",
   "purpose": "Hard per-style exact-parity floor-gate baseline for the embedded tier, consumed by scripts/check-core-quality.js --parity-baseline (see docs/architecture/audits/2026-07-31_EXACT_PARITY_REFOCUS.md). It also records headline fidelity. Sub-1.0 fidelity ratchets are tracked separately per-style in scripts/report-data/verification-policy.yaml (min_pass_rate floors). Regenerate this file after each parity-tuning wave; the gate never goes backward on passed counts or total (fixture-drift guard).",
   "styles": {
@@ -42,28 +42,28 @@
     },
     "chicago-author-date-18th": {
       "tier": "embedded",
-      "fidelityScore": 0.89,
-      "qualityScore": 0.913,
+      "fidelityScore": 0.903,
+      "qualityScore": 0.876,
       "citations": {
         "passed": 62,
         "total": 63
       },
       "bibliography": {
-        "passed": 432,
-        "total": 492
+        "passed": 438,
+        "total": 491
       },
       "exactParity": {
-        "passed": 174,
+        "passed": 211,
         "total": 542,
-        "rate": 0.321
+        "rate": 0.389
       }
     },
     "chicago-notes-18th": {
       "tier": "embedded",
-      "fidelityScore": 0.919,
-      "qualityScore": 0.914,
+      "fidelityScore": 0.986,
+      "qualityScore": 0.895,
       "citations": {
-        "passed": 68,
+        "passed": 73,
         "total": 74
       },
       "bibliography": {
@@ -71,27 +71,27 @@
         "total": 0
       },
       "exactParity": {
-        "passed": 23,
+        "passed": 30,
         "total": 72,
-        "rate": 0.319
+        "rate": 0.417
       }
     },
     "chicago-shortened-notes-bibliography": {
       "tier": "embedded",
-      "fidelityScore": 0.691,
+      "fidelityScore": 0.777,
       "qualityScore": 1,
       "citations": {
-        "passed": 38,
+        "passed": 41,
         "total": 49
       },
       "bibliography": {
-        "passed": 300,
+        "passed": 339,
         "total": 440
       },
       "exactParity": {
-        "passed": 61,
+        "passed": 87,
         "total": 473,
-        "rate": 0.129
+        "rate": 0.184
       }
     },
     "elsevier-harvard": {
@@ -251,9 +251,9 @@
         "total": 47
       },
       "exactParity": {
-        "passed": 53,
+        "passed": 54,
         "total": 67,
-        "rate": 0.791
+        "rate": 0.806
       }
     },
     "springer-basic-brackets": {
@@ -294,20 +294,20 @@
     },
     "taylor-and-francis-chicago-author-date": {
       "tier": "embedded",
-      "fidelityScore": 0.89,
+      "fidelityScore": 0.903,
       "qualityScore": 1,
       "citations": {
         "passed": 62,
         "total": 63
       },
       "bibliography": {
-        "passed": 432,
-        "total": 492
+        "passed": 438,
+        "total": 491
       },
       "exactParity": {
-        "passed": 174,
+        "passed": 211,
         "total": 542,
-        "rate": 0.321
+        "rate": 0.389
       }
     },
     "taylor-and-francis-council-of-science-editors-author-date": {

@@ -501,10 +501,16 @@ impl<'a> Disambiguator<'a> {
                 );
                 let group_key = self.build_group_key(index, reference, &author_key);
                 // Year-suffix letters (a, b, c…) must follow the effective bibliography
-                // sort order. Reuse the bibliography title sort key (leading-article
-                // stripping + locale collation) so suffix assignment cannot diverge from
-                // the rendered order — a raw lowercased title sorts "An Ecology" before
-                // "Biology", producing `2019b` before `2019a` (DISAMBIGUATION.md §3).
+                // sort order. Cache the bibliography title sort key here (normalized
+                // full-title text — markup-stripped, `Title::Shorthand` resolved to its
+                // full form, no leading-article stripping; see `title_sort_key_with_options`)
+                // so suffix assignment reuses the same text the renderer sorts by, not a
+                // raw `to_lowercase()` (DISAMBIGUATION.md §3). This text is compared two
+                // ways depending on whether the style has a resolved bibliography sort:
+                // `sort_group_for_year_suffix`'s `group_sort` branch runs it through the
+                // locale collator (`ReferenceSorter::sort_by_keys`); its fallback branch
+                // (no resolved sort) compares it byte-wise (`String::cmp`) — both use this
+                // same cached key, but only the former is locale-aware.
                 let title_key = needs_title_key.then(|| {
                     crate::sort_support::title_sort_key_with_options(
                         reference,
@@ -3110,6 +3116,52 @@ substitute:
 
         assert!(!hints.get("r1").unwrap().disamb_condition);
         assert!(!hints.get("r2").unwrap().disamb_condition);
+    }
+
+    /// Build a reference with an explicit title and author family, same
+    /// shape as `make_dated_ref` but with a caller-chosen title instead of
+    /// the fixed `"Title {id}"` placeholder — needed to exercise
+    /// title-ordered year-suffix letter assignment directly.
+    fn make_titled_dated_ref(id: &str, family: &str, title: &str, year: i32) -> Reference {
+        Reference::Monograph(Box::new(Monograph {
+            id: Some(id.into()),
+            r#type: MonographType::Book,
+            title: Some(Title::Single(title.to_string())),
+            author: Some(Contributor::StructuredName(StructuredName {
+                family: MultilingualString::Simple(family.to_string()),
+                given: MultilingualString::Simple(String::new()),
+                suffix: None,
+                dropping_particle: None,
+                non_dropping_particle: None,
+            })),
+            issued: DateValue::new(year.to_string()),
+            ..Default::default()
+        }))
+    }
+
+    /// csl26-rrsb root 2: citeproc-js sorts by the literal title text — CSL
+    /// has no automatic leading-article stripping — so "Othello" sorts
+    /// before "The Complete Works" ('O' < 'T') and gets the earlier letter.
+    /// Citum previously stripped "The" unconditionally, which reordered the
+    /// pair ("Complete Works" < "Othello") and swapped the letters.
+    #[test]
+    fn given_a_same_year_collision_with_one_leading_article_when_assigning_year_suffix_then_letter_order_follows_the_unstripped_title()
+     {
+        let othello = make_titled_dated_ref("othello", "Shakespeare", "Othello", 2005);
+        let complete_works =
+            make_titled_dated_ref("complete-works", "Shakespeare", "The Complete Works", 2005);
+
+        let mut bib = Bibliography::new();
+        bib.insert("othello".to_string(), othello);
+        bib.insert("complete-works".to_string(), complete_works);
+
+        let config = Config::default();
+        let locale = Locale::en_us();
+
+        let hints = Disambiguator::new(&bib, &config, &config, &locale).calculate_hints();
+
+        assert_eq!(hints.get("othello").unwrap().group_index, 1);
+        assert_eq!(hints.get("complete-works").unwrap().group_index, 2);
     }
 
     /// Build a reference whose author is `Contributor::Multilingual` with distinct

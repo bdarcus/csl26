@@ -797,19 +797,25 @@ fn disambiguation_givenname_expansion_resolves_same_year_family_name_collision()
     });
 }
 
-/// Row 138 regression: year-suffix letters must follow the article-stripped,
-/// locale-collated bibliography sort order, not a raw lowercased title. Under raw
-/// lowercasing "An Ecology…" sorts before "Biology…", so Biology wrongly takes
-/// `b`; after stripping the leading article "Biology" precedes "Ecology", so
-/// Biology takes `a` and Ecology takes `b`.
-fn disambiguation_year_suffix_follows_article_stripped_title_order() {
+/// Row 138 regression: year-suffix letters must follow the bibliography
+/// title sort key, not a raw lowercased title. Under raw lowercasing "An
+/// Ecology…" sorts before "Biology…", matching the correct letter
+/// assignment only by coincidence of case, not text. The real sort key
+/// (`title_sort_key_with_options`) uses the literal title text — CSL has no
+/// automatic leading-article stripping (csl26-rrsb) — so "An Ecology of
+/// Rivers" ('A') sorts before "Biology of Lakes" ('B') and takes `a`;
+/// Biology takes `b`. This style has no resolved `bibliography.sort`
+/// (`build_author_date_style` sets `citation.sort` only), so the comparison
+/// goes through `sort_group_for_year_suffix`'s no-sort fallback — byte-wise
+/// `String::cmp` on the cached title key, not the locale collator.
+fn disambiguation_year_suffix_follows_literal_title_order() {
     let input = vec![
         make_book("eco", "Garcia", "Maria", 2019, "An Ecology of Rivers"),
         make_book("bio", "Garcia", "Maria", 2019, "Biology of Lakes"),
     ];
-    // Cite Biology first, Ecology second: Biology must read 2019a, Ecology 2019b.
+    // Cite Biology first, Ecology second: Biology reads 2019b, Ecology 2019a.
     let citation_items = vec![vec!["bio", "eco"]];
-    let expected = "Garcia, (2019a), (2019b)";
+    let expected = "Garcia, (2019b), (2019a)";
 
     run_test_case_native(&input, &citation_items, expected, "citation");
 }
@@ -2836,11 +2842,11 @@ mod disambiguation {
     }
 
     #[test]
-    fn year_suffix_follows_article_stripped_title_order() {
+    fn year_suffix_follows_literal_title_order() {
         announce_behavior(
-            "Year-suffix letters must follow the article-stripped bibliography sort order, so a leading article cannot flip 2019a/2019b.",
+            "Year-suffix letters must follow the bibliography title sort key (literal text, no article stripping), not a raw lowercased comparison.",
         );
-        super::disambiguation_year_suffix_follows_article_stripped_title_order();
+        super::disambiguation_year_suffix_follows_literal_title_order();
     }
 
     #[test]

@@ -261,9 +261,10 @@ Reference → [Render] → String
 - **No cross-document**: Disambiguation is per-document; different
   documents may use inconsistent suffixes for the same reference
 - **Suffix order tracks the bibliography**: year-suffix letters follow the
-  effective bibliography sort (article-stripped, locale-collated title as the
-  same-author/same-year tiebreaker), not reference input order. Suffixes are
-  recomputed when the bibliography context changes.
+  effective bibliography sort (literal-text title as the same-author/
+  same-year tiebreaker — no leading-article stripping, matching
+  citeproc-js), not reference input order. Suffixes are recomputed when the
+  bibliography context changes.
 
 ## Test Case Reference
 

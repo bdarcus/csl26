@@ -10,7 +10,9 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus and Citum contributors
 //! `sort:` mapped via `Sort::group_sort()`), per-group sorting, citation-item
 //! ordering, and disambiguation all route through it. Sort keys are compiled
 //! once and cached per reference (Schwartzian transform), so collation and
-//! article stripping are not re-derived on every comparison. Supports:
+//! title-text normalization are not re-derived on every comparison. Title
+//! text is the literal title — CSL has no automatic leading-article
+//! stripping, and neither does this sorter. Supports:
 //! - Type-order sorting (explicit sequence like [legal-case, statute, treaty])
 //! - Name-order sorting (family-given vs given-family for multilingual bibliographies)
 //! - Standard sort keys (author, title, issued) and an opt-in reference-ID tiebreak
@@ -584,7 +586,7 @@ impl<'a> ReferenceSorter<'a> {
             .unwrap_or_default()
     }
 
-    /// Compare by title (with article stripping).
+    /// Compare by title (locale-collated, literal text — no article stripping).
     fn compare_by_title(&self, a: &Reference, b: &Reference) -> std::cmp::Ordering {
         let a_title = self.title_sort_key(a);
         let b_title = self.title_sort_key(b);

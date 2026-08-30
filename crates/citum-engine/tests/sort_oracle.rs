@@ -50,11 +50,14 @@ fn load_sort_oracle_bibliography()
 }
 
 /// Test APA 7th Edition sort order: author, date, title.
-/// Adams has 3 works in 2020 — should sort alphabetically by title.
+/// Adams has 3 works in 2020 — should sort alphabetically by literal title
+/// text. `SORT-1`'s title is "The Academic Enterprise" — CSL has no
+/// automatic leading-article stripping (csl26-rrsb), so it sorts under 'T',
+/// after "Digital Transformation" ('D') and "Ethics in Research" ('E').
 #[test]
 fn test_apa_7th_sort_same_author_year_by_title() {
     announce_behavior(
-        "Works by the same author in the same year are sorted alphabetically by title.",
+        "Works by the same author in the same year are sorted alphabetically by literal title text.",
     );
     let root = project_root();
     let style = load_style(&root.join("styles/embedded/apa-7th.yaml"));
@@ -62,7 +65,7 @@ fn test_apa_7th_sort_same_author_year_by_title() {
     let processor = Processor::new(style, bib);
     let result = processor.render_bibliography();
 
-    // All three Adams 2020 items should appear in title order: Academic, Digital, Ethics.
+    // All three Adams 2020 items should appear in title order: Digital, Ethics, Academic.
     // APA now preserves legacy CSL title casing for these sort-oracle fixtures.
     let academic_pos = result
         .find("Academic Enterprise")
@@ -76,12 +79,12 @@ fn test_apa_7th_sort_same_author_year_by_title() {
         .expect("Ethics in Research should be in output");
 
     assert!(
-        academic_pos < digital_pos,
-        "Academic should come before Digital"
-    );
-    assert!(
         digital_pos < ethics_pos,
         "Digital should come before Ethics"
+    );
+    assert!(
+        ethics_pos < academic_pos,
+        "Ethics should come before Academic (\"The Academic Enterprise\" sorts under 'T')"
     );
 }
 
