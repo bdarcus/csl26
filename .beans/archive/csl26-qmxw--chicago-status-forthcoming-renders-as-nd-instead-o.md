@@ -5,7 +5,7 @@ status: completed
 type: bug
 priority: normal
 created_at: 2026-08-30T13:28:56Z
-updated_at: 2026-08-30T20:35:36Z
+updated_at: 2026-08-30T23:29:12Z
 ---
 
 Surfaced while row-accounting csl26-rrsb (year-suffix engine fix): several
@@ -47,3 +47,7 @@ Spec: `docs/specs/STATUS_DATE_FALLBACK.md` (Active). Schema regenerated (`just s
 Verification: `cargo build --workspace`, `cargo check --workspace --all-targets --all-features`, `cargo fmt --check`, `cargo clippy --all-targets --all-features -- -D warnings` all clean. `cargo nextest run -p citum-engine -p citum-schema-style`: 1939/1939 pass (both touched crates). The full-workspace `cargo nextest run` could not be completed in this session — it was repeatedly interrupted by the environment before finishing (not a test failure; every partial run up to interruption showed passing tests, and the touched crates' own scoped run is clean). A full-workspace nextest run should be re-confirmed once the branch is pushed and CI runs it.
 
 Closes csl26-qmxw.
+
+## Follow-up (Codex adversarial review of the stack)
+
+Review flagged (high): the new `Variable` fallback candidate rendered correctly but was invisible to `Disambiguator::date_component_discriminant` -- two same-author, status-only references with *different* status text (e.g. "forthcoming" vs "in press") would collide into the same empty-discriminant bucket instead of being correctly distinguished. Fixed: added `fallback_variable_discriminant` (`values/date.rs`), wired into the discriminant match. Regression tests confirm distinct status text produces distinct discriminants and identical status text still correctly shares one (a collision key, not an identity key -- same-status entries fall through to author/title like same-year dated entries do).

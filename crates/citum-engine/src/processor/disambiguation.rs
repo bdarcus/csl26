@@ -1902,6 +1902,16 @@ impl<'a> Disambiguator<'a> {
                         discriminant
                     };
                 }
+                TemplateComponent::Variable(variable) => {
+                    let Some(discriminant) =
+                        crate::values::date::fallback_variable_discriminant(&variable, reference)
+                    else {
+                        // Doesn't resolve or renders nothing (e.g. no
+                        // status) — not selected, keep scanning the chain.
+                        continue;
+                    };
+                    return discriminant;
+                }
                 _ => {}
             }
         }
@@ -3651,6 +3661,113 @@ date-fallback:
             discriminant,
             "no date|None|None|None|None|None|None|None|None"
         );
+    }
+
+    /// Like `make_dated_ref`, but with a `status` and no `issued` — the
+    /// shape a `variable: status` fallback candidate needs. csl26-qmxw.
+    fn make_status_ref(id: &str, family: &str, status: &str) -> Reference {
+        Reference::Monograph(Box::new(Monograph {
+            id: Some(id.into()),
+            r#type: MonographType::Book,
+            title: Some(Title::Single(format!("Title {id}"))),
+            author: Some(Contributor::StructuredName(StructuredName {
+                family: MultilingualString::Simple(family.to_string()),
+                given: MultilingualString::Simple(String::new()),
+                suffix: None,
+                dropping_particle: None,
+                non_dropping_particle: None,
+            })),
+            issued: DateValue::new(String::new()),
+            status: Some(status.to_string()),
+            ..Default::default()
+        }))
+    }
+
+    /// csl26-qmxw: before `TemplateComponent::Variable` had a
+    /// `date_component_discriminant` arm, this fell through to the empty
+    /// string every time — a "Forthcoming" and an "In press" work by the
+    /// same author, both undated, collided into the same disambiguation
+    /// bucket even though citeproc-js renders visibly different text for
+    /// each.
+    #[test]
+    fn status_fallback_candidate_discriminates_by_its_rendered_text() {
+        let forthcoming = make_status_ref("s1", "Smith", "forthcoming");
+        let in_press = make_status_ref("s2", "Smith", "in press");
+        let component = issued_date_component();
+        let config: Config = serde_yaml::from_str(
+            r#"
+date-fallback:
+  first-issued:
+    default:
+    - variable: status
+      text-case: capitalize-first
+    - message: term.no-date
+      form: short
+"#,
+        )
+        .expect("status date fallback should parse");
+
+        let locale = Locale::en_us();
+        let forthcoming_discriminant = Disambiguator::date_component_discriminant(
+            &component,
+            &forthcoming,
+            &locale,
+            &config,
+            &forthcoming.ref_type(),
+        );
+        let in_press_discriminant = Disambiguator::date_component_discriminant(
+            &component,
+            &in_press,
+            &locale,
+            &config,
+            &in_press.ref_type(),
+        );
+
+        assert_ne!(forthcoming_discriminant, in_press_discriminant);
+        assert_eq!(
+            forthcoming_discriminant,
+            "Forthcoming|None|None|None|None|None|None|None|None"
+        );
+        assert_eq!(
+            in_press_discriminant,
+            "In press|None|None|None|None|None|None|None|None"
+        );
+    }
+
+    /// Two references with the *same* status text still share a
+    /// discriminant — this is a collision key, not an identity key, so
+    /// same-status entries correctly fall through to the disambiguator's
+    /// other keys (author, title) the same way same-year dated entries do.
+    #[test]
+    fn status_fallback_candidate_shares_a_discriminant_for_identical_status_text() {
+        let a = make_status_ref("s3", "Smith", "forthcoming");
+        let b = make_status_ref("s4", "Jones", "forthcoming");
+        let component = issued_date_component();
+        let config: Config = serde_yaml::from_str(
+            r#"
+date-fallback:
+  first-issued:
+    default:
+    - variable: status
+      text-case: capitalize-first
+    - message: term.no-date
+      form: short
+"#,
+        )
+        .expect("status date fallback should parse");
+
+        let locale = Locale::en_us();
+        let discriminants = [&a, &b].map(|reference| {
+            Disambiguator::date_component_discriminant(
+                &component,
+                reference,
+                &locale,
+                &config,
+                &reference.ref_type(),
+            )
+        });
+
+        assert_eq!(discriminants[0], discriminants[1]);
     }
 
     #[test]
