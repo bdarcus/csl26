@@ -396,27 +396,72 @@ impl<'a> ReferenceSorter<'a> {
     /// each key's ascending/descending direction and stopping at the first
     /// non-equal comparison. Shared by [`Self::compare_cached_references`]
     /// (bibliography sorts) and [`Self::sort_by_keys`] (generic item sorts).
+    ///
+    /// After every resolved key ties, an `Issued` key (if the template has
+    /// one) gets one more implicit look — this time at its full
+    /// year/month/day precision, not just the year `compare_cached_value`
+    /// used for the key itself. This mirrors CMOS/CSL's own two-stage date
+    /// comparison (`chicago-author-date.csl`'s `date-sort-year` macro, "only
+    /// the year is to be taken into account" per CMOS18 13.114, plus a raw
+    /// `<key variable="issued"/>` far later in the same `<sort>` list as a
+    /// last-resort tiebreak) without adding a second, separately-configured
+    /// sort key: a style author who wants month/day to matter already gets
+    /// it, but only after every other key — including Title — has had a
+    /// chance to decide. See csl26-uy29.
+    ///
+    /// **This is not Chicago-specific.** `GroupSortKeyType::Issued` is a
+    /// generic engine key shared by every style resolving an `Issued` sort
+    /// position — confirmed the year-only convention is the norm, not the
+    /// exception, by reading the actual `<sort>` macros of three
+    /// independent major author-date styles: `apa.csl`'s `date-sort` macro
+    /// (`<date date-parts="year" .../>` for every ordinary type),
+    /// `elsevier-harvard.csl`'s `issued` sort macro (`<date-part
+    /// name="year"/>` only, no month/day at all, and no `title` key either
+    /// — making the trailing full-date tiebreak this comment describes the
+    /// *only* thing that can break a same-year tie for that style), and
+    /// Chicago's own `date-sort-year`. See
+    /// `test_apa_shaped_author_date_title_falls_through_to_full_date_for_same_year_same_title`
+    /// below for a non-Chicago regression case built on the exact resolved
+    /// template `Processing::AuthorDate`/`AuthorDateFull` produces for APA,
+    /// Elsevier-Harvard, and every other style using that processing family.
     fn compare_cached_values(
         &self,
         a: &[CachedSortValue],
         b: &[CachedSortValue],
         compiled_keys: &[CompiledSortKey<'_>],
     ) -> std::cmp::Ordering {
+        let mut issued_tiebreak: Option<std::cmp::Ordering> = None;
+
         for (index, sort_key) in compiled_keys.iter().enumerate() {
             #[allow(
                 clippy::indexing_slicing,
                 reason = "index is derived from compiled_keys"
             )]
-            let cmp = self.compare_cached_value(&a[index], &b[index]);
-            let cmp = if Self::is_ascending(sort_key) {
-                cmp
-            } else {
-                cmp.reverse()
-            };
+            let (a_value, b_value) = (&a[index], &b[index]);
+            let cmp = self.compare_cached_value(a_value, b_value);
+            let ascending = Self::is_ascending(sort_key);
+            let cmp = if ascending { cmp } else { cmp.reverse() };
 
             if cmp != std::cmp::Ordering::Equal {
                 return cmp;
             }
+
+            if let (CachedSortValue::Issued(a_date), CachedSortValue::Issued(b_date)) =
+                (a_value, b_value)
+            {
+                let full_cmp = compare_none_last(*a_date, *b_date);
+                issued_tiebreak = Some(if ascending {
+                    full_cmp
+                } else {
+                    full_cmp.reverse()
+                });
+            }
+        }
+
+        if let Some(full_cmp) = issued_tiebreak
+            && full_cmp != std::cmp::Ordering::Equal
+        {
+            return full_cmp;
         }
 
         std::cmp::Ordering::Equal
@@ -451,7 +496,13 @@ impl<'a> ReferenceSorter<'a> {
                 self.text_collator.compare(a_text, b_text)
             }
             (CachedSortValue::Issued(a_date), CachedSortValue::Issued(b_date)) => {
-                compare_none_last(*a_date, *b_date)
+                // Year only — CMOS18 13.114 ("only the year is to be taken
+                // into account"), matching chicago-author-date.csl's
+                // date-sort-year macro. Full year/month/day precision is
+                // still available as an implicit tiebreak, applied by
+                // `compare_cached_values` only after every key (including
+                // Title) has had a chance to decide. See csl26-uy29.
+                compare_none_last(a_date.map(|(year, ..)| year), b_date.map(|(year, ..)| year))
             }
             _ => std::cmp::Ordering::Equal,
         }
@@ -611,6 +662,12 @@ impl<'a> ReferenceSorter<'a> {
     /// defaults to `0`, sorting before any real value - the less precise a
     /// date is, the earlier it's treated, matching EDTF's own
     /// could-be-anywhere-in-range convention for reduced precision.
+    ///
+    /// Only the year is compared for the `Issued` key itself
+    /// (`compare_cached_value`); the full tuple returned here is retained
+    /// in `CachedSortValue::Issued` and consulted only as
+    /// `compare_cached_values`'s implicit post-Title tiebreak. See
+    /// csl26-uy29.
     fn issued_date_parts(reference: &Reference) -> Option<(i32, u32, u32)> {
         let date = reference.effective_issued_date()?;
         let (year, month, day) = date.date_parts()?;
@@ -873,6 +930,29 @@ mod tests {
             "type": ref_type,
             "author": [{"family": author_family, "given": "Test"}],
             "issued": {"date-parts": [[year]]},
+            "title": title,
+            "container-title": "Test Container",
+        });
+        let legacy: csl_legacy::csl_json::Reference = serde_json::from_value(json).unwrap();
+        legacy.into()
+    }
+
+    /// Like [`make_reference`], but with an issued date whose precision is
+    /// exactly `date_parts` (e.g. `[2004]` for year-only, `[2004, 6]` for
+    /// year+month) — for exercising the year-only `Issued` key vs. its
+    /// full-precision tiebreak (`csl26-uy29`).
+    fn make_reference_with_date_parts(
+        id: &str,
+        ref_type: &str,
+        author_family: &str,
+        title: &str,
+        date_parts: &[i32],
+    ) -> Reference {
+        let json = serde_json::json!({
+            "id": id,
+            "type": ref_type,
+            "author": [{"family": author_family, "given": "Test"}],
+            "issued": {"date-parts": [date_parts]},
             "title": title,
             "container-title": "Test Container",
         });
@@ -1167,6 +1247,125 @@ mod tests {
 
         assert_eq!(refs[0].id().unwrap(), "r2");
         assert_eq!(refs[1].id().unwrap(), "r1");
+    }
+
+    /// csl26-uy29 (Fogel pair): same author, same year, one entry with
+    /// month precision and one without. CMOS18 13.114 ("only the year is
+    /// to be taken into account") means the Issued key must tie here so
+    /// Title decides — matching citeproc-js's oracle order (verified via
+    /// the real chicago-author-date-18th fixture entries, csl26-uy29).
+    /// Before this fix, the Issued key compared full (year, month, day)
+    /// with a missing month defaulting to 0, so the undated-month entry
+    /// wrongly sorted first regardless of title.
+    #[test]
+    fn test_issued_year_tie_falls_through_to_title_when_month_differs() {
+        let locale = make_locale();
+        let sorter = ReferenceSorter::new(&locale);
+
+        let alpha_has_month =
+            make_reference_with_date_parts("r1", "book", "Fogel", "Alpha Title", &[2004, 6]);
+        let zulu_no_month =
+            make_reference_with_date_parts("r2", "book", "Fogel", "Zulu Title", &[2004]);
+
+        let mut refs = vec![&zulu_no_month, &alpha_has_month];
+
+        let sort_spec = GroupSort {
+            template: vec![
+                GroupSortKey {
+                    key: GroupSortKeyType::Issued,
+                    ascending: true,
+                    order: None,
+                    sort_order: None,
+                },
+                GroupSortKey {
+                    key: GroupSortKeyType::Title,
+                    ascending: true,
+                    order: None,
+                    sort_order: None,
+                },
+            ],
+        };
+
+        refs = sorter.sort_references(refs, &sort_spec);
+
+        assert_eq!(refs[0].id().unwrap(), "r1"); // Alpha (A < Z), month never consulted
+        assert_eq!(refs[1].id().unwrap(), "r2"); // Zulu
+    }
+
+    /// csl26-uy29 (Gourmet pair, csl26-xm1n's original case): same author,
+    /// same year, identical title, both entries WITH month precision but
+    /// different months. Title can't discriminate here, so the implicit
+    /// full-date tiebreak in `compare_cached_values` must still decide —
+    /// preserving xm1n's fix (May before September) even though the
+    /// primary `Issued` key is now year-only.
+    #[test]
+    fn test_issued_year_and_title_tie_falls_through_to_full_date() {
+        let locale = make_locale();
+        let sorter = ReferenceSorter::new(&locale);
+
+        let september =
+            make_reference_with_date_parts("r1", "article-magazine", "Gourmet", "", &[2000, 9]);
+        let may =
+            make_reference_with_date_parts("r2", "article-magazine", "Gourmet", "", &[2000, 5]);
+
+        let mut refs = vec![&september, &may];
+
+        let sort_spec = GroupSort {
+            template: vec![
+                GroupSortKey {
+                    key: GroupSortKeyType::Issued,
+                    ascending: true,
+                    order: None,
+                    sort_order: None,
+                },
+                GroupSortKey {
+                    key: GroupSortKeyType::Title,
+                    ascending: true,
+                    order: None,
+                    sort_order: None,
+                },
+            ],
+        };
+
+        refs = sorter.sort_references(refs, &sort_spec);
+
+        assert_eq!(refs[0].id().unwrap(), "r2"); // May
+        assert_eq!(refs[1].id().unwrap(), "r1"); // September
+    }
+
+    /// csl26-uy29's year-only-Issued fix isn't Chicago-specific: it changes
+    /// `GroupSortKeyType::Issued`, the generic key `SortPreset::
+    /// AuthorDateTitle::group_sort()` resolves to — the same preset
+    /// `Processing::AuthorDate`/`AuthorDateFull` selects for APA,
+    /// Elsevier-Harvard, and every other author-date style that doesn't
+    /// author its own `sort:` override. This test builds that exact
+    /// resolved template (not a hand-rolled stand-in) and exercises both
+    /// halves of the fix on it: same year + different title (title
+    /// decides, month never consulted) and same year + same title (title
+    /// ties too, so the trailing full-date tiebreak decides).
+    #[test]
+    fn test_author_date_title_preset_matches_the_year_only_fix_for_non_chicago_styles() {
+        let locale = make_locale();
+        let sorter = ReferenceSorter::new(&locale);
+        let sort_spec = citum_schema::presets::SortPreset::AuthorDateTitle.group_sort();
+
+        let alpha_has_month =
+            make_reference_with_date_parts("r1", "book", "Fogel", "Alpha Title", &[2004, 6]);
+        let zulu_no_month =
+            make_reference_with_date_parts("r2", "book", "Fogel", "Zulu Title", &[2004]);
+        let mut refs = vec![&zulu_no_month, &alpha_has_month];
+        refs = sorter.sort_references(refs, &sort_spec);
+        assert_eq!(refs[0].id().unwrap(), "r1"); // Alpha (A < Z), month unused
+        assert_eq!(refs[1].id().unwrap(), "r2"); // Zulu
+
+        let september =
+            make_reference_with_date_parts("r3", "article-magazine", "Gourmet", "", &[2000, 9]);
+        let may =
+            make_reference_with_date_parts("r4", "article-magazine", "Gourmet", "", &[2000, 5]);
+        let mut refs = vec![&september, &may];
+        refs = sorter.sort_references(refs, &sort_spec);
+        assert_eq!(refs[0].id().unwrap(), "r4"); // May
+        assert_eq!(refs[1].id().unwrap(), "r3"); // September
     }
 
     #[test]
