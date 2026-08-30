@@ -1,8 +1,8 @@
 # Localization Integrity Policy
 
 **Status:** Active
-**Version:** 1.0
-**Date:** 2026-08-07
+**Version:** 1.1
+**Date:** 2026-08-30
 **Related:** [`CHICAGO_FAMILY_STRATEGY.md`](../specs/CHICAGO_FAMILY_STRATEGY.md), [`AUTHORING_LOCALES.md`](../guides/AUTHORING_LOCALES.md), [`LOCALE_MESSAGES.md`](../specs/LOCALE_MESSAGES.md), bean `csl26-dfq0`
 
 ## Rule
@@ -11,6 +11,18 @@ A style template must not hardcode natural-language prose as a literal
 `prefix`/`suffix` string when an equivalent locale role verb, term, or
 `message: pattern.*` already exists. Use the locale mechanism instead, so the
 same template renders correctly under every installed locale.
+
+The same rule applies to a style's own `options.messages` (and its
+`citation.options.messages`/`bibliography.options.messages` variants): a
+locally declared `pattern.*` value that already exists as a locale term or
+message (verbatim, once normalized) belongs in the locale file, not
+re-declared per style. Left local, it is invisible to `STYLE010` (which only
+scans `prefix:`/`suffix:` lines) and drifts silently — `csl26-7yxy` found the
+same three keys hardcoded verbatim across four Chicago-family style files
+this way. `pattern.*` prose with **no** existing locale equivalent is not a
+violation of this half of the rule; it still needs the locale entry added
+once (per the "no existing term/message equivalent" row below), after which
+every style referencing that message ID shares one translation.
 
 ## Rationale
 
@@ -54,6 +66,13 @@ scripts/style-structure-lint.js --json crates/citum-schema-style/embedded/styles
 targets the in-repo `styles/` tier; wiring embedded styles into that default
 is a separate, portfolio-wide decision not made here.
 
+`STYLE011` covers the `options.messages` half of the rule, reusing the same
+`localeValueSet` against each `pattern.*` value declared in a style's
+`options.messages`/`citation.options.messages`/`bibliography.options.messages`
+block. Also report-only, not in `FATAL_RULE_IDS`. It flags the *declaration*,
+not the call site — a duplicate message ID with an identical value, wherever
+it is defined in the file.
+
 ## Exceptions
 
 A site may keep a literal string if converting it would lose exact parity
@@ -68,3 +87,6 @@ recorded reason.
 
 - 2026-08-07: Initial version, established from the Chicago-family
   localization-adoption audit.
+- 2026-08-30: Extended the rule to `options.messages` declarations (not just
+  `prefix`/`suffix` call sites) and added `STYLE011` to detect it. Closes
+  `csl26-7yxy`.
