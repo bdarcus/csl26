@@ -19,6 +19,13 @@ impl Renderer<'_> {
     /// - The chunk contains exactly one reference ID.
     /// - The chunk is semantically a bare numeric label.
     /// - The citation numbers are consecutive.
+    /// - The run has at least three consecutive numbers. citeproc-js's own
+    ///   `NumericBlob.checkNext` state machine only starts suppressing a
+    ///   run into a range once a *third* consecutive item is seen
+    ///   (`SUCCESSOR` → `SUCCESSOR_OF_SUCCESSOR`); a pair stays two
+    ///   separately-delimited numbers (`29,30`, not `29–30`). Verified
+    ///   against the real oracle (`disambiguate-year-suffix` and sibling
+    ///   citation clusters) — csl26-rgys.
     #[allow(clippy::indexing_slicing, reason = "loop-guaranteed indices")]
     pub(super) fn collapse_numeric_citation_chunks(
         &self,
@@ -75,7 +82,7 @@ impl Renderer<'_> {
                 j += 1;
             }
 
-            if block_ids.len() < 2 {
+            if block_ids.len() < 3 {
                 collapsed.push(chunks[i].clone());
                 i += 1;
                 continue;
@@ -335,13 +342,17 @@ mod tests {
                 )],
             ),
             (
+                // A pair never collapses into a range — citeproc-js only
+                // suppresses a run into a range starting at the third
+                // consecutive item (see the function doc comment).
                 vec![
                     (vec!["A".to_string()], "1".to_string()),
                     (vec!["B".to_string()], "2".to_string()),
                     (vec!["D".to_string()], "4".to_string()),
                 ],
                 vec![
-                    (vec!["A".to_string(), "B".to_string()], "1–2".to_string()),
+                    (vec!["A".to_string()], "1".to_string()),
+                    (vec!["B".to_string()], "2".to_string()),
                     (vec!["D".to_string()], "4".to_string()),
                 ],
             ),
