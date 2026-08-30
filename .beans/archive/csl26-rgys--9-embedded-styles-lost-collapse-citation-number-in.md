@@ -9,7 +9,7 @@ tags:
     - migrate
     - chicago
 created_at: 2026-08-26T22:30:13Z
-updated_at: 2026-08-30T18:37:45Z
+updated_at: 2026-08-30T22:41:26Z
 parent: csl26-awlo
 ---
 
@@ -28,3 +28,10 @@ Cross-checked every style's info.source.csl-id against styles-legacy/*.csl <cita
 **No action (american-mathematical-society-label):** confirmed `label-mode: alphabetic`, not numeric — correctly has no `collapse:` field, matches the bean's original assessment exactly.
 
 Verification: `cargo nextest run -p citum-schema-style -p citum-engine`: 1935/1935 pass. `cargo fmt --check`: clean. Oracle run on all 7 touched legacy CSL sources shows identical pass/fail counts to pre-edit baseline.
+
+## Follow-up fix (post-merge, pre-push CI catch)
+
+Enabling collapse surfaced two further defects not visible in this bean's own verification (which only checked bibliography-side oracle diffs, not the citations-expanded.json corpus):
+
+1. **collapse: citation-number leaked through extends** into american-mathematical-society-label (via elsevier-with-titles -> elsevier-with-titles-core), where citation-number collapse is invalid for label-mode processing. Fixed by explicit `collapse: null` on the leaf style.
+2. **Engine bug: numeric collapse required only 2+ consecutive numbers**, not 3+. citeproc-js's `NumericBlob.checkNext` state machine only starts suppressing a run into a range at the *third* consecutive item -- a pair stays comma-separated (`29,30`), never collapses to a hyphenated range (`29–30`). This defect predates this bean (already silently present in american-medical-association's baseline) but was dormant for elsevier-with-titles/springer-basic-brackets until this bean enabled their collapse. Fixed in `crates/citum-engine/src/processor/rendering/collapse.rs` (`block_ids.len() < 2` -> `< 3`). Full 35-style corpus diff: zero regressions, three unrelated improvements (american-chemical-society, gb-t-7714-2025-numeric, royal-society-of-chemistry, +4 exact-parity entries each).
