@@ -22,6 +22,7 @@ const RULES = {
   STYLE008: 'Rendered template terms are deprecated; use message components instead.',
   STYLE009: 'Phrase-like term-backed messages must use localized pattern messages.',
   STYLE010: 'Hardcoded prefix/suffix prose duplicates an existing locale role verb, term, or message; use the locale mechanism instead so the text localizes. See docs/policies/LOCALIZATION_INTEGRITY.md.',
+  STYLE011: 'A style-local options.messages entry duplicates a value already available from a locale role, term, or message; declare it in the locale instead so every style sharing that text shares one translation. See docs/policies/LOCALIZATION_INTEGRITY.md.',
 };
 
 const FATAL_RULE_IDS = new Set(['STYLE008', 'STYLE009']);
@@ -31,6 +32,7 @@ const ALLOWED_TERM_MESSAGE_IDS = new Set([
   'ibid',
   'no-date',
   'personal-communication',
+  'version',
   'volume',
 ]);
 
@@ -416,6 +418,52 @@ function collectSubstituteViolations(filePath, content, data) {
   return violations;
 }
 
+/**
+ * STYLE011 — like STYLE010, but scoped to `options.messages` (and its
+ * citation/bibliography-level variants) instead of `prefix`/`suffix` lines.
+ * A style-local message whose normalized value already exists in the
+ * reference locale's roles/terms/messages (`localeValueSet`, shared with
+ * STYLE010) is either a dead duplicate or prose that was never contributed
+ * to the locale in the first place — invisible to STYLE010 because it never
+ * appears as a bare `prefix:`/`suffix:` line. Report-only: which locale file
+ * should own the text (base vs. a `locale-override`) is a judgment call this
+ * rule does not make.
+ */
+function collectHardcodedMessageDuplicateViolations(filePath, content, data, localeValueSet) {
+  const violations = [];
+  if (!localeValueSet || localeValueSet.size === 0) return violations;
+
+  const scopes = [
+    { label: 'options.messages', path: ['options', 'messages'] },
+    { label: 'citation.options.messages', path: ['citation', 'options', 'messages'] },
+    { label: 'bibliography.options.messages', path: ['bibliography', 'options', 'messages'] },
+  ];
+
+  for (const scope of scopes) {
+    const messages = getPathValue(data, scope.path);
+    if (!messages || typeof messages !== 'object' || Array.isArray(messages)) continue;
+
+    for (const [messageId, rawValue] of Object.entries(messages)) {
+      const normalized = normalizeAffixText(rawValue);
+      if (!normalized || !localeValueSet.has(normalized)) continue;
+
+      const line = lineNumberForPattern(
+        content,
+        new RegExp(`^\\s*${escapeRegExp(messageId)}:`, 'm')
+      );
+      violations.push({
+        ruleId: 'STYLE011',
+        file: repoRelative(filePath),
+        line,
+        message: `${RULES.STYLE011} Found ${scope.label}.${messageId}: ${String(rawValue).trim()}`,
+        fixable: false,
+      });
+    }
+  }
+
+  return violations;
+}
+
 function collectContributorComponents(node, trail = []) {
   const components = [];
 
@@ -550,12 +598,13 @@ function collectRawPageLabelPrefixViolations(filePath, content, data) {
   return violations;
 }
 
-function lintParsedStyle(filePath, content, data) {
+function lintParsedStyle(filePath, content, data, localeValueSet) {
   return [
     ...collectSubstituteViolations(filePath, content, data),
     ...collectShortenViolations(filePath, content, data),
     ...collectTemplateDuplicateViolations(filePath, content, data),
     ...collectRawPageLabelPrefixViolations(filePath, content, data),
+    ...collectHardcodedMessageDuplicateViolations(filePath, content, data, localeValueSet),
   ];
 }
 
@@ -882,7 +931,7 @@ function lintStyleFile(filePath, options = {}) {
   }
 
   if (parsed && typeof parsed === 'object') {
-    violations.push(...lintParsedStyle(filePath, workingContent, parsed));
+    violations.push(...lintParsedStyle(filePath, workingContent, parsed, localeValueSet));
   }
 
   if (options.fix && parsed && typeof parsed === 'object') {
@@ -914,10 +963,10 @@ function lintStyleFile(filePath, options = {}) {
     ...lintHardcodedLocaleProse(filePath, refreshedContent, localeValueSet),
   ];
   if (parsed && typeof parsed === 'object' && !fixed) {
-    refreshedViolations.push(...lintParsedStyle(filePath, refreshedContent, parsed));
+    refreshedViolations.push(...lintParsedStyle(filePath, refreshedContent, parsed, localeValueSet));
   } else if (fixed) {
     const refreshedParsed = yaml.load(refreshedContent);
-    refreshedViolations.push(...lintParsedStyle(filePath, refreshedContent, refreshedParsed));
+    refreshedViolations.push(...lintParsedStyle(filePath, refreshedContent, refreshedParsed, localeValueSet));
   }
 
   return {

@@ -503,6 +503,70 @@ test('STYLE010 does not flag prose with no locale equivalent', () => {
   assert.equal(violations.length, 0);
 });
 
+test('STYLE011 flags an options.messages entry that duplicates a locale message', () => {
+  const localeValueSet = new Set(['of']);
+  const content = `options:
+  messages:
+    pattern.chicago-of: "of {$container}"
+`;
+  const data = {
+    options: {
+      messages: {
+        'pattern.chicago-of': 'of {$container}',
+      },
+    },
+  };
+
+  const violations = lintParsedStyle('styles/fixture.yaml', content, data, localeValueSet);
+  const style011 = violations.filter((violation) => violation.ruleId === 'STYLE011');
+
+  assert.equal(style011.length, 1);
+  assert.equal(style011[0].line, 3);
+  assert.equal(style011[0].fixable, false);
+});
+
+test('STYLE011 checks citation- and bibliography-scoped options.messages too', () => {
+  const localeValueSet = new Set(['of']);
+  const content = `citation:
+  options:
+    messages:
+      pattern.chicago-of: "of {$container}"
+`;
+  const data = {
+    citation: {
+      options: {
+        messages: {
+          'pattern.chicago-of': 'of {$container}',
+        },
+      },
+    },
+  };
+
+  const violations = lintParsedStyle('styles/fixture.yaml', content, data, localeValueSet);
+  const style011 = violations.filter((violation) => violation.ruleId === 'STYLE011');
+
+  assert.equal(style011.length, 1);
+});
+
+test('STYLE011 does not flag a message with no locale equivalent', () => {
+  const localeValueSet = new Set(['of']);
+  const content = `options:
+  messages:
+    pattern.chicago-episode: "episode {$number}"
+`;
+  const data = {
+    options: {
+      messages: {
+        'pattern.chicago-episode': 'episode {$number}',
+      },
+    },
+  };
+
+  const violations = lintParsedStyle('styles/fixture.yaml', content, data, localeValueSet);
+
+  assert.equal(violations.some((violation) => violation.ruleId === 'STYLE011'), false);
+});
+
 test('normalizeAffixText strips quotes, punctuation, and casefolds', () => {
   assert.equal(normalizeAffixText('"Translated by "'), 'translated by');
   assert.equal(normalizeAffixText('", written by "'), 'written by');

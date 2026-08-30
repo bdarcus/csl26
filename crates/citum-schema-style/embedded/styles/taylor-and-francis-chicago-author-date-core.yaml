@@ -8,10 +8,10 @@ info:
 extends: chicago-author-date-18th
 options:
   multilingual: romanized-translated
-  messages:
-    pattern.chicago-of: "of {$container}"
-    pattern.chicago-volume: "Vol. {$number}"
-    pattern.chicago-volume-lower: "vol. {$number}"
+  # pattern.chicago-of and term.volume (used at their call sites below) are
+  # locale-level — see en-US.yaml and docs/policies/LOCALIZATION_INTEGRITY.md.
+  # Inherited from chicago-author-date-18th's own locale posture (no
+  # locale-override set here either).
   range-format: expanded
   # T&F Style F (tf_f.pdf) prescribes sentence-style capitalisation for titles
   # (only the first word capitalised) — a deliberate divergence from the CSL
@@ -135,10 +135,13 @@ bibliography:
       render-when:
         field-present: volume-or-issue
     - group:
-      - message: pattern.chicago-volume
-        args:
-          number:
-            number: volume
+      - group:
+        - message: term.volume
+          form: short
+          text-case: capitalize-first
+          suffix: " "
+        - number: volume
+        delimiter: ""
       - number: part-number
         label-form: short
       - message: pattern.chicago-of
@@ -162,10 +165,12 @@ bibliography:
                 emph: true
           delimiter: " "
         - group:
-          - message: pattern.chicago-volume-lower
-            args:
-              number:
-                number: volume
+          - group:
+            - message: term.volume
+              form: short
+              suffix: " "
+            - number: volume
+            delimiter: ""
           - message: pattern.chicago-of
             args:
               container:
@@ -176,10 +181,13 @@ bibliography:
         render-when:
           field-present: volume-title
       - group:
-        - message: pattern.chicago-volume
-          args:
-            number:
-              number: volume
+        - group:
+          - message: term.volume
+            form: short
+            text-case: capitalize-first
+            suffix: " "
+          - number: volume
+          delimiter: ""
         - number: part-number
           label-form: short
         - message: pattern.chicago-of
@@ -193,10 +201,13 @@ bibliography:
       render-when:
         field-present: part-number-non-numeric
     - group:
-      - message: pattern.chicago-volume
-        args:
-          number:
-            number: volume
+      - group:
+        - message: term.volume
+          form: short
+          text-case: capitalize-first
+          suffix: " "
+        - number: volume
+        delimiter: ""
       - message: pattern.chicago-of
         args:
           container:

@@ -35,10 +35,8 @@ info:
   default-locale: en-US
 options:
   multilingual: romanized-translated
-  messages:
-    pattern.chicago-of: "of {$container}"
-    pattern.chicago-volume: "Vol. {$number}"
-    pattern.chicago-volume-lower: "vol. {$number}"
+  # pattern.chicago-of and term.volume (used at its call sites below) are
+  # locale-level — see en-US.yaml and docs/policies/LOCALIZATION_INTEGRITY.md.
   locale-override: en-US-chicago
   processing: note
   contributors:
@@ -255,10 +253,13 @@ bibliography:
       - group:
         - title: collection-title
           text-case: title
-        - message: pattern.chicago-volume
-          args:
-            number:
-              number: volume
+        - group:
+          - message: term.volume
+            form: short
+            text-case: capitalize-first
+            suffix: " "
+          - number: volume
+          delimiter: ""
           prefix: ". "
         - title: parent-monograph
           text-case: title
@@ -309,10 +310,13 @@ bibliography:
         - group:
           - title: parent-monograph
             text-case: title
-          - message: pattern.chicago-volume
-            args:
-              number:
-                number: volume
+          - group:
+            - message: term.volume
+              form: short
+              text-case: capitalize-first
+              suffix: " "
+            - number: volume
+            delimiter: ""
             prefix: ". "
           - group:
             - variable: volume-title
@@ -334,10 +338,13 @@ bibliography:
         - group:
           - title: parent-monograph
             text-case: title
-          - message: pattern.chicago-volume
-            args:
-              number:
-                number: volume
+          - group:
+            - message: term.volume
+              form: short
+              text-case: capitalize-first
+              suffix: " "
+            - number: volume
+            delimiter: ""
             prefix: ". "
           - title: primary
             text-case: title
@@ -383,10 +390,13 @@ bibliography:
       render-when:
         field-absent: volume-or-issue
     - group:
-      - message: pattern.chicago-volume
-        args:
-          number:
-            number: volume
+      - group:
+        - message: term.volume
+          form: short
+          text-case: capitalize-first
+          suffix: " "
+        - number: volume
+        delimiter: ""
       - number: part-number
         label-form: short
       - message: pattern.chicago-of
@@ -411,10 +421,12 @@ bibliography:
                 emph: true
           delimiter: " "
         - group:
-          - message: pattern.chicago-volume-lower
-            args:
-              number:
-                number: volume
+          - group:
+            - message: term.volume
+              form: short
+              suffix: " "
+            - number: volume
+            delimiter: ""
           - message: pattern.chicago-of
             args:
               container:
@@ -425,10 +437,13 @@ bibliography:
         render-when:
           field-present: volume-title
       - group:
-        - message: pattern.chicago-volume
-          args:
-            number:
-              number: volume
+        - group:
+          - message: term.volume
+            form: short
+            text-case: capitalize-first
+            suffix: " "
+          - number: volume
+          delimiter: ""
         - number: part-number
           label-form: short
         - message: pattern.chicago-of

@@ -33,12 +33,10 @@ info:
   short-name: "Chicago Author-Date"
   edition: "18th edition"
 options:
-  messages:
-    pattern.chicago-episode: "Episode {$number}"
-    pattern.chicago-of: "of {$container}"
-    pattern.chicago-volume: "Vol. {$number}"
-    pattern.chicago-volume-lower: "vol. {$number}"
-    pattern.chicago-version: "V. {$version}"
+  # pattern.chicago-episode, pattern.chicago-of, and term.volume/term.version
+  # (used at their call sites below) are locale-level — see en-US.yaml and
+  # docs/policies/LOCALIZATION_INTEGRITY.md. This style does not set
+  # locale-override, so it inherits en-US directly.
   date-fallback: standard
   # multilingual, range-format, dates, punctuation-in-quote, and
   # contributors.demote-non-dropping-particle are inherited from chicago-18-base.
@@ -436,10 +434,13 @@ bibliography:
       render-when:
         field-present: volume-or-issue
     - group:
-      - message: pattern.chicago-volume
-        args:
-          number:
-            number: volume
+      - group:
+        - message: term.volume
+          form: short
+          text-case: capitalize-first
+          suffix: " "
+        - number: volume
+        delimiter: ""
       - number: part-number
         label-form: short
       - message: pattern.chicago-of
@@ -463,10 +464,12 @@ bibliography:
                 emph: true
           delimiter: " "
         - group:
-          - message: pattern.chicago-volume-lower
-            args:
-              number:
-                number: volume
+          - group:
+            - message: term.volume
+              form: short
+              suffix: " "
+            - number: volume
+            delimiter: ""
           - message: pattern.chicago-of
             args:
               container:
@@ -477,10 +480,13 @@ bibliography:
         render-when:
           field-present: volume-title
       - group:
-        - message: pattern.chicago-volume
-          args:
-            number:
-              number: volume
+        - group:
+          - message: term.volume
+            form: short
+            text-case: capitalize-first
+            suffix: " "
+          - number: volume
+          delimiter: ""
         - number: part-number
           label-form: short
         - message: pattern.chicago-of
@@ -494,10 +500,13 @@ bibliography:
       render-when:
         field-present: part-number-non-numeric
     - group:
-      - message: pattern.chicago-volume
-        args:
-          number:
-            number: volume
+      - group:
+        - message: term.volume
+          form: short
+          text-case: capitalize-first
+          suffix: " "
+        - number: volume
+        delimiter: ""
       - message: pattern.chicago-of
         args:
           container:
@@ -591,6 +600,7 @@ bibliography:
       emph: true
     - group:
       - message: pattern.chicago-episode
+        text-case: capitalize-first
         args:
           number:
             variable: number
@@ -1006,10 +1016,13 @@ bibliography:
     - title: primary
       text-case: title
     - variable: raw-genre
-    - message: pattern.chicago-version
-      args:
-        version:
-          variable: version
+    - group:
+      - message: term.version
+        form: short
+        text-case: capitalize-first
+        suffix: " "
+      - variable: version
+      delimiter: ""
     - message: pattern.chicago-released-date
       args:
         date:

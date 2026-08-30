@@ -35,9 +35,9 @@ info:
   short-name: "Chicago Notes"
   edition: "18th edition"
 options:
-  messages:
-    pattern.chicago-episode: "episode {$number}"
-    pattern.chicago-of-number: "of {$number}"
+  # pattern.chicago-episode and pattern.chicago-of-number are locale-level —
+  # see en-US.yaml and docs/policies/LOCALIZATION_INTEGRITY.md. This style
+  # does not set locale-override, so it inherits en-US directly.
   date-fallback: standard
   # multilingual, range-format, dates, punctuation-in-quote, and
   # contributors.demote-non-dropping-particle are inherited from chicago-18-base.
