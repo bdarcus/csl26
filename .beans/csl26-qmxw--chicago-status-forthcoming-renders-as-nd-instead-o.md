@@ -1,11 +1,11 @@
 ---
 # csl26-qmxw
 title: 'Chicago: status: forthcoming renders as n.d. instead of Forthcoming'
-status: todo
+status: in-progress
 type: bug
 priority: normal
 created_at: 2026-08-30T13:28:56Z
-updated_at: 2026-08-30T13:28:56Z
+updated_at: 2026-08-30T19:12:58Z
 ---
 
 Surfaced while row-accounting csl26-rrsb (year-suffix engine fix): several
@@ -31,3 +31,5 @@ whether Chicago's locale has a "forthcoming" term to route to; if not, this
 is either an engine gap (status-aware date fallback) or a locale/YAML gap
 (missing type-variant date-fallback for forthcoming status) — classify with
 the conversion-layer pre-flight before touching YAML.
+
+Design spec: docs/specs/STATUS_DATE_FALLBACK.md (Draft). Adds a new `DateFallbackCandidate::Variable` schema arm rather than a generic `TemplateConditionField::Status` — see spec's Rejected Alternatives.
