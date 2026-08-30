@@ -1131,11 +1131,13 @@ pub(crate) fn render_fallback_component<F: crate::render::format::OutputFormat<O
 ///
 /// Tries each fallback candidate in order and returns the first that
 /// renders. A `message:` candidate (the terminal "no data available" case,
-/// e.g. GB/T 7714's `无日期`/`n.d.` term via `message: term.no-date`) and a
+/// e.g. GB/T 7714's `无日期`/`n.d.` term via `message: term.no-date`), a
 /// `date:` candidate (e.g. GB/T's access-year fallback, rendering
-/// `Anon，[2020a]`) both need the same year-suffix-append convention the
-/// first-issued disambiguation path uses, so every policy candidate
-/// disambiguates identically. See csl26-6eak, csl26-huuz.
+/// `Anon，[2020a]`), and a `variable:` candidate (e.g. Chicago's `status`
+/// fallback, rendering `Forthcoming.`) all need the same year-suffix-append
+/// convention the first-issued disambiguation path uses, so every policy
+/// candidate disambiguates identically. See csl26-6eak, csl26-huuz,
+/// csl26-qmxw.
 ///
 /// For a `date:` candidate, the letter must land inside that candidate's own
 /// wrap (e.g. brackets) — so it is inlined into the raw formatted text
@@ -1195,7 +1197,10 @@ fn render_date_fallback_chain<F: crate::render::format::OutputFormat<Output = St
             continue;
         }
         if !inlined
-            && matches!(component, TemplateComponent::Message(_))
+            && matches!(
+                component,
+                TemplateComponent::Message(_) | TemplateComponent::Variable(_)
+            )
             && let Some(suffix) = suffix_label.as_deref()
         {
             append_no_date_disamb_suffix(&mut output, suffix, options);

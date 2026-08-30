@@ -203,6 +203,22 @@ bibliography:
       # `title: primary` formatting (quote/emph) instead of category-only
       # config — see SUBSTITUTED_TITLE_BIBLIOGRAPHY_FORMATTING.md.
       title-rendering: from-template
+    # Explicit equivalent of the inherited `standard` date-fallback preset,
+    # with a status candidate inserted ahead of the terminal no-date
+    # message: CMOS18 prints a reference's own status text ("Forthcoming.",
+    # "In press.") rather than falling straight to "n.d." when it has no
+    # issued date. Bibliography-scoped only — the citation-form date macro
+    # (`date-short` in the source CSL) uses `text-case="lowercase"` for the
+    # same status text ("forthcoming" vs "Forthcoming."), a distinct
+    # follow-up left for a later bean. See
+    # docs/specs/STATUS_DATE_FALLBACK.md, csl26-qmxw.
+    date-fallback:
+      first-issued:
+        default:
+          - variable: status
+            text-case: capitalize-first
+          - message: term.no-date
+            form: short
     contributors:
       display-as-sort: first
       # Inverted Chicago bibliography names use a serial comma even at two
