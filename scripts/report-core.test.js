@@ -1345,6 +1345,82 @@ test('generateHtml groups families and exposes unadjudicated oracle text drift',
   assert.doesNotMatch(html, /&lt;div&gt;Smith/);
 });
 
+test('generateHtml labels a divergence-masked citation as a known divergence, not an open drift', () => {
+  const html = generateHtml({
+    generated: '2026-08-31T00:00:00.000Z',
+    commit: 'deadbee',
+    metadata: {},
+    totalImpact: 0.1,
+    totalStyles: 1,
+    citationsOverall: { passed: 1, total: 1 },
+    bibliographyOverall: { passed: 0, total: 0 },
+    exactParityOverall: { passed: 0, total: 0, notComparable: 0, rate: 0 },
+    pairingOverall: {
+      paired: 0,
+      unresolvedUnpaired: 0,
+      idProvenOracleOnly: 0,
+      idProvenCitumOnly: 0,
+      totalObservations: 0,
+    },
+    qualityOverall: { score: 1 },
+    families: [],
+    styles: [{
+      name: 'chicago-author-date-18th',
+      format: 'author-date',
+      hasBibliography: true,
+      cslReach: 1,
+      originLabel: 'CSL-derived',
+      benchmarkLabel: 'citeproc-js',
+      bibliographyAuthorityLabel: 'citeproc-js',
+      fidelityScore: 1,
+      exactParity: { passed: 0, total: 0, notComparable: 0, rate: 0 },
+      pairingSummary: {
+        paired: 0,
+        unresolvedUnpaired: 0,
+        idProvenOracleOnly: 0,
+        idProvenCitumOnly: 0,
+        totalObservations: 0,
+      },
+      citations: { passed: 1, total: 1 },
+      bibliography: { passed: 0, total: 0 },
+      qualityScore: 1,
+      qualityBreakdown: {
+        score: 100,
+        subscores: {
+          typeCoverage: { score: 100 },
+          fallbackRobustness: { score: 100 },
+          concision: { score: 100 },
+          presetUsage: { score: 100 },
+        },
+      },
+      // div-017 itself is registered in docs/adjudication/DIVERGENCE_REGISTER.md;
+      // only the note text `renderStyleDetailBody` reads from
+      // adjustedDivergences matters for this test.
+      adjustedDivergences: {
+        'div-017': {
+          note: 'CMOS 15.30-correct comma join; citeproc-js emits a semicolon.',
+        },
+      },
+      citationEntries: [{
+        id: 'disambiguate-year-suffix',
+        rawOracle: '(Garcia 2019b; 2019a)',
+        rawCitum: '(Garcia 2019b, 2019a)',
+        exactOracle: '(Garcia 2019b; 2019a)',
+        exactCitum: '(Garcia 2019b, 2019a)',
+        exactMatch: false,
+        exactAdjudication: 'unresolved',
+        match: true,
+        appliedDivergence: { divergenceId: 'div-017', tag: 'same-author-collapse-no-locator-comma-join', itemIds: ['ITEM-31', 'ITEM-32'] },
+      }],
+    }],
+  });
+
+  assert.match(html, /Known Divergence \(div-017\)/);
+  assert.match(html, /CMOS 15\.30-correct comma join/);
+  assert.doesNotMatch(html, /Unresolved Oracle Drift/);
+  assert.doesNotMatch(html, /Compatibility Fail/);
+});
+
 test('generateHtml replaces registered diff tables with the accessible audit-first explorer', () => {
   const provenance = loadReportProvenance();
   const auditManifest = yaml.load(fs.readFileSync(path.join(
