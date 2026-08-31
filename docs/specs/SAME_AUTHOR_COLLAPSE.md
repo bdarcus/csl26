@@ -1,8 +1,8 @@
 # Same-Author Collapse Specification
 
 **Status:** Active
-**Version:** 1.2
-**Date:** 2026-08-20
+**Version:** 1.3
+**Date:** 2026-08-31
 **Supersedes:** N/A
 **Related:** `csl26-ecfn`, `csl26-m11m`, `csl26-ctkb`, `docs/specs/CITATION_CLUSTER_RENDERING.md`,
 `docs/specs/CITATION_REGIME.md`, `docs/adjudication/DIVERGENCE_REGISTER.md` (div-017),
@@ -291,17 +291,12 @@ the grouping key used everywhere else in the engine and docs
 terminology). This is additive: the existing `CitationCollapse::CitationNumber`
 and its serialized form (`collapse: citation-number`) are unchanged.
 
-The generated JSON schema advertises `citation-number` as a bare string
-(`CitationNumber` is a plain unit variant, so schemars' default external
-tagging matches it exactly) and `same-author` as an object,
-`{ "same-author": <SameAuthorCollapse schema> } `, never as a bare string —
-matching `Processing`'s own published schema, where `{ "label": {...} }` is
-schema-advertised but bare `"label"` is not (`docs/schemas/style.json`,
-`Processing`'s `oneOf`). The bare `collapse: same-author` shorthand in the
-YAML above is real, hand-parsed sugar for `{ "same-author": {} }` — exactly
-how `processing: label` is real, hand-parsed sugar today — it just isn't
-schema-visible, which is an existing, accepted asymmetry in this codebase,
-not a new one.
+The generated JSON schema advertises `citation-number` and `same-author` as
+bare strings. It also accepts a tagged `same-author` map when the style needs
+non-default collapse settings. `Processing` follows the same rule: bare
+`label` selects the default label configuration, while a tagged `label` map
+carries overrides. The published schema and Rust deserializers therefore
+accept the same authoring forms.
 
 ### 2. Default is `None` — no collapse
 
@@ -492,14 +487,11 @@ both share `RegimeFamily::Custom`, which never triggers the inheritance
 guard's cross-family sub-spec reset — but is declared explicitly here since
 its own source independently requests it.
 
-Declared using the config-map form (`same-author: {}`, not the bare
-`same-author` string) in every tracked style: the generated JSON schema only
-advertises `same-author` as an object (§1), so
-`scripts/validate-schemas.js` — which has no normalization step for this
-sugar, unlike its existing `processing:` custom-config handling — rejects the
-bare form. The map form is also what every other config-carrying variant in
-this codebase already uses (`processing: { label: {...} }`, never bare
-`label`).
+Tracked styles use the bare `same-author` form when the default collapse
+configuration is sufficient. Styles that change `year-suffix`, `delimiter`,
+or `year-suffix-delimiter` use the tagged config map. Both forms validate
+directly against `docs/schemas/style.json`; schema validation no longer needs
+an authoring-shape normalization step.
 
 ### 8. Embedded styles that must NOT declare it
 
@@ -743,16 +735,9 @@ CMOS-vs-citeproc-js disagreement that survives this spec unchanged).
 
 ## Acceptance Criteria
 
-- [x] `collapse: same-author` (bare-string) and `{ same-author: { year-suffix:
-      … } }` (config-map) both parse; the config-map form serializes back
-      identically (the bare-string form is deserialize-only sugar and is not
-      expected to round-trip byte-for-byte, matching `processing: label`'s
-      existing behavior). The generated JSON schema's `CitationCollapse`
-      `oneOf` advertises `"citation-number"` as a bare-string const and
-      `same-author` only as `{ "same-author": <SameAuthorCollapse> }`, mirroring
-      `Processing`'s published schema (`docs/schemas/style.json`) exactly —
-      `"label"` is schema-advertised only as an object, never as a bare
-      string, even though the Rust deserializer accepts both.
+- [x] `collapse: same-author` (bare string) and a configured `same-author` map
+      both parse. The generated JSON schema advertises both accepted forms,
+      along with bare and configured `processing: label` forms.
 - [x] Absent `citation.collapse` (directly or via inheritance) produces no
       same-author collapse, in every regime and both citation modes.
 - [x] Migrate maps all four CSL `collapse` values with no information
@@ -917,6 +902,10 @@ normalization step for it (see §7 v1.1).
    description, not here.
 
 ## Changelog
+
+- v1.3 (2026-08-31): Made the published schema advertise the bare
+  `same-author` and `label` shorthands already accepted by the Rust loaders.
+  Default same-author declarations in tracked styles now use the scalar form.
 
 - v1.2 (2026-08-20, `csl26-ctkb`): Adds §13, specifying and (in the stacked
   follow-up PRs) implementing `YearSuffixCollapse::Merged`/`::Ranged`

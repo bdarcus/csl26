@@ -1,8 +1,8 @@
 # Typed Title Mapping Specification
 
 **Status:** Active
-**Version:** 1.0
-**Date:** 2026-08-05
+**Version:** 1.1
+**Date:** 2026-08-31
 **Supersedes:** The `titles.type-mapping` open question in PR #1142
 **Related:** bean `csl26-0h05`, PR #1143,
 [`TYPE_CLASSIFICATION_CENTRALIZATION.md`](./TYPE_CLASSIFICATION_CENTRALIZATION.md),
@@ -25,6 +25,7 @@ In scope:
   types while making lookup spelling consistent.
 - A closed `TitleCategory` value vocabulary.
 - Validation, inheritance, and serialization behavior for the mapping.
+- The `plain` scalar for an explicitly unformatted title category.
 - Shared typed consumption by the engine and migration refinement.
 
 Out of scope:
@@ -146,6 +147,23 @@ Existing per-title-position fallback behavior remains unchanged: a category
 that does not apply to the current title position uses that position's current
 fallback.
 
+### Explicit plain rendering
+
+A title category may use the scalar `plain` instead of an empty mapping:
+
+```yaml
+options:
+  titles:
+    component: plain
+    monograph:
+      emph: true
+```
+
+`plain` resolves to `TitleRendering::default()`. It remains distinct from an
+omitted category: omission inherits an ancestor's setting, while `plain`
+explicitly overlays an unformatted rendering. Serializing a default
+`TitleRendering` emits `plain`; non-default values use the mapping form.
+
 ## Implementation Notes
 
 - Place `ReferenceTypeName` and the shared known-name vocabulary in
@@ -168,9 +186,12 @@ fallback.
   change.
 - [x] Engine rendering and migration refinement agree for every title category
   and title position.
+- [x] `plain` parses and serializes as `TitleRendering::default()` and is
+  advertised by the published style schema.
 
 ## Changelog
 
+- v1.1 (2026-08-31): Added `plain` for explicit unformatted title rendering.
 - v1.0 (2026-08-05): Initial specification.
 - v1.0 implementation (2026-08-05): Activated after schema, engine, migration,
   and embedded-style regression validation.

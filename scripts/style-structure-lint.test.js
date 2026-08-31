@@ -9,16 +9,19 @@ const {
   convertItemsAliasInText,
   expandAnonymousAnchorsInText,
   lintAnonymousAnchors,
+  lintEmptyObjectLiterals,
   lintEmptyStyleVersion,
   lintDeprecatedTemplateTerms,
   lintPhraseLikeTermMessages,
   lintHardcodedLocaleProse,
   lintLegacyItemsAlias,
   lintParsedStyle,
+  listStyleFiles,
   loadLocaleAffixValueSet,
   normalizeAffixText,
   removeEmptyVersionInText,
   stripAnonymousAnchorMarkersInText,
+  summarize,
 } = require('./style-structure-lint');
 
 function writeTempStyle(content) {
@@ -44,6 +47,46 @@ citation:
 
   assert.equal(violations.length, 2);
   assert.equal(violations[0].ruleId, 'STYLE001');
+});
+
+test('STYLE012 rejects empty objects in fields and comments', () => {
+  const content = `options:
+  titles:
+    component: {}
+# do not recommend {}
+`;
+
+  const violations = lintEmptyObjectLiterals('styles/fixture.yaml', content);
+
+  assert.equal(violations.length, 2);
+  assert.equal(violations.every((violation) => violation.ruleId === 'STYLE012'), true);
+  assert.deepEqual(violations.map((violation) => violation.line), [3, 4]);
+});
+
+test('tracked style corpus contains no literal empty objects', () => {
+  const violations = listStyleFiles().flatMap((filePath) =>
+    lintEmptyObjectLiterals(filePath, fs.readFileSync(filePath, 'utf8'))
+  );
+
+  assert.deepEqual(violations, []);
+});
+
+test('rule-filtered summaries isolate STYLE012 from unrelated findings', () => {
+  const summary = summarize(
+    [
+      {
+        fixed: false,
+        violations: [
+          { ruleId: 'STYLE008' },
+          { ruleId: 'STYLE012' },
+        ],
+      },
+    ],
+    ['STYLE012']
+  );
+
+  assert.equal(summary.filesWithViolations, 1);
+  assert.deepEqual(summary.violations, [{ ruleId: 'STYLE012' }]);
 });
 
 test('STYLE002 flags empty substitute candidates that should use none', () => {

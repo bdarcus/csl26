@@ -39,35 +39,6 @@ const ModeDependentType = new yaml.Type('!mode-dependent', {
 
 const Citum_SCHEMA = yaml.DEFAULT_SCHEMA.extend([ModeDependentType]);
 
-function normalizeForSchema(value) {
-  if (Array.isArray(value)) {
-    return value.map(normalizeForSchema);
-  }
-
-  if (!value || typeof value !== 'object') {
-    return value;
-  }
-
-  const normalized = Object.fromEntries(
-    Object.entries(value).map(([key, entryValue]) => [key, normalizeForSchema(entryValue)])
-  );
-
-  if (
-    normalized.processing &&
-    typeof normalized.processing === 'object' &&
-    !Array.isArray(normalized.processing) &&
-    !('custom' in normalized.processing) &&
-    !('label' in normalized.processing)
-  ) {
-    const keys = Object.keys(normalized.processing);
-    if (keys.length > 0 && keys.every(k => ['sort', 'group', 'disambiguate'].includes(k))) {
-      normalized.processing = { custom: normalized.processing };
-    }
-  }
-
-  return normalized;
-}
-
 function normalizeForSchemaKey(data, schemaKey) {
   if (
     schemaKey === 'citation' &&
@@ -93,7 +64,6 @@ function validate(filePath, schemaKey) {
     return; // Skip other formats
   }
 
-  data = normalizeForSchema(data);
   data = normalizeForSchemaKey(data, schemaKey);
 
   const validateFn = ajv.compile(schemas[schemaKey]);

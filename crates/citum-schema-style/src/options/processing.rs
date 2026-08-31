@@ -137,11 +137,7 @@ impl LabelConfig {
 /// - A string: `"author-date"`, `"author-date-full"`, `"numeric"`, `"note"`, or `"label"`
 /// - A label config map: `{ label: { preset: din } }`
 /// - A custom config map: `{ sort: ..., group: ..., disambiguate: ... }`
-// `rename_all` is retained for `JsonSchema` derive (custom `Serialize` /
-// `Deserialize` impls below already use kebab-case names directly).
 #[derive(Debug, Default, PartialEq, Clone)]
-#[cfg_attr(feature = "schema", derive(JsonSchema))]
-#[cfg_attr(feature = "schema", schemars(rename_all = "kebab-case"))]
 #[non_exhaustive]
 pub enum Processing {
     /// Author-date styles (e.g., APA, Chicago).
@@ -166,6 +162,44 @@ pub enum Processing {
     /// Fully custom processing behavior.
     /// Explicit `sort` configuration remains authoritative.
     Custom(ProcessingCustom),
+}
+
+#[cfg(feature = "schema")]
+impl JsonSchema for Processing {
+    fn schema_name() -> std::borrow::Cow<'static, str> {
+        "Processing".into()
+    }
+
+    fn json_schema(generator: &mut schemars::SchemaGenerator) -> schemars::Schema {
+        schemars::json_schema!({
+            "description": "Processing mode for citation and bibliography generation. Named modes use strings; label and custom modes may carry configuration maps.",
+            "oneOf": [
+                {
+                    "type": "string",
+                    "enum": PROCESSING_STRING_VARIANTS
+                },
+                {
+                    "type": "object",
+                    "properties": {
+                        "label": generator.subschema_for::<LabelConfig>()
+                    },
+                    "required": ["label"],
+                    "additionalProperties": false
+                },
+                {
+                    "type": "object",
+                    "properties": {
+                        "base": generator.subschema_for::<Option<ProcessingBase>>(),
+                        "sort": generator.subschema_for::<Option<SortEntry>>(),
+                        "group": generator.subschema_for::<Option<Group>>(),
+                        "disambiguate": generator.subschema_for::<Option<Disambiguation>>()
+                    },
+                    "minProperties": 1,
+                    "additionalProperties": false
+                }
+            ]
+        })
+    }
 }
 
 /// How citation-item sorting is resolved when `citation.sort` is absent.

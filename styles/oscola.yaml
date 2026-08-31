@@ -47,7 +47,7 @@ options:
     approximation-marker: "ca. "
     range-delimiter: –
   titles:
-    component: {}
+    component: plain
     monograph:
       emph: true
     periodical:

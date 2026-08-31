@@ -91,8 +91,7 @@ options:
   punctuation-in-quote: true
 citation:
   # source (apa.csl): collapse="year" — docs/specs/SAME_AUTHOR_COLLAPSE.md §7
-  collapse:
-    same-author: {}
+  collapse: same-author
   options:
     contributors:
       shorten: {min: 3, use-first: 1}

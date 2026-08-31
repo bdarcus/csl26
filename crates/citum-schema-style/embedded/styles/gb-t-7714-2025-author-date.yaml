@@ -48,8 +48,7 @@ options:
 citation:
   # source (tests/fixtures/csl-m/gb-t-7714-2025-author-date.csl):
   # collapse="year" — SAME_AUTHOR_COLLAPSE.md §7
-  collapse:
-    same-author: {}
+  collapse: same-author
   options:
     contributors:
       shorten:

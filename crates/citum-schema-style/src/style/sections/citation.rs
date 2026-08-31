@@ -29,12 +29,7 @@ const CITATION_COLLAPSE_STRING_VARIANTS: &[&str] = &["citation-number", "same-au
 /// `same-author` string shorthand. This mirrors `Processing`
 /// (`crate::options::processing`), which hand-writes its own impls for the
 /// same reason on `Label(..)`.
-// `rename_all` is retained for `JsonSchema` derive (the hand-written
-// `Serialize`/`Deserialize` impls below already use kebab-case names
-// directly).
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "schema", derive(JsonSchema))]
-#[cfg_attr(feature = "schema", schemars(rename_all = "kebab-case"))]
 #[non_exhaustive]
 pub enum CitationCollapse {
     /// Collapse adjacent citation numbers into a numeric range such as `1–3`.
@@ -42,6 +37,39 @@ pub enum CitationCollapse {
     /// Collapse a same-author multi-item group onto one author name with a
     /// joined year/date list. See `docs/specs/SAME_AUTHOR_COLLAPSE.md`.
     SameAuthor(SameAuthorCollapse),
+}
+
+#[cfg(feature = "schema")]
+impl JsonSchema for CitationCollapse {
+    fn schema_name() -> std::borrow::Cow<'static, str> {
+        "CitationCollapse".into()
+    }
+
+    fn json_schema(generator: &mut schemars::SchemaGenerator) -> schemars::Schema {
+        schemars::json_schema!({
+            "description": "Citation collapse behavior for multi-item citations. Default same-author behavior may be written as the bare `same-author` shorthand; configured behavior uses a tagged map.",
+            "oneOf": [
+                {
+                    "type": "string",
+                    "const": "citation-number",
+                    "description": "Collapse adjacent citation numbers into a numeric range such as `1–3`."
+                },
+                {
+                    "type": "string",
+                    "const": "same-author",
+                    "description": "Collapse a same-author group with the default configuration."
+                },
+                {
+                    "type": "object",
+                    "properties": {
+                        "same-author": generator.subschema_for::<SameAuthorCollapse>()
+                    },
+                    "required": ["same-author"],
+                    "additionalProperties": false
+                }
+            ]
+        })
+    }
 }
 
 impl Serialize for CitationCollapse {

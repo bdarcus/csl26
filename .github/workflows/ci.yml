@@ -367,6 +367,9 @@ jobs:
       - name: Validate styles and locales against published schemas
         run: node scripts/validate-schemas.js --scope=styles,locales
 
+      - name: Reject empty objects in tracked styles
+        run: node scripts/style-structure-lint.js --rule STYLE012
+
       - name: Check internal doc links
         run: |
           node scripts/build-doc-pages.js

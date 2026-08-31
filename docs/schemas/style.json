@@ -4624,40 +4624,21 @@
       ]
     },
     "Processing": {
-      "description": "Processing mode for citation/bibliography generation.\n\nDetermines how citations and bibliographies are sorted, grouped, and disambiguated.\nCan be specified as a simple string or with complex configuration maps:\n- A string: `\"author-date\"`, `\"author-date-full\"`, `\"numeric\"`, `\"note\"`, or `\"label\"`\n- A label config map: `{ label: { preset: din } }`\n- A custom config map: `{ sort: ..., group: ..., disambiguate: ... }`",
+      "description": "Processing mode for citation and bibliography generation. Named modes use strings; label and custom modes may carry configuration maps.",
       "oneOf": [
         {
-          "description": "Author-date styles (e.g., APA, Chicago).\nDefault bibliography ordering: author, year, title; disambiguates by year suffix.",
           "type": "string",
-          "const": "author-date"
+          "enum": [
+            "author-date",
+            "author-date-givenname",
+            "author-date-names",
+            "author-date-full",
+            "numeric",
+            "note",
+            "label"
+          ]
         },
         {
-          "description": "Author-date styles that also add given names during disambiguation.",
-          "type": "string",
-          "const": "author-date-givenname"
-        },
-        {
-          "description": "Author-date styles that also expand name lists during disambiguation.",
-          "type": "string",
-          "const": "author-date-names"
-        },
-        {
-          "description": "Author-date styles that expand name lists and add given names during disambiguation.",
-          "type": "string",
-          "const": "author-date-full"
-        },
-        {
-          "description": "Numeric styles (e.g., IEEE, Nature).\nDo not imply a bibliography sort; citations are numbered in order of appearance.",
-          "type": "string",
-          "const": "numeric"
-        },
-        {
-          "description": "Note styles (e.g., Chicago Notes-Bibliography).\nWith a bibliography default to author, title, year ordering.",
-          "type": "string",
-          "const": "note"
-        },
-        {
-          "description": "Label styles (e.g., Alpha, DIN 1505-2).\nDefault bibliography ordering: author, year, title.",
           "type": "object",
           "properties": {
             "label": {
@@ -4670,16 +4651,50 @@
           "additionalProperties": false
         },
         {
-          "description": "Fully custom processing behavior.\nExplicit `sort` configuration remains authoritative.",
           "type": "object",
           "properties": {
-            "custom": {
-              "$ref": "#/$defs/ProcessingCustom"
+            "base": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/ProcessingBase"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "sort": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/SortEntry"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "group": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Group"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "disambiguate": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/Disambiguation"
+                },
+                {
+                  "type": "null"
+                }
+              ]
             }
           },
-          "required": [
-            "custom"
-          ],
+          "minProperties": 1,
           "additionalProperties": false
         }
       ]
@@ -4771,56 +4786,6 @@
           "const": "ams"
         }
       ]
-    },
-    "ProcessingCustom": {
-      "description": "Custom processing configuration.\n\nAllows explicit specification of sorting, grouping, and disambiguation rules.\nWith a `base`, the block is a *delta*: present fields override the named\npreset's configuration wholesale and absent fields inherit from it (the same\nphilosophy as style `extends:`). Without a `base`, present fields stand alone.",
-      "type": "object",
-      "properties": {
-        "base": {
-          "description": "Named preset whose configuration seeds unset fields (optional).",
-          "anyOf": [
-            {
-              "$ref": "#/$defs/ProcessingBase"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "sort": {
-          "description": "Bibliography sorting configuration (optional).",
-          "anyOf": [
-            {
-              "$ref": "#/$defs/SortEntry"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "group": {
-          "description": "Bibliography grouping configuration (optional).",
-          "anyOf": [
-            {
-              "$ref": "#/$defs/Group"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "disambiguate": {
-          "description": "Disambiguation settings (optional).",
-          "anyOf": [
-            {
-              "$ref": "#/$defs/Disambiguation"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        }
-      }
     },
     "ProcessingBase": {
       "description": "Named processing preset usable as the base of a custom delta.\n\nRestricting `ProcessingCustom::base` to this enum makes nested custom\nconfigurations impossible by construction: a base is always one of the\nnamed presets, never another custom block.",
@@ -6497,81 +6462,86 @@
       ]
     },
     "TitleRendering": {
-      "description": "Rendering options for titles.",
-      "type": "object",
-      "properties": {
-        "text-case": {
-          "description": "Text-case transform to apply to this title category.",
-          "anyOf": [
-            {
-              "$ref": "#/$defs/TextCase"
+      "description": "Rendering options for one title category. Use `plain` to select explicit unformatted rendering.",
+      "oneOf": [
+        {
+          "type": "string",
+          "const": "plain"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "text-case": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/TextCase"
+                },
+                {
+                  "type": "null"
+                }
+              ]
             },
-            {
-              "type": "null"
+            "primary-delimiter": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "subtitle-delimiter": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "emph": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "quote": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "strong": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "small-caps": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "prefix": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "suffix": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "locale-overrides": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "additionalProperties": {
+                "$ref": "#/$defs/TitleRendering"
+              }
             }
-          ]
-        },
-        "primary-delimiter": {
-          "description": "Delimiter between the main title and the first subtitle.",
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "subtitle-delimiter": {
-          "description": "Delimiter between subtitle parts when a title has multiple subtitles.",
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "emph": {
-          "type": [
-            "boolean",
-            "null"
-          ]
-        },
-        "quote": {
-          "type": [
-            "boolean",
-            "null"
-          ]
-        },
-        "strong": {
-          "type": [
-            "boolean",
-            "null"
-          ]
-        },
-        "small-caps": {
-          "type": [
-            "boolean",
-            "null"
-          ]
-        },
-        "prefix": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "suffix": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "locale-overrides": {
-          "type": [
-            "object",
-            "null"
-          ],
-          "additionalProperties": {
-            "$ref": "#/$defs/TitleRendering"
-          }
+          },
+          "additionalProperties": false
         }
-      },
-      "unevaluatedProperties": false
+      ]
     },
     "LocatorConfigEntry": {
       "description": "Preset-or-explicit entry — same pattern as DateConfigEntry.",
@@ -8048,7 +8018,7 @@
       "unevaluatedProperties": false
     },
     "CitationCollapse": {
-      "description": "Citation collapse behavior for multi-item citations.\n\n`Deserialize`/`Serialize` are hand-written (see the `impl` blocks below),\nnot derived — a plain `#[derive]` on a tuple variant like `SameAuthor(..)`\nonly accepts the tagged-map form (`{ \"same-author\": {...} }`), not the bare\n`same-author` string shorthand. This mirrors `Processing`\n(`crate::options::processing`), which hand-writes its own impls for the\nsame reason on `Label(..)`.",
+      "description": "Citation collapse behavior for multi-item citations. Default same-author behavior may be written as the bare `same-author` shorthand; configured behavior uses a tagged map.",
       "oneOf": [
         {
           "description": "Collapse adjacent citation numbers into a numeric range such as `1–3`.",
@@ -8056,7 +8026,11 @@
           "const": "citation-number"
         },
         {
-          "description": "Collapse a same-author multi-item group onto one author name with a\njoined year/date list. See `docs/specs/SAME_AUTHOR_COLLAPSE.md`.",
+          "description": "Collapse a same-author group with the default configuration.",
+          "type": "string",
+          "const": "same-author"
+        },
+        {
           "type": "object",
           "properties": {
             "same-author": {
