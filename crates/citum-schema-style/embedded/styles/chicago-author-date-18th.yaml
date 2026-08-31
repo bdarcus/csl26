@@ -102,8 +102,7 @@ citation:
   # into an undocumented citeproc-js default, not a considered CMOS-following
   # choice). Do not add a `delimiter` override here to chase oracle parity —
   # read div-017 first.
-  collapse:
-    same-author: {}
+  collapse: same-author
   options:
     substitute:
       candidates:

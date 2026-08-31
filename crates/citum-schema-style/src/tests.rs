@@ -2608,6 +2608,67 @@ citation:
     );
 }
 
+#[cfg(feature = "schema")]
+#[test]
+fn citation_collapse_schema_exposes_bare_and_configured_same_author_forms() {
+    let schema = serde_json::to_value(schemars::schema_for!(CitationCollapse)).unwrap();
+    let variants = schema
+        .get("oneOf")
+        .and_then(serde_json::Value::as_array)
+        .unwrap();
+
+    assert!(variants.iter().any(
+        |variant| variant.get("const").and_then(serde_json::Value::as_str)
+            == Some("citation-number")
+    ));
+    assert!(variants.iter().any(
+        |variant| variant.get("const").and_then(serde_json::Value::as_str) == Some("same-author")
+    ));
+    assert!(variants.iter().any(|variant| {
+        variant
+            .pointer("/properties/same-author/$ref")
+            .is_some_and(|reference| reference == "#/$defs/SameAuthorCollapse")
+    }));
+}
+
+#[cfg(feature = "schema")]
+#[test]
+fn processing_schema_exposes_label_string_and_runtime_custom_map() {
+    let schema = serde_json::to_value(schemars::schema_for!(options::Processing)).unwrap();
+    let variants = schema
+        .get("oneOf")
+        .and_then(serde_json::Value::as_array)
+        .unwrap();
+    let strings = variants
+        .iter()
+        .find(|variant| variant.get("type").and_then(serde_json::Value::as_str) == Some("string"))
+        .unwrap();
+
+    assert!(
+        strings
+            .get("enum")
+            .and_then(serde_json::Value::as_array)
+            .unwrap()
+            .contains(&"label".into())
+    );
+    assert!(variants.iter().any(|variant| {
+        variant
+            .pointer("/properties/label/$ref")
+            .is_some_and(|reference| reference == "#/$defs/LabelConfig")
+    }));
+    let custom = variants
+        .iter()
+        .find(|variant| variant.pointer("/properties/sort").is_some())
+        .unwrap();
+    assert_eq!(
+        custom
+            .get("minProperties")
+            .and_then(serde_json::Value::as_u64),
+        Some(1)
+    );
+    assert!(custom.pointer("/properties/custom").is_none());
+}
+
 #[rstest]
 #[case::merged("merged", YearSuffixCollapse::Merged)]
 #[case::ranged("ranged", YearSuffixCollapse::Ranged)]

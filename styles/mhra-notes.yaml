@@ -27,7 +27,7 @@ options:
     show-seconds: false
     show-timezone: false
   titles:
-    component: {}
+    component: plain
     monograph:
       emph: true
     periodical:

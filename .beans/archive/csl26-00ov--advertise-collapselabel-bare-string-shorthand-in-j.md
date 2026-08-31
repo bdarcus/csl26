@@ -1,7 +1,7 @@
 ---
 # csl26-00ov
 title: Advertise collapse/label bare-string shorthand in JSON schema
-status: todo
+status: completed
 type: task
 priority: normal
 tags:
@@ -9,7 +9,7 @@ tags:
     - authorability
     - dx
 created_at: 2026-08-31T17:54:01Z
-updated_at: 2026-08-31T17:54:01Z
+updated_at: 2026-08-31T20:17:53Z
 parent: csl26-h7oc
 ---
 
@@ -33,3 +33,7 @@ net progress on this complaint from that attempt: zero.
 
 The fix should cover CitationCollapse alone, and Processing::Label
 (the documented parallel case)?
+
+## Summary of Changes
+
+Added schema-visible scalar shorthands for citation collapse and processing, added `plain` title rendering, removed literal empty objects from tracked styles, and added fatal STYLE012 lint coverage. Updated the same-author and typed-title documentation, regenerated the style schema, and verified identical rendering for every changed style plus the full core quality floor.

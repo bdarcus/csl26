@@ -6,6 +6,7 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus and Citum contributors
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::de::Error as _;
+use serde::ser::SerializeMap;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -184,43 +185,181 @@ where
 }
 
 /// Rendering options for titles.
-#[derive(Debug, Default, PartialEq, Clone, Serialize, Deserialize)]
-#[cfg_attr(feature = "schema", derive(JsonSchema))]
-#[serde(rename_all = "kebab-case")]
+///
+/// The scalar `plain` represents [`TitleRendering::default`]; configured
+/// rendering uses the mapping form.
+#[derive(Debug, Default, PartialEq, Clone)]
 pub struct TitleRendering {
     /// Text-case transform to apply to this title category.
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub text_case: Option<TextCase>,
     /// Delimiter between the main title and the first subtitle.
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub primary_delimiter: Option<String>,
     /// Delimiter between subtitle parts when a title has multiple subtitles.
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub subtitle_delimiter: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    /// Whether the title is emphasized.
     pub emph: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    /// Whether the title is enclosed in locale-appropriate quotation marks.
     pub quote: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    /// Whether the title uses strong emphasis.
     pub strong: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    /// Whether the title is rendered in small capitals.
     pub small_caps: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    /// Text placed before the rendered title.
     pub prefix: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    /// Text placed after the rendered title.
     pub suffix: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    /// Locale-specific overrides keyed by locale identifier.
     pub locale_overrides: Option<HashMap<String, TitleRendering>>,
     /// Forward-compat: captures unknown keys when an older engine reads a
     /// style produced by a newer schema. Empty by default; treated as a
     /// SoftDegrade signal. See `docs/specs/FORWARD_COMPATIBILITY.md`.
-    #[serde(
-        flatten,
-        default,
-        skip_serializing_if = "std::collections::BTreeMap::is_empty"
-    )]
-    #[cfg_attr(feature = "schema", schemars(skip))]
     pub unknown_fields: std::collections::BTreeMap<String, serde_yaml::Value>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "kebab-case")]
+enum PlainTitleRendering {
+    Plain,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "kebab-case")]
+struct TitleRenderingMap {
+    #[serde(default)]
+    text_case: Option<TextCase>,
+    #[serde(default)]
+    primary_delimiter: Option<String>,
+    #[serde(default)]
+    subtitle_delimiter: Option<String>,
+    #[serde(default)]
+    emph: Option<bool>,
+    #[serde(default)]
+    quote: Option<bool>,
+    #[serde(default)]
+    strong: Option<bool>,
+    #[serde(default)]
+    small_caps: Option<bool>,
+    #[serde(default)]
+    prefix: Option<String>,
+    #[serde(default)]
+    suffix: Option<String>,
+    #[serde(default)]
+    locale_overrides: Option<HashMap<String, TitleRendering>>,
+    #[serde(flatten, default)]
+    unknown_fields: std::collections::BTreeMap<String, serde_yaml::Value>,
+}
+
+#[derive(Deserialize)]
+#[serde(untagged)]
+enum TitleRenderingInput {
+    Plain(PlainTitleRendering),
+    Config(TitleRenderingMap),
+}
+
+impl<'de> Deserialize<'de> for TitleRendering {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        match TitleRenderingInput::deserialize(deserializer)? {
+            TitleRenderingInput::Plain(PlainTitleRendering::Plain) => Ok(Self::default()),
+            TitleRenderingInput::Config(config) => Ok(Self {
+                text_case: config.text_case,
+                primary_delimiter: config.primary_delimiter,
+                subtitle_delimiter: config.subtitle_delimiter,
+                emph: config.emph,
+                quote: config.quote,
+                strong: config.strong,
+                small_caps: config.small_caps,
+                prefix: config.prefix,
+                suffix: config.suffix,
+                locale_overrides: config.locale_overrides,
+                unknown_fields: config.unknown_fields,
+            }),
+        }
+    }
+}
+
+impl Serialize for TitleRendering {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        if self == &Self::default() {
+            return serializer.serialize_str("plain");
+        }
+
+        let mut map = serializer.serialize_map(None)?;
+        if let Some(value) = &self.text_case {
+            map.serialize_entry("text-case", value)?;
+        }
+        if let Some(value) = &self.primary_delimiter {
+            map.serialize_entry("primary-delimiter", value)?;
+        }
+        if let Some(value) = &self.subtitle_delimiter {
+            map.serialize_entry("subtitle-delimiter", value)?;
+        }
+        if let Some(value) = self.emph {
+            map.serialize_entry("emph", &value)?;
+        }
+        if let Some(value) = self.quote {
+            map.serialize_entry("quote", &value)?;
+        }
+        if let Some(value) = self.strong {
+            map.serialize_entry("strong", &value)?;
+        }
+        if let Some(value) = self.small_caps {
+            map.serialize_entry("small-caps", &value)?;
+        }
+        if let Some(value) = &self.prefix {
+            map.serialize_entry("prefix", value)?;
+        }
+        if let Some(value) = &self.suffix {
+            map.serialize_entry("suffix", value)?;
+        }
+        if let Some(value) = &self.locale_overrides {
+            map.serialize_entry("locale-overrides", value)?;
+        }
+        for (key, value) in &self.unknown_fields {
+            map.serialize_entry(key, value)?;
+        }
+        map.end()
+    }
+}
+
+#[cfg(feature = "schema")]
+impl JsonSchema for TitleRendering {
+    fn schema_name() -> std::borrow::Cow<'static, str> {
+        "TitleRendering".into()
+    }
+
+    fn json_schema(generator: &mut schemars::SchemaGenerator) -> schemars::Schema {
+        schemars::json_schema!({
+            "description": "Rendering options for one title category. Use `plain` to select explicit unformatted rendering.",
+            "oneOf": [
+                {
+                    "type": "string",
+                    "const": "plain"
+                },
+                {
+                    "type": "object",
+                    "properties": {
+                        "text-case": generator.subschema_for::<Option<TextCase>>(),
+                        "primary-delimiter": generator.subschema_for::<Option<String>>(),
+                        "subtitle-delimiter": generator.subschema_for::<Option<String>>(),
+                        "emph": generator.subschema_for::<Option<bool>>(),
+                        "quote": generator.subschema_for::<Option<bool>>(),
+                        "strong": generator.subschema_for::<Option<bool>>(),
+                        "small-caps": generator.subschema_for::<Option<bool>>(),
+                        "prefix": generator.subschema_for::<Option<String>>(),
+                        "suffix": generator.subschema_for::<Option<String>>(),
+                        "locale-overrides": generator.subschema_for::<Option<HashMap<String, TitleRendering>>>()
+                    },
+                    "additionalProperties": false
+                }
+            ]
+        })
+    }
 }
 
 impl TitleRendering {
@@ -281,6 +420,53 @@ impl TitleRendering {
 mod tests {
     use super::*;
     use crate::presets::TitlePreset;
+
+    #[test]
+    fn plain_title_rendering_round_trips_as_scalar() {
+        let rendering: TitleRendering = serde_yaml::from_str("plain\n").unwrap();
+
+        assert_eq!(rendering, TitleRendering::default());
+        assert_eq!(serde_yaml::to_string(&rendering).unwrap(), "plain\n");
+    }
+
+    #[test]
+    fn configured_title_rendering_round_trips_as_map() {
+        let rendering: TitleRendering =
+            serde_yaml::from_str("text-case: sentence\nemph: true\n").unwrap();
+
+        assert_eq!(rendering.text_case, Some(TextCase::Sentence));
+        assert_eq!(rendering.emph, Some(true));
+        assert_eq!(
+            serde_yaml::to_string(&rendering).unwrap(),
+            "text-case: sentence\nemph: true\n"
+        );
+    }
+
+    #[cfg(feature = "schema")]
+    #[test]
+    fn title_rendering_schema_exposes_plain_and_configured_forms() {
+        let schema = serde_json::to_value(schemars::schema_for!(TitleRendering)).unwrap();
+        let variants = schema
+            .get("oneOf")
+            .and_then(serde_json::Value::as_array)
+            .unwrap();
+
+        assert!(variants.iter().any(|variant| {
+            variant.get("const").and_then(serde_json::Value::as_str) == Some("plain")
+        }));
+        let map = variants
+            .iter()
+            .find(|variant| {
+                variant.get("type").and_then(serde_json::Value::as_str) == Some("object")
+            })
+            .unwrap();
+        assert!(map.pointer("/properties/text-case").is_some());
+        assert_eq!(
+            map.get("additionalProperties")
+                .and_then(serde_json::Value::as_bool),
+            Some(false)
+        );
+    }
 
     #[test]
     fn test_emphasis_all_preset_name_resolves_through_config_entry() {

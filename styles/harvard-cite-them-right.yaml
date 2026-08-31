@@ -71,8 +71,7 @@ options:
 citation:
   # source (harvard-cite-them-right.csl): collapse="year" —
   # SAME_AUTHOR_COLLAPSE.md §7 v1.1
-  collapse:
-    same-author: {}
+  collapse: same-author
   options:
     contributors:
       name-form: initials

@@ -53,8 +53,7 @@ options:
   volume-pages-delimiter: { mark: comma }
 citation:
   # source (elsevier-harvard.csl): collapse="year" — SAME_AUTHOR_COLLAPSE.md §7
-  collapse:
-    same-author: {}
+  collapse: same-author
   options:
     substitute:
       candidates:

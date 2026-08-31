@@ -35,7 +35,7 @@ options:
       text-case: as-is
     container-monograph:
       text-case: as-is
-    periodical: {}
+    periodical: plain
     serial:
       text-case: as-is
   punctuation-in-quote: true

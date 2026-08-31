@@ -23,9 +23,10 @@ const RULES = {
   STYLE009: 'Phrase-like term-backed messages must use localized pattern messages.',
   STYLE010: 'Hardcoded prefix/suffix prose duplicates an existing locale role verb, term, or message; use the locale mechanism instead so the text localizes. See docs/policies/LOCALIZATION_INTEGRITY.md.',
   STYLE011: 'A style-local options.messages entry duplicates a value already available from a locale role, term, or message; declare it in the locale instead so every style sharing that text shares one translation. See docs/policies/LOCALIZATION_INTEGRITY.md.',
+  STYLE012: 'Literal empty objects are not allowed in tracked styles; use a scalar shorthand or omit a semantically inert field.',
 };
 
-const FATAL_RULE_IDS = new Set(['STYLE008', 'STYLE009']);
+const FATAL_RULE_IDS = new Set(['STYLE008', 'STYLE009', 'STYLE012']);
 const ALLOWED_TERM_MESSAGE_IDS = new Set([
   'and',
   'edition',
@@ -42,6 +43,7 @@ function parseArgs(argv = process.argv.slice(2)) {
     strict: false,
     fix: false,
     json: false,
+    ruleIds: [],
   };
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -52,6 +54,13 @@ function parseArgs(argv = process.argv.slice(2)) {
       args.fix = true;
     } else if (arg === '--json') {
       args.json = true;
+    } else if (arg === '--rule') {
+      const ruleId = argv[index + 1];
+      if (!ruleId || !Object.hasOwn(RULES, ruleId)) {
+        throw new Error(`--rule requires a known rule ID; received ${ruleId || 'nothing'}`);
+      }
+      args.ruleIds.push(ruleId);
+      index += 1;
     } else if (arg === '-h' || arg === '--help') {
       printUsage();
       process.exit(0);
@@ -65,7 +74,7 @@ function parseArgs(argv = process.argv.slice(2)) {
 
 function printUsage() {
   console.log(
-    'Usage: node scripts/style-structure-lint.js [--fix] [--strict] [--json] [styles/file.yaml ...]'
+    'Usage: node scripts/style-structure-lint.js [--fix] [--strict] [--json] [--rule STYLE###] [styles/file.yaml ...]'
   );
 }
 
@@ -82,17 +91,34 @@ function isEmbeddedStyle(filePath) {
   return /^crates\/citum-schema-style\/embedded\/styles\/[^/]+\.yaml$/.test(repoRelative(filePath));
 }
 
+function isTrackedStyle(filePath) {
+  const relative = repoRelative(filePath);
+  return /^styles\/(?!embedded\/).+\.yaml$/.test(relative) || isEmbeddedStyle(filePath);
+}
+
+function walkStyleFiles(directory) {
+  return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const filePath = path.join(directory, entry.name);
+    if (entry.isDirectory()) return walkStyleFiles(filePath);
+    if (entry.isFile() && entry.name.endsWith('.yaml')) return [filePath];
+    return [];
+  });
+}
+
 function listStyleFiles(filePaths = []) {
   if (filePaths.length === 0) {
-    return fs.readdirSync(STYLES_DIR)
-      .filter((entry) => entry.endsWith('.yaml'))
-      .map((entry) => path.join(STYLES_DIR, entry))
+    const embeddedStylesDir = path.join(
+      PROJECT_ROOT,
+      'crates/citum-schema-style/embedded/styles'
+    );
+    return [...walkStyleFiles(STYLES_DIR), ...walkStyleFiles(embeddedStylesDir)]
+      .filter((filePath, index, files) => files.indexOf(filePath) === index)
       .sort();
   }
 
   return filePaths
     .map((filePath) => path.resolve(filePath))
-    .filter((filePath) => isProductionStyle(filePath) || isEmbeddedStyle(filePath))
+    .filter(isTrackedStyle)
     .sort();
 }
 
@@ -191,6 +217,21 @@ function lintAnonymousAnchors(filePath, content) {
     });
   }
 
+  return violations;
+}
+
+function lintEmptyObjectLiterals(filePath, content) {
+  const violations = [];
+  for (const [index, line] of content.split('\n').entries()) {
+    if (!line.includes('{}')) continue;
+    violations.push({
+      ruleId: 'STYLE012',
+      file: repoRelative(filePath),
+      line: index + 1,
+      message: RULES.STYLE012,
+      fixable: false,
+    });
+  }
   return violations;
 }
 
@@ -885,6 +926,7 @@ function lintStyleFile(filePath, options = {}) {
   const content = fs.readFileSync(filePath, 'utf8');
   const localeValueSet = getLocaleAffixValueSet();
   const violations = lintAnonymousAnchors(filePath, content);
+  violations.push(...lintEmptyObjectLiterals(filePath, content));
   violations.push(...lintLegacyItemsAlias(filePath, content));
   violations.push(...lintEmptyStyleVersion(filePath, content));
   violations.push(...lintDeprecatedTemplateTerms(filePath, content));
@@ -956,6 +998,7 @@ function lintStyleFile(filePath, options = {}) {
   const refreshedContent = fixed ? workingContent : content;
   const refreshedViolations = [
     ...lintAnonymousAnchors(filePath, refreshedContent),
+    ...lintEmptyObjectLiterals(filePath, refreshedContent),
     ...lintLegacyItemsAlias(filePath, refreshedContent),
     ...lintEmptyStyleVersion(filePath, refreshedContent),
     ...lintDeprecatedTemplateTerms(filePath, refreshedContent),
@@ -976,11 +1019,16 @@ function lintStyleFile(filePath, options = {}) {
   };
 }
 
-function summarize(results) {
+function summarize(results, ruleIds = []) {
   const filesScanned = results.length;
-  const filesWithViolations = results.filter((result) => result.violations.length > 0).length;
+  const selectedRules = new Set(ruleIds);
+  const includesViolation = (violation) =>
+    selectedRules.size === 0 || selectedRules.has(violation.ruleId);
+  const filesWithViolations = results.filter((result) =>
+    result.violations.some(includesViolation)
+  ).length;
   const fixedFiles = results.filter((result) => result.fixed).length;
-  const violations = results.flatMap((result) => result.violations);
+  const violations = results.flatMap((result) => result.violations.filter(includesViolation));
 
   return {
     filesScanned,
@@ -1009,7 +1057,7 @@ function main() {
   const args = parseArgs();
   const filePaths = listStyleFiles(args.filePaths);
   const results = filePaths.map((filePath) => lintStyleFile(filePath, { fix: args.fix }));
-  const summary = summarize(results);
+  const summary = summarize(results, args.ruleIds);
 
   if (args.json) {
     console.log(JSON.stringify(summary, null, 2));
@@ -1042,10 +1090,12 @@ module.exports = {
   lintDeprecatedTemplateTerms,
   lintPhraseLikeTermMessages,
   lintHardcodedLocaleProse,
+  lintEmptyObjectLiterals,
   lintAnonymousAnchors,
   lintLegacyItemsAlias,
   lintParsedStyle,
   lintStyleFile,
+  listStyleFiles,
   loadLocaleAffixValueSet,
   normalizeAffixText,
   parseAnonymousAnchorBlocks,

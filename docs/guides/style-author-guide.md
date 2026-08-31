@@ -355,14 +355,25 @@ the full field list, and
 [`TYPED_TITLE_MAPPING.md`](../specs/TYPED_TITLE_MAPPING.md) for the
 underlying rules.
 
+Use `plain` when a category should be explicitly unformatted:
+
+```yaml
+options:
+  titles:
+    component: plain
+    monograph:
+      emph: true
+```
+
 > [!WARNING]
 > **An unconfigured category renders plain, not an error.**
 > If a reference type resolves to a category you never configured (or one
-> you configured with no `emph`/`quote`), Citum renders that title as plain
+> you configured as `plain`), Citum renders that title as plain
 > text — no italics, no quotes, no warning. That's intentional (some styles
 > genuinely want plain titles for some types), but it means a typo or an
 > unmapped type fails silently. Give every category your style can reach an
-> explicit rendering — even "nothing" — rather than leaving it to omission.
+> explicit rendering, using `plain` when no formatting is wanted, rather than
+> leaving it to omission.
 > This matters even more once contributor substitution is involved; see
 > the warning under Author-less References below.
 
