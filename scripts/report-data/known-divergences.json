@@ -21,5 +21,12 @@
       "intentional": true
     }
   ],
-  "taylor-and-francis-chicago-author-date": []
+  "taylor-and-francis-chicago-author-date": [],
+  "chicago-author-date-18th": [
+    {
+      "feature": "webpage-anonymous-site-owner-substitution",
+      "description": "CMOS 18 14.104 lists an authorless webpage under its site owner/sponsor (drawn from `publisher`) in citation context. Citum currently falls back to the title instead, pending a `publisher` substitute candidate (tracked in csl26-f3hx). Authored webpages and authorless-and-publisherless webpages are unaffected.",
+      "intentional": true
+    }
+  ]
 }
