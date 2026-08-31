@@ -1848,6 +1848,32 @@ function computeFidelityScore(oracleResult, hasBibliography) {
 }
 
 /**
+ * Merge `appliedDivergence` from the divergence-adjusted citation entries
+ * (`oracleResult.adjusted.citations.entries`, built by
+ * `buildAdjustedOracleResult` in `lib/oracle-divergences.js`) onto the raw
+ * citation entries by index, leaving every other field -- including `match`
+ * -- untouched.
+ *
+ * This is deliberately additive rather than a wholesale swap to the adjusted
+ * entries: `styleRecord.citationEntries` is also read by
+ * `analyze-migration-gaps.js`, `style-coverage-review.js`, and
+ * `analyze-parity-residuals.js`, which bucket on the *raw* `entry.match` for
+ * their own purposes (e.g. prioritizing migrate-engine work). Swapping in the
+ * adjusted entries would flip `match` false->true for every divergence-masked
+ * citation and silently change what those tools count. Only the HTML
+ * "Citation Findings" table (`renderStyleDetailBody`) needs to know a
+ * divergence was applied, so only `appliedDivergence` is added here.
+ */
+function mergeAppliedDivergences(rawEntries, adjustedEntries) {
+  if (!rawEntries) return null;
+  if (!adjustedEntries || adjustedEntries.length !== rawEntries.length) return rawEntries;
+  return rawEntries.map((entry, index) => ({
+    ...entry,
+    appliedDivergence: adjustedEntries[index]?.appliedDivergence || null,
+  }));
+}
+
+/**
  * Load known divergences
  */
 function loadDivergences() {
@@ -2950,7 +2976,10 @@ async function processStyleReport(runtime, styleSpec, context) {
     citationComponentUnresolvedSegmentation: citationComponentMatchRate.unresolvedSegmentation,
     statusTier,
     componentSummary: oracleResult.componentSummary || {},
-    citationEntries: oracleResult.citations ? oracleResult.citations.entries : null,
+    citationEntries: mergeAppliedDivergences(
+      oracleResult.citations?.entries,
+      oracleResult.adjusted?.citations?.entries
+    ),
     oracleDetail: oracleResult.bibliography ? oracleResult.bibliography.entries : null,
     benchmarkRunResults: publishedBenchmarkRunResults,
     qualityScore: parseFloat(qualityScore.toFixed(3)),
@@ -4547,14 +4576,35 @@ function generateDetailContent(style) {
           : renderInlineTextDifference(texts.benchmark, texts.citum);
         const benchmarkText = diff?.benchmark ?? renderTextPreview(texts.benchmark);
         const citumText = diff?.citum ?? renderTextPreview(texts.citum);
-        const statusText = entry.match ? 'Unresolved Oracle Drift' : 'Compatibility Fail';
-        const statusColor = entry.match ? 'text-amber-700' : 'text-red-600';
+        // A citation masked by a registered divergence (div-017 and friends
+        // -- see mergeAppliedDivergences) is not an open compatibility gap:
+        // it's an adjudicated, sourced, intentional difference from
+        // citeproc-js. Label it distinctly so it never again reads as
+        // "Unresolved Oracle Drift"/"Compatibility Fail" -- that ambiguity
+        // previously led to "fixing" chicago-author-date-18th's div-017
+        // comma-join back toward the oracle, undoing a considered decision.
+        let statusText;
+        let statusColor;
+        if (entry.appliedDivergence) {
+          statusText = `Known Divergence (${entry.appliedDivergence.divergenceId})`;
+          statusColor = 'text-primary';
+        } else if (entry.match) {
+          statusText = 'Unresolved Oracle Drift';
+          statusColor = 'text-amber-700';
+        } else {
+          statusText = 'Compatibility Fail';
+          statusColor = 'text-red-600';
+        }
+        const divergenceNote = entry.appliedDivergence
+          ? style.adjustedDivergences?.[entry.appliedDivergence.divergenceId]?.note
+          : null;
+        const statusTitleAttr = divergenceNote ? ` title="${escapeHtml(divergenceNote)}"` : '';
         html += `
                                             <tr class="border-b border-slate-200 hover:bg-slate-50">
                                                 <td class="px-2 py-1 text-slate-600">${escapeHtml(entry.id)}</td>
                                                 <td class="px-2 py-1 font-mono text-slate-600 text-xs" title="${escapeHtml(texts.benchmark)}">${benchmarkText}</td>
                                                 <td class="px-2 py-1 font-mono text-slate-600 text-xs" title="${escapeHtml(texts.citum)}">${citumText}</td>
-                                                <td class="px-2 py-1 text-center font-semibold ${statusColor}">${statusText}${diff ? ` <span class="text-slate-400">(Δ${diff.position})</span>` : ''}</td>
+                                                <td class="px-2 py-1 text-center font-semibold ${statusColor}"${statusTitleAttr}>${statusText}${diff ? ` <span class="text-slate-400">(Δ${diff.position})</span>` : ''}</td>
                                             </tr>
 `;
       }
