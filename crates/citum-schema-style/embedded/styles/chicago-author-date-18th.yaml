@@ -93,6 +93,15 @@ options:
       emph: true
 citation:
   # source (chicago-author-date.csl): collapse="year" — SAME_AUTHOR_COLLAPSE.md §7
+  #
+  # The resulting no-locator join is a comma, e.g. "(Garcia 2019b, 2019a)" —
+  # citeproc-js emits a semicolon here instead. That is NOT a bug: it is
+  # div-017 in docs/adjudication/DIVERGENCE_REGISTER.md, a registered,
+  # sourced divergence (CMOS 15.30's own Q&A prefers the comma; citeproc-js's
+  # semicolon is traced to this style's own `<layout delimiter="; ">` leaking
+  # into an undocumented citeproc-js default, not a considered CMOS-following
+  # choice). Do not add a `delimiter` override here to chase oracle parity —
+  # read div-017 first.
   collapse:
     same-author: {}
   options:
@@ -165,11 +174,16 @@ citation:
       render-when:
         field-present: title
       delimiter: ''
-    webpage:
-    - variable: publisher
-    - date: issued
-      form: year
-      prefix: " "
+    # No `webpage:` entry here (intentionally removed): it used to render
+    # `publisher` unconditionally as a second contributor, which is wrong per
+    # CMOS 18 14.104 — the site owner/publisher only stands in for a missing
+    # author, it doesn't render alongside one. The base citation template's
+    # substitute chain (options.substitute.candidates above) already handles
+    # the authorless case correctly for editor/translator/parent-serial/title,
+    # but SubstituteField has no `publisher` candidate yet, so an authorless
+    # webpage falls back to its title instead of its site owner — registered
+    # as a known divergence in scripts/report-data/known-divergences.json.
+    # Follow-up: csl26-f3hx (add a `publisher` substitute candidate).
   template:
   - group:
     - contributor: author
@@ -186,6 +200,10 @@ citation:
   wrap:
     punctuation: parentheses
   delimiter: ''
+  # Joins BETWEEN same-author-collapsed groups in a multi-item citation, e.g.
+  # "(Smith 2020; Jones 2021)". This is architecturally independent of the
+  # WITHIN-group join for a single collapsed group's repeated years (that one
+  # is unset above, so it falls back to a comma — see the `collapse` comment).
   multi-cite-delimiter: "; "
 bibliography:
   options:

@@ -27,7 +27,10 @@ use citum_engine::Processor;
 use citum_io::load_bibliography;
 use citum_schema::Style;
 use citum_schema::citation::{Citation, CitationItem, CitationLocator, CitationMode, LocatorType};
-use citum_schema::reference::{ClassExtension, MultilingualString};
+use citum_schema::reference::{
+    ClassExtension, Contributor, DateValue, InputReference, Monograph, MonographType,
+    MultilingualString, Publisher, StructuredName, Title,
+};
 use rstest::rstest;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -986,6 +989,108 @@ fn given_a_ranged_degree_style_when_run_length_varies_then_only_three_plus_range
     let rendered = processor
         .process_citation(&citation)
         .expect("ranged same-author cluster should render");
+
+    assert_eq!(rendered, expected);
+}
+
+/// Build a minimal webpage reference for the citation type-variant
+/// regression below.
+fn webpage(
+    id: &str,
+    title: &str,
+    author_family: Option<&str>,
+    publisher_name: Option<&str>,
+    year: &str,
+) -> InputReference {
+    InputReference::Monograph(Box::new(Monograph {
+        id: Some(id.into()),
+        r#type: MonographType::Webpage,
+        title: Some(Title::Single(title.to_string())),
+        author: author_family.map(|family| {
+            Contributor::StructuredName(StructuredName {
+                family: family.into(),
+                ..Default::default()
+            })
+        }),
+        publisher: publisher_name.map(|name| Publisher {
+            name: name.into(),
+            place: None,
+        }),
+        issued: DateValue::new(year.to_string()),
+        ..Default::default()
+    }))
+}
+
+/// CMOS 18 14.104: an authorless webpage's citation position falls back
+/// through the ordinary primary-contributor substitute chain (editor,
+/// translator, parent-serial, title -- `citation.options.substitute` above),
+/// not through an unconditional `publisher` addition. Regression coverage
+/// for the deleted `citation.type-variants.webpage` entry in
+/// `chicago-author-date-18th.yaml` (csl26-lr1p), which used to render
+/// `publisher` alongside the author even when one was present, and rendered
+/// nothing but the bare year when neither an author nor a title-adjacent
+/// fallback applied.
+///
+/// The anonymous-with-publisher case falls back to the title rather than the
+/// site owner CMOS 18 14.104 actually prefers -- `SubstituteField` has no
+/// `publisher` candidate yet (csl26-f3hx), and is registered as a known
+/// divergence in `scripts/report-data/known-divergences.json`. These two
+/// cases lock in what already renders correctly and guard against a
+/// regression back to the old unconditional-publisher bug; the third
+/// (anonymous, no publisher) case guards the same bug's other failure mode
+/// (rendering a bare year with no title at all).
+#[rstest]
+#[case::authored_webpage_ignores_publisher(
+    Some("Nguyen"),
+    Some("Example Institute"),
+    "2021",
+    "Authored With Publisher",
+    "(Nguyen 2021)"
+)]
+#[case::anonymous_webpage_with_publisher_falls_back_to_title(
+    None,
+    Some("Example Institute"),
+    "2022",
+    "No Author with Publisher",
+    "(\u{201C}No Author with Publisher\u{201D} 2022)"
+)]
+#[case::anonymous_webpage_without_publisher_falls_back_to_title(
+    None,
+    None,
+    "2023",
+    "No Author No Publisher",
+    "(\u{201C}No Author No Publisher\u{201D} 2023)"
+)]
+fn given_a_webpage_citation_when_rendered_then_matches_expected(
+    #[case] author_family: Option<&str>,
+    #[case] publisher_name: Option<&str>,
+    #[case] year: &str,
+    #[case] title: &str,
+    #[case] expected: &str,
+) {
+    // Loads the live embedded YAML (`get_embedded_style`, `include_bytes!`
+    // at compile time from `crates/citum-schema-style/embedded/styles/`),
+    // deliberately NOT `load_style` -- `common::test_style_path` silently
+    // redirects `styles/embedded/chicago-author-date-18th.yaml` to a
+    // separately pinned, already-stale snapshot at
+    // `crates/citum-engine/tests/fixtures/styles/chicago-author-date-18th.yaml`
+    // that predates this change (and others). This regression needs the
+    // real style.
+    let style = citum_schema::embedded::get_embedded_style("chicago-author-date-18th")
+        .expect("chicago-author-date-18th should be embedded")
+        .expect("chicago-author-date-18th should parse")
+        .into_resolved();
+
+    let reference = webpage("web-1", title, author_family, publisher_name, year);
+    let mut bibliography = indexmap::IndexMap::new();
+    bibliography.insert("web-1".to_string(), reference);
+
+    let processor = Processor::new(style, bibliography);
+    let citation = single_item_citation("web-1");
+
+    let rendered = processor
+        .process_citation(&citation)
+        .expect("webpage citation should render");
 
     assert_eq!(rendered, expected);
 }
