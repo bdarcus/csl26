@@ -49,18 +49,21 @@ citation:
   assert.equal(violations[0].ruleId, 'STYLE001');
 });
 
-test('STYLE012 rejects empty objects in fields and comments', () => {
+test('STYLE012 rejects whitespace-form empty objects in fields and comments', () => {
   const content = `options:
   titles:
     component: {}
-# do not recommend {}
+    label: { }
+    periodical: {
+    }
+# do not recommend {  }
 `;
 
   const violations = lintEmptyObjectLiterals('styles/fixture.yaml', content);
 
-  assert.equal(violations.length, 2);
+  assert.equal(violations.length, 4);
   assert.equal(violations.every((violation) => violation.ruleId === 'STYLE012'), true);
-  assert.deepEqual(violations.map((violation) => violation.line), [3, 4]);
+  assert.deepEqual(violations.map((violation) => violation.line), [3, 4, 5, 7]);
 });
 
 test('tracked style corpus contains no literal empty objects', () => {
@@ -69,6 +72,24 @@ test('tracked style corpus contains no literal empty objects', () => {
   );
 
   assert.deepEqual(violations, []);
+});
+
+test('default style discovery returns unique tracked paths', () => {
+  const files = listStyleFiles();
+  const relativePaths = files.map((filePath) =>
+    path.relative(process.cwd(), filePath).split(path.sep).join('/')
+  );
+
+  assert.equal(new Set(files).size, files.length);
+  assert.equal(relativePaths.some((filePath) => filePath.startsWith('styles/embedded/')), false);
+  assert.equal(
+    relativePaths.every(
+      (filePath) =>
+        /^styles\/(?!embedded\/).+\.yaml$/.test(filePath) ||
+        /^crates\/citum-schema-style\/embedded\/styles\/[^/]+\.yaml$/.test(filePath)
+    ),
+    true
+  );
 });
 
 test('rule-filtered summaries isolate STYLE012 from unrelated findings', () => {
