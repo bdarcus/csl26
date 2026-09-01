@@ -112,6 +112,7 @@ function listStyleFiles(filePaths = []) {
       'crates/citum-schema-style/embedded/styles'
     );
     return [...walkStyleFiles(STYLES_DIR), ...walkStyleFiles(embeddedStylesDir)]
+      .filter(isTrackedStyle)
       .filter((filePath, index, files) => files.indexOf(filePath) === index)
       .sort();
   }
@@ -222,12 +223,14 @@ function lintAnonymousAnchors(filePath, content) {
 
 function lintEmptyObjectLiterals(filePath, content) {
   const violations = [];
-  for (const [index, line] of content.split('\n').entries()) {
-    if (!line.includes('{}')) continue;
+  const pattern = /\{\s*\}/g;
+  let match;
+
+  while ((match = pattern.exec(content)) !== null) {
     violations.push({
       ruleId: 'STYLE012',
       file: repoRelative(filePath),
-      line: index + 1,
+      line: content.slice(0, match.index).split('\n').length,
       message: RULES.STYLE012,
       fixable: false,
     });

@@ -134,7 +134,8 @@ impl LabelConfig {
 ///
 /// Determines how citations and bibliographies are sorted, grouped, and disambiguated.
 /// Can be specified as a simple string or with complex configuration maps:
-/// - A string: `"author-date"`, `"author-date-full"`, `"numeric"`, `"note"`, or `"label"`
+/// - A string: `"author-date"`, `"author-date-givenname"`, `"author-date-names"`,
+///   `"author-date-full"`, `"numeric"`, `"note"`, or `"label"`
 /// - A label config map: `{ label: { preset: din } }`
 /// - A custom config map: `{ sort: ..., group: ..., disambiguate: ... }`
 #[derive(Debug, Default, PartialEq, Clone)]
