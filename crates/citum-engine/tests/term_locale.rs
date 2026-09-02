@@ -178,9 +178,15 @@ fn term_locale_item_scoped_to_bibliography_does_not_affect_citation_rendering() 
     // Default processor locale is en-US, whose `punctuation-in-quote: true`
     // grammar option now supplies the style default (csl26-8e75) and moves
     // the trailing comma inside the closing quote, matching citeproc-js.
+    // The `and` and date template components both declare their own
+    // `prefix: " "`; the shared item delimiter (default ", ") must not
+    // also apply before them, or the join doubles up into a stray comma
+    // and doubled spaces (csl26-475u) — the title's closing quote takes no
+    // comma at all here, since the "and" term supplies its own leading
+    // space directly.
     assert_eq!(
         citation,
-        "Berliner Mauer, “Berliner Mauer,”  and,  January 15, 1990"
+        "Berliner Mauer, “Berliner Mauer” and January 15, 1990"
     );
 }
 

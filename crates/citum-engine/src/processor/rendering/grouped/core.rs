@@ -656,13 +656,12 @@ impl Renderer<'_> {
                 self.config.multilingual.as_ref(),
                 self.locale.punctuation_realization.as_ref(),
             );
-            let (mut filtered_template, leading_affix, strip_item_delimiter) =
-                filter_author_from_template::<F>(
-                    &state.template,
-                    script,
-                    realization.as_deref(),
-                    fmt,
-                );
+            let (mut filtered_template, leading_affix) = filter_author_from_template::<F>(
+                &state.template,
+                script,
+                realization.as_deref(),
+                fmt,
+            );
             if collapse_group {
                 if index == 0 {
                     // Capture the full WrapConfig from the first remaining component
@@ -685,11 +684,18 @@ impl Renderer<'_> {
                     .filter(|value| !value.is_empty())
                     .cloned();
             }
-            let item_delimiter = if strip_item_delimiter {
-                ""
-            } else {
-                params.intra_delimiter
-            };
+            // Previously zeroed to `""` whenever the leading affix was
+            // scavenged for the external author->first-component join
+            // (avoiding a double delimiter there), but `item_delimiter` is
+            // threaded uniformly across *every* join in the item's template
+            // by `citation_to_string_with_format` — zeroing it also
+            // silently dropped the join before any later sibling lacking
+            // its own separator (csl26-475u). That external join is now
+            // guarded per-part instead, via each component's own
+            // `supplies_own_leading_separator` (see `render/citation.rs`),
+            // so the shared delimiter can stay live for the rest of the
+            // template.
+            let item_delimiter = params.intra_delimiter;
             if let Some(item_str) = self.render_group_item_from_template_with_format::<F>(
                 state.reference,
                 GroupItemRenderRequest {
@@ -1532,7 +1538,7 @@ pub(super) fn filter_author_from_template<F>(
     script: crate::values::ScriptClass,
     realization: Option<&citum_schema::options::PunctuationRealization>,
     fmt: &F,
-) -> (Vec<TemplateComponent>, Option<String>, bool)
+) -> (Vec<TemplateComponent>, Option<String>)
 where
     F: crate::render::format::OutputFormat<Output = String>,
 {
@@ -1575,7 +1581,7 @@ where
     if let Some(first) = filtered.first_mut() {
         strip_leading_group_affixes(first);
     }
-    (filtered, leading_affix, stripped_leading_affix.is_some())
+    (filtered, leading_affix)
 }
 
 fn author_group_delimiter_affix<F>(

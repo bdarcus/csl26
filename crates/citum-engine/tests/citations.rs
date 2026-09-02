@@ -2558,9 +2558,14 @@ fn oscola_position_overrides_control_ibid_and_subsequent_forms() {
         .process_citation(&ibid_with_locator)
         .expect("ibid-with-locator cite should render");
 
+    // oscola.yaml's citation.delimiter is a literal space; the title (with
+    // its own scavenged `", "` prefix externalized as the author->title
+    // join) and the year, wrapped in parentheses with no prefix of its
+    // own, must still take that shared delimiter (csl26-475u) — confirmed
+    // against citeproc-js via `node scripts/oracle.js styles-legacy/oscola.csl`.
     assert_eq!(
         first_rendered,
-        "John Smith, \u{201C}_A Great Book_\u{201D}(1995)."
+        "John Smith, \u{201C}_A Great Book_\u{201D} (1995)."
     );
     // oscola.yaml declares no `default-locale`, so it resolves to the
     // caller's locale — en-US here, whose `punctuation-in-quote: true`
@@ -2677,7 +2682,13 @@ fn thomson_reuters_subsequent_short_form_keeps_the_locator() {
         .process_citation(&subsequent)
         .expect("subsequent cite should render");
 
-    assert_eq!(first_rendered, "Smith, \u{201C}A Great Book\u{201D}(1995).");
+    // thomson-reuters-legal-tax-and-accounting-australia.yaml's
+    // citation.delimiter is a literal space; the title and the
+    // parenthesised year must still take it (csl26-475u).
+    assert_eq!(
+        first_rendered,
+        "Smith, \u{201C}A Great Book\u{201D} (1995)."
+    );
     assert_eq!(
         subsequent_rendered,
         "Smith, \u{201C}_A Great Book_\u{201D} at 23."
@@ -2812,32 +2823,41 @@ citation:
 }
 
 /// csl26-475u. given an MLA-shaped citation template — a leading
-/// author+title group (title carrying its own `", "` prefix) followed by a
-/// sibling `variable: locator` with no prefix of its own — when rendering a
-/// citation with a locator (reproduces even for a single, non-collapsed
-/// item), then a delimiter should still separate the title from the
-/// locator. Currently ignored: `filter_author_from_template` scavenges the
-/// title's own prefix to join author->title externally and clears the
-/// delimiter used to join the item's remaining top-level parts, which also
-/// suppresses the title->locator join since only one delimiter value is
-/// threaded through `citation_to_string_with_format`. Two attempted engine
-/// fixes both regressed other embedded styles: (1) falling back to the
-/// normal delimiter whenever more than one top-level component survives
-/// double-delimited a Date/Locator component that already declares its own
-/// `prefix`; (2) narrowing that fallback to components with no static
-/// `prefix`/`wrap` of their own, and injecting the delimiter as their own
-/// `prefix`, still double-delimited MLA's real embedded style wherever a
-/// preceding component renders empty (e.g. a suppressed `disambiguate-only`
-/// title, or a suppressed author) and gets dropped from
-/// `citation_to_string_with_format`'s `parts` before joining -- the
-/// injected static prefix has no way to know its predecessor vanished.
-/// `citation_to_string_with_format`/`push_delimiter` only support one
-/// uniform delimiter value across an item's whole template; a real fix
-/// needs either per-join delimiter support there, or a narrower non-engine
-/// fix (declare `prefix: ", "` on MLA's own `variable: locator` in the
-/// embedded style YAML, sidestepping the shared code path). See the bean
-/// for oracle/PR context.
-fn mla_shaped_template_keeps_title_locator_delimiter_in_same_author_collapse() {
+/// author+title group (title carrying its own `", "` prefix, scavenged to
+/// join author->title externally) followed by a sibling `variable: locator`
+/// with no prefix of its own — when rendering a citation with a locator
+/// (reproduces even for a single, non-collapsed item), then a delimiter
+/// should still separate the title from the locator.
+///
+/// Was broken because `filter_author_from_template` reported the scavenge
+/// via a `strip_item_delimiter` flag that zeroed the *whole* item's shared
+/// delimiter in `render_group_item_parts_with_format`, and
+/// `citation_to_string_with_format` threads that one delimiter value
+/// uniformly across every join in the item's template — so zeroing it to
+/// avoid double-delimiting the externalized author->title join also
+/// silently dropped the title->locator join.
+///
+/// Fixed by inverting the mechanism: `RenderedComponent` now records
+/// `supplies_own_leading_separator` per component, and
+/// `citation_to_string_with_format` skips the *shared* delimiter only for
+/// parts that report it, deciding this after empty parts are already
+/// dropped from `parts`. The shared delimiter itself is no longer zeroed
+/// anywhere. Two earlier attempts instead *injected* a delimiter as a
+/// static per-component `prefix`, decided from template shape alone before
+/// rendering; both regressed other embedded styles (double-delimiting a
+/// component that already declared its own `prefix`, and orphan commas
+/// when a preceding component rendered empty and vanished from `parts`
+/// before the static injection could know).
+///
+/// `supplies_own_leading_separator` classifies the component's *structured*
+/// `DelimiterPunctuation` prefix value, not its realized rendered string —
+/// classifying the rendered glyph breaks for CJK, where a semantic comma
+/// realizes to `，` rather than `,` (caught in PR review; see
+/// `prefix_supplies_own_leading_separator` in `render/component.rs`, and
+/// `cjk_realized_semantic_prefix_is_recognized_as_self_separating` below
+/// for the regression test). See the bean for the full investigation and
+/// oracle/PR context.
+fn item_template_delimits_a_bare_sibling_after_a_scavenged_leading_affix() {
     let style_yaml = r#"
 info:
   title: MLA Locator Delimiter Repro
@@ -2931,6 +2951,89 @@ citation:
         "(Garcia, \u{201c}Methods for Robust Climate Attribution,\u{201d} p. 100; \
          Garcia, \u{201c}Methods for Probabilistic Climate Attribution\u{201d})"
     );
+}
+
+/// csl26-475u follow-up (PR #1255 review). `supplies_own_leading_separator`
+/// must classify the component's *structured* `DelimiterPunctuation` prefix,
+/// not its realized glyph -- a semantic `{ mark: comma }` prefix realizes to
+/// full-width `，` under CJK script, which an ASCII-only character test
+/// would misclassify as "not a separator," reintroducing double-delimiting
+/// for CJK output specifically. Given a citation item whose style opts into
+/// CJK realization (`options.multilingual.realization-default: cjk`) and a
+/// template component with its own `prefix: { mark: comma }`, the shared
+/// item delimiter must be skipped ahead of that component: one full-width
+/// comma at the join, not a doubled join (confirmed against the pre-fix
+/// predicate: it renders `"测试, ，2020"` -- the shared delimiter and the
+/// component's own separator both firing -- not the `"测试，2020"` this
+/// asserts).
+///
+/// Uses `suppress_author: true` to isolate the item's own internal join
+/// (title -> date, where `supplies_own_leading_separator` lives) from the
+/// separate author->title external join, which has its own delimiter
+/// resolution untouched by this fix.
+fn cjk_realized_semantic_prefix_is_recognized_as_self_separating() {
+    let style_yaml = r#"
+info:
+  title: CJK Separator Classification Repro
+  id: cjk-separator-classification-repro
+options:
+  processing: author-date-full
+  multilingual:
+    realization-default: cjk
+citation:
+  template:
+  - contributor: author
+    form: family-only
+  - title: primary
+  - date: issued
+    form: year
+    prefix: { mark: comma }
+  wrap:
+    punctuation: parentheses
+"#;
+    let style: Style = Style::from_yaml_str(style_yaml).expect("style should parse");
+
+    let item = InputReference::Monograph(Box::new(Monograph {
+        id: Some("cjk-item".into()),
+        r#type: MonographType::Book,
+        title: Some(Title::Single("测试".to_string())),
+        author: Some(citum_schema::reference::Contributor::StructuredName(
+            citum_schema::reference::StructuredName {
+                family: citum_schema::reference::MultilingualString::Simple("Wang".to_string()),
+                given: citum_schema::reference::MultilingualString::Simple("Fang".to_string()),
+                suffix: None,
+                dropping_particle: None,
+                non_dropping_particle: None,
+            },
+        )),
+        language: Some("zh".into()),
+        issued: DateValue::new("2020".to_string()),
+        ..Default::default()
+    }));
+
+    let mut bibliography = indexmap::IndexMap::new();
+    bibliography.insert("cjk-item".to_string(), item);
+
+    let processor = Processor::new(style, bibliography);
+    let mut run = processor.begin_run();
+    let citation = Citation {
+        items: vec![CitationItem {
+            id: "cjk-item".to_string(),
+            ..Default::default()
+        }],
+        mode: CitationMode::NonIntegral,
+        // Isolate the item's own internal join (title -> date) from the
+        // separate author->title external join, which has its own
+        // unrelated delimiter resolution not touched by this fix.
+        suppress_author: true,
+        ..Default::default()
+    };
+
+    let rendered = processor
+        .process_citation_with_format::<citum_engine::render::plain::PlainText>(&citation, &mut run)
+        .expect("citation should render");
+
+    assert_eq!(rendered, "\u{ff08}测试，2020\u{ff09}");
 }
 
 fn citation_html_injects_sparse_template_indices_when_enabled() {
@@ -3445,13 +3548,23 @@ mod note_style_positions {
     }
 
     #[test]
-    #[ignore = "csl26-475u: reproduces the defect; two engine fixes attempted and reverted, see doc comment on the bare fn"]
-    fn mla_shaped_template_keeps_title_locator_delimiter_in_same_author_collapse() {
+    fn item_template_delimits_a_bare_sibling_after_a_scavenged_leading_affix() {
         announce_behavior(
             "A citation with a locator must still separate a title-based item's own title \
-             from its locator with a delimiter.",
+             from its locator with a delimiter, even when that title's own leading affix \
+             was scavenged to join the author to it externally.",
         );
-        super::mla_shaped_template_keeps_title_locator_delimiter_in_same_author_collapse();
+        super::item_template_delimits_a_bare_sibling_after_a_scavenged_leading_affix();
+    }
+
+    #[test]
+    fn cjk_realized_semantic_prefix_is_recognized_as_self_separating() {
+        announce_behavior(
+            "A component's own semantic-mark prefix must be recognized as a \
+             separator by its structured mark, not its CJK-realized glyph, or the \
+             shared item delimiter doubles it up under CJK realization.",
+        );
+        super::cjk_realized_semantic_prefix_is_recognized_as_self_separating();
     }
 
     #[test]

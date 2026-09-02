@@ -1,7 +1,7 @@
 ---
 # csl26-475u
 title: MLA drops locator delimiter entirely in same-author collapse
-status: in-progress
+status: completed
 type: bug
 priority: normal
 tags:
@@ -9,7 +9,7 @@ tags:
     - engine
     - rendering
 created_at: 2026-08-18T12:49:10Z
-updated_at: 2026-09-02T17:30:43Z
+updated_at: 2026-09-02T23:01:57Z
 parent: csl26-h7oc
 ---
 
@@ -106,3 +106,54 @@ mla_shaped_template_keeps_title_locator_delimiter_in_same_author_collapse`
 
 `core.rs` has been fully reverted to the fix/4if2 baseline on this branch;
 only the ignored test and this bean update remain as diagnostic residue.
+
+
+## Correction (2026-09-02, this session)
+
+The original "Wanted" string above is stale — MLA doesn't same-author-collapse
+(no `collapse:` key, so `grouping.rs` makes every item a singleton) and the
+oracle's real string for that scenario is:
+
+    (Garcia, "Methods for Robust Climate Attribution," p. 100; Garcia,
+    "Methods for Probabilistic Climate Attribution")
+
+MLA's citation layout is locator-type conditional in the shipped `.csl`
+(`<if locator="line page timestamp">` -> space delimiter, else comma) — no
+delimiter fallback in `group_delimiter` derivation, and no static `prefix`
+on `variable: locator`, can reach that without a locator-type predicate,
+which the schema doesn't have (`render-when` is field-presence only). See
+csl26-t1hh (filed this session).
+
+## Summary of Changes
+
+Fixed the general engine defect: `citation_to_string_with_format`
+(`crates/citum-engine/src/render/citation.rs`) threaded one uniform
+delimiter value across every join in an item's template, so zeroing it to
+avoid double-delimiting an externalized author->title join also silently
+dropped every later join in that item (the bare `variable: locator` after
+MLA's title group, but also — found via a corpus-wide `report-core.js`
+diff — real double-delimiter bugs in `oscola`, `thomson-reuters-legal-tax-
+and-accounting-australia`, and a synthetic `term_locale` test, all sharing
+the same root cause).
+
+Fix: `RenderedComponent` now records `supplies_own_leading_separator` (a
+realized `prefix` whose first character is whitespace or `, ; : .`), and
+`citation_to_string_with_format` skips the *shared* delimiter — routing
+through `push_delimiter` with an empty one, not skipping the call, so
+quote-movement still fires — only for parts that report it, decided after
+empty parts are already dropped. `item_delimiter` in
+`render_group_item_parts_with_format` (`processor/rendering/grouped/core.rs`)
+is no longer zeroed at all; `strip_item_delimiter` is removed.
+
+Verified: full `just pre-commit` (2739/2739), corpus-wide before/after
+`report-core.js --all-features` diff at origin/main (zero regressions,
+several styles' fuzzy citation match improved: oscola, oscola-no-ibid,
+thomson-reuters, entomological-society-of-america,
+international-journal-of-wildland-fire — none individually gated in
+`verification-policy.yaml`, so no floor reset needed), and oracle re-run
+confirming shipped MLA exact parity is unchanged at 11/20 — this PR removes
+the concatenation defect, MLA still needs the locator-type conditional to
+reach oracle-exact.
+
+Follow-up: csl26-t1hh (locator-type-conditional citation delimiters — schema
+gap, docs/specs PR needed first per repo policy).
