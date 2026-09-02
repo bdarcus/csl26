@@ -2724,6 +2724,93 @@ fn grouped_integral_mode_displays_first_author_only() {
     run_test_case_native(&input, &citation_items, expected, "citation");
 }
 
+/// given a citation template whose leading component is an author `group`
+/// gated by `render-when: field-present: author`, when rendering a grouped
+/// citation, then the author slot renders normally for a reference that
+/// satisfies the condition, and renders empty — never falling back to
+/// `reference.author()`, since the condition already established there is
+/// none to promote — for a reference that fails it.
+#[rstest]
+#[case::render_when_satisfied("with-author")]
+#[case::render_when_suppressed("without-author")]
+fn grouped_citation_honors_render_when_on_leading_author_group(#[case] ref_id: &str) {
+    let style_yaml = r#"
+info:
+  title: Render-When Grouping Test
+  id: render-when-grouping-test
+options:
+  processing: author-date-full
+citation:
+  template:
+    - group:
+      - contributor: author
+        form: short
+      render-when:
+        field-present: author
+      delimiter: " "
+    - date: issued
+      form: year
+      prefix: " "
+"#;
+    let style: Style = Style::from_yaml_str(style_yaml).expect("style should parse");
+
+    let with_author = InputReference::Monograph(Box::new(Monograph {
+        id: Some("with-author".into()),
+        r#type: MonographType::Book,
+        title: Some(Title::Single("Book A".to_string())),
+        author: Some(citum_schema::reference::Contributor::StructuredName(
+            citum_schema::reference::StructuredName {
+                family: citum_schema::reference::MultilingualString::Simple("Smith".to_string()),
+                given: citum_schema::reference::MultilingualString::Simple("John".to_string()),
+                suffix: None,
+                dropping_particle: None,
+                non_dropping_particle: None,
+            },
+        )),
+        issued: DateValue::new("2020".to_string()),
+        ..Default::default()
+    }));
+
+    let without_author = InputReference::Monograph(Box::new(Monograph {
+        id: Some("without-author".into()),
+        r#type: MonographType::Book,
+        title: Some(Title::Single("Book B".to_string())),
+        author: None,
+        issued: DateValue::new("2020".to_string()),
+        ..Default::default()
+    }));
+
+    let mut bibliography = indexmap::IndexMap::new();
+    bibliography.insert("with-author".to_string(), with_author);
+    bibliography.insert("without-author".to_string(), without_author);
+
+    let processor = Processor::new(style, bibliography);
+    let mut run = processor.begin_run();
+    let citation = Citation {
+        items: vec![CitationItem {
+            id: ref_id.to_string(),
+            ..Default::default()
+        }],
+        mode: CitationMode::NonIntegral,
+        ..Default::default()
+    };
+
+    let rendered = processor
+        .process_citation_with_format::<citum_engine::render::plain::PlainText>(&citation, &mut run)
+        .expect("citation should render");
+
+    let expected = match ref_id {
+        "with-author" => "Smith 2020",
+        "without-author" => "2020",
+        other => panic!("unexpected case id: {other}"),
+    };
+    assert_eq!(
+        rendered.trim(),
+        expected,
+        "rendered citation for '{ref_id}' did not match; yaml:\n{style_yaml}"
+    );
+}
+
 fn citation_html_injects_sparse_template_indices_when_enabled() {
     let style_yaml = r#"
 info:
