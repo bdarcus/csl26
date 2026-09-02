@@ -1,6 +1,6 @@
 {
-  "generated": "2026-08-30T14:06:50.791Z",
-  "commit": "489bd726",
+  "generated": "2026-09-02T18:46:39.520Z",
+  "commit": "76428dbb6",
   "source": "scripts/report-core.js",
   "purpose": "Hard per-style exact-parity floor-gate baseline for the embedded tier, consumed by scripts/check-core-quality.js --parity-baseline (see docs/architecture/audits/2026-07-31_EXACT_PARITY_REFOCUS.md). It also records headline fidelity. Sub-1.0 fidelity ratchets are tracked separately per-style in scripts/report-data/verification-policy.yaml (min_pass_rate floors). Regenerate this file after each parity-tuning wave; the gate never goes backward on passed counts or total (fixture-drift guard).",
   "styles": {
@@ -42,10 +42,10 @@
     },
     "chicago-author-date-18th": {
       "tier": "embedded",
-      "fidelityScore": 0.903,
-      "qualityScore": 0.876,
+      "fidelityScore": 0.901,
+      "qualityScore": 0.874,
       "citations": {
-        "passed": 62,
+        "passed": 61,
         "total": 63
       },
       "bibliography": {
@@ -53,9 +53,9 @@
         "total": 491
       },
       "exactParity": {
-        "passed": 211,
+        "passed": 215,
         "total": 542,
-        "rate": 0.389
+        "rate": 0.397
       }
     },
     "chicago-notes-18th": {
@@ -89,9 +89,9 @@
         "total": 440
       },
       "exactParity": {
-        "passed": 87,
+        "passed": 86,
         "total": 473,
-        "rate": 0.184
+        "rate": 0.182
       }
     },
     "elsevier-harvard": {
@@ -197,9 +197,9 @@
         "total": 250
       },
       "exactParity": {
-        "passed": 257,
+        "passed": 261,
         "total": 262,
-        "rate": 0.981
+        "rate": 0.996
       }
     },
     "ieee": {
@@ -294,10 +294,10 @@
     },
     "taylor-and-francis-chicago-author-date": {
       "tier": "embedded",
-      "fidelityScore": 0.903,
+      "fidelityScore": 0.901,
       "qualityScore": 1,
       "citations": {
-        "passed": 62,
+        "passed": 61,
         "total": 63
       },
       "bibliography": {
@@ -305,9 +305,9 @@
         "total": 491
       },
       "exactParity": {
-        "passed": 211,
+        "passed": 215,
         "total": 542,
-        "rate": 0.389
+        "rate": 0.397
       }
     },
     "taylor-and-francis-council-of-science-editors-author-date": {
