@@ -2811,6 +2811,128 @@ citation:
     );
 }
 
+/// csl26-475u. given an MLA-shaped citation template — a leading
+/// author+title group (title carrying its own `", "` prefix) followed by a
+/// sibling `variable: locator` with no prefix of its own — when rendering a
+/// citation with a locator (reproduces even for a single, non-collapsed
+/// item), then a delimiter should still separate the title from the
+/// locator. Currently ignored: `filter_author_from_template` scavenges the
+/// title's own prefix to join author->title externally and clears the
+/// delimiter used to join the item's remaining top-level parts, which also
+/// suppresses the title->locator join since only one delimiter value is
+/// threaded through `citation_to_string_with_format`. Two attempted engine
+/// fixes both regressed other embedded styles: (1) falling back to the
+/// normal delimiter whenever more than one top-level component survives
+/// double-delimited a Date/Locator component that already declares its own
+/// `prefix`; (2) narrowing that fallback to components with no static
+/// `prefix`/`wrap` of their own, and injecting the delimiter as their own
+/// `prefix`, still double-delimited MLA's real embedded style wherever a
+/// preceding component renders empty (e.g. a suppressed `disambiguate-only`
+/// title, or a suppressed author) and gets dropped from
+/// `citation_to_string_with_format`'s `parts` before joining -- the
+/// injected static prefix has no way to know its predecessor vanished.
+/// `citation_to_string_with_format`/`push_delimiter` only support one
+/// uniform delimiter value across an item's whole template; a real fix
+/// needs either per-join delimiter support there, or a narrower non-engine
+/// fix (declare `prefix: ", "` on MLA's own `variable: locator` in the
+/// embedded style YAML, sidestepping the shared code path). See the bean
+/// for oracle/PR context.
+fn mla_shaped_template_keeps_title_locator_delimiter_in_same_author_collapse() {
+    let style_yaml = r#"
+info:
+  title: MLA Locator Delimiter Repro
+  id: mla-locator-delimiter-repro
+options:
+  processing: author-date-full
+citation:
+  template:
+  - group:
+    - contributor: author
+      form: family-only
+    - title: primary
+      wrap:
+        punctuation: quotes
+      prefix: ", "
+  - variable: locator
+  wrap:
+    punctuation: parentheses
+  multi-cite-delimiter: "; "
+"#;
+    let style: Style = Style::from_yaml_str(style_yaml).expect("style should parse");
+
+    let item31 = InputReference::Monograph(Box::new(Monograph {
+        id: Some("ITEM-31".into()),
+        r#type: MonographType::Book,
+        title: Some(Title::Single(
+            "Methods for Robust Climate Attribution".to_string(),
+        )),
+        author: Some(citum_schema::reference::Contributor::StructuredName(
+            citum_schema::reference::StructuredName {
+                family: citum_schema::reference::MultilingualString::Simple("Garcia".to_string()),
+                given: citum_schema::reference::MultilingualString::Simple("Maria".to_string()),
+                suffix: None,
+                dropping_particle: None,
+                non_dropping_particle: None,
+            },
+        )),
+        issued: DateValue::new("2020".to_string()),
+        ..Default::default()
+    }));
+    let item32 = InputReference::Monograph(Box::new(Monograph {
+        id: Some("ITEM-32".into()),
+        r#type: MonographType::Book,
+        title: Some(Title::Single(
+            "Methods for Probabilistic Climate Attribution".to_string(),
+        )),
+        author: Some(citum_schema::reference::Contributor::StructuredName(
+            citum_schema::reference::StructuredName {
+                family: citum_schema::reference::MultilingualString::Simple("Garcia".to_string()),
+                given: citum_schema::reference::MultilingualString::Simple("Maria".to_string()),
+                suffix: None,
+                dropping_particle: None,
+                non_dropping_particle: None,
+            },
+        )),
+        issued: DateValue::new("2021".to_string()),
+        ..Default::default()
+    }));
+
+    let mut bibliography = indexmap::IndexMap::new();
+    bibliography.insert("ITEM-31".to_string(), item31);
+    bibliography.insert("ITEM-32".to_string(), item32);
+
+    let processor = Processor::new(style, bibliography);
+    let mut run = processor.begin_run();
+    let citation = Citation {
+        items: vec![
+            CitationItem {
+                id: "ITEM-31".to_string(),
+                locator: Some(citum_schema::citation::CitationLocator::single(
+                    citum_schema::citation::LocatorType::Page,
+                    "100",
+                )),
+                ..Default::default()
+            },
+            CitationItem {
+                id: "ITEM-32".to_string(),
+                ..Default::default()
+            },
+        ],
+        mode: CitationMode::NonIntegral,
+        ..Default::default()
+    };
+
+    let rendered = processor
+        .process_citation_with_format::<citum_engine::render::plain::PlainText>(&citation, &mut run)
+        .expect("citation should render");
+
+    assert_eq!(
+        rendered,
+        "(Garcia, \u{201c}Methods for Robust Climate Attribution,\u{201d} p. 100; \
+         Garcia, \u{201c}Methods for Probabilistic Climate Attribution\u{201d})"
+    );
+}
+
 fn citation_html_injects_sparse_template_indices_when_enabled() {
     let style_yaml = r#"
 info:
@@ -3320,6 +3442,16 @@ mod note_style_positions {
             "Integral grouped rendering should display only the first item's author.",
         );
         super::grouped_integral_mode_displays_first_author_only();
+    }
+
+    #[test]
+    #[ignore = "csl26-475u: reproduces the defect; two engine fixes attempted and reverted, see doc comment on the bare fn"]
+    fn mla_shaped_template_keeps_title_locator_delimiter_in_same_author_collapse() {
+        announce_behavior(
+            "A citation with a locator must still separate a title-based item's own title \
+             from its locator with a delimiter.",
+        );
+        super::mla_shaped_template_keeps_title_locator_delimiter_in_same_author_collapse();
     }
 
     #[test]
