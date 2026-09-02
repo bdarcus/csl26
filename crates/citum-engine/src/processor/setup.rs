@@ -302,7 +302,9 @@ impl Processor {
     /// `Label`) never reach the config-level step; those without any
     /// `processing:` fall back to the default family (`AuthorDate`), whose
     /// config carries the author-date sort preset.
-    fn resolved_bibliography_sort(&self) -> Option<(citum_schema::grouping::GroupSort, bool)> {
+    pub(crate) fn resolved_bibliography_sort(
+        &self,
+    ) -> Option<(citum_schema::grouping::GroupSort, bool)> {
         if let Some(sort_spec) = self
             .style
             .bibliography
