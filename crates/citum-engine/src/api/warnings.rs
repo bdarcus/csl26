@@ -270,44 +270,86 @@ pub fn unknown_enum_warnings(processor: &Processor) -> Vec<Warning> {
             }
         }
     }
-    scan_bibliography_config_sort_for_citation_number(processor, &mut warnings);
+    scan_bibliography_sort_for_citation_number(processor, &mut warnings);
 
     warnings
 }
 
-/// Warn when the bibliography's explicit config-level sort lists
-/// `citation-number` as a key. `Sort::group_sort` drops the key rather than
-/// mapping it, so it contributes nothing to bibliography ordering — a silent
-/// no-op the style author almost certainly did not intend. The
-/// `citation-number` *preset* (`SortEntry::Preset`) is exempt: it is the
-/// documented way to say "no bibliography sort" for numeric styles.
-fn scan_bibliography_config_sort_for_citation_number(
-    processor: &Processor,
-    warnings: &mut Vec<Warning>,
-) {
-    let Some(citum_schema::options::SortEntry::Explicit(sort)) = processor
+/// Warn about bibliography sort configurations that resolve to nothing.
+///
+/// Two distinct shapes, both surfaced under the same `code`:
+///
+/// 1. An *explicit* config-level (custom-processing) sort lists
+///    `citation-number` as one of several keys. `Sort::group_sort` drops the
+///    key rather than mapping it, so that key contributes nothing to
+///    bibliography ordering while any other listed keys still apply — a
+///    silent partial no-op the style author almost certainly did not intend.
+/// 2. The *effective* bibliography sort — [`Processor::resolved_bibliography_sort`],
+///    which accounts for a style-level `bibliography.sort` override and
+///    processing-family preset defaults, not just the config-level step —
+///    resolves to an empty group-sort template because it is (or inherits)
+///    the `citation-number` preset. That preset is the documented way to say
+///    "no bibliography sort" for numeric styles, but a non-numeric family
+///    (author-date/note/label) that resolves to it — often by silently
+///    inheriting `bibliography.sort: citation-number` from a numeric base,
+///    rather than declaring its own sort — has no group-sort equivalent and
+///    renders in registry order with no warning otherwise. Guarded to run
+///    only when case 1 did not already fire, since both read the same
+///    config-level step.
+fn scan_bibliography_sort_for_citation_number(processor: &Processor, warnings: &mut Vec<Warning>) {
+    let mut config_level_explicit_warned = false;
+
+    if let Some(citum_schema::options::SortEntry::Explicit(sort)) = processor
         .get_bibliography_config()
         .processing
         .as_ref()
         .map(citum_schema::options::Processing::config)
         .and_then(|config| config.sort)
-    else {
+    {
+        let uses_citation_number = sort
+            .template
+            .iter()
+            .any(|spec| matches!(spec.key, citum_schema::options::SortKey::CitationNumber));
+
+        if uses_citation_number {
+            config_level_explicit_warned = true;
+            warnings.push(Warning {
+                level: WarningLevel::Warning,
+                code: "citation_number_sort_not_supported".to_string(),
+                citation_id: None,
+                ref_id: None,
+                message: "Style bibliography configuration lists 'citation-number' as an explicit \
+                          sort key; it is not supported and is ignored for bibliography ordering."
+                    .to_string(),
+            });
+        }
+    }
+
+    if config_level_explicit_warned {
         return;
-    };
+    }
 
-    let uses_citation_number = sort
-        .template
-        .iter()
-        .any(|spec| matches!(spec.key, citum_schema::options::SortKey::CitationNumber));
+    let is_numeric_family = matches!(
+        processor.get_bibliography_config().processing,
+        Some(citum_schema::options::Processing::Numeric)
+    );
+    if is_numeric_family {
+        return;
+    }
 
-    if uses_citation_number {
+    if let Some((group_sort, is_config_level)) = processor.resolved_bibliography_sort()
+        && !is_config_level
+        && group_sort.template.is_empty()
+    {
         warnings.push(Warning {
             level: WarningLevel::Warning,
             code: "citation_number_sort_not_supported".to_string(),
             citation_id: None,
             ref_id: None,
-            message: "Style bibliography configuration lists 'citation-number' as an explicit \
-                      sort key; it is not supported and is ignored for bibliography ordering."
+            message: "Style bibliography sort resolves to the 'citation-number' preset, which has \
+                      no group-sort equivalent outside numeric processing; the bibliography will \
+                      render in registry order instead. This is frequently inherited unintentionally \
+                      from a numeric base style rather than declared explicitly."
                 .to_string(),
         });
     }
@@ -451,6 +493,8 @@ fn scan_template_for_unknowns(
 #[cfg(test)]
 #[allow(clippy::unwrap_used, reason = "tests")]
 mod tests {
+    use rstest::rstest;
+
     use super::*;
 
     #[test]
@@ -599,6 +643,53 @@ mod tests {
             "did not expect a warning for the director role-label term \
              (chicago-author-date-18th's song type-variant relies on this), \
              got: {warnings:?}"
+        );
+    }
+
+    /// given a style whose bibliography sort resolves to the `citation-number`
+    /// preset (directly, or by inheriting a numeric base's default), when
+    /// scanning for compat warnings, then a non-numeric processing family
+    /// warns while a numeric family stays silent — `citation-number` has no
+    /// group-sort equivalent outside numeric processing (registry order by
+    /// definition), so it is only a legitimate "no bibliography sort" idiom
+    /// for numeric styles.
+    #[rstest]
+    #[case::author_date_with_own_citation_number_sort(
+        "options:\n  processing: author-date-full\nbibliography:\n  sort: citation-number\n",
+        true
+    )]
+    #[case::note_family_with_citation_number_sort(
+        "options:\n  processing: note\nbibliography:\n  sort: citation-number\n",
+        true
+    )]
+    #[case::numeric_family_with_citation_number_sort(
+        "options:\n  processing: numeric\nbibliography:\n  sort: citation-number\n",
+        false
+    )]
+    #[case::author_date_family_with_no_bibliography_sort_declared(
+        "options:\n  processing: author-date-full\n",
+        false
+    )]
+    #[case::author_date_family_with_own_non_citation_number_sort(
+        "options:\n  processing: author-date-full\nbibliography:\n  sort: author-date-title\n",
+        false
+    )]
+    fn scan_bibliography_sort_for_citation_number_is_family_aware(
+        #[case] yaml_body: &str,
+        #[case] expect_warning: bool,
+    ) {
+        let yaml = format!("info:\n  title: Test\n{yaml_body}");
+        let style = citum_schema::Style::from_yaml_str(&yaml).unwrap();
+        let processor = Processor::new(style, Bibliography::new());
+
+        let warnings = unknown_enum_warnings(&processor);
+        let fired = warnings
+            .iter()
+            .any(|w| w.code == "citation_number_sort_not_supported");
+
+        assert_eq!(
+            fired, expect_warning,
+            "case yaml:\n{yaml}\nwarnings: {warnings:?}"
         );
     }
 
