@@ -295,8 +295,13 @@ fn test_taylor_and_francis_author_date_wrapper_preserves_prefixed_multi_cites() 
         .process_citation(&citation)
         .expect("prefixed multi-cite should render");
 
+    // `variable: locator`'s own `prefix: ", "` already supplies a leading
+    // separator; the shared item `delimiter: " "` must not also apply
+    // before it, or the join doubles up (csl26-475u). Confirmed exact
+    // against citeproc-js via `node scripts/oracle.js
+    // styles-legacy/taylor-and-francis-chicago-author-date.csl`.
     assert_eq!(
-        rendered, "(Kuhn 1962 , 44; cf. LeCun, Bengio, and Hinton 2015 , 437)",
+        rendered, "(Kuhn 1962, 44; cf. LeCun, Bengio, and Hinton 2015, 437)",
         "prefixed multi-cites should retain the full three-author form"
     );
 }

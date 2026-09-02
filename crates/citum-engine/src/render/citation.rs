@@ -135,6 +135,7 @@ pub fn citation_to_string_with_format<F: OutputFormat<Output = String>>(
     }
 
     let delim = RealizedPunctuation::new(std::borrow::Cow::Borrowed(delimiter.unwrap_or("")));
+    let no_delim = RealizedPunctuation::new(std::borrow::Cow::Borrowed(""));
     let punctuation_in_quote = proc_template
         .first()
         .and_then(|c| c.config.as_ref())
@@ -154,9 +155,20 @@ pub fn citation_to_string_with_format<F: OutputFormat<Output = String>>(
         if i == 0 {
             content.push_str(&part.text);
         } else {
+            // A part whose own realized prefix already supplies a leading
+            // separator (e.g. a component's own `", "`) must not also take
+            // the shared item delimiter, or the join doubles up. Route
+            // through `push_delimiter` with an empty delimiter rather than
+            // skipping the call outright, so Case 2 (moving the part's own
+            // leading `.`/`,` inside a preceding closing quote) still fires.
+            let effective_delim = if part.supplies_own_leading_separator {
+                &no_delim
+            } else {
+                &delim
+            };
             push_delimiter::<F>(
                 &mut content,
-                &delim,
+                effective_delim,
                 part,
                 punctuation_in_quote,
                 strong_terminal_comma_policy,
@@ -221,6 +233,7 @@ mod tests {
     fn part(text: &str) -> RenderedComponent {
         RenderedComponent {
             text: text.to_string(),
+            ..Default::default()
         }
     }
 

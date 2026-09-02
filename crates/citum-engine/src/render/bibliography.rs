@@ -725,6 +725,7 @@ mod tests {
     fn rendered(text: &str) -> RenderedComponent {
         RenderedComponent {
             text: text.to_string(),
+            ..Default::default()
         }
     }
 

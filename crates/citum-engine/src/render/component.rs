@@ -164,6 +164,12 @@ pub fn render_component_with_format<F: OutputFormat<Output = String>>(
 pub(crate) struct RenderedComponent {
     /// The fully rendered component text (affixes, wraps, semantics applied).
     pub(crate) text: String,
+    /// True when this component's own outer `prefix` already supplies a
+    /// leading separator, per [`prefix_supplies_own_leading_separator`]. A
+    /// shared join delimiter applied ahead of a part like this would
+    /// double it; see `citation_to_string_with_format`'s per-join
+    /// delimiter skip.
+    pub(crate) supplies_own_leading_separator: bool,
 }
 
 /// As [`render_component_with_format`], but returns a [`RenderedComponent`]
@@ -354,7 +360,49 @@ pub(crate) fn render_component_detailed_with_format_and_renderer<
         output = remap_to_latin_punctuation(output);
     }
 
-    RenderedComponent { text: output }
+    let supplies_own_leading_separator =
+        prefix_supplies_own_leading_separator(rendering.prefix.as_ref());
+
+    RenderedComponent {
+        text: output,
+        supplies_own_leading_separator,
+    }
+}
+
+/// Whether a component's own `prefix` already supplies a leading separator,
+/// so a shared join delimiter applied ahead of it would double up.
+///
+/// Classifies the *source* mark, not the realized glyph: a CJK `，` is
+/// comma-like by origin but not by any ASCII/whitespace test of its
+/// rendered character (see `RealizedPunctuation`'s doc comment in
+/// `render/format.rs`, which states this same principle for the sibling
+/// quote-collision logic). `Custom` is the literal-text authoring path
+/// (e.g. `prefix: ", "`, which is how nearly every embedded style writes a
+/// comma prefix today) — `realize_punctuation` never script-realizes it, so
+/// its author-typed leading character is exactly what will render, at any
+/// script.
+///
+/// Deliberately narrower than "not alphanumeric": an opening bracket or
+/// quote (`prefix: "("`, `prefix: "\u{201c}"`) is not a separator — it is
+/// content that still wants the shared delimiter ahead of it
+/// (`Title (1995)`, not `Title(1995)`).
+fn prefix_supplies_own_leading_separator(
+    prefix: Option<&citum_schema::template::DelimiterPunctuation>,
+) -> bool {
+    match prefix {
+        Some(
+            citum_schema::template::DelimiterPunctuation::Comma
+            | citum_schema::template::DelimiterPunctuation::Semicolon
+            | citum_schema::template::DelimiterPunctuation::Period
+            | citum_schema::template::DelimiterPunctuation::Colon
+            | citum_schema::template::DelimiterPunctuation::Space,
+        ) => true,
+        Some(citum_schema::template::DelimiterPunctuation::Custom(literal)) => literal
+            .chars()
+            .next()
+            .is_some_and(|ch| ch.is_whitespace() || matches!(ch, ',' | ';' | ':' | '.')),
+        _ => false,
+    }
 }
 
 /// Whether this component opts into the legacy literal-punctuation remap.

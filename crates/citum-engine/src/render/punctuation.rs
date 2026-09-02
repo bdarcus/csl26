@@ -306,6 +306,7 @@ mod tests {
     fn part(text: &str) -> RenderedComponent {
         RenderedComponent {
             text: text.to_string(),
+            ..Default::default()
         }
     }
 
