@@ -874,6 +874,19 @@ impl Renderer<'_> {
             None,
         );
 
+        // A leading Group's own render-when gates whether its contents are
+        // considered at all; find_grouping_component descends past it without
+        // checking, so honor it here before descending. A suppressed leading
+        // component means nothing renders in this slot, not that the
+        // reference.author() fallback below should run instead.
+        if let Some(TemplateComponent::Group(group)) = template.first()
+            && group.render_when.as_ref().is_some_and(|condition| {
+                !crate::values::group_condition_matches(reference, condition)
+            })
+        {
+            return String::new();
+        }
+
         // Try to use the first semantically relevant component (including nested lists)
         // so disambiguation hints and component-specific formatting are preserved.
         // This ensures substitution, shortening, and mode-dependent conjunctions are respected.

@@ -1579,7 +1579,16 @@ test('generateReport exposes the registered coverage audit on its corresponding 
   // Chicago parity leverage audit's wave 1 (title case) moved it further
   // to 86, and the title-case stop-word fix (csl26-omqk) moved it to 87 --
   // see docs/architecture/audits/2026-08-23_CHICAGO_PARITY_LEVERAGE_AUDIT.md.
-  assert.equal(audit.postChangeEvidence.afterExactParity.passed, 87);
+  // csl26-4if2 (honor render-when on a leading citation grouping component,
+  // instead of ignoring it) moved it to 86: a net improvement across this
+  // style's corpus (~21 items gained vs. 3 lost), but one of the 3 lost is
+  // an editor-only reference whose author+title group is gated on
+  // `render-when: field-present: author` -- the OLD, render-when-ignoring
+  // code accidentally still rendered correctly because contributor
+  // substitution (editor standing in for author) applied independently of
+  // the gate. See csl26-x79y: render-when field presence checks the raw
+  // field, not the substitution-aware effective contributor.
+  assert.equal(audit.postChangeEvidence.afterExactParity.passed, 86);
 });
 
 test('generateReport supports multi-style selected reports', {
