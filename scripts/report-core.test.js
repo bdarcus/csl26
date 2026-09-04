@@ -1587,8 +1587,11 @@ test('generateReport exposes the registered coverage audit on its corresponding 
   // code accidentally still rendered correctly because contributor
   // substitution (editor standing in for author) applied independently of
   // the gate. See csl26-x79y: render-when field presence checks the raw
-  // field, not the substitution-aware effective contributor.
-  assert.equal(audit.postChangeEvidence.afterExactParity.passed, 86);
+  // field, not the substitution-aware effective contributor. The
+  // terminal-mark quote-collision fix (csl26-wtaq, PR #1257) moved it to
+  // 87 by no longer doubling a period after a quoted terminal mark
+  // (`?".` -> `?"`) at entry-suffix and component-join boundaries.
+  assert.equal(audit.postChangeEvidence.afterExactParity.passed, 87);
 });
 
 test('generateReport supports multi-style selected reports', {

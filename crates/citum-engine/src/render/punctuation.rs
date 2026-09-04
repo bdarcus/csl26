@@ -235,6 +235,34 @@ pub(crate) fn join_with_quote_movement<F: OutputFormat<Output = String>>(
     result
 }
 
+/// Return the visible character immediately preceding the point where
+/// [`move_punctuation_into_quote`] would insert a trailing mark: just inside
+/// a closing quotation glyph when one sits at the visible end of `text`, or
+/// the last non-whitespace visible character otherwise. Used to check
+/// whether a mark about to be appended (e.g. a bibliography entry suffix)
+/// collides with punctuation already there — via [`resolve_punctuation_collision`]
+/// — rather than being genuinely additive (a quoted title already ending in
+/// `?` doesn't also need a trailing `.`: `"?".` is wrong, `?"` is right).
+pub(crate) fn char_before_insertion_point<F: OutputFormat<Output = String>>(
+    text: &str,
+    close_quote: &str,
+) -> Option<char> {
+    let visible = F::default().visible_text(text);
+    let mut chars: Vec<char> = visible.chars().collect();
+    while matches!(chars.last(), Some(ch) if ch.is_whitespace()) {
+        chars.pop();
+    }
+    if !close_quote.is_empty() && chars.ends_with(&close_quote.chars().collect::<Vec<_>>()) {
+        chars.truncate(chars.len().saturating_sub(close_quote.chars().count()));
+    } else if close_quote != "\"" && chars.last() == Some(&'"') {
+        chars.pop();
+    }
+    while matches!(chars.last(), Some(ch) if ch.is_whitespace()) {
+        chars.pop();
+    }
+    chars.last().copied()
+}
+
 /// Resolve one punctuation pair while preserving the established compatibility matrix.
 pub(crate) fn resolve_punctuation_collision(
     first: char,
@@ -308,6 +336,24 @@ mod tests {
             text: text.to_string(),
             ..Default::default()
         }
+    }
+
+    #[rstest]
+    #[case::strong_terminal_before_close_quote("“Are Flaxseeds All That?”", "\u{201D}", Some('?'))]
+    #[case::weak_terminal_before_close_quote("“Staff, 23 June 2025:”", "\u{201D}", Some(':'))]
+    #[case::locale_specific_guillemet_close("«Titre?»", "»", Some('?'))]
+    #[case::no_quote_present_falls_back_to_bare_last_char("Vous descendez?", "\u{201D}", Some('?'))]
+    #[case::trailing_whitespace_is_skipped("“Deep Learning?” ", "\u{201D}", Some('?'))]
+    #[case::empty_text("", "\u{201D}", None)]
+    fn char_before_insertion_point_finds_the_mark_behind_a_close_quote_or_the_bare_end(
+        #[case] text: &str,
+        #[case] close_quote: &str,
+        #[case] expected: Option<char>,
+    ) {
+        assert_eq!(
+            char_before_insertion_point::<PlainText>(text, close_quote),
+            expected
+        );
     }
 
     #[rstest]
