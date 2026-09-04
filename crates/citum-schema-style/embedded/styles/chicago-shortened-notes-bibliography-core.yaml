@@ -162,6 +162,12 @@ citation:
   multi-cite-delimiter: "; "
 bibliography:
   options:
+    substitute:
+      contributor-role-form: short-comma
+      candidates:
+      - editor
+      - translator
+      - contributor: compiler
     contributors:
       shorten:
         min: 7

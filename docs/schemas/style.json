@@ -723,6 +723,11 @@
           "description": "Author of an afterword accompanying the work.",
           "type": "string",
           "const": "afterword-author"
+        },
+        {
+          "description": "Compiler of an anthology, bibliography, or other assembled work.",
+          "type": "string",
+          "const": "compiler"
         }
       ]
     },

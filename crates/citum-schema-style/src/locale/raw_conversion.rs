@@ -392,7 +392,7 @@ impl Locale {
             "introduction-author" => Some(ContributorRole::IntroductionAuthor),
             "afterword-author" => Some(ContributorRole::AfterwordAuthor),
             "director" => Some(ContributorRole::Director),
-            "compiler" => Some(ContributorRole::Composer),
+            "compiler" => Some(ContributorRole::Compiler),
             "illustrator" => Some(ContributorRole::Illustrator),
             "narrator" => Some(ContributorRole::Narrator),
             "collection-editor" => Some(ContributorRole::CollectionEditor),
@@ -813,5 +813,21 @@ impl Locale {
         for (k, v) in &ov.dates.seasons {
             self.dates.seasons.insert(*k, v.clone());
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_role_name_maps_compiler_to_the_compiler_role() {
+        // Regression for csl26-shp4: this previously mapped "compiler" to
+        // ContributorRole::Composer, so a style-supplied compiler role-term
+        // (e.g. "comp.") displayed as the composer term instead.
+        assert_eq!(
+            Locale::parse_role_name("compiler"),
+            Some(ContributorRole::Compiler)
+        );
     }
 }

@@ -1135,7 +1135,9 @@ crate::str_enum! {
         Illustrator = "illustrator",
         Narrator = "narrator",
         OriginalAuthor = "original-author",
-        ReviewedAuthor = "reviewed-author"
+        ReviewedAuthor = "reviewed-author",
+        /// Compiler of an anthology, bibliography, or other assembled work.
+        Compiler = "compiler"
     }
 }
 

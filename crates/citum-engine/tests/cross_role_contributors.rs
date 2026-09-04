@@ -1170,6 +1170,43 @@ bibliography:
 }
 
 #[test]
+fn compiler_candidate_promotes_to_primary_slot_when_author_absent() {
+    // Regression for csl26-shp4: a compiler-only reference ("Austin, Tim,
+    // comp.") silently dropped the contributor entirely and promoted the
+    // title to sentence-initial position, because the template-facing
+    // ContributorRole enum had no Compiler variant at all — a style
+    // couldn't declare it as a substitute candidate even though the
+    // data-model role and engine-side mapping already existed.
+    let style = r#"
+info: {id: compiler-substitute-test, title: Compiler substitute test}
+options:
+  substitute:
+    candidates: [editor, {contributor: compiler}, title]
+bibliography:
+  template:
+    - contributor: author
+      form: long
+      name-order: family-first
+    - title: primary
+      prefix: ". "
+"#;
+    let references = r#"
+- id: compiler-only
+  class: monograph
+  type: book
+  title: The Times Style and Usage Guide
+  contributors:
+    - roles: [compiler]
+      contributor: {family: Austin, given: Tim}
+"#;
+
+    assert_eq!(
+        processor(style, references).render_bibliography(),
+        "Austin, Tim. The Times Style and Usage Guide"
+    );
+}
+
+#[test]
 fn empty_editor_list_falls_through_to_title_substitute() {
     let style = r#"
 info: {id: empty-editor-substitute-test, title: Empty editor substitute test}
