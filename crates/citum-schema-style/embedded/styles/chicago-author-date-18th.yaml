@@ -108,6 +108,7 @@ citation:
       candidates:
       - editor
       - translator
+      - contributor: compiler
       - parent-serial
       - title
     contributors:
@@ -214,6 +215,7 @@ bibliography:
       candidates:
       - editor
       - translator
+      - contributor: compiler
       - collection-editor
       - title
       # A substituted title takes the reference type's own bibliography

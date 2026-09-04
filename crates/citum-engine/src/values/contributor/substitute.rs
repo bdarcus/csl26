@@ -152,6 +152,7 @@ fn data_role_for_builtin(role: &ContributorRole) -> Option<DataRole> {
         ContributorRole::Performer => DataRole::Performer,
         ContributorRole::Narrator => DataRole::Narrator,
         ContributorRole::Writer => DataRole::Writer,
+        ContributorRole::Compiler => DataRole::Compiler,
         ContributorRole::ContainerAuthor
         | ContributorRole::CollectionEditor
         | ContributorRole::EditorialDirector

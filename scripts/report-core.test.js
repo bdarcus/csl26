@@ -1593,8 +1593,10 @@ test('generateReport exposes the registered coverage audit on its corresponding 
   // (`?".` -> `?"`) at entry-suffix and component-join boundaries.
   // csl26-4ndr (base bibliography template and article-magazine date
   // slots switched from `form: year` to `form: full`, restoring dropped
-  // month/day detail) moved it to 91.
-  assert.equal(audit.postChangeEvidence.afterExactParity.passed, 91);
+  // month/day detail) moved it to 91. csl26-shp4 (added a `compiler`
+  // contributor role and substitute candidate, so a compiler-only
+  // reference no longer drops its contributor entirely) moved it to 92.
+  assert.equal(audit.postChangeEvidence.afterExactParity.passed, 92);
 });
 
 test('generateReport supports multi-style selected reports', {

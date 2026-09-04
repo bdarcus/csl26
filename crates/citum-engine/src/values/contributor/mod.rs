@@ -97,6 +97,7 @@ pub(crate) fn contributor_role_to_reference_role(
         ContributorRole::ReviewedAuthor => Some(citum_schema::reference::ContributorRole::Unknown(
             "reviewed-author".to_string(),
         )),
+        ContributorRole::Compiler => Some(citum_schema::reference::ContributorRole::Compiler),
         ContributorRole::Unknown(role) => Some(match role.as_str() {
             "compiler" => citum_schema::reference::ContributorRole::Compiler,
             "performer" => citum_schema::reference::ContributorRole::Performer,
