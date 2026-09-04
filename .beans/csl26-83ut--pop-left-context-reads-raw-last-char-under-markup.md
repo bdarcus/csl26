@@ -9,7 +9,7 @@ tags:
     - rendering
     - engine
 created_at: 2026-09-04T11:42:20Z
-updated_at: 2026-09-04T11:42:26Z
+updated_at: 2026-09-04T11:52:22Z
 ---
 
 Follow-up from csl26-el8r. Sibling bug to the one that bean fixed, found while
@@ -90,3 +90,100 @@ were written for engine-generated output, not author prose -- a Markdown
 document ending `*"quoted"*` no-ops today (raw last char is `*`); after the
 fix the visible last char is `"` and the relocation fires. Needs explicit
 tests/document.rs coverage, not just an assumption.
+
+## Investigation update (2026-09-04) — before writing code
+
+Followed up on the design questions above with concrete evidence rather than
+speculation. Corrects two things and settles two others.
+
+**1. Confirmed latent, not active.** `NoteRule` resolution
+(notes.rs:476-491) falls through to locale grammar defaults
+(`GrammarOptions::note_punctuation/note_number/note_marker_order`,
+`crates/citum-schema-style/src/locale/types.rs:623-635`) unless a style sets
+`options.notes.*` -- and no style in `styles/*.yaml` does (`grep -rln
+"^notes:" styles/*.yaml` is empty). The type defaults are `Adaptive` /
+`Outside` / `After` (`crates/citum-schema-style/src/options/mod.rs:589-626`).
+Under `Outside`+`After`, `desired_note_side` always returns `Outside`
+regardless of quote detection, and the plain-append fallback path
+(`note_support.rs:353-357`) is what a correctly-Outside/After placement would
+also produce for the common "author types the citation marker right after the
+closing quote" case -- so today's silent no-op is currently
+indistinguishable from correct output for every embedded style. This is the
+same shape as csl26-el8r itself: a real latent gap, invisible to the parity
+sweep and the fixture corpus, not an active regression.
+
+**2. Corrected: the lens is not "always Html".** Original note above
+proposed treating the fix as Html-vs-not; that was wrong on inspection of the
+markup lexers, in two ways:
+
+- `result` at the point `pop_left_context` runs is the raw *document source*
+  regardless of `DocumentFormat`/`F` -- traced end to end from
+  `Processor::process_document` (pipeline.rs) through
+  `render_document_body::<F>`. For `DocumentFormat::Html`, content is *not*
+  yet HTML; conversion happens later via `finalize_html_output`, after
+  citations are spliced in as placeholders specifically so a later Djot/
+  Markdown inline pass doesn't mangle them. For the Typst/Latex + note-style
+  path, content also stays in source form (comment at pipeline.rs:337-339:
+  "note styles still emit source footnote syntax the terminal body renderer
+  does not yet model"). So `F` never matches what `result` is actually
+  written in.
+- More importantly, I originally guessed Markdown/Djot's own emphasis syntax
+  (`*word*`, `_word_`) wouldn't matter since it's single ASCII chars already
+  visible to the raw checks -- **wrong**. Both `Markdown::visible_runs`
+  (render/markdown.rs:189) and `Djot::visible_runs` (render/djot.rs:145)
+  *do* strip `*`/`**` (and Djot also `_`) as invisible markup, alongside raw
+  `<tag>` HTML passthrough. So `*"quoted."*` -- the bean's original repro
+  shape -- genuinely is fixed by using the document's own source lexer, and
+  is not a narrower case than first scoped.
+- There are exactly two `CitationParser` implementations
+  (`processor/document/markdown.rs`, `processor/document/djot/mod.rs`), so
+  the correct lens is a small closed choice between the `Markdown` and
+  `Djot` `OutputFormat`s' `visible_runs` -- selected by which source parser
+  `P` produced the document, not by `F` (the citation-rendering format) or
+  `DocumentFormat` (the final target format). None of `pop_left_context`,
+  `render_note_reference_in_prose`, or their caller in `notes.rs:126`
+  currently has access to that choice -- `CitationParser` doesn't expose it
+  as a marker; it would need to be threaded down, e.g. an associated
+  `OutputFormat` type or a small enum passed alongside `F`.
+
+**3. Placement question resolved by a no-regression argument, not an 18-row
+table.** Dropped the "verify against citeproc-js" idea -- citeproc-js has no
+document-level note-marker placement logic; there is no external oracle for
+this. Instead: two candidate re-emission placements for the recovered
+`quote`+`punctuation` cluster --
+(a) whole `inside + quote + outside` cluster at the raw pop offset (inside
+    trailing markup), or
+(b) `inside + quote` at the raw offset, `outside` after trailing markup.
+For the default rule (`Adaptive`/`Outside`/`After`) on `*"said."*[@x]`,
+(a) would italicize the note marker (regression against today's output);
+(b) is byte-identical to today. (b) is therefore the only non-regressing
+choice and is confirmed, not merely hypothesized. The one open content
+question, only relevant if a style ever sets a non-default `order`/
+`punctuation` rule: for `NoteOrder::Before` + `PunctuationRule::Outside`,
+does the punctuation that joins the marker outside leave the emphasis too
+(`*"said"*[^1].`) or stay inside it (`*"said"[^1].*`)? Deferred -- no shipped
+style exercises it, so no answer is needed to close this bean's design
+question for the current corpus.
+
+## Revised remediation shape
+
+1. Add a source-lexer selector (`Markdown` vs `Djot` `OutputFormat`, chosen
+   from `P`, not `F`) and thread it to `pop_left_context` /
+   `render_note_reference_in_prose` / `notes.rs:126`.
+2. `pop_left_context` returns raw insertion offsets alongside the popped
+   quote/punctuation (via a `last_visible_char_and_raw_range`-style helper on
+   `render/punctuation.rs`'s existing `visible_projection`), not just the
+   characters.
+3. Re-emission builds `inside + quote` and `insert_str`s it at the raw
+   offset, then `push_str`s `outside` at the current end -- placement (b)
+   above. A test should assert that for fully-visible input the raw offset
+   equals `result.len()`, so `insert_str` degenerates to today's `push_str`
+   and the fully-visible-tail behavior stays byte-identical.
+4. `inspect_right_context`'s matching gap stays a further, separate
+   follow-up (different remediation shape -- see "Not in scope" above).
+
+Given (1) is now confirmed latent-only for the entire current corpus, and (2)
+above shows the fix requires wiring a new source-lexer selector through
+several call layers rather than a local rewrite, this is materially bigger
+than the "stacked PR, ship soon" framing it was approved under. Flagged back
+to the user before starting implementation.
