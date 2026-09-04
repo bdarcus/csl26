@@ -15,8 +15,8 @@ use crate::render::format::{
 };
 use crate::render::plain::PlainText;
 use crate::render::punctuation::{
-    leading_movable_mark, move_punctuation_into_quote, resolve_punctuation_collision,
-    strong_terminal_comma_policy, visible_projection,
+    char_before_insertion_point, leading_movable_mark, move_punctuation_into_quote,
+    resolve_punctuation_collision, strong_terminal_comma_policy, visible_projection,
 };
 use crate::render::rich_text::{render_djot_inline, render_org_inline};
 use citum_schema::template::DelimiterPunctuation;
@@ -332,43 +332,87 @@ pub(crate) fn render_entry_body_components_with_format<F: OutputFormat<Output = 
         );
     }
 
-    let bib_cfg = proc_template
-        .first()
-        .and_then(|c| c.bibliography_config.as_ref());
-    if let Some(entry_suffix) = bib_cfg.and_then(|bib| bib.entry_suffix.as_ref()) {
-        let realized_suffix = realize_bibliography_punctuation(
-            first_component,
-            Some(entry_suffix),
-            DelimiterPunctuation::None,
-            PunctuationPosition::Suffix,
-        );
-        // Mirrors the historical `Some(suffix) if !suffix.is_empty()` match
-        // guard, now tested against the realized text rather than the enum,
-        // so both `Custom("")` and `DelimiterPunctuation::None` land here.
-        if !realized_suffix.is_empty() {
-            let suffix = realized_suffix.text();
-            let suffix_core = realized_suffix.core().unwrap_or('.');
-            // The suffix is suppressed after a terminal URL/DOI by default; a
-            // style may force it back on per link kind (IEEE: DOI, MLA: URL).
-            let suppress = match terminal_link::<F>(&entry_output) {
-                TerminalLink::Doi => !bib_cfg.is_some_and(|b| b.entry_suffix_after_doi),
-                TerminalLink::Url => !bib_cfg.is_some_and(|b| b.entry_suffix_after_url),
-                TerminalLink::None => false,
-            };
-            let moved_into_quote = !suppress
-                && suffix_core == '.'
-                && realized_suffix.tail().is_empty()
-                && punctuation_in_quote
-                && !entry_output.ends_with(suffix_core)
-                && move_punctuation_into_quote::<F>(&mut entry_output, '.', close_quote);
-            if !moved_into_quote && !suppress && !entry_output.ends_with(suffix_core) {
-                entry_output.push_str(suffix);
-            }
-        }
-    }
+    append_entry_suffix::<F>(
+        &mut entry_output,
+        proc_template
+            .first()
+            .and_then(|c| c.bibliography_config.as_deref()),
+        first_component,
+        punctuation_in_quote,
+        strong_terminal_comma_policy,
+        close_quote,
+    );
 
     cleanup_dangling_punctuation::<F>(&mut entry_output, strong_terminal_comma_policy);
     entry_output
+}
+
+/// Append the bibliography's configured `entry-suffix` (typically a
+/// terminal period) to `entry_output`, honoring the URL/DOI suppression
+/// rule and the punctuation-in-quote quote-move.
+fn append_entry_suffix<F: OutputFormat<Output = String>>(
+    entry_output: &mut String,
+    bib_cfg: Option<&citum_schema::options::BibliographyConfig>,
+    first_component: Option<&ProcTemplateComponent>,
+    punctuation_in_quote: bool,
+    strong_terminal_comma_policy: citum_schema::options::StrongTerminalCommaPolicy,
+    close_quote: &str,
+) {
+    let Some(entry_suffix) = bib_cfg.and_then(|bib| bib.entry_suffix.as_ref()) else {
+        return;
+    };
+    let realized_suffix = realize_bibliography_punctuation(
+        first_component,
+        Some(entry_suffix),
+        DelimiterPunctuation::None,
+        PunctuationPosition::Suffix,
+    );
+    // Mirrors the historical `Some(suffix) if !suffix.is_empty()` match
+    // guard, now tested against the realized text rather than the enum,
+    // so both `Custom("")` and `DelimiterPunctuation::None` land here.
+    if realized_suffix.is_empty() {
+        return;
+    }
+    let suffix = realized_suffix.text();
+    let suffix_core = realized_suffix.core().unwrap_or('.');
+    // The suffix is suppressed after a terminal URL/DOI by default; a
+    // style may force it back on per link kind (IEEE: DOI, MLA: URL).
+    let suppress = match terminal_link::<F>(entry_output) {
+        TerminalLink::Doi => !bib_cfg.is_some_and(|b| b.entry_suffix_after_doi),
+        TerminalLink::Url => !bib_cfg.is_some_and(|b| b.entry_suffix_after_url),
+        TerminalLink::None => false,
+    };
+    // A terminal mark already sitting just inside a closing quote makes the
+    // suffix redundant rather than additive -- a quoted title ending in "?"
+    // doesn't also need the suffix period ("?"." would be wrong). Resolve
+    // via the shared collision matrix; the one matrix case that widens
+    // rather than collapses (a comma meeting a period, `",."`) already
+    // equals the plain insertion/append below when nothing collides, so it
+    // only needs special-casing when the mark fully absorbs. Gated on a
+    // close quote genuinely being present -- without a quote to look
+    // behind, `char_before_insertion_point` falls back to the bare last
+    // visible char, which may be internal punctuation left over from an
+    // upstream component (e.g. a suffix `trim_trailing_only_suffix` didn't
+    // strip) rather than anything the entry is meant to end on; the entry
+    // suffix must still close the entry in that case, not defer to it.
+    let collision_absorbs = ends_with_close_quote::<F>(entry_output, close_quote)
+        && char_before_insertion_point::<F>(entry_output, close_quote)
+            .filter(|&existing| is_final_punctuation(existing))
+            .map(|existing| {
+                resolve_punctuation_collision(existing, suffix_core, strong_terminal_comma_policy)
+            })
+            .is_some_and(|resolved| resolved.chars().count() == 1);
+    if suppress || collision_absorbs {
+        return;
+    }
+    let moved_into_quote = suffix_core == '.'
+        && realized_suffix.tail().is_empty()
+        && punctuation_in_quote
+        && !entry_output.ends_with(suffix_core)
+        && move_punctuation_into_quote::<F>(entry_output, '.', close_quote);
+    if !moved_into_quote && !entry_output.ends_with(suffix_core) {
+        entry_output.push_str(suffix);
+    }
 }
 
 /// Append a rendered component to `entry_output`, inserting spacing or the
@@ -416,6 +460,26 @@ pub(crate) fn append_rendered_component<F: OutputFormat<Output = String>>(
             // Exception: an opening parenthesis needs a leading space unless already spaced.
             if first_char == '(' && !last_char.is_whitespace() && last_char != '[' {
                 entry_output.push(' ');
+            } else if matches!(first_char, '.' | ',')
+                && ends_with_punctuation
+                && !last_char.is_whitespace()
+                && let Some((mark, rest)) = leading_movable_mark::<F>(&rendered.text)
+            {
+                // The incoming component's own leading mark collides with the
+                // mark `entry_output` already ends with (a name suffix's
+                // "Jr." meeting a group's own literal ". " prefix, or a
+                // strong-terminal title meeting a translator group's ". "):
+                // resolve via the shared collision matrix instead of
+                // concatenating both marks blindly ("Jr.." / "?."). Mirrors
+                // `render/citation.rs`'s `push_delimiter` Case 3, which
+                // already does this at a delimiter-driven boundary; this is
+                // the self-delimiting-component analogue.
+                let resolved =
+                    resolve_punctuation_collision(trimmed_last, mark, strong_terminal_comma_policy);
+                entry_output.pop();
+                entry_output.push_str(&resolved);
+                entry_output.push_str(&rest);
+                return;
             }
         } else if ends_with_punctuation {
             // A comma separator meeting an already-punctuated boundary defers to
@@ -443,6 +507,27 @@ pub(crate) fn append_rendered_component<F: OutputFormat<Output = String>>(
             } else if !last_char.is_whitespace() {
                 entry_output.push(' ');
             }
+        } else if punctuation_in_quote
+            && matches!(sep_first_char, '.' | ',')
+            && ends_with_close_quote::<F>(entry_output, close_quote)
+            && char_before_insertion_point::<F>(entry_output, close_quote)
+                .filter(|&existing| is_final_punctuation(existing))
+                .map(|existing| {
+                    resolve_punctuation_collision(
+                        existing,
+                        sep_first_char,
+                        strong_terminal_comma_policy,
+                    )
+                })
+                .is_some_and(|resolved| resolved.chars().count() == 1)
+        {
+            // A mark already sitting just inside the closing quote (a quoted
+            // title ending in "?") makes the separator's own leading mark
+            // redundant rather than additive: dropped via the shared
+            // collision matrix instead of inserting a second one next to it
+            // (`?".` would be wrong; `?"` is right), keeping the rest of the
+            // separator (the trailing space).
+            entry_output.push_str(default_separator.tail());
         } else if punctuation_in_quote
             && (sep_first_char == '.' || sep_first_char == ',')
             && move_punctuation_into_quote::<F>(entry_output, sep_first_char, close_quote)
@@ -1340,6 +1425,33 @@ mod tests {
         );
     }
 
+    /// given `entry_output` already ending in a weak-terminal period (a name
+    /// suffix like "Jr.") and the next component's own leading mark is also
+    /// a period (e.g. a `contributor: translator, prefix: ". "` group with
+    /// no preceding date to consume its own default separator), when the two
+    /// are joined, then the collision resolves to a single mark instead of
+    /// concatenating both. Regression: "The Papers of Martin Luther King,
+    /// Jr.." (doubled period) rather than "...King, Jr."
+    #[test]
+    fn append_rendered_component_resolves_a_name_suffix_period_colliding_with_a_leading_group_period()
+     {
+        let mut entry_output = "King, Martin Luther, Jr.".to_string();
+
+        append_rendered_component::<PlainText>(
+            &mut entry_output,
+            &rendered(". edited by Tenisha Armstrong"),
+            &sep(", "),
+            true,
+            Default::default(),
+            "\u{201D}",
+        );
+
+        assert_eq!(
+            entry_output,
+            "King, Martin Luther, Jr. edited by Tenisha Armstrong"
+        );
+    }
+
     #[test]
     fn append_rendered_component_moves_separator_led_mark_behind_trailing_latex_markup() {
         // The *separator*-driven move (not the component's own leading mark):
@@ -1380,6 +1492,64 @@ mod tests {
         );
 
         assert_eq!(entry_output, "«Titre,» Suite");
+    }
+
+    /// given a quoted title already ending in a terminal mark just inside the
+    /// closing quote, when the next component is joined via a period/comma
+    /// default separator, then the separator's own leading mark is dropped
+    /// via the collision matrix instead of being inserted alongside it.
+    /// Regression: `“Are Flaxseeds All That?.”` (a doubled mark) rather than
+    /// `“Are Flaxseeds All That?”`.
+    #[rstest]
+    #[case::strong_terminal_question_mark(
+        "“Are Flaxseeds All That?”",
+        "“Are Flaxseeds All That?” New York Times, December 13"
+    )]
+    #[case::weak_terminal_colon(
+        "“Email from CMOS Staff, 23 June 2025:”",
+        "“Email from CMOS Staff, 23 June 2025:” New York Times, December 13"
+    )]
+    fn append_rendered_component_drops_separator_mark_already_absorbed_by_quoted_terminal(
+        #[case] quoted_title: &str,
+        #[case] expected: &str,
+    ) {
+        let mut entry_output = quoted_title.to_string();
+
+        append_rendered_component::<PlainText>(
+            &mut entry_output,
+            &rendered("New York Times, December 13"),
+            &sep(". "),
+            true,
+            Default::default(),
+            "\u{201D}",
+        );
+
+        assert_eq!(entry_output, expected);
+    }
+
+    #[test]
+    fn append_rendered_component_does_not_absorb_a_separator_mark_with_no_quote_present() {
+        // given content ending in a terminal mark with NO closing quote at
+        // the boundary (an unquoted, italicized book title): the collision
+        // check must not fire at all -- there's nothing behind a quote to
+        // look at, and the separator's own leading period is genuinely
+        // additive here (a plain space is inserted per the existing
+        // `ends_with_punctuation` branch, unrelated to this collision path).
+        let mut entry_output = "Vous descendez?".to_string();
+
+        append_rendered_component::<PlainText>(
+            &mut entry_output,
+            &rendered("Translated by Nicolas Richard"),
+            &sep(". "),
+            true,
+            Default::default(),
+            "\u{201D}",
+        );
+
+        assert_eq!(
+            entry_output,
+            "Vous descendez? Translated by Nicolas Richard"
+        );
     }
 
     #[test]
@@ -1663,6 +1833,64 @@ mod tests {
         }]);
 
         assert_eq!(result, "2024");
+    }
+
+    /// given an entry whose accumulated output ends in a strong-terminal mark
+    /// just inside a closing quote, when the configured entry-suffix is a
+    /// period, then it is dropped rather than appended a second time.
+    #[test]
+    fn append_entry_suffix_drops_a_period_already_absorbed_by_a_quoted_terminal() {
+        use citum_schema::options::BibliographyConfig;
+
+        let bib_cfg = BibliographyConfig {
+            entry_suffix: Some(".".into()),
+            ..Default::default()
+        };
+        let mut entry_output = "“Are Flaxseeds All That?”".to_string();
+
+        append_entry_suffix::<PlainText>(
+            &mut entry_output,
+            Some(&bib_cfg),
+            None,
+            true,
+            Default::default(),
+            "\u{201D}",
+        );
+
+        assert_eq!(entry_output, "“Are Flaxseeds All That?”");
+    }
+
+    /// given an entry ending in an internal, non-quote-adjacent terminal mark
+    /// (e.g. a `variable: publisher, suffix: "; "` component that landed as
+    /// the entry's own last-rendered component), when the entry-suffix is
+    /// appended, then it is still added -- there is no closing quote to look
+    /// behind, so the mark must not be treated as absorbing the entry-final
+    /// period. Regression: `american-medical-association`'s "Forthcoming A.
+    /// Foundations of Declarative Bibliography. University Press;" losing its
+    /// terminal period entirely when this collision check was ungated.
+    #[test]
+    fn append_entry_suffix_still_closes_the_entry_when_no_quote_precedes_the_mark() {
+        use citum_schema::options::BibliographyConfig;
+
+        let bib_cfg = BibliographyConfig {
+            entry_suffix: Some(".".into()),
+            ..Default::default()
+        };
+        let mut entry_output = "Forthcoming A. Foundations. University Press; ".to_string();
+
+        append_entry_suffix::<PlainText>(
+            &mut entry_output,
+            Some(&bib_cfg),
+            None,
+            true,
+            Default::default(),
+            "\u{201D}",
+        );
+
+        assert_eq!(
+            entry_output,
+            "Forthcoming A. Foundations. University Press; ."
+        );
     }
 
     #[allow(
