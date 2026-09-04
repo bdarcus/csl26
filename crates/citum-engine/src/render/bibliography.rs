@@ -784,6 +784,39 @@ mod tests {
         ));
     }
 
+    #[rstest]
+    #[case::visible_space_before_markup_close_is_not_a_sentence_boundary(
+        r#"<span class="citum-author">Smith </span>"#,
+        false
+    )]
+    #[case::visible_non_space_before_markup_close_still_opens_a_sentence(
+        r#"<span class="citum-author">Smith</span>"#,
+        true
+    )]
+    fn given_html_entry_output_when_checking_sentence_start_then_reads_visible_not_raw_last_char(
+        #[case] entry_output: &str,
+        #[case] expected: bool,
+    ) {
+        // Regression for csl26-el8r: component_starts_new_sentence's own
+        // last-char checks (bibliography.rs:146) must read the *visible*
+        // last character, not `entry_output.chars().last()` -- under Html a
+        // raw read is always the closing tag's `>`, never whitespace, which
+        // would make every markup-terminated boundary look non-space
+        // regardless of the actual rendered content.
+        use crate::render::html::Html;
+
+        assert_eq!(
+            component_starts_new_sentence::<Html>(
+                entry_output,
+                "2020",
+                &sep(". "),
+                false,
+                "\u{201D}"
+            ),
+            expected
+        );
+    }
+
     #[test]
     fn test_bibliography_separator_suppression() {
         use citum_schema::options::{BibliographyConfig, Config};
