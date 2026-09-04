@@ -233,7 +233,7 @@ bibliography:
       label-form: short
       prefix: ", "
     - date: issued
-      form: year
+      form: full
       prefix: ", "
     - variable: url
       prefix: ", "
@@ -662,7 +662,7 @@ bibliography:
   - number: volume
   - variable: publisher
   - date: issued
-    form: year
+    form: full
     prefix: ", "
   - number: pages
     prefix: ": "
