@@ -3559,7 +3559,7 @@ fn apa_structural_entries_use_component_packaging_instead_of_generic_fallbacks()
 
     assert_eq!(
         rendered,
-        "Author, F. A. (2013a). 45 Encyclopedia entry (S. S. Editor, Trans.). In S. S. Editor, ed., _Title of book: a subtitle_ (2 ed., Vol. 2, pp. 123–128). Publisher. https://doi.org/10.1234/5678 http://example.com/\n\nAuthor, F. A. (2013b). 56 Conference paper (S. S. Editor, Trans.). In S. S. Editor, ed., _Proceedings_ (Vol. 2, pp. 123–128). Publisher. https://doi.org/10.1234/5678 http://example.com/\n\nChapter, A. M. J. (2016). 24 Chapter in a report. In F. A. Editor & S. Editor (eds.), _Report title_ (pp. 126–145). Publisher. https://example.com/"
+        "Author, F. A. (2013a). 45 Encyclopedia entry (S. S. Editor, Trans.). In S. S. Editor, ed., _Title of book: a subtitle_ (2 ed., Vol. 2, pp. 123–128). Publisher. https://doi.org/10.1234/5678 http://example.com/\n\nAuthor, F. A. (2013b). 56 Conference paper (S. S. Editor, Trans.). In S. S. Editor, ed., _Proceedings_ (Vol. 2, pp. 123–128). Publisher. https://doi.org/10.1234/5678 http://example.com/\n\nChapter, A. M., Jr. (2016). 24 Chapter in a report. In F. A. Editor & S. Editor (eds.), _Report title_ (pp. 126–145). Publisher. https://example.com/"
     );
 }
 

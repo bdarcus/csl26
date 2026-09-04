@@ -1085,6 +1085,35 @@ fn render_date_part(part: &[i32]) -> String {
     format!("{year}{month}{day}")
 }
 
+/// Split a comma-embedded suffix out of a raw CSL-JSON `given` field.
+///
+/// citeproc-js's reference `parseSuffix` runs unconditionally (its
+/// `development_extensions.parse_names` flag is hardcoded on): when a
+/// name has no explicit `suffix` and `given` contains a comma, everything
+/// after the first comma becomes the suffix, regardless of its content —
+/// this covers both true generational suffixes (`"given": "Robert, III"`
+/// → given "Robert", suffix "III") and the same convention used for a
+/// parenthetical/bracketed alias (`"given": "Karen, [Karen Lee
+/// Orzolek]"`). Citum previously kept the whole string as `given`
+/// verbatim, so `assemble_given_first_long_name` (which never inserts a
+/// comma before a populated `suffix`) rendered `"Robert, III DeYeso"`
+/// instead of the oracle's `"Robert DeYeso III"` — the assembly logic was
+/// already correct, it just never received a split suffix. citeproc-js's
+/// "!"-marked forced-comma-suffix escape and its "et al." embedded in a
+/// name particle are not replicated here — no fixture exercises either.
+fn split_unparsed_given_suffix(given: &str, suffix: Option<String>) -> (String, Option<String>) {
+    if suffix.is_some() {
+        return (given.to_string(), suffix);
+    }
+    match given.split_once(',') {
+        Some((given_part, suffix_part)) if !suffix_part.trim().is_empty() => (
+            given_part.trim().to_string(),
+            Some(suffix_part.trim().to_string()),
+        ),
+        _ => (given.to_string(), suffix),
+    }
+}
+
 impl From<Vec<csl_legacy::csl_json::Name>> for Contributor {
     fn from(names: Vec<csl_legacy::csl_json::Name>) -> Self {
         let contributors: Vec<Contributor> = names
@@ -1109,10 +1138,20 @@ impl From<Vec<csl_legacy::csl_json::Name>> for Contributor {
                             short_name: None,
                         })
                     } else {
+                        // Mirrors citeproc-js's own guard on parseSuffix:
+                        // `!name["non-dropping-particle"] && name.family`.
+                        // A name that already has a non-dropping particle
+                        // is left as-is (no fixture has both a particle
+                        // and a comma-embedded suffix).
+                        let (given, suffix) = if n.non_dropping_particle.is_none() {
+                            split_unparsed_given_suffix(given_str, n.suffix)
+                        } else {
+                            (given_str.to_string(), n.suffix)
+                        };
                         Contributor::StructuredName(StructuredName {
-                            given: given_str.to_string().into(),
+                            given: given.into(),
                             family: n.family.unwrap_or_default().into(),
-                            suffix: n.suffix,
+                            suffix,
                             dropping_particle: n.dropping_particle,
                             non_dropping_particle: n.non_dropping_particle,
                         })
@@ -1778,5 +1817,65 @@ mod tests {
             legacy.note,
             Some(r#"CSTR: <span class="nocase">unrelated</span>"#.to_string())
         );
+    }
+
+    #[test]
+    fn split_unparsed_given_suffix_extracts_a_comma_embedded_suffix() {
+        // citeproc-js's parseSuffix splits at the first comma when no
+        // explicit `suffix` is present, whatever the comma introduces —
+        // a generational suffix or a bracketed alias alike.
+        assert_eq!(
+            split_unparsed_given_suffix("Robert, III", None),
+            ("Robert".to_string(), Some("III".to_string()))
+        );
+        assert_eq!(
+            split_unparsed_given_suffix("Karen, [Karen Lee Orzolek]", None),
+            ("Karen".to_string(), Some("[Karen Lee Orzolek]".to_string()))
+        );
+    }
+
+    #[test]
+    fn split_unparsed_given_suffix_leaves_an_explicit_suffix_field_untouched() {
+        // The CSL-JSON `suffix` field, when present, always wins — matches
+        // citeproc-js's `!nameObj.suffix` guard.
+        assert_eq!(
+            split_unparsed_given_suffix("Robert", Some("III".to_string())),
+            ("Robert".to_string(), Some("III".to_string()))
+        );
+        assert_eq!(
+            split_unparsed_given_suffix("Robert, III", Some("Jr.".to_string())),
+            ("Robert, III".to_string(), Some("Jr.".to_string()))
+        );
+    }
+
+    #[test]
+    fn split_unparsed_given_suffix_leaves_a_comma_free_given_name_untouched() {
+        assert_eq!(
+            split_unparsed_given_suffix("Robert", None),
+            ("Robert".to_string(), None)
+        );
+    }
+
+    #[test]
+    fn legacy_name_with_comma_embedded_suffix_converts_to_a_split_structured_name() {
+        // Reproduces the `6188419/JJW86NR2` chicago-18th fixture regression:
+        // citum previously kept "Robert, III" as a single `given` string
+        // (no `suffix` in the source CSL-JSON), which
+        // `assemble_given_first_long_name` then rendered verbatim as
+        // "Robert, III DeYeso" instead of the oracle's "Robert DeYeso III".
+        let names = vec![csl_legacy::csl_json::Name {
+            family: Some("DeYeso".to_string()),
+            given: Some("Robert, III".to_string()),
+            ..Default::default()
+        }];
+
+        let Contributor::ContributorList(list) = Contributor::from(names) else {
+            panic!("expected a contributor list");
+        };
+        let flat = list.0[0].to_names_vec();
+
+        assert_eq!(flat[0].given.as_deref(), Some("Robert"));
+        assert_eq!(flat[0].family.as_deref(), Some("DeYeso"));
+        assert_eq!(flat[0].suffix.as_deref(), Some("III"));
     }
 }
