@@ -92,6 +92,7 @@ note. The `—` marker in the Tests column means no targeted test exists yet.
 | [`CROSS_ROLE_CONTRIBUTOR_LISTS.md`](./CROSS_ROLE_CONTRIBUTOR_LISTS.md) — merged multi-role name lists with per-name/collective labels and same-person combination | Active | `cross_role_contributors.rs` |
 | [`PRIMARY_CONTRIBUTOR_SUBSTITUTION.md`](./PRIMARY_CONTRIBUTOR_SUBSTITUTION.md) — type-aware scalar and merged contributors promoted into the primary slot | Active | `cross_role_contributors.rs` |
 | [`ROLE_SUBSTITUTE_FALLBACK.md`](./ROLE_SUBSTITUTE_FALLBACK.md) — normative behavior for role-aware contributor fallback chains | Active | `bibliography.rs::substitution` |
+| [`COMPILER_CONTRIBUTOR_ROLE.md`](./COMPILER_CONTRIBUTOR_ROLE.md) — adds `compiler` to the template contributor-role vocabulary so it can be promoted to the primary slot | Draft | — |
 | [`SECONDARY_CONTRIBUTOR_ROLE_FORMATTING.md`](./SECONDARY_CONTRIBUTOR_ROLE_FORMATTING.md) — consistent rendering and verification for secondary contributor roles | Active | `bibliography.rs` |
 
 ### Note Styles & Repeated Citations
