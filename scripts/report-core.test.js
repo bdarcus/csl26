@@ -1591,7 +1591,10 @@ test('generateReport exposes the registered coverage audit on its corresponding 
   // terminal-mark quote-collision fix (csl26-wtaq, PR #1257) moved it to
   // 87 by no longer doubling a period after a quoted terminal mark
   // (`?".` -> `?"`) at entry-suffix and component-join boundaries.
-  assert.equal(audit.postChangeEvidence.afterExactParity.passed, 87);
+  // csl26-4ndr (base bibliography template and article-magazine date
+  // slots switched from `form: year` to `form: full`, restoring dropped
+  // month/day detail) moved it to 91.
+  assert.equal(audit.postChangeEvidence.afterExactParity.passed, 91);
 });
 
 test('generateReport supports multi-style selected reports', {
