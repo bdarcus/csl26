@@ -1,6 +1,6 @@
 {
-  "generated": "2026-09-04T17:16:12.295Z",
-  "commit": "c61c643a9",
+  "generated": "2026-09-05T21:54:09.286Z",
+  "commit": "5e88f3ee2",
   "source": "scripts/report-core.js",
   "purpose": "Hard per-style exact-parity floor-gate baseline for the embedded tier, consumed by scripts/check-core-quality.js --parity-baseline (see docs/architecture/audits/2026-07-31_EXACT_PARITY_REFOCUS.md). It also records headline fidelity. Sub-1.0 fidelity ratchets are tracked separately per-style in scripts/report-data/verification-policy.yaml (min_pass_rate floors). Regenerate this file after each parity-tuning wave; the gate never goes backward on passed counts or total (fixture-drift guard).",
   "styles": {
@@ -107,9 +107,9 @@
         "total": 47
       },
       "exactParity": {
-        "passed": 45,
+        "passed": 51,
         "total": 67,
-        "rate": 0.672
+        "rate": 0.761
       }
     },
     "elsevier-vancouver": {
@@ -125,9 +125,9 @@
         "total": 47
       },
       "exactParity": {
-        "passed": 46,
+        "passed": 55,
         "total": 67,
-        "rate": 0.687
+        "rate": 0.821
       }
     },
     "elsevier-with-titles": {
@@ -143,9 +143,9 @@
         "total": 47
       },
       "exactParity": {
-        "passed": 35,
+        "passed": 50,
         "total": 67,
-        "rate": 0.522
+        "rate": 0.746
       }
     },
     "gb-t-7714-2025-author-date": {
@@ -205,7 +205,7 @@
     "ieee": {
       "tier": "embedded",
       "fidelityScore": 1,
-      "qualityScore": 0.963,
+      "qualityScore": 0.96,
       "citations": {
         "passed": 48,
         "total": 48
@@ -215,27 +215,27 @@
         "total": 101
       },
       "exactParity": {
-        "passed": 97,
+        "passed": 105,
         "total": 149,
-        "rate": 0.651
+        "rate": 0.705
       }
     },
     "modern-language-association": {
       "tier": "embedded",
-      "fidelityScore": 0.948,
-      "qualityScore": 0.99,
+      "fidelityScore": 0.957,
+      "qualityScore": 0.991,
       "citations": {
         "passed": 43,
         "total": 45
       },
       "bibliography": {
-        "passed": 66,
+        "passed": 67,
         "total": 70
       },
       "exactParity": {
-        "passed": 44,
+        "passed": 55,
         "total": 115,
-        "rate": 0.383
+        "rate": 0.478
       }
     },
     "springer-basic-author-date": {
@@ -251,9 +251,9 @@
         "total": 47
       },
       "exactParity": {
-        "passed": 54,
+        "passed": 55,
         "total": 67,
-        "rate": 0.806
+        "rate": 0.821
       }
     },
     "springer-basic-brackets": {
@@ -269,9 +269,9 @@
         "total": 47
       },
       "exactParity": {
-        "passed": 54,
+        "passed": 55,
         "total": 67,
-        "rate": 0.806
+        "rate": 0.821
       }
     },
     "springer-vancouver-brackets": {
@@ -287,9 +287,9 @@
         "total": 47
       },
       "exactParity": {
-        "passed": 40,
+        "passed": 49,
         "total": 67,
-        "rate": 0.597
+        "rate": 0.731
       }
     },
     "taylor-and-francis-chicago-author-date": {
@@ -323,9 +323,9 @@
         "total": 47
       },
       "exactParity": {
-        "passed": 32,
+        "passed": 46,
         "total": 67,
-        "rate": 0.478
+        "rate": 0.687
       }
     },
     "taylor-and-francis-national-library-of-medicine": {
@@ -341,9 +341,9 @@
         "total": 47
       },
       "exactParity": {
-        "passed": 13,
+        "passed": 27,
         "total": 67,
-        "rate": 0.194
+        "rate": 0.403
       }
     }
   }
