@@ -68,24 +68,19 @@ bibliography:
       - contributor: author
         form: long
       - title: primary
-      - message: pattern.in-container-colon
-        args:
-          container:
-            delimiter: { mark: comma }
-            group:
-            - title: parent-monograph
-            - delimiter: " "
-              group:
-              - title: parent-serial
-              - number: volume
-              - date: issued
-                form: year
-                wrap:
-                  punctuation: parentheses
-              - number: pages
+      - delimiter: { mark: comma }
+        group:
+        - title: parent-monograph
+        - delimiter: " "
+          group:
+          - title: parent-serial
+          - number: volume
+          - date: issued
+            form: year
+            wrap:
+              punctuation: parentheses
+          - number: pages
       - number: edition
-      - variable: publisher
-      - variable: publisher-place
       - variable: url
         links:
           target: url

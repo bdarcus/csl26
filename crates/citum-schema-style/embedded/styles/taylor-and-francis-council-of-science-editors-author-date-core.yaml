@@ -119,6 +119,7 @@ bibliography:
       sort-separator: " "
     hanging-indent: false
     separator: ". "
+    entry-suffix: .
   type-variants:
     [article-journal, article-magazine, article-newspaper, dataset, entry-encyclopedia]:
     - contributor: author

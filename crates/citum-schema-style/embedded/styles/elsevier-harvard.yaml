@@ -5,6 +5,3 @@ info:
   - biology
   short-name: "Elsevier Harvard"
 extends: elsevier-harvard-core
-bibliography:
-  options:
-    date-position: after-author
