@@ -48,7 +48,7 @@ options:
 citation:
   options:
     label-mode: numeric
-    label-wrap: brackets
+    label-wrap: superscript
   template:
   - variable: locator
     wrap:

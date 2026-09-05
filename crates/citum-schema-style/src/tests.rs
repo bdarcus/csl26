@@ -1513,7 +1513,11 @@ bibliography:
             .citation
             .as_ref()
             .and_then(|citation| citation.wrap.clone()),
-        None
+        Some(template::WrapConfig {
+            punctuation: template::WrapPunctuation::Brackets,
+            inner_prefix: None,
+            inner_suffix: None,
+        })
     );
     assert_eq!(
         resolved

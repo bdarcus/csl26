@@ -43,8 +43,9 @@ options:
 citation:
   options:
     label-mode: numeric
-    label-wrap: brackets
   template-ref: numeric-citation
+  wrap:
+    punctuation: brackets
   multi-cite-delimiter: ','
   delimiter: ''
   collapse: citation-number

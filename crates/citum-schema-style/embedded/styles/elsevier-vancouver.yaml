@@ -4,9 +4,6 @@ info:
   description: A style for some Elsevier journals, resembles Vancouver style
   short-name: "Vancouver"
 extends: elsevier-vancouver-core
-citation:
-  options:
-    label-wrap: brackets
 bibliography:
   options:
     label-mode: numeric

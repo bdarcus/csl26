@@ -31,6 +31,7 @@ citation:
   template:
   - variable: locator
     prefix: ","
+  delimiter: ""
   wrap:
     punctuation: brackets
   multi-cite-delimiter: ","
