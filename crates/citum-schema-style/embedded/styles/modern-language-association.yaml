@@ -96,6 +96,7 @@ bibliography:
     entry-suffix: .
     separator: ". "
     entry-suffix-after-url: true
+    entry-suffix-after-doi: true
   type-variants:
     article-journal:
       modify:
@@ -152,6 +153,7 @@ bibliography:
     - title: primary
       wrap:
         punctuation: quotes
+      text-case: title
     - title: parent-monograph
     - variable: url
       prefix: ", "
@@ -165,6 +167,7 @@ bibliography:
     standard:
     - variable: authority
     - title: primary
+      text-case: title
     - group:
       - variable: genre
       - number: number
@@ -185,6 +188,7 @@ bibliography:
         use-first: 1
     - title: primary
       quote: true
+      text-case: title
     - contributor: interviewer
       form: long
       name-order: given-first
@@ -208,6 +212,7 @@ bibliography:
       min: 3
       use-first: 1
   - title: primary
+    text-case: title
   - group:
     - contributor: editor
       form: verb
@@ -221,6 +226,7 @@ bibliography:
     form: verb
     name-order: given-first
     prefix: ". "
+    text-case: capitalize-first
   - title: parent-serial
     emph: true
   - number: volume
