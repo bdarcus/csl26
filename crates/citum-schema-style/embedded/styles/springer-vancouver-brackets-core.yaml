@@ -46,8 +46,9 @@ options:
 citation:
   options:
     label-mode: numeric
-    label-wrap: brackets
   template-ref: numeric-citation
+  wrap:
+    punctuation: brackets
   integral:
     template:
     - contributor: author

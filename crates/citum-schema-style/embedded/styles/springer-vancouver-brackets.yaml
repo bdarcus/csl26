@@ -3,9 +3,6 @@ info:
   title: Springer - NLM/Vancouver (citation-sequence, brackets)
   description: Based on the document "Key Style Points 2.0 І December 2024".
 extends: springer-vancouver-brackets-core
-citation:
-  options:
-    label-wrap: brackets
 bibliography:
   options:
     label-mode: numeric
