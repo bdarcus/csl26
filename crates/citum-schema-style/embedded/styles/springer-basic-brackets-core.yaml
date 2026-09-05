@@ -171,7 +171,7 @@ bibliography:
       prefix: " "
     - title: primary
       prefix: " "
-    - title: parent-serial
+    - title: parent-monograph
       prefix: ". "
     - delimiter: ":"
       prefix: " "
