@@ -97,10 +97,33 @@ bibliography:
             number: pages
           label-form: short
     book:
-      modify:
-        - match:
-            variable: publisher-place
-          prefix: ". "
+    - contributor: author
+      form: long
+      and: text
+      name-order: given-first
+      shorten:
+        min: 7
+        use-first: 1
+    - title: primary
+    - title: parent-monograph
+      emph: true
+    - title: parent-serial
+      emph: true
+    - number: edition
+    - number: volume
+      prefix: ", vol. "
+    - number: issue
+      prefix: ", no. "
+    - variable: publisher-place
+      prefix: ". "
+    - variable: publisher
+      prefix: ": "
+    - number: pages
+    - date: issued
+      form: year
+    - variable: doi
+      prefix: ", doi: "
+    - variable: url
     chapter:
     - contributor: author
       form: long
@@ -126,9 +149,10 @@ bibliography:
         form: short
         placement: suffix
         text-case: capitalize-first
-    - variable: publisher-place
-    - variable: publisher
-      prefix: ": "
+    - delimiter: ": "
+      group:
+      - variable: publisher-place
+      - variable: publisher
     - date: issued
       form: year
     - number: pages
@@ -224,12 +248,12 @@ bibliography:
     prefix: ", vol. "
   - number: issue
     prefix: ", no. "
-  - variable: publisher-place
   - variable: publisher
-    prefix: ": "
+  - variable: publisher-place
+    prefix: ", "
   - number: pages
   - date: issued
-    form: year
+    form: month-abbr-day-year
   - variable: doi
     prefix: ", doi: "
   - variable: url
