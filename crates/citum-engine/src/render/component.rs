@@ -41,6 +41,17 @@ pub struct ProcTemplateComponent {
     pub sentence_initial: bool,
     /// Whether the value is already pre-formatted (e.g. from a List or substitution).
     pub pre_formatted: bool,
+    /// A style-configured delimiter that should join this component to its
+    /// preceding sibling in the outer citation/integral part list, resolved
+    /// for a `variable: locator` component from `options.locators`'
+    /// per-kind/pattern `attach` (see `docs/specs/LOCATOR_RENDERING.md`,
+    /// "Label Case and Attachment"). Deliberately **not** realized into this
+    /// component's own rendered `value`/affixes: unlike a template-authored
+    /// `prefix`, it must never appear when this component ends up first in
+    /// the part list (e.g. a preceding component suppressed to empty) — it
+    /// only ever surfaces via the join loop in `citation_to_string_with_format`,
+    /// which by construction only runs for parts after the first.
+    pub locator_attach: Option<citum_schema::template::DelimiterPunctuation>,
 }
 
 /// A processed template (list of rendered components).
@@ -170,6 +181,11 @@ pub(crate) struct RenderedComponent {
     /// double it; see `citation_to_string_with_format`'s per-join
     /// delimiter skip.
     pub(crate) supplies_own_leading_separator: bool,
+    /// The realized text of [`ProcTemplateComponent::locator_attach`], when
+    /// set. Replaces the shared join delimiter ahead of this part in
+    /// `citation_to_string_with_format`'s join loop — never baked into
+    /// `text`, so it cannot appear when this part ends up first.
+    pub(crate) join_delimiter_override: Option<String>,
 }
 
 /// As [`render_component_with_format`], but returns a [`RenderedComponent`]
@@ -239,6 +255,10 @@ pub fn render_component_with_format_and_renderer<F: OutputFormat<Output = String
 
 /// As [`render_component_with_format_and_renderer`], but returns a
 /// [`RenderedComponent`] rather than a bare string.
+#[allow(
+    clippy::too_many_lines,
+    reason = "single linear rendering pipeline: styles, links, affixes, wrap, semantics"
+)]
 pub(crate) fn render_component_detailed_with_format_and_renderer<
     F: OutputFormat<Output = String>,
 >(
@@ -362,11 +382,36 @@ pub(crate) fn render_component_detailed_with_format_and_renderer<
 
     let supplies_own_leading_separator =
         prefix_supplies_own_leading_separator(rendering.prefix.as_ref());
+    let join_delimiter_override = realize_join_delimiter_override(
+        component.locator_attach.as_ref(),
+        script,
+        realization.as_deref(),
+    );
 
     RenderedComponent {
         text: output,
         supplies_own_leading_separator,
+        join_delimiter_override,
     }
+}
+
+/// Realize [`ProcTemplateComponent::locator_attach`] to the literal text
+/// `citation_to_string_with_format`'s join loop should splice in, using the
+/// same script/realization context the component's own affixes use.
+fn realize_join_delimiter_override(
+    locator_attach: Option<&citum_schema::template::DelimiterPunctuation>,
+    script: crate::values::ScriptClass,
+    realization: Option<&citum_schema::options::PunctuationRealization>,
+) -> Option<String> {
+    locator_attach.map(|punctuation| {
+        super::format::realize_punctuation(
+            punctuation,
+            script,
+            realization,
+            super::format::PunctuationPosition::Separator,
+        )
+        .into_owned()
+    })
 }
 
 /// Whether a component's own `prefix` already supplies a leading separator,

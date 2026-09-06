@@ -10,7 +10,7 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus and Citum contributors
 
 use citum_schema::citation::{CitationLocator, LocatorSegment, LocatorType};
 use citum_schema::locale::{Locale, TermForm};
-use citum_schema::options::{LabelForm, LabelRepeat, LocatorConfig, RangeFormat};
+use citum_schema::options::{LabelForm, LabelRepeat, LocatorConfig, RangeFormat, TextCase};
 
 /// Render a citation locator to a display string.
 ///
@@ -44,25 +44,7 @@ pub fn render_locator(
     // Collect the set of locator kinds present in the locator
     let kinds: std::collections::HashSet<LocatorType> =
         segments.iter().map(|seg| seg.label.clone()).collect();
-
-    // Find first matching pattern
-    let pattern = config.patterns.iter().find(|p| {
-        // Check if pattern's kind set is a subset of active kinds
-        let pattern_kinds: std::collections::HashSet<LocatorType> =
-            p.kinds.iter().cloned().collect();
-        if !pattern_kinds.is_subset(&kinds) {
-            return false;
-        }
-
-        // Check type_class gate if present
-        if let Some(type_class) = p.type_class
-            && !crate::values::type_class::matches_type_class(ref_type, type_class)
-        {
-            return false;
-        }
-
-        true
-    });
+    let pattern = find_matching_pattern(&kinds, ref_type, config);
 
     if let Some(pattern) = pattern {
         render_with_pattern(
@@ -82,6 +64,61 @@ pub fn render_locator(
             range_delimiter,
         )
     }
+}
+
+/// Find the first `LocatorPattern` whose `kinds` set is a subset of the
+/// locator's active kinds and whose optional `type_class` gate matches
+/// `ref_type`. Patterns are tested in declaration order.
+///
+/// Shared by [`render_locator`] and [`effective_attach`] so both agree on
+/// which pattern (if any) governs a given locator.
+fn find_matching_pattern<'a>(
+    kinds: &std::collections::HashSet<LocatorType>,
+    ref_type: &str,
+    config: &'a LocatorConfig,
+) -> Option<&'a citum_schema::options::LocatorPattern> {
+    config.patterns.iter().find(|p| {
+        let pattern_kinds: std::collections::HashSet<LocatorType> =
+            p.kinds.iter().cloned().collect();
+        if !pattern_kinds.is_subset(kinds) {
+            return false;
+        }
+        if let Some(type_class) = p.type_class
+            && !crate::values::type_class::matches_type_class(ref_type, type_class)
+        {
+            return false;
+        }
+        true
+    })
+}
+
+/// Resolve the delimiter that should join this locator to its preceding
+/// sibling, per `docs/specs/LOCATOR_RENDERING.md` ("Label Case and
+/// Attachment"): the `attach` of the first kind in a matched pattern's
+/// `order`, or of the locator's first (and, for a `Single` locator, only)
+/// segment kind when no pattern matches, falling back to `config.attach`.
+///
+/// Returns `None` when no `attach` applies at any level — callers must not
+/// overwrite an existing template-authored prefix in that case.
+#[must_use]
+pub fn effective_attach(
+    locator: &CitationLocator,
+    ref_type: &str,
+    config: &LocatorConfig,
+) -> Option<citum_schema::template::DelimiterPunctuation> {
+    let segments = locator.segments();
+    let kinds: std::collections::HashSet<LocatorType> =
+        segments.iter().map(|seg| seg.label.clone()).collect();
+    let pattern = find_matching_pattern(&kinds, ref_type, config);
+
+    let governing_kind = match pattern {
+        Some(pattern) => pattern.order.first().cloned(),
+        None => segments.first().map(|seg| seg.label.clone()),
+    };
+
+    governing_kind
+        .and_then(|kind| config.kinds.get(&kind).and_then(|k| k.attach.clone()))
+        .or_else(|| config.attach.clone())
 }
 
 /// Render segments using a matched pattern.
@@ -112,6 +149,7 @@ fn render_with_pattern(
                     form,
                     config,
                     config.strip_label_periods,
+                    config.label_case,
                     locale,
                     style_range_format,
                     range_delimiter,
@@ -151,6 +189,7 @@ fn render_with_pattern(
                 form,
                 &value_str,
                 config.strip_label_periods,
+                config.label_case,
                 locale,
             )
         };
@@ -190,6 +229,7 @@ fn render_default(
                 form,
                 config,
                 config.strip_label_periods,
+                config.label_case,
                 locale,
                 style_range_format,
                 range_delimiter,
@@ -213,6 +253,7 @@ fn render_segment_with_label(
     form: LabelForm,
     config: &LocatorConfig,
     global_strip: Option<bool>,
+    global_label_case: Option<TextCase>,
     locale: &Locale,
     style_range_format: Option<&RangeFormat>,
     range_delimiter: &str,
@@ -223,16 +264,29 @@ fn render_segment_with_label(
         Some(&range_format),
         range_delimiter,
     );
-    render_segment_with_label_str(seg, kind_cfg, form, &value_str, global_strip, locale)
+    render_segment_with_label_str(
+        seg,
+        kind_cfg,
+        form,
+        &value_str,
+        global_strip,
+        global_label_case,
+        locale,
+    )
 }
 
 /// Render a single segment with label, given a pre-computed value string.
+#[allow(
+    clippy::too_many_arguments,
+    reason = "internal helper, callers are the small set above"
+)]
 fn render_segment_with_label_str(
     seg: &LocatorSegment,
     kind_cfg: Option<&citum_schema::options::LocatorKindConfig>,
     form: LabelForm,
     value_str: &str,
     global_strip: Option<bool>,
+    global_label_case: Option<TextCase>,
     locale: &Locale,
 ) -> String {
     let plural = seg.value.is_plural();
@@ -249,11 +303,24 @@ fn render_segment_with_label_str(
             .and_then(|k| k.strip_label_periods)
             .or(global_strip)
             == Some(true);
-        if strip_periods {
+        let label_case = kind_cfg.and_then(|k| k.label_case).or(global_label_case);
+        let (term, glued) = if strip_periods {
             // Stripping the trailing period removes the natural separator,
             // so no additional space is added (e.g. "p." → "p23" not "p 23").
-            let term_str = crate::values::strip_trailing_periods(&term);
-            format!("{term_str}{value_str}")
+            (crate::values::strip_trailing_periods(&term), true)
+        } else {
+            (term, false)
+        };
+        let term = match label_case {
+            Some(case) => crate::values::text_case::apply_text_case_with_language(
+                &term,
+                case,
+                Some(locale.locale.as_str()),
+            ),
+            None => term,
+        };
+        if glued {
+            format!("{term}{value_str}")
         } else {
             format!("{term} {value_str}")
         }
@@ -295,6 +362,7 @@ mod tests {
     use super::*;
     use citum_schema::citation::LocatorValue;
     use citum_schema::options::{LabelForm, LocatorConfig};
+    use rstest::rstest;
 
     #[test]
     fn test_render_single_page_locator_with_short_label() {
@@ -711,6 +779,58 @@ locators:
         assert_eq!(
             render_locator(&locator, "book", &config, &locale, None, None),
             "reel 3"
+        );
+    }
+
+    #[rstest]
+    #[case::page_opts_out_of_config_level_label_case(LocatorType::Page, "12", "p. 12")]
+    #[case::section_takes_config_level_label_case(LocatorType::Section, "12", "Section 12")]
+    fn given_a_config_level_label_case_with_a_per_kind_opt_out_when_rendered_then_only_the_opted_out_kind_is_unaffected(
+        #[case] kind: LocatorType,
+        #[case] value: &str,
+        #[case] expected: &str,
+    ) {
+        // APA (docs/specs/LOCATOR_RENDERING.md, "Label Case and Attachment"):
+        // every kind gets a long, capitalized label except page (and
+        // paragraph), which stay short and as-is.
+        let mut kinds = std::collections::HashMap::new();
+        kinds.insert(
+            LocatorType::Page,
+            citum_schema::options::LocatorKindConfig {
+                label_form: Some(LabelForm::Short),
+                label_case: Some(TextCase::AsIs),
+                ..Default::default()
+            },
+        );
+        let config = LocatorConfig {
+            default_label_form: LabelForm::Long,
+            label_case: Some(TextCase::CapitalizeFirst),
+            kinds,
+            ..Default::default()
+        };
+        let locale = Locale::from_yaml_str(
+            r#"
+locale: en-US
+locators:
+  page:
+    short:
+      singular: "p."
+      plural: "pp."
+  section:
+    long:
+      singular: "section"
+      plural: "sections"
+"#,
+        )
+        .expect("custom locale should parse");
+        let locator = CitationLocator::Single(LocatorSegment {
+            label: kind,
+            value: LocatorValue::Text(value.to_string()),
+        });
+
+        assert_eq!(
+            render_locator(&locator, "book", &config, &locale, None, None),
+            expected
         );
     }
 }

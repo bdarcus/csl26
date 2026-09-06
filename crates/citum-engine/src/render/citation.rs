@@ -161,7 +161,20 @@ pub fn citation_to_string_with_format<F: OutputFormat<Output = String>>(
             // through `push_delimiter` with an empty delimiter rather than
             // skipping the call outright, so Case 2 (moving the part's own
             // leading `.`/`,` inside a preceding closing quote) still fires.
-            let effective_delim = if part.supplies_own_leading_separator {
+            //
+            // A locator's resolved `attach` (`join_delimiter_override`)
+            // takes precedence over both: it replaces the shared delimiter
+            // outright rather than merely suppressing it, and — because it
+            // is applied only here, never baked into the part's own
+            // `text` — it cannot appear when this part is `i == 0` (see
+            // `ProcTemplateComponent::locator_attach`'s doc comment).
+            let override_delim = part
+                .join_delimiter_override
+                .as_deref()
+                .map(|text| RealizedPunctuation::new(std::borrow::Cow::Borrowed(text)));
+            let effective_delim = if let Some(override_delim) = override_delim.as_ref() {
+                override_delim
+            } else if part.supplies_own_leading_separator {
                 &no_delim
             } else {
                 &delim
@@ -201,6 +214,34 @@ pub fn citation_to_string_with_format<F: OutputFormat<Output = String>>(
     } else {
         assembled
     }
+}
+
+/// The `join_delimiter_override` of the first component in `proc_template`
+/// that renders non-empty text, or `None` if none do or that first
+/// component carries no override.
+///
+/// A grouped multi-item citation renders each item's author-stripped
+/// template through [`citation_to_string_with_format`], but joins the
+/// *externally*-rendered author heading to that result separately, using a
+/// delimiter guessed from the template's structurally-first remaining
+/// component (see `filter_author_from_template` in
+/// `processor/rendering/grouped/core.rs`). That guess is wrong whenever the
+/// structurally-first component (e.g. a `disambiguate-only` title) renders
+/// empty at runtime and a later component with its own `attach` (e.g. a
+/// locator, `docs/specs/LOCATOR_RENDERING.md`) becomes the item's true first
+/// visible content. This function lets that external caller ask
+/// `citation_to_string_with_format`'s own answer instead of re-guessing.
+#[must_use]
+pub fn leading_join_delimiter_override<F: OutputFormat<Output = String>>(
+    proc_template: &ProcTemplate,
+) -> Option<String> {
+    for component in proc_template {
+        let rendered = render_component_detailed::<F>(component);
+        if !rendered.text.is_empty() {
+            return rendered.join_delimiter_override;
+        }
+    }
+    None
 }
 
 #[cfg(test)]
@@ -261,6 +302,7 @@ mod tests {
                 quote_marks: Default::default(),
                 sentence_initial: false,
                 pre_formatted: false,
+                locator_attach: None,
             },
             ProcTemplateComponent {
                 template_component: TemplateComponent::Date(TemplateDate {
@@ -281,6 +323,7 @@ mod tests {
                 quote_marks: Default::default(),
                 sentence_initial: false,
                 pre_formatted: false,
+                locator_attach: None,
             },
         ];
 
@@ -322,6 +365,7 @@ mod tests {
                 quote_marks: Default::default(),
                 sentence_initial: false,
                 pre_formatted: false,
+                locator_attach: None,
             },
             ProcTemplateComponent {
                 template_component: TemplateComponent::Date(TemplateDate {
@@ -342,6 +386,7 @@ mod tests {
                 quote_marks: Default::default(),
                 sentence_initial: false,
                 pre_formatted: false,
+                locator_attach: None,
             },
         ];
 
@@ -689,6 +734,7 @@ ENDING IN COMMA
                 quote_marks: Default::default(),
                 sentence_initial: false,
                 pre_formatted: false,
+                locator_attach: None,
             },
             ProcTemplateComponent {
                 template_component: TemplateComponent::Date(TemplateDate {
@@ -716,6 +762,7 @@ ENDING IN COMMA
                 quote_marks: Default::default(),
                 sentence_initial: false,
                 pre_formatted: false,
+                locator_attach: None,
             },
         ]
     }

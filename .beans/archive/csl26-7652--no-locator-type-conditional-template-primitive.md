@@ -1,7 +1,7 @@
 ---
 # csl26-7652
 title: No locator-type-conditional template primitive
-status: in-progress
+status: completed
 type: task
 priority: normal
 tags:
@@ -9,7 +9,7 @@ tags:
     - fidelity
     - style
 created_at: 2026-09-06T15:56:25Z
-updated_at: 2026-09-06T17:48:21Z
+updated_at: 2026-09-06T19:52:04Z
 parent: csl26-ccdt
 blocking:
     - csl26-t1hh
@@ -90,3 +90,36 @@ Next: user reviews the spec (PR against `docs/specs/LOCATOR_RENDERING.md`),
 then implementation lands in a stacked PR.
 
 Related: csl26-t1hh (pre-existing MLA-specific bean with prior investigation reaching the same options/preset-over-render-when conclusion; cross-linked, not duplicated).
+
+## Summary of Changes
+
+Implemented per docs/specs/LOCATOR_RENDERING.md ("Label Case and
+Attachment", now Active v1.1):
+
+- `label-case` and `attach` added to `LocatorConfig`/`LocatorKindConfig`;
+  new `LocatorOverrides` + `LocatorConfigEntry::PresetWithOverrides` (with
+  the correct `Preset, PresetWithOverrides, Explicit` untagged-enum
+  ordering) so a style can keep a preset shorthand while overriding
+  individual fields.
+- `attach` is resolved via `values::locator::effective_attach()` and
+  threaded through a dedicated `ProcTemplateComponent::locator_attach` /
+  `RenderedComponent::join_delimiter_override` channel -- never baked into
+  the component's own rendered text -- so it only ever surfaces in
+  `citation_to_string_with_format`'s join loop for parts after the first.
+  (An earlier design that wrote `attach` into `Rendering.prefix` was
+  caught by the full nextest suite: it rendered a stray leading separator
+  when a preceding component collapsed to empty under `suppress_author`.)
+- `apa-7th.yaml` and `modern-language-association.yaml` updated.
+
+Verified: `cargo nextest run` 2767/2767 green; `report-core.js
+--all-features` shows APA exact-parity 106/146 -> 108/146 and MLA
+62/115 -> 64/115, with the three targeted rows (`locator-section-with-suffix`,
+`with-locator`, `suppress-author-with-locator`) flipping to exact match and
+zero regressions elsewhere, including on every other `locators:`-using
+embedded style.
+
+Deferred to filed beans: csl26-bg3f (legal type-class labels), csl26-swk3
+(self-identifying non-numeric values), csl26-nn2t (`timestamp`
+`LocatorType`).
+
+Note: implementation also surfaced a related, separate gap — grouped multi-item citations don't yet pick up `attach` (a different render path). Split out as csl26-8r9r.

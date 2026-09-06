@@ -53,6 +53,7 @@ impl ComponentValues for TemplateGroup {
                 quote_marks: crate::render::format::QuoteMarks::from(options.locale),
                 sentence_initial: false,
                 pre_formatted: v.pre_formatted,
+                locator_attach: None,
             };
 
             let rendered =

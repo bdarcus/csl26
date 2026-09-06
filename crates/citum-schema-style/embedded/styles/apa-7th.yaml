@@ -29,6 +29,16 @@ info:
   edition: "7th"
 options:
   date-fallback: standard
+  # apa.csl's label-locator macro (APA §8.13): page and paragraph locators
+  # abbreviate ("p. 33"); every other kind gets a long, capitalized label
+  # ("Section 12"). See docs/specs/LOCATOR_RENDERING.md ("Label Case and
+  # Attachment").
+  locators:
+    default-label-form: long
+    label-case: capitalize-first
+    kinds:
+      page: { label-form: short, label-case: as-is }
+      paragraph: { label-form: short, label-case: as-is }
   # APA 7 disambiguation profile: add names + global first-author given-name
   # (initials via the contributor config) + year suffix (matches apa.csl). The
   # `author-date-full` preset bundles exactly this — names + add-givenname +

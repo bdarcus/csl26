@@ -924,7 +924,7 @@ fn given_pandoc_markdown_author_date_syntax_when_rendered_then_integral_and_clus
     );
     assert_output_has_line(
         &output,
-        "Later work supports this (Kuhn, 1962, chap. 3; see Smith, 2010, p. 12).",
+        "Later work supports this (Kuhn, 1962, Chapter 3; see Smith, 2010, p. 12).",
         "bracketed markdown cite cluster should render with prefix and locator",
     );
 }

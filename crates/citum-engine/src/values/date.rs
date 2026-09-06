@@ -1156,6 +1156,7 @@ pub(crate) fn render_fallback_component<F: crate::render::format::OutputFormat<O
         quote_marks: crate::render::format::QuoteMarks::from(options.locale),
         sentence_initial: false,
         pre_formatted: values.pre_formatted,
+        locator_attach: None,
     };
     crate::render::render_component_with_format_and_renderer::<F>(
         &proc_item,

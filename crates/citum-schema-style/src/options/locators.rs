@@ -8,7 +8,8 @@ SPDX-FileCopyrightText: © 2023-2026 Bruce D'Arcus and Citum contributors
 //! Defines how citation locators (page numbers, sections, etc.) are displayed,
 //! including label forms, range formatting, and compound locator patterns.
 
-use super::RangeFormat;
+use super::{RangeFormat, TextCase};
+use crate::template::DelimiterPunctuation;
 use citum_schema_data::citation::LocatorType;
 use std::collections::HashMap;
 
@@ -74,6 +75,16 @@ pub struct LocatorKindConfig {
     /// Strip trailing periods from labels (e.g., "p." → "p").
     #[serde(skip_serializing_if = "Option::is_none")]
     pub strip_label_periods: Option<bool>,
+    /// Text-case transform applied to this kind's rendered label term.
+    /// `AsIs` opts a kind out of a config-level `label_case`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub label_case: Option<TextCase>,
+    /// Overrides the delimiter joining this locator to its preceding
+    /// sibling, when the locator is a top-level item in the citation or
+    /// integral template. See `docs/specs/LOCATOR_RENDERING.md`
+    /// ("Label Case and Attachment") for the scope and precedence rules.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub attach: Option<DelimiterPunctuation>,
     /// Forward-compat: captures unknown keys when an older engine reads a
     /// style produced by a newer schema. Empty by default; treated as a
     /// SoftDegrade signal. See `docs/specs/FORWARD_COMPATIBILITY.md`.
@@ -84,6 +95,33 @@ pub struct LocatorKindConfig {
     )]
     #[cfg_attr(feature = "schema", schemars(skip))]
     pub unknown_fields: std::collections::BTreeMap<String, serde_yaml::Value>,
+}
+
+impl LocatorKindConfig {
+    /// Merge `other`'s `Some` fields into `self`, field by field.
+    ///
+    /// Used when a `PresetWithOverrides` overlay's `kinds` map shares a key
+    /// with the resolved preset's own `kinds` map: the overlay's fields win,
+    /// but fields the overlay left unset keep the preset's value (e.g. the
+    /// `note` preset's `page.label_form: Some(None)` survives an overlay
+    /// that only sets `page.attach`).
+    fn merge(&mut self, other: LocatorKindConfig) {
+        if other.label_form.is_some() {
+            self.label_form = other.label_form;
+        }
+        if other.range_format.is_some() {
+            self.range_format = other.range_format;
+        }
+        if other.strip_label_periods.is_some() {
+            self.strip_label_periods = other.strip_label_periods;
+        }
+        if other.label_case.is_some() {
+            self.label_case = other.label_case;
+        }
+        if other.attach.is_some() {
+            self.attach = other.attach;
+        }
+    }
 }
 
 /// A pattern matching a specific combination of LocatorType values.
@@ -135,6 +173,13 @@ pub struct LocatorConfig {
     /// Strip trailing periods from labels globally (e.g., "p." → "p").
     #[serde(skip_serializing_if = "Option::is_none")]
     pub strip_label_periods: Option<bool>,
+    /// Default label-case transform for all kinds unless overridden per kind.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub label_case: Option<TextCase>,
+    /// Default attachment delimiter for all kinds unless overridden per kind.
+    /// See `LocatorKindConfig::attach` for scope and precedence.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub attach: Option<DelimiterPunctuation>,
     /// Per-kind configuration overrides.
     #[serde(default)]
     pub kinds: HashMap<LocatorType, LocatorKindConfig>,
@@ -162,6 +207,8 @@ impl Default for LocatorConfig {
             default_label_form: LabelForm::Short,
             range_format: None,
             strip_label_periods: None,
+            label_case: None,
+            attach: None,
             kinds: HashMap::new(),
             patterns: Vec::new(),
             fallback_delimiter: ", ".to_string(),
@@ -201,6 +248,8 @@ impl LocatorPreset {
                 default_label_form: LabelForm::Short,
                 range_format: None,
                 strip_label_periods: None,
+                label_case: None,
+                attach: None,
                 kinds: {
                     let mut m = HashMap::new();
                     // Page locators have no label in note style
@@ -210,6 +259,8 @@ impl LocatorPreset {
                             label_form: Some(LabelForm::None),
                             range_format: None,
                             strip_label_periods: None,
+                            label_case: None,
+                            attach: None,
                             unknown_fields: std::collections::BTreeMap::new(),
                         },
                     );
@@ -223,6 +274,8 @@ impl LocatorPreset {
                 default_label_form: LabelForm::Short,
                 range_format: None,
                 strip_label_periods: None,
+                label_case: None,
+                attach: None,
                 kinds: HashMap::new(),
                 patterns: Vec::new(),
                 fallback_delimiter: ", ".to_string(),
@@ -232,6 +285,8 @@ impl LocatorPreset {
                 default_label_form: LabelForm::Short,
                 range_format: None,
                 strip_label_periods: Some(true),
+                label_case: None,
+                attach: None,
                 kinds: HashMap::new(),
                 patterns: Vec::new(),
                 fallback_delimiter: ", ".to_string(),
@@ -241,13 +296,125 @@ impl LocatorPreset {
     }
 }
 
+/// All-`Option` overlay applied on top of a resolved preset.
+///
+/// `LocatorConfig` itself cannot serve as the overlay: its
+/// `default_label_form` and `fallback_delimiter` fields are non-`Option`
+/// with serde defaults, so a flattened `LocatorConfig` overlay could not
+/// distinguish "field not set, inherit the preset" from "field explicitly
+/// set to the schema default." Every field here mirrors a field on
+/// `LocatorConfig`.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+#[serde(rename_all = "kebab-case", default)]
+pub struct LocatorOverrides {
+    /// Overrides the preset's default label form.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub default_label_form: Option<LabelForm>,
+    /// Overrides the preset's range format.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub range_format: Option<RangeFormat>,
+    /// Overrides the preset's `strip_label_periods`. `Some(false)` is an
+    /// explicit clear, distinct from an omitted field (which inherits).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub strip_label_periods: Option<bool>,
+    /// Overrides the preset's `label_case`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub label_case: Option<TextCase>,
+    /// Overrides the preset's `attach`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub attach: Option<DelimiterPunctuation>,
+    /// Overrides the preset's fallback delimiter.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub fallback_delimiter: Option<String>,
+    /// Merged into the preset's `kinds` map per key, not replaced wholesale.
+    #[serde(default)]
+    pub kinds: HashMap<LocatorType, LocatorKindConfig>,
+    /// Replaces the preset's `patterns` wholesale when present.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub patterns: Option<Vec<LocatorPattern>>,
+    /// Forward-compat: captures unknown keys when an older engine reads a
+    /// style produced by a newer schema. Empty by default; treated as a
+    /// SoftDegrade signal. See `docs/specs/FORWARD_COMPATIBILITY.md`.
+    #[serde(
+        flatten,
+        default,
+        skip_serializing_if = "std::collections::BTreeMap::is_empty"
+    )]
+    #[cfg_attr(feature = "schema", schemars(skip))]
+    pub unknown_fields: std::collections::BTreeMap<String, serde_yaml::Value>,
+}
+
+impl LocatorOverrides {
+    /// Overlay `self` onto a resolved preset `LocatorConfig`, field by field.
+    ///
+    /// `kinds` merges per `LocatorType` key into the base's `kinds` map
+    /// rather than replacing it wholesale, so a preset's own per-kind
+    /// entries (e.g. `note`'s bare-page `LocatorKindConfig`) survive unless
+    /// the same key is present in the overlay.
+    #[must_use]
+    pub fn apply(self, mut base: LocatorConfig) -> LocatorConfig {
+        if let Some(v) = self.default_label_form {
+            base.default_label_form = v;
+        }
+        if self.range_format.is_some() {
+            base.range_format = self.range_format;
+        }
+        if self.strip_label_periods.is_some() {
+            base.strip_label_periods = self.strip_label_periods;
+        }
+        if self.label_case.is_some() {
+            base.label_case = self.label_case;
+        }
+        if self.attach.is_some() {
+            base.attach = self.attach;
+        }
+        if let Some(v) = self.fallback_delimiter {
+            base.fallback_delimiter = v;
+        }
+        if let Some(v) = self.patterns {
+            base.patterns = v;
+        }
+        for (kind, overlay_kind_cfg) in self.kinds {
+            match base.kinds.entry(kind) {
+                std::collections::hash_map::Entry::Occupied(mut e) => {
+                    e.get_mut().merge(overlay_kind_cfg);
+                }
+                std::collections::hash_map::Entry::Vacant(e) => {
+                    e.insert(overlay_kind_cfg);
+                }
+            }
+        }
+        base
+    }
+}
+
 /// Preset-or-explicit entry — same pattern as DateConfigEntry.
+///
+/// `#[serde(untagged)]`: variant order is load-bearing. `Preset` is tried
+/// first (a bare string). `PresetWithOverrides` is tried next — its
+/// `preset` field is required, so it only matches a mapping carrying that
+/// key, and falls through otherwise. `Explicit` **must come last**:
+/// `LocatorConfig` carries a `#[serde(flatten)] unknown_fields` catch-all
+/// with no `deny_unknown_fields`, so `Explicit` would happily accept (and
+/// silently discard into `unknown_fields`) a stray `preset` key. Trying
+/// `Explicit` before `PresetWithOverrides` would make
+/// `{preset: note, kinds: {...}}` resolve as a bare `Explicit` with
+/// `preset` discarded and no preset behavior applied at all.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(untagged)]
 pub enum LocatorConfigEntry {
     /// A preset name.
     Preset(LocatorPreset),
+    /// A preset resolved to a `LocatorConfig`, then overlaid with `overrides`.
+    PresetWithOverrides {
+        /// The base preset to resolve before applying `overrides`.
+        preset: LocatorPreset,
+        /// Fields to overlay onto the resolved preset.
+        #[serde(flatten)]
+        overrides: LocatorOverrides,
+    },
     /// Explicit configuration.
     Explicit(LocatorConfig),
 }
@@ -258,6 +425,9 @@ impl LocatorConfigEntry {
     pub fn resolve(self) -> LocatorConfig {
         match self {
             LocatorConfigEntry::Preset(preset) => preset.config(),
+            LocatorConfigEntry::PresetWithOverrides { preset, overrides } => {
+                overrides.apply(preset.config())
+            }
             LocatorConfigEntry::Explicit(config) => config,
         }
     }
@@ -287,6 +457,7 @@ fn default_delimiter() -> String {
 )]
 mod tests {
     use super::*;
+    use rstest::rstest;
 
     #[test]
     fn test_locator_preset_note() {
@@ -354,5 +525,79 @@ mod tests {
         assert_eq!(config.default_label_form, LabelForm::Short);
         assert_eq!(config.fallback_delimiter, ", ");
         assert_eq!(config.range_format, None);
+    }
+
+    #[rstest]
+    #[case::page("page", LocatorType::Page)]
+    #[case::line("line", LocatorType::Line)]
+    fn given_a_preset_with_a_per_kind_attach_override_when_parsed_then_resolves_as_preset_with_overrides(
+        #[case] kind_key: &str,
+        #[case] overridden_kind: LocatorType,
+    ) {
+        let yaml = format!("preset: note\nkinds:\n  {kind_key}:\n    attach: \" \"\n");
+        let entry: LocatorConfigEntry = serde_yaml::from_str(&yaml).unwrap();
+        assert!(
+            matches!(entry, LocatorConfigEntry::PresetWithOverrides { .. }),
+            "an untagged {{preset, kinds}} mapping must resolve as PresetWithOverrides, \
+             not fall through to Explicit and silently discard `preset`"
+        );
+
+        let config = entry.resolve();
+        // The `note` preset's own bare-page behavior must survive the
+        // overlay: the overlay only adds an `attach` entry for one kind,
+        // it must not replace the preset's `kinds` map wholesale.
+        assert_eq!(
+            config
+                .kinds
+                .get(&LocatorType::Page)
+                .and_then(|k| k.label_form),
+            Some(LabelForm::None)
+        );
+        assert_eq!(
+            config
+                .kinds
+                .get(&overridden_kind)
+                .and_then(|k| k.attach.clone()),
+            Some(DelimiterPunctuation::Custom(" ".to_string()))
+        );
+    }
+
+    #[test]
+    fn given_a_plain_explicit_locator_config_when_parsed_then_resolves_as_explicit_not_preset_with_overrides()
+     {
+        let yaml = "default-label-form: long\nlabel-case: capitalize-first\n";
+        let entry: LocatorConfigEntry = serde_yaml::from_str(yaml).unwrap();
+        assert!(matches!(entry, LocatorConfigEntry::Explicit(_)));
+
+        let config = entry.resolve();
+        assert_eq!(config.default_label_form, LabelForm::Long);
+        assert_eq!(config.label_case, Some(TextCase::CapitalizeFirst));
+    }
+
+    #[test]
+    fn given_a_preset_with_overrides_strip_label_periods_false_when_resolved_then_it_clears_the_preset_value()
+     {
+        // `numeric` sets strip_label_periods: Some(true); an explicit
+        // `Some(false)` override must clear it, distinct from omitting the
+        // field (which would inherit the preset's `true`).
+        let entry = LocatorConfigEntry::PresetWithOverrides {
+            preset: LocatorPreset::Numeric,
+            overrides: LocatorOverrides {
+                strip_label_periods: Some(false),
+                ..Default::default()
+            },
+        };
+        let config = entry.resolve();
+        assert_eq!(config.strip_label_periods, Some(false));
+    }
+
+    #[test]
+    fn given_a_kind_level_label_case_as_is_when_resolved_then_it_is_distinct_from_no_override() {
+        let with_override = LocatorKindConfig {
+            label_case: Some(TextCase::AsIs),
+            ..Default::default()
+        };
+        let without_override = LocatorKindConfig::default();
+        assert_ne!(with_override.label_case, without_override.label_case);
     }
 }

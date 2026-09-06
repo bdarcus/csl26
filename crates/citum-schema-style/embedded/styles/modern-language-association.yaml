@@ -22,7 +22,16 @@ info:
   short-name: "MLA"
   edition: "9th"
 options:
-  locators: note
+  # mla.csl (styles-legacy/modern-language-association.csl:1146) joins the
+  # locator to the preceding author-short/title with a bare space for
+  # page/line locators ("Kuhn 23"), and a comma-joined label for every
+  # other kind ("Kuhn, sec. 12"). See docs/specs/LOCATOR_RENDERING.md
+  # ("Label Case and Attachment").
+  locators:
+    preset: note
+    kinds:
+      page: { attach: " " }
+      line: { attach: " " }
   # MLA is author-page, not author-date: it never appends year suffixes. It
   # disambiguates by adding names / given-name initials (matches mla.csl:
   # disambiguate-add-names + disambiguate-add-givenname, no add-year-suffix) and,

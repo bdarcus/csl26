@@ -1,7 +1,7 @@
 # Locator Rendering Specification
 
-**Status:** Active (v1.0); **v1.1 addition below: Draft, pending review**
-**Version:** 1.1-draft
+**Status:** Active
+**Version:** 1.1
 **Date:** 2026-09-06
 **Related:** bean csl26-3he9, bean csl26-7652, bean csl26-t1hh,
 `crates/citum-schema-style/src/options/locators.rs`
@@ -54,6 +54,22 @@ fully configurable by styles.
 - Adding `timestamp` to the `LocatorType` enum. Deferred to a follow-up bean.
 - A named "locator class" abstraction (a third precedence tier grouping
   multiple kinds under one label). See Rejected Alternatives below.
+
+**In scope (v1.1):**
+- **`attach` inside a grouped multi-item citation** (e.g. MLA's
+  `multi-item-with-locators` case, `(A, Title 10; see also B et al 440)`).
+  A grouped citation with more than one item renders each item's
+  remaining template through `filter_author_from_template` /
+  `render_item_from_template_with_format`
+  (`crates/citum-engine/src/processor/rendering/grouped/core.rs`), which
+  computes its own "leading affix" between the externally-rendered author
+  heading and the item's own content — a join point separate from
+  `citation_to_string_with_format`'s per-part loop, and one that guesses
+  the delimiter from the item's *structurally* first remaining template
+  component rather than what actually renders. See Engine semantics below
+  for `leading_join_delimiter_override`, which corrects that guess using
+  what actually rendered. Both single-item and multi-item grouped
+  citations pick up `attach` correctly.
 
 ## Design
 
@@ -216,9 +232,6 @@ Styles that used `strip-label-periods: true` → set
 so).
 
 ## Label Case and Attachment (v1.1)
-
-**Status of this section: Draft.** Pending review; flips to Active alongside
-`v1.1` (dated) once implementation lands.
 
 ### Problem
 
@@ -412,65 +425,102 @@ other ~30 `LocatorType` variants individually.
 
 ### Engine semantics
 
-- **What actually classifies a join-delimiter suppression.**
-  `ProcTemplateComponent` (`crates/citum-engine/src/render/component.rs:13-44`)
-  carries *two* separate prefix-like fields, and only one of them matters
-  here. `component.prefix: Option<String>` ("prefix from value extraction")
-  is rendered as an **inner** affix — inside any `wrap`, next to the raw
-  value (`total_inner_prefix`,
-  `crates/citum-engine/src/render/component.rs:317-330`) — and is never
-  consulted by the join-delimiter logic. The field that matters is
-  `Rendering.prefix: Option<DelimiterPunctuation>` (the template-authored,
-  semantic prefix): it is realized as an **outer** affix
-  (`realized_component_affixes`,
-  `crates/citum-engine/src/render/component.rs:183-201`) and is the sole
-  input to `prefix_supplies_own_leading_separator`
-  (`crates/citum-engine/src/render/component.rs:363-403`), whose result
-  (`RenderedComponent::supplies_own_leading_separator`) the join loop in
-  `citation_to_string_with_format` consults to skip the shared delimiter
-  ahead of a part (`crates/citum-engine/src/render/citation.rs:150-176`).
-  **`attach` must resolve into `Rendering.prefix` for the locator's
-  component, not into `component.prefix`.**
+- **`attach` is not a prefix — it is a dedicated join-override channel.**
+  An earlier draft of this section proposed writing the resolved `attach`
+  into the locator's `Rendering.prefix`, reasoning that
+  `prefix_supplies_own_leading_separator`
+  (`crates/citum-engine/src/render/component.rs`) already suppresses the
+  shared delimiter for a component with its own leading separator. That
+  draft was wrong in a way only caught by the full test suite: `Rendering`
+  affixes are baked into the component's own rendered text unconditionally
+  (`realized_component_affixes`, applied inside
+  `render_component_detailed_with_format_and_renderer`), regardless of the
+  component's eventual position in the outer part list. When a *preceding*
+  component collapses to empty at render time (e.g. `suppress_author` on a
+  citation whose template is `[group[author,...], variable: locator]`), the
+  locator becomes the first rendered part — and a baked-in `attach` prefix
+  then renders with nothing to join to (`( 10)` instead of `(10)`).
+  `ProcTemplateComponent` instead carries a separate
+  `locator_attach: Option<DelimiterPunctuation>` field, realized into
+  `RenderedComponent::join_delimiter_override: Option<String>` alongside
+  (not merged into) the component's own affixes. The join loop in
+  `citation_to_string_with_format`
+  (`crates/citum-engine/src/render/citation.rs`) uses this override in
+  place of the shared delimiter **only** for parts after the first —
+  `for (i, part) in parts.iter().enumerate()` skips the join step entirely
+  when `i == 0`. This makes "never appears when there's nothing to join to"
+  structural rather than a rule to remember, and needs no change to
+  `prefix_supplies_own_leading_separator` or `realized_component_affixes`.
 - **Where `attach` is resolved.** The locator's `LocatorType` kind (and
   which `LocatorPattern`, if any, matches) is only known where the raw
   `CitationLocator` is still available — the `SimpleVariable::Locator` arm
-  of value resolution (`crates/citum-engine/src/values/variable.rs:335-355`),
-  which already loads the effective `LocatorConfig` and calls
-  `render_locator` (`crates/citum-engine/src/values/locator.rs:26-62`). This
-  is a different point in the pipeline from `get_effective_rendering`
-  (`crates/citum-engine/src/render/component.rs:455-484`), which layers
+  of value resolution (`crates/citum-engine/src/values/variable.rs`), which
+  already loads the effective `LocatorConfig` and calls `render_locator`
+  (`crates/citum-engine/src/values/locator.rs`). The renderer resolves
+  `locator_attach` separately, at `ProcTemplateComponent` construction time
+  (`processor/rendering/grouped/core.rs`'s
+  `render_template_component_with_format`, via a small
+  `resolve_locator_attach` helper), reusing the same
+  kind/pattern-matching logic as `render_locator` through a shared
+  `values::locator::effective_attach()` function — this is a different
+  point in the pipeline from `get_effective_rendering`
+  (`crates/citum-engine/src/render/component.rs`), which layers
   per-component-type config into `Rendering` but only sees the already-built
-  `ProcTemplateComponent` — by then the raw locator kind is gone, leaving
-  only the rendered value string. The resolved `attach`, once computed
-  during value resolution, must be carried forward and set as the locator
-  component's `Rendering.prefix` at `ProcTemplateComponent` construction
-  time — new plumbing, not a reuse of the existing per-type
-  `get_effective_rendering` arms (those key on static config/`ref_type`
-  only). **This is new engine wiring, not solely a schema addition** — the
-  Files section below is corrected accordingly.
-- **Template `prefix` wins, structurally.** The resolved `attach` is written
-  into `Rendering.prefix` **only when the template's own `TemplateVariable`
-  did not already set one**. This makes precedence a fallback check at
-  construction time rather than a separate rule the classifier or the
-  realization path needs to know about — the existing merge/realize/classify
-  code is otherwise untouched.
-- **Scope of this addition: top-level template items only.** Confirmed by
-  reading every consumer of `supplies_own_leading_separator`: it is read
-  exactly once, inside `citation_to_string_with_format`'s join over the
-  *outer* list of a citation or integral template's top-level items
-  (`crates/citum-engine/src/render/citation.rs:150-176`). The nested
-  group-item join in
-  `crates/citum-engine/src/processor/rendering/grouped/core.rs` (around
-  line 695) does not consult it — a comment there confirms per-part
-  suppression was deliberately moved to the outer join only (csl26-475u).
-  Both target styles need only this scope: MLA's citation template is
-  `[group[author, title], variable: locator]` and its integral template is
-  `[contributor: author, variable: locator]` — in both, `variable: locator`
-  is a top-level item, not nested inside a `group:`. APA's locator is
-  likewise always a top-level array item. **`attach` inside a nested
-  `group:` is out of scope for v1.1** and not implemented; if a future style
-  needs it, the nested-group join in `grouped/core.rs` needs the same
-  classifier wired in first — a separate, larger change.
+  `ProcTemplateComponent`, by which point the raw locator kind is gone.
+- **Template `prefix` wins, structurally.** `resolve_locator_attach` returns
+  `None` (no override) whenever the `variable: locator` component's own
+  `TemplateVariable.rendering.prefix` is already set. The template's prefix
+  is therefore rendered exactly as today — through the ordinary affix path,
+  never through `locator_attach` — with no separate precedence rule for the
+  classifier or realization path to implement.
+- **Scope of the top-level join: `citation_to_string_with_format`'s own
+  part list.** `join_delimiter_override` (like
+  `supplies_own_leading_separator`) is read exactly once, inside that
+  function's join over the *outer* list of a citation or integral
+  template's top-level items (`crates/citum-engine/src/render/citation.rs`).
+  The nested group-item join in
+  `crates/citum-engine/src/processor/rendering/grouped/core.rs`
+  (`render_group_child_values` / `join_with_quote_movement`, joining a
+  `group:` node's own children, e.g. author+title) does not consult it — a
+  comment there confirms per-part suppression was deliberately moved to
+  the outer join only (csl26-475u). **`attach` inside a nested `group:` is
+  out of scope for v1.1** and not implemented; if a future style needs it,
+  that join needs the same classifier wired in first — a separate, larger
+  change. Neither target style needs it: MLA's locator is a top-level
+  item in both its citation and integral templates, never nested inside a
+  `group:`; APA's locator is likewise always top-level.
+- **A second join point: the author-heading-to-item join in grouped
+  multi-item citations.** A citation with more than one cite item renders
+  each item's remaining (author-stripped) template through
+  `filter_author_from_template` /
+  `render_item_from_template_with_format`
+  (`crates/citum-engine/src/processor/rendering/grouped/core.rs`,
+  `crates/citum-engine/src/processor/rendering/mod.rs`) — itself calling
+  `citation_to_string_with_format` for the item's own top-level list, then
+  separately splicing the externally-rendered author heading onto the
+  front using a delimiter guessed by `filter_author_from_template` from
+  the item's *structurally* first remaining `TemplateComponent`. That
+  guess is wrong whenever the structural guess renders empty at runtime
+  (e.g. a `disambiguate-only` title not needed for this reference) and a
+  later component — a locator with its own `attach` — becomes the item's
+  true first visible content: the stale guess (the title's own `", "`
+  prefix) still gets spliced on, producing e.g. `"LeCun et al, 440"`
+  instead of `"LeCun et al 440"`.
+
+  Fixed by `leading_join_delimiter_override()`
+  (`crates/citum-engine/src/render/citation.rs`): given the item's own
+  `ProcTemplate`, it renders components in order and returns the
+  `join_delimiter_override` of the first one that renders non-empty text
+  — i.e. `citation_to_string_with_format`'s own answer to "what actually
+  renders first," rather than a structural guess. `render_item_from_template_with_format`
+  computes this alongside the rendered string; `render_group_item_parts_with_format`
+  prefers it over the static `leading_affix` when both are present, only
+  for the item establishing `group_delimiter` (index 0's contribution;
+  subsequent same-author-collapse items join to each other via a
+  different, unaffected delimiter). This makes the fix general — it
+  corrects the same class of stale-guess bug for any component with a
+  `join_delimiter_override`, not only locators, and the full corpus sweep
+  below found seven *additional* pre-existing MLA rows it also fixes.
 - **Compound locators.** When a `LocatorPattern` matches, the `attach` of
   the first kind in `pattern.order` governs the join for the whole rendered
   locator.
@@ -520,14 +570,16 @@ other ~30 `LocatorType` variants individually.
 - `citum-migrate` fixup code that sets `show_label`/`strip_label_periods`
   should be updated to emit `locators` config onto the style's `Config`
   instead (or removed if migration always generates config-level locators).
-- **v1.1:** `attach` is not schema-only. It requires new engine plumbing to
-  carry the resolved value from locator value-resolution time (where the
-  `LocatorType` kind is known) into the built `ProcTemplateComponent`'s
-  `Rendering.prefix` (where the join-suppression classifier reads it) — see
-  Engine semantics above for the exact fields and why `get_effective_rendering`
-  cannot host this by itself. Scope the v1.1 implementation to top-level
-  template items only; do not attempt to also wire nested-`group:` support
-  in the same change.
+- **v1.1:** `attach` is not schema-only. It required new engine plumbing:
+  `ProcTemplateComponent::locator_attach` and
+  `RenderedComponent::join_delimiter_override`, resolved separately from
+  (never baked into) the component's own affixes, so it only ever surfaces
+  in `citation_to_string_with_format`'s join loop for parts after the
+  first — see Engine semantics above for why the naively simpler "write it
+  into `Rendering.prefix`" approach renders a stray separator when a
+  preceding component collapses to empty (e.g. `suppress_author`). Scoped
+  to top-level template items only; nested-`group:` attachment is
+  unimplemented.
 
 ## Acceptance Criteria
 
@@ -547,48 +599,65 @@ other ~30 `LocatorType` variants individually.
 
 **v1.1 additions:**
 
-- [ ] `label_case`, `attach`, and `strip_label_periods` present on both
+- [x] `label_case`, `attach`, and `strip_label_periods` present on both
       `LocatorConfig` and the new `LocatorOverrides`.
-- [ ] `LocatorConfigEntry` gains `PresetWithOverrides`, ordered
+- [x] `LocatorConfigEntry` gains `PresetWithOverrides`, ordered
       `Preset, PresetWithOverrides, Explicit` (untagged — order is load
       bearing, see Schema additions). A parse-and-resolve test asserts the
       exact MLA YAML below deserializes as `PresetWithOverrides`, not
       `Explicit`, and resolves `page` to `LabelForm::None` (inherited from
-      the `note` preset, not lost).
-- [ ] `render_locator()` applies `label_case` to label terms and resolves
+      the `note` preset, not lost) —
+      `given_a_preset_with_a_per_kind_attach_override_when_parsed_then_resolves_as_preset_with_overrides`.
+- [x] `render_locator()` applies `label_case` to label terms and resolves
       the effective `attach` for the matched kind/pattern.
-- [ ] The resolved `attach` is threaded from locator value resolution
-      (`values/variable.rs`'s `SimpleVariable::Locator` arm) into the
-      locator's `ProcTemplateComponent.rendering.prefix` — **not** into
-      `ProcTemplateComponent.prefix` (a different, inner-affix field) — and
-      only when the template did not already set its own `prefix`. Tests
-      confirm `Rendering.prefix` (not `component.prefix`) carries the
-      value and that `supplies_own_leading_separator` is exercised, not
-      bypassed.
-- [ ] Test coverage includes: MLA citation top-level locator, MLA integral
-      top-level locator (both flip to `Kuhn 23` / `Kuhn (sec. 12)`), and an
-      explicit non-goal test/note that `attach` inside a nested `group:` is
-      unimplemented in v1.1 (out of scope, not silently broken).
-- [ ] `apa-7th.yaml` and `modern-language-association.yaml` updated to the
-      YAML shown above; both flip to exact parity on the affected rows.
-- [ ] Follow-up beans filed for: legal type-class label overrides,
-      self-identifying non-numeric locator values, `timestamp` as a
-      `LocatorType` variant.
-- [ ] No fidelity or exact-parity regression elsewhere
-      (`node scripts/report-core.js --all-features`).
+- [x] The resolved `attach` is threaded from locator value resolution
+      (`values/locator.rs::effective_attach()`, called from
+      `processor/rendering/grouped/core.rs::resolve_locator_attach`) into
+      `ProcTemplateComponent::locator_attach` — a dedicated field, **not**
+      `Rendering.prefix` and **not** `ProcTemplateComponent.prefix` — only
+      realized at the join site
+      (`RenderedComponent::join_delimiter_override`, consumed by
+      `citation_to_string_with_format`) and only when the template did not
+      already set its own `prefix`.
+- [x] Test coverage includes: MLA single-item citation locator, MLA
+      integral locator, and MLA *multi-item grouped* citation locator
+      (`with-locator`, `suppress-author-with-locator`,
+      `multi-item-with-locators` in `scripts/report-data` fixtures — all
+      three flip to exact parity), and the regression the design avoids
+      (`example_documents::mla_plain_text_shows_integral_name_memory`,
+      `suppress_author` collapsing the preceding component to empty must
+      not surface a stray leading separator on the locator).
+- [x] `apa-7th.yaml` and `modern-language-association.yaml` updated to the
+      YAML shown above; both flip to exact parity on the affected rows
+      (APA 106/146 → 108/146; MLA 62/115 → 72/115 exact-parity rows,
+      `node scripts/report-core.js --all-features --styles apa-7th,modern-language-association`).
+- [x] Follow-up beans filed for: legal type-class label overrides
+      (csl26-bg3f), self-identifying non-numeric locator values
+      (csl26-swk3), `timestamp` as a `LocatorType` variant (csl26-nn2t).
+- [x] No fidelity or exact-parity regression anywhere: full
+      `cargo nextest run` (2767/2767) and a **full-corpus**
+      `report-core.js --all-features` sweep (all 35 embedded styles, not
+      only `locators:`-using ones — `leading_join_delimiter_override`
+      touches the shared grouped-citation join path) show zero regressions
+      and eight total exact-parity improvements, all in
+      modern-language-association; `fidelityScore` unchanged for every
+      style.
 
 ## Changelog
 
 - v1.0 (2026-03-17): Initial version.
-- v1.1-draft (2026-09-06): Added `label-case`, `attach`, and
-  `strip_label_periods` on the new `LocatorOverrides`, and a
-  `preset`-plus-`overrides` form for `Config.locators`. Fixes APA
-  label-case and MLA locator-attachment fidelity gaps (bean csl26-7652).
-  Rejected a template-level `LocatorKind` condition field; deferred a
-  locator-class abstraction. Revised after adversarial review: corrected
-  `LocatorConfigEntry` variant order (untagged-enum shadowing was silently
-  losing the preset), corrected the join mechanism to target
-  `Rendering.prefix` (not the unrelated `component.prefix` inner-affix
-  field) and named the new engine wiring this requires, narrowed the join
-  claim to top-level template items only, and added the missing
-  `strip_label_periods` overlay field.
+- v1.1 (2026-09-06): Added `label-case`, `attach`, and `strip_label_periods`
+  on the new `LocatorOverrides`, and a `preset`-plus-`overrides` form for
+  `Config.locators`. Fixes APA label-case and MLA locator-attachment
+  fidelity gaps (bean csl26-7652). Rejected a template-level `LocatorKind`
+  condition field; deferred a locator-class abstraction. `attach` routes
+  through a dedicated `ProcTemplateComponent::locator_attach` /
+  `RenderedComponent::join_delimiter_override` channel — never baked into
+  a component's own text — so it only surfaces at the true join site in
+  `citation_to_string_with_format`, both for single-item and (via
+  `leading_join_delimiter_override`) multi-item grouped citations. Landed
+  with `apa-7th.yaml` and `modern-language-association.yaml` updated,
+  three follow-up beans filed for explicitly out-of-scope work
+  (csl26-bg3f, csl26-swk3, csl26-nn2t), full `cargo nextest run` green,
+  and a full-corpus `report-core.js` sweep showing eight exact-parity
+  improvements and zero regressions across all 35 embedded styles.

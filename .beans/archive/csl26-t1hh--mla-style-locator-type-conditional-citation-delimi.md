@@ -1,7 +1,7 @@
 ---
 # csl26-t1hh
 title: MLA-style locator-type-conditional citation delimiter
-status: todo
+status: completed
 type: bug
 priority: normal
 tags:
@@ -10,10 +10,11 @@ tags:
     - rendering
     - schema
 created_at: 2026-09-02T23:01:27Z
-updated_at: 2026-09-06T17:48:14Z
+updated_at: 2026-09-06T20:51:32Z
 parent: csl26-h7oc
 blocked_by:
     - csl26-7652
+    - csl26-8r9r
 ---
 
 MLA's citation layout (`mla.csl`) picks the delimiter between the author-title
@@ -83,3 +84,30 @@ This bean stays open as the MLA-specific tracking/verification bean;
 closes when csl26-7652's implementation PR lands and the two MLA exact-
 parity rows quoted above (with-locator page, multi-item-with-locators)
 flip.
+
+## Partial resolution (2026-09-06)
+
+csl26-7652's implementation lands the options/preset-level `attach`
+mechanism this bean's investigation recommended. The single-item repro
+quoted above ("with-locator", page locator) now flips to exact parity:
+`(Kuhn, "The Structure of Scientific Revolutions" 23)`.
+
+The second repro ("multi-item-with-locators") does NOT yet flip --
+implementation revealed that a *grouped multi-item* citation renders each
+item through a different code path
+(filter_author_from_template/render_item_from_template_with_format) that
+the v1.1 `attach` mechanism doesn't reach. Split out to csl26-8r9r
+("Extend locator attach to grouped multi-item citations"). This bean
+stays open, now blocked by csl26-8r9r, until that lands.
+
+## Fully resolved (2026-09-06)
+
+csl26-8r9r fixed the multi-item grouped-citation join gap. Both repro
+strings quoted in this bean's original body now match exactly:
+- with-locator (page): "(Kuhn, "The Structure of Scientific
+  Revolutions" 23)"
+- multi-item-with-locators: "(Kuhn, "The Structure of Scientific
+  Revolutions" 10; see also LeCun et al 440)"
+
+Verified via full-corpus report-core.js sweep (zero regressions,
+fidelityScore unchanged everywhere).
