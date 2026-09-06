@@ -832,24 +832,33 @@ impl<'a> Renderer<'a> {
     }
 
     /// Render a single item to a formatted string using a template.
+    ///
+    /// The second element of the returned tuple is the
+    /// `join_delimiter_override` of the item's own first non-empty rendered
+    /// part (see [`crate::render::citation::leading_join_delimiter_override`]),
+    /// which a grouped-citation caller may need to correct its own
+    /// externally-computed author-heading join delimiter.
     fn render_item_from_template_with_format<F>(
         &self,
         reference: &Reference,
         request: TemplateRenderRequest<'_>,
         delimiter: &str,
-    ) -> Option<String>
+    ) -> Option<(String, Option<String>)>
     where
         F: crate::render::format::OutputFormat<Output = String>,
     {
         self.process_template_request_with_format::<F>(reference, request)
             .map(|proc| {
-                crate::render::citation::citation_to_string_with_format::<F>(
+                let leading_override =
+                    crate::render::citation::leading_join_delimiter_override::<F>(&proc);
+                let rendered = crate::render::citation::citation_to_string_with_format::<F>(
                     &proc,
                     None,
                     None,
                     None,
                     Some(delimiter),
-                )
+                );
+                (rendered, leading_override)
             })
     }
 
@@ -1027,6 +1036,7 @@ impl<'a> Renderer<'a> {
         // yields nothing; the marker still has to produce a chunk.
         let body = self
             .render_item_from_template_with_format::<F>(state.reference, request, state.delimiter)
+            .map(|(rendered, _leading_override)| rendered)
             .unwrap_or_default();
         if body.is_empty() && state.marker.is_none() {
             return None;

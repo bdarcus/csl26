@@ -933,6 +933,7 @@ mod tests {
             quote_marks: Default::default(),
             sentence_initial: false,
             pre_formatted: false,
+            locator_attach: None,
         };
 
         let c2 = ProcTemplateComponent {
@@ -958,6 +959,7 @@ mod tests {
             quote_marks: Default::default(),
             sentence_initial: false,
             pre_formatted: false,
+            locator_attach: None,
         };
 
         let entries = vec![ProcEntry {
@@ -1008,6 +1010,7 @@ mod tests {
             quote_marks: Default::default(),
             sentence_initial: false,
             pre_formatted: false,
+            locator_attach: None,
         };
 
         // when the entry renders with and without a marker
@@ -1235,6 +1238,7 @@ mod tests {
             quote_marks: Default::default(),
             sentence_initial: false,
             pre_formatted: false,
+            locator_attach: None,
         };
 
         let c2 = ProcTemplateComponent {
@@ -1255,6 +1259,7 @@ mod tests {
             quote_marks: Default::default(),
             sentence_initial: false,
             pre_formatted: false,
+            locator_attach: None,
         };
 
         let entries = vec![ProcEntry {
@@ -1735,6 +1740,7 @@ mod tests {
             quote_marks: Default::default(),
             sentence_initial: false,
             pre_formatted: false,
+            locator_attach: None,
         };
 
         let c2 = ProcTemplateComponent {
@@ -1758,6 +1764,7 @@ mod tests {
             quote_marks: Default::default(),
             sentence_initial: false,
             pre_formatted: false,
+            locator_attach: None,
         };
 
         let entries = vec![ProcEntry {
@@ -1803,6 +1810,7 @@ mod tests {
             quote_marks: Default::default(),
             sentence_initial: false,
             pre_formatted: false,
+            locator_attach: None,
         };
 
         let pages = ProcTemplateComponent {
@@ -1823,6 +1831,7 @@ mod tests {
             quote_marks: Default::default(),
             sentence_initial: false,
             pre_formatted: false,
+            locator_attach: None,
         };
 
         let result = refs_to_string(vec![ProcEntry {
@@ -1935,6 +1944,7 @@ mod tests {
             quote_marks: Default::default(),
             sentence_initial: false,
             pre_formatted: false,
+            locator_attach: None,
         };
 
         let pages = ProcTemplateComponent {
@@ -1959,6 +1969,7 @@ mod tests {
             quote_marks: Default::default(),
             sentence_initial: false,
             pre_formatted: false,
+            locator_attach: None,
         };
 
         let doi = ProcTemplateComponent {
@@ -1982,6 +1993,7 @@ mod tests {
             quote_marks: Default::default(),
             sentence_initial: false,
             pre_formatted: false,
+            locator_attach: None,
         };
 
         let result = refs_to_string_with_format::<Html>(
@@ -2037,6 +2049,7 @@ mod tests {
                 quote_marks: Default::default(),
                 sentence_initial: false,
                 pre_formatted: false,
+                locator_attach: None,
             }],
             metadata: crate::render::format::ProcEntryMetadata::default(),
         }

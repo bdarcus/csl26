@@ -172,26 +172,29 @@ impl Renderer<'_> {
         let mut rendered_items = Vec::new();
         for item in group {
             let state = self.resolve_item_render_state(item, params.spec)?;
-            if let Some(item_str) = self.render_group_item_from_template_with_format::<F>(
-                state.reference,
-                GroupItemRenderRequest {
-                    item: state.item,
-                    template: &state.template,
-                    mode: params.mode,
-                    suppress_author: params.suppress_author,
-                    position: params.position,
-                    note_start_text_case: params.note_start_text_case,
-                    delimiter: params.intra_delimiter,
-                },
-            ) && let Some(chunk) = self.build_citation_chunk(
-                &fmt,
-                vec![item.id.clone()],
-                item_str,
-                item.prefix.as_deref(),
-                item.suffix.as_deref(),
-                None,
-                "",
-            ) {
+            if let Some((item_str, _leading_override)) = self
+                .render_group_item_from_template_with_format::<F>(
+                    state.reference,
+                    GroupItemRenderRequest {
+                        item: state.item,
+                        template: &state.template,
+                        mode: params.mode,
+                        suppress_author: params.suppress_author,
+                        position: params.position,
+                        note_start_text_case: params.note_start_text_case,
+                        delimiter: params.intra_delimiter,
+                    },
+                )
+                && let Some(chunk) = self.build_citation_chunk(
+                    &fmt,
+                    vec![item.id.clone()],
+                    item_str,
+                    item.prefix.as_deref(),
+                    item.suffix.as_deref(),
+                    None,
+                    "",
+                )
+            {
                 rendered_items.push(fmt.citation(chunk.ids, chunk.content));
             }
         }
@@ -221,18 +224,20 @@ impl Renderer<'_> {
 
         for item in group {
             let state = self.resolve_item_render_state(item, spec)?;
-            if let Some(item_str) = self.render_group_item_from_template_with_format::<F>(
-                state.reference,
-                GroupItemRenderRequest {
-                    item: state.item,
-                    template: &state.template,
-                    mode,
-                    suppress_author,
-                    position,
-                    note_start_text_case: spec.note_start_text_case,
-                    delimiter: component_delimiter,
-                },
-            ) && !item_str.is_empty()
+            if let Some((item_str, _leading_override)) = self
+                .render_group_item_from_template_with_format::<F>(
+                    state.reference,
+                    GroupItemRenderRequest {
+                        item: state.item,
+                        template: &state.template,
+                        mode,
+                        suppress_author,
+                        position,
+                        note_start_text_case: spec.note_start_text_case,
+                        delimiter: component_delimiter,
+                    },
+                )
+                && !item_str.is_empty()
             {
                 group_items_str.push(self.affix_content(
                     &fmt,
@@ -678,12 +683,6 @@ impl Renderer<'_> {
                     }
                 }
             }
-            if group_delimiter.is_none() {
-                group_delimiter = leading_affix
-                    .as_ref()
-                    .filter(|value| !value.is_empty())
-                    .cloned();
-            }
             // Previously zeroed to `""` whenever the leading affix was
             // scavenged for the external author->first-component join
             // (avoiding a double delimiter there), but `item_delimiter` is
@@ -696,19 +695,40 @@ impl Renderer<'_> {
             // so the shared delimiter can stay live for the rest of the
             // template.
             let item_delimiter = params.intra_delimiter;
-            if let Some(item_str) = self.render_group_item_from_template_with_format::<F>(
-                state.reference,
-                GroupItemRenderRequest {
-                    item: state.item,
-                    template: &filtered_template,
-                    mode: params.mode,
-                    suppress_author: params.suppress_author,
-                    position: params.position,
-                    note_start_text_case: params.note_start_text_case,
-                    delimiter: item_delimiter,
-                },
-            ) && !item_str.is_empty()
+            if let Some((item_str, leading_override)) = self
+                .render_group_item_from_template_with_format::<F>(
+                    state.reference,
+                    GroupItemRenderRequest {
+                        item: state.item,
+                        template: &filtered_template,
+                        mode: params.mode,
+                        suppress_author: params.suppress_author,
+                        position: params.position,
+                        note_start_text_case: params.note_start_text_case,
+                        delimiter: item_delimiter,
+                    },
+                )
+                && !item_str.is_empty()
             {
+                if group_delimiter.is_none() {
+                    // `leading_affix` guesses the author->item join from the
+                    // item's structurally-first remaining template
+                    // component (e.g. a title group) — wrong when that
+                    // component renders empty at runtime and a later one
+                    // (e.g. a locator with its own `attach`) becomes the
+                    // item's true first visible content. `leading_override`
+                    // is `citation_to_string_with_format`'s own answer for
+                    // what actually rendered first, so it wins when present.
+                    group_delimiter =
+                        leading_override
+                            .filter(|value| !value.is_empty())
+                            .or_else(|| {
+                                leading_affix
+                                    .as_ref()
+                                    .filter(|value| !value.is_empty())
+                                    .cloned()
+                            });
+                }
                 let prefix = (index > 0).then_some(item.prefix.as_deref()).flatten();
                 item_parts.push(self.affix_content(
                     fmt,
@@ -1310,6 +1330,8 @@ impl Renderer<'_> {
             crate::values::effective_component_language(ctx.reference, resolved_component);
         tracker.mark_rendered(var_key, values.substituted_key.as_deref());
 
+        let locator_attach = self.resolve_locator_attach(resolved_component, ctx);
+
         Some(ProcTemplateComponent {
             template_component: resolved_component.clone(),
             template_index: self.inject_ast_indices.then_some(ctx.template_index),
@@ -1324,6 +1346,7 @@ impl Renderer<'_> {
             quote_marks: crate::render::format::QuoteMarks::from(ctx.options.locale),
             sentence_initial: false,
             pre_formatted: values.pre_formatted,
+            locator_attach,
         })
     }
 
@@ -1400,6 +1423,7 @@ impl Renderer<'_> {
             quote_marks: crate::render::format::QuoteMarks::from(ctx.options.locale),
             sentence_initial: false,
             pre_formatted: true,
+            locator_attach: None,
         })
     }
 
@@ -1473,6 +1497,42 @@ impl Renderer<'_> {
         }
     }
 
+    /// Resolve the style-configured join delimiter for a `variable: locator`
+    /// component, per `docs/specs/LOCATOR_RENDERING.md` ("Label Case and
+    /// Attachment").
+    ///
+    /// Returns `None` when the template already authored its own `prefix`
+    /// (the template's own setting always wins), when this isn't a locator
+    /// component, or when no `attach` applies. Deliberately **not** written
+    /// into the component's `Rendering.prefix`: that field gets baked into
+    /// the component's own rendered text regardless of the component's
+    /// eventual position in the outer part list, so an unconditional
+    /// injection there renders even when this locator ends up first (e.g.
+    /// a preceding `suppress_author` component collapses to empty) —
+    /// producing a stray leading separator with nothing to join to. The
+    /// resolved value is instead threaded through
+    /// `ProcTemplateComponent::locator_attach` and only realized at the
+    /// join site in `citation_to_string_with_format`, which by construction
+    /// only runs for parts after the first.
+    fn resolve_locator_attach(
+        &self,
+        component: &TemplateComponent,
+        ctx: &TemplateRenderContext<'_>,
+    ) -> Option<citum_schema::template::DelimiterPunctuation> {
+        let TemplateComponent::Variable(variable) = component else {
+            return None;
+        };
+        if variable.variable != citum_schema::template::SimpleVariable::Locator {
+            return None;
+        }
+        if variable.rendering.prefix.is_some() {
+            return None;
+        }
+        let locator = ctx.options.locator_raw?;
+        let locator_config = ctx.options.config.locators.as_ref()?;
+        crate::values::locator::effective_attach(locator, ctx.ref_type, locator_config)
+    }
+
     /// Apply the substitution string to the primary contributor component.
     pub fn apply_author_substitution(&self, proc: &mut ProcTemplate, substitute: &str) {
         self.apply_author_substitution_with_format::<crate::render::plain::PlainText>(
@@ -1497,11 +1557,14 @@ impl Renderer<'_> {
         }
     }
 
+    /// The second element of the returned tuple is the item's own
+    /// leading `join_delimiter_override`, per
+    /// [`crate::render::citation::leading_join_delimiter_override`].
     fn render_group_item_from_template_with_format<F>(
         &self,
         reference: &Reference,
         item_request: GroupItemRenderRequest<'_>,
-    ) -> Option<String>
+    ) -> Option<(String, Option<String>)>
     where
         F: crate::render::format::OutputFormat<Output = String>,
     {

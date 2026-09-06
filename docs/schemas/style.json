@@ -6549,11 +6549,100 @@
       ]
     },
     "LocatorConfigEntry": {
-      "description": "Preset-or-explicit entry — same pattern as DateConfigEntry.",
+      "description": "Preset-or-explicit entry — same pattern as DateConfigEntry.\n\n`#[serde(untagged)]`: variant order is load-bearing. `Preset` is tried\nfirst (a bare string). `PresetWithOverrides` is tried next — its\n`preset` field is required, so it only matches a mapping carrying that\nkey, and falls through otherwise. `Explicit` **must come last**:\n`LocatorConfig` carries a `#[serde(flatten)] unknown_fields` catch-all\nwith no `deny_unknown_fields`, so `Explicit` would happily accept (and\nsilently discard into `unknown_fields`) a stray `preset` key. Trying\n`Explicit` before `PresetWithOverrides` would make\n`{preset: note, kinds: {...}}` resolve as a bare `Explicit` with\n`preset` discarded and no preset behavior applied at all.",
       "anyOf": [
         {
           "description": "A preset name.",
           "$ref": "#/$defs/LocatorPreset"
+        },
+        {
+          "description": "A preset resolved to a `LocatorConfig`, then overlaid with `overrides`.",
+          "type": "object",
+          "properties": {
+            "preset": {
+              "description": "The base preset to resolve before applying `overrides`.",
+              "$ref": "#/$defs/LocatorPreset"
+            },
+            "default-label-form": {
+              "description": "Overrides the preset's default label form.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/LabelForm2"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "range-format": {
+              "description": "Overrides the preset's range format.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/RangeFormat"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "strip-label-periods": {
+              "description": "Overrides the preset's `strip_label_periods`. `Some(false)` is an\nexplicit clear, distinct from an omitted field (which inherits).",
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "label-case": {
+              "description": "Overrides the preset's `label_case`.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/TextCase"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "attach": {
+              "description": "Overrides the preset's `attach`.",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/DelimiterPunctuation"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "fallback-delimiter": {
+              "description": "Overrides the preset's fallback delimiter.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "kinds": {
+              "description": "Merged into the preset's `kinds` map per key, not replaced wholesale.",
+              "type": "object",
+              "additionalProperties": {
+                "$ref": "#/$defs/LocatorKindConfig"
+              },
+              "default": {}
+            },
+            "patterns": {
+              "description": "Replaces the preset's `patterns` wholesale when present.",
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "$ref": "#/$defs/LocatorPattern"
+              }
+            }
+          },
+          "required": [
+            "preset"
+          ]
         },
         {
           "description": "Explicit configuration.",
@@ -6580,57 +6669,6 @@
           "const": "numeric"
         }
       ]
-    },
-    "LocatorConfig": {
-      "description": "Top-level locator rendering configuration.",
-      "type": "object",
-      "properties": {
-        "default-label-form": {
-          "description": "Default label form for all locator kinds (default: Short).",
-          "$ref": "#/$defs/LabelForm2",
-          "default": "short"
-        },
-        "range-format": {
-          "description": "Range format for all locator kinds. `None` inherits the style-wide\n`options.range-format` default (see\n`docs/specs/RANGE_COLLAPSE_MODEL.md` Decision 2); `Some` overrides it\nfor every kind unless a `kinds.<kind>.range-format` entry wins first.",
-          "anyOf": [
-            {
-              "$ref": "#/$defs/RangeFormat"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "strip-label-periods": {
-          "description": "Strip trailing periods from labels globally (e.g., \"p.\" → \"p\").",
-          "type": [
-            "boolean",
-            "null"
-          ]
-        },
-        "kinds": {
-          "description": "Per-kind configuration overrides.",
-          "type": "object",
-          "additionalProperties": {
-            "$ref": "#/$defs/LocatorKindConfig"
-          },
-          "default": {}
-        },
-        "patterns": {
-          "description": "Patterns for compound locators and type-specific rendering.",
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/LocatorPattern"
-          },
-          "default": []
-        },
-        "fallback-delimiter": {
-          "description": "Fallback delimiter for unmatched compound locators (default: \", \").",
-          "type": "string",
-          "default": ", "
-        }
-      },
-      "unevaluatedProperties": false
     },
     "LabelForm2": {
       "description": "How a locator label is displayed.",
@@ -6718,6 +6756,28 @@
           "type": [
             "boolean",
             "null"
+          ]
+        },
+        "label-case": {
+          "description": "Text-case transform applied to this kind's rendered label term.\n`AsIs` opts a kind out of a config-level `label_case`.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TextCase"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "attach": {
+          "description": "Overrides the delimiter joining this locator to its preceding\nsibling, when the locator is a top-level item in the citation or\nintegral template. See `docs/specs/LOCATOR_RENDERING.md`\n(\"Label Case and Attachment\") for the scope and precedence rules.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DelimiterPunctuation"
+            },
+            {
+              "type": "null"
+            }
           ]
         }
       },
@@ -6812,6 +6872,79 @@
           "const": "none"
         }
       ]
+    },
+    "LocatorConfig": {
+      "description": "Top-level locator rendering configuration.",
+      "type": "object",
+      "properties": {
+        "default-label-form": {
+          "description": "Default label form for all locator kinds (default: Short).",
+          "$ref": "#/$defs/LabelForm2",
+          "default": "short"
+        },
+        "range-format": {
+          "description": "Range format for all locator kinds. `None` inherits the style-wide\n`options.range-format` default (see\n`docs/specs/RANGE_COLLAPSE_MODEL.md` Decision 2); `Some` overrides it\nfor every kind unless a `kinds.<kind>.range-format` entry wins first.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RangeFormat"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "strip-label-periods": {
+          "description": "Strip trailing periods from labels globally (e.g., \"p.\" → \"p\").",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "label-case": {
+          "description": "Default label-case transform for all kinds unless overridden per kind.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TextCase"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "attach": {
+          "description": "Default attachment delimiter for all kinds unless overridden per kind.\nSee `LocatorKindConfig::attach` for scope and precedence.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DelimiterPunctuation"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "kinds": {
+          "description": "Per-kind configuration overrides.",
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/LocatorKindConfig"
+          },
+          "default": {}
+        },
+        "patterns": {
+          "description": "Patterns for compound locators and type-specific rendering.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/LocatorPattern"
+          },
+          "default": []
+        },
+        "fallback-delimiter": {
+          "description": "Fallback delimiter for unmatched compound locators (default: \", \").",
+          "type": "string",
+          "default": ", "
+        }
+      },
+      "unevaluatedProperties": false
     },
     "CitationNumberConfig": {
       "description": "Citation-number range formatting (identifier sequences, e.g. `[1-3]`).",
