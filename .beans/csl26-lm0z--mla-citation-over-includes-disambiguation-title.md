@@ -4,8 +4,12 @@ title: 'MLA: citation over-includes disambiguation title'
 status: todo
 type: bug
 priority: normal
+tags:
+    - engine
+    - fidelity
+    - disambiguation
 created_at: 2026-09-05T20:49:37Z
-updated_at: 2026-09-05T20:49:37Z
+updated_at: 2026-09-06T15:27:08Z
 parent: csl26-ccdt
 ---
 

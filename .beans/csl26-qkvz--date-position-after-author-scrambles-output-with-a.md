@@ -4,8 +4,11 @@ title: 'date-position: after-author scrambles output with a leading empty contri
 status: todo
 type: bug
 priority: low
+tags:
+    - engine
+    - fidelity
 created_at: 2026-09-05T21:49:39Z
-updated_at: 2026-09-05T21:49:39Z
+updated_at: 2026-09-06T15:27:08Z
 parent: csl26-ccdt
 ---
 
