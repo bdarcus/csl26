@@ -1,6 +1,6 @@
 {
-  "generated": "2026-09-05T21:54:09.286Z",
-  "commit": "5e88f3ee2",
+  "generated": "2026-09-06T16:09:59.848Z",
+  "commit": "0810384c8",
   "source": "scripts/report-core.js",
   "purpose": "Hard per-style exact-parity floor-gate baseline for the embedded tier, consumed by scripts/check-core-quality.js --parity-baseline (see docs/architecture/audits/2026-07-31_EXACT_PARITY_REFOCUS.md). It also records headline fidelity. Sub-1.0 fidelity ratchets are tracked separately per-style in scripts/report-data/verification-policy.yaml (min_pass_rate floors). Regenerate this file after each parity-tuning wave; the gate never goes backward on passed counts or total (fixture-drift guard).",
   "styles": {
@@ -25,7 +25,7 @@
     "apa-7th": {
       "tier": "embedded",
       "fidelityScore": 0.986,
-      "qualityScore": 0.914,
+      "qualityScore": 0.913,
       "citations": {
         "passed": 48,
         "total": 48
@@ -35,9 +35,9 @@
         "total": 98
       },
       "exactParity": {
-        "passed": 93,
+        "passed": 106,
         "total": 146,
-        "rate": 0.637
+        "rate": 0.726
       }
     },
     "chicago-author-date-18th": {
@@ -143,9 +143,9 @@
         "total": 47
       },
       "exactParity": {
-        "passed": 50,
+        "passed": 51,
         "total": 67,
-        "rate": 0.746
+        "rate": 0.761
       }
     },
     "gb-t-7714-2025-author-date": {
@@ -222,20 +222,20 @@
     },
     "modern-language-association": {
       "tier": "embedded",
-      "fidelityScore": 0.957,
+      "fidelityScore": 0.948,
       "qualityScore": 0.991,
       "citations": {
         "passed": 43,
         "total": 45
       },
       "bibliography": {
-        "passed": 67,
+        "passed": 66,
         "total": 70
       },
       "exactParity": {
-        "passed": 55,
+        "passed": 62,
         "total": 115,
-        "rate": 0.478
+        "rate": 0.539
       }
     },
     "springer-basic-author-date": {
