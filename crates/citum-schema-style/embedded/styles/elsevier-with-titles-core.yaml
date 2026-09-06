@@ -582,24 +582,29 @@ bibliography:
     - number: edition
     - variable: publisher
     - variable: publisher-place
-    - date: issued
-      form: year
-    - variable: url
-      links:
-        target: url
-        anchor: component
-    - message: pattern.accessed-date
-      args:
-        date:
-          group:
-            - date: accessed
-              form: month-day
-            - date: accessed
-              form: year
-              prefix: ", "
-          delimiter: " "
-      wrap:
-        punctuation: parentheses
+    - group:
+      - date: issued
+        form: year
+        wrap:
+          punctuation: parentheses
+        suffix: "."
+      - variable: url
+        links:
+          target: url
+          anchor: component
+      - message: pattern.accessed-date
+        args:
+          date:
+            group:
+              - date: accessed
+                form: month-day
+              - date: accessed
+                form: year
+                prefix: ", "
+            delimiter: " "
+        wrap:
+          punctuation: parentheses
+      delimiter: " "
     - variable: number
     - variable: doi
       prefix: ". https://doi.org/"
