@@ -134,6 +134,38 @@ naturally `alternatives: [{<detail block>}, {variable: doi, prefix: "doi:"}]`,
 which generalizes the one-off enum to any style, not just
 `no-page-fallback: doi` on `article-journal`.
 
+### Rejected: an options-level construct instead of a template component
+
+The three precedents this spec generalizes are all options-level
+(`Substitute`, `DateFallbackCandidate`, `ArticleJournalNoPageFallback`), so
+the natural question is why this isn't a fourth one — say,
+`bibliography.options.fallbacks: { volume-title: [...] }` — instead of a new
+`TemplateComponent` variant.
+
+The precedents work as named options because each anchors to exactly **one
+semantic slot that exists in every reference regardless of style**: *the*
+contributor position, *the* issued date, *the* article-journal detail block.
+An option can afford to skip saying "where in the template" because there is
+only one place it could mean.
+
+The 49 A-shape uses this spec targets have no such single slot. `volume-title`
+vs `title: primary` only matters inside Chicago's multivolume-chapter
+shape; `collection-title`, `recipient`, `archive-location`, `original-title`,
+and `publisher` each guard a different, unrelated position, found in a
+different type-variant, with different surrounding prefix/suffix/emphasis
+that belongs to that exact spot in that exact template. An options table
+keyed by field name would need to smuggle back in everything a template
+position already carries (which type-variant, what delimiter joins it to its
+neighbors, what emphasis this specific style wants) — at which point it is a
+template fragment wearing an options key, not a genuine cross-cutting policy.
+
+The deciding cost, not just the modeling awkwardness: treating each field as
+its own named option recreates exactly the one-off proliferation
+`RENDER_WHEN_CONTRACT.md`'s extension criteria were trying to close off — a
+new Rust type for every field a style author discovers needs a fallback,
+forever. A template-level primitive is the one that lets a style express a
+new fallback with no schema change at all.
+
 ### Future migration target
 
 `RENDER_WHEN_CONTRACT.md` states that `citum-migrate` does not emit
