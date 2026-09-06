@@ -9,7 +9,7 @@ tags:
     - fidelity
     - styles
 created_at: 2026-09-06T15:27:17Z
-updated_at: 2026-09-06T16:14:35Z
+updated_at: 2026-09-06T16:18:09Z
 parent: csl26-ccdt
 ---
 
@@ -68,4 +68,4 @@ check-core-quality.js --parity-baseline).
 
 ## PR
 
-fidelity/embedded-parity-sweep-2 (not yet opened as PR at bean-completion time)
+https://github.com/citum/citum-core/pull/1264
