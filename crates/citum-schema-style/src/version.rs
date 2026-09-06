@@ -11,7 +11,7 @@ use crate::Style;
 use schemars::JsonSchema;
 
 /// Canonical Citum style schema version used when `Style.version` is omitted.
-pub const STYLE_SCHEMA_VERSION: &str = "0.76.0";
+pub const STYLE_SCHEMA_VERSION: &str = "0.77.0";
 
 /// Maximum accepted nesting depth for authored template groups and fallbacks.
 pub const MAX_TEMPLATE_NESTING_DEPTH: usize = 64;
