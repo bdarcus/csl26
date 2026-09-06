@@ -140,12 +140,21 @@ policy that conditions "do not inspect substitution results." An
 `alternatives:` list tests *output*, not raw presence, so it has no
 equivalent blind spot.
 
-Verified before recommending it: group suppression in the engine is already
-CSL-correct — `values/list.rs:70` treats a group as empty when it produced no
-non-term content, so a branch like `[message: pattern.chicago-of, number:
-part-number]` already goes empty on its own when `part-number` is absent.
-`alternatives:` needs no new "did this render" concept; the mechanism it
-needs already exists.
+Verified before recommending it, and corrected after a Codex adversarial
+review of the resulting spec found the first pass incomplete: group
+suppression in the engine is already CSL-correct — `values/list.rs:70`
+treats a `group:` as empty when it produced no non-term content, so a
+branch like `[message: pattern.chicago-of, number: part-number]` already
+goes empty on its own when `part-number` is absent. That much held up. What
+the first pass missed is that this rule lives entirely inside
+`TemplateGroup::values` and has no bearing on render-when, variable-once
+tracking, or substitution bookkeeping — those live on `Renderer`
+(`crates/citum-engine/src/processor/rendering/mod.rs` and `grouped/core.rs`),
+a different layer the review draft never named. `alternatives:` still needs
+no *new* "did this render" concept, but it does need to be implemented
+against the right existing one: `Renderer`'s per-component dispatch, not
+`values::list.rs` in isolation. See `docs/specs/ALTERNATIVES.md`'s
+Implementation Notes and `csl26-8b4a` for the corrected account.
 
 It also directly answers two of wave 3's three parity needs (see the
 companion `docs/specs/MEDIUM_DESIGNATOR.md` for the third, which is a marker,
@@ -212,16 +221,28 @@ once step 3 has a design.
 ## Follow-on beans
 
 - `csl26-h8ja` (this decision) — parent task tracking the spec/doc work.
-- New bean under `csl26-40n4`: design work-form routing for the B-shape
+- `csl26-zmxt` (under `csl26-40n4`): design work-form routing for the B-shape
   inventory above (volume-or-issue / part-number-numeric /
   part-number-non-numeric editor and container routing).
 - `csl26-x79y`: cross-linked — resolved by construction once `alternatives:`
   ships and Chicago's author-substitution gates migrate to it.
 - `csl26-x61x`: cross-linked as the eventual home for work-form routing.
 - `csl26-zs9y`: root cause reclassified from "needs a render-when field" to
-  "needs `alternatives:`" for the `[place unknown]` and NLM-DOI cases, and
-  "needs a medium designator option" (see `docs/specs/MEDIUM_DESIGNATOR.md`)
-  for the `[Internet]` case.
+  "needs `alternatives:`" for the `[place unknown]` case and "needs a medium
+  designator option" (see `docs/specs/MEDIUM_DESIGNATOR.md`) for the
+  `[Internet]` case. The NLM-DOI case originally grouped with these is
+  **not** `alternatives:`-shaped after all (see `csl26-8b4a` below) — it
+  routes to `csl26-8z39` instead.
+- `csl26-8b4a`: resolves a Codex adversarial review of `ALTERNATIVES.md` and
+  `MEDIUM_DESIGNATOR.md` — corrected both specs' evaluation/integration
+  details and this record's own "Verified before recommending it" claim
+  above (see that section). Produced two further beans:
+  - `csl26-2hr4`: a pre-existing tracker-merge-before-empty-check quirk in
+    plain `group:` rendering, found while specifying `alternatives:`'s
+    tracker semantics. Unrelated to `render-when`'s disposition; filed under
+    the engine-review epic.
+  - `csl26-8z39`: extends `ArticleJournalNoPageFallback` (not
+    `alternatives:`) to cover NLM/CSE's DOI-if-no-page-or-volume rule.
 
 ## Evidence appendix
 

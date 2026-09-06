@@ -1,12 +1,12 @@
 # Alternatives Specification
 
 **Status:** Draft
-**Version:** 1.0
+**Version:** 1.1
 **Date:** 2026-09-06
 **Supersedes:** None
 **Related:** `docs/specs/RENDER_WHEN_CONTRACT.md`,
 `docs/architecture/audits/2026-09-06_RENDER_WHEN_DISPOSITION.md`, `csl26-h8ja`,
-`csl26-x79y`, `csl26-zs9y`
+`csl26-x79y`, `csl26-zs9y`, `csl26-8b4a`
 
 ## Purpose
 
@@ -30,7 +30,9 @@ In scope:
 
 - the wire contract for a new `TemplateComponent::Alternatives` variant;
 - evaluation order and "did this render" semantics, reusing the engine's
-  existing group-suppression rule;
+  existing per-component rendering dispatch (leaf and group alike) rather
+  than defining a second success rule;
+- tracker semantics for discarded candidates;
 - interaction with `Substitute` and `DateFallbackCandidate` (naming, not
   merging);
 - validation rules.
@@ -87,17 +89,54 @@ inside `type-variants`/`bibliography.template` entries — anywhere a
 ### Evaluation
 
 1. Evaluate list entries in order.
-2. An entry "renders" if its component-level `values()` computation returns
-   non-empty output — the same rule `TemplateGroup` already applies at
-   `crates/citum-engine/src/values/list.rs:70` (a group counts only
-   non-term content; a literal-only or term-only render does not count as
-   content). `alternatives:` reuses this rule rather than defining a second
-   one.
+2. An entry "renders" if it produces non-empty output under the **existing,
+   unchanged** per-component rendering rule for whatever kind of component it
+   is: a leaf component (variable, message, number, etc.) succeeds when its
+   rendered value is non-empty, exactly as today; a `group:` entry succeeds
+   under the group's own existing rule (which already discards a group whose
+   only content is terms/literals with no real data behind them — see
+   `crates/citum-engine/src/values/list.rs:70` for that group-specific
+   heuristic). `alternatives:` does not define a second, competing notion of
+   "did this render" — it reuses whichever rule already governs the entry's
+   own component kind.
+
+   **This has one direct authoring consequence:** a term-only or
+   message-only fallback (e.g. a locale message like "place unknown") must be
+   written as a **bare leaf component**, not wrapped in `group:`. A leaf
+   message renders whenever it produces text, full stop; a `group:`
+   containing only terms is suppressed by the rule above regardless of
+   `alternatives:`, because that suppression is the group's own long-standing
+   behavior for deciding whether it carries real content. Compare:
+
+   ```yaml
+   # Correct: bare leaf, renders "place unknown" whenever reached.
+   - alternatives:
+     - variable: publisher-place
+     - message: term.place-unknown
+
+   # Wrong: the second candidate is a term-only group, so it is suppressed
+   # by list.rs's existing rule and never renders even when reached.
+   - alternatives:
+     - variable: publisher-place
+     - group:
+       - message: term.place-unknown
+   ```
+
 3. The first entry that renders wins. Its output, prefix, and suffix are used
-   as-is. No further entries are evaluated (no side effects to worry about,
-   but this also bounds cost: a long alternatives list does not evaluate
-   every branch on every reference).
-4. If no entry renders, the `alternatives:` component itself renders nothing
+   as-is. No further entries are evaluated (no side effects to worry about
+   for the winner, but this also bounds cost: a long alternatives list does
+   not evaluate every branch on every reference).
+4. **Discarded candidates must not leave side effects.** Rendering a
+   candidate — trying it and finding it empty, or trying it and discarding it
+   because an earlier candidate already won — must not mark any variable as
+   "already rendered," consume any contributor role, or otherwise mutate
+   shared rendering state that the winning candidate or later template
+   components still depend on. Each candidate is evaluated against a cloned
+   copy of that state; only the winning candidate's mutations are kept. (The
+   pre-existing `group:` rendering path does not currently guarantee this for
+   its own children — see Implementation Notes — but `alternatives:` must not
+   inherit that gap.)
+5. If no entry renders, the `alternatives:` component itself renders nothing
    — same as a `group` with no content, so it is invisible to surrounding
    delimiter/join logic.
 
@@ -107,6 +146,15 @@ output rather than declared in advance. This is why it cannot express the
 B-shape (structural policy) uses found in the disposition audit — those
 require knowing *which* branch to pick before rendering anything, based on a
 property that never appears in the rendered output at all.
+
+The `term.place-unknown` message used above is illustrative, not existing
+vocabulary: checked `crates/citum-schema-style/src/locale/message_ids.rs`,
+no `place-unknown` term is defined today. Using this example in an actual
+style requires the same locale-authoring step
+`docs/specs/MEDIUM_DESIGNATOR.md` needs for its own access-phrase term —
+adding a new term (or a style-scoped `messages:` override) via
+`docs/guides/AUTHORING_LOCALES.md`'s existing mechanism — not part of this
+spec's acceptance criteria.
 
 ### Validation
 
@@ -127,12 +175,23 @@ message-shaped, and variable-shaped candidates). `alternatives:` does not
 replace them — it is the shape underneath all three, available directly in
 templates for cases that are not contributor substitution or date fallback.
 
-`ArticleJournalNoPageFallback::Doi` (`options/bibliography.rs:136`) is a
-plausible future deprecation target once `alternatives:` ships: NLM's
-"article detail block, else DOI" rule (`csl26-h8ja`'s wave-3 motivation) is
-naturally `alternatives: [{<detail block>}, {variable: doi, prefix: "doi:"}]`,
-which generalizes the one-off enum to any style, not just
-`no-page-fallback: doi` on `article-journal`.
+**Correction (2026-09-06):** an earlier draft of this section proposed
+`alternatives:` as a replacement for `ArticleJournalNoPageFallback::Doi`
+(`options/bibliography.rs:136`), citing NLM's DOI rule as a worked example.
+That was wrong and has been removed. Reading NLM's shipped `access` macro
+precisely (`styles-legacy/taylor-and-francis-national-library-of-medicine.csl:72-88`)
+shows the rule is `if type="article-journal"` **and**
+`if match="none" variable="page volume"` — a type-gated, field-presence
+test, not "render the normal detail block and fall back to DOI if it happens
+to be empty." The normal detail block includes `date: issued`, which is
+present on nearly every reference, so an `alternatives:` encoding using it
+as the first candidate would never fall through to DOI at all. This case
+does not fit `alternatives:`'s output-based, no-predicate model — it needs a
+declared condition evaluated *before* anything renders, which is exactly
+what `ArticleJournalNoPageFallback` already is. The correct fix is
+extending that existing, narrowly-scoped option to also test volume absence
+(tracked separately; see `docs/specs/MEDIUM_DESIGNATOR.md`'s cross-reference
+and its companion bean), not routing it through this primitive.
 
 ### Rejected: an options-level construct instead of a template component
 
@@ -179,26 +238,69 @@ covers. That is future work, not part of this spec's acceptance criteria.
 Expected shape: a new `TemplateComponent::Alternatives(TemplateAlternatives)`
 variant, `TemplateAlternatives { alternatives: Vec<TemplateComponent> }`,
 alongside the existing `Group`, `Variable`, `Message`, etc. variants in
-`crates/citum-schema-style/src/template.rs:625`. Evaluation lives in
-`crates/citum-engine/src/values/`, sharing the "does this render" test
-`TemplateGroup::values` already implements
-(`crates/citum-engine/src/values/list.rs:15-72`) rather than duplicating it.
+`crates/citum-schema-style/src/template.rs:625`.
+
+**Correction (2026-09-06):** an earlier draft of this section said
+evaluation "lives in `crates/citum-engine/src/values/`, sharing
+`TemplateGroup::values`." That named the wrong layer. `TemplateGroup::values`
+(`crates/citum-engine/src/values/list.rs`) has no render-when handling and is
+not where variable-once tracking or substitution bookkeeping happen —
+grepped, zero hits. Those live on `Renderer`
+(`crates/citum-engine/src/processor/rendering/mod.rs`, `TemplateComponentTracker`
+at `:249`), specifically in `render_template_component_with_format` and
+`render_group_component_with_format`
+(`crates/citum-engine/src/processor/rendering/grouped/core.rs`) — the actual
+per-template-position dispatch that already resolves nested `render-when`,
+variable-once skipping, and substitution metadata correctly. `Renderer` is
+confirmed shared by both citation and bibliography rendering
+(`Renderer::new` called from `processor/bibliography/mod.rs:162,268` and
+`processor/citation.rs:374`), so an `alternatives:` arm added to this same
+dispatch — rather than to `values::` — covers both template kinds from one
+implementation, and gets nested-group correctness for free by recursing
+through the same per-component call these functions already make.
+
+The tracker-cloning rule in Evaluation step 4 needs one implementation
+caveat: `render_group_component_with_format` currently merges a group's
+tracker mutations into its parent unconditionally, *before* checking whether
+the group produced any output (`tracker.merge_from(group_tracker)` runs
+above the subsequent `values?` empty-check). That is a pre-existing
+behavior of plain `group:` rendering, out of scope for this spec to change
+(see the follow-up bean cross-linked in Acceptance Criteria) — but
+`alternatives:`'s own evaluator must not copy this pattern: discard a losing
+candidate's tracker clone entirely, merge only the winner's.
 
 ## Acceptance Criteria
 
 - [ ] Schema: `TemplateComponent::Alternatives` variant, validated (empty and
       single-entry rejected).
-- [ ] Engine: evaluation order, first-non-empty-wins, reusing group's
-      "non-term content" rule.
-- [ ] Behavior tests: first entry renders, first entry empty falls through,
-      all entries empty renders nothing, nested `alternatives:` inside
-      `group` and vice versa.
+- [ ] Engine: evaluation order, first-non-empty-wins, implemented as an arm
+      on `Renderer`'s existing per-component dispatch (not a `values::`-layer
+      reimplementation) — see Implementation Notes.
+- [ ] Engine: candidate evaluation uses a cloned tracker per attempt; only
+      the winning candidate's tracker delta is merged back.
+- [ ] Behavior tests: a bare-leaf term-only candidate succeeds; a `group:` of
+      only terms inside a candidate is still suppressed (existing group
+      semantics, unchanged); first entry renders; first entry empty falls
+      through; all entries empty renders nothing; nested `alternatives:`
+      inside `group` and vice versa; nested `render-when` inside a candidate
+      is honored; a losing candidate that would have consumed a
+      contributor/date does not affect the winning candidate or later
+      template components.
 - [ ] `just schema-gen` run, schema docs updated.
-- [ ] At least one embedded style migrated as a worked example (candidate:
-      T&F-NLM's DOI-fallback rule, or Chicago's volume-title fallback) with a
-      report-core.js diff showing 0 regressions.
+- [ ] At least one embedded style migrated as a worked example — Chicago's
+      volume-title fallback (`chicago-author-date-18th.yaml:416-425`) is the
+      verified-shape candidate; the NLM DOI case is explicitly not a target
+      for this spec (see "Rejected: an options-level construct" section's
+      correction) — with a `report-core.js` diff showing 0 regressions.
 - [ ] Status promoted to Active in the implementation commit.
 
 ## Changelog
 
+- v1.1 (2026-09-06): Corrected per a Codex adversarial review and follow-up
+  verification: fixed the evaluation rule (leaf vs. group "did this render"
+  semantics were conflated), fixed Implementation Notes to name the real
+  integration point (`Renderer`/`grouped/core.rs`, not `values/`), added the
+  tracker clone-and-discard rule, dropped the NLM-DOI worked example (routed
+  to extending `ArticleJournalNoPageFallback` instead), noted
+  `term.place-unknown` doesn't exist yet. See `csl26-8b4a`.
 - v1.0 (2026-09-06): Initial draft.
