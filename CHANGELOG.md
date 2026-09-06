@@ -5,6 +5,266 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.81.0] - 2026-09-06
+
+### Bug Fixes
+
+**ci**
+
+- Filter skipped styles in fidelity scope ([`807fa54`](https://github.com/citum/citum-core/commit/807fa54eb313a601362aff521982bef75777c308))
+
+
+**engine**
+
+- Render djot in substituted titles ([`61cb868`](https://github.com/citum/citum-core/commit/61cb868f82cf12bea7b13c2b9b4c21530dbe2d95))
+
+- Include given name in sort key ([`0dab325`](https://github.com/citum/citum-core/commit/0dab32566785776303fc0f723d0418f74bf2c471))
+
+- Compare all co-authors in sort key ([`7c18935`](https://github.com/citum/citum-core/commit/7c1893545da02cbd46924c50ad6ac5e549c88681))
+
+- Emphasize substituted titles ([`3d3fdcc`](https://github.com/citum/citum-core/commit/3d3fdcc7628251ba9f0e7eccfdfc9f1a0936bdc5))
+
+- By-cite is document-wide again ([`e4ef118`](https://github.com/citum/citum-core/commit/e4ef118934449e21dc45f5c7322756c35d0bfe21))
+
+- Escalate givenname past same initials ([`a7f6759`](https://github.com/citum/citum-core/commit/a7f67590e62f66d98b00671178270bed75f17b77))
+
+- Escalate collapse locator delimiter ([`3e5f766`](https://github.com/citum/citum-core/commit/3e5f7665664bebffd8db43e943356951921df8a2))
+
+- Strip djot markup from sort keys ([`bdcb202`](https://github.com/citum/citum-core/commit/bdcb202c1e6bb0cbd5b84402e080790f1eceaf21))
+
+- Recover Chicago multivolume parity ([`5a24f43`](https://github.com/citum/citum-core/commit/5a24f434a4f668f254ef08a8d8042aecc0fb8715))
+
+- Add missing title-case stop words ([`be1c116`](https://github.com/citum/citum-core/commit/be1c1166bca6aeb134a0d8d908a901603d535fb5))
+
+- Numeric collapse needs 3+ consecutive ([`e5fb122`](https://github.com/citum/citum-core/commit/e5fb122ad7ab07411209010feb90eb23ce32c41b))
+
+- Year-only issued sort key ([`066f74e`](https://github.com/citum/citum-core/commit/066f74e4569eb99521f5f49fecfe194d3d86d8ce))
+
+- Status fallback needs a discriminant ([`d2fc47f`](https://github.com/citum/citum-core/commit/d2fc47fe5e68593f177f4519bafe239d108f9f92))
+
+- Widen citation-number sort warning ([`d4eddff`](https://github.com/citum/citum-core/commit/d4eddffdacbe8cf7c4863c38ebbffd181b6f757d))
+
+- Honor render-when on author group ([`3a14272`](https://github.com/citum/citum-core/commit/3a14272bb39b8cb4f5807f60c92d2e0477c2703b))
+
+- Stop double-delimiting item joins ([`c0c71fe`](https://github.com/citum/citum-core/commit/c0c71fe0b79a9a0f543dab29f1c9e089727d81dc))
+
+- Dedupe terminal marks at quote joins ([`f4f6339`](https://github.com/citum/citum-core/commit/f4f6339c5d0d713b376b25f5797b3051683e1494))
+
+
+**report**
+
+- Show known divergences distinctly ([`279820e`](https://github.com/citum/citum-core/commit/279820e9f499a303b15378e8d763fd35510e2fbe))
+
+
+**schema**
+
+- Flip elsevier-harvard title-quote ([`8ae8388`](https://github.com/citum/citum-core/commit/8ae83885544cbc4d7fe04b133f790fe6443d2622))
+
+- Flip T&F CSE title-quote ([`cc6f96f`](https://github.com/citum/citum-core/commit/cc6f96fbbb09e39d6182ff99974b719c74b08119))
+
+- Cse disambiguate-add-names migration ([`bf599f8`](https://github.com/citum/citum-core/commit/bf599f80c79d1bb7accafc53ed2b24d043316a49))
+
+- Advertise style shorthands ([`b0a49ee`](https://github.com/citum/citum-core/commit/b0a49ee2ad6212aac9ee9b25115796209a8c5d9c))
+
+- Address shorthand review findings ([`59758c5`](https://github.com/citum/citum-core/commit/59758c58cb191fbaa7200c2d867a56ab380b8a05))
+
+- Split comma-embedded name suffix ([`e850f01`](https://github.com/citum/citum-core/commit/e850f0190663a78245c4be37b2048f4cd74afa5c))
+
+- Add compiler contributor role ([`8f8b95e`](https://github.com/citum/citum-core/commit/8f8b95eaf10a2057a2a5b0ef800488a9b0fc4488))
+
+
+**scripts**
+
+- Detect bibliography order divergence ([`8b92cf5`](https://github.com/citum/citum-core/commit/8b92cf515c37da7bc8a4819947addbe4497fa081))
+
+- Make oracle-refresh actually save ([`49cc970`](https://github.com/citum/citum-core/commit/49cc970501e17727d3dcbe6ae4cbde0b456f703f))
+
+- Update parity baseline for CI ([`3e93876`](https://github.com/citum/citum-core/commit/3e9387640fb2b35d07205df912f1b7d31040a136))
+
+
+**security**
+
+- Bump h2 for RUSTSEC-2026-0258 ([`3260a3a`](https://github.com/citum/citum-core/commit/3260a3a3fe9911c76846b10b51781c7d1524a65f))
+
+
+**styles**
+
+- Enable initials in chicago disambig ([`1c359bc`](https://github.com/citum/citum-core/commit/1c359bc1e11150a1eab02322f5e1907c57ebf479))
+
+- Suppress no-date term for T&F CSE ([`db58091`](https://github.com/citum/citum-core/commit/db58091936a85b11c08f7a7a6782329ef64b2314))
+
+- Scope T&F CSE names to citation ([`bbd0817`](https://github.com/citum/citum-core/commit/bbd08173b2fb83548635ad2827745358a6e98f4e))
+
+- Improve Chicago embedded parity ([`ccc89a8`](https://github.com/citum/citum-core/commit/ccc89a87e5d8ee1d750480e181f8fe1a9a737cf6))
+
+- Apply chicago title-case wave 1 ([`4be4cad`](https://github.com/citum/citum-core/commit/4be4cad69eb1ea3cc0c452fb552952d2d885bb13))
+
+- Quote document/thesis titles (wave 2) ([`a2b2862`](https://github.com/citum/citum-core/commit/a2b2862868fdb616d7524cd1575940c713155ab8))
+
+- Chicago map/graphic no longer quoted ([`cd372f7`](https://github.com/citum/citum-core/commit/cd372f7637f0937755254ad8a43d75ad98d455ab))
+
+- Chicago classic/hearing quoting ([`8cc47b8`](https://github.com/citum/citum-core/commit/8cc47b8b0a39567410948c71fe910b62cdc79744))
+
+- Localize chicago prose messages ([`7c160d5`](https://github.com/citum/citum-core/commit/7c160d52caa080eda0c66430a34b3f59c5a76956))
+
+- Restore citation-number collapse ([`457b79b`](https://github.com/citum/citum-core/commit/457b79b6b30070288e03bb179df5e975dc6d6afb))
+
+- Clear leaked collapse in ams-label ([`d33a829`](https://github.com/citum/citum-core/commit/d33a829031c67078728f69279a310f26e106c6cd))
+
+- Chicago webpage citation substitute ([`01d892d`](https://github.com/citum/citum-core/commit/01d892d3333f7fa6ba16c00a87ba19620b9b8f0b))
+
+- Restore shortnb date detail ([`9bd8187`](https://github.com/citum/citum-core/commit/9bd818753b75cb97e2c0b63e0b5d649f2d699c3c))
+
+- Fix numeric marker-wrap bugs ([`2aefb8d`](https://github.com/citum/citum-core/commit/2aefb8df2fdcc9973af905566a3276eb8d2d0a4f))
+
+- Fix MLA period, translator, titlecase ([`e42eb9a`](https://github.com/citum/citum-core/commit/e42eb9a6b0fc4c9130892136b1c2f87d3f078172))
+
+- Fix IEEE colon and publisher/date ([`51b1d47`](https://github.com/citum/citum-core/commit/51b1d476c4e7325790e943ef0224653507679400))
+
+- Fix elsevier/springer structure ([`f4d2429`](https://github.com/citum/citum-core/commit/f4d24296f9b0d8b0d54fcc47b91f5efdaefd44e1))
+
+- Fix APA suffix, label-case bugs ([`368804e`](https://github.com/citum/citum-core/commit/368804e59c37ca6ef5bb76bcc83c5175797d3db9))
+
+- Fix MLA container-chain comma grammar ([`4478b5b`](https://github.com/citum/citum-core/commit/4478b5b19f7a545120ad4a890e4024775a518105))
+
+- Fix Elsevier fallback date grammar ([`9bbd58b`](https://github.com/citum/citum-core/commit/9bbd58bea3451d9c66d2a1c4b18a454dd72cf47d))
+
+
+
+### Documentation
+
+**engine**
+
+- Activate range-collapse model ([`528c1b8`](https://github.com/citum/citum-core/commit/528c1b81cb8b4f0b2248bfe120f5b41d948bc5b9))
+
+
+**schema**
+
+- Fix initialize-with doc, schema ([`12ea3af`](https://github.com/citum/citum-core/commit/12ea3af7d2881c5aa671665b9f5ff09a83f41de3))
+
+
+**spec**
+
+- Analyze substituted-value formatting ([`5d294fb`](https://github.com/citum/citum-core/commit/5d294fb3dad539b39523467d8907d86c871b11ba))
+
+- Define fallback policy options ([`86bac96`](https://github.com/citum/citum-core/commit/86bac96b2513b96189cc9d1428973963316732a6))
+
+- By-cite disambiguates document-wide ([`325feee`](https://github.com/citum/citum-core/commit/325feeeaaab5317458d0ecafdf795ea44cee1c65))
+
+- By-cite escalates per position ([`2a7cc69`](https://github.com/citum/citum-core/commit/2a7cc69a247d0fa7ed78f040bddf9550868a407c))
+
+- Register div-017 collapse delimiter ([`12b7098`](https://github.com/citum/citum-core/commit/12b709856ef7e4249682aa7d711e702eef59858d))
+
+- Make same-author collapse opt-in ([`cd2f592`](https://github.com/citum/citum-core/commit/cd2f592617ed0564dd966dbd42e0dd367cf20a43))
+
+- Activate same-author collapse ([`12ee766`](https://github.com/citum/citum-core/commit/12ee766afe9b2d2705a88963daaae9e3d8e3394c))
+
+- Design year-suffix collapse rendering ([`d985b31`](https://github.com/citum/citum-core/commit/d985b31780b9e305643553883b63611fe47ff3ee))
+
+- Add second-field-align layout spec ([`eb36ff7`](https://github.com/citum/citum-core/commit/eb36ff7e0bba8d800731ff0255a63ceb7a16ca6b))
+
+- Bib substitute title formatting spec ([`66df0ca`](https://github.com/citum/citum-core/commit/66df0caa8f9ed5c628733092e4ec758164e4e9ab))
+
+- Range/collapse model, resolved ([`3ebbff2`](https://github.com/citum/citum-core/commit/3ebbff219d1d5aebb079f62cc2d4a0c92b52236f))
+
+- Status-aware date fallback ([`bbb6854`](https://github.com/citum/citum-core/commit/bbb6854092bd0f2dd06976f5bcaf9c2217d5b25e))
+
+- Add locator label-case and attachment ([`4d580bc`](https://github.com/citum/citum-core/commit/4d580bc64f696defdee973ed8b3279bf2f3404fd))
+
+
+
+### Features
+
+**engine**
+
+- Resolve fallback policies centrally ([`4d4804e`](https://github.com/citum/citum-core/commit/4d4804ec8edb2b318eb16138ff9a12842dc210b2))
+
+- By-cite escalates names per position ([`a2efa0f`](https://github.com/citum/citum-core/commit/a2efa0f6dd450ed83c99ee8de3f73e560a65644c))
+
+- Same-author collapse becomes opt-in ([`e548600`](https://github.com/citum/citum-core/commit/e548600e3b77620c2b7c083afa80aa617e409ad3))
+
+- Render year-suffix collapse degrees ([`c5e6fb1`](https://github.com/citum/citum-core/commit/c5e6fb158855f9ff9a651ac89d576c981cd71fdd))
+
+- Render second-field-align layout ([`4d6019b`](https://github.com/citum/citum-core/commit/4d6019b8d709b77e62fd071312fae25b6c0ac88d))
+
+- Derive substitute title from node ([`0c2e707`](https://github.com/citum/citum-core/commit/0c2e707b7890578abf849d164991e33b7b48757c))
+
+- Locator inherits range-format ([`f324927`](https://github.com/citum/citum-core/commit/f324927ce550ce1cd5a4837a22dd7a8bed69b6ec))
+
+- Configurable identifier ranges ([`a3f9503`](https://github.com/citum/citum-core/commit/a3f950386a6ec3d6656abe85f6c29371ac497621))
+
+- Year-suffix key ignores date range ([`5dec47f`](https://github.com/citum/citum-core/commit/5dec47fe206a121aadc7c2b2f5cd2c257bead60a))
+
+- Title sort uses literal text ([`8f94ea0`](https://github.com/citum/citum-core/commit/8f94ea03589fcb70f668299ae38ec7fb3bc491ca))
+
+- Add locator label-case and attach ([`faf18fd`](https://github.com/citum/citum-core/commit/faf18fd9bdbb4b99642ac75fc2c6eae1ccc4799a))
+
+
+**migrate**
+
+- Extract fallback policies ([`99e7b6c`](https://github.com/citum/citum-core/commit/99e7b6cfec32a8e8368d84bcebbd6ea161d04116))
+
+- Map all csl collapse values ([`a507ff3`](https://github.com/citum/citum-core/commit/a507ff335768d93c8454073d3e80580665acf557))
+
+- Map collapse delimiter attributes ([`a8671f5`](https://github.com/citum/citum-core/commit/a8671f54fe86e50575b0f7ccdb39f08c0cee76a2))
+
+
+**schema**
+
+- Add fallback policy models ([`52296b9`](https://github.com/citum/citum-core/commit/52296b98ef6aa70a224a0ff6c07049253064bfa1))
+
+- Remove legacy fallback fields ([`312571b`](https://github.com/citum/citum-core/commit/312571b08533a298a64c0ec892bc79454fe02b71))
+
+- Opt-in same-author collapse ([`c956fe9`](https://github.com/citum/citum-core/commit/c956fe90d69fecfd8011d2af806e47abf1b11f35))
+
+- Add collapse delimiter fields ([`c18bba9`](https://github.com/citum/citum-core/commit/c18bba923c7e82cd3f4f25be7a66ec2f335c9bff))
+
+- Rename range options ([`195e224`](https://github.com/citum/citum-core/commit/195e224851817bf9dc958070de3d1faefcb6d9b3))
+
+- Add status template condition ([`a125ae6`](https://github.com/citum/citum-core/commit/a125ae6d913750e70b1cee5f66beb172c9fb7578))
+
+
+**scripts**
+
+- Pair citations with refs fixtures ([`5322eec`](https://github.com/citum/citum-core/commit/5322eec8a3c035f79312ea8b99e9c7a189c95c65))
+
+- Audit substitute-formatting corpus ([`e44ab55`](https://github.com/citum/citum-core/commit/e44ab553774685892562fdce9af9f281826b5d19))
+
+- Score citation components too ([`47419fc`](https://github.com/citum/citum-core/commit/47419fcb3e6168aedb457efda41fd08c3c1c423c))
+
+- Derive embedded parity baseline ([`1614270`](https://github.com/citum/citum-core/commit/16142702d629e4d097b81878f2db0720888459b2))
+
+- Add fixture-refresh fan-out recipe ([`d37e565`](https://github.com/citum/citum-core/commit/d37e5655e94dcb11d7c9d2c5220dc433e8a9509c))
+
+- Mask div-017 in oracle reporting ([`545b844`](https://github.com/citum/citum-core/commit/545b8448adc3285cbaebabf12b80868eeb1af9ba))
+
+- Rank parity residuals by leverage ([`305c2f2`](https://github.com/citum/citum-core/commit/305c2f2ac4f7344704edf39b65bc7b1ebb7d8fc5))
+
+- Add parity residual --diff mode ([`f1ca878`](https://github.com/citum/citum-core/commit/f1ca8788ce0c69f4dc27ee8f073d195c4a274610))
+
+
+**styles**
+
+- Declare same-author collapse ([`9f7789a`](https://github.com/citum/citum-core/commit/9f7789aeb02528c3f696bd982590aa458c84da6f))
+
+- Declare springer collapse delimiter ([`afd55b1`](https://github.com/citum/citum-core/commit/afd55b1ae0f0b77dd9360e27337fa95110a4a782))
+
+- Declare second-field-align ([`c96d9ff`](https://github.com/citum/citum-core/commit/c96d9ff433056bae135c9a2181dbf1049c3e6e10))
+
+
+
+### Styling
+
+
+### Testing
+
+**engine**
+
+- Pin non-collapsed citation clusters ([`4899f39`](https://github.com/citum/citum-core/commit/4899f39191d326e7974169f00cb55ee9357263a7))
+
+- Pin Html sentence-start last-char ([`e6ab30f`](https://github.com/citum/citum-core/commit/e6ab30fbbcd44dface22356d9914eb1e749e4f27))
+
+
 ## [0.80.0] - 2026-08-13
 
 ### Bug Fixes
