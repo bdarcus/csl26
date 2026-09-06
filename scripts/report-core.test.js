@@ -650,8 +650,12 @@ test('apa-7th concision regression reflects preset-first success', () => {
   // literal that dropped the version field entirely for titled datasets; the
   // type-label + term:version group correctly localizes and renders both, at
   // the cost of a few extra template components. See
-  // docs/specs/TYPE_CLASSIFICATION_CENTRALIZATION.md.
-  assert.equal(concision.score, 63.4, `expected embedded APA concision, got ${concision.score}`);
+  // docs/specs/TYPE_CLASSIFICATION_CENTRALIZATION.md. A further dip to 63
+  // reflects the wave-2 exact-parity fixes (csl26-7e6l): several suffix/label
+  // corrections wrapped previously-flat components into groups (article-newspaper,
+  // interview, base archive block) to fix real oracle mismatches, at the cost
+  // of a few more template components.
+  assert.equal(concision.score, 63, `expected embedded APA concision, got ${concision.score}`);
 });
 
 test('report-core exposes expected benchmark labels for representative styles', () => {

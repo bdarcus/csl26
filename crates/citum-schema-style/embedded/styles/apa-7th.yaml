@@ -41,6 +41,7 @@ options:
       - editor
       - title
       - translator
+    contributor-role-case: capitalize-first
     overrides:
       episode:
         - contributor: [writer, director]
@@ -303,11 +304,13 @@ bibliography:
       wrap:
         punctuation: brackets
       prefix: " "
-    - title: parent-serial
-      emph: true
+    - group:
+      - title: parent-serial
+        emph: true
+      - number: pages
+        prefix: ", "
+      delimiter: ""
       prefix: ". "
-    - number: pages
-      prefix: ", "
       suffix: "."
     - variable: doi
       prefix: "https://doi.org/"
@@ -340,6 +343,7 @@ bibliography:
           - contributor: container-author
             form: long
             name-order: given-first
+            label: {term: editor, form: short, placement: suffix, text-case: capitalize-first}
           - title: parent-monograph
             emph: true
       text-case: capitalize-first
@@ -392,7 +396,7 @@ bibliography:
       - contributor: editor
         form: long
         name-order: given-first
-        label: {term: editor, form: short, placement: suffix}
+        label: {term: editor, form: short, placement: suffix, text-case: capitalize-first}
       - delimiter: " "
         group:
         - title: parent-monograph
@@ -502,7 +506,7 @@ bibliography:
       - contributor: editor
         form: long
         name-order: given-first
-        label: {term: editor, form: short, placement: suffix}
+        label: {term: editor, form: short, placement: suffix, text-case: capitalize-first}
       - delimiter: " "
         group:
         - title: parent-monograph
@@ -550,7 +554,7 @@ bibliography:
       - contributor: editor
         form: long
         name-order: given-first
-        label: {term: editor, form: short, placement: suffix}
+        label: {term: editor, form: short, placement: suffix, text-case: capitalize-first}
       - delimiter: " "
         group:
         - title: parent-monograph
@@ -680,25 +684,27 @@ bibliography:
       wrap:
         punctuation: parentheses
       prefix: " "
-    - title: primary
-      emph: false
-    - contributor: interviewer
-      form: long
-      name-order: given-first
-      label: {term: interviewer, form: long, placement: suffix, text-case: capitalize-first}
-      wrap:
-        punctuation: parentheses
-      prefix: " "
-    - delimiter: "; "
-      wrap:
-        punctuation: brackets
-      prefix: " "
+    - group:
+      - title: primary
+        emph: false
+      - contributor: interviewer
+        form: long
+        name-order: given-first
+        label: {term: interviewer, form: long, placement: suffix, text-case: capitalize-first}
+        wrap:
+          punctuation: parentheses
+        prefix: " "
+      - delimiter: "; "
+        wrap:
+          punctuation: brackets
+        prefix: " "
+        group:
+        - variable: genre
+          text-case: capitalize-first
+        - variable: medium
+          text-case: capitalize-first
+      delimiter: ""
       suffix: "."
-      group:
-      - variable: genre
-        text-case: capitalize-first
-      - variable: medium
-        text-case: capitalize-first
     - variable: publisher
       prefix: " "
       suffix: "."
@@ -753,7 +759,7 @@ bibliography:
       - contributor: editor
         form: long
         name-order: given-first
-        label: {term: editor, form: short, placement: suffix}
+        label: {term: editor, form: short, placement: suffix, text-case: capitalize-first}
       - contributor: translator
         form: long
         name-order: given-first
@@ -779,6 +785,7 @@ bibliography:
       prefix: " "
     - title: primary
       emph: false
+      suffix: "."
     - group:
       - variable: genre
         text-case: capitalize-first
@@ -870,6 +877,7 @@ bibliography:
   - contributor: editor
     form: long
     name-order: given-first
+    label: {term: editor, form: short, placement: suffix, text-case: capitalize-first}
     prefix: ". In "
   - title: parent-monograph
     emph: true
@@ -903,3 +911,6 @@ bibliography:
       prefix: " "
     delimiter: ""
     prefix: ". "
+  - variable: archive-place
+    prefix: ", "
+    suffix: "."
