@@ -146,7 +146,7 @@
       "coverageMode": "inferred-structural",
       "evidence": "resolved-style",
       "provider": "citum-cli",
-      "providerVersion": "citum 0.80.0"
+      "providerVersion": "citum 0.81.0"
     },
     "schema": "citum.style-coverage-audit-manifest/v1",
     "source": {
@@ -179,7 +179,7 @@
       ],
       "id": "chicago-shortened-notes-bibliography",
       "path": "crates/citum-schema-style/embedded/styles/chicago-shortened-notes-bibliography.yaml",
-      "resolvedSha256": "c0c83f328dc2f7c1a041a2597c7da4391ead6e0ec328756d27714641b6e9d53c",
+      "resolvedSha256": "c204460b9a5ee310812c97218f297956fa5ff05f05ba0ffc33bbf5e89b7012b9",
       "sha256": "0350678436d9d2827d896e0ee16b8724c3542e6e8b9c0b369f5b80d1425972f5"
     },
     "surfaces": [
