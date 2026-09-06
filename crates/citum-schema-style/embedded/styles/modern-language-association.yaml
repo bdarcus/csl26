@@ -214,29 +214,31 @@ bibliography:
   - title: primary
     text-case: title
   - group:
-    - contributor: editor
+    - group:
+      - title: parent-monograph
+        emph: true
+      - contributor: editor
+        form: verb
+        name-order: given-first
+        shorten:
+          min: 4
+          use-first: 1
+      delimiter: ", "
+    - contributor: translator
       form: verb
       name-order: given-first
-      shorten:
-        min: 4
-        use-first: 1
-    - title: parent-monograph
+      text-case: capitalize-first
+    - title: parent-serial
       emph: true
-  - contributor: translator
-    form: verb
-    name-order: given-first
+    - number: volume
+      prefix: "vol. "
+    - number: issue
+      prefix: "no. "
+    - variable: publisher
+    - date: issued
+      form: day-month-abbr-year
+    delimiter: ", "
     prefix: ". "
-    text-case: capitalize-first
-  - title: parent-serial
-    emph: true
-  - number: volume
-    prefix: ", vol. "
-  - number: issue
-    prefix: ", no. "
-  - variable: publisher
-  - date: issued
-    form: day-month-abbr-year
-    prefix: ", "
   - number: pages
     prefix: ", "
   - variable: doi
