@@ -3,7 +3,8 @@
 **Status:** Active
 **Version:** 1.0
 **Date:** 2026-03-17
-**Related:** bean csl26-3he9, `crates/citum-schema-style/src/options/locators.rs`
+**Related:** bean csl26-3he9, `crates/citum-schema-style/src/options/locators.rs`,
+`docs/specs/LOCATOR_INPUT.md`
 
 ## Purpose
 

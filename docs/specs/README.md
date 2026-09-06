@@ -75,6 +75,7 @@ note. The `—` marker in the Tests column means no targeted test exists yet.
 | [`INTEGRAL_NAME_MEMORY.md`](./INTEGRAL_NAME_MEMORY.md) — durable author-display state across citation clusters | Active | `citations.rs::integral_name_memory` |
 | [`PERSONAL_COMMUNICATION_CITATION.md`](./PERSONAL_COMMUNICATION_CITATION.md) — rendering of personal communications across style families | Active | `citations.rs::contributor_scoping` |
 | [`LEGAL_CITATIONS.md`](./LEGAL_CITATIONS.md) — legal-case type support and jurisdiction-aware rendering | Draft | — |
+| [`LOCATOR_INPUT.md`](./LOCATOR_INPUT.md) — input model for citation locators: surfaces, plurality detection, ergonomic options | Active | `citum-schema-data/src/citation.rs` |
 | [`LOCATOR_RENDERING.md`](./LOCATOR_RENDERING.md) — style-level LocatorConfig replacing per-template locator fields | Active | `citations.rs` |
 | [`NON_STANDARD_NUMBERING_AND_LOCATOR_KINDS.md`](./NON_STANDARD_NUMBERING_AND_LOCATOR_KINDS.md) — domain-specific numbering and locator labels | Active | `citations.rs` |
 | [`REFERENCE_MARKERS.md`](./REFERENCE_MARKERS.md) — processor-owned numeric and label markers; removes label components from templates | Active | `citations.rs` |
