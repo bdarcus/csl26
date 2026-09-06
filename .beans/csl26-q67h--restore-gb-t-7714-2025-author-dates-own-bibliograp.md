@@ -4,8 +4,12 @@ title: Restore gb-t-7714-2025-author-date's own bibliography.sort
 status: todo
 type: bug
 priority: normal
+tags:
+    - engine
+    - fidelity
+    - gb-t
 created_at: 2026-08-06T13:30:40Z
-updated_at: 2026-08-12T00:48:44Z
+updated_at: 2026-09-06T15:27:17Z
 parent: csl26-ccdt
 ---
 

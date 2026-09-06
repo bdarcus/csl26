@@ -4,8 +4,12 @@ title: Oracle parity gate compares wrong text representation for superscript
 status: todo
 type: task
 priority: normal
+tags:
+    - oracle
+    - policy
+    - rendering
 created_at: 2026-09-05T21:33:02Z
-updated_at: 2026-09-05T21:33:02Z
+updated_at: 2026-09-06T15:27:08Z
 parent: csl26-ccdt
 ---
 
