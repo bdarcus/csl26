@@ -71,7 +71,7 @@ fn test_apa_interview_fidelity_regression() {
     // APA expected output for interview
     assert_eq!(
         result,
-        "Arendt, H. (1975). Thinking in Public (E. Young-Bruehl, Interviewer) Schocken Books."
+        "Arendt, H. (1975). Thinking in Public (E. Young-Bruehl, Interviewer). Schocken Books."
     );
 }
 

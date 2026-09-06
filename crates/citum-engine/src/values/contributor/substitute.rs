@@ -285,9 +285,17 @@ fn resolve_substitute_role_labels<F: OutputFormat<Output = String>>(
         return (None, None);
     }
 
-    if substitute.contributor_role_form.is_none()
-        && substitute.contributor_role_case.is_none()
-        && let Some(known) = role.built_in()
+    // A rich per-role presentation (an explicit `role_label_presentation`
+    // override, or a `role.defaults` bundle entry with its own form/case/wrap)
+    // always wins over the blunt `contributor_role_form`/`contributor_role_case`
+    // override below, which exists for roles the bundle doesn't otherwise
+    // cover. Gating this branch on the override being unset -- as an earlier
+    // version of this check did -- meant setting either override for one role
+    // (e.g. APA's editor, whose "apa" bundle has no rich preset) silently
+    // discarded another role's already-correct rich preset (e.g. director's
+    // parenthesized, title-case label), since the override is style-wide, not
+    // per-role.
+    if let Some(known) = role.built_in()
         && options
             .config
             .contributors
