@@ -9,7 +9,7 @@ tags:
     - fidelity
     - style
 created_at: 2026-09-05T21:24:36Z
-updated_at: 2026-09-06T15:27:08Z
+updated_at: 2026-09-06T21:57:58Z
 parent: csl26-ccdt
 ---
 
@@ -42,3 +42,11 @@ a `Url` variant added to `TemplateConditionField` plus wiring
 components, or (b) a narrower purpose-built "online-source marker"
 component. Scope: engine (`crates/citum-engine`) + schema
 (`crates/citum-schema-style`), not style YAML.
+
+## Resolution direction (2026-09-06)
+
+Root cause reclassified: this is not a render-when gap (option (a) above), it's option (b) -- a narrower purpose-built option. Spec drafted at `docs/specs/MEDIUM_DESIGNATOR.md` (Draft): a `BibliographyConfig.online_access` option bundling the title-suffix marker, access-phrase, and cited-date-bracket, gated by URL presence and an excluded-type list. Decided alongside the broader `render-when` disposition question -- see `docs/architecture/audits/2026-09-06_RENDER_WHEN_DISPOSITION.md` and `csl26-h8ja`.
+
+Confirmed against the shipped .csl: `taylor-and-francis-national-library-of-medicine.csl:133-150` (title macro) and `springer-vancouver-brackets.csl:113-120` (accessed-date macro). Also affects `taylor-and-francis-council-of-science-editors-author-date`. IEEE's analogous "[Online]. Available: URL" pattern (noted above) is a plausible second consumer once this option exists, not part of this spec's acceptance criteria.
+
+Next: spec review, then implementation in a stacked PR.

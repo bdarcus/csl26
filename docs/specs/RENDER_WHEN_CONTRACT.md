@@ -1,10 +1,12 @@
 # Render-When Contract Specification
 
-**Status:** Active
-**Version:** 1.1
-**Date:** 2026-07-13
+**Status:** Active (vocabulary frozen — see v1.2)
+**Version:** 1.2
+**Date:** 2026-09-06
 **Supersedes:** None
-**Related:** `csl26-qyub`
+**Related:** `csl26-qyub`, `csl26-h8ja`,
+`docs/architecture/audits/2026-09-06_RENDER_WHEN_DISPOSITION.md`,
+`docs/specs/ALTERNATIVES.md`
 
 ## Purpose
 
@@ -17,6 +19,17 @@ semantics, and validation rules.
 The mechanism is intentionally bounded: independent `field-present` and
 `field-absent` probes combined with AND only. No OR, value comparisons, or
 arbitrary boolean expressions.
+
+**As of v1.2, the field vocabulary below is frozen — no further fields will
+be added.** A full-corpus inventory (`docs/architecture/audits/2026-09-06_RENDER_WHEN_DISPOSITION.md`)
+found that every one of the 125 existing uses is one of two shapes: a
+fallback where the tested field is the same one the branch renders (now
+served by `docs/specs/ALTERNATIVES.md`'s ordered-candidate-list primitive,
+which needs no predicate at all), or a structural policy gate where the
+tested field never appears in what it guards (not yet served by anything —
+see that audit's "Work-form routing" section). New style needs that look
+like a `render-when` field addition should be routed to one of those two
+efforts, not to this contract.
 
 ## Scope
 
@@ -80,7 +93,9 @@ value.
 | `archive` | archive or repository name exists |
 | `archive-location` | archive location or shelfmark exists |
 
-New fields may be added when all of the following hold:
+**Frozen as of v1.2 — no new fields will be added to this table.** The
+extension criteria that governed v1.0/v1.1 growth are recorded here for
+history:
 
 - presence has one unambiguous, documented reference accessor meaning;
 - a real style forcing case needs it, and the need is a field-presence
@@ -90,9 +105,17 @@ New fields may be added when all of the following hold:
 - engine behavior stays generic and does not inspect style identity;
 - this contract and generated schema documentation are updated.
 
+The 2026-09-06 disposition audit found that every candidate field a wave-3
+parity pass wanted (`url`, `pages`, `publisher-place`) failed the second
+criterion on inspection — each was a stand-in for a fallback that
+`docs/specs/ALTERNATIVES.md` now serves declaratively. Rather than
+re-litigate that same question per proposal, the vocabulary is closed: a
+proposed new field is evidence that a need belongs to `alternatives:` or to
+work-form routing (see the audit), not to this contract.
+
 Field growth does not imply operator growth. Multiple-field lists, OR,
 comparisons, arbitrary expressions, and new branch forms each require a
-separate design proposal.
+separate design proposal, and remain out of scope regardless of the freeze.
 
 ### Validation
 
@@ -137,6 +160,10 @@ schema-gen` was run and produced no diff, which is expected, not an omission.
 
 ## Changelog
 
+- v1.2 (2026-09-06): Froze the field vocabulary — no new fields will be
+  added. A-shape (fallback) uses route to `docs/specs/ALTERNATIVES.md`;
+  B-shape (structural policy) uses await a work-form-routing design under
+  `csl26-40n4`. See `docs/architecture/audits/2026-09-06_RENDER_WHEN_DISPOSITION.md`.
 - v1.1 (2026-07-13): Implemented validation and behavior tests; promoted to
   Active.
 - v1.0 (2026-07-13): Initial contract specification.
