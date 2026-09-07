@@ -1,10 +1,10 @@
 # Medium Designator Specification
 
 **Status:** Draft
-**Version:** 1.2
+**Version:** 1.3
 **Date:** 2026-09-06
 **Supersedes:** None
-**Related:** `csl26-zs9y`, `csl26-8b4a`, `csl26-8z39`,
+**Related:** `csl26-zs9y`, `csl26-8b4a`, `csl26-8z39`, `csl26-la9t`, `csl26-ro72`,
 `docs/architecture/audits/2026-09-06_RENDER_WHEN_DISPOSITION.md`,
 `docs/specs/ARTICLE_JOURNAL_NO_PAGE_FALLBACK.md`
 
@@ -172,6 +172,15 @@ named which *term* backs the bracket — the spec had silently assumed
 `term.cited` for every style, which is wrong for T&F-CSE (see "CSE also
 uses a different term" in Evidence above). Added `cited-date-label` below.
 
+**Revised again (2026-09-06, third review round)** after a follow-up review
+found two more concrete defects: the wire example's field values were bare
+scalars where the actual message type requires a mapping, and the proposed
+Rust field lived on the wrong struct — style-authored `bibliography:
+options:` deserializes into `BibliographyOptions`
+(`crates/citum-schema-style/src/style/sections/bibliography.rs:32`), a
+*different* type from the runtime `BibliographyConfig` this spec had been
+targeting exclusively. Both fixed below.
+
 ### New option
 
 ```yaml
@@ -180,15 +189,50 @@ options:
 bibliography:
   options:
     online-access:
-      medium-marker: term.internet
+      medium-marker: {message: term.internet}
       access-phrase: true
-      cited-date-label: term.cited   # term.accessed for T&F-CSE
+      cited-date-label: {message: term.cited}   # {message: term.accessed} for T&F-CSE
       cited-date-form: text
 ```
 
+`medium-marker` and `cited-date-label` are mapping-shaped
+(`{message: ...}`), not bare strings: `SubstituteMessage`
+(`crates/citum-schema-style/src/options/substitute.rs:69-81`) is a plain
+struct with `deny_unknown_fields` and no string-shorthand `Deserialize`
+impl, so a scalar like `term.internet` would either fail to parse or (if
+authored under a permissive container) be silently captured as an unknown
+field and have no effect — exactly Codex's finding. There is precedent
+elsewhere in the schema for string-shorthand message fields, but
+`SubstituteMessage` specifically is not one of them; this spec uses it
+as-is rather than proposing a second message-reference shape.
+
+**Schema placement — wired in three places, following `article_journal`'s
+exact precedent** (`ArticleJournalBibliographyConfig`, the shape
+`ArticleJournalNoPageFallback` uses, already does this correctly):
+
+1. `BibliographyOptions` (`crates/citum-schema-style/src/options/mod.rs:365`)
+   — the authoring-time type `bibliography: options:` actually deserializes
+   into. Add `online_access: Option<OnlineAccessConfig>` here, alongside the
+   existing `pub article_journal: Option<ArticleJournalBibliographyConfig>`
+   at the same struct.
+2. `BibliographyConfig` (`crates/citum-schema-style/src/options/bibliography.rs:19`)
+   — the resolved runtime type the engine actually reads. Add the same
+   field here too; these are two separate struct definitions with no
+   automatic field-sharing.
+3. `BibliographyOptions::to_bibliography_config()`
+   (`crates/citum-schema-style/src/options/mod.rs:981-1000`) — a **hand-written**,
+   field-by-field conversion function, not a derive. It must gain
+   `online_access: self.online_access.clone(),` explicitly, in the same
+   pattern as its existing `article_journal: self.article_journal.clone(),`
+   line, or an authored `online-access:` block is silently dropped between
+   authoring and runtime — never reaching the engine at all, with no error.
+   This is the mechanism Codex's finding warned about, confirmed by reading
+   the function directly rather than assuming a merge path exists.
+
 Proposed schema shape:
 
-- `BibliographyConfig.online_access: Option<OnlineAccessConfig>`
+- `BibliographyOptions.online_access` and `BibliographyConfig.online_access`:
+  both `Option<OnlineAccessConfig>`, identical shape, per the wiring above.
 - `OnlineAccessConfig`:
   - `medium_marker: Option<SubstituteMessage>` — locale message rendered
     bracketed, capitalized-first, anchored per "Anchor selection" below.
@@ -211,36 +255,48 @@ Proposed schema shape:
 
 ### Anchor selection
 
-**Revised from a flat `exclude-types` list.** The marker attaches to the
-reference's container-title when
-`container_title_category(ref.ref_type()) != TitleCategory::Default`
-(`crates/citum-schema-style/src/options/title_class.rs:244-251`), and to the
-reference's own title otherwise. This reuses the engine's existing
-type→category classification rather than a new type list:
+**Revised twice.** First from a flat `exclude-types` list (didn't fit
+T&F-CSE's data-presence gate) to `container_title_category(ref_type) !=
+Default`, a type classification. A third review round found that
+classification still knowingly diverges from real reference shapes — a
+container-less `chapter`, or a non-listed type authored with a populated
+`container-title`, would pick the wrong anchor — and correctly pointed out
+that a *type* proxy shouldn't stand in when the *actual data being
+anchored to* is directly checkable.
 
-```rust
-pub fn container_title_category(ref_type: &str) -> TitleCategory {
-    match ref_type {
-        "article-journal" | "article-magazine" | "article-newspaper" | "broadcast" => TitleCategory::Periodical,
-        "chapter" | "paper-conference" => TitleCategory::ContainerMonograph,
-        _ => TitleCategory::Default,
-    }
-}
-```
+It is: `Reference::container_title()`
+(`crates/citum-schema-data/src/reference/accessors.rs:1108`) returns
+`Option<Title>` — the exact data T&F-CSE's own rule tests
+(`<if variable="container-title" match="none">`). The anchor rule is
+`reference.container_title().is_some()`: attach the marker to the
+container-title component when it exists, to the reference's own title
+otherwise. This is not a proxy for the real condition, it *is* the real
+condition — the same accessor the container-title template component
+itself would consult. For NLM/springer's own listed types
+(article-journal/magazine/newspaper, chapter, paper-conference) this
+subsumes the type-based rule as a consequence, not a coincidence: those are
+exactly the types given an embedded container `WorkRelation`, so
+`container_title()` returns `Some` for them via `p.title()`.
 
-The non-`Default` cases are exactly NLM/springer's type list (`broadcast`
-aside — not present in this family's fixtures). No new enum, no new type
-selector.
-
-**Residual risk, not yet proven:** T&F-CSE's shipped rule is gated on
-*data* (`container-title` present or absent), not on this classification.
-The two coincide whenever a reference's type-driven container-title
-category matches whether it actually carries container-title data — true
-for every observed case in this wave's fixtures, but not verified against
-the full corpus. A container-less `chapter`, or a non-listed type authored
-with a populated `container-title`, would make CSE's real behavior diverge
-from this rule. Flagged in Acceptance Criteria as a fixture check, not
-assumed.
+**New residual risk found while verifying this fix, narrower than the one
+it replaces:** `container_title()` also returns `Some` for
+`ClassExtension::LegalCase`/`Statute`/`Regulation`/`Treaty`
+(`accessors.rs:1124-1127`) — from a flat `reporter`/`code` string field, not
+an embedded work's title. NLM's own title macro excludes only its 5
+periodical/monograph type list from the marker
+(`match="none"` over that exact list) — bill, legislation, and the other
+legal types are *not* excluded, so NLM's real behavior puts the marker on
+their own title, not a container. A bare `container_title().is_some()`
+check would misroute these four legal classes to the container anchor.
+**Fix:** gate the container anchor on `container_title().is_some()` *and*
+the container coming from an embedded `WorkRelation` with its own title
+(i.e., exclude `LegalCase`/`Statute`/`Regulation`/`Treaty` explicitly, or
+add a second accessor that distinguishes "container is an embedded titled
+work" from "container is a flat reporter/code string"). Not yet decided
+which; either is a small, mechanical addition. Flagged in Acceptance
+Criteria as a fixture check covering at least one legal-type reference
+(e.g. `TLIB-SEL-BILL-1`, already used elsewhere in this wave's fixtures)
+before this anchor rule is treated as correct.
 
 ### Access phrase
 
@@ -295,10 +351,10 @@ style sets `cited_date_label` to name its own term:
 ```yaml
 # NLM, springer-vancouver-brackets:
 online-access:
-  cited-date-label: term.cited
+  cited-date-label: {message: term.cited}
 # T&F-CSE:
 online-access:
-  cited-date-label: term.accessed
+  cited-date-label: {message: term.accessed}
 ```
 
 No locale override needed for this piece — both terms already exist
@@ -333,17 +389,30 @@ not this option.
 
 ## Acceptance Criteria
 
-- [ ] Schema: `OnlineAccessConfig` on `BibliographyConfig`, validated.
-- [ ] Engine: medium-marker anchor selection (via `container_title_category`),
-      access-phrase composition, and cited-date-bracket wiring, each
-      independently gated on URL presence.
+- [ ] Schema: `OnlineAccessConfig` added to **both** `BibliographyOptions`
+      (`options/mod.rs:365`) and `BibliographyConfig`
+      (`options/bibliography.rs:19`), plus an explicit
+      `online_access: self.online_access.clone(),` line in
+      `BibliographyOptions::to_bibliography_config()` (`options/mod.rs:981`)
+      — verified with a round-trip test analogous to
+      `test_article_journal_no_page_fallback_roundtrip`, not just schema
+      validation, so a style-authored value is confirmed to actually reach
+      the runtime config.
+- [ ] Schema: `medium_marker`/`cited_date_label` deserialize only in mapping
+      form (`{message: ...}`); a bare scalar is rejected or fails to parse,
+      not silently captured as an unknown field.
+- [ ] Engine: medium-marker anchor selection via
+      `reference.container_title().is_some()`, excluding
+      `LegalCase`/`Statute`/`Regulation`/`Treaty` from the container anchor
+      (see "Anchor selection" residual risk) — access-phrase composition and
+      cited-date-bracket wiring, each independently gated on URL presence.
+- [ ] Fixture check covering at least one legal-type reference (e.g.
+      `TLIB-SEL-BILL-1`) confirming the marker anchors on the reference's
+      own title, not a container, before treating the anchor-selection
+      exclusion as correct.
 - [ ] New locale-override file (e.g. `en-US-nlm.yaml`) overriding
       `term.retrieved`, following the `en-US-ieee`/`en-US-springer`
       precedent.
-- [ ] Fixture check confirming `container_title_category != Default`
-      coincides with T&F-CSE's real `container-title`-presence gate for
-      every reference type this family's fixtures exercise, before treating
-      the "Anchor selection" residual risk as closed.
 - [ ] Exact-output fixture check, per style, confirming the accessed-date
       bracket text: `[cited …]` for NLM and springer, `[accessed …]` for
       CSE — not asserted from reading the CSL, verified against a real
@@ -361,6 +430,20 @@ not this option.
 
 ## Changelog
 
+- v1.3 (2026-09-06): Corrected per a third Codex adversarial-review round:
+  the wire example used bare-scalar message fields where `SubstituteMessage`
+  requires a mapping (`{message: ...}`), and the proposed field lived only
+  on `BibliographyConfig` when style-authored `bibliography: options:`
+  actually deserializes into a separate type, `BibliographyOptions` — fixed
+  by wiring `online_access` into both types plus the hand-written
+  `to_bibliography_config()` conversion, following `article_journal`'s
+  exact precedent. Replaced the `container_title_category` anchor rule with
+  the actual data accessor, `Reference::container_title().is_some()` —
+  which in turn surfaced a narrower, previously-unnoticed edge case (legal
+  reference types populate `container_title()` from a flat reporter/code
+  field, not an embedded work, and NLM's real behavior doesn't treat them
+  as container-anchored), now flagged precisely rather than hidden behind
+  the classification it replaced. See `csl26-ro72`.
 - v1.2 (2026-09-06): Corrected per a second Codex adversarial-review round:
   the shared `cited_date_form` field only controlled formatting and silently
   assumed `term.cited` for every style; T&F-CSE's own macro (also confusingly
