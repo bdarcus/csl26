@@ -1,12 +1,12 @@
 # Alternatives Specification
 
 **Status:** Draft
-**Version:** 1.1
+**Version:** 1.2
 **Date:** 2026-09-06
 **Supersedes:** None
 **Related:** `docs/specs/RENDER_WHEN_CONTRACT.md`,
 `docs/architecture/audits/2026-09-06_RENDER_WHEN_DISPOSITION.md`, `csl26-h8ja`,
-`csl26-x79y`, `csl26-zs9y`, `csl26-8b4a`
+`csl26-x79y`, `csl26-zs9y`, `csl26-8b4a`, `csl26-2hr4`
 
 ## Purpose
 
@@ -259,18 +259,37 @@ dispatch — rather than to `values::` — covers both template kinds from one
 implementation, and gets nested-group correctness for free by recursing
 through the same per-component call these functions already make.
 
-The tracker-cloning rule in Evaluation step 4 needs one implementation
-caveat: `render_group_component_with_format` currently merges a group's
-tracker mutations into its parent unconditionally, *before* checking whether
-the group produced any output (`tracker.merge_from(group_tracker)` runs
-above the subsequent `values?` empty-check). That is a pre-existing
-behavior of plain `group:` rendering, out of scope for this spec to change
-(see the follow-up bean cross-linked in Acceptance Criteria) — but
-`alternatives:`'s own evaluator must not copy this pattern: discard a losing
-candidate's tracker clone entirely, merge only the winner's.
+**Correction (2026-09-06, second review round):** the tracker-cloning rule
+in Evaluation step 4 — "discard a losing candidate's tracker clone entirely,
+merge only the winner's" — is necessary but was believed sufficient when
+first written, and is not. `render_group_component_with_format` merges a
+group's tracker mutations into its parent unconditionally, *before* checking
+whether the group produced any output (`tracker.merge_from(group_tracker)`
+runs above the subsequent `values?` empty-check), and it does this at
+**every level of nesting**, not only at whichever call site happens to be
+outermost. So if the *winning* `alternatives:` candidate is itself a
+`group:` containing a nested empty sub-group, that sub-group's tracker
+mutations are already merged into the candidate's own clone before
+`alternatives:` ever inspects it — "merge only the winner's tracker" still
+commits the pollution, because it happened one level deeper.
+
+**`alternatives:` therefore cannot be implemented with correct tracker
+isolation until `csl26-2hr4` is resolved** (fixed — moving the merge after
+the empty-check — or explicitly proven safe as-is). This is now a blocking
+prerequisite, not an independent, unrelated cleanup: see Acceptance
+Criteria. Fixing the ordering bug in `render_group_component_with_format`
+itself (rather than giving `alternatives:` a parallel, duplicate,
+transactional evaluator that never calls the shared path) is the
+recommended direction — it also corrects plain `group:` rendering on its
+own merits, and avoids two different rendering behaviors for a group
+depending on whether it happens to sit inside an `alternatives:` candidate.
 
 ## Acceptance Criteria
 
+- [ ] **Prerequisite:** `csl26-2hr4` resolved (the `render_group_component_with_format`
+      tracker-merge-before-empty-check ordering fixed, or explicitly proven
+      not to affect `alternatives:`). Not gate-able around — see
+      Implementation Notes.
 - [ ] Schema: `TemplateComponent::Alternatives` variant, validated (empty and
       single-entry rejected).
 - [ ] Engine: evaluation order, first-non-empty-wins, implemented as an arm
@@ -285,7 +304,10 @@ candidate's tracker clone entirely, merge only the winner's.
       inside `group` and vice versa; nested `render-when` inside a candidate
       is honored; a losing candidate that would have consumed a
       contributor/date does not affect the winning candidate or later
-      template components.
+      template components; **a winning candidate containing a suppressed/
+      empty nested `group:`, followed by a component that depends on tracker
+      state that nested group must not have touched** (the forcing case for
+      the `csl26-2hr4` prerequisite above).
 - [ ] `just schema-gen` run, schema docs updated.
 - [ ] At least one embedded style migrated as a worked example — Chicago's
       volume-title fallback (`chicago-author-date-18th.yaml:416-425`) is the
@@ -296,6 +318,15 @@ candidate's tracker clone entirely, merge only the winner's.
 
 ## Changelog
 
+- v1.2 (2026-09-06): Corrected per a second Codex adversarial-review round:
+  the v1.1 tracker-clone-and-discard rule only isolated at the
+  `alternatives:` boundary, not recursively — a winning candidate's own
+  nested `group:` can already have merged a suppressed sub-group's tracker
+  mutations before `alternatives:` gets a say (the same
+  merge-before-empty-check ordering v1.1 flagged as a `group:` quirk turns
+  out to recur at every nesting depth). `csl26-2hr4` elevated from
+  independent cleanup to a blocking prerequisite; added the corresponding
+  regression-test case to Acceptance Criteria.
 - v1.1 (2026-09-06): Corrected per a Codex adversarial review and follow-up
   verification: fixed the evaluation rule (leaf vs. group "did this render"
   semantics were conflated), fixed Implementation Notes to name the real

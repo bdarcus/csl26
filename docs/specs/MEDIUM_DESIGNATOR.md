@@ -1,7 +1,7 @@
 # Medium Designator Specification
 
 **Status:** Draft
-**Version:** 1.1
+**Version:** 1.2
 **Date:** 2026-09-06
 **Supersedes:** None
 **Related:** `csl26-zs9y`, `csl26-8b4a`, `csl26-8z39`,
@@ -125,6 +125,31 @@ unconditional on reference type. See "Anchor selection" below for why this
 turns out to coincide with NLM/springer's type-based rule rather than
 requiring a second mechanism.
 
+**CSE also uses a different term for the accessed-date bracket, not just a
+different anchor.** Its macro — confusingly also named `cited`, matching
+NLM/springer's macro *name* but not their *term* —
+(`taylor-and-francis-council-of-science-editors-author-date.csl:96-105`):
+
+```xml
+<macro name="cited">
+  <choose>
+    <if variable="URL">
+      <group delimiter=" " prefix=" [" suffix="]">
+        <text term="accessed"/>
+        <date variable="accessed">...</date>
+      </group>
+    </if>
+  </choose>
+</macro>
+```
+
+renders `[accessed …]`, not `[cited …]` — `term.accessed` is a distinct,
+already-existing `GeneralTerm` variant
+(`crates/citum-schema-style/src/locale/message_ids.rs:28`), not an alias for
+`term.cited`. NLM's and springer's own macros both use `term="cited"`
+(confirmed above). A shared option that hardcodes one term for all three
+styles gets one of them wrong. See "Cited-date label" below.
+
 `taylor-and-francis-council-of-science-editors-author-date.csl:77-83`
 (`publisher-place` macro) has the same "if absent, render a bracketed
 literal instead" shape for `[place unknown]` (7 rows) — that one is
@@ -141,6 +166,12 @@ implementation.
 vocabulary for the original `access-phrase` field. Both are fixed below by
 reusing existing engine machinery instead of inventing new vocabulary.
 
+**Revised again (2026-09-06, second review round)** after a follow-up
+review found `cited-date-form` only controls date *formatting* and never
+named which *term* backs the bracket — the spec had silently assumed
+`term.cited` for every style, which is wrong for T&F-CSE (see "CSE also
+uses a different term" in Evidence above). Added `cited-date-label` below.
+
 ### New option
 
 ```yaml
@@ -151,6 +182,7 @@ bibliography:
     online-access:
       medium-marker: term.internet
       access-phrase: true
+      cited-date-label: term.cited   # term.accessed for T&F-CSE
       cited-date-form: text
 ```
 
@@ -170,8 +202,12 @@ Proposed schema shape:
     (`crates/citum-schema-style/src/options/mod.rs:114`), not by a new field
     here: whether a style shows an access phrase and what word it uses are
     orthogonal, and only the first belongs to this bundle.
+  - `cited_date_label: Option<SubstituteMessage>` — locale message naming the
+    term inside the accessed-date bracket (see "Cited-date label" below).
+    `None` disables the bracket even when a URL exists, regardless of
+    `cited_date_form`.
   - `cited_date_form: Option<DateForm>` — form for the accessed-date bracket;
-    `None` disables the bracket even when a URL exists.
+    only meaningful when `cited_date_label` is set.
 
 ### Anchor selection
 
@@ -245,6 +281,29 @@ full-locale-replacement semantics) is unrelated to this narrower per-message
 overlay, which has two working precedents already; worth a one-line sanity
 check before implementation, not a blocker.
 
+### Cited-date label
+
+**Added (2026-09-06, second review round).** NLM and springer both name the
+term `term.cited`; T&F-CSE's own macro of the same name (`cited`) renders
+`term.accessed` instead (see Evidence). These are two distinct, already-
+existing `GeneralTerm` variants
+(`crates/citum-schema-style/src/locale/message_ids.rs:28-29`) — not a
+formatting difference `cited_date_form` could express, and not a case where
+one style is "wrong" and can be normalized to the other's wording. Each
+style sets `cited_date_label` to name its own term:
+
+```yaml
+# NLM, springer-vancouver-brackets:
+online-access:
+  cited-date-label: term.cited
+# T&F-CSE:
+online-access:
+  cited-date-label: term.accessed
+```
+
+No locale override needed for this piece — both terms already exist
+verbatim in the base `en-US` locale.
+
 ### Semantics
 
 When a reference has a URL:
@@ -256,8 +315,9 @@ When a reference has a URL:
    + `term.from` (whatever the active locale, overridden or not, resolves
    them to) before `variable: url`, matching the shipped `": "` / `" "`
    delimiters.
-3. The accessed-date component, if present, wraps in `[<term.cited> …]`
-   using `cited_date_form`.
+3. If `cited_date_label` is set, the accessed-date component wraps in
+   `[<cited_date_label> …]` using `cited_date_form` — `term.cited` for
+   NLM/springer, `term.accessed` for CSE, per "Cited-date label" above.
 
 When a reference has no URL, none of the three render — matching today's
 behavior, and unaffected for styles that don't set this option at all.
@@ -284,17 +344,30 @@ not this option.
       coincides with T&F-CSE's real `container-title`-presence gate for
       every reference type this family's fixtures exercise, before treating
       the "Anchor selection" residual risk as closed.
+- [ ] Exact-output fixture check, per style, confirming the accessed-date
+      bracket text: `[cited …]` for NLM and springer, `[accessed …]` for
+      CSE — not asserted from reading the CSL, verified against a real
+      rendered fixture for each of the three, before treating
+      `cited_date_label` as correct.
 - [ ] `taylor-and-francis-national-library-of-medicine-core.yaml`,
       `springer-vancouver-brackets-core.yaml`, and
       `taylor-and-francis-council-of-science-editors-author-date-core.yaml`
       updated; `report-core.js --diff` shows the targeted `[Internet]`/
-      `[cited …]` rows flip with 0 regressions. (T&F-NLM's DOI rows are
-      `csl26-8z39`'s scope, not this option's — don't count them here.)
+      `[cited …]`/`[accessed …]` rows flip with 0 regressions. (T&F-NLM's
+      DOI rows are `csl26-8z39`'s scope, not this option's — don't count
+      them here.)
 - [ ] `just schema-gen` run, schema docs updated.
 - [ ] Status promoted to Active in the implementation commit.
 
 ## Changelog
 
+- v1.2 (2026-09-06): Corrected per a second Codex adversarial-review round:
+  the shared `cited_date_form` field only controlled formatting and silently
+  assumed `term.cited` for every style; T&F-CSE's own macro (also confusingly
+  named `cited`) actually renders `term.accessed`. Added `cited_date_label`
+  so each style names its own term, and an exact-output fixture check to
+  Acceptance Criteria rather than asserting the wording from reading the CSL
+  alone. See `csl26-8b4a`.
 - v1.1 (2026-09-06): Corrected per a Codex adversarial review and follow-up
   verification: replaced the flat `exclude-types` list with the engine's
   existing `container_title_category` classification (added a documented

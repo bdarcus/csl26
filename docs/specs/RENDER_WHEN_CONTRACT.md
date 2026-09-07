@@ -92,6 +92,12 @@ value.
 | `genre` | genre exists |
 | `archive` | archive or repository name exists |
 | `archive-location` | archive location or shelfmark exists |
+| `volume-or-issue` | the volume number, or the issue number when volume is absent — "does this serial component have any volume/issue identifier at all?" |
+| `part-number` | the document-level part number used by multivolume and multipart works |
+| `part-number-numeric` | a document-level part number whose value is a bare numeric value |
+| `part-number-non-numeric` | a document-level part number whose value already contains a textual label |
+| `number-of-volumes` | the total number of volumes in a multivolume work |
+| `volume-title` | the title of an individual volume within a multivolume work |
 
 **Frozen as of v1.2 — no new fields will be added to this table.** The
 extension criteria that governed v1.0/v1.1 growth are recorded here for
@@ -160,10 +166,18 @@ schema-gen` was run and produced no diff, which is expected, not an omission.
 
 ## Changelog
 
-- v1.2 (2026-09-06): Froze the field vocabulary — no new fields will be
-  added. A-shape (fallback) uses route to `docs/specs/ALTERNATIVES.md`;
-  B-shape (structural policy) uses await a work-form-routing design under
-  `csl26-40n4`. See `docs/architecture/audits/2026-09-06_RENDER_WHEN_DISPOSITION.md`.
+- v1.2 (2026-09-06, corrected same day): Froze the field vocabulary — no new
+  fields will be added. A-shape (fallback) uses route to
+  `docs/specs/ALTERNATIVES.md`; B-shape (structural policy) uses await a
+  work-form-routing design under `csl26-40n4`. See
+  `docs/architecture/audits/2026-09-06_RENDER_WHEN_DISPOSITION.md`.
+  A Codex adversarial review of that freeze found the table itself was
+  incomplete — six existing `TemplateConditionField` variants
+  (`volume-or-issue`, `part-number`, `part-number-numeric`,
+  `part-number-non-numeric`, `number-of-volumes`, `volume-title`, the
+  corpus's *highest-volume* fields) had never been added to this table in
+  v1.0/v1.1. Added them same-day, before this freeze could be read as
+  documenting a complete vocabulary that it didn't. See `csl26-8b4a`.
 - v1.1 (2026-07-13): Implemented validation and behavior tests; promoted to
   Active.
 - v1.0 (2026-07-13): Initial contract specification.

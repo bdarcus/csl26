@@ -156,15 +156,20 @@ against the right existing one: `Renderer`'s per-component dispatch, not
 `values::list.rs` in isolation. See `docs/specs/ALTERNATIVES.md`'s
 Implementation Notes and `csl26-8b4a` for the corrected account.
 
-It also directly answers two of wave 3's three parity needs (see the
-companion `docs/specs/MEDIUM_DESIGNATOR.md` for the third, which is a marker,
-not a fallback, and doesn't fit here):
-
-- `[place unknown]` (7 rows): `alternatives: [{variable: publisher-place},
-  {message: term.place-unknown}]`.
-- NLM's DOI-when-no-page-or-volume rule (11 rows): generalizes
-  `ArticleJournalNoPageFallback` into "render the detail block; if it would be
-  empty, render DOI instead" rather than adding a second narrow one-off.
+It also directly answers one of wave 3's three parity needs — `[place
+unknown]` (7 rows): `alternatives: [{variable: publisher-place}, {message:
+term.place-unknown}]`. The other two do **not** route through
+`alternatives:`: the `[Internet]` marker is a marker, not a fallback (see
+the companion `docs/specs/MEDIUM_DESIGNATOR.md`), and NLM's
+DOI-when-no-page-or-volume rule turned out, on closer reading of the shipped
+CSL, to be a type- and field-presence-gated choice, not an output-based
+fallback — it extends the existing `ArticleJournalNoPageFallback` option
+directly (`csl26-8z39`), not `alternatives:`. (An earlier draft of this
+section proposed generalizing `ArticleJournalNoPageFallback` into
+`alternatives:` for this case; that was checked against NLM's actual `access`
+macro and found wrong — the normal detail block includes `date: issued`,
+present on nearly every reference, so it would never fall through to DOI.
+See `docs/specs/ALTERNATIVES.md`'s correction note for the full trace.)
 
 And it opens a migration path `RENDER_WHEN_CONTRACT.md` explicitly closed:
 that spec refuses to let `citum-migrate` emit `render-when` at all. A CSL
@@ -228,11 +233,11 @@ once step 3 has a design.
   ships and Chicago's author-substitution gates migrate to it.
 - `csl26-x61x`: cross-linked as the eventual home for work-form routing.
 - `csl26-zs9y`: root cause reclassified from "needs a render-when field" to
-  "needs `alternatives:`" for the `[place unknown]` case and "needs a medium
+  "needs `alternatives:`" for the `[place unknown]` case, "needs a medium
   designator option" (see `docs/specs/MEDIUM_DESIGNATOR.md`) for the
-  `[Internet]` case. The NLM-DOI case originally grouped with these is
-  **not** `alternatives:`-shaped after all (see `csl26-8b4a` below) — it
-  routes to `csl26-8z39` instead.
+  `[Internet]` case, and "extend `ArticleJournalNoPageFallback`"
+  (`csl26-8z39`) for the NLM-DOI case — see the Recommendation section above
+  for why the NLM-DOI case doesn't fit `alternatives:`.
 - `csl26-8b4a`: resolves a Codex adversarial review of `ALTERNATIVES.md` and
   `MEDIUM_DESIGNATOR.md` — corrected both specs' evaluation/integration
   details and this record's own "Verified before recommending it" claim
