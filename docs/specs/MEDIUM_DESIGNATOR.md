@@ -1,7 +1,7 @@
 # Medium Designator Specification
 
 **Status:** Draft
-**Version:** 1.3
+**Version:** 1.4
 **Date:** 2026-09-06
 **Supersedes:** None
 **Related:** `csl26-zs9y`, `csl26-8b4a`, `csl26-8z39`, `csl26-la9t`, `csl26-ro72`,
@@ -161,25 +161,14 @@ implementation.
 
 ## Design
 
-**Revised (2026-09-06)** after a Codex adversarial review found the original
-`exclude-types` design didn't fit T&F-CSE, and after checking the locale
-vocabulary for the original `access-phrase` field. Both are fixed below by
-reusing existing engine machinery instead of inventing new vocabulary.
-
-**Revised again (2026-09-06, second review round)** after a follow-up
-review found `cited-date-form` only controls date *formatting* and never
-named which *term* backs the bracket — the spec had silently assumed
-`term.cited` for every style, which is wrong for T&F-CSE (see "CSE also
-uses a different term" in Evidence above). Added `cited-date-label` below.
-
-**Revised again (2026-09-06, third review round)** after a follow-up review
-found two more concrete defects: the wire example's field values were bare
-scalars where the actual message type requires a mapping, and the proposed
-Rust field lived on the wrong struct — style-authored `bibliography:
-options:` deserializes into `BibliographyOptions`
+Style-authored `bibliography: options:` deserializes into
+`BibliographyOptions`
 (`crates/citum-schema-style/src/style/sections/bibliography.rs:32`), a
-*different* type from the runtime `BibliographyConfig` this spec had been
-targeting exclusively. Both fixed below.
+different type from the runtime `BibliographyConfig` — both need the new
+option (see Acceptance Criteria). `cited_date_label` names, per style,
+which term backs the accessed/cited bracket — `term.cited` for NLM and
+springer, `term.accessed` for T&F-CSE (see "CSE also uses a different
+term" in Evidence above); a single hardcoded term would be wrong for CSE.
 
 ### New option
 
@@ -255,14 +244,11 @@ Proposed schema shape:
 
 ### Anchor selection
 
-**Revised twice.** First from a flat `exclude-types` list (didn't fit
-T&F-CSE's data-presence gate) to `container_title_category(ref_type) !=
-Default`, a type classification. A third review round found that
-classification still knowingly diverges from real reference shapes — a
-container-less `chapter`, or a non-listed type authored with a populated
-`container-title`, would pick the wrong anchor — and correctly pointed out
-that a *type* proxy shouldn't stand in when the *actual data being
-anchored to* is directly checkable.
+**Rejected: a type-based classification** (`container_title_category(ref_type)
+!= Default`). It diverges from real reference shapes — a container-less
+`chapter`, or a non-listed type authored with a populated `container-title`,
+would pick the wrong anchor. A *type* proxy shouldn't stand in when the
+*actual data being anchored to* is directly checkable.
 
 It is: `Reference::container_title()`
 (`crates/citum-schema-data/src/reference/accessors.rs:1108`) returns
@@ -278,8 +264,7 @@ subsumes the type-based rule as a consequence, not a coincidence: those are
 exactly the types given an embedded container `WorkRelation`, so
 `container_title()` returns `Some` for them via `p.title()`.
 
-**New residual risk found while verifying this fix, narrower than the one
-it replaces:** `container_title()` also returns `Some` for
+**Residual risk:** `container_title()` also returns `Some` for
 `ClassExtension::LegalCase`/`Statute`/`Regulation`/`Treaty`
 (`accessors.rs:1124-1127`) — from a flat `reporter`/`code` string field, not
 an embedded work's title. NLM's own title macro excludes only its 5
@@ -300,7 +285,7 @@ before this anchor rule is treated as correct.
 
 ### Access phrase
 
-**Revised from an invented `access-phrase: term.available-from`.** No such
+**Rejected: an invented `access-phrase: term.available-from`.** No such
 term exists (checked `crates/citum-schema-style/src/locale/message_ids.rs`);
 `pattern.retrieved-from`/`pattern.available-at` exist but carry different
 wording ("retrieved from" / "available at") than NLM's "Available from".
@@ -321,10 +306,14 @@ The shipped CSL doesn't invent a phrase either — it locally overrides an
 `term.retrieved` and `term.from` both already exist
 (`crates/citum-schema-style/src/locale/message_ids.rs:29-36`), and the
 project already has the exact mechanism for a style-scoped term override:
-`crates/citum-schema-style/embedded/locales/overrides/en-US-chicago.yaml`
-and the `en-US-ieee`/`en-US-springer` precedent (`csl26-fz2e`) both define a
+`crates/citum-schema-style/embedded/locales/overrides/en-US-chicago.yaml` — a
 `messages:` block on a `locale-override` file, referenced from a style via
-the existing, general-purpose `options.locale-override` field. NLM/springer/
+the existing, general-purpose `options.locale-override` field, plus an entry
+in `EMBEDDED_LOCALE_OVERRIDE_IDS` (`crates/citum-schema-style/src/embedded/locales.rs`)
+so the built-in style can actually load it. (`csl26-fz2e` proposes the same
+pattern for `en-US-ieee`/`en-US-springer` but is unimplemented — not yet a
+second working example, just the same recipe written down twice.)
+NLM/springer/
 CSE need a new file of that same kind — e.g.
 `locales/overrides/en-US-nlm.yaml` with `messages: {term.retrieved:
 "available"}` — set via their own `options.locale-override`, no schema
@@ -334,12 +323,15 @@ immediately before the pre-existing `variable: url` component, reading
 whatever the active locale (overridden or not) resolves those two terms to
 — not a new `{$url}`-argument pattern. `csl26-9l88` (open question about
 full-locale-replacement semantics) is unrelated to this narrower per-message
-overlay, which has two working precedents already; worth a one-line sanity
-check before implementation, not a blocker.
+overlay, which has two registered, working precedents today —
+`en-US-chicago.yaml` and `de-DE-chicago.yaml`, both in
+`EMBEDDED_LOCALE_OVERRIDE_IDS` — not `en-US-ieee`/`en-US-springer`, which
+are the same unimplemented pattern described in `csl26-fz2e`; worth a
+one-line sanity check before implementation, not a blocker.
 
 ### Cited-date label
 
-**Added (2026-09-06, second review round).** NLM and springer both name the
+NLM and springer both name the
 term `term.cited`; T&F-CSE's own macro of the same name (`cited`) renders
 `term.accessed` instead (see Evidence). These are two distinct, already-
 existing `GeneralTerm` variants
@@ -411,8 +403,21 @@ not this option.
       own title, not a container, before treating the anchor-selection
       exclusion as correct.
 - [ ] New locale-override file (e.g. `en-US-nlm.yaml`) overriding
-      `term.retrieved`, following the `en-US-ieee`/`en-US-springer`
-      precedent.
+      `term.retrieved`, following the `en-US-chicago.yaml` precedent
+      (`crates/citum-schema-style/embedded/locales/overrides/en-US-chicago.yaml`)
+      — the only override file actually registered today; `en-US-ieee`/
+      `en-US-springer` are the same not-yet-built pattern, tracked
+      unimplemented in `csl26-fz2e`, not a shipped precedent to assume works
+      without the next bullet.
+- [ ] New override file registered in
+      `crates/citum-schema-style/src/embedded/locales.rs`: added to
+      `EMBEDDED_LOCALE_OVERRIDE_IDS` (currently `["en-US-chicago",
+      "de-DE-chicago"]`) and reachable from `get_locale_override_bytes`.
+      Without this step a style's `options.locale-override: en-US-nlm`
+      fails to load at all — confirmed by grepping the current registry,
+      which does not yet contain an NLM entry. Test: a built-in style using
+      the new override loads and renders the overridden term, not just that
+      the YAML file parses standalone.
 - [ ] Exact-output fixture check, per style, confirming the accessed-date
       bracket text: `[cited …]` for NLM and springer, `[accessed …]` for
       CSE — not asserted from reading the CSL, verified against a real
@@ -430,6 +435,17 @@ not this option.
 
 ## Changelog
 
+- v1.4 (2026-09-06): A fourth Codex round found the locale-override
+  mechanism described here (and its `en-US-ieee`/`en-US-springer`
+  "precedent") omits the step that actually makes an override file loadable
+  by a built-in style: registration in
+  `crates/citum-schema-style/src/embedded/locales.rs`'s
+  `EMBEDDED_LOCALE_OVERRIDE_IDS`/`get_locale_override_bytes`. Confirmed by
+  reading the registry directly — it lists only `en-US-chicago` and
+  `de-DE-chicago` today, and `csl26-fz2e` (the cited "precedent" for
+  `en-US-ieee`/`en-US-springer`) is unimplemented, not a second shipped
+  example. Added the registration step as its own Acceptance Criteria item
+  and corrected the precedent language accordingly. See `csl26-ro72`.
 - v1.3 (2026-09-06): Corrected per a third Codex adversarial-review round:
   the wire example used bare-scalar message fields where `SubstituteMessage`
   requires a mapping (`{message: ...}`), and the proposed field lived only

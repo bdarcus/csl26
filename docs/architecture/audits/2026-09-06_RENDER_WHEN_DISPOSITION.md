@@ -164,12 +164,12 @@ the companion `docs/specs/MEDIUM_DESIGNATOR.md`), and NLM's
 DOI-when-no-page-or-volume rule turned out, on closer reading of the shipped
 CSL, to be a type- and field-presence-gated choice, not an output-based
 fallback — it extends the existing `ArticleJournalNoPageFallback` option
-directly (`csl26-8z39`), not `alternatives:`. (An earlier draft of this
-section proposed generalizing `ArticleJournalNoPageFallback` into
-`alternatives:` for this case; that was checked against NLM's actual `access`
-macro and found wrong — the normal detail block includes `date: issued`,
-present on nearly every reference, so it would never fall through to DOI.
-See `docs/specs/ALTERNATIVES.md`'s correction note for the full trace.)
+directly (`csl26-8z39`), not `alternatives:`. Generalizing
+`ArticleJournalNoPageFallback` into `alternatives:` does not work for this
+case: NLM's actual `access` macro's normal detail block includes `date:
+issued`, present on nearly every reference, so an output-based fallback
+would never fall through to DOI. See `docs/specs/ALTERNATIVES.md`'s
+"Relationship to existing candidate-list types" section for the full trace.
 
 And it opens a migration path `RENDER_WHEN_CONTRACT.md` explicitly closed:
 that spec refuses to let `citum-migrate` emit `render-when` at all. A CSL

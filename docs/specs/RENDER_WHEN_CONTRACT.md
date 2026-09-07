@@ -113,11 +113,21 @@ history:
 
 The 2026-09-06 disposition audit found that every candidate field a wave-3
 parity pass wanted (`url`, `pages`, `publisher-place`) failed the second
-criterion on inspection — each was a stand-in for a fallback that
-`docs/specs/ALTERNATIVES.md` now serves declaratively. Rather than
-re-litigate that same question per proposal, the vocabulary is closed: a
-proposed new field is evidence that a need belongs to `alternatives:` or to
-work-form routing (see the audit), not to this contract.
+criterion on inspection — each was a stand-in for a fallback owned
+elsewhere, not a genuine field-presence distinction. Rather than
+re-litigate that same question per proposal, the vocabulary is closed. The
+routing for those three cases is not interchangeable — each goes to a
+different, specific mechanism:
+
+| Field | Routes to |
+|---|---|
+| `publisher-place` | `docs/specs/ALTERNATIVES.md` (`alternatives:`, output-based fallback) |
+| `url` | `docs/specs/MEDIUM_DESIGNATOR.md` (a bundled bibliography option, not a template fallback) |
+| `pages` / `volume` | extending `ArticleJournalNoPageFallback` (`options/bibliography.rs`), tracked in `csl26-8z39` |
+
+A proposed new field is evidence that a need belongs to one of these three,
+or to the not-yet-designed work-form routing primitive (see the audit's
+"Work-form routing" section) — not to this contract.
 
 Field growth does not imply operator growth. Multiple-field lists, OR,
 comparisons, arbitrary expressions, and new branch forms each require a
@@ -178,6 +188,13 @@ schema-gen` was run and produced no diff, which is expected, not an omission.
   corpus's *highest-volume* fields) had never been added to this table in
   v1.0/v1.1. Added them same-day, before this freeze could be read as
   documenting a complete vocabulary that it didn't. See `csl26-8b4a`.
+  A fourth Codex round then found the freeze note's routing claim itself
+  was wrong: it said `url`/`pages`/`publisher-place` interchangeably route
+  to "`alternatives:` or work-form routing," which contradicts the specific
+  routing the companion specs actually settled on. Replaced with a
+  per-field routing table (`publisher-place` → `alternatives:`, `url` →
+  `docs/specs/MEDIUM_DESIGNATOR.md`, `pages`/`volume` → extending
+  `ArticleJournalNoPageFallback`, tracked in `csl26-8z39`). See `csl26-ro72`.
 - v1.1 (2026-07-13): Implemented validation and behavior tests; promoted to
   Active.
 - v1.0 (2026-07-13): Initial contract specification.

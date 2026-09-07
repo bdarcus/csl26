@@ -1,7 +1,7 @@
 # Alternatives Specification
 
 **Status:** Draft
-**Version:** 1.3
+**Version:** 1.4
 **Date:** 2026-09-06
 **Supersedes:** None
 **Related:** `docs/specs/RENDER_WHEN_CONTRACT.md`,
@@ -35,9 +35,8 @@ In scope:
   than defining a second success rule;
 - tracker semantics for discarded candidates;
 - resource-budget accounting for the candidate list;
-- an explicit, narrower-than-originally-drafted v1 placement restriction
-  (see "v1 placement restriction" below) and the follow-up work needed to
-  lift it;
+- an explicit v1 placement restriction (see "v1 placement restriction"
+  below) and the follow-up work needed to lift it;
 - interaction with `Substitute` and `DateFallbackCandidate` (naming, not
   merging).
 
@@ -50,7 +49,8 @@ Out of scope:
   `part-number-numeric` / `part-number-non-numeric` editor/container
   routing) — that is a separate, not-yet-designed primitive; see the decision
   record's "Work-form routing" section. **Chicago's actual volume-title
-  fallback is not a target for this spec** — see "v1 placement restriction";
+  fallback is not a target for this spec** — see the Wire Contract
+  section's "Rejected: Chicago's `volume-title` position";
 - nesting `alternatives:` inside `alternatives:` — deferred to v2 alongside
   the placement restriction, not part of this spec's acceptance criteria;
 - migrating `Substitute` or `DateFallbackCandidate` onto this primitive —
@@ -90,76 +90,102 @@ separate groups and a repeated field name:
     field-absent: publisher-place
 ```
 
-**Correction (2026-09-06, third review round):** an earlier draft used
-Chicago's `volume-title` position as this section's illustrative example,
-presented as equivalent to that style's actual `render-when` pair. It
-wasn't. Re-reading the literal YAML
-(`chicago-author-date-18th.yaml:416-430`) shows a **third**, interacting
-group — `field-present: part-number-non-numeric` also renders `title:
-primary`, overriding `volume-title` even when `volume-title` is present.
-A two-item `alternatives: [volume-title, title: primary]` cannot reproduce
-this: `alternatives:` has no way to make a candidate conditionally
-inapplicable other than by rendering it and checking for output, so a
-present `volume-title` always wins, contradicting the real rule. Chicago's
-volume-title position is not an `alternatives:` target — it stays
-`render-when` today and is a `csl26-zmxt` (work-form routing) candidate,
-not this spec's. The publisher-place example above was re-verified directly
-against the shipped CSL specifically because of this failure, and has no
-known third condition.
+**Rejected: Chicago's `volume-title` position as a worked example.** It
+looks like a two-way `alternatives: [volume-title, title: primary]` swap
+but isn't: the literal YAML (`chicago-author-date-18th.yaml:416-430`) has a
+**third**, interacting group — `field-present: part-number-non-numeric`
+also renders `title: primary`, overriding `volume-title` even when
+`volume-title` is present. `alternatives:` has no way to make a candidate
+conditionally inapplicable other than by rendering it and checking for
+output, so a present `volume-title` always wins, contradicting the real
+rule. Chicago's volume-title position stays `render-when` and is a
+`csl26-zmxt` (work-form routing) candidate, not this spec's. The
+publisher-place example above was verified directly against the shipped
+CSL and has no such third condition.
 
 `alternatives:` is valid as a top-level template item and inside a `group`,
 subject to the placement restriction below.
 
 ### v1 placement restriction
 
-**Added (2026-09-06, third review round).** An earlier draft claimed
-`alternatives:` is "valid anywhere a `TemplateComponent` is valid." That
-claim is too strong for v1 and is withdrawn.
+`alternatives:` is not valid everywhere a `TemplateComponent` is valid.
 
 `TemplateComponent::Group` is pattern-matched in **21 files** across
 `citum-engine` and `citum-schema-style` — not only the renderer. Three were
-checked directly this session and confirmed to key on specific component
-*kinds* for reasons that have nothing to do with rendering:
+checked directly and confirmed to key on specific component *kinds* for
+reasons that have nothing to do with rendering, walking recursively into
+`Group` children and into `Message` argument trees wherever a message
+carries nested `TemplateComponent` args:
 
-- `crates/citum-engine/src/values/list.rs` (`is_term_based`) — already
-  accounted for above.
+- `crates/citum-engine/src/values/list.rs` (`is_term_based`) — has no
+  `Alternatives` arm; an unmatched variant falls to its `_ => false` case,
+  so a `group:` whose only data child is an `alternatives:` list is always
+  treated as "has content" regardless of what the winning candidate turns
+  out to be. This does not break the publisher-place worked example below
+  (its winning candidate, `variable: publisher-place`, is genuinely
+  content), but it means a `group:` wrapping an `alternatives:` list whose
+  every candidate is term-only would not be suppressed the way an
+  equivalent flat term-only `group:` is — `is_term_based` needs its own
+  `Alternatives` arm (recursing the same way `Group` does) before that case
+  is correct. Tracked in Acceptance Criteria.
 - `crates/citum-engine/src/processor/rendering/grouped/component_predicates.rs` —
-  matches `Title`, `Date(Issued)`, `Number(Volume)`, `Variable(Url)`,
-  `Variable(Doi)` specifically, to find "the title component," "the volume
-  number," "the DOI," etc. for citation grouping and contributor-stripping
-  logic.
+  a generic recursive `component_or_message_arg_contains` helper backs
+  several structural finders (`Title`, `Date(Issued)`, `Number(Volume)`,
+  `Variable(Url)`, `Variable(Doi)`, and others) used to locate "the title
+  component," "the volume number," "the DOI," etc. for citation grouping
+  and contributor-stripping. It recurses into *any* message's args, not a
+  named subset, so a component of one of these kinds is invisible to it
+  regardless of how deeply it is nested inside a message argument.
 - `crates/citum-engine/src/processor/rendering/grouped/template_policy.rs` —
   filters an `article-journal` bibliography template by structurally
-  locating its `Date(Issued)`/`Number(Volume)`/`Variable(Url)` components
-  (this is the exact mechanism `csl26-8z39`, cross-referenced from
-  `docs/specs/MEDIUM_DESIGNATOR.md`, extends for NLM's DOI rule).
+  locating its `Date(Issued)`/`Number(Volume)`/`Variable(Url)` components,
+  and separately by walking for any `Message` whose name starts with
+  `pattern.` (`template_has_pattern_message`) — the mechanism `csl26-8z39`
+  extends for NLM's DOI rule.
 
-If any of these leaf kinds — or a title, or a contributor — is wrapped
-inside an `alternatives:` candidate, the consumer that looks for it
-structurally (independent of rendering) will not see it, regardless of
-nesting depth. Restricting `alternatives:` to non-nested use does not fix
-this; the cause is *what* a candidate can contain, not how deep it sits.
+The restriction this implies is about **candidate content, not candidate
+position**: a consumer that looks for one of these kinds walks the whole
+component tree it is given, so wrapping the kind inside `group:`,
+`alternatives:`, or a message argument does not hide it from a positional
+rule — only excluding the kind itself does.
 
-The remaining 18 files were not individually audited this session. **v1
-restricts `alternatives:` to positions where none of the checked consumers
-apply**, until that audit exists:
+The remaining 18 files were not individually audited. **v1 rejects any
+`alternatives:` candidate that is, or recursively contains (through
+`Group` children or `Message` args), any of the following:**
 
-- not nested inside another `alternatives:` (see Scope, deferred to v2);
-- not used as, or containing, the primary title or primary contributor
-  component;
-- not used inside an `article-journal` type-variant's top-level
-  bibliography template (the exact surface `template_policy.rs` filters).
+- a `Title` or `Contributor` component;
+- a `Date(Issued)` component;
+- a `Number(Volume)` component;
+- a `Variable(Url)` or `Variable(Doi)` component;
+- a `Message` whose name starts with `pattern.`;
 
-The publisher-place worked example above satisfies all three: it sits
-inside T&F-CSE's `publisher` macro/group, a "detail" position none of the
-three checked consumers inspect, and involves no title, contributor, date,
-number, or URL/DOI variable.
+and separately, regardless of content:
 
-**Lifting this restriction requires a follow-up audit** of the remaining
-18 `TemplateComponent::Group`-matching files, adding an `Alternatives` arm
-to every one that needs it — tracked in `csl26-57a7` (filed alongside this
-correction). Until that lands, treat any `alternatives:` use outside the
-three bullets above as unverified, not merely unrecommended.
+- nesting `alternatives:` inside another `alternatives:` (see Scope,
+  deferred to v2).
+
+This is a content restriction, checked by walking each candidate's own
+subtree the same way the consumers above do — not a restriction on where
+in the template `alternatives:` itself may sit. An `alternatives:` used at
+the template's top level is fine as long as every candidate's subtree is
+clean by this rule; one nested three levels inside a `group:` is not
+exempt just because it's deeply nested.
+
+The publisher-place worked example above satisfies this: `variable:
+publisher-place` and `message: term.place-unknown` are both plain leaves,
+neither is any of the listed kinds, and `term.place-unknown` is a
+term-message with no nested component args, so nothing under it is hidden
+from any of the three checked consumers.
+
+Because this rule targets *kinds*, not a single position, it covers a
+narrower slice of the 49 A-shape uses identified in the disposition audit:
+any A-shape candidate that renders a date, volume number, URL, DOI, title,
+or contributor is out of scope for v1 regardless of where it sits.
+**Lifting this restriction requires a follow-up audit**
+of the remaining 18 `TemplateComponent::Group`-matching files, adding an
+`Alternatives` arm to every one that needs it — tracked in `csl26-57a7`.
+Until that lands, treat any `alternatives:` candidate containing one of the
+listed kinds as unverified, not merely unrecommended.
 
 ### Evaluation
 
@@ -206,8 +232,12 @@ three bullets above as unverified, not merely unrecommended.
    because an earlier candidate already won — must not mark any variable as
    "already rendered," consume any contributor role, or otherwise mutate
    shared rendering state that the winning candidate or later template
-   components still depend on. Each candidate is evaluated against a cloned
-   copy of that state; only the winning candidate's mutations are kept. (The
+   components still depend on. (The v1 content restriction forbids
+   `Contributor` and `Date(Issued)` candidates, so variable-once tracking on
+   a plain `variable:` is the only reachable case of this rule in v1 — see
+   the Acceptance Criteria behavior-test bullet.) Each candidate is
+   evaluated against a cloned copy of that state; only the winning
+   candidate's mutations are kept. (The
    pre-existing `group:` rendering path does not currently guarantee this for
    its own children — see Implementation Notes — but `alternatives:` must not
    inherit that gap.)
@@ -250,11 +280,10 @@ message-shaped, and variable-shaped candidates). `alternatives:` does not
 replace them — it is the shape underneath all three, available directly in
 templates for cases that are not contributor substitution or date fallback.
 
-**Correction (2026-09-06):** an earlier draft of this section proposed
-`alternatives:` as a replacement for `ArticleJournalNoPageFallback::Doi`
-(`options/bibliography.rs:136`), citing NLM's DOI rule as a worked example.
-That was wrong and has been removed. Reading NLM's shipped `access` macro
-precisely (`styles-legacy/taylor-and-francis-national-library-of-medicine.csl:72-88`)
+**Rejected: NLM's DOI rule as a worked example for replacing
+`ArticleJournalNoPageFallback::Doi`** (`options/bibliography.rs:136`).
+Reading NLM's shipped `access` macro precisely
+(`styles-legacy/taylor-and-francis-national-library-of-medicine.csl:72-88`)
 shows the rule is `if type="article-journal"` **and**
 `if match="none" variable="page volume"` — a type-gated, field-presence
 test, not "render the normal detail block and fall back to DOI if it happens
@@ -282,7 +311,10 @@ contributor position, *the* issued date, *the* article-journal detail block.
 An option can afford to skip saying "where in the template" because there is
 only one place it could mean.
 
-The 49 A-shape uses this spec targets have no such single slot. `volume-title`
+The A-shape uses this spec targets (49 candidates in the disposition audit,
+though the v1 content restriction above covers only the subset whose
+candidates contain none of the listed structurally-inspected kinds) have no
+single slot in common. `volume-title`
 vs `title: primary` only matters inside Chicago's multivolume-chapter
 shape; `collection-title`, `recipient`, `archive-location`, `original-title`,
 and `publisher` each guard a different, unrelated position, found in a
@@ -315,12 +347,11 @@ variant, `TemplateAlternatives { alternatives: Vec<TemplateComponent> }`,
 alongside the existing `Group`, `Variable`, `Message`, etc. variants in
 `crates/citum-schema-style/src/template.rs:625`.
 
-**Correction (2026-09-06):** an earlier draft of this section said
-evaluation "lives in `crates/citum-engine/src/values/`, sharing
-`TemplateGroup::values`." That named the wrong layer. `TemplateGroup::values`
-(`crates/citum-engine/src/values/list.rs`) has no render-when handling and is
-not where variable-once tracking or substitution bookkeeping happen —
-grepped, zero hits. Those live on `Renderer`
+Evaluation does not live in `crates/citum-engine/src/values/`.
+`TemplateGroup::values` (`crates/citum-engine/src/values/list.rs`) has no
+render-when handling and is not where variable-once tracking or
+substitution bookkeeping happen — grepped, zero hits. Those live on
+`Renderer`
 (`crates/citum-engine/src/processor/rendering/mod.rs`, `TemplateComponentTracker`
 at `:249`), specifically in `render_template_component_with_format` and
 `render_group_component_with_format`
@@ -334,10 +365,10 @@ dispatch — rather than to `values::` — covers both template kinds from one
 implementation, and gets nested-group correctness for free by recursing
 through the same per-component call these functions already make.
 
-**Correction (2026-09-06, second review round):** the tracker-cloning rule
-in Evaluation step 4 — "discard a losing candidate's tracker clone entirely,
-merge only the winner's" — is necessary but was believed sufficient when
-first written, and is not. `render_group_component_with_format` merges a
+The tracker-cloning rule in Evaluation step 4 — "discard a losing
+candidate's tracker clone entirely, merge only the winner's" — is
+necessary but not sufficient on its own. `render_group_component_with_format`
+merges a
 group's tracker mutations into its parent unconditionally, *before* checking
 whether the group produced any output (`tracker.merge_from(group_tracker)`
 runs above the subsequent `values?` empty-check), and it does this at
@@ -359,7 +390,7 @@ recommended direction — it also corrects plain `group:` rendering on its
 own merits, and avoids two different rendering behaviors for a group
 depending on whether it happens to sit inside an `alternatives:` candidate.
 
-**Added (2026-09-06, third review round): resource-budget accounting.**
+**Resource-budget accounting.**
 `TemplateResourceBudget::check_component`
 (`crates/citum-schema-style/src/style/validation.rs:490-521`) increments a
 component count and nesting depth for every `TemplateComponent`, and for
@@ -390,31 +421,46 @@ large).
       semantics, unchanged); first entry renders; first entry empty falls
       through; all entries empty renders nothing; nested `alternatives:`
       inside `group` and vice versa; nested `render-when` inside a candidate
-      is honored; a losing candidate that would have consumed a
-      contributor/date does not affect the winning candidate or later
-      template components; **a winning candidate containing a suppressed/
+      is honored; a losing candidate whose `variable:` component would have
+      marked that variable as already-rendered (variable-once tracking)
+      does not affect a later template component that renders the same
+      variable — the v1 content restriction forbids `Contributor` and
+      `Date(Issued)` candidates, so variable-once tracking on a plain
+      `variable:` is the reachable forcing case, not contributor/date
+      consumption; **a winning candidate containing a suppressed/
       empty nested `group:`, followed by a component that depends on tracker
       state that nested group must not have touched** (the forcing case for
       the `csl26-2hr4` prerequisite above).
+- [ ] Engine: `is_term_based` (`crates/citum-engine/src/values/list.rs:122`)
+      gains an `Alternatives` arm — `alt.alternatives.iter().all(is_term_based)`,
+      mirroring `Group`'s own recursion — so a `group:` wrapping an
+      `alternatives:` list whose every candidate is term-only is suppressed
+      the same way an equivalent flat term-only `group:` is today. Behavior
+      test: a `group:` containing only an `alternatives:` of term-only
+      candidates is suppressed; the same shape with one non-term-only
+      candidate is not.
 - [ ] Schema/validation: `TemplateResourceBudget::check_component` gains an
       `Alternatives` arm recursing through candidates (mirroring `Group`'s),
       so a style's candidate list counts against
       `MAX_TEMPLATE_COMPONENTS`/`MAX_TEMPLATE_NESTING_DEPTH`. Regression
       tests for both limits with an `alternatives:` list as the offending
       structure.
-- [ ] Validation: reject `alternatives:` nested inside `alternatives:`
-      (v1 placement restriction), used as/containing the primary title or
-      primary contributor, and used inside an `article-journal`
-      type-variant's top-level bibliography template — with tests for each
-      rejection.
+- [ ] Validation: reject `alternatives:` nested inside `alternatives:`, and
+      reject any candidate that is or recursively contains (through `Group`
+      children or `Message` args) a `Title`, `Contributor`, `Date(Issued)`,
+      `Number(Volume)`, `Variable(Url)`, `Variable(Doi)`, or `pattern.*`
+      `Message` component (v1 placement restriction) — with a rejection test
+      for each listed kind, including one nested inside a `group:` and one
+      nested inside a message argument.
 - [ ] `just schema-gen` run, schema docs updated.
 - [ ] At least one embedded style migrated as a worked example —
       T&F-CSE's publisher-place fallback
       (`taylor-and-francis-council-of-science-editors-author-date-core.yaml`,
       per the Wire Contract section) is the verified-shape candidate.
       Chicago's volume-title position and the NLM DOI case are explicitly
-      not targets for this spec (see the Wire Contract correction and
-      "Rejected: an options-level construct" section) — with a
+      not targets for this spec (see the Wire Contract section's "Rejected:
+      Chicago's `volume-title` position" and "Relationship to existing
+      candidate-list types" section's NLM-DOI rejection) — with a
       `report-core.js` diff showing 0 regressions.
 - [ ] Status promoted to Active in the implementation commit. Lifting the v1
       placement restriction is separate follow-up work
@@ -422,6 +468,20 @@ large).
 
 ## Changelog
 
+- v1.4 (2026-09-06): The v1.3 placement restriction mixed content and
+  position (forbidding the primary title/contributor *slot* and the
+  `article-journal` top level) while its own stated rationale was that
+  structural consumers walk the whole component tree regardless of
+  position. Rewrote it as a pure content restriction: any candidate that
+  is or recursively contains (through `Group` children or `Message` args)
+  a `Title`, `Contributor`, `Date(Issued)`, `Number(Volume)`,
+  `Variable(Url)`, `Variable(Doi)`, or `pattern.*` `Message` is rejected,
+  regardless of where the `alternatives:` sits. Added the `pattern.*`
+  message check (`template_policy.rs`'s second structural walk, not
+  previously listed). Updated Acceptance Criteria's rejection tests to
+  match. Noted this narrows the spec's practical coverage of the 49
+  A-shape uses to those whose candidates avoid all listed kinds. See
+  `csl26-ro72`.
 - v1.3 (2026-09-06): Corrected per a third Codex adversarial-review round:
   the Chicago volume-title worked example silently dropped a real,
   interacting third guard (`part-number-non-numeric`) and was not actually
